@@ -23,14 +23,14 @@
 
 ```
 src/
-├── protocol/       RoundMessage, ColumnMessage, Coin, Scalar, Spec, Context, replay()
+├── protocol/       RoundMessage, Coin, Scalar, Spec, Context, replay()
 ├── query/          sub-verifiers: vanishing, (logderiv, rangecheck, ...)
 └── verifier.zig    entry point: Systems, ProofData, verify()
 ```
 
 `protocol/` is internally split into two files:
 
-- `types.zig` — wire types: `RoundMessage`, `ColumnMessage`, `Coin`, `Scalar`, `Visibility`
+- `types.zig` — wire types: `RoundMessage`, `Coin`, `Scalar`
 - `root.zig` — `Spec`, `Context`, `replay()`; re-exports the public surface. `replay` takes a comptime `Spec`, absorbs each round into the transcript, and squeezes its coins inline — round ordering is fixed by the `inline for` over the spec, so no runtime ordering check is needed.
 
 ## Coin Generation

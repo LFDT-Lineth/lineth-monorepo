@@ -18,8 +18,8 @@ func newSingleLookup(t *testing.T) *wiop.System {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -69,8 +69,8 @@ func TestBuildRowLimitSystemDynamicModule(t *testing.T) {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewDynamicModule(sys.Context.Childf("modS"), wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},

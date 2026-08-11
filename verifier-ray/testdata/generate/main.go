@@ -119,12 +119,8 @@ func writeHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };")
 	fmt.Fprintln(out, "pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };")
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "pub const prover_visibility_oracle: u8 = %d;\n", int(wiop.VisibilityOracle))
-	fmt.Fprintf(out, "pub const prover_visibility_public: u8 = %d;\n", int(wiop.VisibilityPublic))
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
-	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };")
+	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };")
 	fmt.Fprintln(out)
 }
@@ -399,20 +395,13 @@ type runtimeTraceCase struct {
 
 // runtimeTraceRound is the verifier-visible transcript input for one WIOP
 // round. expectedCoins are the extension-field coins that prover-ray derives for
-// the next round after absorbing this round's columns and cells.
+// the next round after absorbing this round's commitment (if any) and cells.
+// prover-ray columns never travel raw: every committed round is represented by
+// a single Merkle root, and non-committed rounds carry none at all.
 type runtimeTraceRound struct {
-	columns       []runtimeTraceColumn
+	commitment    *field.Octuplet
 	cells         []runtimeTraceCell
 	expectedCoins []field.Ext
-}
-
-// runtimeTraceColumn records one verifier-visible column assignment. prover-ray
-// may have internal columns in the source protocol, but they are intentionally
-// not exported to verifier-ray traces.
-type runtimeTraceColumn struct {
-	commitments      []field.Octuplet
-	publicBaseValues []field.Element
-	publicExtValues  []field.Ext
 }
 
 // runtimeTraceCell records a scalar value opened in the round. Unlike internal
@@ -440,57 +429,43 @@ func writeRuntimeTraceCases(out *bytes.Buffer) {
 }
 
 // buildRuntimeTraceCases constructs a small prover-ray WIOP runtime at the
-// verifier boundary. Oracle columns are represented by their commitment values
-// rather than raw witness assignments, and expected coins are sampled through
-// Runtime.AdvanceRound so the fixture stays coupled to prover-ray round logic.
+// verifier boundary. Columns never travel in the transcript: a committed round
+// is represented solely by its Merkle root (set directly on rt.Commitments here,
+// bypassing the PCS compiler since this fixture only exercises AdvanceRound's
+// absorption order), and expected coins are sampled through Runtime.AdvanceRound
+// so the fixture stays coupled to prover-ray round logic.
 func buildRuntimeTraceCases() []runtimeTraceCase {
 	sys := wiop.NewSystemf("runtime-trace")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	r2 := sys.NewRound()
-	commitmentMod := sys.NewSizedModule(sys.Context.Childf("commitments"), len(field.Octuplet{}), wiop.PaddingDirectionNone)
-	valueMod := sys.NewSizedModule(sys.Context.Childf("values"), 4, wiop.PaddingDirectionNone)
 
-	r0OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r0-oracle-commitment"), wiop.VisibilityOracle, r0)
-	r0PublicExt := valueMod.NewExtensionColumn(sys.Context.Childf("r0-public-ext"), wiop.VisibilityPublic, r0)
-	// Keep an unassigned internal column in the prover-ray protocol. It is not a
-	// verifier-visible transcript message and is intentionally not exported.
-	commitmentMod.NewColumn(sys.Context.Childf("r0-internal-unassigned"), wiop.VisibilityInternal, r0)
+	r0.HasCommitment = true
+	r1.HasCommitment = true
+
 	r0BaseCell := r0.NewCell(sys.Context.Childf("r0-base-cell"), false)
 	r0ExtCell := r0.NewCell(sys.Context.Childf("r0-ext-cell"), true)
 
 	r1CoinA := r1.NewCoinField(sys.Context.Childf("r1-coin-a"))
 	r1CoinB := r1.NewCoinField(sys.Context.Childf("r1-coin-b"))
-	r1OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r1-oracle-commitment"), wiop.VisibilityOracle, r1)
-	r1PublicBase := valueMod.NewColumn(sys.Context.Childf("r1-public-base"), wiop.VisibilityPublic, r1)
 	r1BaseCell := r1.NewCell(sys.Context.Childf("r1-base-cell"), false)
 
 	r2Coin := r2.NewCoinField(sys.Context.Childf("r2-coin"))
 
-	r0OracleBaseValues := elems(3, 1, 4, 1)
-	r0OracleCommitment := commitmentFromElements(r0OracleBaseValues)
-	r0PublicExtValues := []field.Ext{
-		field.UintsToExt(5, 9, 2, 6, 5, 3),
-		field.UintsToExt(5, 8, 9, 7, 9, 3),
-		field.UintsToExt(2, 3, 8, 4, 6, 2),
-		field.UintsToExt(6, 4, 3, 3, 8, 3),
-	}
+	r0Commitment := commitmentFromElements(elems(3, 1, 4, 1))
 	r0BaseCellValue := elem(23)
 	r0ExtCellValue := field.UintsToExt(10, 20, 30, 40, 50, 60)
 
-	r1OracleExtValues := []field.Ext{
+	r1Commitment := commitmentFromExts([]field.Ext{
 		field.UintsToExt(101, 102, 103, 104, 105, 106),
 		field.UintsToExt(201, 202, 203, 204, 205, 206),
 		field.UintsToExt(301, 302, 303, 304, 305, 306),
 		field.UintsToExt(401, 402, 403, 404, 405, 406),
-	}
-	r1OracleCommitment := commitmentFromExts(r1OracleExtValues)
-	r1PublicBaseValues := elems(11, 22, 33, 44)
+	})
 	r1BaseCellValue := elem(77)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(r0OracleCommitmentColumn, concreteBase(r0OracleCommitment[:]))
-	rt.AssignColumn(r0PublicExt, concreteExt(r0PublicExtValues))
+	rt.Commitments[r0.ID] = r0Commitment
 	rt.AssignCell(r0BaseCell, field.ElemFromBase(r0BaseCellValue))
 	rt.AssignCell(r0ExtCell, field.ElemFromExt(r0ExtCellValue))
 	rt.AdvanceRound()
@@ -499,8 +474,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 		rt.GetCoinValue(r1CoinB).AsExt(),
 	}
 
-	rt.AssignColumn(r1OracleCommitmentColumn, concreteBase(r1OracleCommitment[:]))
-	rt.AssignColumn(r1PublicBase, concreteBase(r1PublicBaseValues))
+	rt.Commitments[r1.ID] = r1Commitment
 	rt.AssignCell(r1BaseCell, field.ElemFromBase(r1BaseCellValue))
 	rt.AdvanceRound()
 	r2Coins := []field.Ext{rt.GetCoinValue(r2Coin).AsExt()}
@@ -508,10 +482,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 	return []runtimeTraceCase{{
 		rounds: []runtimeTraceRound{
 			{
-				columns: []runtimeTraceColumn{
-					{commitments: []field.Octuplet{r0OracleCommitment}},
-					{publicExtValues: r0PublicExtValues},
-				},
+				commitment: &r0Commitment,
 				cells: []runtimeTraceCell{
 					baseTraceCell(r0BaseCellValue),
 					extTraceCell(r0ExtCellValue),
@@ -519,10 +490,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 				expectedCoins: r1Coins,
 			},
 			{
-				columns: []runtimeTraceColumn{
-					{commitments: []field.Octuplet{r1OracleCommitment}},
-					{publicBaseValues: r1PublicBaseValues},
-				},
+				commitment: &r1Commitment,
 				cells: []runtimeTraceCell{
 					baseTraceCell(r1BaseCellValue),
 				},
@@ -534,11 +502,9 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 
 func writeRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound) {
 	fmt.Fprintln(out, "        .{")
-	fmt.Fprintln(out, "            .columns = &.{")
-	for _, column := range round.columns {
-		writeTraceColumn(out, column, "                ")
+	if round.commitment != nil {
+		fmt.Fprintf(out, "            .commitment = %s,\n", oct8(*round.commitment))
 	}
-	fmt.Fprintln(out, "            },")
 	fmt.Fprintln(out, "            .cells = &.{")
 	for _, cell := range round.cells {
 		writeTraceCell(out, cell, "                ")
@@ -820,8 +786,8 @@ func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
 	for i := range tCols {
-		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
-		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), r0)
+		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), r0)
 		tTableView[i] = tCols[i].View()
 		sTableView[i] = sCols[i].View()
 	}
@@ -859,7 +825,7 @@ func buildLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("lagrange-sel")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	selector := wiop.NewLagrangeSelector(mod, 1)
 	value := wiop.NewConstantField(elem(99))
 	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
@@ -880,7 +846,7 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("lagrange-sel-dyn")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	selector := wiop.NewLagrangeSelector(mod, 1)
 	value := wiop.NewConstantField(elem(99))
 	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
@@ -945,7 +911,7 @@ func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, 
 	sys := wiop.NewSystemf("dyn-fib-multisize")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("fib"),
 		wiop.Sub(
@@ -987,14 +953,14 @@ func addMultiSizeTwoDynModules(reg func(source, name string, sys *wiop.System, h
 	r0 := sys.NewRound()
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), r0)
 	modA.NewVanishing(
 		sys.Context.Childf("fibA"),
 		wiop.Sub(wiop.Sub(colA.View(), colA.View().Shift(-1)), colA.View().Shift(-2)),
 	)
 
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colB := modB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), r0)
 	modB.NewVanishing(
 		sys.Context.Childf("fibB"),
 		wiop.Sub(wiop.Sub(colB.View(), colB.View().Shift(-1)), colB.View().Shift(-2)),
@@ -1042,27 +1008,17 @@ func dynamicModuleSizes(sys *wiop.System, rt *wiop.Runtime) []int {
 
 func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTraceRound {
 	var trace runtimeTraceRound
-	// A committed (interactive PCS) round carries its Merkle root as a single
-	// oracle commitment, absorbed by the verifier in place of the now-hidden
-	// columns — mirroring prover-ray's AdvanceRound. This is the octuplet the PCS
-	// batch root binds to (see codegen.PcsBatchRoot / verifier.resolveRoots).
+	// A committed (interactive PCS) round carries its Merkle root as the sole
+	// verifier-visible message for that round, absorbed by AdvanceRound in place
+	// of the round's columns (which never travel raw). Columns themselves are
+	// never part of the trace — see prover-ray's wiop_prove_verify.go Proof
+	// comment: binding them is the commitment scheme's job, not the transcript's.
 	if round.HasCommitment {
 		root, ok := rt.Commitments[round.ID]
 		if !ok {
 			panic(fmt.Sprintf("round %d HasCommitment but no root in runtime", round.ID))
 		}
-		trace.columns = append(trace.columns, runtimeTraceColumn{commitments: []field.Octuplet{root}})
-	}
-	for _, col := range round.Columns {
-		if col.Visibility < wiop.VisibilityOracle || !rt.HasColumnAssignment(col) {
-			continue
-		}
-		vec := rt.GetColumnAssignment(col).Plain
-		if vec.IsBase() {
-			trace.columns = append(trace.columns, runtimeTraceColumn{publicBaseValues: append([]field.Element(nil), vec.AsBase()...)})
-		} else {
-			trace.columns = append(trace.columns, runtimeTraceColumn{publicExtValues: append([]field.Ext(nil), vec.AsExt()...)})
-		}
+		trace.commitment = &root
 	}
 	for _, cell := range round.Cells {
 		if !rt.HasCellValue(cell) {
@@ -1115,9 +1071,8 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
-	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };")
+	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };")
 	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
 	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
@@ -1162,30 +1117,15 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 
 func writeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
 	fmt.Fprintf(out, "%s.{\n", indent)
-	fmt.Fprintf(out, "%s    .columns = &.{\n", indent)
-	for _, column := range round.columns {
-		writeTraceColumn(out, column, indent+"        ")
+	if round.commitment != nil {
+		fmt.Fprintf(out, "%s    .commitment = %s,\n", indent, oct8(*round.commitment))
 	}
-	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .cells = &.{\n", indent)
 	for _, cell := range round.cells {
 		writeTraceCell(out, cell, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s},\n", indent)
-}
-
-func writeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
-	switch {
-	case column.commitments != nil:
-		fmt.Fprintf(out, "%s.{ .oracle = &%s },\n", indent, commitmentSlice(column.commitments))
-	case column.publicBaseValues != nil:
-		fmt.Fprintf(out, "%s.{ .public_base = &%s },\n", indent, elemSlice(column.publicBaseValues))
-	case column.publicExtValues != nil:
-		fmt.Fprintf(out, "%s.{ .public_ext = &%s },\n", indent, extSlice(column.publicExtValues))
-	default:
-		panic("runtime trace column has no data variant")
-	}
 }
 
 func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
@@ -1314,8 +1254,12 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	}
 
 	fmt.Fprintf(out, "const %s_rounds = [_]protocol.RoundMessage{\n", prefix)
-	for roundIdx := range proof.rounds {
-		fmt.Fprintf(out, "    .{ .columns = &%s_round_%d_columns, .cells = &%s_round_%d_cells },\n", prefix, roundIdx, prefix, roundIdx)
+	for roundIdx, round := range proof.rounds {
+		if round.commitment != nil {
+			fmt.Fprintf(out, "    .{ .commitment = %s, .cells = &%s_round_%d_cells },\n", commitmentValueLiteral(*round.commitment), prefix, roundIdx)
+		} else {
+			fmt.Fprintf(out, "    .{ .cells = &%s_round_%d_cells },\n", prefix, roundIdx)
+		}
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
@@ -1335,43 +1279,6 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 }
 
 func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round runtimeTraceRound) {
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicBaseValues {
-				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicExtValues {
-				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		}
-	}
-
-	fmt.Fprintf(out, "const %s_round_%d_columns = [_]protocol.ColumnMessage{\n", prefix, roundIdx)
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.commitments != nil:
-			for _, value := range column.commitments {
-				fmt.Fprintf(out, "    .{ .oracle_commitment = %s },\n", commitmentValueLiteral(value))
-			}
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .base = &%s_round_%d_column_%d_base } },\n", prefix, roundIdx, columnIdx)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .ext = &%s_round_%d_column_%d_ext } },\n", prefix, roundIdx, columnIdx)
-		default:
-			panic("runtime trace column has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
 	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
 	for _, cell := range round.cells {
 		switch {
@@ -1556,10 +1463,6 @@ func concreteBase(values []field.Element) *wiop.ConcreteVector {
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(values)}
 }
 
-func concreteExt(values []field.Ext) *wiop.ConcreteVector {
-	return &wiop.ConcreteVector{Plain: field.VecFromExt(values)}
-}
-
 func octuplet(values ...uint64) field.Octuplet {
 	if len(values) != 8 {
 		panic("octuplet requires 8 values")
@@ -1625,14 +1528,6 @@ func extSlice(values []field.Ext) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
 		parts[i] = ext6(value)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
-}
-
-func commitmentSlice(values []field.Octuplet) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = oct8(value)
 	}
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }

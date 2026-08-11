@@ -202,24 +202,22 @@ fn routeClaims(
 
 /// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
 /// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
-/// interactive batch's root is the sole oracle commitment of the round message it
-/// names (the same octuplet absorbed to derive zeta); a precomputed batch's root
-/// is the compile-time constant. This is the verifier-ray analogue of prover-ray's
+/// interactive batch's root is the commitment of the round message it names
+/// (the same octuplet absorbed to derive zeta); a precomputed batch's root is
+/// the compile-time constant. This is the verifier-ray analogue of prover-ray's
 /// `collectRoots` reading `rt.Commitments`, so the root a batch is authenticated
 /// against is provably the one zeta is bound to.
 ///
 /// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
-/// name a round message that exists and carries exactly one oracle commitment;
-/// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
-/// an out-of-bounds panic or a silently mis-bound root.
+/// name a round message that exists and carries a commitment; otherwise the
+/// PCS/protocol metadata disagree — surfaced as an error rather than an
+/// out-of-bounds panic or a silently mis-bound root.
 ///
-/// A committed round can never carry public columns alongside its commitment:
-/// prover-ray's `hideCommittedColumns` (wiop/compilers/pcs/pcs.go) panics at
-/// compile time if a committed round holds a `VisibilityPublic` column, and
-/// otherwise rewrites all of that round's columns to `VisibilityInternal`
-/// before the transcript ever absorbs them. So a committed round's message is
-/// provably root-only — `cols.len != 1` below is asserting that invariant, not
-/// over-rejecting a legal mixed-visibility round.
+/// prover-ray columns never travel raw (see wiop_prove_verify.go's Proof
+/// comment): a round is either committed, in which case its message carries
+/// exactly that one root, or it isn't, in which case `commitment` is null. So
+/// `RoundMessage.commitment == null` below directly reflects "this round has no
+/// batch root," not an ambiguous case to disambiguate at runtime.
 fn resolveRoots(
     batch_roots: []const pcs.BatchRoot,
     rounds: []const protocol.RoundMessage,
@@ -231,15 +229,7 @@ fn resolveRoots(
             .precomputed => |root| slot.* = root,
             .round => |round_index| {
                 if (round_index >= rounds.len) return error.BatchRootMismatch;
-                const cols = rounds[round_index].columns;
-                // A committed interactive round carries exactly one oracle
-                // commitment (its batch Merkle root); anything else is a metadata
-                // mismatch, not an honest proof.
-                if (cols.len != 1) return error.BatchRootMismatch;
-                switch (cols[0]) {
-                    .oracle_commitment => |root| slot.* = root,
-                    .public_column => return error.BatchRootMismatch,
-                }
+                slot.* = rounds[round_index].commitment orelse return error.BatchRootMismatch;
             },
         }
     }
