@@ -36,32 +36,9 @@ type CommitterState struct {
 	Tree *Tree
 }
 
-// CommitOption customizes [Commit].
-type CommitOption func(*commitConfig)
-
-type commitConfig struct {
-	consumeWitness bool
-}
-
-// WithConsumeWitness transfers ownership of the witness columns to Commit:
-// each plaintext column is released as soon as its codeword is computed, so
-// the witness and its full encoding never coexist and peak memory drops by
-// roughly the witness size on large batches. The caller must not use the
-// witness table after the call. The plaintext values remain available: for a
-// rate-two code the first half of every codeword is exactly the bit-reversed
-// plaintext column.
-func WithConsumeWitness() CommitOption {
-	return func(cfg *commitConfig) { cfg.consumeWitness = true }
-}
-
 // Commit commits to a sorted list of tables. The table must satisfy the format
 // expected by [MultiSizeTable.checkWellFormedness] with a K of 1.
-func Commit(encoders []*RSEncoder, witness MultiSizeTable, opts ...CommitOption) CommitterState {
-
-	var cfg commitConfig
-	for _, opt := range opts {
-		opt(&cfg)
-	}
+func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	k, err := witness.checkWellFormedness()
 	if err != nil {
@@ -72,7 +49,7 @@ func Commit(encoders []*RSEncoder, witness MultiSizeTable, opts ...CommitOption)
 		panic("k must be one")
 	}
 
-	encoded := witness.encode(encoders, cfg.consumeWitness)
+	encoded := witness.Encode(encoders)
 	tree := encoded.Merkleize()
 
 	return CommitterState{
@@ -87,14 +64,6 @@ func Commit(encoders []*RSEncoder, witness MultiSizeTable, opts ...CommitOption)
 // The function expects that the encoder is well-formed: see
 // [assertValidMultiEncoder].
 func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
-	return table.encode(encoders, false)
-}
-
-// encode implements Encode; when consume is true, every plaintext column is
-// released (set to nil in the caller's table) as soon as its codeword is
-// computed, bounding the memory held jointly by witness and encoding.
-func (table MultiSizeTable) encode(encoders []*RSEncoder, consume bool) MultiSizeTable {
-
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
@@ -131,14 +100,8 @@ func (table MultiSizeTable) encode(encoders []*RSEncoder, consume bool) MultiSiz
 			it := work[w]
 			if it.ext {
 				encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
-				if consume {
-					table[it.i].Ext[it.k] = nil
-				}
 			} else {
 				encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
-				if consume {
-					table[it.i].Base[it.k] = nil
-				}
 			}
 		}
 	})
@@ -188,6 +151,9 @@ func (table MultiSizeTable) Merkleize() *Tree {
 			continue
 		}
 		s := table[i].Size()
+		if s == 1 {
+			continue
+		}
 		digests := make([]field.Octuplet, s/2)
 		hashSizedLeaves(table[i], true, digests)
 		upperLeaves[utils.Log2Ceil(s/2)] = digests

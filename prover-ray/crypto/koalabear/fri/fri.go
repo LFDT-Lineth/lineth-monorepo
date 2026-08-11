@@ -655,14 +655,27 @@ func octupletToExt(o field.Octuplet) (field.Ext, error) {
 // extLimbs returns an extension's six base-field coordinates in the canonical
 // order every Merkle leaf and octuplet packing uses. It is the single source
 // of truth for that layout: writeRowElements, writeRowOpeningElements,
-// leafLayout.writeRow, and buildTreeExt all route through it, since a
-// divergence here would silently break Merkle-root reconstruction.
+// leafLayout.writeRow, buildTreeExt, and mapExtToOctuplet all route through it,
+// since a divergence here would silently break Merkle-root reconstruction.
 func extLimbs(e field.Ext) [6]field.Element {
 	return [6]field.Element{
 		e.B0.A0, e.B0.A1,
 		e.B1.A0, e.B1.A1,
 		e.B2.A0, e.B2.A1,
 	}
+}
+
+// mapExtToOctuplet converts a slice of field extensions into a slice of
+// octuplets, packing each extension's six coordinates into the first six
+// octuplet entries and leaving coordinates 6 and 7 zero. It is the slice-wise
+// inverse of octupletToExt.
+func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
+	res := make([]field.Octuplet, len(exts))
+	for i := range exts {
+		limbs := extLimbs(exts[i])
+		copy(res[i][:], limbs[:])
+	}
+	return res
 }
 
 // openRunningQueryExt builds the Merkle opening data for query index s across

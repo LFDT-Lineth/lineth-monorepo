@@ -558,8 +558,8 @@ type Challenges struct {
 // It is a convenience wrapper around the package-level Commit. It does not
 // register an opening; pass the returned state to AddOpening when this
 // commitment should contribute to the next opening proof.
-func (pcs *PCS) Commit(witness MultiSizeTable, opts ...CommitOption) CommitterState {
-	return Commit(pcs.Encoders, witness, opts...)
+func (pcs *PCS) Commit(witness MultiSizeTable) CommitterState {
+	return Commit(pcs.Encoders, witness)
 }
 
 // AddOpening registers one committed batch to be opened at zeta with the given
