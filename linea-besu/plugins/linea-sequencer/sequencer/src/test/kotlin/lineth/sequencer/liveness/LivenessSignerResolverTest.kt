@@ -9,10 +9,9 @@
 package lineth.sequencer.liveness
 
 import linea.crypto.Secp256k1Signature
-import linea.crypto.Signer
 import lineth.config.LineaLivenessServiceConfiguration
 import lineth.config.LineaLivenessServiceConfiguration.SignerType
-import lineth.signing.NamedSignerProviderService
+import lineth.signing.SignerService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.plugin.ServiceManager
@@ -27,33 +26,14 @@ import java.util.Optional
 
 class LivenessSignerResolverTest {
   @Test
-  fun `rejects missing custom signer provider`() {
+  fun `rejects missing custom signer service`() {
     val serviceManager = FakeServiceManager()
 
     assertThatThrownBy {
       LivenessSignerResolver(serviceManager).resolve(customConfig(SIGNER_ADDRESS))
     }
       .isInstanceOf(IllegalStateException::class.java)
-      .hasMessageContaining("No NamedSignerProviderService")
-      .hasMessageContaining(SIGNER_NAME)
-  }
-
-  @Test
-  fun `propagates unknown signer name from provider`() {
-    val serviceManager =
-      FakeServiceManager()
-        .withService(
-          NamedSignerProviderService::class.java,
-          NamedSignerProviderService { name ->
-            throw IllegalArgumentException("Unknown AWS KMS signer: $name")
-          },
-        )
-
-    assertThatThrownBy {
-      LivenessSignerResolver(serviceManager).resolve(customConfig(SIGNER_ADDRESS))
-    }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("Unknown AWS KMS signer: $SIGNER_NAME")
+      .hasMessageContaining("No SignerService")
   }
 
   @Test
@@ -94,21 +74,20 @@ class LivenessSignerResolverTest {
   private fun customConfig(address: String): LineaLivenessServiceConfiguration =
     LineaLivenessServiceConfiguration.builder()
       .signerType(SignerType.CUSTOM)
-      .signerName(SIGNER_NAME)
       .signerAddress(address)
       .build()
 
   private fun serviceManagerReturning(
-    signer: Signer<Secp256k1Signature>,
+    signer: SignerService,
   ): ServiceManager =
     FakeServiceManager()
       .withService(
-        NamedSignerProviderService::class.java,
-        NamedSignerProviderService { signer },
+        SignerService::class.java,
+        signer,
       )
 
-  private fun signer(publicKey: ByteArray): Signer<Secp256k1Signature> =
-    object : Signer<Secp256k1Signature> {
+  private fun signer(publicKey: ByteArray): SignerService =
+    object : SignerService {
       override fun publicKey(): ByteArray = publicKey.clone()
 
       override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> =
@@ -132,7 +111,6 @@ class LivenessSignerResolverTest {
   }
 
   private companion object {
-    const val SIGNER_NAME = "liveness"
     val PUBLIC_KEY: ByteArray =
       Numeric.toBytesPadded(ECKeyPair.create(BigInteger.ONE).publicKey, 64)
     val SIGNER_ADDRESS: String =

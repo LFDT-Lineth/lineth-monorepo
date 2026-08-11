@@ -10,8 +10,7 @@
 package lineth.plugin.acc.test.signer
 
 import linea.crypto.Secp256k1Signature
-import linea.crypto.Signer
-import lineth.signing.NamedSignerProviderService
+import lineth.signing.SignerService
 import org.hyperledger.besu.plugin.BesuPlugin
 import org.hyperledger.besu.plugin.ServiceManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -21,8 +20,8 @@ import java.util.HexFormat
 class PackagedLineaSignerPlugin : BesuPlugin {
   override fun register(serviceManager: ServiceManager) {
     serviceManager.addService(
-      NamedSignerProviderService::class.java,
-      TestNamedSignerProviderService(),
+      SignerService::class.java,
+      TestSignerService(),
     )
   }
 
@@ -30,14 +29,7 @@ class PackagedLineaSignerPlugin : BesuPlugin {
 
   override fun stop() = Unit
 
-  private class TestNamedSignerProviderService : NamedSignerProviderService {
-    override fun get(name: String): Signer<Secp256k1Signature> {
-      require(name == SIGNER_NAME) { "Unknown test signer: $name" }
-      return TestSigner()
-    }
-  }
-
-  private class TestSigner : Signer<Secp256k1Signature> {
+  private class TestSignerService : SignerService {
     override fun publicKey(): ByteArray = PUBLIC_KEY.clone()
 
     override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> =
@@ -48,7 +40,6 @@ class PackagedLineaSignerPlugin : BesuPlugin {
 
   companion object {
     const val PLUGIN_NAME = "PackagedLineaSignerPlugin"
-    const val SIGNER_NAME = "liveness-test"
     val PUBLIC_KEY: ByteArray =
       HexFormat.of()
         .parseHex(

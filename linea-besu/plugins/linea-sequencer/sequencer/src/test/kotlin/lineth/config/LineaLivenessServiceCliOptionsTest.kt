@@ -51,7 +51,6 @@ class LineaLivenessServiceCliOptionsTest {
     val config = options.toDomainObject()
 
     assertThat(config.signerType()).isEqualTo(SignerType.WEB3SIGNER)
-    assertThat(config.signerName()).isNull()
   }
 
   @Test
@@ -70,7 +69,7 @@ class LineaLivenessServiceCliOptionsTest {
   }
 
   @Test
-  fun `accepts custom signer name without Web3Signer options`() {
+  fun `accepts custom signer without Web3Signer options`() {
     commandLine.parseArgs(
       "--plugin-linea-liveness-enabled",
       "--plugin-linea-liveness-contract-address",
@@ -79,31 +78,11 @@ class LineaLivenessServiceCliOptionsTest {
       SIGNER_ADDRESS,
       "--plugin-linea-liveness-signer-type",
       "CUSTOM",
-      "--plugin-linea-liveness-signer-name",
-      "liveness",
     )
 
     val config = options.toDomainObject()
 
     assertThat(config.signerType()).isEqualTo(SignerType.CUSTOM)
-    assertThat(config.signerName()).isEqualTo("liveness")
-  }
-
-  @Test
-  fun `rejects custom signer without name`() {
-    commandLine.parseArgs(
-      "--plugin-linea-liveness-enabled",
-      "--plugin-linea-liveness-contract-address",
-      CONTRACT_ADDRESS,
-      "--plugin-linea-liveness-signer-address",
-      SIGNER_ADDRESS,
-      "--plugin-linea-liveness-signer-type",
-      "CUSTOM",
-    )
-
-    assertThatExceptionOfType(IllegalArgumentException::class.java)
-      .isThrownBy { options.toDomainObject() }
-      .withMessageContaining("--plugin-linea-liveness-signer-name")
   }
 
   @Test
@@ -116,8 +95,6 @@ class LineaLivenessServiceCliOptionsTest {
       SIGNER_ADDRESS,
       "--plugin-linea-liveness-signer-type",
       "CUSTOM",
-      "--plugin-linea-liveness-signer-name",
-      "liveness",
       "--plugin-linea-liveness-signer-url",
       "http://localhost:9000",
     )

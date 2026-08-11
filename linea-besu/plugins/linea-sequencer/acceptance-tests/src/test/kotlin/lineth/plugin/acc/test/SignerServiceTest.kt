@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 @Tag("AcceptanceTest")
-class NamedSignerProviderServiceTest : LineaPluginTestBase() {
+class SignerServiceTest : LineaPluginTestBase() {
   override fun requestedPlugins(): List<String> =
     DEFAULT_REQUESTED_PLUGINS +
       "PackagedLineaSignerPlugin"
@@ -26,7 +26,6 @@ class NamedSignerProviderServiceTest : LineaPluginTestBase() {
         "0x0000000000000000000000000000000000000001",
       )
       .set("--plugin-linea-liveness-signer-type=", "CUSTOM")
-      .set("--plugin-linea-liveness-signer-name=", "liveness-test")
       .set(
         "--plugin-linea-liveness-signer-address=",
         "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",

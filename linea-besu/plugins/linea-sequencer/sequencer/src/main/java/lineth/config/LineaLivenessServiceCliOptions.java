@@ -34,7 +34,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
   public static final String CONTRACT_ADDRESS = "--plugin-linea-liveness-contract-address";
 
   public static final String SIGNER_TYPE = "--plugin-linea-liveness-signer-type";
-  public static final String SIGNER_NAME = "--plugin-linea-liveness-signer-name";
   public static final String SIGNER_URL = "--plugin-linea-liveness-signer-url";
   public static final String SIGNER_KEY_ID = "--plugin-linea-liveness-signer-key-id";
   public static final String SIGNER_ADDRESS = "--plugin-linea-liveness-signer-address";
@@ -101,14 +100,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
       description = "Liveness transaction signer type (default: ${DEFAULT-VALUE})",
       defaultValue = "WEB3SIGNER")
   private SignerType signerType = SignerType.WEB3SIGNER;
-
-  @Option(
-      names = {SIGNER_NAME},
-      hidden = true,
-      paramLabel = "<NAME>",
-      description = "Logical signer name resolved by a custom signer provider",
-      arity = "1")
-  private String signerName = null;
 
   @Option(
       names = {SIGNER_URL},
@@ -226,7 +217,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
     options.bundleMaxTimestampSurplusSecond = config.bundleMaxTimestampSurplusSecond;
     options.contractAddress = config.contractAddress;
     options.signerType = config.signerType;
-    options.signerName = config.signerName;
     options.signerUrl = config.signerUrl;
     options.signerKeyId = config.signerKeyId;
     options.signerAddress = config.signerAddress;
@@ -304,7 +294,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .bundleMaxTimestampSurplusSecond(Duration.ofSeconds(bundleMaxTimestampSurplusSecond))
         .contractAddress(contractAddress)
         .signerType(signerType)
-        .signerName(signerName)
         .signerUrl(signerUrl)
         .signerKeyId(signerKeyId)
         .signerAddress(signerAddress)
@@ -326,7 +315,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .add(BUNDLE_MAX_TIMESTAMP_SURPLUS_SECONDS, bundleMaxTimestampSurplusSecond)
         .add(CONTRACT_ADDRESS, contractAddress)
         .add(SIGNER_TYPE, signerType)
-        .add(SIGNER_NAME, signerName)
         .add(SIGNER_URL, signerUrl)
         .add(SIGNER_KEY_ID, signerKeyId)
         .add(SIGNER_ADDRESS, signerAddress)
@@ -357,17 +345,9 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         throw new IllegalArgumentException(
             "Error: " + SIGNER_KEY_ID + " contains unsupported characters");
       }
-      if (signerName != null) {
-        throw new IllegalArgumentException(
-            "Error: " + SIGNER_NAME + " is only valid for CUSTOM signers");
-      }
       return;
     }
 
-    if (signerName == null || signerName.isBlank()) {
-      throw new IllegalArgumentException(
-          "Error: " + SIGNER_NAME + " is required for CUSTOM signers");
-    }
     if (signerUrl != null || signerKeyId != null || tlsEnabled || hasTlsOptions()) {
       throw new IllegalArgumentException(
           "Error: Web3Signer URL, key ID, and TLS options are not valid for CUSTOM signers");

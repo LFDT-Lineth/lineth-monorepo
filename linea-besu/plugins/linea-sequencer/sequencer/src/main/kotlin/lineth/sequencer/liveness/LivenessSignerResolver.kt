@@ -12,7 +12,7 @@ import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import lineth.config.LineaLivenessServiceConfiguration
 import lineth.config.LineaLivenessServiceConfiguration.SignerType
-import lineth.signing.NamedSignerProviderService
+import lineth.signing.SignerService
 import org.hyperledger.besu.plugin.ServiceManager
 import org.web3j.crypto.Keys
 import org.web3j.utils.Numeric
@@ -28,13 +28,12 @@ class LivenessSignerResolver(private val serviceManager: ServiceManager) {
         SignerType.WEB3SIGNER -> Web3SignerDigestSigner(configuration)
         SignerType.CUSTOM ->
           serviceManager
-            .getService(NamedSignerProviderService::class.java)
+            .getService(SignerService::class.java)
             .orElseThrow {
               IllegalStateException(
-                "No NamedSignerProviderService is registered for CUSTOM signer " +
-                  "'${configuration.signerName()}'",
+                "No SignerService is registered for CUSTOM liveness signing",
               )
-            }[configuration.signerName()]
+            }
       }
 
     validateSigner(configuration, signer)
@@ -53,13 +52,9 @@ class LivenessSignerResolver(private val serviceManager: ServiceManager) {
 
     val derivedAddress = Numeric.prependHexPrefix(Keys.getAddress(BigInteger(1, publicKey)))
     require(derivedAddress.equals(configuration.signerAddress(), ignoreCase = true)) {
-      val signerIdentifier =
-        when (configuration.signerType()) {
-          SignerType.WEB3SIGNER -> configuration.signerKeyId()
-          SignerType.CUSTOM -> configuration.signerName()
-        }
-      "Configured liveness signer address does not match ${configuration.signerType()} signer " +
-        "'$signerIdentifier'"
+      val signerIdentifier = configuration.signerKeyId()?.let { " '$it'" }.orEmpty()
+      "Configured liveness signer address does not match " +
+        "${configuration.signerType()} signer$signerIdentifier"
     }
   }
 
