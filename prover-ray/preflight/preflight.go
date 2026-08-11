@@ -3,11 +3,10 @@
 //
 // [Run] takes the full collection of bus input sets S_1 … S_n — one per shard —
 // commits to each with FRI (obtaining Merkle roots R_1 … R_n), maps each root
-// through an [AdditiveHasher] (landing in a commutative group), accumulates the
-// sum A = Σ AdditiveHash(R_i), and converts A to a [field.Octuplet] via
-// [AdditiveHasher.ToSeed]. Because the group operation is commutative, the
-// result does not depend on the order the sets are processed in, so no
-// coordinator has to impose one.
+// into the multiset-hash group, sums them, and compresses the sum to a
+// [field.Octuplet]. Because the group operation is commutative, the result does
+// not depend on the order the sets are processed in, so no coordinator has to
+// impose one.
 //
 // This runs in the orchestrator, once, before any shard proof is produced — not
 // inside a proof. It cannot run inside one: it consumes every shard's data,
@@ -19,7 +18,20 @@ package preflight
 
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+)
+
+// The multiset hash provides the commutative group the roots are accumulated in:
+// [Hash] maps a root into the group, [Combine] is the group operation,
+// [Identity] is the neutral element and [ToSeed] compresses a group element back
+// to an octuplet. They are re-exported here so that callers reproducing γ do not
+// have to know which concrete multiset hash backs it.
+var (
+	Hash     = multisethashing.Hash
+	Combine  = multisethashing.Combine
+	Identity = multisethashing.Identity
+	ToSeed   = multisethashing.ToSeed
 )
 
 // BusInputSet bundles one logical cross-shard column fragment with the RS
@@ -38,20 +50,17 @@ type BusInputSet struct {
 // participating shard.
 //
 // For each set s it commits to s.Table using s.Encoders (obtaining a Merkle
-// root), maps the root through hasher.Hash, and accumulates the results with
-// hasher.Combine. The final accumulated value is converted to a [field.Octuplet]
-// via hasher.ToSeed.
+// root) and accumulates the root; the final accumulated value is compressed
+// into the returned octuplet.
 //
-// The result is deterministic and order-independent as long as hasher.Combine
-// is commutative and associative. Callers must pass the sets of *all* shards:
-// a γ computed from a subset binds only that subset, and the shards left out
-// would be proving against a seed unrelated to their own data.
-func Run[P any](sets []BusInputSet, hasher AdditiveHasher[P]) field.Octuplet {
-	acc := hasher.Identity()
+// The result is deterministic and order-independent. Callers must pass the sets
+// of *all* shards: a γ computed from a subset binds only that subset, and the
+// shards left out would be proving against a seed unrelated to their own data.
+func Run(sets []BusInputSet) field.Octuplet {
+	acc := Identity()
 	for _, s := range sets {
 		cs := fri.Commit(s.Encoders, s.Table)
-		a := hasher.Hash(cs.Tree.Root())
-		acc = hasher.Combine(acc, a)
+		acc = Combine(acc, Hash(cs.Tree.Root()))
 	}
-	return hasher.ToSeed(acc)
+	return ToSeed(acc)
 }
