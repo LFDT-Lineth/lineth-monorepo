@@ -17,7 +17,6 @@ pub const system_0_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "bool-col"
@@ -121,7 +120,6 @@ pub const system_1_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "fib"
@@ -229,7 +227,6 @@ pub const system_2_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "geo"
@@ -335,7 +332,6 @@ pub const system_3_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "ctr"
@@ -443,7 +439,6 @@ pub const system_4_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "pyth"
@@ -554,7 +549,6 @@ pub const system_5_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "dyn-fib"
@@ -662,7 +656,6 @@ pub const system_6_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "const-col"
@@ -764,7 +757,6 @@ pub const system_7_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "fwd-shift"
@@ -868,7 +860,6 @@ pub const system_8_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "bool-cube"
@@ -976,7 +967,6 @@ pub const system_9_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lin-comb"
@@ -1088,7 +1078,6 @@ pub const system_10_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "fib-16"
@@ -1196,7 +1185,6 @@ pub const system_11_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "same-ratio"
@@ -1304,7 +1292,6 @@ pub const system_12_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "mixed-ratio"
@@ -1414,7 +1401,6 @@ pub const system_13_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "multi-mod"
@@ -1540,7 +1526,6 @@ pub const system_14_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "manual-cxl"
@@ -1646,7 +1631,6 @@ pub const system_15_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "pre-sel"
@@ -1752,7 +1736,6 @@ pub const system_16_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "cell-leaf"
@@ -1858,7 +1841,6 @@ pub const system_17_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "coin-scaled"
@@ -1972,7 +1954,6 @@ pub const system_18_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "step3"
@@ -2080,7 +2061,6 @@ pub const system_19_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "quartic"
@@ -2194,7 +2174,6 @@ pub const system_20_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "dyn-leftpad"
@@ -2298,7 +2277,6 @@ pub const system_21_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "cube-shift"
@@ -2408,7 +2386,6 @@ pub const system_22_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "mixed-hi-ratio"
@@ -2538,7 +2515,6 @@ pub const system_23_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "multi-mod-hi-ratio"
@@ -2674,7 +2650,6 @@ pub const system_24_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "cube-32"
@@ -2782,7 +2757,6 @@ pub const system_25_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "fwd-shift-3"
@@ -2886,7 +2860,6 @@ pub const system_26_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "two-shift"
@@ -2996,7 +2969,6 @@ pub const system_27_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "dyn-quad"
@@ -3100,7 +3072,6 @@ pub const system_28_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "quartic-shift"
@@ -3218,7 +3189,6 @@ pub const system_29_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "dyn-fib-multisize"
@@ -3298,7 +3268,6 @@ pub const system_30_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 2,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "dyn-fib-two-modules"
@@ -3402,7 +3371,6 @@ pub const system_31_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-ones"
@@ -3514,7 +3482,6 @@ pub const system_32_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-partial"
@@ -3637,7 +3604,6 @@ pub const system_33_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-zeros"
@@ -3760,7 +3726,6 @@ pub const system_34_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-maskzero"
@@ -3884,7 +3849,6 @@ pub const system_35_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-pack"
@@ -4076,7 +4040,6 @@ pub const system_36_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-multi-mod"
@@ -4242,7 +4205,6 @@ pub const system_37_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-size1"
@@ -4344,7 +4306,6 @@ pub const system_38_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-cond"
@@ -4527,7 +4488,6 @@ pub const system_39_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-many"
@@ -4791,7 +4751,6 @@ pub const system_40_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-size2"
@@ -4903,7 +4862,6 @@ pub const system_41_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-multi-q"
@@ -5050,7 +5008,6 @@ pub const system_42_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-vec-den"
@@ -5169,7 +5126,6 @@ pub const system_43_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lds-ones-pack"
@@ -5350,7 +5306,6 @@ pub const system_44_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-simple"
@@ -5532,7 +5487,6 @@ pub const system_45_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-filterA"
@@ -5719,7 +5673,6 @@ pub const system_46_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-filterT"
@@ -5918,7 +5871,6 @@ pub const system_47_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-double"
@@ -6122,7 +6074,6 @@ pub const system_48_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-multi-col"
@@ -6322,7 +6273,6 @@ pub const system_49_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-shared"
@@ -6557,7 +6507,6 @@ pub const system_50_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5, 6 },
     .total_round_coins = 6,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-distinct"
@@ -6848,7 +6797,6 @@ pub const system_51_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-multi-filterT"
@@ -7065,7 +7013,6 @@ pub const system_52_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-repeated"
@@ -7247,7 +7194,6 @@ pub const system_53_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-shift-a"
@@ -7429,7 +7375,6 @@ pub const system_54_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-shift-b"
@@ -7612,7 +7557,6 @@ pub const system_55_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-multi-A"
@@ -7847,7 +7791,6 @@ pub const system_56_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-w3"
@@ -8065,7 +8008,6 @@ pub const system_57_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-size1"
@@ -8222,7 +8164,6 @@ pub const system_58_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-precomp"
@@ -8404,7 +8345,6 @@ pub const system_59_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-rep-s"
@@ -8586,7 +8526,6 @@ pub const system_60_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-empty"
@@ -8773,7 +8712,6 @@ pub const system_61_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "rc-distinct"
@@ -9048,7 +8986,6 @@ pub const system_62_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lagrange-sel"
@@ -9152,7 +9089,6 @@ pub const system_63_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lagrange-sel-dyn"
@@ -9256,7 +9192,6 @@ pub const system_64_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .column_size_max_supported = 4194304,
 };
 
 // scenario: "lk-multi-col-bench"
