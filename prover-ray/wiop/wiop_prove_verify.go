@@ -197,6 +197,9 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	// (power of two, completeness) after the replay.
 	for k, v := range proof.DynamicSizes {
 		rt.dynamicSizes[k] = v
+		if v > ColumnSizeMaxSupported {
+			return fmt.Errorf("wiop: dynamic module size %d exceeds the maximum supported %d", v, ColumnSizeMaxSupported)
+		}
 	}
 
 	// piIdx maps each registered public-input cell to its position in pub. Their
