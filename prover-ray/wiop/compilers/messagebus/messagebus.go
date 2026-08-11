@@ -149,14 +149,14 @@ func Compile(sys *wiop.System) {
 	// ensureRoundAfter reuses any tail round already at this position
 	// rather than appending a duplicate.
 
-	// Find the highest-ID round any participant column touches.
-	maxParticipantRound := latestParticipantRound(byHandle)
-	// Pick the slot directly after the participants — allocate a fresh round
-	// if empty, reuse any round already sitting there. The reuse path is what
-	// lands α/β on the *same* round a sharded caller pre-allocated for a
+	// Pick the slot directly after the participants — allocate a fresh round if
+	// empty, reuse any round already sitting there. The reuse path is what lands
+	// α/β on the *same* round a sharded caller pre-allocated for a
 	// PreSamplingHook, so the hook's SetFSState fires immediately before this
-	// round's coin sampling.
-	coinRound := ensureRoundAfter(sys, maxParticipantRound)
+	// round's coin sampling. Going through ensureCoinRound rather than
+	// open-coding the lookup is what guarantees the caller's pre-allocation and
+	// this one agree: both are the same call.
+	coinRound := ensureCoinRound(sys)
 	// Declare α on that round — sampled by AdvanceRound, after any pre-sampling hook fires.
 	alpha := coinRound.NewCoinField(compCtx.Childf("alpha"))
 	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
@@ -225,24 +225,6 @@ func Compile(sys *wiop.System) {
 			mb.MarkAsReduced()
 		}
 	}
-}
-
-// latestParticipantRound returns the [wiop.Round] with the highest ID among
-// the participant columns of every unreduced MessageBus entry, or nil if no
-// entry references a round-bearing leaf.
-func latestParticipantRound(byHandle map[string][]*wiop.MessageBus) *wiop.Round {
-	var best *wiop.Round
-	update := func(r *wiop.Round) {
-		if r != nil && (best == nil || r.ID > best.ID) {
-			best = r
-		}
-	}
-	for _, entries := range byHandle {
-		for _, mb := range entries {
-			update(mb.Round())
-		}
-	}
-	return best
 }
 
 // ensureRoundAfter returns a round with ID > after.ID, reusing the existing
