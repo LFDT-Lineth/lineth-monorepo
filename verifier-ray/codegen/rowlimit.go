@@ -11,7 +11,7 @@ import (
 // wiop.System, in the form the Zig rowlimit sub-verifier consumes.
 //
 // prover-ray's lookuptologderivsum compiler bin-packs lookups sharing an
-// including (B) table into subgroups, each of which shares a multiplicity
+// includings table into subgroups, each of which shares a multiplicity
 // column M and therefore drains its own MaxLookupRows budget independently
 // (see lookuptologderivsum.RowLimitVerifierAction). Compile-time bin-packing
 // keeps every subgroup under budget using static (maximum) module heights, but
@@ -25,11 +25,11 @@ type RowLimitSystem struct {
 	Checks     []RowLimitCheck
 }
 
-// RowLimitCheck is one subgroup's row-limit check: the included (A-side) and
-// includings (B-side) module partitioning (one ModuleSize per fragment,
-// mirroring RowLimitVerifierAction.IncludedModules/IncludingsModules
-// one-to-one, so a repeated module appears once per fragment exactly as
-// prover-ray's own sum does) and the shared per-side budget.
+// RowLimitCheck is one subgroup's row-limit check: the included and
+// includings module partitioning (one ModuleSize per fragment, mirroring
+// RowLimitVerifierAction.IncludedModules/IncludingsModules one-to-one, so a
+// repeated module appears once per fragment exactly as prover-ray's own sum
+// does) and the shared per-side budget.
 type RowLimitCheck struct {
 	IncludedModules   []ModuleSize
 	IncludingsModules []ModuleSize

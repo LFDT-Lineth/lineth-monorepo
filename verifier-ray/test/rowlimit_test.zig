@@ -11,31 +11,31 @@ const rowlimit = verifier_ray.query.rowlimit;
 // check is what stops a prover from claiming a far larger size than it
 // compiled against.
 
-const static_a: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 4 }};
-const static_b: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 4 }};
-const dynamic_a: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .dynamic = 0 }};
+const static_included: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 4 }};
+const static_includings: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 4 }};
+const dynamic_included: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .dynamic = 0 }};
 
-fn oneCheckSystem(comptime a_modules: []const rowlimit.ModuleSize, comptime b_modules: []const rowlimit.ModuleSize, comptime limit: u64) rowlimit.System {
-    return .{ .checks = &[_]rowlimit.Check{.{ .a_modules = a_modules, .b_modules = b_modules, .limit = limit }} };
+fn oneCheckSystem(comptime included_modules: []const rowlimit.ModuleSize, comptime includings_modules: []const rowlimit.ModuleSize, comptime limit: u64) rowlimit.System {
+    return .{ .checks = &[_]rowlimit.Check{.{ .included_modules = included_modules, .includings_modules = includings_modules, .limit = limit }} };
 }
 
 test "rowlimit accepts a check well under budget" {
-    try rowlimit.verify(oneCheckSystem(static_a, static_b, 1 << 30), &.{});
+    try rowlimit.verify(oneCheckSystem(static_included, static_includings, 1 << 30), &.{});
 }
 
-test "rowlimit rejects an A side reaching the limit" {
+test "rowlimit rejects the included side reaching the limit" {
     try std.testing.expectError(
         error.RowLimitExceeded,
-        rowlimit.verify(oneCheckSystem(static_a, static_b, 4), &.{}),
+        rowlimit.verify(oneCheckSystem(static_included, static_includings, 4), &.{}),
     );
 }
 
-test "rowlimit rejects a B side reaching the limit" {
-    // A side (2) stays under a limit of 4; B side (4) reaches it.
-    const small_a: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 2 }};
+test "rowlimit rejects the includings side reaching the limit" {
+    // The included side (2) stays under a limit of 4; includings (4) reaches it.
+    const small_included: []const rowlimit.ModuleSize = &[_]rowlimit.ModuleSize{.{ .static = 2 }};
     try std.testing.expectError(
         error.RowLimitExceeded,
-        rowlimit.verify(oneCheckSystem(small_a, static_b, 4), &.{}),
+        rowlimit.verify(oneCheckSystem(small_included, static_includings, 4), &.{}),
     );
 }
 
@@ -46,13 +46,13 @@ test "rowlimit sums multiple fragments on the same side" {
     // (the sum reaches the limit) exactly as two separate size-4 fragments would.
     try std.testing.expectError(
         error.RowLimitExceeded,
-        rowlimit.verify(oneCheckSystem(two_fragments, static_b, 4), &.{}),
+        rowlimit.verify(oneCheckSystem(two_fragments, static_includings, 4), &.{}),
     );
 }
 
 test "rowlimit resolves a dynamic module size from module_sizes" {
     // The dynamic module's honest runtime size (4) is well under the limit.
-    try rowlimit.verify(oneCheckSystem(dynamic_a, static_b, 1 << 30), &[_]usize{4});
+    try rowlimit.verify(oneCheckSystem(dynamic_included, static_includings, 1 << 30), &[_]usize{4});
 }
 
 test "rowlimit rejects a dynamic module whose claimed runtime size reaches the limit" {
@@ -61,14 +61,14 @@ test "rowlimit rejects a dynamic module whose claimed runtime size reaches the l
     // the claimed size to anything, so this check is the only thing that catches it.
     try std.testing.expectError(
         error.RowLimitExceeded,
-        rowlimit.verify(oneCheckSystem(dynamic_a, static_b, 1 << 30), &[_]usize{1 << 30}),
+        rowlimit.verify(oneCheckSystem(dynamic_included, static_includings, 1 << 30), &[_]usize{1 << 30}),
     );
 }
 
 test "rowlimit rejects a proof missing a dynamic module's size" {
     try std.testing.expectError(
         error.MissingDynamicModuleSize,
-        rowlimit.verify(oneCheckSystem(dynamic_a, static_b, 1 << 30), &.{}),
+        rowlimit.verify(oneCheckSystem(dynamic_included, static_includings, 1 << 30), &.{}),
     );
 }
 

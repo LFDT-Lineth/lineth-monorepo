@@ -47,17 +47,17 @@ type rowLimitTemplateData struct {
 
 const rowLimitZigTemplate = `{{if .Options.EmitImport}}const rowlimit = {{.Options.Import}};
 
-{{end}}{{range $c, $check := .System.Checks}}const system_{{$.Index}}_rowlimit_check_{{$c}}_a_modules = [_]rowlimit.ModuleSize{
+{{end}}{{range $c, $check := .System.Checks}}const system_{{$.Index}}_rowlimit_check_{{$c}}_included_modules = [_]rowlimit.ModuleSize{
 {{range $check.IncludedModules}}    {{moduleSize .}},
 {{end}}};
 
-const system_{{$.Index}}_rowlimit_check_{{$c}}_b_modules = [_]rowlimit.ModuleSize{
+const system_{{$.Index}}_rowlimit_check_{{$c}}_includings_modules = [_]rowlimit.ModuleSize{
 {{range $check.IncludingsModules}}    {{moduleSize .}},
 {{end}}};
 
 {{end}}// rowlimit system: "{{zig .System.SourceName}}"
 const system_{{.Index}}_rowlimit_checks = [_]rowlimit.Check{
-{{range $c, $check := .System.Checks}}    .{ .a_modules = &system_{{$.Index}}_rowlimit_check_{{$c}}_a_modules, .b_modules = &system_{{$.Index}}_rowlimit_check_{{$c}}_b_modules, .limit = {{$check.Limit}} },
+{{range $c, $check := .System.Checks}}    .{ .included_modules = &system_{{$.Index}}_rowlimit_check_{{$c}}_included_modules, .includings_modules = &system_{{$.Index}}_rowlimit_check_{{$c}}_includings_modules, .limit = {{$check.Limit}} },
 {{end}}};
 
 const system_{{.Index}}_rowlimit = rowlimit.System{ .checks = &system_{{.Index}}_rowlimit_checks };

@@ -14,14 +14,15 @@ pub const ModuleSize = union(enum) {
 };
 
 /// One subgroup's row-limit check: prover-ray's lookuptologderivsum compiler
-/// bin-packs lookups sharing an including (B) table into subgroups that share a
+/// bin-packs lookups sharing an includings table into subgroups that share a
 /// multiplicity column M, so each subgroup drains its own row budget
-/// independently. a_modules/b_modules list one ModuleSize per fragment on each
-/// side (a repeated module appears once per fragment, deliberately
-/// double-counting it — each fragment is its own pass over that module's rows).
+/// independently. included_modules/includings_modules list one ModuleSize per
+/// fragment on each side (a repeated module appears once per fragment,
+/// deliberately double-counting it — each fragment is its own pass over that
+/// module's rows).
 pub const Check = struct {
-    a_modules: []const ModuleSize,
-    b_modules: []const ModuleSize,
+    included_modules: []const ModuleSize,
+    includings_modules: []const ModuleSize,
     limit: u64,
 };
 
@@ -55,10 +56,10 @@ fn sumRows(modules: []const ModuleSize, module_sizes: []const usize) Error!u64 {
 /// overflow the small field the reduced lookup constraints run in.
 pub fn verify(comptime system: System, module_sizes: []const usize) Error!void {
     inline for (system.checks) |check| {
-        const a_rows = try sumRows(check.a_modules, module_sizes);
-        if (a_rows >= check.limit) return error.RowLimitExceeded;
+        const included_rows = try sumRows(check.included_modules, module_sizes);
+        if (included_rows >= check.limit) return error.RowLimitExceeded;
 
-        const b_rows = try sumRows(check.b_modules, module_sizes);
-        if (b_rows >= check.limit) return error.RowLimitExceeded;
+        const includings_rows = try sumRows(check.includings_modules, module_sizes);
+        if (includings_rows >= check.limit) return error.RowLimitExceeded;
     }
 }

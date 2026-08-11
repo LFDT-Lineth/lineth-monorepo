@@ -41,10 +41,10 @@ func TestBuildRowLimitSystemExtractsCheck(t *testing.T) {
 	}
 	check := rl.Checks[0]
 	if len(check.IncludedModules) != 1 || check.IncludedModules[0].Dynamic || check.IncludedModules[0].StaticSize != 4 {
-		t.Fatalf("expected one static A module of size 4, got %+v", check.IncludedModules)
+		t.Fatalf("expected one static included module of size 4, got %+v", check.IncludedModules)
 	}
 	if len(check.IncludingsModules) != 1 || check.IncludingsModules[0].Dynamic || check.IncludingsModules[0].StaticSize != 4 {
-		t.Fatalf("expected one static B module of size 4, got %+v", check.IncludingsModules)
+		t.Fatalf("expected one static includings module of size 4, got %+v", check.IncludingsModules)
 	}
 	if check.Limit != wiop.MaxLookupRows {
 		t.Fatalf("expected limit %d, got %d", wiop.MaxLookupRows, check.Limit)
@@ -87,7 +87,7 @@ func TestBuildRowLimitSystemDynamicModule(t *testing.T) {
 	}
 	check := rl.Checks[0]
 	if len(check.IncludedModules) != 1 || !check.IncludedModules[0].Dynamic || check.IncludedModules[0].DynamicIndex != 0 {
-		t.Fatalf("expected one dynamic A module at index 0, got %+v", check.IncludedModules)
+		t.Fatalf("expected one dynamic included module at index 0, got %+v", check.IncludedModules)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestWriteRowLimitSystemZigRendersCheck(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const rowlimit = @import",
-		"system_0_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{",
+		"system_0_rowlimit_check_0_included_modules = [_]rowlimit.ModuleSize{",
 		".{ .static = 4 },",
 		"system_0_rowlimit_checks = [_]rowlimit.Check{",
 		".limit = 1073741824",
