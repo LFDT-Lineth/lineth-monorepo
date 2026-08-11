@@ -274,6 +274,18 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 	envelope := pcscompiler.FRIStaticParams()
 	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
 
+	// Every static column must be sized before pcsShiftSlots reads
+	// Module.Size() as a modulus: an unsized module reports size 0, which
+	// would divide-by-zero there instead of failing with a clear error here.
+	for _, b := range batches {
+		for _, col := range b.Round.Columns {
+			if !col.Module.IsDynamic() && !col.Module.IsSized() {
+				return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has no size set",
+					col.Module.Context.Path(), col.Context.Path())
+			}
+		}
+	}
+
 	shiftSlots := pcsShiftSlots(sys)
 	dynIdx := DynamicModuleIndex(sys)
 	colDeclByID := pcsColumnDeclIndex(sys)
@@ -310,11 +322,8 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				desc.DynamicMinSizeLog2 = minSizeLog2
 			} else {
 				// Static column: size_log2 is the padded, fixed module size. SetSize
-				// already rounds it up to a power of two, so log2 is exact.
-				if !col.Module.IsSized() {
-					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has no size set",
-						col.Module.Context.Path(), col.Context.Path())
-				}
+				// already rounds it up to a power of two, so log2 is exact. Sizing
+				// was validated above, before any Module.Size() call.
 				desc.SizeLog2 = bits.Len(uint(col.Module.Size())) - 1
 				if desc.SizeLog2 > maxSizeLog2 {
 					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has size_log2 %d, above the verifier envelope's max %d",

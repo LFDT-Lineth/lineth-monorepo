@@ -523,25 +523,16 @@ func extTraceCell(value field.Ext) runtimeTraceCell {
 }
 
 type fixtureCase struct {
-	name    string
-	honest  vanishingProofView
-	invalid *vanishingProofView
+	name string
 	// pcs is the compile-time PCS System baked once for this case; every proof
 	// of this case (honest, invalid, alt) verifies against it.
-	pcs *codegen.PcsSystem
-	// honestEntryClaims / invalidEntryClaims carry the runtime PCS openings for
-	// the honest and invalid proofs. The matching FRI opening proofs come from
-	// the proving runtime.
-	honestEntryClaims  [][]field.Ext
-	invalidEntryClaims [][]field.Ext
-	honestOpening      fri.OpeningProof
-	invalidOpen        fri.OpeningProof
-	// alt is a second honest proof of the same compiled protocol at a different
-	// dynamic-module size, verified against the same baked PcsSystem.
-	// altEntryClaims is the alt proof's runtime opening.
-	alt            *vanishingProofView
-	altEntryClaims [][]field.Ext
-	altOpen        fri.OpeningProof
+	pcs     *codegen.PcsSystem
+	honest  proofFixture
+	invalid *proofFixture
+	// alt is a second honest proof of the same compiled protocol at a
+	// different dynamic-module size, verified against the same baked
+	// PcsSystem.
+	alt *proofFixture
 }
 
 type vanishingProofView struct {
@@ -553,6 +544,33 @@ type vanishingProofView struct {
 }
 
 type assignFn func(rt *wiop.Runtime)
+
+// proofFixture is everything a verify.zig fixture needs from one proving run:
+// the vanishing proof view, the PCS entry claims, and the FRI opening proof.
+type proofFixture struct {
+	view        vanishingProofView
+	entryClaims [][]field.Ext
+	opening     fri.OpeningProof
+}
+
+// buildProofFixture runs the prover for one assignment against a PCS system
+// already baked for sys, and extracts the fixture data that proof yields.
+// label names the proof (e.g. "honest", "invalid", "alt") for error messages.
+func buildProofFixture(sys *wiop.System, pcs codegen.PcsSystem, assign assignFn, source, name, label string) (proofFixture, error) {
+	rt := runProver(sys, assign)
+	claims, err := codegen.ExtractPcsOpening(pcs, rt)
+	if err != nil {
+		return proofFixture{}, fmt.Errorf("extract %s pcs opening %s/%s: %w", label, source, name, err)
+	}
+	if rt.PCSOpeningProof == nil {
+		return proofFixture{}, fmt.Errorf("pcs %s/%s: %s runtime has no PCSOpeningProof", source, name, label)
+	}
+	return proofFixture{
+		view:        extractVanishingProofView(sys, rt),
+		entryClaims: claims,
+		opening:     *rt.PCSOpeningProof,
+	}, nil
+}
 
 func compileFullPipeline(sys *wiop.System) {
 	rangecheck.Compile(sys)
@@ -575,65 +593,39 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		routing, err := codegen.BuildCoinRouting(sys)
+		compiled, err := codegen.BuildCompiledSystem(sys)
 		if err != nil {
-			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
+		}
+		if len(compiled.Vanishing.Modules) == 0 {
+			return nil
 		}
 		publicInput, err := codegen.BuildPublicInputSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build public-input system %s/%s: %w", source, name, err)
 		}
-		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
-		if err != nil {
-			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
-		}
-		if len(vanishingSystem.Modules) == 0 {
-			return nil
-		}
-		honestRt := runProver(sys, honest)
-		logDeriv, err := codegen.BuildLogDerivSystem(sys)
-		if err != nil {
-			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
-		}
 		rowLimit, err := codegen.BuildRowLimitSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build rowlimit system %s/%s: %w", source, name, err)
 		}
-		honestProof := extractVanishingProofView(sys, honestRt)
+		compiled.PublicInput = publicInput
+		compiled.RowLimit = rowLimit
 
-		pcs, err := codegen.BuildPcsSystem(sys, routing)
+		honestFixture, err := buildProofFixture(sys, *compiled.Pcs, honest, source, name, "honest")
 		if err != nil {
-			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
+			return err
 		}
-
-		tc := fixtureCase{name: name, honest: honestProof, pcs: &pcs}
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
 		if invalid != nil {
-			invalidRt := runProver(sys, invalid)
-			proof := extractVanishingProofView(sys, invalidRt)
-			tc.invalid = &proof
-			invalidClaims, err := codegen.ExtractPcsOpening(sys, pcs, invalidRt)
+			invalidFixture, err := buildProofFixture(sys, *compiled.Pcs, invalid, source, name, "invalid")
 			if err != nil {
-				return fmt.Errorf("extract invalid pcs opening %s/%s: %w", source, name, err)
+				return err
 			}
-			if invalidRt.PCSOpeningProof == nil {
-				return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
-			}
-			tc.invalidEntryClaims = invalidClaims
-			tc.invalidOpen = *invalidRt.PCSOpeningProof
+			tc.invalid = &invalidFixture
 		}
-
-		honestClaims, err := codegen.ExtractPcsOpening(sys, pcs, honestRt)
-		if err != nil {
-			return fmt.Errorf("extract honest pcs opening %s/%s: %w", source, name, err)
-		}
-		if honestRt.PCSOpeningProof == nil {
-			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
-		}
-		tc.honestEntryClaims = honestClaims
-		tc.honestOpening = *honestRt.PCSOpeningProof
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, PublicInput: publicInput, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: &pcs})
+		systems = append(systems, compiled)
 		return nil
 	}
 
@@ -644,64 +636,34 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		routing, err := codegen.BuildCoinRouting(sys)
+		compiled, err := codegen.BuildCompiledSystem(sys)
 		if err != nil {
-			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
 		publicInput, err := codegen.BuildPublicInputSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build public-input system %s/%s: %w", source, name, err)
 		}
-		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
-		if err != nil {
-			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
-		}
-		logDeriv, err := codegen.BuildLogDerivSystem(sys)
-		if err != nil {
-			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
-		}
 		rowLimit, err := codegen.BuildRowLimitSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build rowlimit system %s/%s: %w", source, name, err)
 		}
+		compiled.PublicInput = publicInput
+		compiled.RowLimit = rowLimit
 
-		pcs, err := codegen.BuildPcsSystem(sys, routing)
+		honestFixture, err := buildProofFixture(sys, *compiled.Pcs, honest, source, name, "honest")
 		if err != nil {
-			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
+			return err
 		}
-
-		honestRt := runProver(sys, honest)
-		honestClaims, err := codegen.ExtractPcsOpening(sys, pcs, honestRt)
+		altFixture, err := buildProofFixture(sys, *compiled.Pcs, alt, source, name, "alt")
 		if err != nil {
-			return fmt.Errorf("extract honest pcs opening %s/%s: %w", source, name, err)
-		}
-		if honestRt.PCSOpeningProof == nil {
-			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
+			return err
 		}
 
-		altRt := runProver(sys, alt)
-		altClaims, err := codegen.ExtractPcsOpening(sys, pcs, altRt)
-		if err != nil {
-			return fmt.Errorf("extract alt pcs opening %s/%s: %w", source, name, err)
-		}
-		if altRt.PCSOpeningProof == nil {
-			return fmt.Errorf("pcs %s/%s: alt runtime has no PCSOpeningProof", source, name)
-		}
-
-		tc := fixtureCase{
-			name:              name,
-			honest:            extractVanishingProofView(sys, honestRt),
-			pcs:               &pcs,
-			honestEntryClaims: honestClaims,
-			honestOpening:     *honestRt.PCSOpeningProof,
-		}
-		altView := extractVanishingProofView(sys, altRt)
-		tc.alt = &altView
-		tc.altEntryClaims = altClaims
-		tc.altOpen = *altRt.PCSOpeningProof
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, alt: &altFixture}
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, PublicInput: publicInput, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: &pcs})
+		systems = append(systems, compiled)
 		return nil
 	}
 
@@ -760,16 +722,14 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 
 		last := len(cases) - 1
-		if len(cases[last].honest.publicInputs) == 0 {
+		if len(cases[last].honest.view.publicInputs) == 0 {
 			return nil, nil, fmt.Errorf("public input fixture produced no public inputs")
 		}
 
 		invalid := cases[last].honest
-		invalid.publicInputs = append([]runtimeTraceCell(nil), invalid.publicInputs...)
-		invalid.publicInputs[0] = baseTraceCell(elem(99))
+		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
+		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
-		cases[last].invalidEntryClaims = cases[last].honestEntryClaims
-		cases[last].invalidOpen = cases[last].honestOpening
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
@@ -782,16 +742,14 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 
 		last := len(cases) - 1
-		if len(cases[last].honest.publicInputs) == 0 {
+		if len(cases[last].honest.view.publicInputs) == 0 {
 			return nil, nil, fmt.Errorf("dynamic public input fixture produced no public inputs")
 		}
 
 		invalid := cases[last].honest
-		invalid.publicInputs = append([]runtimeTraceCell(nil), invalid.publicInputs...)
-		invalid.publicInputs[0] = baseTraceCell(elem(99))
+		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
+		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
-		cases[last].invalidEntryClaims = cases[last].honestEntryClaims
-		cases[last].invalidOpen = cases[last].honestOpening
 	}
 
 	// LagrangeSelector boundary scenario. It is constructed here rather than in
@@ -1196,10 +1154,10 @@ func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintf(out, "    .logderiv = system_%d_logderiv,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
-	writeVanishingProofView(out, tc.honest, "        ")
+	writeVanishingProofView(out, tc.honest.view, "        ")
 	if tc.invalid != nil {
 		fmt.Fprintln(out, "    .invalid =")
-		writeVanishingProofView(out, *tc.invalid, "        ")
+		writeVanishingProofView(out, tc.invalid.view, "        ")
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
@@ -1345,13 +1303,13 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	// carries only its own runtime opening.
 	pcsName := writePcsSystemZig(out, fmt.Sprintf("verify_case_%d", idx), tc.pcs)
 
-	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest, tc.honestEntryClaims, tc.honestOpening)
+	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
 	if tc.invalid != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid, tc.invalidEntryClaims, tc.invalidOpen)
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
 	}
 	// The alt (second-size) honest proof, verified against the SAME System's .pcs.
 	if tc.alt != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt, tc.altEntryClaims, tc.altOpen)
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
 	}
 	fmt.Fprintf(
 		out,
@@ -1361,7 +1319,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintln(out)
 }
 
-func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView, entryClaims [][]field.Ext, opening fri.OpeningProof) {
+func writeVerifyProof(out *bytes.Buffer, prefix string, fixture proofFixture) {
+	proof := fixture.view
 	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
 	fmt.Fprintln(out)
 
@@ -1383,7 +1342,7 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	// The PCS opening: the authenticated entry_claims (which vanishing is then
 	// re-sliced from) and the FRI opening proof. No witness/quotient_claims —
 	// those are derived by the verifier from entry_claims via the claim maps.
-	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(entryClaims, opening))
+	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(fixture.entryClaims, fixture.opening))
 	fmt.Fprintln(out)
 
 	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)

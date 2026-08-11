@@ -188,7 +188,7 @@ func TestExtractPcsOpeningRejectsAliasingDynamicShifts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildPcsSystem() error = %v", err)
 	}
-	_, err = ExtractPcsOpening(sys, pcs, rt)
+	_, err = ExtractPcsOpening(pcs, rt)
 	if err == nil {
 		t.Fatalf("ExtractPcsOpening accepted aliasing dynamic-column shifts; want an error")
 	}
