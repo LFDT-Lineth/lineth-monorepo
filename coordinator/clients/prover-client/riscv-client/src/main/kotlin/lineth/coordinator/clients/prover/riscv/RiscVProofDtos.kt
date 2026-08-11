@@ -1,13 +1,13 @@
 package lineth.coordinator.clients.prover.riscv
 
 import linea.clients.BlobWitness
-import linea.clients.ExecutionPayload
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponseV1
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
