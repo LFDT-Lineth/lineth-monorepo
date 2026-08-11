@@ -3,12 +3,14 @@
 ### 🚀 Features
 
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
+- *(coordinator)* Make runtime invariants explicit (#3716)
 
 ### 🚜 Refactor
 
