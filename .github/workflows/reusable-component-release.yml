@@ -45,6 +45,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_e2e_test:
+        description: 'Skip the run-e2e-tests job'
+        required: false
+        type: boolean
+        default: false
     outputs:
       tag_changed:
         description: "Indicate whether the release tag of the component has changed"
@@ -217,6 +222,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       (needs.build-local-coordinator.result       == 'success' ||
        needs.build-local-postman.result           == 'success' ||
        needs.build-local-prover.result            == 'success' ||
@@ -231,8 +237,12 @@ jobs:
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
-    needs: [run-e2e-tests]
-    if: always() && !cancelled() && needs.run-e2e-tests.result == 'success'
+    needs: [compute-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      (needs.run-e2e-tests.result == 'success' ||
+       (needs.run-e2e-tests.result == 'skipped' && inputs.skip_e2e_test))
     uses: ./.github/workflows/reusable-component-gh-release.yml
     with:
       component-name: ${{ inputs.component-name }}
