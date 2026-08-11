@@ -29,7 +29,7 @@ func RegisterPreflightSeed[P any](
 	hasher preflight.AdditiveHasher[P],
 ) *wiop.Round {
 	coinRound := ensureRoundAfter(sys, latestUnreducedParticipantRound(sys))
-	coinRound.RegisterPreSamplingHook(&preflightSeedHook[P]{sets: sets, hasher: hasher})
+	coinRound.RegisterPreSamplingHook(&PreflightSeedHook[P]{sets: sets, hasher: hasher})
 	return coinRound
 }
 
@@ -51,18 +51,18 @@ func latestUnreducedParticipantRound(sys *wiop.System) *wiop.Round {
 	return best
 }
 
-// preflightSeedHook is a [wiop.ProverAction] that fires as a PreSamplingHook
+// PreflightSeedHook is a [wiop.ProverAction] that fires as a PreSamplingHook
 // on the coin round. It recomputes the shared Fiat-Shamir seed from the
 // pre-distributed cross-shard column sets and injects it via SetFSState so
 // that the subsequent α and β coins are identical on every participating shard.
 // Because [wiop.Runtime.AdvanceRound] runs PreSamplingHooks on both the prover
 // and the verifier, no separate verifier action is needed.
-type preflightSeedHook[P any] struct {
+type PreflightSeedHook[P any] struct {
 	sets   []preflight.BusInputSet
 	hasher preflight.AdditiveHasher[P]
 }
 
 // Run implements [wiop.ProverAction].
-func (h *preflightSeedHook[P]) Run(rt *wiop.Runtime) {
+func (h *PreflightSeedHook[P]) Run(rt *wiop.Runtime) {
 	rt.SetFSState(preflight.Run(h.sets, h.hasher))
 }
