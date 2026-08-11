@@ -115,7 +115,14 @@ data class QbftOptionsDtoToml(
     example = "0x0000000000000000000000000000000000000000",
   )
   val feeRecipient: ByteArray,
+  @param:ConfigDoc(
+    description = "Validator signing backend. Use 'local' for the node private key or 'custom' for an external signer.",
+    default = "local",
+  )
   val signerType: String = "local",
+  @param:ConfigDoc(
+    description = "Logical signer name passed to the external signer factory when signer-type is 'custom'.",
+  )
   val signerName: String? = null,
 ) {
   fun toDomain(): QbftConfig =
