@@ -23,6 +23,7 @@ import lineth.conflation.ConflationService
 import lineth.conflation.FixedLaggingHeadSafeBlockProvider
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.ConflationCalculators
+import lineth.coordination.FtxRollingInfoProviderImpl
 import lineth.coordination.HighestConflationTracker
 import lineth.coordination.HighestProvenBatchTracker
 import lineth.coordination.HighestProvenBlobTracker
@@ -430,7 +431,7 @@ class ConflationAppV1(
         aggregationL2StateProvider = AggregationL2StateProviderImpl(
           ethApiClient = l2EthClient,
           messageService = l2MessageService,
-          forcedTransactionsDao = forcedTransactionsDao,
+          ftxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
         ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
