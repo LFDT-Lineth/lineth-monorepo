@@ -22,18 +22,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// The multiset hash provides the commutative group the roots are accumulated in:
-// [Hash] maps a root into the group, [Combine] is the group operation,
-// [Identity] is the neutral element and [ToSeed] compresses a group element back
-// to an octuplet. They are re-exported here so that callers reproducing γ do not
-// have to know which concrete multiset hash backs it.
-var (
-	Hash     = multisethashing.Hash
-	Combine  = multisethashing.Combine
-	Identity = multisethashing.Identity
-	ToSeed   = multisethashing.ToSeed
-)
-
 // BusInputSet bundles one logical cross-shard column fragment with the RS
 // encoders needed to commit to it. Build one BusInputSet per shard fragment
 // before calling [Run].
@@ -57,10 +45,10 @@ type BusInputSet struct {
 // of *all* shards: a γ computed from a subset binds only that subset, and the
 // shards left out would be proving against a seed unrelated to their own data.
 func Run(sets []BusInputSet) field.Octuplet {
-	acc := Identity()
+	acc := multisethashing.Identity()
 	for _, s := range sets {
 		cs := fri.Commit(s.Encoders, s.Table)
-		acc = Combine(acc, Hash(cs.Tree.Root()))
+		acc = multisethashing.Combine(acc, multisethashing.Hash(cs.Tree.Root()))
 	}
-	return ToSeed(acc)
+	return multisethashing.ToSeed(acc)
 }

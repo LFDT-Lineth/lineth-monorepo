@@ -306,8 +306,11 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		}
 	}
 
-	// This runs all the verifier actions.
+	// This runs all the verifier actions. The current round follows the round
+	// being checked, so that a verifier action reads the same [Runtime.CurrentRound]
+	// as the prover action it mirrors.
 	for _, r := range sys.Rounds {
+		rt.currentRound = r
 		for _, va := range r.VerifierActions {
 			if err := va.Check(rt); err != nil {
 				return err

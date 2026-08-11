@@ -3,12 +3,16 @@ package messagebus
 import (
 	"fmt"
 
+	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/sirupsen/logrus"
 )
 
 const (
 	NumSharedRandomness                                    = len(field.Octuplet{})
+	NumSharedRandomnessContribution                        = len(multisethashing.MSetHash{})
 	SharedRandomnessSeedPI             wiop.PublicInputTag = "SharedRandomnessSeed"
 	SharedRandomnessSeedContributionPI wiop.PublicInputTag = "SharedRandomnessSeedContribution"
 )
@@ -53,7 +57,14 @@ func RegisterSharedRandomness(sys *wiop.System) {
 		sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
 	}
 
-	coinRound.RegisterPreSamplingHook(&sharedRandomnessSeedHook{})
+	for i := range NumSharedRandomnessContribution {
+		cell := seedRound.NewCell(ctx.Childf("contribution-%d", i), false)
+		sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
+	}
+
+	coinRound.RegisterPreSamplingHook(&SharedRandomnessSeedHook{})
+	coinRound.RegisterAction(&SharedRandomnessContributionAssigner{})
+	coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
 }
 
 // GetSharedRandomnessSeed returns the god-given value of the shared randomness
@@ -93,16 +104,112 @@ func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 	}
 }
 
-// sharedRandomnessSeedHook is the [wiop.ProverAction] registered as a
+// SharedRandomnessContributionAssigner is a prover action that takes all the
+// PCS commitment preceding the shared randomness seed Fiat-Shamir override and
+// hash them into a multiset hash that is then exposed to the verifier as a
+// public-input.
+//
+// This function is meant to be run as a prover action at the round where the
+// the message BUS randomness is sampled.
+//
+// In case this function is called over a system that is not using a PCS, the
+// function will unsoundly assign a multiset-hash derived from 0. If no message
+// bus is called in this system, this function will also assign a dummy multiset
+// hash.
+type SharedRandomnessContributionAssigner struct{}
+
+// SharedRandomnessContributionChecker is a verifier action that checks that the
+// public-input cells of the shared randomness contribution are correctly
+// computed against the commitment cell values. It is the verifier analog to
+// [SharedRandomnessContributionAssigner].
+type SharedRandomnessContributionChecker struct{}
+
+// Run implements [wiop.ProverAction] on behalf of [SharedRandomnessContributionAssigner].
+func (_ *SharedRandomnessContributionAssigner) Run(rt *wiop.Runtime) {
+	round := rt.CurrentRound()
+	hasher := poseidon2.NewMDHasher()
+	for i := range round.ID {
+		if !rt.System.Rounds[i].HasCommitment {
+			logrus.Warnf(
+				"No commitment found for round: %v. Did you use a message bus? "+
+					"And did you reduce the current system using a PCS?", i)
+			continue
+		}
+
+		com := rt.Commitments[i]
+		hasher.WriteElements(com[:]...)
+	}
+
+	digest := hasher.SumDigest()
+	digestMSet := multisethashing.Hash(digest)
+
+	for i := range digestMSet {
+
+		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
+		if pos < 0 {
+			panic(fmt.Sprintf("wiop/compilers/messagebus: SharedRandomnessContributionProverAction: missing contribution-%d", i))
+		}
+		if cell.IsExtension() {
+			panic("the shared randomness cell should not be an extension-field value")
+		}
+		rt.AssignCell(cell, field.ElemFromBase(digestMSet[i]))
+	}
+}
+
+// Check implements the [VerifierAction] interface for
+// [SharedRandomnessContributionChecker].
+func (_ *SharedRandomnessContributionChecker) Check(rt *wiop.Runtime) error {
+
+	round := rt.CurrentRound()
+	hasher := poseidon2.NewMDHasher()
+	for i := range round.ID {
+		if !rt.System.Rounds[i].HasCommitment {
+			logrus.Warnf(
+				"No commitment found for round: %v. Did you use a message bus? "+
+					"And did you reduce the current system using a PCS?", i)
+			continue
+		}
+
+		com := rt.Commitments[i]
+		hasher.WriteElements(com[:]...)
+	}
+
+	digest := hasher.SumDigest()
+	digestMSet := multisethashing.Hash(digest)
+
+	for i := range digestMSet {
+
+		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
+		if pos < 0 {
+			// If this fails, this indicates the wizard is ill-defined, not the
+			// proof. That's why it is a panic.
+			panic(fmt.Sprintf("wiop/compilers/messagebus: SharedRandomnessContributionProverAction: missing contribution-%d", i))
+		}
+
+		if cell.IsExtension() {
+			// If this fails, this indicates the wizard is ill-defined, not the
+			// proof. That's why it is a panic.
+			panic("the shared randomness cell should not be an extension-field value")
+		}
+
+		if digestMSet[i] != rt.GetCellValue(cell).AsBase() {
+			return fmt.Errorf("wiop/compilers/messagebus: SharedRandomnessContributionChecker: mismatch in contribution-%d", i)
+		}
+	}
+
+	return nil
+}
+
+// SharedRandomnessSeedHook is the [wiop.ProverAction] registered as a
 // pre-sampling hook on the message-bus coin round. It reads γ from the
 // public-input cells and installs it as the Fiat-Shamir state, so that the α
 // and β sampled immediately afterwards are a function of γ alone and therefore
 // identical on every shard that was given the same γ.
-type sharedRandomnessSeedHook struct{}
+type SharedRandomnessSeedHook struct{}
 
 // Run implements [wiop.ProverAction]. It also runs on the verifier, which
 // reaches it through [wiop.System.Verify]'s transcript replay.
-func (h *sharedRandomnessSeedHook) Run(rt *wiop.Runtime) {
+func (h *SharedRandomnessSeedHook) Run(rt *wiop.Runtime) {
 	seed := GetSharedRandomnessSeed(rt)
 	rt.SetFSState(seed)
 }
