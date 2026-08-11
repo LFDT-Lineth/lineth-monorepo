@@ -174,7 +174,7 @@ func Compile(sys *wiop.System) {
 //     (or otherwise unsized) modules as their maximum height 2^22, so it is a
 //     conservative upper bound.
 //
-//   - Runtime: one [groupRowLimitAction] per subgroup re-checks the *exact*
+//   - Runtime: one [RowLimitVerifierAction] per subgroup re-checks the *exact*
 //     per-run heights, summed across the whole subgroup, on both the prover
 //     (panic) and verifier (error) sides. This is the check that enforces the
 //     shared budget now that a subgroup — not a single query — is the unit that
@@ -199,8 +199,18 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 
 		// Runtime check on the subgroup aggregate. One instance serves both
 		// roles: it panics as a prover action and returns an error as a verifier
-		// action.
-		rowLimit := &groupRowLimitAction{group: g}
+		// action. IncludedModules/IncludingsModules mirror g.included/g.includings
+		// one-to-one (see the type doc) so out-of-package consumers can read the
+		// exact per-side module partitioning without reaching into lookupGroup.
+		includedModules := make([]*wiop.Module, len(g.included))
+		for i, inc := range g.included {
+			includedModules[i] = inc.cols[0].Module()
+		}
+		includingsModules := make([]*wiop.Module, len(g.includings))
+		for i, it := range g.includings {
+			includingsModules[i] = it.module
+		}
+		rowLimit := &RowLimitVerifierAction{group: g, IncludedModules: includedModules, IncludingsModules: includingsModules}
 		g.witnessRound.RegisterAction(rowLimit)
 		g.witnessRound.RegisterVerifierAction(rowLimit)
 	}
@@ -489,7 +499,7 @@ func compileGroup(
 	return fractions
 }
 
-// groupRowLimitAction enforces, at runtime, that a single subgroup's summed row
+// RowLimitVerifierAction enforces, at runtime, that a single subgroup's summed row
 // count stays below the budget on each side. It is the runtime counterpart to
 // the compile-time bin-packing in [collectGroups]: bin-packing keeps every
 // subgroup under limit using static (maximum) module heights, and this action
@@ -508,12 +518,22 @@ func compileGroup(
 // and fails if either reaches limit. Summing per fragment deliberately
 // double-counts two fragments that live on the same module, because each
 // fragment contributes its own pass over that module's rows to the argument.
-type groupRowLimitAction struct {
+//
+// IncludedModules and IncludingsModules are exported (mirroring the pattern used by
+// [ResultIsZeroVerifierAction]) so out-of-package consumers can read the exact
+// per-side module partitioning this check enforces. They list one module per
+// fragment in [lookupGroup.included] / [lookupGroup.includings] respectively,
+// in the same order, so a duplicate module pointer here means the
+// corresponding fragments deliberately double-count that module (see above).
+type RowLimitVerifierAction struct {
 	group *lookupGroup
+
+	IncludedModules   []*wiop.Module
+	IncludingsModules []*wiop.Module
 }
 
 // Run implements [wiop.ProverAction]: it panics on an over-limit subgroup.
-func (a *groupRowLimitAction) Run(rt *wiop.Runtime) {
+func (a *RowLimitVerifierAction) Run(rt *wiop.Runtime) {
 	if err := a.validate(rt); err != nil {
 		panic(err)
 	}
@@ -521,7 +541,7 @@ func (a *groupRowLimitAction) Run(rt *wiop.Runtime) {
 
 // Check implements [wiop.VerifierAction]: it returns an error on an over-limit
 // subgroup so the verifier rejects the proof.
-func (a *groupRowLimitAction) Check(rt *wiop.Runtime) error {
+func (a *RowLimitVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.validate(rt)
 }
 
@@ -529,18 +549,18 @@ func (a *groupRowLimitAction) Check(rt *wiop.Runtime) error {
 // error if either side reaches the limit. Mirrors the accounting of
 // [wiop.TableRelationQuery.ValidateRowLimit], extended from a single query to
 // the whole subgroup's union of A fragments against the shared B side.
-func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
+func (a *RowLimitVerifierAction) validate(rt *wiop.Runtime) error {
 	var aRows uint64
-	for _, inc := range a.group.included {
-		aRows += uint64(inc.cols[0].Module().RuntimeSize(rt))
+	for _, m := range a.IncludedModules {
+		aRows += uint64(m.RuntimeSize(rt))
 	}
 	if aRows >= wiop.MaxLookupRows {
 		return a.overLimitError("A", aRows)
 	}
 
 	var bRows uint64
-	for _, it := range a.group.includings {
-		bRows += uint64(it.module.RuntimeSize(rt))
+	for _, m := range a.IncludingsModules {
+		bRows += uint64(m.RuntimeSize(rt))
 	}
 	if bRows >= wiop.MaxLookupRows {
 		return a.overLimitError("B", bRows)
@@ -551,7 +571,7 @@ func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
 // overLimitError builds the shared over-budget message, listing the lookup
 // queries folded into the offending subgroup so the failure is traceable back
 // to source lookups.
-func (a *groupRowLimitAction) overLimitError(side string, rows uint64) error {
+func (a *RowLimitVerifierAction) overLimitError(side string, rows uint64) error {
 	paths := make([]string, 0, len(a.group.queries))
 	for _, q := range a.group.queries {
 		paths = append(paths, q.Context().Path())

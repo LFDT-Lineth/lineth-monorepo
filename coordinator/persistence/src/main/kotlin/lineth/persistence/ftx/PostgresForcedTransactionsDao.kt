@@ -137,6 +137,18 @@ class PostgresForcedTransactionsDao(
 
   private val selectAllQuery = connection.preparedQuery(selectAllSql)
 
+  private val selectBySimulatedBlockRangeSql =
+    """
+      select ftx_number, inclusion_result, simulated_execution_block_number,
+             simulated_execution_block_timestamp, ftx_block_number_deadline,
+             ftx_rolling_hash, ftx_rlp, proof_status
+      from forced_transactions
+      where simulated_execution_block_number between $1 and $2
+      order by ftx_number
+    """.trimIndent()
+
+  private val selectBySimulatedBlockRangeQuery = connection.preparedQuery(selectBySimulatedBlockRangeSql)
+
   private val deleteSql =
     """
       delete from forced_transactions
@@ -180,6 +192,14 @@ class PostgresForcedTransactionsDao(
       .toSafeFuture()
   }
 
+  override fun findBySimulatedExecutionBlock(blockRange: ULongRange): SafeFuture<List<ForcedTransactionRecord>> {
+    val params = listOf(blockRange.first.toLong(), blockRange.last.toLong())
+    queryLog.log(Level.TRACE, selectBySimulatedBlockRangeSql, params)
+    return selectBySimulatedBlockRangeQuery.execute(Tuple.tuple(params))
+      .map { rowSet -> rowSet.map(::parseRecord) }
+      .toSafeFuture()
+  }
+
   override fun deleteFtxUpToInclusive(ftxNumber: ULong): SafeFuture<Int> {
     val params = listOf(ftxNumber.toLong())
     queryLog.log(Level.TRACE, deleteSql, params)
@@ -203,6 +223,10 @@ class RetryingPostgresForcedTransactionsDao(
 
   override fun list(): SafeFuture<List<ForcedTransactionRecord>> {
     return persistenceRetryer.retryQuery({ delegate.list() })
+  }
+
+  override fun findBySimulatedExecutionBlock(blockRange: ULongRange): SafeFuture<List<ForcedTransactionRecord>> {
+    return persistenceRetryer.retryQuery({ delegate.findBySimulatedExecutionBlock(blockRange) })
   }
 
   override fun deleteFtxUpToInclusive(ftxNumber: ULong): SafeFuture<Int> {
