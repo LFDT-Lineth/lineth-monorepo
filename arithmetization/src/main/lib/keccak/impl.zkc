@@ -32,10 +32,11 @@ fn keccak<ram, keccak_state>(msg_address:Address, msg_length:u32, output_address
     printf "msg_length: %x\n", msg_length
     printf "output_address: %x\n", output_address
 
-    var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH)
-    var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
+    var n_blocks:u32
+    var remainder:u32
+    n_blocks, remainder = (msg_length /% BLOCK_BYTE_LENGTH)
 
-    kec_absorbing_phase(n_blocks, remainder, msg_address)
+    kec_absorbing_phase(n_blocks, remainder as u8, msg_address)
 
     kec_squeezing_phase(output_address)
 
