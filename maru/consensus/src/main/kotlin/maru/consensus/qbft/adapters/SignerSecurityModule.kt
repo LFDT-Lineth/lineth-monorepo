@@ -11,6 +11,7 @@ package maru.consensus.qbft.adapters
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import maru.crypto.SecpCrypto
+import maru.crypto.decodeSecp256k1PublicKey
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.ECPointUtil
@@ -28,26 +29,15 @@ internal class SignerSecurityModule(
   private val publicKey: PublicKey
 
   init {
-    val encodedPublicKey = signer.publicKey().copyOf()
-    if (encodedPublicKey.size != PUBLIC_KEY_SIZE) {
-      throw SecurityModuleException(
-        "Validator signer public key must be $PUBLIC_KEY_SIZE bytes, got ${encodedPublicKey.size}",
-      )
-    }
     try {
-      val secpPublicKey = SecpCrypto.signatureAlgorithm.createPublicKey(Bytes.wrap(encodedPublicKey))
-      if (!SecpCrypto.signatureAlgorithm.isValidPublicKey(secpPublicKey)) {
-        throw SecurityModuleException("Validator signer public key is not a valid secp256k1 point")
-      }
+      val secpPublicKey = decodeSecp256k1PublicKey(signer.publicKey())
       val point =
         ECPointUtil.fromBouncyCastleECPoint(
           SecpCrypto.signatureAlgorithm.publicKeyAsEcPoint(secpPublicKey),
         )
       publicKey = PublicKey { point }
-    } catch (error: SecurityModuleException) {
-      throw error
     } catch (error: Exception) {
-      throw SecurityModuleException("Invalid validator signer public key", error)
+      throw SecurityModuleException("Invalid validator signer public key: ${error.message}", error)
     }
   }
 
@@ -61,11 +51,7 @@ internal class SignerSecurityModule(
       } catch (error: Exception) {
         throw SecurityModuleException("Validator signing failed", unwrapCompletionError(error))
       }
-    return object : Signature {
-      override fun getR() = signature.r
-
-      override fun getS() = signature.s
-    }
+    return BesuSignatureAdapter(signature)
   }
 
   override fun getPublicKey(): PublicKey = publicKey
@@ -77,8 +63,6 @@ internal class SignerSecurityModule(
     throw SecurityModuleException("ECDH is not supported by the consensus-only validator signer")
 
   companion object {
-    const val PUBLIC_KEY_SIZE = 64
-
     private fun unwrapCompletionError(error: Throwable): Throwable {
       var cause = error
       while ((cause is ExecutionException || cause is CompletionException) && cause.cause != null) {
@@ -87,6 +71,14 @@ internal class SignerSecurityModule(
       return cause
     }
   }
+}
+
+private class BesuSignatureAdapter(
+  private val signature: Secp256k1Signature,
+) : Signature {
+  override fun getR() = signature.r
+
+  override fun getS() = signature.s
 }
 
 internal fun Signer<Secp256k1Signature>.toNodeKey(): NodeKey = NodeKey(SignerSecurityModule(this))

@@ -18,7 +18,6 @@ import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
-import linea.crypto.withCloseAction
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
@@ -31,9 +30,7 @@ import maru.api.ApiServerImpl
 import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
-import maru.config.QbftConfig
 import maru.config.SyncingConfig
-import maru.config.ValidatorSignerType
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -42,8 +39,6 @@ import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
-import maru.crypto.LocalValidatorSigner
-import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
@@ -118,9 +113,10 @@ interface MaruAppFactoryCreator {
 }
 
 class MaruAppFactory(
-  private val validatorSignerFactory: ValidatorSignerFactory = DefaultValidatorSignerFactory,
+  customValidatorSignerFactory: CustomValidatorSignerFactory = MissingCustomValidatorSignerFactory,
 ) : MaruAppFactoryCreator {
   private val log = LogManager.getLogger(this.javaClass)
+  private val validatorSignerFactory = ValidatorSignerFactory(customValidatorSignerFactory)
 
   override fun create(
     config: MaruConfig,
@@ -153,11 +149,13 @@ class MaruAppFactory(
     config.persistence.dataPath.createDirectories()
     val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
     val validatorSigner =
-      createValidatorSigner(
-        qbftConfig = config.qbft,
-        beaconGenesisConfig = beaconGenesisConfig,
-        privateKey = privateKey,
-      )
+      config.qbft?.let { qbftConfig ->
+        validatorSignerFactory.create(
+          qbftConfig = qbftConfig,
+          beaconGenesisConfig = beaconGenesisConfig,
+          privateKey = privateKey,
+        )
+      }
 
     return try {
       createMaruApp(
@@ -411,39 +409,6 @@ class MaruAppFactory(
       timerFactory = timerFactory,
       blockHashing = blockHashing,
     )
-  }
-
-  internal fun createValidatorSigner(
-    qbftConfig: QbftConfig?,
-    beaconGenesisConfig: ForksSchedule,
-    privateKey: ByteArray,
-  ): CloseableSigner<Secp256k1Signature>? {
-    if (qbftConfig == null) {
-      return null
-    }
-
-    val validatorSigner =
-      when (qbftConfig.validatorSigner.type) {
-        ValidatorSignerType.LOCAL ->
-          LocalValidatorSigner(
-            SecpCrypto.privateKeyBytesWithoutPrefix(privateKey),
-          ).withCloseAction()
-
-        ValidatorSignerType.CUSTOM ->
-          validatorSignerFactory.create(qbftConfig.validatorSigner)
-      }
-
-    try {
-      ValidatorIdentityValidator.validate(qbftConfig, beaconGenesisConfig, validatorSigner)
-      return validatorSigner
-    } catch (error: Throwable) {
-      try {
-        validatorSigner.close()
-      } catch (closeError: Throwable) {
-        error.addSuppressed(closeError)
-      }
-      throw error
-    }
   }
 
   companion object {

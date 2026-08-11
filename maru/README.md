@@ -47,7 +47,7 @@ fee-recipient = "0x0000000000000000000000000000000000000000"
 signer-type = "local"
 ```
 
-An application embedding Maru can inject a custom `ValidatorSignerFactory` that resolves a backend-neutral
+An application embedding Maru can inject a `CustomValidatorSignerFactory` that resolves a backend-neutral
 `CloseableSigner` by logical name:
 
 ```toml
@@ -92,4 +92,3 @@ Dockerhub. `-<date>-<commit-hash>` suffix is added to the actual docker image an
   `v2.0.1-betav4-20251027155452-cd25bfd`
 * Changelog will be pulled automatically into the release description. Review it and publish the release
 * Make a PR to clean up the changelog
-

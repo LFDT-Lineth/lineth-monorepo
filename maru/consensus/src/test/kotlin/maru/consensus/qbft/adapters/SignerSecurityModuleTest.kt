@@ -11,6 +11,7 @@ package maru.consensus.qbft.adapters
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import maru.crypto.LocalValidatorSigner
+import maru.crypto.SECP256K1_PUBLIC_KEY_SIZE
 import maru.crypto.SecpCrypto
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
@@ -72,7 +73,7 @@ class SignerSecurityModuleTest {
   @Test
   fun `adapter rejects invalid secp256k1 points`() {
     val signer =
-      FakeValidatorSigner(ByteArray(SignerSecurityModule.PUBLIC_KEY_SIZE)) {
+      FakeValidatorSigner(ByteArray(SECP256K1_PUBLIC_KEY_SIZE)) {
         error("must not be called")
       }
 

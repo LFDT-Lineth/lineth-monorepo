@@ -36,7 +36,7 @@ import java.time.Clock
 
 class QbftProtocolValidatorFactory(
   private val qbftOptions: QbftConfig,
-  private val validatorSigner: Signer<Secp256k1Signature>,
+  private val signer: Signer<Secp256k1Signature>,
   private val validatorELNodeEngineApiWeb3JClient: Web3JClient,
   private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
   private val metricsSystem: MetricsSystem,
@@ -92,7 +92,7 @@ class QbftProtocolValidatorFactory(
     val qbftValidatorFactory =
       QbftValidatorFactory(
         beaconChain = beaconChain,
-        validatorSigner = validatorSigner,
+        signer = signer,
         qbftOptions = qbftOptions,
         metricsSystem = metricsSystem,
         finalizationStateProvider = finalizationStateProvider,

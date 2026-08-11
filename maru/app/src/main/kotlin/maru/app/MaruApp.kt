@@ -93,7 +93,7 @@ class MaruApp internal constructor(
       log.info("Qbft options are not defined. nodeRole=follower")
     } else {
       checkNotNull(validatorSigner) { "Validator signer is required when QBFT is configured" }
-      val validator = ValidatorIdentityValidator.validatorFor(validatorSigner)
+      val validator = validatorSigner.toValidator()
       log.info(
         "Qbft options are defined. nodeRole=validator signerType={} signerName={} validatorAddress={}",
         config.qbft!!.validatorSigner.type.name.lowercase(),
@@ -253,7 +253,7 @@ class MaruApp internal constructor(
       if (config.qbft != null) {
         QbftProtocolValidatorFactory(
           qbftOptions = config.qbft!!,
-          validatorSigner = checkNotNull(validatorSigner),
+          signer = checkNotNull(validatorSigner),
           validatorELNodeEngineApiWeb3JClient = validatorELNodeEngineApiWeb3JClient!!,
           followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
           metricsSystem = metricsSystem,

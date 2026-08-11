@@ -9,21 +9,11 @@
 package maru.app
 
 import linea.crypto.withCloseAction
-import maru.config.ApiConfig
-import maru.config.ApiEndpointConfig
-import maru.config.FollowersConfig
-import maru.config.ForkTransition
-import maru.config.MaruConfig
-import maru.config.ObservabilityConfig
-import maru.config.Persistence
 import maru.config.QbftConfig
-import maru.config.SyncingConfig
-import maru.config.ValidatorElNode
 import maru.config.ValidatorSignerConfig
 import maru.config.ValidatorSignerType
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
-import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
@@ -35,55 +25,61 @@ import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import java.net.URI
-import java.nio.file.Path
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
-import kotlin.time.Duration.Companion.seconds
 
 class ValidatorSignerFactoryTest {
-  @TempDir
-  lateinit var tempDir: Path
-
   private val privateKey = ByteArray(32).also { it[it.lastIndex] = 1 }
+  private val localSignerConfig = ValidatorSignerConfig()
   private val customSignerConfig =
     ValidatorSignerConfig(ValidatorSignerType.CUSTOM, "maru-validator")
 
   @Test
-  fun `default factory rejects a custom signer with its logical name`() {
+  fun `missing custom signer factory reports the logical name`() {
     assertThatThrownBy {
-      DefaultValidatorSignerFactory.create(
-        customSignerConfig,
-      )
+      MissingCustomValidatorSignerFactory.create(customSignerConfig)
     }.isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("maru-validator")
   }
 
   @Test
-  fun `app factory composes a custom signer matching the validator set`() {
+  fun `factory creates a local signer without invoking the custom factory`() {
+    val factory =
+      ValidatorSignerFactory(
+        CustomValidatorSignerFactory { error("must not be called") },
+      )
+    val expectedValidator = SecpCrypto.privateKeyToValidator(privateKey)
+
+    val signer =
+      factory.create(
+        qbftConfig = qbftConfig(localSignerConfig),
+        beaconGenesisConfig = forkSchedule(setOf(expectedValidator)),
+        privateKey = privateKey,
+      )
+
+    assertThat(signer.toValidator()).isEqualTo(expectedValidator)
+  }
+
+  @Test
+  fun `factory creates a custom signer matching the validator set`() {
     var receivedConfig: ValidatorSignerConfig? = null
     var closeCalls = 0
     val localSigner = LocalValidatorSigner(privateKey)
     val factory =
-      MaruAppFactory(
-        ValidatorSignerFactory { config ->
+      ValidatorSignerFactory(
+        CustomValidatorSignerFactory { config ->
           receivedConfig = config
           localSigner.withCloseAction { closeCalls++ }
         },
       )
 
     val signer =
-      factory.createValidatorSigner(
-        qbftConfig = customQbftConfig(),
+      factory.create(
+        qbftConfig = qbftConfig(customSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(SecpCrypto.privateKeyToValidator(privateKey))),
         privateKey = ByteArray(0),
       )
 
     assertThat(receivedConfig).isEqualTo(customSignerConfig)
-    assertThat(ValidatorIdentityValidator.validatorFor(signer!!))
-      .isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
+    assertThat(signer.toValidator()).isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
 
     signer.close()
     signer.close()
@@ -91,11 +87,11 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `app factory closes a custom signer rejected by validator identity validation`() {
+  fun `factory closes a custom signer rejected by validator set validation`() {
     var closeCalls = 0
     val factory =
-      MaruAppFactory(
-        ValidatorSignerFactory {
+      ValidatorSignerFactory(
+        CustomValidatorSignerFactory {
           LocalValidatorSigner(privateKey).withCloseAction { closeCalls++ }
         },
       )
@@ -107,8 +103,8 @@ class ValidatorSignerFactoryTest {
       )
 
     assertThatThrownBy {
-      factory.createValidatorSigner(
-        qbftConfig = customQbftConfig(),
+      factory.create(
+        qbftConfig = qbftConfig(customSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
         privateKey = ByteArray(0),
       )
@@ -120,90 +116,48 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `app factory closes a custom signer when later construction fails`() {
-    var closeCalls = 0
-    val localSigner = LocalValidatorSigner(privateKey)
-    val validator = SecpCrypto.privateKeyToValidator(privateKey)
+  fun `factory preserves warning-only behavior for a local signer outside the validator set`() {
     val factory =
-      MaruAppFactory(
-        ValidatorSignerFactory {
-          localSigner.withCloseAction { closeCalls++ }
-        },
+      ValidatorSignerFactory(
+        CustomValidatorSignerFactory { error("must not be called") },
       )
-    val now = 1_000_000L
-    val schedule =
-      ForksSchedule(
-        chainId = 1u,
-        forks =
-        setOf(
-          qbftFork(timestampSeconds = now.toULong(), validators = setOf(validator)),
-          ForkSpec(
-            timestampSeconds = (now + 10).toULong(),
-            blockTimeSeconds = 1u,
-            configuration =
-            DifficultyAwareQbftConfig(
-              postTtdConfig = qbftConsensusConfig(setOf(validator)),
-              terminalTotalDifficulty = 42u,
-            ),
-          ),
-        ),
+    val differentValidator =
+      SecpCrypto.privateKeyToValidator(
+        Bytes32
+          .fromHexString("0x02")
+          .toArray(),
       )
 
-    assertThatThrownBy {
+    val signer =
       factory.create(
-        config = maruConfig(),
-        beaconGenesisConfig = schedule,
-        clock = Clock.fixed(Instant.ofEpochSecond(now), ZoneOffset.UTC),
+        qbftConfig = qbftConfig(localSignerConfig),
+        beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
+        privateKey = privateKey,
       )
-    }.isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("future fork enables DifficultyAwareQbft")
 
-    assertThat(closeCalls).isEqualTo(1)
+    assertThat(signer.toValidator()).isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
   }
 
-  private fun customQbftConfig() =
+  private fun qbftConfig(signerConfig: ValidatorSignerConfig) =
     QbftConfig(
       feeRecipient = ByteArray(20),
-      validatorSigner = customSignerConfig,
+      validatorSigner = signerConfig,
     )
 
   private fun forkSchedule(validators: Set<Validator>) =
     ForksSchedule(
       chainId = 1u,
-      forks = setOf(qbftFork(0uL, validators)),
-    )
-
-  private fun qbftFork(
-    timestampSeconds: ULong,
-    validators: Set<Validator>,
-  ) = ForkSpec(
-    timestampSeconds = timestampSeconds,
-    blockTimeSeconds = 1u,
-    configuration = qbftConsensusConfig(validators),
-  )
-
-  private fun qbftConsensusConfig(validators: Set<Validator>) =
-    QbftConsensusConfig(
-      validatorSet = validators,
-      fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-    )
-
-  private fun maruConfig(): MaruConfig {
-    val endpoint = ApiEndpointConfig(URI.create("http://localhost:8545").toURL())
-    return MaruConfig(
-      persistence = Persistence(tempDir),
-      qbft = customQbftConfig(),
-      p2p = null,
-      validatorElNode = ValidatorElNode(endpoint, payloadValidationEnabled = true),
-      followers = FollowersConfig(emptyMap()),
-      observability = ObservabilityConfig(),
-      api = ApiConfig(),
-      syncing =
-      SyncingConfig(
-        peerChainHeightPollingInterval = 1.seconds,
-        syncTargetSelection = SyncingConfig.SyncTargetSelection.Highest,
+      forks =
+      setOf(
+        ForkSpec(
+          timestampSeconds = 0uL,
+          blockTimeSeconds = 1u,
+          configuration =
+          QbftConsensusConfig(
+            validatorSet = validators,
+            fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+          ),
+        ),
       ),
-      forkTransition = ForkTransition(),
     )
-  }
 }

@@ -78,7 +78,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class QbftValidatorFactory(
   private val beaconChain: BeaconChain,
-  private val validatorSigner: Signer<Secp256k1Signature>,
+  private val signer: Signer<Secp256k1Signature>,
   private val qbftOptions: QbftConfig,
   private val metricsSystem: MetricsSystem,
   private val finalizationStateProvider: FinalizationProvider,
@@ -106,7 +106,7 @@ class QbftValidatorFactory(
   override fun create(forkSpec: ForkSpec): Protocol {
     val protocolConfig = forkSpec.configuration as QbftConsensusConfig
     val blockChain = QbftBlockchainAdapter(beaconChain)
-    val nodeKey: NodeKey = validatorSigner.toNodeKey()
+    val nodeKey: NodeKey = signer.toNodeKey()
 
     val localAddress = Util.publicKeyToAddress(nodeKey.publicKey)
     val qbftProposerSelector = ProposerSelectorAdapter(beaconChain, ProposerSelectorImpl)
@@ -118,7 +118,7 @@ class QbftValidatorFactory(
     val localValidator = Validator(localAddress.bytes.toArray())
     val prevRandaoProvider =
       PrevRandaoProviderImpl(
-        signer = Signing.ULongSigner(validatorSigner),
+        signer = Signing.ULongSigner(signer),
         hasher = Hashing::keccak,
       )
     val sealedBeaconBlockImporter =
