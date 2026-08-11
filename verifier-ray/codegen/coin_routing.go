@@ -27,6 +27,10 @@ type CoinRouting struct {
 	// byte-exact with the prover. Counted in the same order as the proof's
 	// module_sizes (VanishingSystem dynamic-module order).
 	DynamicModuleCount int
+	// ColumnSizeMaxSupported mirrors wiop.ColumnSizeMaxSupported: the maximum
+	// dynamic-module size a proof may declare. The Zig verifier rejects any
+	// module_sizes entry above this before it reaches downstream arithmetic.
+	ColumnSizeMaxSupported int
 }
 
 // BuildCoinRouting extracts the protocol-level coin layout from a compiled
@@ -59,6 +63,7 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 	// `Runtime.AdvanceRound` uses, which iterates `sys.Modules` in module-index
 	// order (NOT verifier-action-registration order). See DynamicModuleOrder.
 	out.DynamicModuleCount = len(DynamicModuleOrder(sys))
+	out.ColumnSizeMaxSupported = wiop.ColumnSizeMaxSupported
 
 	return out, nil
 }

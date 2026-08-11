@@ -51,5 +51,6 @@ const protocol = {{.Options.ProtocolImport}};
     .round_coin_offsets = &[_]usize{{intArray .Routing.RoundCoinOffsets}},
     .total_round_coins = {{.Routing.TotalRoundCoins}},
     .dynamic_module_count = {{.Routing.DynamicModuleCount}},
+    .column_size_max_supported = {{.Routing.ColumnSizeMaxSupported}},
 };
 `
