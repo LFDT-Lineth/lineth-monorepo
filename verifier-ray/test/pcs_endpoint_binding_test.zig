@@ -51,7 +51,7 @@ const systems = vf.get(case_index).systems;
 
 test "endpoint cell binding: honest proof verifies" {
     const input = vf.getInput(case_index);
-    try verifier.verify(spec, systems, input);
+    try verifier.verify(spec, systems, input.proof, input.public_inputs);
 }
 
 test "endpoint cell binding: corrupting the raw z_final cell is rejected" {
@@ -92,7 +92,7 @@ test "endpoint cell binding: corrupting the raw z_final cell is rejected" {
     //      (QuotientIdentityMismatch).
     // The soundness claim is that the corruption CANNOT be accepted. Assert
     // rejection via either layer — the endpoint cell is not a free value.
-    const err = verifier.verify(spec, systems, bad);
+    const err = verifier.verify(spec, systems, bad.proof, bad.public_inputs);
     try std.testing.expect(std.meta.isError(err));
     if (err) |_| unreachable else |e| switch (e) {
         // Layer 1 (Fiat-Shamir): the corrupted cell re-derives different query

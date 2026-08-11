@@ -77,7 +77,7 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
     const systems = verifier_case.systems;
     // `spec`/`systems` are comptime, but the verifier input is a runtime value
     // read from `input` (mmap/linker/embedded memory), so dereference it here.
-    verifier.verify(spec, systems, input.*) catch {
+    verifier.verify(spec, systems, input.proof, input.public_inputs) catch {
         // if the verifier fails, return a non-zero exit code
         return 1;
     };

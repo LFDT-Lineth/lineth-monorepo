@@ -76,9 +76,13 @@ pub const PcsOpening = struct {
     proof: pcs.OpeningProof,
 };
 
-/// The full verifier input: prover-ray-style proof plus the separate flat
-/// public-input statement. `proof.rounds[*].cells` omits public-input cells;
-/// `public_inputs` supplies them in registration order.
+/// A bundled verifier input: prover-ray-style proof plus the separate flat
+/// public-input statement, for callers (native mmap / R5 linked-memory /
+/// embedded-rodata loaders) that need the two loaded and passed around as one
+/// value. `verify` itself takes `proof` and `public_inputs` as separate
+/// parameters — pass `input.proof, input.public_inputs`.
+/// `proof.rounds[*].cells` omits public-input cells; `public_inputs` supplies
+/// them in registration order.
 pub const VerifyInput = struct {
     proof: Proof,
     public_inputs: PublicInput = &.{},
@@ -100,7 +104,8 @@ pub const VerifyInput = struct {
 pub fn verify(
     comptime spec: protocol.Spec,
     comptime systems: Systems,
-    input: VerifyInput,
+    proof: Proof,
+    public_inputs: PublicInput,
 ) !void {
     comptime if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
         @compileError("verifier: public_input.round_cell_counts must have one entry per replayed round");
@@ -108,8 +113,7 @@ pub fn verify(
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
-    const proof = input.proof;
-    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, input.public_inputs);
+    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, public_inputs);
     const rounds = bound_rounds.rounds();
 
     // Step 1 — replay transcript, derive all coins. The transcript is owned here
