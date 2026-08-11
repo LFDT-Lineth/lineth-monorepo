@@ -62,3 +62,18 @@ jobs:
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check"
+
+      # The rust guest above hashes in guest software: -Dkeccak-accel=true is only
+      # passed on the zig build path, so that step never executes
+      # arithmetization/src/main/lib/keccak. This one does, and is the only
+      # PR-gating coverage of that library.
+      - name: Trace Keccak zig via the zkc keccak accelerator and check it
+        run: make keccak-zig-exec
+        working-directory: arithmetization/src/test
+        timeout-minutes: 15
+        env:
+          ZKC_REF: "" # Empty to avoid installing zkc again
+          KECCAK_ACCEL: true
+          KECCAK_N_VECTORS: 1
+          KECCAK_JSON_FILE: common_inputs/keccak_accel_check.json
+          ZKC_EXEC_FLAGS: "--check"
