@@ -180,7 +180,7 @@ export type PublicActionsL1<
 >;
 
 export type PublicActionsL1Parameters = {
-  lineaRollupAddress: Address;
+  rollupAddress: Address;
   l2MessageServiceAddress: Address;
 };
 
@@ -198,7 +198,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              lineaRollupAddress: parameters.lineaRollupAddress,
+              rollupAddress: parameters.rollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
             }
           : {}),
@@ -208,7 +208,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              lineaRollupAddress: parameters.lineaRollupAddress,
+              rollupAddress: parameters.rollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
             }
           : {}),
@@ -218,7 +218,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.lineaRollupAddress,
+              messageServiceAddress: parameters.rollupAddress,
             }
           : {}),
       }),
@@ -227,7 +227,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.lineaRollupAddress,
+              messageServiceAddress: parameters.rollupAddress,
             }
           : {}),
       }),
@@ -236,7 +236,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.lineaRollupAddress,
+              messageServiceAddress: parameters.rollupAddress,
             }
           : {}),
       }),

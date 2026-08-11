@@ -217,7 +217,7 @@ async function testArtifactLoading(): Promise<void> {
 
   const fixturesDir = resolve(__dirname, "fixtures");
   const yieldManagerPath = resolve(fixturesDir, "artifacts/YieldManager.json");
-  const lineaRollupPath = resolve(fixturesDir, "artifacts/LineaRollup.json");
+  const linethRollupPath = resolve(fixturesDir, "artifacts/LinethRollup.json");
 
   // Test 1: Load YieldManager artifact
   const yieldManager = loadArtifact(yieldManagerPath);
@@ -226,11 +226,11 @@ async function testArtifactLoading(): Promise<void> {
   assert(yieldManager.abi.length > 0, "YieldManager ABI has entries");
   assert(yieldManager.deployedBytecode.length > 0, "YieldManager has deployed bytecode");
 
-  // Test 2: Load LineaRollup artifact
-  const lineaRollup = loadArtifact(lineaRollupPath);
-  assert(!!lineaRollup, "LineaRollup artifact loaded");
-  assertEqual(lineaRollup.format, "foundry", "LineaRollup detected as Foundry format");
-  assert(lineaRollup.abi.length > 0, "LineaRollup ABI has entries");
+  // Test 2: Load LinethRollup artifact
+  const linethRollup = loadArtifact(linethRollupPath);
+  assert(!!linethRollup, "LinethRollup artifact loaded");
+  assertEqual(linethRollup.format, "foundry", "LinethRollup detected as Foundry format");
+  assert(linethRollup.abi.length > 0, "LinethRollup ABI has entries");
 
   // Test 3: Check immutable references
   assert(
@@ -238,13 +238,13 @@ async function testArtifactLoading(): Promise<void> {
     "YieldManager has immutable references",
   );
   assert(
-    lineaRollup.immutableReferences !== undefined && lineaRollup.immutableReferences.length > 0,
-    "LineaRollup has immutable references",
+    linethRollup.immutableReferences !== undefined && linethRollup.immutableReferences.length > 0,
+    "LinethRollup has immutable references",
   );
 
   // Test 4: Check method identifiers
   assert(yieldManager.methodIdentifiers !== undefined, "YieldManager has method identifiers");
-  assert(lineaRollup.methodIdentifiers !== undefined, "LineaRollup has method identifiers");
+  assert(linethRollup.methodIdentifiers !== undefined, "LinethRollup has method identifiers");
 
   // Test 5: Extract selectors
   const adapter = new MockWeb3Adapter();
@@ -252,9 +252,9 @@ async function testArtifactLoading(): Promise<void> {
   assert(yieldManagerSelectors.size > 0, "YieldManager selectors extracted");
   assert(yieldManagerSelectors.has("91d14854"), "YieldManager has hasRole selector");
 
-  const lineaRollupSelectors = extractSelectorsFromArtifact(adapter, lineaRollup);
-  assert(lineaRollupSelectors.size > 0, "LineaRollup selectors extracted");
-  assert(lineaRollupSelectors.has("1c9b1ba7"), "LineaRollup has CONTRACT_VERSION selector");
+  const linethRollupSelectors = extractSelectorsFromArtifact(adapter, linethRollup);
+  assert(linethRollupSelectors.size > 0, "LinethRollup selectors extracted");
+  assert(linethRollupSelectors.has("1c9b1ba7"), "LinethRollup has CONTRACT_VERSION selector");
 }
 
 /**
@@ -572,11 +572,11 @@ async function testFullIntegration(): Promise<void> {
 
   // Test 5: Create verifier and verify contract structure
   new Verifier(adapter); // Verify Verifier can be instantiated
-  const lineaRollup = jsonConfig.contracts.find((c) => c.name === "TestLineaRollup-Proxy");
-  assert(lineaRollup !== undefined, "LineaRollup found in config");
+  const linethRollup = jsonConfig.contracts.find((c) => c.name === "TestLinethRollup-Proxy");
+  assert(linethRollup !== undefined, "LinethRollup found in config");
 
   // Test 6: Verify bytecode comparison works with loaded artifact
-  const artifact = loadArtifact(lineaRollup!.artifactFile);
+  const artifact = loadArtifact(linethRollup!.artifactFile);
   const bytecodeResult = compareBytecode(artifact.deployedBytecode, artifact.deployedBytecode);
   assertEqual(bytecodeResult.status, "pass", "Bytecode self-comparison passes");
 

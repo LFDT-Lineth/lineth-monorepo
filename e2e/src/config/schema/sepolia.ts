@@ -32,8 +32,8 @@ const config: Config = {
   L1: {
     rpcUrl: L1_RPC_URL,
     chainId: L1_CHAIN_ID,
-    lineaRollupAddress: "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5",
-    lineaRollupProxyAdminAddress: "0xa89E358Ef34921ebA90f328901B7381F86b1db52",
+    linethRollupAddress: "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5",
+    linethRollupProxyAdminAddress: "0xa89E358Ef34921ebA90f328901B7381F86b1db52",
     tokenBridgeAddress: "0x5A0a48389BB0f12E5e017116c1105da97E129142",
     l1TokenAddress: "0x",
     accountManager: new EnvironmentBasedAccountManager(

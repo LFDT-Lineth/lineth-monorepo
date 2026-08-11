@@ -52,11 +52,14 @@ const (
 // SszStatelessValidationResult; that result is too small to hold all 16, so
 // the rest are computed by the Lineth wrapper (run_l2_execution_guest).
 //
-// The wiop mechanism is in place (wiop.RegisterPublicInputs, commit e48fd92f):
-// col.At(pos).Open(ctx) exposes a column position as a cell, RegisterPublicInputs
-// registers it, and sys.Prove returns its value in wiop.PublicInput. What
-// remains is establishing which columns/positions in RISCV-ZKC.bin carry each
-// field, and which fields come from the wrapper instead (open question #5).
+// The wiop mechanism is in place: col.At(pos).Open(ctx) exposes a column position
+// as a cell, [wiop.System.RegisterPublicInputs] registers that cell under a
+// [wiop.PublicInputTag], and sys.Prove returns its value at the matching position
+// of wiop.PublicInput. A field spanning several cells (every [32]byte below) is
+// registered one cell at a time under a numeric suffix. What remains is
+// establishing which columns/positions in RISCV-ZKC.bin carry each field, and
+// which fields come from the wrapper instead (open question #5); see
+// zkcdriver/risc5.RegisterPublicInputs.
 //
 // Count and field names follow the coordinator response schema
 // (rollup_spec/src/rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.response.schema.json).

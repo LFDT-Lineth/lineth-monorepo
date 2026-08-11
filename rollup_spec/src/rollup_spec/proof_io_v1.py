@@ -40,7 +40,7 @@ Design notes:
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
     (on responses) and `guestProgramId` (on requests) are routing metadata.
 
-Conventions (Linea): byte/hash fields are 0x-prefixed hex; integers that fit in
+Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
 """
 
@@ -56,8 +56,8 @@ from .block import (
     ChainConfig,
     ForcedTransactionAcceptance,
     ForcedTransactionWitness,
-    LineaPayloadInput,
-    LineaRollupExtension,
+    LinethPayloadInput,
+    LinethRollupExtension,
 )
 from .stateless_input import encode_stateless_input_ssz
 from .l2_execution import (
@@ -168,7 +168,7 @@ def _decode_forced_transaction(obj: dict, ctx: str) -> ForcedTransactionWitness:
     )
 
 
-def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> LineaPayloadInput:
+def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> LinethPayloadInput:
     ctx = f"payloads[{index}]."
     stateless_input = _require(obj, "statelessInput", ctx)
     new_payload_request = _require(stateless_input, "newPayloadRequest", f"{ctx}statelessInput.")
@@ -206,9 +206,9 @@ def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> Lin
     forced = _require(rollup_extension, "forcedTransactions", f"{ctx}rollupExtension.")
     if not isinstance(forced, list):
         raise ProofIoError(f"'{ctx}rollupExtension.forcedTransactions' must be an array")
-    return LineaPayloadInput(
+    return LinethPayloadInput(
         stateless_input_ssz=stateless_input_ssz,
-        rollup_extension=LineaRollupExtension(
+        rollup_extension=LinethRollupExtension(
             forced_transactions=[
                 _decode_forced_transaction(ftx, f"{ctx}rollupExtension.forcedTransactions[{i}].")
                 for i, ftx in enumerate(forced)
@@ -224,7 +224,7 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
 
     The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
     is routing metadata and the block range is implied by the payloads. The single
-    `proofRequest.chainConfig` carries both the Linea range-level config
+    `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
     the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
     latter when SSZ-encoding each payload's readable `statelessInput`.
@@ -236,7 +236,7 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     chain_config_obj = _require(proof_request, "chainConfig", "proofRequest.")
     chain_config = _decode_chain_config(chain_config_obj)
     # `forkName` selects the stateless-input SSZ fork (the only part the guest
-    # validates); it is not part of the Linea range-level `ChainConfig` dataclass.
+    # validates); it is not part of the Lineth range-level `ChainConfig` dataclass.
     fork_name = _require(chain_config_obj, "forkName", "proofRequest.chainConfig.")
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=Hash32(

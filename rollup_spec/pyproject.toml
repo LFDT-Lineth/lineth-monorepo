@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rollup-spec"
 version = "0.1.0"
-description = "Linea Type-1 RISC-V rollup reference spec, prover I/O JSON schemas, and the host-side JSON <-> guest-dataclass codec."
+description = "Lineth Type-1 RISC-V rollup reference spec, prover I/O JSON schemas, and the host-side JSON <-> guest-dataclass codec."
 requires-python = ">=3.11"
 # Dependencies are defined once, in requirements.txt (the single source of truth).
 dynamic = ["dependencies"]

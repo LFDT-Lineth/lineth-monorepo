@@ -14,7 +14,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | LinethRollup contract address. Read from registry on stable networks; env var used as fallback. |
 | L1_SECURITY_COUNCIL | registry\|env | address | L1 Security Council address (default admin). Read from registry on stable networks; env var used as fallback. |
 | FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID | true | uint256 | Destination L2 chain ID |
 | FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER | true | uint256 | L2 block buffer for forced transaction inclusion |
@@ -38,7 +38,7 @@ npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
 
 Base command with cli arguments:
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINEA_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
+DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINETH_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

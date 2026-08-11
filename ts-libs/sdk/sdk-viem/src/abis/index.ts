@@ -10,5 +10,5 @@
 
 export * from "./message-service";
 export * from "./l2-message-service";
-export * from "./linea-rollup";
+export * from "./lineth-rollup";
 export * from "./token-bridge";

@@ -77,7 +77,7 @@ L2_RPC_URL="${L2_RPC_URL:-http://localhost:$HOST_PORT_L2_RPC}"
 L1_MODE="$(lineth_l1_mode)"
 L1_RPC_URL="$(lineth_l1_host_rpc_url)"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8 || true)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8 || true)"
 L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge || true)"
 L1_ERC20="$(lineth_json_section_addr "$ADDR" l1 ERC20Example || true)"
 L2_MESSAGE_SERVICE="$(lineth_json_section_addr "$ADDR" l2 L2MessageService || true)"
@@ -97,7 +97,7 @@ cat > "$OUTPUT_DIR/links.json" <<EOF
     "coordinatorObservability": "http://localhost:$HOST_PORT_COORDINATOR"
   },
   "l1": {
-    "LineaRollupV8": $(lineth_json_value "$(lineth_l1_address_link "$LINEA_ROLLUP")"),
+    "LinethRollupV8": $(lineth_json_value "$(lineth_l1_address_link "$LINETH_ROLLUP")"),
     "TokenBridge": $(lineth_json_value "$(lineth_l1_address_link "$L1_TOKEN_BRIDGE")"),
     "ERC20Example": $(lineth_json_value "$(lineth_l1_address_link "$L1_ERC20")")
   },
@@ -139,8 +139,8 @@ data_finalized="false"
 state_updated="false"
 state_mismatch="false"
 
-if [ -n "$L1_RPC_URL" ] && [ -n "$LINEA_ROLLUP" ]; then
-  rollup_resp="$(lineth_rpc_json "$L1_RPC_URL" eth_call "[{\"to\":\"$LINEA_ROLLUP\",\"data\":\"0x695378f5\"},\"latest\"]")"
+if [ -n "$L1_RPC_URL" ] && [ -n "$LINETH_ROLLUP" ]; then
+  rollup_resp="$(lineth_rpc_json "$L1_RPC_URL" eth_call "[{\"to\":\"$LINETH_ROLLUP\",\"data\":\"0x695378f5\"},\"latest\"]")"
   rollup_block_hex="$(printf '%s\n' "$rollup_resp" | lineth_json_stdin_string_field result)"
   if [ -n "$rollup_block_hex" ]; then
     rollup_block_dec="$(lineth_hex_to_dec_small "$rollup_block_hex")"
@@ -186,7 +186,7 @@ cat > "$OUTPUT_DIR/finality-report.json" <<EOF
   },
   "addresses": {
     "l2ChainId": $(lineth_json_value "$addresses_chain_id"),
-    "lineaRollupV8": $(lineth_json_value "$LINEA_ROLLUP")
+    "linethRollupV8": $(lineth_json_value "$LINETH_ROLLUP")
   },
   "l1": {
     "mode": $(lineth_json_value "$L1_MODE"),

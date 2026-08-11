@@ -12,7 +12,7 @@ import {
   ClientChainNotConfiguredError,
 } from "viem";
 import { sendTransaction } from "viem/actions";
-import { mainnet } from "viem/chains";
+import { linea, mainnet } from "viem/chains";
 
 import { claimOnL1, ClaimOnL1Parameters } from "./claimOnL1";
 import { getMessageProof } from "./getMessageProof";
@@ -210,7 +210,7 @@ describe("claimOnL1", () => {
 
     expect(getMessageProof).toHaveBeenCalledWith(client, {
       l2Client,
-      lineaRollupAddress: undefined,
+      rollupAddress: undefined,
       l2MessageServiceAddress: undefined,
       messageHash: computeMessageHash({
         from,
@@ -298,7 +298,7 @@ describe("claimOnL1", () => {
 
     expect(getMessageProof).toHaveBeenCalledWith(client, {
       l2Client,
-      lineaRollupAddress: undefined,
+      rollupAddress: undefined,
       l2MessageServiceAddress: undefined,
       messageHash: computeMessageHash({
         from,
@@ -328,14 +328,14 @@ describe("claimOnL1", () => {
       messageNonce,
       feeRecipient,
       l2Client,
-      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      rollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       account: mockAccount,
     });
 
     expect(getMessageProof).toHaveBeenCalledWith(client, {
       l2Client,
-      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      rollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       messageHash: computeMessageHash({
         from,
@@ -399,6 +399,24 @@ describe("claimOnL1", () => {
       }),
     );
     expect(result).toBe(TEST_TRANSACTION_HASH);
+  });
+
+  it("throws if the settlement client chain has no default rollup address and rollupAddress is not provided", async () => {
+    const client = mockClient(linea.id, mockAccount);
+
+    await expect(
+      claimOnL1(client, {
+        from,
+        to,
+        fee,
+        value,
+        calldata,
+        messageNonce,
+        feeRecipient,
+        messageProof,
+        account: mockAccount,
+      }),
+    ).rejects.toThrow(`Cannot resolve a default rollup contract address for chain ID ${linea.id}.`);
   });
 
   it("defaults feeRecipient to zeroAddress if not provided", async () => {
