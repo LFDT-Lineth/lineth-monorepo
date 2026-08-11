@@ -519,13 +519,12 @@ func compileGroup(
 // double-counts two fragments that live on the same module, because each
 // fragment contributes its own pass over that module's rows to the argument.
 //
-// AModules and BModules are exported so out-of-package consumers — notably the
-// verifier-ray codegen — can recognise a subgroup row-limit check and read the
-// exact per-side module partitioning it enforces (mirroring the pattern used by
-// [ResultIsZeroVerifierAction]). They list one module per fragment in
-// [lookupGroup.included] / [lookupGroup.includings] respectively, in the same
-// order, so a duplicate module pointer here means the corresponding fragments
-// deliberately double-count that module (see above).
+// AModules and BModules are exported (mirroring the pattern used by
+// [ResultIsZeroVerifierAction]) so out-of-package consumers can read the exact
+// per-side module partitioning this check enforces. They list one module per
+// fragment in [lookupGroup.included] / [lookupGroup.includings] respectively,
+// in the same order, so a duplicate module pointer here means the
+// corresponding fragments deliberately double-count that module (see above).
 type RowLimitVerifierAction struct {
 	group *lookupGroup
 
