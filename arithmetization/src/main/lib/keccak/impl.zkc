@@ -106,14 +106,14 @@ fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_addres
 
     // final block, DOES require padding --- always
     // n_full_words ∈ {0, 1, ..., 16}
-    var n_full_words:u8 //a u5 in practice
-    var n_bytes:u8 // a u3 in practice
+    var n_full_words:u8 // u5 in practice
+    var n_bytes:u8 // u3 in practice
     n_full_words, n_bytes = remainder /% 8
 
     var final_word_in_block:u1 = n_full_words == 16 ? 1:0
 
-    for limb:u8 = 0; limb<n_full_words; limb = limb + 1 {
-        keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
+    for limb:u7 = 0; limb<n_full_words as u7; limb = limb + 1 {
+        keccak_state[PIB + limb] = read_64(curr_address + (8 * (limb as Address)))
     }
     curr_address = curr_address + (8 * (n_full_words as Address))
     keccak_state[PIB + (n_full_words as u7)] = read_and_pad_64(curr_address, n_bytes as u3, final_word_in_block)
