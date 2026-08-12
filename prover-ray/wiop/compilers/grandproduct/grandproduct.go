@@ -136,7 +136,6 @@ func buildZ(
 
 	zCol := m.NewExtensionColumn(
 		ctx.Childf("z-m%d-k%d", mi, k),
-		wiop.VisibilityOracle,
 		round,
 	)
 

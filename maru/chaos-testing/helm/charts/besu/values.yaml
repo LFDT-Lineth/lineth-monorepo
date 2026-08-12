@@ -307,7 +307,7 @@ configFiles:
       <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="TRACE" additivity="false" />
       <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal" level="DEBUG" additivity="false" />
       <Logger name="org.hyperledger.besu.ethereum.eth.manager.snap" level="DEBUG" additivity="false /"
-      <Logger name="net.consensys.linea.sequencer.txselection.selectors" level="DEBUG" />
+      <Logger name="lineth.sequencer.txselection.selectors" level="DEBUG" />
       <Logger name="org.hyperledger.besu.ethereum.blockcreation.txselection.BlockTransactionSelector" level="INFO" />
       <Logger name="io.opentelemetry" level="WARN" additivity="false" />
     </Loggers>

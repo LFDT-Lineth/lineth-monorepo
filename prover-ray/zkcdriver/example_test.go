@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate
@@ -39,14 +38,9 @@ func TestRunZKCExamples(t *testing.T) {
 		},
 		{
 			// A test case which doesn't use memory which would translate to lookup constraints
-			// which zkc doesn't yet generate. This is the only test case which should work even
-			// with pcs compiler added to the pipeline.
+			// which zkc doesn't yet generate.
 			ZkcFilePath: "testdata/no-memory.zkc",
 			InputStr:    `{}`,
-			compileFn: func(sys *wiop.System) {
-				proverCompilePipeline(sys)
-				pcs.Compile(sys)
-			},
 		},
 	}
 

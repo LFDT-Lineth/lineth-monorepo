@@ -56,7 +56,7 @@ This plugin extends the standard transaction selection protocols employed by Bes
 It leverages the `TransactionSelectionService` to manage and customize the process of transaction selection.
 This includes setting limits such as `TraceLineLimit`, `maxBlockGas`, and optionally a compression-aware blob
 size limit and/or a raw block calldata limit. Block size selectors are only instantiated when their
-respective CLI flag is set. The selectors are in the package `net.consensys.linea.sequencer.txselection.selectors`.
+respective CLI flag is set. The selectors are in the package `lineth.sequencer.txselection.selectors`.
 
 - **`--plugin-linea-blob-size-limit`** (optional): If set, enables `CompressionAwareBlockTransactionSelector`
   which constructs an RLP-encoded block (using placeholder values for header fields) containing all currently
@@ -96,7 +96,7 @@ This includes setting limits such as `TraceLineLimit`, `maxTxGasLimit`, and chec
 of a transaction, and enforcing deny list rules against sender, recipient, and EIP-7702 authorization list entries
 (recovered authority and delegation target address). Per-transaction calldata size validation is optional and only enabled when
 `--plugin-linea-max-tx-calldata-size` is set.
-The validators are in the package `net.consensys.linea.sequencer.txpoolvalidation.validators`.
+The validators are in the package `lineth.sequencer.txpoolvalidation.validators`.
 
 #### CLI options
 

@@ -1,10 +1,10 @@
 import { Eip1193Provider, Signer, Wallet } from "ethers";
 
 import {
-  LineaRollupClient,
-  EthersLineaRollupLogClient,
+  LinethRollupClient,
+  EthersLinethRollupLogClient,
   L1ClaimingService,
-  LineaRollupMessageRetriever,
+  LinethRollupMessageRetriever,
   MerkleTreeService,
 } from "./clients/ethereum";
 import { DefaultGasProvider, GasProvider } from "./clients/gas";
@@ -181,14 +181,14 @@ export class LineaSDK {
   }
 
   /**
-   * Creates an instance of the `EthersLineaRollupLogClient` for interacting with L1 contract event logs.
+   * Creates an instance of the `EthersLinethRollupLogClient` for interacting with L1 contract event logs.
    *
    * @param {string} [localL1ContractAddress] - Optional custom L1 contract address. Required if the network is set to 'custom'.
-   * @returns {EthersLineaRollupLogClient} An instance of the L1 message service log client.
+   * @returns {EthersLinethRollupLogClient} An instance of the L1 message service log client.
    */
-  public getL1ContractEventLogClient(localL1ContractAddress?: string): EthersLineaRollupLogClient {
+  public getL1ContractEventLogClient(localL1ContractAddress?: string): EthersLinethRollupLogClient {
     const l1ContractAddress = this.getContractAddress("l1", localL1ContractAddress);
-    return new EthersLineaRollupLogClient(this.l1Provider, l1ContractAddress);
+    return new EthersLinethRollupLogClient(this.l1Provider, l1ContractAddress);
   }
 
   /**
@@ -203,30 +203,30 @@ export class LineaSDK {
   }
 
   /**
-   * Retrieves an instance of the `LineaRollupClient` for interacting with the L1 contract.
+   * Retrieves an instance of the `LinethRollupClient` for interacting with the L1 contract.
    *
    * @param {string} [localL1ContractAddress] - Optional custom L1 contract address. Required if the network is set to 'custom'.
    * @param {string} [localL2ContractAddress] - Optional custom L2 contract address. Required if the network is set to 'custom'.
-   * @returns {LineaRollupClient} An instance of the `LineaRollupClient` configured for the specified L1 contract.
+   * @returns {LinethRollupClient} An instance of the `LinethRollupClient` configured for the specified L1 contract.
    */
-  public getL1Contract(localL1ContractAddress?: string, localL2ContractAddress?: string): LineaRollupClient {
+  public getL1Contract(localL1ContractAddress?: string, localL2ContractAddress?: string): LinethRollupClient {
     const l1ContractAddress = this.getContractAddress("l1", localL1ContractAddress);
     const l2ContractAddress = this.getContractAddress("l2", localL2ContractAddress);
 
-    const lineaRollupLogClient = new EthersLineaRollupLogClient(this.l1Provider, l1ContractAddress);
+    const linethRollupLogClient = new EthersLinethRollupLogClient(this.l1Provider, l1ContractAddress);
     const l2MessageServiceLogClient = this.getL2ContractEventLogClient(l2ContractAddress);
 
-    return new LineaRollupClient(
+    return new LinethRollupClient(
       this.l1Provider,
       l1ContractAddress,
-      lineaRollupLogClient,
+      linethRollupLogClient,
       l2MessageServiceLogClient,
       this.getL1GasProvider(),
-      new LineaRollupMessageRetriever(this.l1Provider, lineaRollupLogClient, l1ContractAddress),
+      new LinethRollupMessageRetriever(this.l1Provider, linethRollupLogClient, l1ContractAddress),
       new MerkleTreeService(
         this.l1Provider,
         l1ContractAddress,
-        lineaRollupLogClient,
+        linethRollupLogClient,
         l2MessageServiceLogClient,
         this.l2MessageTreeDepth,
       ),

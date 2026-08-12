@@ -1,6 +1,6 @@
 # Smart Contracts
 
-> Solidity contracts for the Linea rollup, messaging, and bridging protocols.
+> Solidity contracts for the Lineth rollup, messaging, and bridging protocols.
 
 > **Diagram:** [Contracts Architecture](../diagrams/contracts-architecture.mmd) (Mermaid source)
 
@@ -19,10 +19,10 @@ The contracts directory contains all Solidity smart contracts for:
 │                            L1 (ETHEREUM)                               │
 │                                                                        │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                         LineaRollup                              │  │
+│  │                         LinethRollup                              │  │
 │  │                                                                  │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐   │  │
-│  │  │ ZkEvmV2     │  │ L1Message   │  │ LineaRollupYield        │   │  │
+│  │  │ ZkEvmV2     │  │ L1Message   │  │ LinethRollupYield        │   │  │
 │  │  │             │  │  Service    │  │  Extension              │   │  │
 │  │  │ - Submit    │  │             │  │                         │   │  │
 │  │  │   blobs     │  │ - Send msg  │  │ - Native ETH yield      │   │  │
@@ -89,8 +89,8 @@ The contracts directory contains all Solidity smart contracts for:
 contracts/
 ├── src/
 │   ├── rollup/                 # L1 Rollup contracts
-│   │   ├── LineaRollup.sol     # Main rollup contract
-│   │   ├── LineaRollupBase.sol # Base rollup logic
+│   │   ├── LinethRollup.sol     # Main rollup contract
+│   │   ├── LinethRollupBase.sol # Base rollup logic
 │   │   └── ZkEvmV2.sol         # ZK verification logic
 │   │
 │   ├── messaging/              # Message service contracts
@@ -152,20 +152,20 @@ contracts/
 ├── deploy/                     # Deployment scripts
 │   ├── 01_deploy_PlonkVerifier.ts
 │   ├── 02_deploy_Timelock.ts
-│   ├── 03_deploy_LineaRollup.ts
+│   ├── 03_deploy_LinethRollup.ts
 │   ├── 04_deploy_L2MessageService.ts
 │   ├── 05_deploy_BridgedToken.ts
 │   └── 06_deploy_TokenBridge.ts
 │
 └── local-deployments-artifacts/ # Local deployment scripts
-    ├── deployPlonkVerifierAndLineaRollupV6.ts
+    ├── deployPlonkVerifierAndLinethRollupV6.ts
     ├── deployL2MessageServiceV1.ts
     └── deployBridgedTokenAndTokenBridgeV1_1.ts
 ```
 
 ## Core Contracts
 
-### LineaRollup (L1)
+### LinethRollup (L1)
 
 The main L1 contract managing state submissions and finalization.
 
@@ -331,7 +331,7 @@ Hardhat scripts live under `contracts/deploy/`. The canonical parameter and tag 
 make deploy-contracts
 
 # Deploy L1 rollup only
-make deploy-linea-rollup-v6
+make deploy-lineth-rollup-v6
 
 # Deploy L2 message service
 make deploy-l2messageservice
@@ -347,12 +347,12 @@ make deploy-token-bridge-l2
 
 ```bash
 # L1 Deployment
-PRIVATE_KEY=0x...
+DEPLOYER_PRIVATE_KEY=0x...
 RPC_URL=http://localhost:8445
 VERIFIER_CONTRACT_NAME=IntegrationTestTrueVerifier
-LINEA_ROLLUP_INITIAL_STATE_ROOT_HASH=0x...
-LINEA_ROLLUP_SECURITY_COUNCIL=0x...
-LINEA_ROLLUP_OPERATORS=0x...,0x...
+INITIAL_L2_STATE_ROOT_HASH=0x...
+L1_SECURITY_COUNCIL=0x...
+LINETH_ROLLUP_OPERATORS=0x...,0x...
 
 # L2 Deployment
 PRIVATE_KEY=0x...
@@ -373,7 +373,7 @@ pnpm exec hardhat compile
 pnpm exec hardhat test
 
 # Run specific test file
-pnpm exec hardhat test test/hardhat/rollup/LineaRollup.ts
+pnpm exec hardhat test test/hardhat/rollup/LinethRollup.ts
 
 # Coverage
 pnpm exec hardhat coverage
@@ -444,7 +444,7 @@ All major contracts use OpenZeppelin's **Transparent Upgradeable Proxy** pattern
 │           ▼                                                          │
 │  ┌──────────────────┐                                                │
 │  │  Implementation  │                                                │
-│  │  (LineaRollup)   │                                                │
+│  │  (LinethRollup)   │                                                │
 │  │                  │                                                │
 │  │  - Business logic│                                                │
 │  │  - No upgrade fn │                                                │
@@ -464,7 +464,7 @@ All major contracts use OpenZeppelin's **Transparent Upgradeable Proxy** pattern
 
 | Contract | Address |
 |----------|---------|
-| LineaRollup | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F` |
+| LinethRollup | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F` |
 | L2MessageService | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec` |
 | TokenBridge (L1) | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319` |
 | TokenBridge (L2) | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9` |
@@ -473,5 +473,5 @@ All major contracts use OpenZeppelin's **Transparent Upgradeable Proxy** pattern
 
 | Contract | Address |
 |----------|---------|
-| LineaRollup | `0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5` |
+| LinethRollup | `0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5` |
 | L2MessageService | `0x971e727e956690b9957be6d51ec16e73acac83a7` |

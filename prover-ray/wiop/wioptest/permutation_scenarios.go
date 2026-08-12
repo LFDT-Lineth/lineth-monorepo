@@ -42,8 +42,8 @@ func NewPermutationSingleColumnScenario() *PermutationScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(colA.View())},
@@ -71,10 +71,10 @@ func NewPermutationMultiColumnScenario() *PermutationScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	a0 := modA.NewColumn(sys.Context.Childf("A0"), wiop.VisibilityOracle, r0)
-	a1 := modA.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
-	b0 := modB.NewColumn(sys.Context.Childf("B0"), wiop.VisibilityOracle, r0)
-	b1 := modB.NewColumn(sys.Context.Childf("B1"), wiop.VisibilityOracle, r0)
+	a0 := modA.NewColumn(sys.Context.Childf("A0"), r0)
+	a1 := modA.NewColumn(sys.Context.Childf("A1"), r0)
+	b0 := modB.NewColumn(sys.Context.Childf("B0"), r0)
+	b1 := modB.NewColumn(sys.Context.Childf("B1"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(a0.View(), a1.View())},
@@ -110,9 +110,9 @@ func NewPermutationMultiFragmentScenario() *PermutationScenario {
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 2, wiop.PaddingDirectionNone)
 	modA2 := sys.NewSizedModule(sys.Context.Childf("modA2"), 2, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	a1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
-	a2 := modA2.NewColumn(sys.Context.Childf("A2"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	a1 := modA1.NewColumn(sys.Context.Childf("A1"), r0)
+	a2 := modA2.NewColumn(sys.Context.Childf("A2"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(a1.View()), wiop.NewTable(a2.View())},

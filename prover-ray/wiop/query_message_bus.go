@@ -1,6 +1,9 @@
 package wiop
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // BusDirection is the sign of a [MessageBus] entry's contribution to its
 // (OriginShard, Handle) accumulator.
@@ -145,6 +148,34 @@ func (sys *System) NewMessageBusSend(ctx *ContextFrame, originShard, handle stri
 // Panics on any invariant violation.
 func (sys *System) NewMessageBusReceive(ctx *ContextFrame, originShard, handle string, tab Table) *MessageBus {
 	return sys.newMessageBus(ctx, originShard, handle, BusReceive, tab)
+}
+
+// MessageBusHandles returns the distinct [MessageBus.Handle] values declared in
+// sys, sorted alphabetically and without duplicates.
+//
+// It exists because [System.MessageBuses] holds one entry per *participation*,
+// not one per bus: a handle normally has several entries (at least one Send and
+// one Receive, since that is what its grand product relates), so
+// len(sys.MessageBuses) overcounts the buses. Use this to count or enumerate
+// them.
+//
+// The ordering is the one the messagebus compiler uses: it sorts handles the
+// same way and suffixes each handle's public-input tag with that index, so
+// MessageBusHandles()[i] is the handle behind the public input tagged
+// MessageBus_i on every shard. The compiler is single-invocation per system
+// precisely so that this correspondence holds for every declared handle.
+func (sys *System) MessageBusHandles() []string {
+	seen := make(map[string]struct{}, len(sys.MessageBuses))
+	handles := make([]string, 0, len(sys.MessageBuses))
+	for _, mb := range sys.MessageBuses {
+		if _, dup := seen[mb.Handle]; dup {
+			continue
+		}
+		seen[mb.Handle] = struct{}{}
+		handles = append(handles, mb.Handle)
+	}
+	sort.Strings(handles)
+	return handles
 }
 
 // newMessageBus is the shared constructor for the message-bus entry builders.

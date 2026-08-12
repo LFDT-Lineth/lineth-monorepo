@@ -1,5 +1,5 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { TestLineaRollup } from "contracts/typechain-types";
+import { TestLinethRollup } from "contracts/typechain-types";
 import { Contract } from "ethers";
 
 import { FinalizationData, ShnarfDataGenerator, AggregatedProofData, ExpectedCustomError } from "../../common/types";
@@ -8,7 +8,7 @@ import { FinalizationData, ShnarfDataGenerator, AggregatedProofData, ExpectedCus
 export type { AggregatedProofData, ExpectedCustomError } from "../../common/types";
 
 export type FinalizeContext = {
-  lineaRollup: TestLineaRollup;
+  linethRollup: TestLinethRollup;
   operator: SignerWithAddress;
 };
 

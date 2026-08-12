@@ -20,6 +20,13 @@ type CoinRouting struct {
 	// TotalRoundCoins is the total number of coins across all rounds; the
 	// length of the Zig verifier's all_coins array.
 	TotalRoundCoins int
+	// DynamicModuleCount is the number of distinct dynamically-sized modules
+	// whose runtime sizes the prover absorbs into the transcript at each round
+	// advance (prover-ray's AdvanceRound). The Zig verifier's replay absorbs the
+	// first DynamicModuleCount entries of module_sizes at every round to stay
+	// byte-exact with the prover. Counted in the same order as the proof's
+	// module_sizes (VanishingSystem dynamic-module order).
+	DynamicModuleCount int
 }
 
 // BuildCoinRouting extracts the protocol-level coin layout from a compiled
@@ -46,5 +53,44 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 			out.RoundCoinCounts[0],
 		)
 	}
+
+	// The number of dynamically-sized modules whose sizes the transcript absorbs
+	// once per round advance. This MUST match the count and order prover-ray's
+	// `Runtime.AdvanceRound` uses, which iterates `sys.Modules` in module-index
+	// order (NOT verifier-action-registration order). See DynamicModuleOrder.
+	out.DynamicModuleCount = len(DynamicModuleOrder(sys))
+
 	return out, nil
+}
+
+// DynamicModuleOrder returns the dynamically-sized modules in the canonical
+// order the verifier must use for `module_sizes`: prover-ray's
+// `Runtime.AdvanceRound` absorbs one size per dynamic module by iterating
+// `sys.Modules` in module-index order, so the verifier's `module_sizes` slice
+// (and every `DynamicIndex` into it) must follow that same order to reproduce
+// the transcript. This is the single source of truth for dynamic-module
+// ordering, shared by BuildCoinRouting (count), BuildVanishingSystem
+// (DynamicIndex), and the fixture generator (module_sizes slice).
+//
+// Returns modules in `sys.Modules` order (dynamic ones only). `out[i]` is the
+// module whose runtime size occupies `module_sizes[i]`.
+func DynamicModuleOrder(sys *wiop.System) []*wiop.Module {
+	var out []*wiop.Module
+	for _, m := range sys.Modules {
+		if m.IsDynamic() {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// DynamicModuleIndex returns a map from each dynamic module to its index in the
+// canonical DynamicModuleOrder — i.e. its slot in the verifier's `module_sizes`.
+func DynamicModuleIndex(sys *wiop.System) map[*wiop.Module]int {
+	order := DynamicModuleOrder(sys)
+	idx := make(map[*wiop.Module]int, len(order))
+	for i, m := range order {
+		idx[m] = i
+	}
+	return idx
 }

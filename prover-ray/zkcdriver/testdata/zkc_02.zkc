@@ -8,11 +8,11 @@ fn main() {
     var v:u16 = 1
     //
     while i != n {
-      v = v + v
-      i = i + 1
+        v = v + v
+        i = i + 1
     }
     //
     if v != r {
-       fail
+        fail
     }
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
@@ -139,15 +140,14 @@ func proverCompilePipeline(sys *wiop.System) {
 	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
 	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
 	// test case. We should also do it in the pipeline test then.
-	// pcs.Compile(sys)
+	pcs.Compile(sys)
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
 func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
-		r := recover()
-		if r != nil {
+		if r := recover(); r != nil {
 			err = fmt.Errorf("panic during test-case execution: %v", r)
 		}
 	}()
@@ -168,9 +168,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	proverCompilePipeline(sys)
 
 	// Run the ZkC driver to produce a proof and public inputs
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignWithPreRead(rt, inputs)
-	})
+	proof, pub := sys.Prove(
+		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs) },
+		wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	// Verify the proof and public inputs
 	if err := sys.Verify(proof, pub); err != nil {

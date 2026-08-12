@@ -10,7 +10,7 @@ import { YieldReportingProcessor } from "../YieldReportingProcessor.js";
 
 import type { ILazyOracle } from "../../../core/clients/contracts/ILazyOracle.js";
 import type { UpdateVaultDataParams } from "../../../core/clients/contracts/ILazyOracle.js";
-import type { ILineaRollupYieldExtension } from "../../../core/clients/contracts/ILineaRollupYieldExtension.js";
+import type { ILinethRollupYieldExtension } from "../../../core/clients/contracts/ILinethRollupYieldExtension.js";
 import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
 import type { IYieldManager } from "../../../core/clients/contracts/IYieldManager.js";
 import type { IBeaconChainStakingClient } from "../../../core/clients/IBeaconChainStakingClient.js";
@@ -106,7 +106,7 @@ describe("YieldReportingProcessor", () => {
   let yieldManager: jest.Mocked<IYieldManager<TransactionReceipt>>;
   let lazyOracle: jest.Mocked<ILazyOracle<TransactionReceipt>>;
   let lidoReportClient: jest.Mocked<ILidoAccountingReportClient>;
-  let yieldExtension: jest.Mocked<ILineaRollupYieldExtension<TransactionReceipt>>;
+  let yieldExtension: jest.Mocked<ILinethRollupYieldExtension<TransactionReceipt>>;
   let beaconClient: jest.Mocked<IBeaconChainStakingClient>;
   let vaultHubClient: jest.Mocked<IVaultHub<TransactionReceipt>>;
 
@@ -143,7 +143,7 @@ describe("YieldReportingProcessor", () => {
 
     yieldExtension = {
       transferFundsForNativeYield: jest.fn(),
-    } as unknown as jest.Mocked<ILineaRollupYieldExtension<TransactionReceipt>>;
+    } as unknown as jest.Mocked<ILinethRollupYieldExtension<TransactionReceipt>>;
 
     beaconClient = {
       submitWithdrawalRequestsToFulfilAmount: jest.fn(),

@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 import { YieldManagerStorageLayout } from "./YieldManagerStorageLayout.sol";
 import { IYieldManager } from "./interfaces/IYieldManager.sol";
 import { IYieldProvider } from "./interfaces/IYieldProvider.sol";
-import { ILineaRollupYieldExtension } from "./interfaces/ILineaRollupYieldExtension.sol";
+import { ILinethRollupYieldExtension } from "./interfaces/ILinethRollupYieldExtension.sol";
 import { YieldManagerPauseManager } from "../security/pausing/YieldManagerPauseManager.sol";
 import { Math256 } from "../libraries/Math256.sol";
 import { ErrorUtils } from "../libraries/ErrorUtils.sol";
@@ -479,7 +479,7 @@ contract YieldManager is
    * @param _amount Amount of ETH to send.
    */
   function _fundReserve(uint256 _amount) internal virtual {
-    ILineaRollupYieldExtension(L1_MESSAGE_SERVICE).fund{ value: _amount }();
+    ILinethRollupYieldExtension(L1_MESSAGE_SERVICE).fund{ value: _amount }();
   }
 
   /**
@@ -581,7 +581,7 @@ contract YieldManager is
     $$.lastReportedNegativeYield = outstandingNegativeYield;
     YieldManagerStorage storage $ = _getYieldManagerStorage();
     $.userFundsInYieldProvidersTotal += newReportedYield;
-    ILineaRollupYieldExtension(L1_MESSAGE_SERVICE).reportNativeYield(newReportedYield, _l2YieldRecipient);
+    ILinethRollupYieldExtension(L1_MESSAGE_SERVICE).reportNativeYield(newReportedYield, _l2YieldRecipient);
     emit NativeYieldReported(_yieldProvider, _l2YieldRecipient, newReportedYield, outstandingNegativeYield);
   }
 
@@ -990,7 +990,7 @@ contract YieldManager is
     onlyKnownYieldProvider(_yieldProvider)
     onlyL1MessageService
   {
-    if (!ILineaRollupYieldExtension(L1_MESSAGE_SERVICE).isWithdrawLSTAllowed()) {
+    if (!ILinethRollupYieldExtension(L1_MESSAGE_SERVICE).isWithdrawLSTAllowed()) {
       revert LSTWithdrawalNotAllowed();
     }
     YieldProviderStorage storage $$ = _getYieldProviderStorage(_yieldProvider);

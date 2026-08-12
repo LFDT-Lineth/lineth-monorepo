@@ -3,7 +3,7 @@ sequenceDiagram
     participant User as USER/CONTRACT
     participant L2 as L2 (L2MessageService)
     participant Coord as Coordinator
-    participant L1 as L1 (LineaRollup)
+    participant L1 as L1 (LinethRollup)
 
     User->>L2: 1. sendMessage()
     L2->>L2: 2. MessageSent event<br/>+ rolling hash update
