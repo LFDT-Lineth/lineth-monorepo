@@ -1,0 +1,44 @@
+{
+  "avgPayloadBPerBlock": 1517.8238956995524,
+  "avgTxPerBlock": 2.6422455730686902,
+  "blockCount": 10278,
+  "blockRange": {
+    "first": 31685616,
+    "last": 31695893
+  },
+  "byteBreakdown": {
+    "blockHash": 328896,
+    "blockMetadata": 61668,
+    "fromAddresses": 543140,
+    "txRLP": 14666490
+  },
+  "chainId": 59144,
+  "fetchedAtUTC": "2026-08-12T19:16:13Z",
+  "firstTimestamp": 1786449448,
+  "hashChecks": {
+    "passed": 2,
+    "performed": 2
+  },
+  "label": "current",
+  "lastTimestamp": 1786528754,
+  "note": "byteBreakdown sums to totalPayloadBytes exactly (it is the same accounting v1.EncodeBlockForCompression uses). txFieldBreakdown decomposes txRLP only; residual accounts for RLP list headers and type-envelope bytes not attributable to a single field.",
+  "payloadBytesPerHour": 708151.948150203,
+  "rpcEndpoint": "https://rpc.linea.build",
+  "toolCommit": "3263e7764",
+  "totalPayloadBytes": 15600194,
+  "txCount": 27157,
+  "txFieldBreakdown": {
+    "accessList": 649,
+    "blobFields": 0,
+    "data": 13379421,
+    "gas": 101167,
+    "gasFeeCap": 74926,
+    "gasPrice": 61419,
+    "gasTipCap": 74775,
+    "nonce": 75555,
+    "residual": 298765,
+    "to": 542380,
+    "value": 57433
+  },
+  "windowHours": 22.029444444444444
+}
