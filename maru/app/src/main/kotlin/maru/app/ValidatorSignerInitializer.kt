@@ -12,31 +12,16 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.crypto.withCloseAction
 import maru.config.QbftConfig
-import maru.config.ValidatorSignerConfig
 import maru.config.ValidatorSignerType
 import maru.consensus.ForksSchedule
 import maru.crypto.LocalValidatorSigner
 import maru.crypto.SecpCrypto
+import maru.crypto.toValidator
 
-fun interface CustomValidatorSignerFactory {
-  fun create(config: ValidatorSignerConfig): CloseableSigner<Secp256k1Signature>
-}
-
-object MissingCustomValidatorSignerFactory : CustomValidatorSignerFactory {
-  override fun create(config: ValidatorSignerConfig): CloseableSigner<Secp256k1Signature> {
-    require(config.type == ValidatorSignerType.CUSTOM) {
-      "CustomValidatorSignerFactory is only used for custom validator signers"
-    }
-    throw IllegalArgumentException(
-      "Custom validator signer '${config.name}' requires an external CustomValidatorSignerFactory",
-    )
-  }
-}
-
-internal class ValidatorSignerFactory(
+internal class ValidatorSignerInitializer(
   private val customSignerFactory: CustomValidatorSignerFactory,
 ) {
-  fun create(
+  fun initialize(
     qbftConfig: QbftConfig,
     beaconGenesisConfig: ForksSchedule,
     privateKey: ByteArray,

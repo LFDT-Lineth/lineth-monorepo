@@ -21,35 +21,28 @@ import maru.consensus.QbftConsensusConfig
 import maru.core.Validator
 import maru.crypto.LocalValidatorSigner
 import maru.crypto.SecpCrypto
+import maru.crypto.toValidator
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
-class ValidatorSignerFactoryTest {
+class ValidatorSignerInitializerTest {
   private val privateKey = ByteArray(32).also { it[it.lastIndex] = 1 }
   private val localSignerConfig = ValidatorSignerConfig()
   private val customSignerConfig =
     ValidatorSignerConfig(ValidatorSignerType.CUSTOM, "maru-validator")
 
   @Test
-  fun `missing custom signer factory reports the logical name`() {
-    assertThatThrownBy {
-      MissingCustomValidatorSignerFactory.create(customSignerConfig)
-    }.isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("maru-validator")
-  }
-
-  @Test
-  fun `factory creates a local signer without invoking the custom factory`() {
-    val factory =
-      ValidatorSignerFactory(
+  fun `initializer creates a local signer without invoking the custom factory`() {
+    val initializer =
+      ValidatorSignerInitializer(
         CustomValidatorSignerFactory { error("must not be called") },
       )
     val expectedValidator = SecpCrypto.privateKeyToValidator(privateKey)
 
     val signer =
-      factory.create(
+      initializer.initialize(
         qbftConfig = qbftConfig(localSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(expectedValidator)),
         privateKey = privateKey,
@@ -59,12 +52,12 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `factory creates a custom signer matching the validator set`() {
+  fun `initializer creates a custom signer matching the validator set`() {
     var receivedConfig: ValidatorSignerConfig? = null
     var closeCalls = 0
     val localSigner = LocalValidatorSigner(privateKey)
-    val factory =
-      ValidatorSignerFactory(
+    val initializer =
+      ValidatorSignerInitializer(
         CustomValidatorSignerFactory { config ->
           receivedConfig = config
           localSigner.withCloseAction { closeCalls++ }
@@ -72,7 +65,7 @@ class ValidatorSignerFactoryTest {
       )
 
     val signer =
-      factory.create(
+      initializer.initialize(
         qbftConfig = qbftConfig(customSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(SecpCrypto.privateKeyToValidator(privateKey))),
         privateKey = ByteArray(0),
@@ -87,10 +80,10 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `factory closes a custom signer rejected by validator set validation`() {
+  fun `initializer closes a custom signer rejected by validator set validation`() {
     var closeCalls = 0
-    val factory =
-      ValidatorSignerFactory(
+    val initializer =
+      ValidatorSignerInitializer(
         CustomValidatorSignerFactory {
           LocalValidatorSigner(privateKey).withCloseAction { closeCalls++ }
         },
@@ -103,7 +96,7 @@ class ValidatorSignerFactoryTest {
       )
 
     assertThatThrownBy {
-      factory.create(
+      initializer.initialize(
         qbftConfig = qbftConfig(customSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
         privateKey = ByteArray(0),
@@ -116,9 +109,9 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `factory rejects a local signer outside the validator set`() {
-    val factory =
-      ValidatorSignerFactory(
+  fun `initializer rejects a local signer outside the validator set`() {
+    val initializer =
+      ValidatorSignerInitializer(
         CustomValidatorSignerFactory { error("must not be called") },
       )
     val differentValidator =
@@ -129,7 +122,7 @@ class ValidatorSignerFactoryTest {
       )
 
     assertThatThrownBy {
-      factory.create(
+      initializer.initialize(
         qbftConfig = qbftConfig(localSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
         privateKey = privateKey,

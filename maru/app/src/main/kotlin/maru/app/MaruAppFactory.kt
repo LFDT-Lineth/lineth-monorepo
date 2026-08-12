@@ -116,7 +116,8 @@ class MaruAppFactory(
   customValidatorSignerFactory: CustomValidatorSignerFactory = MissingCustomValidatorSignerFactory,
 ) : MaruAppFactoryCreator {
   private val log = LogManager.getLogger(this.javaClass)
-  private val validatorSignerFactory = ValidatorSignerFactory(customValidatorSignerFactory)
+  private val validatorSignerInitializer =
+    ValidatorSignerInitializer(customValidatorSignerFactory)
 
   override fun create(
     config: MaruConfig,
@@ -150,7 +151,7 @@ class MaruAppFactory(
     val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
     val validatorSigner =
       config.qbft?.let { qbftConfig ->
-        validatorSignerFactory.create(
+        validatorSignerInitializer.initialize(
           qbftConfig = qbftConfig,
           beaconGenesisConfig = beaconGenesisConfig,
           privateKey = privateKey,

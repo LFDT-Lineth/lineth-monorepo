@@ -25,6 +25,7 @@ import maru.consensus.qbft.DifficultyAwareQbftFactory
 import maru.consensus.state.FinalizationProvider
 import maru.core.Protocol
 import maru.core.SealedBeaconBlock
+import maru.crypto.toValidator
 import maru.database.BeaconChain
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
