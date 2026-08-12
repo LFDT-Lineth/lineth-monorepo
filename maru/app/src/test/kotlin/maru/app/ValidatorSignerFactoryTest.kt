@@ -116,7 +116,7 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `factory preserves warning-only behavior for a local signer outside the validator set`() {
+  fun `factory rejects a local signer outside the validator set`() {
     val factory =
       ValidatorSignerFactory(
         CustomValidatorSignerFactory { error("must not be called") },
@@ -128,14 +128,15 @@ class ValidatorSignerFactoryTest {
           .toArray(),
       )
 
-    val signer =
+    assertThatThrownBy {
       factory.create(
         qbftConfig = qbftConfig(localSignerConfig),
         beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
         privateKey = privateKey,
       )
-
-    assertThat(signer.toValidator()).isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
+    }.isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("Local validator signer")
+      .hasMessageContaining("is not present in any configured validator set")
   }
 
   private fun qbftConfig(signerConfig: ValidatorSignerConfig) =

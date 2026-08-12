@@ -16,11 +16,8 @@ import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.core.Validator
-import org.apache.logging.log4j.LogManager
 
 internal object ValidatorSetMembership {
-  private val log = LogManager.getLogger(ValidatorSetMembership::class.java)
-
   fun validate(
     qbftConfig: QbftConfig,
     beaconGenesisConfig: ForksSchedule,
@@ -40,15 +37,15 @@ internal object ValidatorSetMembership {
         }.toSet()
 
     if (validator !in validatorsFromAllForks) {
-      if (qbftConfig.validatorSigner.type == ValidatorSignerType.CUSTOM) {
-        throw IllegalArgumentException(
-          "Custom validator signer '${qbftConfig.validatorSigner.name}' address " +
-            "${validator.address.encodeHex()} is not present in any configured validator set",
-        )
-      }
-      log.warn(
-        "Local validator={} is not present in any validator set in the genesis file",
-        validator,
+      val signerDescription =
+        when (qbftConfig.validatorSigner.type) {
+          ValidatorSignerType.LOCAL -> "Local validator signer"
+          ValidatorSignerType.CUSTOM ->
+            "Custom validator signer '${qbftConfig.validatorSigner.name}'"
+        }
+      throw IllegalArgumentException(
+        "$signerDescription address ${validator.address.encodeHex()} " +
+          "is not present in any configured validator set",
       )
     }
   }
