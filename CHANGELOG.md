@@ -18,6 +18,10 @@
 - *(coordinator)* Support custom transaction signers (#3597)
 - *(linea-besu)* Update to v26.7.0 (#3623)
 - *(linea-besu)* Update to 26.7.1 (#3699)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
+- *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
+- *(linea-besu)* Support custom liveness signers (#3666)
+- *(maru)* Support Noise / Yamux (#3751)
 
 ### 🐛 Bug Fixes
 
@@ -128,3 +132,4 @@
 - *(coordinator)* Update to vertx 5.1.5 (#3744)
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(linea-besu)* Package renaming to lineth.* (#3750)
+- *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)

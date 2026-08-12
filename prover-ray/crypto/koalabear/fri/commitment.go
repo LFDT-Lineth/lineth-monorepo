@@ -64,12 +64,16 @@ func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 // The function expects that the encoder is well-formed: see
 // [assertValidMultiEncoder].
 func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
-
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
 	for i := range table {
-		encoded[i].Base = make([][]field.Element, len(table[i].Base))
-		encoded[i].Ext = make([][]field.Ext, len(table[i].Ext))
+		// One contiguous slab per size, pre-sliced per column: per-column
+		// codeword allocations are large objects that contend on the page heap
+		// and the kernel fault path under 96-way parallelism (measured >90%
+		// system time on a cold one-shot wide commit).
+		N := int(encoders[i].Domain.Cardinality)
+		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
+		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
 	}
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
@@ -90,18 +94,33 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 			work = append(work, encodeItem{i: i, k: k, ext: true})
 		}
 	}
+	encodeOpts := []fft.Option{fft.WithNbTasks(1)}
 	parallel.Execute(len(work), func(start, end int) {
 		for w := start; w < end; w++ {
 			it := work[w]
 			if it.ext {
-				encoded[it.i].Ext[it.k] = encoders[it.i].EncodeExt(table[it.i].Ext[it.k], fft.WithNbTasks(1))
+				encoders[it.i].EncodeExtInto(table[it.i].Ext[it.k], encoded[it.i].Ext[it.k], encodeOpts...)
 			} else {
-				encoded[it.i].Base[it.k] = encoders[it.i].Encode(table[it.i].Base[it.k], fft.WithNbTasks(1))
+				encoders[it.i].EncodeInto(table[it.i].Base[it.k], encoded[it.i].Base[it.k], encodeOpts...)
 			}
 		}
 	})
 
 	return encoded
+}
+
+// slabColumns allocates count columns of n elements as sub-slices of one
+// contiguous slab, each capped so a column cannot grow into its neighbor.
+func slabColumns[T any](count, n int) [][]T {
+	columns := make([][]T, count)
+	if count == 0 {
+		return columns
+	}
+	slab := make([]T, count*n)
+	for k := range columns {
+		columns[k] = slab[k*n : (k+1)*n : (k+1)*n]
+	}
+	return columns
 }
 
 // Merkleize merkleizes the table using Poseidon2. Every table but the bottom
@@ -110,42 +129,38 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 func (table MultiSizeTable) Merkleize() *Tree {
 
 	bottom := len(table) - 1
-
-	// One slot wider than table: shallowest slot (index 0's shifted pair)
-	// would otherwise be a negative index.
-	leaves := make([][]field.Octuplet, len(table)+1)
+	if table[bottom].NumRows() == 0 {
+		panic("the bottom level must be non-empty")
+	}
 
 	// Leaf hashing dominates Commit; it is parallel over leaf index and
 	// vectorizes 16-wide with AVX-512, so hashSizedLeaves handles each size.
-	if table[bottom].NumRows() > 0 {
-		size := table[bottom].Size()
-		leaves[len(leaves)-1] = make([]field.Octuplet, size)
-		hashSizedLeaves(table[bottom], false, leaves[len(leaves)-1])
-	}
+	// The bottom leaves are hashed directly into the tree's node storage,
+	// which saves allocating and copying a leaf array as large as the encoded
+	// bottom table's height.
+	size := table[bottom].Size()
+	tree := allocTree(size)
+	hashSizedLeaves(table[bottom], false, tree.Nodes[size-1:])
 
+	// Every table but the bottom is digested as conjugate pairs, one tree
+	// depth shallower than its own size: a table of encoded height s yields
+	// s/2 auxiliary leaves attached at the level holding s/2 nodes.
+	upperLeaves := make([][]field.Octuplet, utils.Log2Ceil(size))
 	for i := range bottom {
 		if table[i].NumRows() == 0 {
 			continue
 		}
-		size := table[i].Size()
-		leaves[i] = make([]field.Octuplet, size/2)
-		hashSizedLeaves(table[i], true, leaves[i])
+		s := table[i].Size()
+		if s == 1 {
+			continue
+		}
+		digests := make([]field.Octuplet, s/2)
+		hashSizedLeaves(table[i], true, digests)
+		upperLeaves[utils.Log2Ceil(s/2)] = digests
 	}
 
-	// NewTree expects the levels in increasing-size order, from the top of the
-	// tree (smallest) down to the bottom layer (largest). The table is already
-	// sorted by increasing size, so the largest committed table is the last one.
-	//
-	// The blowup makes the largest committed table have len(leaves[last]) rows; a
-	// complete binary tree over them has Log2Ceil(len)+1 levels. The levels above
-	// the smallest committed table carry no auxiliary leaves, so prepend empty
-	// levels at the top until we reach the tree height.
-	targetLevels := utils.Log2Ceil(len(leaves[len(leaves)-1])) + 1
-	if pad := targetLevels - len(leaves); pad > 0 {
-		leaves = append(make([][]field.Octuplet, pad), leaves...)
-	}
-
-	return NewTree(leaves)
+	tree.buildLevels(upperLeaves)
+	return tree
 }
 
 // writeRowElements absorbs one row into hasher without resetting or summing,

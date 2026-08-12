@@ -8,30 +8,11 @@
  */
 
 plugins {
-  id 'java'
   id 'application'
+  id 'lineth.kotlin-common-minimal-conventions'
 }
 
 group = 'net.consensys.linea.besu.plugin'
-
-repositories {
-  mavenCentral()
-  maven {
-    name = 'besu-maven'
-    url = 'https://hyperledger.jfrog.io/artifactory/besu-maven/'
-    content { includeGroupAndSubgroups('org.hyperledger.besu') }
-  }
-  maven {
-    name = 'linea-besu'
-    url = 'https://artifacts.consensys.net/public/linea-besu/maven/'
-  }
-}
-
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(25)
-  }
-}
 
 application {
   mainClass = 'lineth.besu.docgen.CliOptionsManifestGenerator'

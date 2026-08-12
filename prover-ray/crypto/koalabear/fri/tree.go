@@ -6,7 +6,19 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 )
+
+// minParallelTreeLevel avoids paying goroutine scheduling costs for the small
+// levels near the root. Larger levels contain independent nodes and benefit
+// from using all available CPUs.
+const minParallelTreeLevel = 512
+
+// batchLanes is the width of the batched Poseidon2 compression.
+const batchLanes = 16
+
+var batchPoseidon2 = gnarkposeidon2.NewPermutation(16, 6, 21)
 
 // Tree is a Merkle tree for multi-size FRI. The tree is 3-ary, each node may
 // have:
@@ -84,87 +96,128 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 		}
 	}
 
-	var (
-		nodes = make([]field.Octuplet, 2*len(leaves[bottom])-1)
-		aux   = make([]*field.Octuplet, len(leaves[bottom])-1)
-	)
+	t := allocTree(len(leaves[bottom]))
+	copy(t.Nodes[len(leaves[bottom])-1:], leaves[bottom])
+	t.buildLevels(leaves[:bottom])
+	return t
+}
 
-	copy(nodes[len(leaves[bottom])-1:], leaves[bottom])
+// allocTree allocates the node and aux storage for a tree with the given
+// power-of-two number of bottom leaves. The caller must fill
+// Nodes[numLeaves-1:] with the bottom leaves and then call buildLevels.
+func allocTree(numLeaves int) *Tree {
+	if numLeaves <= 0 || numLeaves&(numLeaves-1) != 0 {
+		panic("fri: allocTree: number of leaves must be a positive power of two")
+	}
+	return &Tree{
+		Nodes: make([]field.Octuplet, 2*numLeaves-1),
+		Aux:   make([]*field.Octuplet, numLeaves-1),
+	}
+}
 
-	for i := bottom - 1; i >= 0; i-- {
-
-		var (
-			n = 1 << i
-			// This level holds n nodes; in a complete binary tree they occupy the
-			// heap positions [n-1, 2n-1), i.e. right above the n-1 nodes of the
-			// levels below them.
-			levelStartPos = n - 1
-		)
-
-		for j := range n {
-
-			k := levelStartPos + j
-
-			if aux[k] != nil {
-				panic("indices on aux are wrong and we are overlapping values")
-			}
-
-			if len(leaves[i]) > 0 {
-				// we already asserted that len(leaves[i]) == n. So this
-				// will not go OOB.
-				aux[k] = &leaves[i][j]
-			}
-
-			left, right := nodes[2*k+1], nodes[2*k+2]
-			if (nodes[k] != field.Octuplet{}) {
-				panic("already computed node; the indexing must be wrong")
-			}
-
-			nodes[k] = hashNode(left, right, aux[k])
+// buildLevels computes every internal level bottom-up; Nodes[NumLeaves()-1:]
+// must already hold the bottom leaves. upperLeaves, if non-nil, lists the
+// auxiliary leaves of the levels above the bottom, indexed as in [NewTree]:
+// len(upperLeaves[i]) is 2^i or 0.
+func (t *Tree) buildLevels(upperLeaves [][]field.Octuplet) {
+	n := t.NumLeaves()
+	for levelSize := n / 2; levelSize > 0; levelSize /= 2 {
+		var auxLeaves []field.Octuplet
+		if upperLeaves != nil {
+			auxLeaves = upperLeaves[utils.Log2Ceil(levelSize)]
 		}
+		hashTreeLevel(t.Nodes, t.Aux, auxLeaves, levelSize)
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
 	// be zero.
-	if nodes[0] == (field.Octuplet{}) {
+	if n > 1 && t.Nodes[0] == (field.Octuplet{}) {
 		panic("sanity-check failed : the root is zero.")
-	}
-
-	return &Tree{
-		Nodes: nodes,
-		Aux:   aux,
 	}
 }
 
-// newCompleteBinaryTree builds a complete binary Merkle tree from a single bottom
-// layer of octuplet leaves; len(leaves) must be a positive power of two. There
-// are no auxiliary leaves, so every internal node k is hashNode(nodes[2k+1],
-// nodes[2k+2], nil). The returned tree carries a length-(n-1) all-nil Aux so that
-// OpenBranch/RecoverRoot index it consistently.
-func newCompleteBinaryTree(leaves []field.Octuplet) *Tree {
-
-	n := len(leaves)
-	if n == 0 || n&(n-1) != 0 {
-		panic("fri: newCompleteBinaryTree: number of leaves must be a positive power of two")
+// hashTreeLevel computes the complete level of levelSize internal nodes at
+// heap positions [levelSize-1, 2*levelSize-1). Children belong to
+// already-computed lower levels, so the writes are independent. If leaves is
+// non-empty, it contains exactly one auxiliary leaf per node at this level.
+func hashTreeLevel(
+	nodes []field.Octuplet,
+	aux []*field.Octuplet,
+	leaves []field.Octuplet,
+	levelSize int,
+) {
+	levelStart := levelSize - 1
+	if len(leaves) != 0 && len(leaves) != levelSize {
+		panic("fri: hashTreeLevel: invalid auxiliary leaf count")
 	}
 
+	// Levels smaller than one batch (only the topmost few nodes) are hashed
+	// with the scalar compression.
+	if levelSize < batchLanes {
+		for j := range levelSize {
+			k := levelStart + j
+			if len(leaves) != 0 {
+				aux[k] = &leaves[j]
+			}
+			nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], aux[k])
+		}
+		return
+	}
+
+	// Levels are powers of two, so levelSize is a multiple of batchLanes.
+	// Each group of 16 sibling pairs is staged column-major and hashed by one
+	// batched Poseidon2 compression, writing the 16 parents directly into
+	// nodes[k0:k0+16]. Bit-identical to the scalar hashNode loop; with aux
+	// leaves, C(C(left,right),aux) is the same chain with one more block.
 	var (
-		nodes = make([]field.Octuplet, 2*n-1)
-		aux   = make([]*field.Octuplet, n-1) // all nil: no auxiliary leaves
+		nbGroups = levelSize / batchLanes
+		hasAux   = len(leaves) != 0
+		nbSteps  = 1
 	)
-	copy(nodes[n-1:], leaves)
-
-	// Children always have a higher index than their parent, so a single
-	// descending pass computes every internal node after its children.
-	for k := n - 2; k >= 0; k-- {
-		nodes[k] = hashNode(nodes[2*k+1], nodes[2*k+2], nil)
+	if hasAux {
+		nbSteps = 2
 	}
 
-	if n > 1 && nodes[0] == (field.Octuplet{}) {
-		panic("fri: newCompleteBinaryTree: sanity-check failed: the root is zero")
+	hashGroups := func(gStart, gEnd int) {
+		state := make([]field.Element, 8*batchLanes)
+		matrix := make([]field.Element, nbSteps*8*batchLanes)
+		for g := gStart; g < gEnd; g++ {
+			var (
+				j        = g * batchLanes
+				k0       = levelStart + j
+				children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
+			)
+			// Stage both buffers in one pass per lane.
+			for lane := range batchLanes {
+				left, right := &children[2*lane], &children[2*lane+1]
+				for pos := range 8 {
+					state[pos*batchLanes+lane] = left[pos]
+					matrix[pos*batchLanes+lane] = right[pos]
+				}
+			}
+			if hasAux {
+				for lane := range batchLanes {
+					auxLeaf := &leaves[j+lane]
+					aux[k0+lane] = auxLeaf
+					for pos := range 8 {
+						matrix[(8+pos)*batchLanes+lane] = auxLeaf[pos]
+					}
+				}
+			}
+			batchPoseidon2.Compressx16ColumnsWithState(
+				state,
+				matrix,
+				nbSteps*8,
+				nodes[k0:k0+batchLanes],
+			)
+		}
 	}
 
-	return &Tree{Nodes: nodes, Aux: aux}
+	if levelSize < minParallelTreeLevel {
+		hashGroups(0, nbGroups)
+		return
+	}
+	parallel.Execute(nbGroups, hashGroups)
 }
 
 // Root returns the Merkle root digest. Build must be called first.

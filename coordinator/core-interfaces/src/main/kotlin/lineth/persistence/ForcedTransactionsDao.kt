@@ -33,6 +33,12 @@ interface ForcedTransactionsDao {
       }
     }
   }
+
+  fun findBySimulatedExecutionBlock(blockRange: ULongRange): SafeFuture<List<ForcedTransactionRecord>> {
+    return list().thenApply { allFtx ->
+      allFtx.filter { ftx -> ftx.simulatedExecutionBlockNumber in blockRange }
+    }
+  }
 }
 
 /**
