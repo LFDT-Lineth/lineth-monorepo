@@ -292,8 +292,16 @@ func TestCompilePermutation_RowLimit_MultipleFragmentsCombine(t *testing.T) {
 // cannot produce a proof for a 2^58-row permutation (it would panic, and the
 // row walk is infeasible anyway), so we prove an honest permutation over
 // dynamic modules at a small size, then rewrite the B-side module's declared
-// size in the proof to 2^58. The row-limit verifier action — the first verifier
-// action, on the witness round — must reject before any other check runs.
+// size in the proof to 2^58 and require the verifier to reject it.
+//
+// The rejection comes from Verify's entry guard on Proof.DynamicSizes, not from
+// the grand-product row-limit action: no claimed size above
+// [wiop.ColumnSizeMaxSupported] (2^22) survives long enough to reach the
+// transcript replay. That guard is what makes the runtime row-limit action
+// unreachable here — PrecheckRowLimit already counts a dynamic module at that
+// same 2^22 maximum, so a permutation that compiles cannot reach the 2^58 budget
+// for any runtime assignment, whatever the proof claims. The action itself is
+// covered structurally and per-side in rowlimit_internal_test.go.
 func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
 	sys := wiop.NewSystemf("gp-limit-verify")
 	r0 := sys.NewRound()
@@ -327,8 +335,8 @@ func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
 	proof.DynamicSizes[bIdx] = 1 << 58
 
 	err := sys.Verify(proof, pub)
-	assert.ErrorContains(t, err, "effective per-query row limit",
-		"verifier must reject a proof when a permutation side reaches the row limit")
+	assert.ErrorContains(t, err, "exceeds the maximum supported",
+		"verifier must reject a proof claiming a dynamic-module size above the supported maximum")
 }
 
 // TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound builds several
