@@ -2,6 +2,7 @@
 
 ### 🚀 Features
 
+- *(maru)* Support Noise / Yamux (#3751)
 - *(maru)* Support custom QBFT validator signers without exposing the P2P private key (#3700)
 
 ### 🐛 Bug Fixes
