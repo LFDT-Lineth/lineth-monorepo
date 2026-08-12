@@ -3,6 +3,7 @@ package lineth.coordination.aggregation
 import linea.contract.l2.FakeL2MessageService
 import linea.domain.toBlockParameter
 import linea.ethapi.FakeEthApiClient
+import lineth.coordination.FtxRollingInfoProviderImpl
 import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import org.assertj.core.api.Assertions.assertThat
@@ -23,7 +24,9 @@ class AggregationL2StateProviderImplTest {
     // deploy block = 1 so block 0 is before deployment
     messageService = FakeL2MessageService(contractDeployBlock = 1uL)
     forcedTransactionsDao = FakeForcedTransactionsDao()
-    provider = AggregationL2StateProviderImpl(ethApiClient, messageService, forcedTransactionsDao)
+    provider = AggregationL2StateProviderImpl(
+      ethApiClient, messageService, FtxRollingInfoProviderImpl(forcedTransactionsDao),
+    )
   }
 
   @Test

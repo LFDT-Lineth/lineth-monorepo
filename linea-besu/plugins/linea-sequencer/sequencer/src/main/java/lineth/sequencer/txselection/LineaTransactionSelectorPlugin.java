@@ -25,6 +25,7 @@ import lineth.metrics.HistogramMetrics;
 import lineth.sequencer.liveness.LineaLivenessService;
 import lineth.sequencer.liveness.LineaLivenessTxBuilder;
 import lineth.sequencer.liveness.LivenessService;
+import lineth.sequencer.liveness.LivenessSignerResolver;
 import lineth.sequencer.txselection.selectors.ProfitableTransactionSelector;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
@@ -41,10 +42,12 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 @AutoService(BesuPlugin.class)
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   private TransactionSelectionService transactionSelectionService;
+  private LivenessSignerResolver livenessSignerResolver;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
+    livenessSignerResolver = new LivenessSignerResolver(serviceManager);
     transactionSelectionService =
         serviceManager
             .getService(TransactionSelectionService.class)
@@ -103,7 +106,10 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     livenessServiceConfiguration(),
                     rpcEndpointService,
                     new LineaLivenessTxBuilder(
-                        livenessServiceConfiguration(), blockchainService, chainId),
+                        livenessServiceConfiguration(),
+                        blockchainService,
+                        chainId,
+                        livenessSignerResolver.resolve(livenessServiceConfiguration())),
                     metricCategoryRegistry,
                     metricsSystem))
             : Optional.empty();
