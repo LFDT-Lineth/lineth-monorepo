@@ -175,7 +175,8 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 // actions read the re-derived coins and the cells.
 //
 // Verify also checks that the provided dynamic-module sizes are non-zero powers
-// of two, and that the proof carries exactly one size per dynamic module.
+// of two no greater than [ColumnSizeMaxSupported], and that the proof carries
+// exactly one size per dynamic module.
 //
 // It returns an error if the proof contains a cell that the system does not
 // declare, or that the replay never consumed.
@@ -195,7 +196,14 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	// data, so it cannot derive them the way the prover does (as a side effect of
 	// assignment) and has to take them from the proof. They are re-validated
 	// (power of two, completeness) after the replay.
+	// The cap is load-bearing beyond rejecting nonsense sizes: the compile-time
+	// row-limit prechecks bound a query by counting every dynamic module at
+	// ColumnSizeMaxSupported, and that bound only dominates the per-run one
+	// because no proof can claim more than the maximum here.
 	for k, v := range proof.DynamicSizes {
+		if v > ColumnSizeMaxSupported {
+			return fmt.Errorf("wiop: dynamic module size %d exceeds the maximum supported %d", v, ColumnSizeMaxSupported)
+		}
 		rt.dynamicSizes[k] = v
 	}
 

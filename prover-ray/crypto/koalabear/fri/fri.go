@@ -564,7 +564,17 @@ func checkBranchShape(b Branch, numLeaves int, exactSiblings bool) error {
 // octuplets). Unlike NewTree, which is the 3-ary multi-size builder, this is a
 // plain power-of-two binary tree with no auxiliary leaves.
 func buildTreeExt(layer []field.Ext) *Tree {
-	return newCompleteBinaryTree(mapExtToOctuplet(layer))
+	n := len(layer)
+	t := allocTree(n)
+	bottom := t.Nodes[n-1:]
+	parallel.Execute(n, func(start, end int) {
+		for i := start; i < end; i++ {
+			limbs := extLimbs(layer[i])
+			copy(bottom[i][:6], limbs[:])
+		}
+	})
+	t.buildLevels(nil)
+	return t
 }
 
 // foldLayerInternally computes one step of the FRI split-and-fold routine on a
@@ -645,8 +655,8 @@ func octupletToExt(o field.Octuplet) (field.Ext, error) {
 // extLimbs returns an extension's six base-field coordinates in the canonical
 // order every Merkle leaf and octuplet packing uses. It is the single source
 // of truth for that layout: writeRowElements, writeRowOpeningElements,
-// leafLayout.writeRow, and mapExtToOctuplet all route through it, since a
-// divergence here would silently break Merkle-root reconstruction.
+// leafLayout.writeRow, buildTreeExt, and mapExtToOctuplet all route through it,
+// since a divergence here would silently break Merkle-root reconstruction.
 func extLimbs(e field.Ext) [6]field.Element {
 	return [6]field.Element{
 		e.B0.A0, e.B0.A1,
