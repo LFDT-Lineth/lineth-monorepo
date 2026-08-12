@@ -21,7 +21,7 @@ All messages are stored in a configurable Postgres DB.
 
 #### L1 Configuration
 - `L1_RPC_URL`: Ethereum node RPC endpoint
-- `L1_CONTRACT_ADDRESS`: Address of the LineaRollup contract on L1
+- `L1_CONTRACT_ADDRESS`: Address of the LinethRollup contract on L1
 - `L1_SIGNER_PRIVATE_KEY`: Private key for L1 transactions (when using `private-key` signer type)
 - `L1_LISTENER_INTERVAL`: Block listening interval (ms)
 - `L1_LISTENER_INITIAL_FROM_BLOCK`: (optional) Starting block for event listening. This configuration option controls from which block the Postman service starts fetching events.

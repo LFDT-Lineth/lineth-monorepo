@@ -278,7 +278,7 @@ func newNonNativeScenario(name string, nbBits int, lefts, rights, moduli,
 	newLimbCols := func(label string) []*wiop.Column {
 		cols := make([]*wiop.Column, nbLimbs)
 		for i := range cols {
-			cols[i] = mod.NewColumn(sys.Context.Childf("%s-limb-%d", label, i), wiop.VisibilityOracle, r0)
+			cols[i] = mod.NewColumn(sys.Context.Childf("%s-limb-%d", label, i), r0)
 		}
 		return cols
 	}

@@ -28,7 +28,7 @@ pub fn requireZigVersion() void {
     }
 }
 
-/// The freestanding rv64im target every guest builds for (the Linea ZkC interpreter profile:
+/// The freestanding rv64im target every guest builds for (the Lineth ZkC interpreter profile:
 /// base RV64I + M, soft-float, no A/C/D/F/Zicsr). Overridable on the CLI like any standard target.
 pub fn standardGuestTarget(b: *std.Build) std.Build.ResolvedTarget {
     return b.standardTargetOptions(.{

@@ -1,0 +1,82 @@
+name: "Config docs actions tests"
+
+# Lints and unit-tests the reusable composite actions under
+# .github/actions/validate-config-docs and .github/actions/publish-config-docs
+# so refactors of the inline bash (MDX validation, provenance, atomic copy,
+# boundary enforcement) are guarded the same way production code is.
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/validate-config-docs/**"
+      - ".github/actions/publish-config-docs/**"
+      - ".github/workflows/config-docs-action-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/actions/validate-config-docs/**"
+      - ".github/actions/publish-config-docs/**"
+      - ".github/workflows/config-docs-action-tests.yml"
+
+concurrency:
+  group: config-docs-action-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install shellcheck
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck on every action script
+        run: |
+          set -euo pipefail
+          mapfile -t scripts < <(find .github/actions/validate-config-docs/scripts \
+                                      .github/actions/publish-config-docs/scripts \
+                                      -type f -name '*.sh' | sort)
+          if [[ "${#scripts[@]}" -eq 0 ]]; then
+            echo "::error::No shell scripts found to lint"
+            exit 1
+          fi
+          printf '%s\n' "${scripts[@]}"
+          shellcheck -x "${scripts[@]}"
+
+  bats:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install bats-core
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y bats
+
+      - name: Run bats on every action test suite
+        run: |
+          set -euo pipefail
+          mapfile -t suites < <(find .github/actions/validate-config-docs/tests \
+                                      .github/actions/publish-config-docs/tests \
+                                      -type f -name '*.bats' | sort)
+          if [[ "${#suites[@]}" -eq 0 ]]; then
+            echo "::error::No bats suites found to run"
+            exit 1
+          fi
+          printf '%s\n' "${suites[@]}"
+          bats "${suites[@]}"

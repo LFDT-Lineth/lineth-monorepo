@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'lineth.kotlin-application-conventions'
 }
 
 dependencies {
@@ -60,7 +60,7 @@ jar {
   doFirst {
     manifest {
       attributes(
-          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
+          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
           'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
           'Multi-Release': 'true'
           )

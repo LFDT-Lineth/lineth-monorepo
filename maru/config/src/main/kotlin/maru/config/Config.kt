@@ -8,6 +8,8 @@
  */
 package maru.config
 
+import linea.config.docs.ConfigDoc
+import linea.config.docs.ConfigSection
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.kotlin.assertIs20Bytes
@@ -15,7 +17,6 @@ import linea.kotlin.encodeHex
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path
-import kotlin.math.max
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
@@ -23,7 +24,15 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 data class Persistence(
+  @param:ConfigDoc(
+    description = "Directory where Maru stores its persistent on-disk state (database, keystore).",
+    example = "/data/maru",
+  )
   val dataPath: Path,
+  @param:ConfigDoc(
+    description = "Path to the node private key file. Defaults to a 'private-key' file under data-path.",
+    default = "data-path/private-key",
+  )
   val privateKeyPath: Path = dataPath.resolve("private-key"),
 )
 
@@ -39,16 +48,42 @@ data class FollowersConfig(
 )
 
 data class P2PConfig(
+  @param:ConfigDoc(
+    description = "IP address the node listens on for P2P traffic. Defaults to localhost for security.",
+    default = "127.0.0.1",
+  )
   val ipAddress: String = "127.0.0.1", // default to localhost for security
+  @param:ConfigDoc(
+    description = "TCP port the node listens on for P2P traffic. UDP discovery uses p2p.discovery.port.",
+    default = "9000",
+  )
   val port: UInt = 9000u,
+  @param:ConfigDoc(
+    description = "Static peer addresses (enodes) the node stays connected to.",
+  )
   val staticPeers: List<String> = emptyList(),
+  @param:ConfigDoc(
+    description = "Delay before reconnecting to a dropped peer.",
+    default = "PT5S",
+  )
   val reconnectDelay: Duration = 5.seconds,
+  @param:ConfigDoc(
+    description = "Maximum number of peers the node maintains.",
+    default = "25",
+  )
   val maxPeers: Int = 25,
-  val maxUnsyncedPeers: Int = max(1, maxPeers / 10),
+  @param:ConfigSection("Discovery (node lookup) settings. Omit to disable discovery.")
   val discovery: Discovery? = null,
+  @param:ConfigSection("Peer status update polling settings.")
   val statusUpdate: StatusUpdate = StatusUpdate(),
+  @param:ConfigSection("Peer reputation scoring settings.")
   val reputation: Reputation = Reputation(),
+  @param:ConfigDoc(
+    description = "Leeway time during which a peer is tolerated despite a fork mismatch before being penalized.",
+    default = "PT20S",
+  )
   val peeringForkMismatchLeewayTime: Duration = 20.seconds,
+  @param:ConfigSection("Gossipsub parameters. Wraps Teku's GossipConfig per the Ethereum consensus p2p spec.")
   val gossiping: Gossiping = Gossiping(),
 ) {
   init {
@@ -62,12 +97,37 @@ data class P2PConfig(
   }
 
   data class Discovery(
+    @param:ConfigDoc(
+      description = "UDP port used for discovery.",
+      default = "9000",
+    )
     val port: UInt = 9000u,
+    @param:ConfigDoc(
+      description = "Bootnode addresses (enodes) used to bootstrap discovery.",
+    )
     val bootnodes: List<String> = emptyList(),
+    @param:ConfigDoc(
+      description = "Interval between discovery table refresh cycles.",
+    )
     val refreshInterval: Duration,
+    @param:ConfigDoc(
+      description = "Interval between discovery search runs.",
+      default = "PT1S",
+    )
     val searchInterval: Duration = 1.seconds,
+    @param:ConfigDoc(
+      description = "Timeout for a single discovery search run.",
+      default = "PT30S",
+    )
     val searchTimeout: Duration = 30.seconds,
+    @param:ConfigDoc(
+      description = "Timeout before retrying a failed discovery request.",
+      default = "PT10S",
+    )
     val retryTimeout: Duration = 10.seconds,
+    @param:ConfigDoc(
+      description = "IP address advertised to peers for discovery. Omit to use the listen IP address.",
+    )
     val advertisedIp: String? = null,
   ) {
     init {
@@ -91,18 +151,58 @@ data class P2PConfig(
   }
 
   data class StatusUpdate(
+    @param:ConfigDoc(
+      description = "Interval between peer status refreshes.",
+      default = "PT30S",
+    )
     val refreshInterval: Duration = 30.seconds,
+    @param:ConfigDoc(
+      description = "Leeway applied to the peer status refresh interval.",
+      default = "PT5S",
+    )
     val refreshIntervalLeeway: Duration = 5.seconds,
+    @param:ConfigDoc(
+      description = "Timeout for a single peer status update request.",
+      default = "PT10S",
+    )
     val timeout: Duration = 10.seconds,
   )
 
   data class Reputation(
+    @param:ConfigDoc(
+      description = "Maximum number of peers tracked in the reputation table.",
+      default = "1024",
+    )
     val capacity: Int = 1024,
+    @param:ConfigDoc(
+      description = "Reputation score delta applied for a large positive/negative event.",
+      default = "10",
+    )
     val largeChange: Int = 10,
+    @param:ConfigDoc(
+      description = "Reputation score delta applied for a small positive/negative event.",
+      default = "3",
+    )
     val smallChange: Int = 3,
+    @param:ConfigDoc(
+      description = "Reputation score below which a peer is disconnected. Defaults to -large-change.",
+      default = "-10",
+    )
     val disconnectScoreThreshold: Int = -largeChange,
+    @param:ConfigDoc(
+      description = "Maximum reputation score a peer can reach. Defaults to 2 * large-change.",
+      default = "20",
+    )
     val maxReputation: Int = 2 * largeChange,
+    @param:ConfigDoc(
+      description = "Duration a peer's reputation is held before decaying after a change.",
+      default = "PT2M",
+    )
     val cooldownPeriod: Duration = 2.minutes,
+    @param:ConfigDoc(
+      description = "Duration a peer is banned after dropping below the disconnect threshold.",
+      default = "PT1H",
+    )
     val banPeriod: Duration = 1.hours,
   )
 
@@ -111,17 +211,67 @@ data class P2PConfig(
    * https://github.com/ethereum/consensus-specs/blob/v0.11.1/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
    */
   data class Gossiping(
+    @param:ConfigDoc(
+      description = "Target mesh degree (number of peers each topic is gossiped to).",
+      default = "8",
+    )
     val d: Int = 8,
+    @param:ConfigDoc(
+      description = "Lower bound on the mesh degree; peers are added when the mesh drops below this.",
+      default = "6",
+    )
     val dLow: Int = 6,
+    @param:ConfigDoc(
+      description = "Upper bound on the mesh degree; peers are pruned when the mesh exceeds this. " +
+        "Defaults to 2 * d.",
+      default = "16",
+    )
     val dHigh: Int = d * 2,
+    @param:ConfigDoc(
+      description = "Degree of lazy (non-mesh) peers used for gossip amplification.",
+      default = "6",
+    )
     val dLazy: Int = 6,
+    @param:ConfigDoc(
+      description = "Time-to-live for gossip fanout messages sent to peers outside the mesh.",
+      default = "PT1M",
+    )
     val fanoutTTL: Duration = 60.seconds,
+    @param:ConfigDoc(
+      description = "Number of history windows advertised via IHAVE messages (libp2p gossipSize).",
+      default = "3",
+    )
     val gossipSize: Int = 3,
+    @param:ConfigDoc(
+      description = "Number of gossip history windows retained in the message cache (libp2p gossipHistoryLength).",
+      default = "6",
+    )
     val history: Int = 6,
+    @param:ConfigDoc(
+      description = "Interval between gossipsub heartbeat rounds.",
+      default = "PT0.7S",
+    )
     val heartbeatInterval: Duration = 700.milliseconds,
+    @param:ConfigDoc(
+      description = "Time-to-live for the seen-message cache. Defaults to 700ms * 1115.",
+      default = "PT780.5S",
+    )
     val seenTTL: Duration = 700.milliseconds * 1115,
+    @param:ConfigDoc(
+      description = "Maximum message size above which flood publishing is skipped. Defaults to 16KiB.",
+      default = "16384",
+    )
     val floodPublishMaxMessageSizeThreshold: Int = 1 shl 14, // 16KiB
+    @param:ConfigDoc(
+      description = "Fraction of non-mesh peers that receive gossip messages (libp2p gossipFactor).",
+      default = "0.25",
+    )
     val gossipFactor: Double = 0.25,
+    @param:ConfigDoc(
+      description = "Whether all peers are scored as direct peers (same as static peers) in " +
+        "gossip peer scoring (libp2p GossipPeerScoreParams.isDirect).",
+      default = "false",
+    )
     val considerPeersAsDirect: Boolean = false,
   )
 }
@@ -189,8 +339,20 @@ data class QbftConfig(
 }
 
 data class ObservabilityConfig(
+  @param:ConfigDoc(
+    description = "Port serving observability endpoints (metrics, health).",
+    default = "9545",
+  )
   val port: UInt = 9545u,
+  @param:ConfigDoc(
+    description = "Whether Prometheus metrics are exposed on the observability port.",
+    default = "true",
+  )
   val prometheusMetricsEnabled: Boolean = true,
+  @param:ConfigDoc(
+    description = "Whether JVM-level metrics are exposed in addition to application metrics.",
+    default = "true",
+  )
   val jvmMetricsEnabled: Boolean = true,
 )
 
@@ -231,14 +393,36 @@ data class LineaConfig(
 }
 
 data class ApiConfig(
+  @param:ConfigDoc(
+    description = "Port serving the Maru JSON-RPC API.",
+    default = "5060",
+  )
   val port: UInt = 5060u,
 )
 
 data class SyncingConfig(
+  @param:ConfigDoc(
+    description = "Interval between polls for peer chain height updates.",
+  )
   val peerChainHeightPollingInterval: Duration,
+  @param:ConfigDoc(
+    description = "Sync target selection strategy. Use a bare string 'Highest' to sync to the " +
+      "highest peer head, or an inline table " +
+      "{ _type = 'MostFrequent', peer-chain-height-granularity = <n> } to sync to the most " +
+      "frequent peer chain height. Sealed-type dispatch is enabled by the loader.",
+  )
   val syncTargetSelection: SyncTargetSelection,
+  @param:ConfigDoc(
+    description = "Optional interval to refresh the execution-layer sync status. Omit to disable.",
+  )
   val elSyncStatusRefreshInterval: Duration? = null,
+  @param:ConfigDoc(
+    description = "How far the sync target may be ahead of this node's head before the node is " +
+      "considered desynced.",
+    default = "5",
+  )
   val desyncTolerance: ULong = 5UL,
+  @param:ConfigSection("Block download settings used while syncing.")
   val download: Download = Download(),
 ) {
   sealed interface SyncTargetSelection {
@@ -256,11 +440,37 @@ data class SyncingConfig(
   }
 
   data class Download(
+    @param:ConfigDoc(
+      description = "Timeout for a single block-range download request.",
+      default = "PT5S",
+    )
     val blockRangeRequestTimeout: Duration = 5.seconds,
+    @param:ConfigDoc(
+      description = "Number of blocks requested in a single download batch.",
+      default = "100",
+    )
     val blocksBatchSize: UInt = 100u,
+    @param:ConfigDoc(
+      description = "Number of block-range download requests issued in parallel.",
+      default = "1",
+    )
     val blocksParallelism: UInt = 1u,
+    @param:ConfigDoc(
+      description = "Maximum number of retries for a failed download request.",
+      default = "5",
+    )
     val maxRetries: UInt = 5u,
+    @param:ConfigDoc(
+      description = "Backoff delay between download retries.",
+      default = "PT1S",
+    )
     val backoffDelay: Duration = 1.seconds,
+    @param:ConfigDoc(
+      description = "When false (default), pick a random peer among those whose latest reported " +
+        "block is at least the download range end. When true, skip that end-block filter and pick " +
+        "any peer at random.",
+      default = "false",
+    )
     val useUnconditionalRandomDownloadPeer: Boolean = false,
   )
 }

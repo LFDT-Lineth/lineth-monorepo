@@ -1,6 +1,6 @@
 # Local Development Guide
 
-This guide provides instructions for setting up and running Linea services locally, with a specific focus on the coordinator service.
+This guide provides instructions for setting up and running Lineth services locally, with a specific focus on the coordinator service.
 
 ## Prerequisites
 

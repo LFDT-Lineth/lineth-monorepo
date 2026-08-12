@@ -13,12 +13,18 @@ import (
 
 const (
 	nativeMulmod = "mulmod_"
+	expmodHint   = "expmod_unconstrained_"
 
 	nativeMulmodLeft      = "lhsL'"
 	nativeMulmodRight     = "rhsL'"
 	nativeMulmodModulus   = "modL'"
 	nativeMulmodRemainder = "remainder'"
 	nativeMulmodQuotient  = "quotient'"
+
+	expmodBase = "base'"
+	expmodExp  = "exp'"
+	expmodMod  = "mod'"
+	expmodRes  = "res'"
 )
 
 func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element]) error {
@@ -29,7 +35,45 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 		}
 		return nil
 	}
+	if strings.HasPrefix(modName, expmodHint) {
+		// expmod_unconstrained_* is unconstrained. Though, we still need to register the columns so that lookups would work.
+		s.defineNativeExpUnconstrained(mod)
+		return nil
+	}
 	return fmt.Errorf("unknown native module %s", modName)
+}
+
+// defineNativeExpUnconstrained registers a wiop column for known register of a
+// native module without adding any constraint, leaving the module genuinely
+// unconstrained while still giving callers a valid column to reference.
+func (s *schemaScanner) defineNativeExpUnconstrained(mod schema.Module[koalabear.Element]) {
+	modName := mod.Name().String()
+
+	moduleWIOP := s.Sys.NewDynamicModule(
+		s.Sys.Context.Childf("module-native-%s", modName),
+		wiop.PaddingDirectionRight,
+	)
+
+	for _, reg := range mod.Registers() {
+		matched := false
+		for _, prefix := range []string{
+			expmodBase, expmodExp, expmodMod, expmodRes,
+		} {
+			if _, found := strings.CutPrefix(reg.Name(), prefix); found {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			continue
+		}
+		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
+		col := moduleWIOP.NewColumn(
+			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
+			s.Sys.Rounds[0],
+		)
+		s.ColumnIDs[colQualifiedName] = col.Context.ID
+	}
 }
 
 func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element], after string) error {
@@ -103,7 +147,6 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		colQualifiedName := qualifiedCorsetName(modName, reg.Name())
 		col := moduleWIOP.NewColumn(
 			s.Sys.Context.Childf("col-native-%s", colQualifiedName),
-			wiop.VisibilityOracle,
 			s.Sys.Rounds[0],
 		)
 		limbs[idx] = col

@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
 .DEFAULT_GOAL := exec
@@ -43,6 +43,12 @@ TEST ?=
 # 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
 ZKC_EXEC_FLAGS ?=--fast
+
+# Flags to use when invoking zkc trace via zkc-trace:
+# 	--stats for the trace summary (cells, columns, per-module breakdown)
+# 	--check to additionally verify the generated trace against the constraints
+# 	-o out.lt to write the trace out
+ZKC_TRACE_FLAGS ?=--stats
 
 # If TEST=src_optional_subfolder/your_test(.s|.zig|.rs), the variables below are set as follows:
 # src_optional_subfolder/your_test
@@ -139,6 +145,11 @@ install-zkc:
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
 zkc-exec: require-json
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+
+# Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
+# Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
+zkc-trace: require-json
+	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
 
 zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
