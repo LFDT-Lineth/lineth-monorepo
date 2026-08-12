@@ -98,8 +98,8 @@ def run_rollup_aggregation_guest(
         filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
         # Position-pair pass-through (§3.4): the extremes are exposed, not
         # asserted here — L1 checks them against committed state (§3.6).
-        parent_drh=first_proof.public_inputs.parent_drh,
-        end_drh=last_proof.public_inputs.end_drh,
+        parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
+        end_data_rolling_hash=last_proof.public_inputs.end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=first_proof.public_inputs.start_offset,
@@ -141,11 +141,11 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
 
 
 def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:
-    # Position-pair continuity (§3.4): both the DRH and the byte offset must
+    # Position-pair continuity (§3.4): both the dataRollingHash and the byte offset must
     # match at the seam, excluding both byte gaps and overlaps — neither KZG
     # nor block-hash continuity alone can detect either.
-    if left.public_inputs.end_drh != right.public_inputs.parent_drh:
-        raise Exception("rollup DRH continuity failed")
+    if left.public_inputs.end_data_rolling_hash != right.public_inputs.parent_data_rolling_hash:
+        raise Exception("rollup dataRollingHash continuity failed")
     # A chunk filled exactly to its end (`end_offset == BLOB_BYTES_LENGTH`) and
     # the next proof naturally starting at `start_offset == 0` describe the same
     # stream position, even though the two integers differ — accept both that
@@ -157,7 +157,7 @@ def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> Non
     if not (offsets_continuous or offsets_at_chunk_boundary):
         raise Exception("rollup offset continuity failed")
     # Execution continuity is now explicit (§2.4) rather than folded into the
-    # DA accumulator, since a shared chunk's DRH fold no longer determines
+    # DA accumulator, since a shared chunk's dataRollingHash fold no longer determines
     # "the last block completing here" on its own.
     if left.public_inputs.end_block_hash != right.public_inputs.parent_block_hash:
         raise Exception("rollup block-hash continuity failed")

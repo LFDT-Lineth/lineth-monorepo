@@ -6,7 +6,7 @@ from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from .l2_execution import hash_address_list, hash_hash_list
-from .rollup import L2_L1_TREE_DEPTH, DrhWitness, RollupPublicInput
+from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
 
 
 def _encode_offset(offset: int) -> bytes:
@@ -51,10 +51,10 @@ class LinethRollupState:
     field below).
 
     `current_finalized_position_commitment` is the enforced-offset variant
-    (§3.6, §8 Q2): `keccak256(endDrh || encode_offset(endOffset))`, sealed
+    (§3.6, §8 Q2): `keccak256(endDataRollingHash || encode_offset(endOffset))`, sealed
     into the same slot that used to hold a plain shnarf — zero additional
-    storage. The next finalization supplies the previous `(drh, offset)` pair
-    as calldata (`finalize_rollup`'s `prev_drh`/`prev_offset` params); the
+    storage. The next finalization supplies the previous `(data_rolling_hash, offset)` pair
+    as calldata (`finalize_rollup`'s `prev_data_rolling_hash`/`prev_offset` params); the
     contract verifies the preimage against this commitment before applying
     the continuity disjunction.
     """
@@ -71,10 +71,10 @@ class LinethRollupState:
     ftx_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_deadlines: Dict[U64, U64] = field(default_factory=dict)
     sanctioned_addresses: Set[Address] = field(default_factory=set)
-    # Anchor storage (§3.6): a plain set of anchored DRH values. Execution
+    # Anchor storage (§3.6): a plain set of anchored dataRollingHash values. Execution
     # continuity no longer travels with the DA accumulator (§2.4), so there
-    # is no per-DRH lastBlockHash to track anymore — just membership.
-    anchored_drhs: Set[Hash32] = field(default_factory=set)
+    # is no per-dataRollingHash lastBlockHash to track anymore — just membership.
+    anchored_data_rolling_hashes: Set[Hash32] = field(default_factory=set)
     l2_merkle_roots_depths: Dict[Hash32, int] = field(default_factory=dict)
     # The single, combined security-council-managed approved-VK list
     # (§ProgramVK anchoring). Exec and rollup VKs are NOT distinguished on L1 —
@@ -114,29 +114,29 @@ class FinalizationSubmission:
 
 def anchor_chunk_submission(
     state: LinethRollupState,
-    parent_drh: Hash32,
+    parent_data_rolling_hash: Hash32,
     chunk_hash: Hash32,
 ) -> Hash32:
     """
-    Anchor one submitted chunk (§3.6): fold `chunk_hash` into the DRH chain
+    Anchor one submitted chunk (§3.6): fold `chunk_hash` into the dataRollingHash chain
     and record the result as anchored. Called once per chunk in a submission
-    transaction (`submitBlobs(bytes32 _parentDrh, bytes32 _finalDrh)` folds
+    transaction (`submitBlobs(bytes32 _parentDataRollingHash, bytes32 _finalDataRollingHash)` folds
     `blobhash(i)` for each `i` this same way on-chain; the caller loops over
     multiple chunks in one submission itself).
     """
-    end_drh = DrhWitness(parent_drh, chunk_hash).hash()
-    state.anchored_drhs.add(end_drh)
-    return end_drh
+    end_data_rolling_hash = DataRollingHashWitness(parent_data_rolling_hash, chunk_hash).hash()
+    state.anchored_data_rolling_hashes.add(end_data_rolling_hash)
+    return end_data_rolling_hash
 
 
 def finalize_rollup(
     state: LinethRollupState,
     submission: FinalizationSubmission,
-    prev_drh: Hash32,
+    prev_data_rolling_hash: Hash32,
     prev_offset: int,
 ) -> None:
     """
-    `prev_drh` / `prev_offset` are the previously-finalized end position,
+    `prev_data_rolling_hash` / `prev_offset` are the previously-finalized end position,
     supplied as calldata so the contract can open the stored position
     commitment (§3.6, enforced variant) — the caller reads them from the
     prior finalization's event/return value rather than the contract storing
@@ -146,14 +146,14 @@ def finalize_rollup(
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
         raise Exception("invalid rollup-aggregation proof")
-    if keccak256(prev_drh + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
-        raise Exception("prevDrh/prevOffset do not match the finalized position commitment")
-    if pi.parent_drh != prev_drh:
-        raise Exception("parentDrh does not match the finalized position")
+    if keccak256(prev_data_rolling_hash + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
+        raise Exception("prevDataRollingHash/prevOffset do not match the finalized position commitment")
+    if pi.parent_data_rolling_hash != prev_data_rolling_hash:
+        raise Exception("parentDataRollingHash does not match the finalized position")
     if not (pi.start_offset == prev_offset or pi.start_offset == 0):
         raise Exception("startOffset neither continues the finalized position nor is a fresh start")
-    if pi.end_drh not in state.anchored_drhs:
-        raise Exception("endDrh was not anchored by a chunk submission")
+    if pi.end_data_rolling_hash not in state.anchored_data_rolling_hashes:
+        raise Exception("endDataRollingHash was not anchored by a chunk submission")
     if pi.parent_block_hash != state.current_finalized_last_block_hash:
         raise Exception("parentBlockHash does not match the currently finalized block hash")
     if pi.parent_l1_l2_bridge_rolling_hash != state.current_finalized_l1_l2_bridge_rolling_hash:
@@ -210,7 +210,7 @@ def finalize_rollup(
             raise Exception("program VK is not approved")
 
     state.current_finalized_position_commitment = keccak256(
-        pi.end_drh + _encode_offset(pi.end_offset)
+        pi.end_data_rolling_hash + _encode_offset(pi.end_offset)
     )
     state.current_finalized_last_block_hash = pi.end_block_hash
     state.current_l2_block_number = pi.end_block_number

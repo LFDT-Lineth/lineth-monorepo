@@ -412,10 +412,10 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
     touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
     are top-level (not per-chunk): relevant only to the first/last touched
-    chunk respectively, and empty (`0x`) when absent. `parentDrh`/`startOffset`
-    are guest inputs; the outbound `endDrh`/`endOffset` are recomputed by the
+    chunk respectively, and empty (`0x`) when absent. `parentDataRollingHash`/`startOffset`
+    are guest inputs; the outbound `endDataRollingHash`/`endOffset` are recomputed by the
     guest and returned in the response PI, so they are not echoed in the
-    request. `boundaryPrevDrh` is present only for a mid-chunk start
+    request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
     (`startOffset > 0`, §3.4).
     """
     proof_request = _require(obj, "proofRequest", "")
@@ -433,19 +433,19 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             "'proofRequest.conflations' and 'proofRequest.l2ExecutionProofs' must have the same length"
         )
     start_offset = int(_u64(_require(proof_request, "startOffset", "proofRequest."), "proofRequest.startOffset"))
-    boundary_prev_drh_hex = proof_request.get("boundaryPrevDrh")
-    if start_offset > 0 and boundary_prev_drh_hex is None:
-        raise ProofIoError("'proofRequest.boundaryPrevDrh' is required when startOffset > 0")
+    boundary_prev_data_rolling_hash_hex = proof_request.get("boundaryPrevDataRollingHash")
+    if start_offset > 0 and boundary_prev_data_rolling_hash_hex is None:
+        raise ProofIoError("'proofRequest.boundaryPrevDataRollingHash' is required when startOffset > 0")
     opaque_prefix_bytes = _bytes_from_hex(
         proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
     )
     if len(opaque_prefix_bytes) != start_offset:
         raise ProofIoError("'proofRequest.opaquePrefixBytes' length must equal startOffset")
     return RollupProofPrivateInput(
-        parent_drh=Hash32(
+        parent_data_rolling_hash=Hash32(
             _bytes_from_hex(
-                _require(proof_request, "parentDrh", "proofRequest."),
-                "proofRequest.parentDrh",
+                _require(proof_request, "parentDataRollingHash", "proofRequest."),
+                "proofRequest.parentDataRollingHash",
             )
         ),
         start_offset=start_offset,
@@ -465,9 +465,9 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
         opaque_suffix_bytes=_bytes_from_hex(
             proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
         ),
-        boundary_prev_drh=(
-            Hash32(_bytes_from_hex(boundary_prev_drh_hex, "proofRequest.boundaryPrevDrh"))
-            if boundary_prev_drh_hex is not None
+        boundary_prev_data_rolling_hash=(
+            Hash32(_bytes_from_hex(boundary_prev_data_rolling_hash_hex, "proofRequest.boundaryPrevDataRollingHash"))
+            if boundary_prev_data_rolling_hash_hex is not None
             else None
         ),
     )
@@ -501,8 +501,8 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
-        "parentDrh": _hx(pi.parent_drh),
-        "endDrh": _hx(pi.end_drh),
+        "parentDataRollingHash": _hx(pi.parent_data_rolling_hash),
+        "endDataRollingHash": _hx(pi.end_data_rolling_hash),
         "parentBlockHash": _hx(pi.parent_block_hash),
         "endBlockHash": _hx(pi.end_block_hash),
         "startOffset": int(pi.start_offset),
@@ -580,8 +580,8 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
-        parent_drh=h("parentDrh"),
-        end_drh=h("endDrh"),
+        parent_data_rolling_hash=h("parentDataRollingHash"),
+        end_data_rolling_hash=h("endDataRollingHash"),
         parent_block_hash=h("parentBlockHash"),
         end_block_hash=h("endBlockHash"),
         start_offset=int(n("startOffset")),

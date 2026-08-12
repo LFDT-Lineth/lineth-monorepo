@@ -19,7 +19,7 @@
         "chainId",
         "conflations",
         "chunks",
-        "parentDrh",
+        "parentDataRollingHash",
         "startOffset",
         "l2ExecutionProofs"
       ],
@@ -45,13 +45,13 @@
           "description": "Foreign bytes after endOffset in the LAST touched chunk only (§3.1); empty (0x) or absent otherwise.",
           "$ref": "#/$defs/hex"
         },
-        "parentDrh": { "$ref": "#/$defs/hash32" },
+        "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
         "startOffset": {
-          "description": "This proof's start position within the first touched chunk (§3.4). 0 means a fresh chunk start; a value in (0, chunkSize) means a mid-chunk start requiring boundaryPrevDrh.",
+          "description": "This proof's start position within the first touched chunk (§3.4). 0 means a fresh chunk start; a value in (0, chunkSize) means a mid-chunk start requiring boundaryPrevDataRollingHash.",
           "$ref": "#/$defs/uint"
         },
-        "boundaryPrevDrh": {
-          "description": "Required only when startOffset > 0 (§3.4): the DRH value before the first touched chunk, opening its preimage against parentDrh.",
+        "boundaryPrevDataRollingHash": {
+          "description": "Required only when startOffset > 0 (§3.4): the dataRollingHash value before the first touched chunk, opening its preimage against parentDataRollingHash.",
           "$ref": "#/$defs/hash32"
         },
         "l2ExecutionProofs": {

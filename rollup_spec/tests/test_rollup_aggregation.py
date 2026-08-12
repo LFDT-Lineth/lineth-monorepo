@@ -35,8 +35,8 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
-        parent_drh=Hash32(bytes([0x47]) * 32),
-        end_drh=Hash32(bytes([0x8D]) * 32),
+        parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
+        end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=0,
@@ -50,7 +50,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
     # This proof's end-of-range values, which `_right_pi()` mirrors at its
     # start-of-range fields by default.
     defaults = dict(
-        end_drh=Hash32(bytes([0x8D]) * 32),
+        end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         end_offset=500,
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -64,7 +64,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
 
 def _right_pi(**overrides) -> RollupPublicInput:
     defaults = dict(
-        parent_drh=Hash32(bytes([0x8D]) * 32),
+        parent_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         start_offset=500,
         parent_block_hash=Hash32(bytes([0x0B]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -84,9 +84,9 @@ def test_fully_continuous_proofs_pass() -> None:
     assert_rollup_proof_continuity(_proof(_left_pi()), _proof(_right_pi()))
 
 
-def test_drh_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(parent_drh=Hash32(bytes([0x99]) * 32)))
-    with pytest.raises(Exception, match="DRH continuity"):
+def test_data_rolling_hash_mismatch_is_rejected() -> None:
+    right = _proof(_right_pi(parent_data_rolling_hash=Hash32(bytes([0x99]) * 32)))
+    with pytest.raises(Exception, match="dataRollingHash continuity"):
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 

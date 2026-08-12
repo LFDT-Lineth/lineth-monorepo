@@ -281,8 +281,8 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(9),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
-        parent_drh=Hash32(bytes([0x47]) * 32),
-        end_drh=Hash32(bytes([0x8D]) * 32),
+        parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
+        end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
@@ -308,11 +308,11 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     req = decode_rollup_request(_valid_rollup_request())
 
     assert int(req.chain_id) == 59144
-    # parentDrh (top-level) -> parent_drh; the outbound endDrh/endOffset are
+    # parentDataRollingHash (top-level) -> parent_data_rolling_hash; the outbound endDataRollingHash/endOffset are
     # recomputed by the guest and not echoed in the request.
-    assert bytes(req.parent_drh) == bytes([0x47]) * 32
+    assert bytes(req.parent_data_rolling_hash) == bytes([0x47]) * 32
     assert req.start_offset == 4
-    assert bytes(req.boundary_prev_drh) == bytes([0x39]) * 32
+    assert bytes(req.boundary_prev_data_rolling_hash) == bytes([0x39]) * 32
 
     assert len(req.conflations) == 1
     conflation = req.conflations[0]
@@ -344,8 +344,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
     req = _valid_rollup_request()
-    del req["proofRequest"]["parentDrh"]
-    with pytest.raises(ProofIoError, match="parentDrh"):
+    del req["proofRequest"]["parentDataRollingHash"]
+    with pytest.raises(ProofIoError, match="parentDataRollingHash"):
         decode_rollup_request(req)
 
 
@@ -410,8 +410,8 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["endBlockNumber"] == 1000520
     assert pi["endBlockTimestamp"] == 1763000457
     assert pi["l2L1BridgeTransactionTree"] == "0x" + ("11" * 32)
-    assert pi["parentDrh"] == "0x" + ("47" * 32)
-    assert pi["endDrh"] == "0x" + ("8d" * 32)
+    assert pi["parentDataRollingHash"] == "0x" + ("47" * 32)
+    assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["startOffset"] == 4
@@ -427,7 +427,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
-        "parentDrh", "endDrh", "parentBlockHash", "endBlockHash",
+        "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
     }
 
@@ -496,8 +496,8 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 7
     assert int(pi.parent_processed_ftx_number) == 7
     assert int(pi.end_processed_ftx_number) == 9
-    assert bytes(pi.parent_drh) == bytes([0x47]) * 32
-    assert bytes(pi.end_drh) == bytes([0x8D]) * 32
+    assert bytes(pi.parent_data_rolling_hash) == bytes([0x47]) * 32
+    assert bytes(pi.end_data_rolling_hash) == bytes([0x8D]) * 32
 
 
 def test_decode_aggregation_request_empty_rollup_proofs_is_rejected() -> None:
@@ -516,15 +516,15 @@ def test_decode_aggregation_request_non_array_rollup_proofs_is_rejected() -> Non
 
 def test_decode_aggregation_request_missing_nested_pi_field_is_rejected() -> None:
     req = _valid_aggregation_request()
-    del req["proofRequest"]["rollupProofs"][0]["publicInputs"]["endDrh"]
-    with pytest.raises(ProofIoError, match="endDrh"):
+    del req["proofRequest"]["rollupProofs"][0]["publicInputs"]["endDataRollingHash"]
+    with pytest.raises(ProofIoError, match="endDataRollingHash"):
         decode_aggregation_request(req)
 
 
 def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
     req = _valid_aggregation_request()
-    req["proofRequest"]["rollupProofs"][0]["publicInputs"]["parentDrh"] = "0xnothex"
-    with pytest.raises(ProofIoError, match="parentDrh"):
+    req["proofRequest"]["rollupProofs"][0]["publicInputs"]["parentDataRollingHash"] = "0xnothex"
+    with pytest.raises(ProofIoError, match="parentDataRollingHash"):
         decode_aggregation_request(req)
 
 
@@ -570,8 +570,8 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
 
     pi = out["publicInputs"]
     assert pi["endBlockNumber"] == 1000520
-    assert pi["parentDrh"] == "0x" + ("47" * 32)
-    assert pi["endDrh"] == "0x" + ("8d" * 32)
+    assert pi["parentDataRollingHash"] == "0x" + ("47" * 32)
+    assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
     assert pi["parentProcessedFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # Combined: bubbled exec VK (0xaa) then this aggregation's rollup VK (0xbb).
@@ -582,7 +582,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
-        "parentDrh", "endDrh", "parentBlockHash", "endBlockHash",
+        "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
     }
 

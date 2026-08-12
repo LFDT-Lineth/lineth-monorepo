@@ -99,12 +99,12 @@ class TruncatedEthereumBlock:
 
 
 @dataclass
-class DrhWitness:
+class DataRollingHashWitness:
     """
-    DrhWitness is the preimage of a Data Rolling Hash (DRH) fold step (§3.1):
-    `keccak256(parentDrh || chunkHash)`.
+    DataRollingHashWitness is the preimage of a dataRollingHash fold step (§3.1):
+    `keccak256(parentDataRollingHash || chunkHash)`.
 
-    The DRH is a pure DA accumulator over the ordered sequence of published
+    The dataRollingHash is a pure DA accumulator over the ordered sequence of published
     chunks. Execution continuity — the role the old 3-input shnarf's
     `lastBlockHash` used to play — lives in the explicit `parentBlockHash` /
     `endBlockHash` public-input fields instead (§2.4): under shared chunks,
@@ -112,11 +112,11 @@ class DrhWitness:
     witnesses, so a 1-input accumulator is the shape a single proof can
     recompute alone.
     """
-    parent_drh: Hash32
+    parent_data_rolling_hash: Hash32
     chunk_hash: Hash32
 
     def hash(self) -> Hash32:
-        return keccak256(self.parent_drh + self.chunk_hash)
+        return keccak256(self.parent_data_rolling_hash + self.chunk_hash)
 
 
 @dataclass
@@ -193,14 +193,14 @@ def _verify_and_fold_chunks(
     chunks: Sequence[Hash32],
     opaque_prefix_bytes: bytes,
     opaque_suffix_bytes: bytes,
-    parent_drh: Hash32,
-    boundary_prev_drh: Optional[Hash32],
+    parent_data_rolling_hash: Hash32,
+    boundary_prev_data_rolling_hash: Optional[Hash32],
 ) -> Tuple[Hash32, int]:
     """
     Slice `own_stream_bytes` (this proof's own concatenated conflation
     segments) across the chunks it touches, reconstruct each chunk's full
     published bytes, verify each chunk's KZG commitment against its anchored
-    hash (`chunks[k]`), and fold the DRH chain across them (§3.1, §3.4).
+    hash (`chunks[k]`), and fold the dataRollingHash chain across them (§3.1, §3.4).
 
     `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes not owned
     by this proof — relevant only at the two ends of the touched range, never
@@ -212,14 +212,14 @@ def _verify_and_fold_chunks(
     verification — their content is never interpreted, only reproduced
     (§2.2: "opaque boundary bytes").
 
-    Mid-chunk starts (`start_offset > 0`): `parent_drh` is already the DRH
+    Mid-chunk starts (`start_offset > 0`): `parent_data_rolling_hash` is already the dataRollingHash
     value *after* folding the first touched chunk, so instead of folding
-    forward the guest opens its preimage — `boundary_prev_drh` plus the
-    recomputed hash of the first chunk must reproduce `parent_drh` — which
+    forward the guest opens its preimage — `boundary_prev_data_rolling_hash` plus the
+    recomputed hash of the first chunk must reproduce `parent_data_rolling_hash` — which
     binds the witnessed chunk to the chain position without requiring the
-    guest to have derived `parent_drh` itself.
+    guest to have derived `parent_data_rolling_hash` itself.
 
-    Returns `(end_drh, end_offset)`.
+    Returns `(end_data_rolling_hash, end_offset)`.
     """
     chunk_count = len(chunks)
     if chunk_count == 0:
@@ -237,7 +237,7 @@ def _verify_and_fold_chunks(
 
     setup = _trusted_setup()
     cursor = 0
-    drh = parent_drh
+    data_rolling_hash = parent_data_rolling_hash
     for i in range(chunk_count):
         is_first = i == 0
         is_last = i == chunk_count - 1
@@ -275,18 +275,18 @@ def _verify_and_fold_chunks(
             raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
 
         if is_first and start_offset > 0:
-            if boundary_prev_drh is None:
-                raise Exception("mid-chunk start requires boundaryPrevDrh")
-            if DrhWitness(boundary_prev_drh, chunks[i]).hash() != parent_drh:
-                raise Exception("boundary chunk DRH preimage does not open parentDrh")
-            drh = parent_drh
+            if boundary_prev_data_rolling_hash is None:
+                raise Exception("mid-chunk start requires boundaryPrevDataRollingHash")
+            if DataRollingHashWitness(boundary_prev_data_rolling_hash, chunks[i]).hash() != parent_data_rolling_hash:
+                raise Exception("boundary chunk dataRollingHash preimage does not open parentDataRollingHash")
+            data_rolling_hash = parent_data_rolling_hash
         else:
-            drh = DrhWitness(drh, chunks[i]).hash()
+            data_rolling_hash = DataRollingHashWitness(data_rolling_hash, chunks[i]).hash()
 
     if cursor != len(own_stream_bytes):
         raise Exception("chunk witnesses do not cover the reconstructed segment length")
 
-    return drh, end_offset
+    return data_rolling_hash, end_offset
 
 
 @dataclass
@@ -298,7 +298,7 @@ class RollupPublicInput:
     the old 3-input shnarf's `lastBlockHash` used to play — now explicit
     public-input fields rather than folded into the DA accumulator (§3.1).
     `start_offset` / `end_offset` are the byte positions (§3.4) that pair with
-    `parent_drh` / `end_drh` to form this proof's start and end stream
+    `parent_data_rolling_hash` / `end_data_rolling_hash` to form this proof's start and end stream
     positions; `end_offset` is a derived output (computed from the guest's own
     recompression), not trusted witness input.
 
@@ -328,8 +328,8 @@ class RollupPublicInput:
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
-    parent_drh: Hash32
-    end_drh: Hash32
+    parent_data_rolling_hash: Hash32
+    end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
     start_offset: int
@@ -345,13 +345,13 @@ class RollupProofPrivateInput:
     paired 1:1 with `l2_execution_proofs`), transported across >=1 chunks
     (§3.1).
 
-    `parent_drh` / `start_offset` give this proof's start stream position
+    `parent_data_rolling_hash` / `start_offset` give this proof's start stream position
     (§3.4). `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes
     not owned by this proof, relevant only at the two ends of the touched
     chunk range (not per-chunk) — see `_verify_and_fold_chunks`.
-    `boundary_prev_drh` is required only for a mid-chunk start
-    (`start_offset > 0`) — the DRH value before the first touched chunk, used
-    to open its preimage. `end_drh` and `end_offset` are not request inputs:
+    `boundary_prev_data_rolling_hash` is required only for a mid-chunk start
+    (`start_offset > 0`) — the dataRollingHash value before the first touched chunk, used
+    to open its preimage. `end_data_rolling_hash` and `end_offset` are not request inputs:
     the guest derives them from its own recompression.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
@@ -361,7 +361,7 @@ class RollupProofPrivateInput:
     the rollup range, so the rollup proof inherits chain-config integrity
     from the l2-execution proofs it recursively verifies.
     """
-    parent_drh: Hash32
+    parent_data_rolling_hash: Hash32
     start_offset: int
     chain_id: U64
     conflations: List[ConflationWitness]
@@ -369,7 +369,7 @@ class RollupProofPrivateInput:
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
     opaque_prefix_bytes: bytes = b""
     opaque_suffix_bytes: bytes = b""
-    boundary_prev_drh: Optional[Hash32] = None
+    boundary_prev_data_rolling_hash: Optional[Hash32] = None
 
 
 @dataclass
@@ -424,7 +424,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     this proof's own byte stream. Slices that stream across the chunks it
     touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, computes the KZG commitment for each,
-    and checks it against the L1-anchored `chunkHash` — folding the DRH
+    and checks it against the L1-anchored `chunkHash` — folding the dataRollingHash
     chain across the touched chunks as it goes (§3.4). Recursively verifies
     the N l2-execution proofs, checks continuity, builds the L2->L1
     Merkle-root commitment, collects FTX outputs, and emits the 20-field
@@ -461,14 +461,14 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         segments.append(_compress_conflation_segment(conflation_truncated))
 
     own_stream_bytes = b"".join(segments)
-    end_drh, end_offset = _verify_and_fold_chunks(
+    end_data_rolling_hash, end_offset = _verify_and_fold_chunks(
         own_stream_bytes,
         rollup_input.start_offset,
         rollup_input.chunks,
         rollup_input.opaque_prefix_bytes,
         rollup_input.opaque_suffix_bytes,
-        rollup_input.parent_drh,
-        rollup_input.boundary_prev_drh,
+        rollup_input.parent_data_rolling_hash,
+        rollup_input.boundary_prev_data_rolling_hash,
     )
 
     rollup_start_block_number = int(rollup_input.l2_execution_proofs[0].proof.start_block_number)
@@ -563,8 +563,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
-        parent_drh=rollup_input.parent_drh,
-        end_drh=end_drh,
+        parent_data_rolling_hash=rollup_input.parent_data_rolling_hash,
+        end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=rollup_input.start_offset,
