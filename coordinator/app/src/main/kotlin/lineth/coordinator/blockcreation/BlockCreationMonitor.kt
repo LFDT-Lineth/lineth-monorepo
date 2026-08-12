@@ -152,10 +152,15 @@ class BlockCreationMonitor(
         "Block creation monitor ready. Starting from block number={}",
         firstBlockNumber,
       )
-      ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(firstBlockNumber - 1))
-        .thenApply { parentBlock ->
-          expectedParentBlockHash.set(parentBlock.hash)
-        }
+      if (firstBlockNumber == 0L) {
+        expectedParentBlockHash.set(ByteArray(32))
+        SafeFuture.completedFuture(Unit)
+      } else {
+        ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(firstBlockNumber - 1))
+          .thenApply { parentBlock ->
+            expectedParentBlockHash.set(parentBlock.hash)
+          }
+      }
     }
   }
 
