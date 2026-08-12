@@ -274,6 +274,13 @@ func decodeLegacyTx(b *bytes.Reader) (parsedTx *types.LegacyTx, err error) {
 		TryCast(&parsedTx.Data, decTx[5], "data"),
 	)
 
+	if len(decTx) == legacyTxNumField {
+		if err = errors.Join(err, TryCast(&parsedTx.V, decTx[6], "chain-id")); err == nil {
+			// EIP-155: V = 2*chainID + 35 + yParity; the 35 offset keeps protected V clear of the pre-155 values 27 and 28.
+			parsedTx.V.Add(parsedTx.V.Lsh(parsedTx.V, 1), big.NewInt(35))
+		}
+	}
+
 	return
 }
 
