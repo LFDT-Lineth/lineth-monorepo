@@ -10,11 +10,12 @@ import (
 // sub-verifier; fields are zero-valued (empty) when the system has no queries
 // of that kind.
 type CompiledSystem struct {
-	Routing     CoinRouting
-	PublicInput PublicInputSystem
-	Vanishing   VanishingSystem
-	LogDeriv    LogDerivSystem
-	RowLimit    RowLimitSystem
+	Routing      CoinRouting
+	PublicInput  PublicInputSystem
+	Vanishing    VanishingSystem
+	LogDeriv     LogDerivSystem
+	GrandProduct GrandProductSystem
+	RowLimit     RowLimitSystem
 	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
@@ -26,12 +27,13 @@ type CompiledSystemZigOptions struct {
 	// EmitHeader, when true, prepends all necessary import declarations
 	// (protocol, field, vanishing, logderivativesum, rowlimit). Set to false
 	// when writing multiple systems under a shared file header.
-	EmitHeader      bool
-	ProtocolImport  string
-	FieldImport     string
-	VanishingImport string
-	LogDerivImport  string
-	RowLimitImport  string
+	EmitHeader         bool
+	ProtocolImport     string
+	FieldImport        string
+	VanishingImport    string
+	LogDerivImport     string
+	GrandProductImport string
+	RowLimitImport     string
 }
 
 // WriteCompiledSystemZig writes the spec, vanishing system, and logderiv
@@ -65,6 +67,12 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 	if err := WriteLogDerivSystemZigWithOptions(w, index, system.LogDeriv, LogDerivZigOptions{
 		EmitImport:     opts.EmitHeader,
 		LogDerivImport: opts.LogDerivImport,
+	}); err != nil {
+		return err
+	}
+	if err := WriteGrandProductSystemZigWithOptions(w, index, system.GrandProduct, GrandProductZigOptions{
+		EmitImport:         opts.EmitHeader,
+		GrandProductImport: opts.GrandProductImport,
 	}); err != nil {
 		return err
 	}

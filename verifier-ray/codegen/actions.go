@@ -5,8 +5,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
@@ -37,12 +39,10 @@ func (e *UnhandledVerifierActionError) Error() string {
 // This exists because each Build*System pass filters for ONLY its own action
 // type and silently skips the rest (vanishing.go / logderivativesum.go / pcs.go
 // all `continue` past unrecognized actions). Without this guard a protocol that
-// registers, e.g., grandproduct.FinalProductCheck (∏Z == Result) or
-// grandproduct.CheckResultIsOne (permutation Result == 1) or
-// messagebus.CheckHandleSumInShard would compile to a Zig verifier that never
-// enforces that boundary identity — a SOUNDNESS hole where a false grand-product
-// / non-permutation statement is accepted. Callers assembling a CompiledSystem
-// MUST invoke this before emitting; it turns "silently unenforced" into a loud
+// registers an action the codegen does not translate would compile to a Zig
+// verifier that never enforces that boundary identity — a SOUNDNESS hole where
+// a false statement is accepted. Callers assembling a CompiledSystem MUST
+// invoke this before emitting; it turns "silently unenforced" into a loud
 // generation-time error.
 //
 // The allowlist is the set of actions the Zig verifier DOES enforce:
@@ -50,6 +50,15 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - logderivativesum.VerifierAction          → logderivativesum boundary sum
 //   - lookuptologderivsum.ResultIsZeroVerifierAction → logderivativesum result-is-zero
 //   - lookuptologderivsum.RowLimitVerifierAction → BuildRowLimitSystem / rowlimit sub-verifier
+//   - grandproduct.FinalProductCheck            → BuildGrandProductSystem / grandproduct
+//     sub-verifier (∏Z[n-1] == Result, registered for every GrandProduct)
+//   - grandproduct.CheckResultIsOne             → BuildGrandProductSystem / grandproduct
+//     sub-verifier (permutation Result == 1, folded into the same query's
+//     `expected` field)
+//   - messagebus.CheckHandleSumInShard          → BuildGrandProductSystem / grandproduct
+//     sub-verifier (message-bus handle Result == expected, folded into the
+//     same query's `expected` field; absent entirely when SkipInShardCheck
+//     leaves it to a downstream cross-shard layer)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem (performs no
 //     boundary check the Zig side must re-emit — the whole PCS opening is
 //     reconstructed by BuildPcsSystem from the committed batches and
@@ -83,6 +92,12 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 	case *lookuptologderivsum.RowLimitVerifierAction:
 		return true
 	case *pcs.OpeningVerifierAction:
+		return true
+	case *grandproduct.FinalProductCheck:
+		return true
+	case *grandproduct.CheckResultIsOne:
+		return true
+	case *messagebus.CheckHandleSumInShard:
 		return true
 	}
 	return false

@@ -2,6 +2,7 @@ const protocol = @import("protocol/root.zig");
 const public_input_mod = protocol.public_input;
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
+const grandproduct = @import("query/grandproduct.zig");
 const rowlimit = @import("query/rowlimit.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
@@ -15,6 +16,12 @@ pub const Systems = struct {
     public_input: public_input_mod.Spec = .{},
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
+    /// Grand-product boundary checks: permutation arguments (Result == 1) and
+    /// message-bus handles (Result == expected accumulator). The running-product
+    /// Z-column recurrence and row-0 boundary are ordinary vanishing constraints,
+    /// already covered by `vanishing`; this sub-verifier closes the remaining
+    /// ∏Z[n-1] == Result and Result == expected identities.
+    grandproduct: grandproduct.System = .{},
     /// Lookup row-limit checks. Independent of vanishing/logderivativesum: it
     /// bounds dynamic-module runtime sizes rather than checking a polynomial
     /// identity, so it needs only `proof.module_sizes`, never claims or coins.
@@ -197,6 +204,8 @@ pub fn verify(
     try logderivativesum.verify(systems.logderivativesum, ctx);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
+
+    try grandproduct.verify(systems.grandproduct, ctx);
 
     try rowlimit.verify(systems.rowlimit, proof.module_sizes);
 
