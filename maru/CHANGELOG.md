@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Support Noise / Yamux (#3751)
+
 ### 🐛 Bug Fixes
 
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
