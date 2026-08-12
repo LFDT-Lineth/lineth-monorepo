@@ -118,7 +118,7 @@ func TestRowLimitAction_RejectsOverLimitASide(t *testing.T) {
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit A side")
-	assert.ErrorContains(t, err, "A side")
+	require.ErrorContains(t, err, "A side")
 	assert.Panics(t, func() { action.Run(rt) }, "prover must panic on an over-limit A side")
 }
 
@@ -131,7 +131,7 @@ func TestRowLimitAction_RejectsOverLimitBSide(t *testing.T) {
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit B side")
-	assert.ErrorContains(t, err, "B side")
+	require.ErrorContains(t, err, "B side")
 	assert.Panics(t, func() { action.Run(rt) }, "prover must panic on an over-limit B side")
 }
 
