@@ -1,6 +1,6 @@
 //! l2-execution guest logic: the Linea-specific layer on top of per-block stateless execution.
 //!
-//! Faithful translation of the Python oracle (`rollup_spec.l2_execution.run_l2_execution_guest` and
+//! Faithful translation of the Python reference implementation (`rollup_spec.l2_execution.run_l2_execution_guest` and
 //! its helpers) to Zig, wired against zesu's exposed modules:
 //!   - per-block execution + full logs: `execution.executeStatelessInputWithLogs`;
 //!   - vanilla stateless-input decode: `zesu_ssz_decode.decode`;
@@ -49,7 +49,15 @@ const BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0: [32]u8 = .{
     0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c,
 };
 
-/// Storage layout of L2MessageService (see the Python oracle's docstring for provenance).
+/// Storage layout of the L2MessageService contract: `lastAnchoredL1MessageNumber` at the fixed
+/// slot below, `l1RollingHashes` (a mapping keyed by message number) at the mapping base slot
+/// below. Solidity assigns storage slots by state-variable declaration order across the whole
+/// inheritance chain — a property of the contract's compiled bytecode, independent of chain id or
+/// deployment address, so the same slots hold on every deployment of the same contract version.
+/// These two numbers are extracted from the compiled storage layout of
+/// contracts/src/messaging/l2/L2MessageService.sol; if that layout ever changes (including a
+/// `__gap` slot in an ancestor), they must be re-extracted, or these reads return wrong values and
+/// the L1 finalization check fails.
 const LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: u64 = 280;
 const L1_ROLLING_HASHES_MAPPING_BASE_SLOT: u64 = 281;
 
@@ -105,7 +113,7 @@ fn addToForcedTxRollingHash(prev: [32]u8, tx_hash: [32]u8, deadline: u64, from_a
 }
 
 /// Hash of a list of 32-byte digests (e.g. `l2_l1_messages_hash`'s message-hash preimages). Named
-/// `hashDigestList`, matching the Python oracle's `hash_digest_list` (renamed from `hash_hash_list`
+/// `hashDigestList`, matching the Python reference implementation's `hash_digest_list` (renamed from `hash_hash_list`
 /// for the same reason): "hash a HashList" reads as a typo, not a type name; `Digest` avoids the
 /// verb/noun clash.
 fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
@@ -124,7 +132,7 @@ fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
 
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
 //
-// Semantics (must match the Python oracle exactly — see Readme.md's state_transition.py docstrings):
+// Semantics must match Readme.md's specification exactly (state_transition.py is its reference implementation):
 //   - account/slot proven absent from the trie  -> `null` / `0` (NOT an error);
 //   - a witness node needed to resolve the path is missing from the pool -> `error.InvalidProof`
 //     propagates (guest rejection). `verifyAccountIndexed`/`verifyStorageIndexed` already draw this
@@ -133,7 +141,8 @@ fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
 //     This is DELIBERATELY NOT `zesu_db.WitnessDatabase`: its `basic()`/`storage()` catch
 //     `error.InvalidProof` and silently treat it as absence (a leniency WitnessDatabase needs for
 //     precompile addresses that have no witness proof during live EVM execution) — that would mask a
-//     genuinely incomplete witness here, where the Python spec's `_mpt_lookup` raises instead.
+//     genuinely incomplete witness here, where the Python reference implementation's `_mpt_lookup`
+//     raises instead.
 
 /// Account at `address` proven against `state_root`, or `null` if proven absent.
 fn readAccount(state_root: [32]u8, address: [20]u8, node_index: *const mpt.NodeIndex) !?mpt.AccountState {
@@ -327,10 +336,11 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
     // "No L2MessageService configured" mode: a zero l2MessageServiceAddress means this range's
     // chain has no bridge contract, so there is nothing to read or scan. Both the L1->L2 bridge
     // rolling-hash boundary reads and the L2->L1 message-log extraction are suppressed and the four
-    // bridge PI fields are pinned to zero (mirrors the Python oracle's read_l1l2_bridge_state
-    // zero-address branch). This is a real semantic, not test scaffolding — but it is also what lets
-    // a vanilla EF stateless input (which has no L2MessageService account, and whose witness only
-    // covers nodes execution touched) be dummy-wrapped and run through this guest unchanged.
+    // bridge PI fields are pinned to zero (mirrors the Python reference implementation's
+    // read_l1l2_bridge_state zero-address branch). This is a real semantic, not test scaffolding —
+    // but it is also what lets a vanilla EF stateless input (which has no L2MessageService account,
+    // and whose witness only covers nodes execution touched) be dummy-wrapped and run through this
+    // guest unchanged.
     const bridge_suppressed = isZeroAddress(l2_ms_address);
 
     var current_parent_hash = parent_block_hash;

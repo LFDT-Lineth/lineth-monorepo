@@ -15,6 +15,7 @@ const l2_execution_ssz = @import("l2_execution_ssz");
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
 const primitives = @import("zesu_primitives");
+const tx_fixtures = @import("tx_fixtures");
 
 const types = executor.executor_types;
 const rlp = executor.executor_rlp_encode;
@@ -30,7 +31,7 @@ fn repeat(comptime n: usize, byte: u8) [n]u8 {
 // Expected bytes computed with `rollup_spec/.venv/bin/python` against the same formulas in
 // `rollup_spec/src/rollup_spec/l2_execution.py` / `block.py`.
 
-test "chainConfigHash matches the Python oracle" {
+test "chainConfigHash matches Readme.md's §2.1 dynamicChainConfigHash formula" {
     const chain_config = l2_execution_ssz.ChainConfig{
         .l2_message_service_address = repeat(20, 0x11),
         .coinbase = repeat(20, 0x00),
@@ -41,7 +42,7 @@ test "chainConfigHash matches the Python oracle" {
     try testing.expectEqualSlices(u8, &want, &got);
 }
 
-test "addToForcedTxRollingHash matches the Python oracle" {
+test "addToForcedTxRollingHash matches Readme.md's §6.3 forced-tx rolling-hash formula" {
     const prev = repeat(32, 0x22);
     const tx_hash = repeat(32, 0x33);
     const from_address = repeat(20, 0x44);
@@ -50,7 +51,7 @@ test "addToForcedTxRollingHash matches the Python oracle" {
     try testing.expectEqualSlices(u8, &want, &got);
 }
 
-test "hashAddressList / hashDigestList match the Python oracle, including the empty-list case" {
+test "hashAddressList / hashDigestList match the Python reference implementation, including the empty-list case" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -74,7 +75,7 @@ test "hashAddressList / hashDigestList match the Python oracle, including the em
     try testing.expectEqualSlices(u8, &hash_want, &got_hash);
 }
 
-test "mappingSlot matches the Python oracle's Solidity mapping-slot formula" {
+test "mappingSlot matches the Python reference implementation's Solidity mapping-slot formula" {
     const base_slot = api.u64ToSlot32Fn(281);
     const key = api.u64ToSlot32Fn(7);
     const got = api.mappingSlotFn(base_slot, key);
@@ -243,6 +244,15 @@ const TX_MAX_GAS_FEE_PLUS_VALUE: u256 = 21_000_000_001_000;
 fn decodeFixtureTx(alloc: std.mem.Allocator) !types.TxInput {
     const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{&SIGNED_TX_RLP});
     return decoded[0];
+}
+
+/// Recovers the sender of an arbitrary raw signed tx, for freshly-built typed-tx fixtures whose
+/// sender must be derived from the signed bytes themselves (`decodeFixtureTx`/`EXPECTED_SENDER`
+/// serve the one frozen legacy fixture, whose sender is a fixed, pre-computed constant instead).
+fn recoverTxSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8) ![20]u8 {
+    const decoded = try executor.executor_tx_decode.decodeTxs(alloc, &.{signed_tx_rlp});
+    var tx = decoded[0];
+    return (try api.recoverSenderFn(alloc, &tx, CHAIN_ID)).?;
 }
 
 test "recoverSender recovers the known signer of the signed-tx fixture" {
@@ -461,5 +471,345 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
     try testing.expectError(
         error.ForcedTxDeadlineExceeded,
         api.validateForcedTransactionsFn(alloc, &rolling_hash2, &last_number2, CHAIN_ID, DUMMY_PAYLOAD, fixture.root, &fixture.index, &.{expired}),
+    );
+}
+
+test "validateForcedTransactions: an unknown acceptance value is rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var fixture = try oneAccountNodeIndex(alloc, EXPECTED_SENDER, 0, 0);
+    defer fixture.index.deinit();
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .acceptance = 7,
+        .deadline = 100,
+    };
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    try testing.expectError(
+        error.UnknownForcedTxAcceptance,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, fixture.root, &fixture.index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: FILTERED_ADDRESS_TO on a contract-creation tx is rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // A real signed legacy tx with to=null: recoverSender runs unconditionally, before acceptance
+    // dispatch, and succeeds here — isolating the rejection below to genuinely
+    // FilteredAddressToOnContractCreation.
+    const creation_tx_rlp = try tx_fixtures.buildSignedLegacyTx(alloc, "FilteredAddressToCreation", .{
+        .nonce = 0,
+        .gas_price = 1_000_000_000,
+        .gas = 21_000,
+        .to = null,
+        .value = 0,
+        .chain_id = CHAIN_ID,
+    });
+
+    var fixture = try oneAccountNodeIndex(alloc, EXPECTED_SENDER, 0, 0);
+    defer fixture.index.deinit();
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = creation_tx_rlp,
+        .acceptance = api.Acceptance.FILTERED_ADDRESS_TO,
+        .deadline = 100,
+    };
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    try testing.expectError(
+        error.FilteredAddressToOnContractCreation,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, fixture.root, &fixture.index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: BAD_NONCE with a sender proven absent at the parent state is rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // An empty node index, checked against the canonical empty-trie root: the fixture tx's sender
+    // is proven absent from the very first lookup, with no witness nodes needed to prove it.
+    var empty_index = try mpt.buildNodeIndex(alloc, &.{});
+    defer empty_index.deinit();
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .acceptance = api.Acceptance.BAD_NONCE,
+        .deadline = 100,
+    };
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    try testing.expectError(
+        error.ForcedTxSenderAbsent,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, EMPTY_TRIE_HASH, &empty_index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: BAD_NONCE whose tx is actually in the block is rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var fixture = try oneAccountNodeIndex(alloc, EXPECTED_SENDER, 0, 0);
+    defer fixture.index.deinit();
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .acceptance = api.Acceptance.BAD_NONCE,
+        .deadline = 100,
+    };
+    const payload_with_tx = dummyPayload(10, &.{&SIGNED_TX_RLP});
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    try testing.expectError(
+        error.InvalidForcedTxFoundInBlock,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, payload_with_tx, fixture.root, &fixture.index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: a deadline equal to the block number clears the deadline check" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var fixture = try oneAccountNodeIndex(alloc, EXPECTED_SENDER, 0, 0);
+    defer fixture.index.deinit();
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = &SIGNED_TX_RLP,
+        .acceptance = api.Acceptance.FILTERED_ADDRESS_FROM,
+        .deadline = DUMMY_PAYLOAD.block_number,
+    };
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    const rejected = try api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, fixture.root, &fixture.index, &.{ftx});
+    try testing.expectEqual(@as(usize, 1), rejected.len);
+    try testing.expectEqualSlices(u8, &EXPECTED_SENDER, &rejected[0]);
+}
+
+test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-2 (EIP-1559) tx's fee+value" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const tx_rlp = try tx_fixtures.buildSignedEip1559Tx(alloc, "BadBalanceEip1559", .{
+        .nonce = 0,
+        .max_priority_fee = 0,
+        .max_fee_per_gas = 1_000_000_000,
+        .gas = 21_000,
+        .to = repeat(20, 0xcc),
+        .value = 1000,
+        .chain_id = CHAIN_ID,
+    });
+    const sender = try recoverTxSender(alloc, tx_rlp);
+    // gas(21000) * maxFeePerGas(1e9) + value(1000) = 21_000_000_001_000.
+    const max_fee_plus_value: u256 = 21_000_000_001_000;
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = tx_rlp,
+        .acceptance = api.Acceptance.BAD_BALANCE,
+        .deadline = 100,
+    };
+
+    // Balance below fee+value -> BAD_BALANCE correctly declared.
+    var insufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value - 1);
+    defer insufficient.index.deinit();
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    _ = try api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, insufficient.root, &insufficient.index, &.{ftx});
+
+    // Balance covers fee+value -> BAD_BALANCE was declared incorrectly, must error.
+    var sufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value);
+    defer sufficient.index.deinit();
+    var rolling_hash2: [32]u8 = repeat(32, 0);
+    var last_number2: u64 = 0;
+    try testing.expectError(
+        error.BadBalanceMismatch,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash2, &last_number2, CHAIN_ID, DUMMY_PAYLOAD, sufficient.root, &sufficient.index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-3 (blob) tx's fee+blob-surcharge+value" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // Two versioned hashes, so the blob surcharge term is visibly nonzero.
+    const versioned_hashes = [_][32]u8{ repeat(32, 0xd1), repeat(32, 0xd2) };
+    const tx_rlp = try tx_fixtures.buildSignedBlobTx(alloc, "BadBalanceBlob", .{
+        .nonce = 0,
+        .max_priority_fee = 0,
+        .max_fee_per_gas = 1_000_000_000,
+        .gas = 21_000,
+        .to = repeat(20, 0xcc),
+        .value = 1000,
+        .chain_id = CHAIN_ID,
+        .max_fee_per_blob_gas = 1_000,
+        .versioned_hashes = &versioned_hashes,
+    });
+    const sender = try recoverTxSender(alloc, tx_rlp);
+
+    const gas_fee: u256 = @as(u256, 21_000) * @as(u256, 1_000_000_000);
+    const blob_surcharge: u256 = @as(u256, versioned_hashes.len) * @as(u256, primitives.GAS_PER_BLOB) * @as(u256, 1_000);
+    const max_fee_plus_value: u256 = gas_fee + blob_surcharge + 1000;
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = tx_rlp,
+        .acceptance = api.Acceptance.BAD_BALANCE,
+        .deadline = 100,
+    };
+
+    // Balance below fee+surcharge+value -> BAD_BALANCE correctly declared.
+    var insufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value - 1);
+    defer insufficient.index.deinit();
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    _ = try api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, insufficient.root, &insufficient.index, &.{ftx});
+
+    // Balance covers fee+surcharge+value -> BAD_BALANCE was declared incorrectly, must error.
+    var sufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value);
+    defer sufficient.index.deinit();
+    var rolling_hash2: [32]u8 = repeat(32, 0);
+    var last_number2: u64 = 0;
+    try testing.expectError(
+        error.BadBalanceMismatch,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash2, &last_number2, CHAIN_ID, DUMMY_PAYLOAD, sufficient.root, &sufficient.index, &.{ftx}),
+    );
+}
+
+test "validateForcedTransactions: BAD_BALANCE dispatch mirrors a type-4 (EIP-7702) tx's fee+value" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const tx_rlp = try tx_fixtures.buildSignedEip7702Tx(alloc, "BadBalanceEip7702", .{
+        .nonce = 0,
+        .max_priority_fee = 0,
+        .max_fee_per_gas = 1_000_000_000,
+        .gas = 21_000,
+        .to = repeat(20, 0xcc),
+        .value = 1000,
+        .chain_id = CHAIN_ID,
+    });
+    const sender = try recoverTxSender(alloc, tx_rlp);
+    // gas(21000) * maxFeePerGas(1e9) + value(1000) = 21_000_000_001_000: maxGasFee dispatches type
+    // 4 through the same gas*maxFeePerGas formula as type 2, adding the blob surcharge only for
+    // type 3.
+    const max_fee_plus_value: u256 = 21_000_000_001_000;
+
+    const ftx = l2_execution_ssz.ForcedTransactionWitness{
+        .number = 1,
+        .signed_tx_rlp = tx_rlp,
+        .acceptance = api.Acceptance.BAD_BALANCE,
+        .deadline = 100,
+    };
+
+    // Balance below fee+value -> BAD_BALANCE correctly declared.
+    var insufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value - 1);
+    defer insufficient.index.deinit();
+    var rolling_hash: [32]u8 = repeat(32, 0);
+    var last_number: u64 = 0;
+    _ = try api.validateForcedTransactionsFn(alloc, &rolling_hash, &last_number, CHAIN_ID, DUMMY_PAYLOAD, insufficient.root, &insufficient.index, &.{ftx});
+
+    // Balance covers fee+value -> BAD_BALANCE was declared incorrectly, must error.
+    var sufficient = try oneAccountNodeIndex(alloc, sender, 0, max_fee_plus_value);
+    defer sufficient.index.deinit();
+    var rolling_hash2: [32]u8 = repeat(32, 0);
+    var last_number2: u64 = 0;
+    try testing.expectError(
+        error.BadBalanceMismatch,
+        api.validateForcedTransactionsFn(alloc, &rolling_hash2, &last_number2, CHAIN_ID, DUMMY_PAYLOAD, sufficient.root, &sufficient.index, &.{ftx}),
+    );
+}
+
+// ─── extractL2L1Messages: malformed log ────────────────────────────────────────────────────────────
+
+test "extractL2L1Messages rejects a matching log with fewer than 4 topics" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const l2_ms_address = repeat(20, 0x11);
+    const bridge_topic0 = [_]u8{ 0xe8, 0x56, 0xc2, 0xb8, 0xbd, 0x4e, 0xb0, 0x02, 0x7c, 0xe3, 0x2e, 0xea, 0xf5, 0x95, 0xc2, 0x1b, 0x0b, 0x6b, 0x46, 0x44, 0xb3, 0x26, 0xe5, 0xb7, 0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c };
+
+    // Matching address + topic0, but only 3 topics — one short of topics[3], the message hash.
+    const short_log = try makeLog(alloc, l2_ms_address, &.{ bridge_topic0, repeat(32, 0), repeat(32, 0) });
+    const receipts = [_]types.Receipt{try makeReceiptWithLogs(alloc, &.{short_log})};
+
+    var out = std.ArrayListUnmanaged([32]u8).empty;
+    try testing.expectError(
+        error.InvalidBridgeMessageLog,
+        api.extractL2L1MessagesFn(alloc, &out, &receipts, l2_ms_address),
+    );
+}
+
+// ─── readL1L2BridgeState: composed reads over a real two-slot storage trie ─────────────────────────
+
+test "readL1L2BridgeState reads the number and rolling hash from real L2MessageService storage" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const l2_ms_address = repeat(20, 0x22);
+    const number: u64 = 7;
+    const hash_value: [32]u8 = repeat(32, 0x77);
+
+    var index = try mpt.buildNodeIndex(alloc, &.{});
+    defer index.deinit();
+
+    // Slot 280: the message number, as a plain u256.
+    var storage_root = EMPTY_TRIE_HASH;
+    const number_slot = api.u64ToSlot32Fn(280);
+    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, number), &index);
+
+    // mappingSlot(281, number): the rolling hash keyed by that same number.
+    const rolling_hash_slot = api.mappingSlotFn(api.u64ToSlot32Fn(281), api.u64ToSlot32Fn(number));
+    const hash_as_u256 = std.mem.readInt(u256, &hash_value, .big);
+    try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_as_u256, &index);
+
+    const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
+    var state_root = EMPTY_TRIE_HASH;
+    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
+
+    const bridge_state = try api.readL1L2BridgeStateFn(state_root, l2_ms_address, &index);
+    try testing.expectEqualSlices(u8, &hash_value, &bridge_state.hash);
+    try testing.expectEqual(number, bridge_state.number);
+}
+
+test "readL1L2BridgeState rejects a message number that overflows u64" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const l2_ms_address = repeat(20, 0x22);
+    const overflowing_number: u256 = @as(u256, 1) << 64;
+
+    var index = try mpt.buildNodeIndex(alloc, &.{});
+    defer index.deinit();
+
+    var storage_root = EMPTY_TRIE_HASH;
+    const number_slot = api.u64ToSlot32Fn(280);
+    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, overflowing_number, &index);
+
+    const account_rlp = try accountLeafValue(alloc, 0, 0, storage_root, KECCAK_EMPTY);
+    var state_root = EMPTY_TRIE_HASH;
+    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&l2_ms_address), account_rlp, &index);
+
+    try testing.expectError(
+        error.RollingHashNumberOverflow,
+        api.readL1L2BridgeStateFn(state_root, l2_ms_address, &index),
     );
 }
