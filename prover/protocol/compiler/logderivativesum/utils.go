@@ -39,29 +39,27 @@ func GetTableCanonicalOrder(q query.Inclusion) ([]ifaces.Column, [][]ifaces.Colu
 	}
 
 	var (
-		checked    = make([]ifaces.Column, len(q.Included))
-		table      = make([]ifaces.Column, len(q.Including[0]))
-		colNamesT  = make([]ifaces.ColID, len(checked))
-		sortingMap = make([]int, len(table))
+		checked = make([]ifaces.Column, len(q.Included))
+		table   = make([]ifaces.Column, len(q.Including[0]))
+		perm    = make([]int, len(q.Including[0]))
 	)
 
-	for col := range colNamesT {
-		colNamesT[col] = q.Including[0][col].GetColID()
-		sortingMap[col] = col
+	for i := range perm {
+		perm[i] = i
 	}
 
-	sort.Slice(colNamesT, func(i, j int) bool {
-		return strings.Compare(string(colNamesT[i]), string(colNamesT[j])) < 0
+	// Sort positions by the T-column name. The stable sort keeps duplicated
+	// columns in their original relative order and, since perm is a
+	// permutation, every (Included, Including) pair is carried over exactly
+	// once: matching back by name would silently drop the checked column
+	// paired with the second occurrence of a duplicated table column.
+	sort.SliceStable(perm, func(i, j int) bool {
+		return q.Including[0][perm[i]].GetColID() < q.Including[0][perm[j]].GetColID()
 	})
 
-	for i, colName := range colNamesT {
-		for oldPos, includedCol := range q.Including[0] {
-			if includedCol.GetColID() == colName {
-				checked[i] = q.Included[oldPos]
-				table[i] = includedCol
-				break
-			}
-		}
+	for newPos, oldPos := range perm {
+		table[newPos] = q.Including[0][oldPos]
+		checked[newPos] = q.Included[oldPos]
 	}
 
 	return checked, [][]ifaces.Column{table}

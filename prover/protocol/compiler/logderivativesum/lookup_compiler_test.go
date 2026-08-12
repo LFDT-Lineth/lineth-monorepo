@@ -236,6 +236,56 @@ func TestLogDerivativeLookupMultiXor(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestLogDerivativeLookupDuplicateTableColumn is a regression test for a bug
+// in [GetTableCanonicalOrder] where, if the same column appeared twice in the
+// including table, the checked column paired with the second occurrence was
+// silently replaced by the one paired with the first occurrence and its
+// constraint was dropped.
+func TestLogDerivativeLookupDuplicateTableColumn(t *testing.T) {
+
+	var sizeT, sizeS int = 16, 8
+
+	define := func(b *wizard.Builder) {
+		colA := b.RegisterCommit("A", sizeT)
+		colS1 := b.RegisterCommit("S1", sizeS)
+		colS2 := b.RegisterCommit("S2", sizeS)
+		b.Inclusion("LOOKUP", []ifaces.Column{colA, colA}, []ifaces.Column{colS1, colS2})
+	}
+
+	t.Run("satisfied", func(t *testing.T) {
+
+		// The rows of the table are (A_i, A_i), so the query is satisfied iff
+		// S1 = S2 row-wise with values taken in A.
+		prover := func(run *wizard.ProverRuntime) {
+			run.AssignColumn("A", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
+			run.AssignColumn("S1", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7))
+			run.AssignColumn("S2", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7))
+		}
+
+		comp := wizard.Compile(define, CompileLookups, dummy.Compile)
+		proof := wizard.Prove(comp, prover)
+		err := wizard.Verify(comp, proof)
+		require.NoError(t, err)
+	})
+
+	t.Run("unsatisfied-on-second-column", func(t *testing.T) {
+
+		// S1 alone is included in A but the rows (S1_i, S2_i) with S1_i != S2_i
+		// are not rows of (A, A). Before the fix, the constraint on S2 was
+		// dropped and the proof went through.
+		prover := func(run *wizard.ProverRuntime) {
+			run.AssignColumn("A", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
+			run.AssignColumn("S1", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7))
+			run.AssignColumn("S2", smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 9))
+		}
+
+		comp := wizard.Compile(define, CompileLookups, dummy.Compile)
+		require.Panics(t, func() {
+			_ = wizard.Prove(comp, prover)
+		})
+	})
+}
+
 func TestLogDerivativeLookupRandomLinComb(t *testing.T) {
 
 	var sizeA, sizeB int = 16, 8
