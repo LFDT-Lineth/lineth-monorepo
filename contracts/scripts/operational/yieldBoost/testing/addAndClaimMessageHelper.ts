@@ -21,18 +21,18 @@ export interface ClaimParams {
 
 export interface PrepareMessageResult {
   claimParams: ClaimParams;
-  lineaRollup: Contract;
+  linethRollup: Contract;
 }
 
 /**
- * Prepares and adds a message merkle root to LineaRollup.
+ * Prepares and adds a message merkle root to LinethRollup.
  * Handles parameter resolution, validation, message number generation,
  * proof creation, merkle root calculation, and adding the root to the contract.
  *
  * @param taskArgs - Task arguments from Hardhat
  * @param hre - Hardhat runtime environment
  * @param requireYieldProvider - Whether yieldProvider is required (default: false)
- * @returns Claim parameters and LineaRollup contract instance
+ * @returns Claim parameters and LinethRollup contract instance
  */
 export async function prepareAndAddMessageMerkleRoot(
   taskArgs: Record<string, unknown>,
@@ -44,7 +44,7 @@ export async function prepareAndAddMessageMerkleRoot(
   const signerAddress = await signer.getAddress();
 
   // --- Resolve inputs from CLI or ENV (with sensible fallbacks to deployments) ---
-  const lineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "lineaRollupAddress", "LINEA_ROLLUP_ADDRESS");
+  const linethRollupAddress = getTaskCliOrEnvValue(taskArgs, "linethRollupAddress", "LINETH_ROLLUP_ADDRESS");
   const fromAddress = getTaskCliOrEnvValue(taskArgs, "from", "FROM_ADDRESS") || signerAddress;
   const toAddress = getTaskCliOrEnvValue(taskArgs, "to", "TO_ADDRESS");
   const valueRaw = getTaskCliOrEnvValue(taskArgs, "value", "VALUE");
@@ -53,7 +53,7 @@ export async function prepareAndAddMessageMerkleRoot(
 
   // Validate required params
   const missing: string[] = [];
-  if (!lineaRollupAddress) missing.push("lineaRollupAddress / LINEA_ROLLUP_ADDRESS");
+  if (!linethRollupAddress) missing.push("linethRollupAddress / LINETH_ROLLUP_ADDRESS");
   if (!toAddress) missing.push("to / TO_ADDRESS");
   if (!valueRaw) missing.push("value / VALUE");
   // Note: data has a default value of "0x" (empty calldata), so validation is not needed
@@ -74,7 +74,7 @@ export async function prepareAndAddMessageMerkleRoot(
   const proof = Array.from({ length: 32 }, () => randomBytes32());
   const proofDepth = proof.length;
 
-  const lineaRollup = await ethers.getContractAt("TestLineaRollup", lineaRollupAddress!, signer);
+  const linethRollup = await ethers.getContractAt("TestLinethRollup", linethRollupAddress!, signer);
   // Generate random messageNumber and check if it's already claimed
   let messageNumber: bigint;
   let attempts = 0;
@@ -87,7 +87,7 @@ export async function prepareAndAddMessageMerkleRoot(
         `Failed to find unclaimed message number after ${maxAttempts} attempts. This is highly unlikely.`,
       );
     }
-    const isClaimed = await lineaRollup.isMessageClaimed(messageNumber);
+    const isClaimed = await linethRollup.isMessageClaimed(messageNumber);
     if (!isClaimed) {
       break;
     }
@@ -97,7 +97,7 @@ export async function prepareAndAddMessageMerkleRoot(
 
   // Log params
   console.log("Parameters:");
-  console.log("  lineaRollupAddress:", lineaRollupAddress);
+  console.log("  linethRollupAddress:", linethRollupAddress);
   console.log("  messageNumber:", messageNumber.toString(), "(auto-generated, verified unclaimed)");
   console.log("  from:", fromAddress);
   console.log("  to:", toAddress);
@@ -116,14 +116,14 @@ export async function prepareAndAddMessageMerkleRoot(
   console.log("  messageHash:", messageHash);
 
   // Get generatedRoot
-  const generatedRoot = await lineaRollup.generateMerkleRoot.staticCall(messageHash, proof, leafIndex);
+  const generatedRoot = await linethRollup.generateMerkleRoot.staticCall(messageHash, proof, leafIndex);
   console.log("generatedRoot=", generatedRoot);
 
-  // Add merkle root to LineaRollup
-  console.log("\nAdding merkle root to LineaRollup...");
+  // Add merkle root to LinethRollup
+  console.log("\nAdding merkle root to LinethRollup...");
   console.log("  NOTE: Signer must have DEFAULT_ADMIN_ROLE");
   {
-    const tx = await lineaRollup.addL2MerkleRoots([generatedRoot], proofDepth);
+    const tx = await linethRollup.addL2MerkleRoots([generatedRoot], proofDepth);
     console.log("  Transaction hash:", tx.hash);
     const receipt = await tx.wait();
     console.log("  Transaction confirmed in block:", receipt?.blockNumber);
@@ -169,6 +169,6 @@ export async function prepareAndAddMessageMerkleRoot(
 
   return {
     claimParams,
-    lineaRollup,
+    linethRollup,
   };
 }

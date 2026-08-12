@@ -53,6 +53,12 @@ allprojects {
   }
 
   repositories {
+    maven {
+      url "https://artifacts.consensys.net/public/linea-besu/maven/"
+      content {
+        includeGroupAndSubgroups('org.hyperledger')
+      }
+    }
     mavenCentral()
     mavenLocal()
   }

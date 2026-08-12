@@ -3,15 +3,29 @@
 ### 🚀 Features
 
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
+- *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
+- *(coordinator)* Apply message anchoring L1 retries (#3715)
+- *(coordinator)* Make runtime invariants explicit (#3716)
+
+### 🚜 Refactor
+
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
+- *(coordinator)* Rename Linea to Lineth in app and config (#3707)
+- *(misc)* Rename gradle plugins (#3729)
+- *(coordinator)* Apply review cleanups (#3717)
+- *(coordinator)* Package renaming to lineth (#3746)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

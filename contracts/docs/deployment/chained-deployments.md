@@ -13,7 +13,7 @@ This section describes the scripts that can be run to deploy multiple contracts 
 Chained `--tags` deployments support the browser-wallet flow with **one session for the entire run**:
 
 ```shell
-HARDHAT_SIGNER_UI=true pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+HARDHAT_SIGNER_UI=true pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
 ```
 
 When `HARDHAT_SIGNER_UI=true` is set:
@@ -32,7 +32,7 @@ See the **Browser wallet signing (`HARDHAT_SIGNER_UI`)** section in [README.md](
 
 ## L1MessageService Chained Deployments
 
-This will run the script that deploys PlonkVerifier, LineaRollup, Timelock contracts.
+This will run the script that deploys PlonkVerifier, LinethRollup, Timelock contracts.
 
 Parameters that should be filled either in .env or passed as CLI arguments:
 
@@ -46,9 +46,9 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
 | L2_GENESIS_TIMESTAMP | true | uint256 | Genesis timestamp (shared base) |
 | L1_SECURITY_COUNCIL  | registry\|env | address | Security Council Address. Read from registry on stable networks; env var used as fallback. |
-| LINEA_ROLLUP_OPERATORS     | registry\|env | address | Operators Addresses (comma-delimited if multiple). Read from registry on stable networks; env var used as fallback. |
-| LINEA_ROLLUP_RATE_LIMIT_PERIOD     | true  | uint256   | L1 Rate Limit Period |
-| LINEA_ROLLUP_RATE_LIMIT_AMOUNT     | true  | uint256   | L1 Rate Limit Amount |
+| LINETH_ROLLUP_OPERATORS     | registry\|env | address | Operators Addresses (comma-delimited if multiple). Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_RATE_LIMIT_PERIOD     | true  | uint256   | L1 Rate Limit Period |
+| LINETH_ROLLUP_RATE_LIMIT_AMOUNT     | true  | uint256   | L1 Rate Limit Amount |
 | TIMELOCK_PROPOSERS | true     | address | Timelock Proposers address |
 | TIMELOCK_EXECUTORS | true     | address | Timelock Executors address |
 | TIMELOCK_ADMIN_ADDRESS | true     | address | Timelock Admin address |
@@ -62,18 +62,18 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_IS_ALLOWED_CIRCUIT_ID | true | uint256 | Allowed-circuit bit mask passed to the verifier constructor and folded into the verifier chain configuration hash. This value must match the prover-side `isAllowedCircuitID` used to generate aggregation proofs. |
 | VERIFIER_MIMC_ADDRESS | false | address | Optional. Reuse an existing deployed `Mimc` library for PlonkVerifier instead of deploying a new one (see [verifier.md](l1/verifier.md)). |
 | YIELD_MANAGER_ADDRESS | registry\|env | address | Yield Manager contract address. Read from registry on stable networks; env var used as fallback. |
-| LINEA_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
 
 <br />
 
 Base command:
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
 ```
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINETH_ROLLUP_OPERATORS=<address> LINETH_ROLLUP_RATE_LIMIT_PERIOD=<value> LINETH_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LinethRollup,Timelock
 ```
 
 (make sure to replace `<value>` `<bytes>` `<key>` `<address>` with actual values)
@@ -126,7 +126,7 @@ This will run the script that deploys the TokenBridge and BridgedToken contracts
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | L2_MESSAGE_SERVICE_ADDRESS    | registry\|env  | address   | L2 Message Service address. Read from registry on stable networks; env var used as fallback. |
-| LINEA_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from registry on stable networks; env var used as fallback. |
 | REMOTE_CHAIN_ID       | true      |   uint256     | ChainID of the remote (target) network |
 | REMOTE_SENDER_ADDRESS | registry\|env | address | Remote sender address (the TokenBridge on the other chain). Read from registry if present; env var used as fallback. |
 | DEPLOY_TOKEN_BRIDGE_ON_L1       | false     |true\|false| If Token Bridge is deployed on L1, DEPLOY_TOKEN_BRIDGE_ON_L1 should be set to `true`. Otherwise it should be `false`|
@@ -143,6 +143,6 @@ pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINETH_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 ```
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

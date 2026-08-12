@@ -46,7 +46,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
    */
   const livenessSignerAccount = context.getL2AccountManager().whaleAccount(LIVENESS_ACCOUNT_INDEX);
 
-  const lineaRollup = context.l1Contracts.lineaRollup(l1WalletClient);
+  const linethRollup = context.l1Contracts.linethRollup(l1WalletClient);
 
   const [l1AccountNonce, l2AccountNonce] = await Promise.all([
     l1PublicClient.getTransactionCount({ address: account.address }),
@@ -154,7 +154,7 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
       maxFeePerGas: maxFeePerGasLineaSequencerUptimeFeed,
     }),
     l1PublicClient.waitForTransactionReceipt({
-      hash: await lineaRollup.write.sendMessage([to, fee, calldata], {
+      hash: await linethRollup.write.sendMessage([to, fee, calldata], {
         value: etherToWei("500"),
         gasPrice: parseGwei("300"),
         nonce: l1AccountNonce + 1,
@@ -162,9 +162,9 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
     }),
   ]);
 
-  const lineaRollupBalance = await l1PublicClient.getBalance({ address: lineaRollup.address });
-  if (lineaRollupBalance < etherToWei("500")) {
-    throw new Error("LineaRollup funding failed");
+  const linethRollupBalance = await l1PublicClient.getBalance({ address: linethRollup.address });
+  if (linethRollupBalance < etherToWei("500")) {
+    throw new Error("LinethRollup funding failed");
   }
 
   const { maxPriorityFeePerGas: maxPriorityFeePerGasSparseMerkleProof, maxFeePerGas: maxFeePerGasSparseMerkleProof } =
@@ -197,5 +197,5 @@ async function configureOnceOffPrerequisities(context: TestContext, logger: { in
   logger.info(`L2 Poseidon2 contract deployed. address=${l2Poseidon2ContractAddress}`);
   logger.info(`L2 LineaSequencerUptimeFeed contract deployed. address=${l2LineaSequencerUptimeFeedContractAddress}`);
   logger.info(`L2 SparseMerkleProof contract deployed. address=${l2SparseMerkleProofContractAddress}`);
-  logger.info(`LineaRollup funded with ${formatEther(lineaRollupBalance)} ETH on L1`);
+  logger.info(`LinethRollup funded with ${formatEther(linethRollupBalance)} ETH on L1`);
 }

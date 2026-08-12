@@ -3,7 +3,7 @@ import { ZeroAddress, ZeroHash } from "ethers";
 export const HASH_ZERO = ZeroHash;
 export const ADDRESS_ZERO = ZeroAddress;
 
-export const LINEA_ROLLUP_INITIALIZE_SIGNATURE =
+export const LINETH_ROLLUP_INITIALIZE_SIGNATURE =
   "initialize((bytes32,uint256,uint256,address,uint256,uint256,(address,bytes32)[],(uint8,bytes32)[],(uint8,bytes32)[],address,address,address),address,address)";
 
 export const VALIDIUM_INITIALIZE_SIGNATURE =

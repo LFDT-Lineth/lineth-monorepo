@@ -34,7 +34,7 @@ runs:
   steps:
     - name: Login to Docker Hub
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
-      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
       with:
         username: ${{ inputs.docker_username }}
         password: ${{ inputs.docker_password }}

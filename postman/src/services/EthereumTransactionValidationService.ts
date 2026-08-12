@@ -1,7 +1,7 @@
 import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { BaseTransactionValidationService } from "./BaseTransactionValidationService";
-import { ILineaRollupClient } from "../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { ILinethRollupClient } from "../core/clients/blockchain/ethereum/ILinethRollupClient";
 import { IEthereumGasProvider } from "../core/clients/blockchain/IGasProvider";
 import { Message } from "../core/entities/Message";
 import {
@@ -12,7 +12,7 @@ import { Address } from "../core/types";
 
 export class EthereumTransactionValidationService extends BaseTransactionValidationService {
   constructor(
-    private readonly lineaRollupClient: ILineaRollupClient,
+    private readonly linethRollupClient: ILinethRollupClient,
     private readonly gasProvider: IEthereumGasProvider,
     config: TransactionValidationServiceConfig,
     logger: ILogger,
@@ -26,7 +26,7 @@ export class EthereumTransactionValidationService extends BaseTransactionValidat
     claimViaAddress?: Address,
   ): Promise<TransactionEvaluation> {
     const [gasLimit, { maxPriorityFeePerGas, maxFeePerGas }] = await Promise.all([
-      this.lineaRollupClient.estimateClaimGas(
+      this.linethRollupClient.estimateClaimGas(
         {
           ...message,
           feeRecipient,
@@ -41,7 +41,7 @@ export class EthereumTransactionValidationService extends BaseTransactionValidat
     const estimatedGasLimit = this.getGasLimit(gasLimit);
     const isUnderPriced = this.computeIsUnderPricedByMaxFee(gasLimit, message.fee, maxFeePerGas);
     const hasZeroFee = this.hasZeroFee(message);
-    const isRateLimitExceeded = await this.lineaRollupClient.isRateLimitExceeded(message.fee, message.value);
+    const isRateLimitExceeded = await this.linethRollupClient.isRateLimitExceeded(message.fee, message.value);
     const isForSponsorship = this.isForSponsorship(gasLimit, hasZeroFee, isUnderPriced);
 
     const evaluation: TransactionEvaluation = {

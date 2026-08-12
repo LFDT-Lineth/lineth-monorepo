@@ -11,7 +11,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
-// DefaultDepth is the default depth of the Linea state Merkle tree.
+// DefaultDepth is the default depth of the Lineth state Merkle tree.
 // This value should not be changed as it would modify the state structure.
 const DefaultDepth = 40
 

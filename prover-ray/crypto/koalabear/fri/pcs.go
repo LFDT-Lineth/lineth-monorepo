@@ -124,6 +124,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
@@ -394,9 +395,43 @@ type quotientClaim struct {
 	Value field.Ext
 }
 
+// claimRotation is the prover-only E2 data for one claim point ζ·ω_n^s: its
+// inverse column is Scale · rotate(level's DenomBaseInv, Rot), with
+// Rot = (r·s) mod N (r = inverse rate, N = codeword-domain size) and
+// Scale = ω_N^{−(r·s)}.
+type claimRotation struct {
+	Rot   int
+	Scale field.Element
+}
+
+// quotientColumn is prover-only (built in reconstructLevels, consumed by
+// Level.EvalsAt). Rotations runs parallel to Claims and lives here — rather than
+// on quotientClaim — so the verifier's claim type (which also instantiates
+// quotientClaim, via claimsForEntry) stays free of prover-only state.
+// quotientColumn holds one opened column's codeword over the domain. To avoid
+// allocating (and, for base columns, widening) a fresh 4N-length []E6 per
+// column in reconstructLevels — the dominant cost of Open — the codeword is
+// aliased directly from the committed table: ext columns keep their []field.Ext
+// in EvalsExt, base columns keep their []field.Element in EvalsBase. Exactly one
+// is non-nil; isBase reports which. Level.EvalsAt lifts base elements to E6 on
+// the stack as it reads them.
 type quotientColumn struct {
-	Evals  []field.Ext // Evals over the codeword domain
-	Claims []quotientClaim
+	EvalsExt  []field.Ext     // set for ext columns; nil for base
+	EvalsBase []field.Element // set for base columns; nil for ext
+	Claims    []quotientClaim
+	Rotations []claimRotation
+}
+
+// isBase reports whether this column's codeword is stored as base elements.
+func (c *quotientColumn) isBase() bool { return c.EvalsBase != nil }
+
+// codewordLen returns the number of evaluations in the column's codeword,
+// regardless of whether it is stored as base or ext.
+func (c *quotientColumn) codewordLen() int {
+	if c.EvalsBase != nil {
+		return len(c.EvalsBase)
+	}
+	return len(c.EvalsExt)
 }
 
 func reconstructDomainSize(domain domainLight) (int, error) {
@@ -419,24 +454,9 @@ func checkColumnClaimPoints(columnIdx int, claims []quotientClaim) error {
 	return nil
 }
 
-func collectClaimPoints(columns []quotientColumn) (map[field.Ext]int, []field.Ext) {
-	indexes := make(map[field.Ext]int)
-	for _, column := range columns {
-		for _, claim := range column.Claims {
-			if _, ok := indexes[claim.Point]; ok {
-				continue
-			}
-			indexes[claim.Point] = len(indexes)
-		}
-	}
-
-	points := make([]field.Ext, len(indexes))
-	for point, index := range indexes {
-		points[index] = point
-	}
-	return indexes, points
-}
-
+// denominatorInverses is the pre-E2 dense builder: 1/(x − z) for every (domain
+// position x, claim point z). Retained as the reference implementation the E2
+// rotation identity is validated against in fri_e2_test.go.
 func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, error) {
 	if len(claimPoints) == 0 {
 		return nil, nil
@@ -454,6 +474,27 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 		}
 	}
 	return field.BatchInvertExt(denominators), nil
+}
+
+// denomBaseInverses returns the length-N vector 1/(ω^e − ζ) in natural order
+// (index e = exponent), where ω = generator is the codeword-domain generator.
+// This single vector backs every claim point of the level via the rotation
+// identity in Level.EvalsAt, replacing a dense N×P denominator table (P =
+// distinct claim points) with one N-element batch inversion. A zero denominator
+// means ζ (hence every ζ·ω_n^s claim point) lands on the domain, which is a
+// soundness violation.
+func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.Ext, error) {
+	denoms := make([]field.Ext, n)
+	pow := field.One()
+	for e := range n {
+		x := field.Lift(pow)
+		denoms[e].Sub(&x, &zeta)
+		if denoms[e].IsZero() {
+			return nil, fmt.Errorf("fri: reconstructLevels: claim point lands on domain position %d", e)
+		}
+		pow.Mul(&pow, &generator)
+	}
+	return field.BatchInvertExt(denoms), nil
 }
 
 // =============================================================================
@@ -720,8 +761,23 @@ func (pcs *PCS) shiftedPoint(sizeLog2 uint8, shift int, zeta field.Ext) (field.E
 // Level.EvalsAt.
 func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	logD := pcs.Params.LogPlainTextSize
-	levels := make([]Level, 0, logD+1)
-	for sizeLog2 := int(logD); sizeLog2 >= 0; sizeLog2-- {
+	// The domain schedule drives which sizes can host a level: domainsLight
+	// (length numRounds()+1, further sliced for a restricted PCS) holds exactly
+	// the sizes 2^logD down to 2^logFinalPolySize. Iterating it directly makes
+	// it structurally impossible to reach a size below the final-poly floor
+	// (which could never host a FRI level anyway).
+	levels := make([]Level, 0, len(pcs.Params.domainsLight))
+	for di := range pcs.Params.domainsLight {
+		sizeLog2 := int(logD) - di
+		domain := pcs.Params.domainsLight[di]
+		size, err := reconstructDomainSize(domain)
+		if err != nil {
+			return nil, err
+		}
+		// r is the inverse rate: the codeword domain (size N) is the r-fold
+		// blowup of the size-2^sizeLog2 plaintext domain, so ω_n = ω_N^r.
+		r := size >> sizeLog2
+
 		var columns []quotientColumn
 		var trees []*Tree
 		for _, opening := range pcs.openings {
@@ -731,18 +787,27 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 				}
 				trees = append(trees, opening.committed.Tree)
 				for _, entry := range bundle.Entries {
-					evals, err := encodedColumnEvals(opening.committed, entry)
+					column, err := encodedColumnEvals(opening.committed, entry)
 					if err != nil {
 						return nil, err
 					}
-					claims, err := pcs.openingClaimsForEntry(opening, entry)
+					column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
 					if err != nil {
 						return nil, err
 					}
-					columns = append(columns, quotientColumn{
-						Evals:  evals,
-						Claims: claims,
-					})
+					// Precompute the E2 rotation offset and base-field prefactor
+					// of each claim point for Level.EvalsAt, parallel to claims
+					// (entry.Shifts is aligned with claims).
+					rotations := make([]claimRotation, len(entry.Shifts))
+					for i, shift := range entry.Shifts {
+						rot := (r * shift) & (size - 1)
+						rotations[i].Rot = rot
+						// Scale = ω_N^{-rot} = ω_N^{(N-rot) mod N}.
+						expo := (size - rot) & (size - 1)
+						rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
+					}
+					column.Rotations = rotations
+					columns = append(columns, column)
 				}
 			}
 		}
@@ -750,38 +815,25 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 			continue
 		}
 
-		domain := pcs.Params.domainsLight[logD-uint8(sizeLog2)]
-		size, err := reconstructDomainSize(domain)
-		if err != nil {
-			return nil, err
-		}
 		for columnIdx, column := range columns {
-			if len(column.Evals) != size {
+			if column.codewordLen() != size {
 				return nil, fmt.Errorf("fri: reconstructLevels: column %d has %d evals, want %d",
-					columnIdx, len(column.Evals), size)
+					columnIdx, column.codewordLen(), size)
 			}
 			if err = checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
 				return nil, err
 			}
 		}
 
-		domainPoints := make([]field.Ext, size)
-		for pos := range domainPoints {
-			domainPoints[pos] = domainPointExt(domain, pos)
-		}
-
-		claimPointIndexes, claimPoints := collectClaimPoints(columns)
-		denominatorInverses, err := denominatorInverses(domainPoints, claimPoints)
+		denomBaseInv, err := denomBaseInverses(domain.generator, size, pcs.zeta)
 		if err != nil {
 			return nil, err
 		}
 
 		levels = append(levels, Level{
-			Trees:               trees,
-			Columns:             columns,
-			ClaimPointIndexes:   claimPointIndexes,
-			ClaimPoints:         claimPoints,
-			DenominatorInverses: denominatorInverses,
+			Trees:        trees,
+			Columns:      columns,
+			DenomBaseInv: denomBaseInv,
 		})
 	}
 	return levels, nil
@@ -795,32 +847,33 @@ func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
 	return logD - sizeLog2, nil
 }
 
-func encodedColumnEvals(committed CommitterState, entry deepEntry) ([]field.Ext, error) {
+// encodedColumnEvals aliases the entry's codeword from the committed table into
+// a quotientColumn (populating exactly one of EvalsExt / EvalsBase). The
+// committed table is never mutated after Commit, and both consumers of these
+// slices — Level.EvalsAt during folding and the query phase — read them
+// read-only, so aliasing rather than copying is safe. This avoids allocating a
+// fresh 4N-length []E6 per column (and, for base columns, widening every
+// element to E6) — the dominant cost of reconstructLevels. EvalsAt lifts base
+// elements to E6 on the stack as it reads them.
+func encodedColumnEvals(committed CommitterState, entry deepEntry) (quotientColumn, error) {
 	table := committed.EncodedTable
 	if int(entry.SizeLog2) >= len(table) {
-		return nil, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
 	}
 	sized := table[entry.SizeLog2]
 	if entry.IsExt {
 		if entry.RowIdx >= len(sized.Ext) {
-			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
+			return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
 				entry.SizeLog2, entry.RowIdx)
 		}
-		evals := make([]field.Ext, len(sized.Ext[entry.RowIdx]))
-		copy(evals, sized.Ext[entry.RowIdx])
-		return evals, nil
+		return quotientColumn{EvalsExt: sized.Ext[entry.RowIdx]}, nil
 	}
 
 	if entry.RowIdx >= len(sized.Base) {
-		return nil, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
 			entry.SizeLog2, entry.RowIdx)
 	}
-	base := sized.Base[entry.RowIdx]
-	evals := make([]field.Ext, len(base))
-	for i := range base {
-		evals[i] = field.Lift(base[i])
-	}
-	return evals, nil
+	return quotientColumn{EvalsBase: sized.Base[entry.RowIdx]}, nil
 }
 
 func (pcs *PCS) claimsForEntry(
@@ -1036,7 +1089,8 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 		hasher.WriteElements(base)
 	}
 	for _, ext := range row.Ext {
-		hasher.WriteElements(ext.B0.A0, ext.B0.A1, ext.B1.A0, ext.B1.A1, ext.B2.A0, ext.B2.A1)
+		limbs := extLimbs(ext)
+		hasher.WriteElements(limbs[:]...)
 	}
 }
 
@@ -1132,13 +1186,11 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 // walked highest AlphaPower first (canonicalLayout assigns them
 // 0..len(Entries)-1 in order, so that's simply the reverse index order).
 func reconstructQueryValueAt(
-	pcs *PCS,
 	bundle sizeBundle,
+	entryClaims [][]quotientClaim,
 	opening InputQuery,
 	inputIndexByBatch []int,
 	levelSize int,
-	claimed []BatchClaimedValues,
-	zeta field.Ext,
 	alphaDeep field.Ext,
 	x field.Ext,
 	sibling bool,
@@ -1147,10 +1199,7 @@ func reconstructQueryValueAt(
 	value := running
 	for i := len(bundle.Entries) - 1; i >= 0; i-- {
 		entry := bundle.Entries[i]
-		claims, err := pcs.claimsForEntry(claimed, entry, zeta)
-		if err != nil {
-			return field.Ext{}, err
-		}
+		claims := entryClaims[i]
 		branch := opening[inputIndexByBatch[entry.BatchIdx]]
 		pair, err := branch.pairAtLevel(levelSize)
 		if err != nil {
@@ -1269,123 +1318,194 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	copy(finalCodeword, proof.FRIProof.FinalPoly)
 	pcs.Params.domains[pcs.Params.numRounds()].FFTExt6(finalCodeword, fft.DIF)
 
+	// A level's entry claims (claim points + values) do not depend on the
+	// query, so precompute them once here rather than rebuilding them — each
+	// with a big.Int Exp in shiftedPoint — inside every query × self/sib.
+	layoutClaims := make([][][]quotientClaim, len(layout))
+	for levelIdx, bundle := range layout {
+		layoutClaims[levelIdx] = make([][]quotientClaim, len(bundle.Entries))
+		for i, entry := range bundle.Entries {
+			entryClaims, err := pcs.claimsForEntry(claimed, entry, zeta)
+			if err != nil {
+				return err
+			}
+			layoutClaims[levelIdx][i] = entryClaims
+		}
+	}
+
+	// Each query is authenticated and reconstructed independently (read-only
+	// shared inputs, disjoint writes to resolved[queryIdx]); the per-query work
+	// — dominated by Merkle branch re-hashing — parallelizes cleanly.
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
-	for queryIdx, queryPosition := range positions {
-		rq := resolvedQuery{
-			// Rounds[0..numRounds()-1] hold running-layer pairs; Rounds[0] is
-			// always zero (no committed layer at round 0). An extra slot at
-			// index numRounds() holds the zero seed for any level introduced
-			// at that boundary round (e.g. a D=1 aux level at the final round).
-			Rounds: make([]inputPair, pcs.Params.numRounds()+1),
-			Aux:    make(map[uint8]inputPair, len(layout)),
-			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds()],
+	queryErrs := make([]error, pcs.Params.NumQueries)
+	vq := verifyQueryCtx{
+		pcs:               pcs,
+		layout:            layout,
+		proof:             proof,
+		inputRoots:        inputRoots,
+		runningRoots:      runningRoots,
+		layoutClaims:      layoutClaims,
+		inputIndexByBatch: inputIndexByBatch,
+		orders:            orders,
+		shapes:            in.Shapes,
+		foldAlphas:        foldAlphas,
+		finalCodeword:     finalCodeword,
+	}
+	parallel.Execute(int(pcs.Params.NumQueries), func(start, end int) {
+		for queryIdx := start; queryIdx < end; queryIdx++ {
+			rq, err := vq.resolve(queryIdx, positions[queryIdx])
+			if err != nil {
+				queryErrs[queryIdx] = err
+				continue
+			}
+			resolved[queryIdx] = rq
 		}
-
-		inputOpening := proof.InputQueries[queryIdx]
-		if err = authenticateInputQuery(pcs.Params, inputOpening, inputRoots, queryPosition); err != nil {
-			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+	})
+	for _, err := range queryErrs {
+		if err != nil {
+			return err
 		}
-
-		// Running layers: authenticate and decode directly from the committed
-		// codeword -- no PCS reconstruction involved. Computed before the level
-		// loop below, since a level's own reconstruction seeds on this same
-		// round's running pair (rq.Rounds[0] is left at its zero value, so
-		// round 0 needs no special case).
-		for j := uint8(1); j < pcs.Params.numRounds(); j++ {
-			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
-			if err = checkQueryLayerShape(
-				opening, runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
-			}
-			branch, err := authenticateQueryLayer(j, opening, runningRoots[j], queryPosition>>j)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-			}
-			if len(branch.Siblings) == 0 {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
-			}
-			self, err := octupletToExt(branch.Leaf)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
-			}
-			sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
-			}
-			rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
-		}
-
-		// Every level -- including the main degree-D polynomial, introduced
-		// at round 0 -- binds the same way: authenticate its rows against
-		// their declared shape, then reconstruct its conjugate pair at
-		// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
-		// square of that SAME round's own fold challenge, never an earlier
-		// round's (see reconstructQueryValueAt).
-		for levelIdx, bundle := range layout {
-			round, err := pcs.roundForSize(bundle.SizeLog2)
-			if err != nil {
-				return err
-			}
-			if round > pcs.Params.numRounds() {
-				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
-					levelIdx, round, pcs.Params.numRounds())
-			}
-			domain := pcs.Params.domainsLight[round]
-			levelSize, err := reconstructDomainSize(domain)
-			if err != nil {
-				return err
-			}
-			label := fmt.Sprintf("level %d", levelIdx)
-			if round == 0 {
-				label = "round 0"
-			}
-			if err = bindInputTreeOpenings(label, inputOpening, inputIndexByBatch,
-				levelSize, orders[levelIdx], bundle, in.Shapes); err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-			}
-			var alphaDeep field.Ext
-			if int(round) < len(foldAlphas) {
-				alphaDeep.Square(&foldAlphas[round])
-			} else if len(foldAlphas) > 0 {
-				// Boundary round (round == numRounds()): no fold challenge exists
-				// at this round. Use the first power of the last fold challenge to
-				// batch the bundle's entries; the first power is distinct from round
-				// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
-				alphaDeep = foldAlphas[len(foldAlphas)-1]
-			}
-			levelPos := queryPosition >> round
-			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
-			if err != nil {
-				return err
-			}
-			sib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
-			if err != nil {
-				return err
-			}
-			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
-		}
-
-		// D=1: numRounds()==0 so checkFolds runs zero iterations and never
-		// ties the top-level pair to the final polynomial. Do it explicitly:
-		// the revealed FinalPoly IS the constant layer-0 codeword and both
-		// conjugate positions must match it exactly.
-		if pcs.Params.numRounds() == 0 {
-			pair := rq.Aux[0]
-			sibFinal := finalCodeword[queryPosition^1]
-			if !pair.Self.Equal(&rq.Final) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 self does not match FinalPoly", queryIdx)
-			}
-			if !pair.Sibling.Equal(&sibFinal) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
-			}
-		}
-
-		resolved[queryIdx] = rq
 	}
 
 	return checkFolds(pcs.Params, resolved, in.Challenges.FoldAlphas, positions)
+}
+
+// verifyQueryCtx bundles the per-Verify, query-independent inputs so a single
+// query can be authenticated and reconstructed in isolation (see
+// verifyQueryCtx.resolve). All fields are read-only during resolution, which is
+// what makes the query loop safe to parallelize.
+type verifyQueryCtx struct {
+	pcs               *PCS
+	layout            layout
+	proof             OpeningProof
+	inputRoots        QueryLayerRoots
+	runningRoots      []QueryLayerRoots
+	layoutClaims      [][][]quotientClaim
+	inputIndexByBatch []int
+	orders            [][]int
+	shapes            []Shape
+	foldAlphas        []field.Ext
+	finalCodeword     []field.Ext
+}
+
+// resolve authenticates one query's Merkle openings and reconstructs its
+// per-round fold inputs into a resolvedQuery. It is a straight extraction of
+// the former per-query body of Verify.
+func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, error) {
+	pcs := vq.pcs
+	rq := resolvedQuery{
+		// Rounds[0..numRounds()-1] hold running-layer pairs; Rounds[0] is
+		// always zero (no committed layer at round 0). An extra slot at
+		// index numRounds() holds the zero seed for any level introduced
+		// at that boundary round (e.g. a D=1 aux level at the final round).
+		Rounds: make([]inputPair, pcs.Params.numRounds()+1),
+		Aux:    make(map[uint8]inputPair, len(vq.layout)),
+		Final:  vq.finalCodeword[queryPosition>>pcs.Params.numRounds()],
+	}
+
+	inputOpening := vq.proof.InputQueries[queryIdx]
+	if err := authenticateInputQuery(pcs.Params, inputOpening, vq.inputRoots, queryPosition); err != nil {
+		return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+	}
+
+	// Running layers: authenticate and decode directly from the committed
+	// codeword -- no PCS reconstruction involved. Computed before the level
+	// loop below, since a level's own reconstruction seeds on this same
+	// round's running pair (rq.Rounds[0] is left at its zero value, so
+	// round 0 needs no special case).
+	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
+		opening := vq.proof.FRIProof.RunningQueries[queryIdx][j-1]
+		if err := checkQueryLayerShape(
+			opening, vq.runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
+		}
+		branch, err := authenticateQueryLayer(j, opening, vq.runningRoots[j], queryPosition>>j)
+		if err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+		}
+		if len(branch.Siblings) == 0 {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
+		}
+		self, err := octupletToExt(branch.Leaf)
+		if err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
+		}
+		sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
+		if err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
+		}
+		rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
+	}
+
+	// Every level -- including the main degree-D polynomial, introduced
+	// at round 0 -- binds the same way: authenticate its rows against
+	// their declared shape, then reconstruct its conjugate pair at
+	// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
+	// square of that SAME round's own fold challenge, never an earlier
+	// round's (see reconstructQueryValueAt).
+	for levelIdx, bundle := range vq.layout {
+		round, err := pcs.roundForSize(bundle.SizeLog2)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		if round > pcs.Params.numRounds() {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
+				levelIdx, round, pcs.Params.numRounds())
+		}
+		domain := pcs.Params.domainsLight[round]
+		levelSize, err := reconstructDomainSize(domain)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		label := fmt.Sprintf("level %d", levelIdx)
+		if round == 0 {
+			label = "round 0"
+		}
+		if err = bindInputTreeOpenings(label, inputOpening, vq.inputIndexByBatch,
+			levelSize, vq.orders[levelIdx], bundle, vq.shapes); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+		}
+		var alphaDeep field.Ext
+		if int(round) < len(vq.foldAlphas) {
+			alphaDeep.Square(&vq.foldAlphas[round])
+		} else if len(vq.foldAlphas) > 0 {
+			// Boundary round (round == numRounds()): no fold challenge exists
+			// at this round. Use the first power of the last fold challenge to
+			// batch the bundle's entries; the first power is distinct from round
+			// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
+			alphaDeep = vq.foldAlphas[len(vq.foldAlphas)-1]
+		}
+		levelPos := queryPosition >> round
+		entryClaims := vq.layoutClaims[levelIdx]
+		self, err := reconstructQueryValueAt(bundle, entryClaims, inputOpening, vq.inputIndexByBatch, levelSize,
+			alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		sib, err := reconstructQueryValueAt(bundle, entryClaims, inputOpening, vq.inputIndexByBatch, levelSize,
+			alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
+		if err != nil {
+			return resolvedQuery{}, err
+		}
+		rq.Aux[round] = inputPair{Self: self, Sibling: sib}
+	}
+
+	// D=1: numRounds()==0 so checkFolds runs zero iterations and never
+	// ties the top-level pair to the final polynomial. Do it explicitly:
+	// the revealed FinalPoly IS the constant layer-0 codeword and both
+	// conjugate positions must match it exactly.
+	if pcs.Params.numRounds() == 0 {
+		pair := rq.Aux[0]
+		sibFinal := vq.finalCodeword[queryPosition^1]
+		if !pair.Self.Equal(&rq.Final) {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: round-0 self does not match FinalPoly", queryIdx)
+		}
+		if !pair.Sibling.Equal(&sibFinal) {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
+		}
+	}
+
+	return rq, nil
 }
 
 func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {

@@ -16,6 +16,12 @@
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
+- *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
+- *(linea-besu)* Support custom liveness signers (#3666)
+- *(maru)* Support Noise / Yamux (#3751)
 
 ### 🐛 Bug Fixes
 
@@ -55,6 +61,13 @@
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
+- *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
+- *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
+- *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
+- *(coordinator)* Apply message anchoring L1 retries (#3715)
+- *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+- *(coordinator)* Make runtime invariants explicit (#3716)
 
 ### 🚜 Refactor
 
@@ -63,6 +76,7 @@
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 
 ### ⚡ Performance
 
@@ -109,3 +123,13 @@
 - *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
 - *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
+- *(coordinator)* Rename Linea to Lineth in app and config (#3707)
+- *(prover)* Rename Linea to Lineth in prover (#3709)
+- *(misc)* Rename gradle plugins (#3729)
+- *(coordinator)* Apply review cleanups (#3717)
+- *(coordinator)* Update to vertx 5.1.5 (#3744)
+- *(coordinator)* Package renaming to lineth (#3746)
+- *(linea-besu)* Package renaming to lineth.* (#3750)
+- *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)

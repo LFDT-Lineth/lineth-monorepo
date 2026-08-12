@@ -110,9 +110,6 @@ func (ls *LagrangeSelector) IsSized() bool { return ls.module.IsSized() }
 // Module implements [VectorPromise].
 func (ls *LagrangeSelector) Module() *Module { return ls.module }
 
-// Visibility implements [VectorPromise].
-func (ls *LagrangeSelector) Visibility() Visibility { return VisibilityPublic }
-
 // EvaluateSingle is a placeholder implementation of [VectorPromise].
 func (ls *LagrangeSelector) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")

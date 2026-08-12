@@ -25,8 +25,10 @@ class ConfigSchemaWalkerTest {
     @param:ConfigSection(description = "Legacy section.", deprecated = true, replacement = "retries")
     val legacyRetries: NestedToml = NestedToml(),
     val undocumented: Int = 0,
-    // consecutive capitals: Hoplite treats each uppercase as a boundary
+    // consecutive capitals: acronym-aware kebab keeps TLS together
     val httpTLSPort: Int = 0,
+    val fanoutTTL: Duration = Duration.ZERO,
+    val seenTTL: Duration = Duration.ZERO,
   ) {
     data class NestedToml(
       @param:ConfigDoc("Timeout.", default = "PT1S")
@@ -39,7 +41,7 @@ class ConfigSchemaWalkerTest {
   private fun List<ConfigKey>.byPath(path: String) = single { it.path == path }
 
   @Test
-  fun `renders kebab keys via Hoplite and sorts by path`() {
+  fun `renders acronym-aware kebab keys and sorts by path`() {
     val paths = keys().map { it.path }
     assertThat(paths).isSorted
     assertThat(paths).contains(
@@ -53,8 +55,18 @@ class ConfigSchemaWalkerTest {
       "legacy-retries",
       "legacy-retries.timeout",
       "undocumented",
-      "http-t-l-s-port",
+      "http-tls-port",
+      "fanout-ttl",
+      "seen-ttl",
     )
+  }
+
+  @Test
+  fun `toKebabCase keeps acronyms together`() {
+    assertThat(ConfigSchemaWalker.toKebabCase("fanoutTTL")).isEqualTo("fanout-ttl")
+    assertThat(ConfigSchemaWalker.toKebabCase("seenTTL")).isEqualTo("seen-ttl")
+    assertThat(ConfigSchemaWalker.toKebabCase("httpTLSPort")).isEqualTo("http-tls-port")
+    assertThat(ConfigSchemaWalker.toKebabCase("dLow")).isEqualTo("d-low")
   }
 
   @Test
@@ -78,15 +90,19 @@ class ConfigSchemaWalkerTest {
   }
 
   @Test
-  fun `recurses into sections and carries section deprecation without cascading`() {
+  fun `recurses into sections and cascades section deprecation to nested leaves`() {
     assertThat(keys().byPath("retries").isSection).isTrue()
     assertThat(keys().byPath("retries.timeout").default).isEqualTo("PT1S")
+    assertThat(keys().byPath("retries.timeout").deprecated).isFalse()
 
     val legacy = keys().byPath("legacy-retries")
     assertThat(legacy.isSection).isTrue()
     assertThat(legacy.deprecated).isTrue()
     assertThat(legacy.replacement).isEqualTo("retries")
-    assertThat(keys().byPath("legacy-retries.timeout").deprecated).isFalse()
+    keys().byPath("legacy-retries.timeout").let {
+      assertThat(it.deprecated).isTrue()
+      assertThat(it.replacement).isEqualTo("retries")
+    }
   }
 
   @Test

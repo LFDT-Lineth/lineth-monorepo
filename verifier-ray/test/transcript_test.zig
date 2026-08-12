@@ -45,7 +45,8 @@ test "replay absorbs commitments, public columns, and cells, then squeezes coins
         .round_coin_offsets = &[_]usize{ 0, 0 },
         .total_round_coins = 2,
     };
-    const coins = try protocol.replay(spec, &rounds);
+    var transcript = fiat_shamir.Transcript.init();
+    const coins = try protocol.replayWithTranscript(&transcript, spec, &rounds, &.{});
 
     // Consecutive coins must be distinct: randomDigest() absorbs a zero
     // separator between squeezes, so identical back-to-back outputs indicate

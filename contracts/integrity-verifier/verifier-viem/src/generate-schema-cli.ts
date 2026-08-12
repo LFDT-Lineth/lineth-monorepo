@@ -14,7 +14,7 @@
  *   pnpx generate-schema-viem Storage.sol schema.json
  *
  *   # Multiple files (recommended for inherited storage)
- *   pnpx generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+ *   pnpx generate-schema-viem LinethRollupYieldExtension.sol YieldManager.sol -o schema.json
  *
  *   # With verbose output
  *   pnpx generate-schema-viem *.sol -o schema.json --verbose
@@ -45,7 +45,7 @@ function printUsage(): void {
   console.log("  generate-schema-viem Storage.sol schema.json");
   console.log("");
   console.log("  # Multiple files (recommended for inherited storage)");
-  console.log("  generate-schema-viem LineaRollupYieldExtension.sol YieldManager.sol -o schema.json");
+  console.log("  generate-schema-viem LinethRollupYieldExtension.sol YieldManager.sol -o schema.json");
   console.log("");
   console.log("  # Process all .sol files in a directory");
   console.log("  generate-schema-viem ./contracts/storage/ -o schema.json");

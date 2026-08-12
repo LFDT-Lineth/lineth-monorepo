@@ -11,7 +11,7 @@ import path from "path";
 
 import {
   EMPTY_INITIALIZE_SIGNATURE,
-  LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+  LINETH_ROLLUP_INITIALIZE_SIGNATURE,
   L2_MESSAGE_SERVICE_INITIALIZE_SIGNATURE,
   ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
   VALIDIUM_INITIALIZE_SIGNATURE,
@@ -50,9 +50,9 @@ type RegistryLookupCheck = {
 
 const INITIALIZER_CHECKS: InitializerCheck[] = [
   {
-    label: "LineaRollup",
-    artifactRelativePath: "src/rollup/LineaRollup.sol/LineaRollup.json",
-    signature: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+    label: "LinethRollup",
+    artifactRelativePath: "src/rollup/LinethRollup.sol/LinethRollup.json",
+    signature: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
   },
   {
     label: "Validium",
@@ -295,8 +295,8 @@ function validateLocalDeploymentArtifacts(sources: Array<{ fileName: string; sou
   const issues: ValidationIssue[] = [];
   const forbiddenEnvVars = [
     "PLONKVERIFIER_ADDRESS",
-    "LINEA_ROLLUP_PAUSE_TYPE_ROLES",
-    "LINEA_ROLLUP_UNPAUSE_TYPE_ROLES",
+    "LINETH_ROLLUP_PAUSE_TYPE_ROLES",
+    "LINETH_ROLLUP_UNPAUSE_TYPE_ROLES",
     "VALIDIUM_INITIAL_STATE_ROOT_HASH",
     "VALIDIUM_INITIAL_L2_BLOCK_NUMBER",
     "VALIDIUM_SECURITY_COUNCIL",

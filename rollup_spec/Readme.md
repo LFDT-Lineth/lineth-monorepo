@@ -1,4 +1,4 @@
-# Linea Type-1 RISC-V Migration
+# Lineth Type-1 RISC-V Migration
 ## The Path to a Type-1 RISC-V Architecture
 
 ---
@@ -41,7 +41,7 @@ so use Python 3.11 or 3.12 with a C toolchain (`xcode-select --install` on macOS
 
 ### 1.1 Motivation
 
-Linea currently relies on a multi-layered proving system optimized for a Type-2 zkEVM environment: bespoke arithmetic circuits for EVM execution, a custom SNARK-friendly LZSS compressor, and a dedicated pi-interconnection circuit to wire them together. While functional, this architecture accumulates significant complexity at every layer — from the proving system down to the L1 smart contracts.
+Lineth currently relies on a multi-layered proving system optimized for a Type-2 zkEVM environment: bespoke arithmetic circuits for EVM execution, a custom SNARK-friendly LZSS compressor, and a dedicated pi-interconnection circuit to wire them together. While functional, this architecture accumulates significant complexity at every layer — from the proving system down to the L1 smart contracts.
 
 The migration to a Type-1 RISC-V zkEVM, targeting the Fusaka/Glamsterdam Ethereum fork, is an opportunity to fundamentally simplify this stack. A general-purpose RISC-V virtual machine can execute standard software directly as a provable program, eliminating the need for most bespoke circuits.
 
@@ -52,7 +52,7 @@ The architecture is driven by four principles:
 1. **Move intelligence from circuits to software.** Logic that today lives in custom Gnark/Vortex circuits moves into standard RISC-V guest programs written in Rust or C. This trades circuit complexity for software simplicity.
 2. **Use industry-standard primitives.** SNARK-friendly workarounds (MiMC hashing, custom LZSS) are replaced with standard algorithms (Keccak256, LZ4/zstd, BLS12-381) that can be compiled directly into the guest.
 3. **Leverage recursive proof composition for continuity.** Instead of a bespoke interconnection circuit that manually checks array mappings at the gate level, adjacent proofs are composed via recursive STARK verification with software `assert_eq!` continuity checks.
-4. **Minimize the L1 footprint.** The L1 `LineaRollup` contract should verify as little as possible — a single proof and a small set of public values. All cryptographic complexity belongs inside the proof.
+4. **Minimize the L1 footprint.** The L1 `LinethRollup` contract should verify as little as possible — a single proof and a small set of public values. All cryptographic complexity belongs inside the proof.
 
 ### 1.3 System Overview
 
@@ -93,7 +93,7 @@ checks modeled separately in `l1_rollup.py`:
 
 | Guest program | Reference entry point | Scope |
 |---|---|---|
-| l2-execution | `l2_execution.py::run_l2_execution_guest` | Replays a contiguous range of Engine API `NewPayloadRequest`s from vanilla stateless inputs plus Linea rollup-extension fields, validates the EVM state transition, extracts bridge events, processes Linea forced transactions, and emits the 16-field l2-execution PI. It does not read blobs, verify KZG, or recursively verify other proofs. |
+| l2-execution | `l2_execution.py::run_l2_execution_guest` | Replays a contiguous range of Engine API `NewPayloadRequest`s from vanilla stateless inputs plus Lineth rollup-extension fields, validates the EVM state transition, extracts bridge events, processes Lineth forced transactions, and emits the 16-field l2-execution PI. It does not read blobs, verify KZG, or recursively verify other proofs. |
 | rollup | `rollup.py::run_rollup_guest` | For each of `K >= 1` consecutive blobs, recomputes the canonical compressed payload from the witnessed full block RLPs (truncate → RLP-encode → LZ4-compress → zero-pad to `BLOB_BYTES_LENGTH`), computes the KZG commitment from those bytes, checks its versioned hash against the L1-committed `blobHash`, and verifies the KZG proof. Chains the shnarf transition, recursively verifies the `N` l2-execution proofs that tile the blob range against their supplied `programVk`s, builds L2->L1 root commitments, merges refused-address outputs, and emits the 16-field rollup PI (field 16, `programVks`, is the set of guest VKs it recursively verified). It does not run the EVM or perform L1 finalization checks. |
 | rollup-aggregation | `rollup_aggregation.py::run_rollup_aggregation_guest` | Recursively verifies the `M` rollup proofs for a finalization range against their supplied `programVk`s, checks proof-to-proof continuity, merges root/address commitments, and emits the final 16-field PI consumed by L1 (field 16, `programVks`, unions the verified guest VKs). It does not inspect raw blocks, raw blobs, or L1 storage. |
 
@@ -146,11 +146,11 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 **Private Inputs (Witness)**
 
-- The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, stateless chain config, and optional transaction public keys before reading Linea's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Linea wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
-- The stateless execution witness per payload after stateless-input SSZ decode (`state`, `codes`, `headers`, and optional JSON/debug `keys`). `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at the payload parent; the final header hash must equal `newPayloadRequest.executionPayload.parentHash`, and that parent header carries the state root that anchors `parentBlockHash`. The canonical `SszExecutionWitness` contains `state`, `codes`, and `headers`; an engine's JSON/debug path (e.g. Zesu's `StateWitness`) also carries `keys`, so the logical schema preserves `keys` for decoded debug fixtures. SSZ-encoded `keys` would require a distinct Linea schema id rather than changing the vanilla stateless-input slice. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
-- Transaction public keys, ordered by `executionPayload.transactions` index, are part of the vanilla stateless execution input (the SSZ `StatelessInput.public_keys`), not the Linea rollup extension and not `executionWitness.keys`. They are **not transmitted on the wire**: the readable request omits them and the prover middleware recovers them from the signed transactions when building the guest's SSZ input (`stateless_input.py::_recover_public_keys`). The Linea logical spec does not derive senders from this field: signer derivation is `recover_sender(chainID, tx)`. `public_keys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
-- The static Linea proof-range chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserts every subsequent payload in the range carries the same value. `chainID` deliberately duplicates the chain id inside each vanilla `StatelessInput`: the inner copy preserves the unmodified stateless-input boundary, while the outer copy is the Linea range-level preimage for `dynamicChainConfigHash`. The guest rejects the range if any decoded stateless-input `chainID` differs from this range-level value.
-- The Linea rollup-extension forced-transaction witnesses for FTXs in the range — see §6
+- The complete set of L2 payloads as length-delimited vanilla stateless-input SSZ `StatelessInput` byte slices, one per block in the conflation. The guest decodes each slice into a `NewPayloadRequest`, execution witness, stateless chain config, and optional transaction public keys before reading Lineth's rollup-extension fields. Each request carries `executionPayload`, `versionedHashes`, `parentBeaconBlockRoot`, and typed `executionRequests`. The Lineth wrapper consumes normal transactions from `executionPayload.transactions` as canonical signed transaction bytes, derives each sender with execution-specs `recover_sender(chainID, tx)`, then commits to the ordered list via `txFromsHash`.
+- The stateless execution witness per payload after stateless-input SSZ decode (`state`, `codes`, `headers`, and optional JSON/debug `keys`). `headers` are RLP-encoded parent/ancestor headers ordered by block number and ending at the payload parent; the final header hash must equal `newPayloadRequest.executionPayload.parentHash`, and that parent header carries the state root that anchors `parentBlockHash`. The canonical `SszExecutionWitness` contains `state`, `codes`, and `headers`; an engine's JSON/debug path (e.g. Zesu's `StateWitness`) also carries `keys`, so the logical schema preserves `keys` for decoded debug fixtures. SSZ-encoded `keys` would require a distinct Lineth schema id rather than changing the vanilla stateless-input slice. The `state` MPT node pool must additionally include proof paths for: (a) the L2MessageService's `L1L2RollingHash` and `L1L2RollingHashMessageNumber` slots at both the parent and end state roots — read at proof-range boundaries even when no block in the range writes them; (b) the sender account of any FTX whose declared outcome is *Invalid* (§6.5), at the parent state root of the block where that FTX would have been included.
+- Transaction public keys, ordered by `executionPayload.transactions` index, are part of the vanilla stateless execution input (the SSZ `StatelessInput.public_keys`), not the Lineth rollup extension and not `executionWitness.keys`. They are **not transmitted on the wire**: the readable request omits them and the prover middleware recovers them from the signed transactions when building the guest's SSZ input (`stateless_input.py::_recover_public_keys`). The Lineth logical spec does not derive senders from this field: signer derivation is `recover_sender(chainID, tx)`. `public_keys` is not a witness override; any production optimization that consumes it must produce the same accepted/rejected transaction result and sender address as `recover_sender(chainID, tx)`.
+- The static Lineth proof-range chain config: `L2MessageServiceContract`, `coinBase`, `chainID`. `baseFee` — the fourth input to `dynamicChainConfigHash` — is NOT part of this struct; the guest reads it from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserts every subsequent payload in the range carries the same value. `chainID` deliberately duplicates the chain id inside each vanilla `StatelessInput`: the inner copy preserves the unmodified stateless-input boundary, while the outer copy is the Lineth range-level preimage for `dynamicChainConfigHash`. The guest rejects the range if any decoded stateless-input `chainID` differs from this range-level value.
+- The Lineth rollup-extension forced-transaction witnesses for FTXs in the range — see §6
 
 **What it proves:**
 
@@ -362,7 +362,7 @@ Note: `parentBlockHash` and `endBlockHash` are not separate public inputs — bl
 
 ### 2.5 Guest Termination Semantics
 
-The Python reference uses `raise Exception(...)` as compact notation for proof, witness, or public-input rejection. Production Zig and Rust guests must map these failed checks to the zkVM standard failed-termination interface described in [Execution Termination Semantics](https://github.com/eth-act/zkvm-standards/blob/main/standards/standard-termination-semantics/README.md). For Linea validity proofs this spec assumes Type 1 verifier semantics: a guest failure is not an accepted proof. Type 2 proof-of-failure verification is out of scope unless a future flow explicitly needs to prove a rejected execution.
+The Python reference uses `raise Exception(...)` as compact notation for proof, witness, or public-input rejection. Production Zig and Rust guests must map these failed checks to the zkVM standard failed-termination interface described in [Execution Termination Semantics](https://github.com/eth-act/zkvm-standards/blob/main/standards/standard-termination-semantics/README.md). For Lineth validity proofs this spec assumes Type 1 verifier semantics: a guest failure is not an accepted proof. Type 2 proof-of-failure verification is out of scope unless a future flow explicitly needs to prove a rejected execution.
 
 Classification:
 
@@ -445,7 +445,7 @@ The DA blob must contain the exact inputs required to re-execute the L2 blocks f
 
 The fixtures under `prover_io/testdata/` document the request/response JSON the coordinator exchanges with the prover; they validate against the JSON Schemas under `prover_io/schemas/` (the versioned contract), and `proof_io_v1.py` is the codec that converts schema-valid JSON to/from the guest dataclasses. The bytes carried into the zkVM guest are binary, not this JSON.
 
-**Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Linea l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Linea rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Linea extension parsing outside the stateless-input slice. Do not append Linea bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Linea data would be interpreted as stateless input rather than ignored.
+**Transport.** The guest reads input bytes via the zkVM's read-input primitive (`ziskos::read_input()` on Zisk). The Lineth l2-execution envelope length-delimits a vanilla SSZ `StatelessInput` byte slice per payload, then carries Lineth rollup-extension fields beside that slice. The Python reference models this boundary in `stateless_input.py::decode_stateless_input_ssz`, using the `remerkleable` decoder for the same raw/Ere-prefixed stateless-input container shape while keeping Lineth extension parsing outside the stateless-input slice. Do not append Lineth bytes to that slice itself: the SSZ decoder treats the final field as consuming the remainder of the slice, so trailing Lineth data would be interpreted as stateless input rather than ignored.
 
 **Container.** The logical request and witness shapes are defined once in the
 Python reference; this section does not restate their field lists, to avoid a
@@ -459,7 +459,7 @@ The on-wire SSZ schema (the `Ssz*` containers) lives in `stateless_input.py` and
 `canonical_ssz.py`, mirroring execution-specs `forks/amsterdam/stateless_ssz.py` —
 the same schema the underlying engine (e.g. Zesu) decodes.
 
-Full block RLPs still exist in the rollup-proof DA witness (`blockRlps_b`) because the rollup guest recomputes the compressed blob payload from DA data, but l2-execution consumes `NewPayloadRequest` instead. The per-FTX `signedTxRlp` payloads and proof-range `chainConfig` fields are Linea wrapper fields outside the EIP-8025 `StatelessInput`. Rollup-proof and rollup-aggregation-proof containers follow their own schemas and are pinned alongside the corresponding guest implementations.
+Full block RLPs still exist in the rollup-proof DA witness (`blockRlps_b`) because the rollup guest recomputes the compressed blob payload from DA data, but l2-execution consumes `NewPayloadRequest` instead. The per-FTX `signedTxRlp` payloads and proof-range `chainConfig` fields are Lineth wrapper fields outside the EIP-8025 `StatelessInput`. Rollup-proof and rollup-aggregation-proof containers follow their own schemas and are pinned alongside the corresponding guest implementations.
 
 **Readable input vs guest bytes.** The request carries `statelessInput` as a
 decoded JSON object (the schema form), not raw SSZ bytes. The codec
@@ -506,14 +506,15 @@ The L2→L1 bridge state is tracked via `l2L1BridgeTransactionTree`, a commitmen
 
 ## 5. L1 Smart Contract
 
-The new architecture dramatically simplifies the `LineaRollup` contract.
+The new architecture dramatically simplifies the `LinethRollup` contract.
 In the Python reference, this contract-facing logic lives in `l1_rollup.py`; it is
 separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 
 **What the contract does:**
 
 1. **On blob submission:** compute `endShnarf = keccak256(parentShnarf, lastBlockHash, blobHash)` and anchor it in storage.
-2. **On finalization:** verify the STARK-to-SNARK proof against the sixteen aggregated public inputs (§2.4), then:
+2. **On finalization:** verify the STARK-to-SNARK proof against the sixteen aggregated public inputs (§2.4), including `keccak256(verifierKeys)` (see §5.3), then:
+   - Assert that every VK in `finalizationData.verifierKeys` is in the on-chain allowlist (§5.3)
    - Assert `parentShnarf == currentFinalizedShnarf` (DA and block-hash continuity — the shnarf encodes the last block hash, so this check subsumes a separate `parentBlockHash` check)
    - Assert `endShnarf` was anchored by a prior blob submission (DA anchoring — `l1_rollup.py` rejects an un-anchored `endShnarf` and reads the `lastBlockHash` recorded with the anchored shnarf to update `currentFinalizedLastBlockHash`)
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
@@ -523,10 +524,10 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert every VK in the proof's combined `programVks` set is a member of `approvedVks` (guest-program anchoring — an order-independent set-membership test that rejects any finalization built from an unapproved exec or rollup guest binary; the two are not distinguished on-chain); revert otherwise. See §2.6 *Guest Program Anchoring (ProgramVK)* for the mechanism and list-management policy.
    - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
    - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
-   - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`, `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`
+   - Update storage: `blockHashes[endBlockNumber] = finalBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber, l1RollingHash, finalForcedTransactionNumber, finalForcedTransactionRollingHash, finalTimestamp)`
+   - Emit `DataFinalizedV4(startBlockNumber, endBlockNumber, shnarf, parentBlockHash, finalBlockHash)` — see §5.4
 
 3. **Guest-program approval (security-council managed):** maintains `approvedVks`, a single combined set of approved `programVk` hashes covering both exec and rollup guests — exec and rollup VKs are **not** distinguished on-chain, and the proof surfaces them as one combined `programVks` public-input set (§2.4); the exec-vs-rollup split is internal guest bookkeeping only. The security council calls `addApprovedVk` / `removeApprovedVk` to manage membership, the same trust model as `setVerifierAddress`. See §2.6 *Guest Program Anchoring (ProgramVK)* for the management policy.
-
 
 **What is removed:**
 
@@ -551,6 +552,10 @@ function submitBlobs(
 **Per-blob shnarf computation.** For each blob carried by the calling transaction, the contract reads the blob's versioned hash via the EIP-4844 `blobhash(i)` opcode and folds it into the running shnarf together with the caller-supplied last-block hash for that blob. The hash function is the standard 3-input form from §3.1, applied iteratively:
 
 ```
+K = len(_blobFinalBlockHashes)
+if K == 0: revert BlobSubmissionDataIsMissing()
+if blobhash(K) != EMPTY_HASH: revert BlobSubmissionDataEmpty(K)  // no unaccounted extra blobs
+
 computedShnarf = _parentShnarf
 
 for i in [0, K):
@@ -562,10 +567,10 @@ for i in [0, K):
     currentBlobHash              // blobHash of blob i (from the EIP-4844 opcode)
   )
 
-assert computedShnarf == _finalBlobShnarf
+if computedShnarf != _finalBlobShnarf: revert FinalShnarfWrong(_finalBlobShnarf, computedShnarf)
 ```
 
-After the loop the contract anchors `(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[K-1])` via `_acceptShnarfData` so that a later finalization (§5) can prove `endShnarf` was produced by a prior blob submission and recover the last block hash to update `currentFinalizedLastBlockHash`. The contract never recomputes a KZG commitment, never calls the `0x0A` point-evaluation precompile, and never reads a polynomial evaluation point or claim — those obligations have moved into the compression proof.
+After the loop the contract anchors `(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[K-1])` via `_acceptShnarfData`, which emits `DataSubmittedV4(parentShnarf, shnarf, finalBlockHash)` and marks `_finalBlobShnarf` as existing in the shnarf tracking map so that a later finalization can assert `endShnarf` was anchored by a prior submission. The contract never recomputes a KZG commitment, never calls the `0x0A` point-evaluation precompile, and never reads a polynomial evaluation point or claim — those obligations have moved into the compression proof.
 
 **Removed from the per-blob calldata.** The previous `BlobSubmission` struct carried five fields; all five are deleted from the L1 interface:
 
@@ -608,12 +613,12 @@ computedShnarf = _computeShnarf(
   currentDataHash                      // dataHash (keccak256 of compressedData — plays the role of blobHash on the calldata path)
 )
 
-assert computedShnarf == _expectedShnarf
+if computedShnarf != _expectedShnarf: revert FinalShnarfWrong(_expectedShnarf, computedShnarf)
 ```
 
-After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _submission.blockHash)` via `_acceptShnarfData` so that a later finalization (§5) can prove `endShnarf` was produced by a prior calldata submission and recover the last block hash to update `currentFinalizedLastBlockHash`. The contract never runs the Horner-method polynomial evaluation, never reduces modulo the BLS scalar field, and never reads a `dataEvaluationPoint` or `dataEvaluationClaim` — those obligations have moved into the compression proof.
+After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _submission.blockHash)` via `_acceptShnarfData`, which emits `DataSubmittedV4(parentShnarf, shnarf, finalBlockHash)` and marks `_expectedShnarf` in the shnarf tracking map. The contract never runs the Horner-method polynomial evaluation, never reduces modulo the BLS scalar field, and never reads a `dataEvaluationPoint` or `dataEvaluationClaim` — those obligations have moved into the compression proof.
 
-**Removed from the submission struct.** The previous `CompressedCalldataSubmission` struct carried three fields; two are deleted and one is retained:
+**Removed from the submission struct.** The previous `CompressedCalldataSubmission` struct is replaced by `CompressedCalldataSubmissionV2`; three fields were carried, two are deleted and one is retained:
 
 | Field | Fate |
 |---|---|
@@ -624,6 +629,90 @@ After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _su
 **Removed in-contract computation.** The `_calculateY` Horner-method routine is deleted entirely. It iterated `compressedData` in 32-byte chunks (each required to start with a zero byte, enforced by `FirstByteIsNotZero`), interpreted each chunk as a BLS scalar field element, and computed `Y = Σ chunk_i · z^(n-1-i) mod BLS_CURVE_MODULUS` so the L1 shnarf could bind the polynomial evaluation claim. With the polynomial evaluation now proven inside the compression proof against the in-guest computed commitment, neither `Y` nor the evaluation point `z` ever appears on-chain, and the 32-byte chunk length / zero-first-byte constraints on `compressedData` become proof-internal invariants rather than L1 revert conditions. `BytesLengthNotMultipleOf32` and `FirstByteIsNotZero` are removed from the interface alongside `_calculateY`; `EmptySubmissionData` is retained.
 
 **Binding to the compression proof.** Identical to §5.1: for each calldata submission the prover produces a compression proof attesting to (a) correct decompression of `compressedData` and (b) the polynomial evaluation against `keccak256(compressedData)`, and the proof aggregates its related l2-execution proofs and emits the unified 16-field public-input tuple. The L1 contract only anchors the shnarf at submission time; verification happens at finalization (§5).
+
+### 5.3 Guest Program Verifier Key Registry
+
+The contract maintains an on-chain allowlist of guest-program verifier keys (VKs) — `bytes32` identifiers that uniquely identify a specific RISC-V guest program version. These are distinct from verifier *contract addresses* (which identify the SNARK verifier, e.g. Groth16/Plonk): a VK identifies which guest program the proof was produced for; the verifier contract verifies the SNARK wrapping it.
+
+**Storage and roles.**
+
+```solidity
+mapping(bytes32 verifierKey => bool exists) public verifierKeys;
+
+bytes32 public constant SET_VERIFIER_KEY_ROLE   = keccak256("SET_VERIFIER_KEY_ROLE");
+bytes32 public constant UNSET_VERIFIER_KEY_ROLE = keccak256("UNSET_VERIFIER_KEY_ROLE");
+```
+
+**Management functions.**
+
+```solidity
+function setVerifierKeys(bytes32[] calldata _verifierKeys)   external; // requires SET_VERIFIER_KEY_ROLE
+function unsetVerifierKeys(bytes32[] calldata _verifierKeys) external; // requires UNSET_VERIFIER_KEY_ROLE
+```
+
+Both functions require non-empty arrays and non-zero keys. `setVerifierKeys` reverts if a key is already set; `unsetVerifierKeys` reverts if a key is not found (non-idempotent by design — an attempt to remove an already-absent key is flagged as an error to prevent silent no-ops).
+
+Initial VKs are seeded from `BaseInitializationData.verifierKeys` at contract initialization.
+
+**Inclusion in the public input hash.** The finalization call's `verifierKeys` array — the set of VKs used in the batch being finalized — is hashed and included in `_computePublicInput`:
+
+```
+publicInput = keccak256(
+  lastFinalizedShnarf,
+  finalShnarf,
+  finalTimestamp,
+  endBlockNumber,
+  ...                            // L1/L2 rolling hash fields, FTX fields, Merkle depth
+  keccak256(l2MerkleRoots),
+  verifierChainConfiguration,
+  keccak256(filteredAddresses),
+  keccak256(verifierKeys)        // ← NEW: binds which guest programs produced this proof
+)
+```
+
+Before proof verification, the contract validates that every key in `finalizationData.verifierKeys` is in the allowlist:
+
+```solidity
+function _validateVerifierKeys(bytes32[] calldata _verifierKeysUsed) internal view {
+  for (uint256 i; i < _verifierKeysUsed.length; i++) {
+    require(verifierKeys[_verifierKeysUsed[i]], VerifierKeyNotFound(_verifierKeysUsed[i]));
+  }
+}
+```
+
+This ensures the proof was produced using an operator-approved guest program version and that any future guest upgrades require an explicit governance action to add the new VK before that proof type can be finalized.
+
+### 5.4 Migration: State-Root-Hash to Block-Hash Finalization
+
+The initial deployment of the new contract must transition existing state that was committed under the old 5-argument shnarf formula (`keccak256(parentShnarf, snarkHash, stateRootHash, evaluationPoint, evaluationClaim)`) to the new 3-argument formula (`keccak256(parentShnarf, lastBlockHash, blobHash)`).
+
+**`FinalizationDataV5` parent fields.** The struct places both parent continuity fields together at the top (offsets `0x000` and `0x020`) to make the path-selection intent visible at the calldata level:
+
+```solidity
+bytes32 parentStateRootHash;  // migration path: expected starting state root hash
+bytes32 parentBlockHash;      // new path:       expected starting block hash
+```
+
+**How it works.** The contract stores a `blockHashes` mapping keyed by L2 block number. At initialization, the genesis block hash is written. On each finalization, the contract checks whether `blockHashes[lastFinalizedBlockNumber]` is set:
+
+- **Migration path (empty — no block hash stored):** The parent was committed under the old state-root-hash model. The contract asserts `stateRootHashes[lastFinalizedBlockNumber] == finalizationData.parentStateRootHash` (revert: `StartingRootHashDoesNotMatch`), uses the legacy 5-argument `_computeShnarf`, and writes `stateRootHashes[endBlockNumber]` as before. After this path runs, it writes `blockHashes[endBlockNumber] = finalBlockHash`, which moves the *next* finalization round onto the new path.
+- **New path (non-empty):** The parent was committed under the block-hash model. The contract asserts `blockHashes[lastFinalizedBlockNumber] == finalizationData.parentBlockHash` (revert: `StartingBlockHashDoesNotMatch`) as a soft continuity check — the on-chain mapping is authoritative, but the caller must declare which parent they are building from. The contract then uses the 3-argument `_computeShnarf(shnarfData.parentShnarf, finalBlockHash, finalBlobHash)`.
+
+On the very first post-upgrade finalization the new path is not yet active (migration path runs instead); the `parentBlockHash` in the emitted `DataFinalizedV4` event will be `EMPTY_HASH` — indexers should treat this as the transition marker.
+
+**`DataFinalizedV4` event.** A single finalization event is emitted for all paths (no dual-event emission):
+
+```solidity
+event DataFinalizedV4(
+  uint256 indexed startBlockNumber,
+  uint256 indexed endBlockNumber,
+  bytes32 indexed shnarf,
+  bytes32 parentBlockHash,   // EMPTY_HASH on the first post-upgrade finalization
+  bytes32 finalBlockHash
+);
+```
+
+`DataFinalizedV3` is retired and no longer emitted after this upgrade.
 
 ---
 
@@ -719,7 +808,7 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Shnarf formula** | `keccak256(parent, snarkHash, stateRoot, X, Y)` — 5 inputs; `snarkHash` must be computed in-circuit                   | `keccak256(parent, lastBlockHash, blobHash)` — 3 standard inputs |
 | **KZG verification** | L1 contract calls `0x0A` precompile; `X` and `Y` exposed on-chain                                                     | Commitment computed and proof verified inside zkVM guest; `blobKzgCommitment`, `X`, and `Y` never appear on-chain |
 | **Blob submission interface** | `submitBlobs(BlobSubmission[] calldata, bytes32, bytes32)` — per-blob struct carries `kzgCommitment`, `kzgProof`, `dataEvaluationClaim`, `finalStateRootHash`, `snarkHash`; contract calls `0x0A` precompile per blob | `submitBlobs(bytes32[] calldata _blobFinalBlockHashes, bytes32 _parentShnarf, bytes32 _finalBlobShnarf)` — one `bytes32` per blob (its last block hash); KZG verification moved into the compression proof; no precompile call |
-| **Calldata submission interface** | `submitDataAsCalldata(CompressedCalldataSubmission calldata, bytes32, bytes32)` — struct carries `finalStateRootHash`, `snarkHash`, `compressedData`; contract runs in-contract Horner-method polynomial evaluation (`_calculateY`) over 32-byte chunks mod BLS scalar field | `submitDataAsCalldata(CompressedCalldataSubmissionV2 calldata, bytes32, bytes32)` — struct carries `blockHash` + `compressedData`; polynomial evaluation moved into the compression proof; Horner method, `BytesLengthNotMultipleOf32`, and `FirstByteIsNotZero` deleted |
+| **Calldata submission interface** | `submitDataAsCalldata(CompressedCalldataSubmission calldata, bytes32, bytes32)` — struct carries `finalStateRootHash`, `snarkHash`, `compressedData`; contract runs in-contract Horner-method polynomial evaluation (`_calculateY`) over 32-byte chunks mod BLS scalar field | `submitDataAsCalldata(CompressedCalldataSubmissionV2 calldata, bytes32, bytes32)` — new struct `CompressedCalldataSubmissionV2` carries `blockHash` + `compressedData`; polynomial evaluation moved into the compression proof; Horner method, `BytesLengthNotMultipleOf32`, and `FirstByteIsNotZero` deleted |
 | **Compression** | Custom SNARK-friendly LZSS; arithmetization-constrained compression ratio                                             | Standard LZ4/zstd compiled into RISC-V guest; unconstrained ratio |
 | **Proof interconnection** | Bespoke pi-interconnection circuit in Go/Gnark; gate-level array mapping                                              | rollup proof: recursively verifies N l2-execution proofs across K ≥ 1 blobs and chains them with `assert_eq!` in the RISC-V guest. rollup-aggregation proof: flat recursion over M rollup proofs, same continuity assertions across rollup-proof boundaries |
 | **l2-execution public inputs** | ~14 Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | 16 fields — see §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
@@ -730,3 +819,6 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Final aggregated public inputs** | 13 fields (shnarfs, timestamps, block numbers, rolling hashes ×2, Merkle roots…)                                      | 16 fields — see §2.4 |
 | **ProgramVK anchoring** | Hard-anchored: the aggregation circuit's own verifying key, deployed via `setVerifierAddress`, fixes the whole set of inner-circuit identities it can recursively verify; changing that set means deploying a new verifier | Flexibly anchored: exec and rollup guests each commit a `programVk`, bubbled up as a single combined PI set field `programVks` (§2.2–§2.4; a canonical distinct, sorted-ascending array; exec vs rollup not distinguished — internal guest bookkeeping); L1 runs an order-independent set-membership check of every entry against a mutable, council-managed `approvedVks` set at finalization (§2.6, §5) and reverts otherwise — no verifier redeploy needed; aggregation-grained, so multiple approved exec VKs (i.e. different forks) can finalize together in one call |
 | **rollup-proof granularity** | n/a (no rollup proof existed; compression was a separate proof per blob)                                                | Configurable: one rollup proof can cover `K ≥ 1` blobs (analogous to today's M-block conflation inside an l2-execution proof). `K = 1` is the simplest case; `K > 1` amortizes recursion overhead |
+| **Guest program verifier key registry** | n/a | New on-chain allowlist of `bytes32` guest-program VKs (distinct from verifier contract addresses). Managed by `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE`. The finalization batch declares which VKs it used; the contract validates all are allowed and includes `keccak256(verifierKeys)` in the L1 public input hash — see §5.3 |
+| **Finalization event** | `DataFinalizedV3(startBlockNumber, endBlockNumber, shnarf, parentStateRootHash, finalStateRootHash)` | `DataFinalizedV4(startBlockNumber, endBlockNumber, shnarf, parentBlockHash, finalBlockHash)` — single event for all paths; `parentBlockHash` is `EMPTY_HASH` on the first post-upgrade finalization (migration marker) — see §5.4 |
+| **L1 block hash storage** | n/a | `mapping(uint256 blockNumber => bytes32 blockHash) public blockHashes` — populated at initialization with the genesis block hash and updated on every finalization; drives the migration path selection (§5.4) |
