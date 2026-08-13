@@ -3,19 +3,19 @@
 //! One rich happy-path scenario exercises every public-input field at once over a realistic
 //! 2-block range: real signed transactions, L2->L1 bridge messages, L1<->L2 bridge storage, and
 //! forced transactions spanning both blocks — checked against independently-derived expected
-//! values. Twelve one-mutation scenarios each drift a single field or hook away from a realistic
-//! default range, one per rejection the guest's conflation logic enforces.
+//! values. Fifteen one-mutation scenarios each drift a single field or hook away from a realistic
+//! default range, one per rejection (or, for a handful, one per accepted/observed edge case) the
+//! guest's conflation logic enforces.
 
 const std = @import("std");
 const testing = std.testing;
 
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
-const secp256k1 = @import("zesu_secp256k1");
 const l2_execution = @import("l2_execution");
 const l2_execution_ssz = @import("l2_execution_ssz");
 const conflation_plan = @import("conflation_plan.zig");
-const legacy_tx_rlp = @import("legacy_tx_rlp");
+const tx_fixtures = @import("tx_fixtures");
 
 const types = executor.executor_types;
 const api = l2_execution.test_api;
@@ -53,29 +53,18 @@ const RANGE_TX_GAS_PRICE: u128 = 1_000_000_000;
 const RANGE_TX_GAS: u64 = 21_000;
 const RANGE_TX_TO: [20]u8 = @splat(0xbb);
 
-/// Deterministic per-tx private key: keccak256("l2exec-range-fixture/T<n>"), one label per tx.
-fn fixturePrivateKey(comptime label: []const u8) [32]u8 {
-    return mpt.keccak256("l2exec-range-fixture/" ++ label);
-}
-
-/// Builds and signs one of T1-T4 live: RLP-encodes the unsigned EIP-155 preimage
-/// `[nonce, gasPrice, gas, to, value, data="", chainId, "", ""]` (`buildLegacyTxRlp` with
-/// `v=chainId, r=s=0`), hashes it (keccak256), signs with the label's deterministic private key
-/// via zesu's real secp256k1 backend, then re-encodes with the derived `v = chainId*2 + 35 +
-/// recid`. libsecp256k1's signing is RFC-6979 (deterministic nonce), so the same
-/// (label, nonce, value) triple always produces the same signature bytes, run to run.
+/// Thin wrapper baking this file's own RANGE_* constants onto the shared signed-legacy-tx
+/// builder — the same label/nonce/value triple derives the same private key and signs the same
+/// transaction bytes as before, so T1-T4's senders and signatures are unchanged.
 fn buildSignedFixtureTx(alloc: std.mem.Allocator, comptime label: []const u8, nonce: u64, value: u256) ![]const u8 {
-    const private_key = fixturePrivateKey(label);
-    const unsigned_rlp = try legacy_tx_rlp.buildLegacyTxRlp(alloc, nonce, RANGE_TX_GAS_PRICE, RANGE_TX_GAS, RANGE_TX_TO, value, &.{}, RANGE_CHAIN_ID, 0, 0);
-    const msg_hash = mpt.keccak256(unsigned_rlp);
-
-    const ctx = secp256k1.getContext() orelse return error.Secp256k1ContextUnavailable;
-    const signature = ctx.sign(msg_hash, private_key) orelse return error.FixtureTxSigningFailed;
-    const r = std.mem.readInt(u256, signature.sig[0..32], .big);
-    const s = std.mem.readInt(u256, signature.sig[32..64], .big);
-    const v: u256 = @as(u256, RANGE_CHAIN_ID) * 2 + 35 + @as(u256, signature.recid);
-
-    return legacy_tx_rlp.buildLegacyTxRlp(alloc, nonce, RANGE_TX_GAS_PRICE, RANGE_TX_GAS, RANGE_TX_TO, value, &.{}, v, r, s);
+    return tx_fixtures.buildSignedLegacyTx(alloc, label, .{
+        .nonce = nonce,
+        .gas_price = RANGE_TX_GAS_PRICE,
+        .gas = RANGE_TX_GAS,
+        .to = RANGE_TX_TO,
+        .value = value,
+        .chain_id = RANGE_CHAIN_ID,
+    });
 }
 
 fn recoverFixtureSender(alloc: std.mem.Allocator, signed_tx_rlp: []const u8, chain_id: u64) ![20]u8 {
@@ -370,6 +359,48 @@ test "bridge storage declared while the address stays at its suppressed zero def
 
     const output = try plan.run(arena.allocator());
 
+    try testing.expectEqual(@as(u64, 0), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
+    try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
+    try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
+    try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.end_l1_l2_bridge_rolling_hash);
+}
+
+test "a decreasing bridge message number across the range is rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    var plan = conflation_plan.ConflationPlan{ .l2_message_service_address = conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS };
+    plan.bridgeStorage(.parent, .{ .number = 7, .hash = PARENT_BRIDGE_HASH });
+    plan.bridgeStorage(.end, .{ .number = 5, .hash = END_BRIDGE_HASH });
+
+    try plan.expectReject(arena.allocator(), error.RollingHashNumberDecreased);
+}
+
+test "a matching bridge log is ignored while the address stays at its suppressed zero default" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    // A realistic non-zero contract address for the log's own emitting address; the field that
+    // actually stays suppressed at its zero default below is l2_message_service_address.
+    const placeholder_log_address: [20]u8 = @splat(0xdd);
+    // StubEngine attaches declared logs per DECODED transaction, so a real tx must ride in the
+    // block for this log to have anything to attach to.
+    const t_rlp = try buildSignedFixtureTx(alloc, "T12", 0, 1000);
+    const bridge_log = try testLog(alloc, placeholder_log_address, &.{ BRIDGE_MESSAGE_SENT_TOPIC0, ZERO_HASH, ZERO_HASH, MESSAGE_HASH_1 });
+
+    const block0_logs = [_][]const types.Log{&.{bridge_log}};
+    const blocks = [_]conflation_plan.BlockPlan{
+        .{ .signed_tx_rlps = &.{t_rlp}, .tx_logs = &block0_logs },
+        .{},
+    };
+    // l2_message_service_address is left at the DSL's own suppressed zero default.
+    const plan = conflation_plan.ConflationPlan{ .blocks = &blocks };
+
+    const output = try plan.run(alloc);
+
+    try testing.expectEqual(@as(usize, 0), output.l2_l1_messages.len);
+    const expected_empty_hash = try api.hashDigestListFn(alloc, &.{});
+    try testing.expectEqualSlices(u8, &expected_empty_hash, &output.public_inputs.l2_l1_messages_hash);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number);
     try testing.expectEqualSlices(u8, &ZERO_HASH, &output.public_inputs.parent_l1_l2_bridge_rolling_hash);
     try testing.expectEqual(@as(u64, 0), output.public_inputs.end_l1_l2_bridge_rolling_hash_message_number);
