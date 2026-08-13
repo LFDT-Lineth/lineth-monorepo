@@ -55,6 +55,8 @@ type traceStats struct {
 
 func main() {
 	outFlag := flag.String("out", defaultOutput, "CSV output path")
+	accelFlag := flag.Bool("accel", false,
+		"measure the accelerated Poseidon2 path (custom RISC-V opcode) instead of the software one")
 	flag.Parse()
 	args := flag.Args()
 	zkcBin := "zkc"
@@ -62,8 +64,15 @@ func main() {
 		zkcBin = args[0]
 	}
 
+	// The build flag has to be forwarded here: this runner rebuilds the guest
+	// itself, so a manually flagged `zig build` would be silently overwritten.
+	buildArgs := []string{"build", "--release=small"}
+	if *accelFlag {
+		buildArgs = append(buildArgs, "-Ddisable-accelerators=false")
+	}
+
 	fmt.Fprintln(os.Stderr, "building R5 ELF...")
-	if err := run("zig", "build", "--release=small"); err != nil {
+	if err := run("zig", buildArgs...); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -92,13 +101,18 @@ func main() {
 	}
 
 	fmt.Fprintln(os.Stderr, "running zkc...")
+	// -vvv is required: zkc gates printf output behind verbosity level PRINTF.
+	// Both the arithmetization's per-instruction "clock cycle:" trace and the
+	// guest's VERIFIER-MARK writes go through printf, so without it this runner
+	// sees an empty stream and reports "no cycles recorded".
+	//
 	// --fast: execute for cycle counts only. The default (tracing) mode lowers
 	// the word machine to a field machine for AIR constraints, which currently
 	// panics under KOALABEAR_16 — the 32-bit `instruction` register exceeds the
 	// 16-bit field register width and register splitting (--split) is incomplete
 	// for multi-limb arithmetic. The benchmark only needs cycle counts, so the
 	// trace/AIR path is unnecessary.
-	zkcCmd := exec.Command(zkcBin, "exec", "--fast", r5JSON, zkcMain)
+	zkcCmd := exec.Command(zkcBin, "exec", "--fast", "-vvv", r5JSON, zkcMain)
 	stdout, err := zkcCmd.StdoutPipe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
