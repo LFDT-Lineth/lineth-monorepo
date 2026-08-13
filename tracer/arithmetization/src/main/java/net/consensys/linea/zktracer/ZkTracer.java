@@ -120,7 +120,7 @@ public class ZkTracer implements LineCountingTracer {
   public ZkTracer(ChainConfig chain, PublicInputs publicInputs) {
     if (publicInputs.missingSomeInfos()) {
       log.info(
-          "[ZkTracer] Missing part of the public inputs, assuming line counting only, testing, or tracing very specific conflation. Tracing might fail. \nhistorical blockhashes size = {}\nblob base fees size = {}",
+          "Missing part of the public inputs, assuming line counting only, testing, or tracing very specific conflation. Tracing might fail. \nhistorical blockhashes size = {}\nblob base fees size = {}",
           publicInputs.historicalBlockhashes() == null
               ? 0
               : publicInputs.historicalBlockhashes().size(),
@@ -140,7 +140,7 @@ public class ZkTracer implements LineCountingTracer {
     this.debugMode =
         debugLevel.none() ? Optional.empty() : Optional.of(new DebugMode(debugLevel, this.hub));
 
-    log.info("[ZkTracer] Created ZkTracer for fork {}", chain.fork);
+    log.trace("Created ZkTracer for fork {}", chain.fork);
   }
 
   public void writeToFile(final Path filename, long startBlock, long endBlock) {
@@ -378,8 +378,7 @@ public class ZkTracer implements LineCountingTracer {
   /** When called, erase all tracing related to the bundle of all transactions since the last. */
   @Override
   public void popTransactionBundle() {
-    log.info(
-        "[ZkTracer] Transaction bundle has been popped, assuming block building. Tracing might fail.");
+    log.info("Transaction bundle has been popped, assuming block building. Tracing might fail.");
     hub.popTransactionBundle();
   }
 

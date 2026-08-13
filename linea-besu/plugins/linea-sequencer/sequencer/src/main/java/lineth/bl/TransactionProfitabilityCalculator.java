@@ -69,10 +69,11 @@ public class TransactionProfitabilityCalculator {
 
     final var profitAtWei = Wei.ofNumber(BigDecimal.valueOf(profitAt).toBigInteger());
 
-    log.atDebug()
+    log.atTrace()
         .setMessage(
-            "Estimated profitable priorityFeePerGas: {}; minMargin={}, fixedCostWei={}, "
-                + "variableCostWei={}, gas={}, txSize={}, compressedTxSize={}")
+            "Estimated profitable: tx={} priorityFeePerGas={}, minMargin={}, fixedCostWei={}, "
+                + "variableCostWei={}, gas={}, txSize={}, compressedTxSize={} ")
+        .addArgument(transaction::getHash)
         .addArgument(profitAtWei::toHumanReadableString)
         .addArgument(minMargin)
         .addArgument(profitabilityConf.fixedCostWei())
@@ -135,24 +136,11 @@ public class TransactionProfitabilityCalculator {
       final Wei minGasPriceWei) {
 
     final Wei profitableGasPrice = baseFee.add(profitablePriorityFee);
-
-    if (payingGasPrice.lessThan(profitableGasPrice)) {
-      log(
-          log.atDebug(),
-          context,
-          transaction,
-          minMargin,
-          payingGasPrice,
-          baseFee,
-          profitablePriorityFee,
-          profitableGasPrice,
-          gas,
-          minGasPriceWei);
-      return false;
-    }
+    final boolean isProfitable = payingGasPrice.greaterOrEqualThan(profitableGasPrice);
+    final LoggingEventBuilder loggingAtLevel = isProfitable ? log.atTrace() : log.atDebug();
 
     log(
-        log.atTrace(),
+        loggingAtLevel,
         context,
         transaction,
         minMargin,
@@ -162,7 +150,8 @@ public class TransactionProfitabilityCalculator {
         profitableGasPrice,
         gas,
         minGasPriceWei);
-    return true;
+
+    return isProfitable;
   }
 
   /**
@@ -188,7 +177,7 @@ public class TransactionProfitabilityCalculator {
       final Wei minGasPriceWei) {
 
     leb.setMessage(
-            "Context {}. Transaction {} has a margin of {}, minMargin={}, payingGasPrice={},"
+            "Context {}: tx={} has margin={}, minMargin={}, payingGasPrice={},"
                 + " profitableGasPrice={}, baseFee={}, profitablePriorityFee={}, fixedCostWei={}, variableCostWei={}, "
                 + " gasUsed={}")
         .addArgument(context)
