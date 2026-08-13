@@ -259,7 +259,7 @@ public class CompressionAwareTransactionSelector
       if (!appendResult.getBlockAppended()) {
         log.atTrace()
             .setMessage(
-                "event=tx_selection path=slow decision=reject reason=block_compressed_size_overflow tx_hash={} fast_path_limit={}")
+                "event=tx_selection path=slow decision=reject reason=block_compressed_size_overflow tx={} fast_path_limit={}")
             .addArgument(transaction::getHash)
             .addArgument(fastExecutionPathLimit)
             .log();
