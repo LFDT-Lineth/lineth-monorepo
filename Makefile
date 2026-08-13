@@ -42,6 +42,7 @@ start-env:
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
+	chmod -R 777 tmp/local; \
 	$(MAKE) seed-deny-list; \
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	while [ "$(SKIP_L1_L2_NODE_HEALTH_CHECK)" = "false" ] && \
