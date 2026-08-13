@@ -18,6 +18,7 @@
 *.ssz_snappy binary
 *.png binary
 *.cbor binary
+*.bin binary
 
 prover/zkevm/arithmetization/zkevm.bin binary
 prover/symbolic/testdata/**/*.cbor binary

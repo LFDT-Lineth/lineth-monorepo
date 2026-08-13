@@ -309,9 +309,12 @@ lowering to `rv64im` works, and Zig ships clang, so reference C compiles directl
 already link C headers. The fastest path to a cycle number is to build reference implementations,
 not port them:
 
-- **A1** — [`jedisct1/zig-lz4`](https://github.com/jedisct1/zig-lz4) is a pure-Zig port of Collet's
-  reference implementation with block decompression and dictionary support, so this is plausibly
-  an integration job. Fall back to compiling `lz4.c`.
+- **A1 — done.** [`jedisct1/zig-lz4`](https://github.com/jedisct1/zig-lz4) is a pure-Zig port of
+  Collet's reference implementation with block decompression and dictionary support, and the
+  integration job it looked like: vendored unmodified into
+  [`bench_lz4/vendor/lz4`](../verifier-ray/bench/bench_lz4/vendor/lz4/root.zig) (their `build.zig`
+  targets an API removed from this project's pinned Zig, so it is referenced as source rather than
+  a package dependency — the decode logic itself is untouched upstream code). Result below.
 - **A2** — a reference `inflate`; several small permissively-licensed C implementations exist.
 - **A3** — `scroll-tech/rust-zstd-decompressor` was written for exactly this purpose and is worth
   evaluating before anything heavier; otherwise compile zstd's own decode path.
@@ -321,11 +324,48 @@ Create a `data-availability` guest per [the guests README](../riscv-guests/READM
 harness from [`bench_compress`](../verifier-ray/bench/bench_compress/run.go).
 
 **Measure $\kappa_{\text{fix}}$ first** — a guest that only unpacks the blob, hashes the payload
-and checks blob consistency. One to two days, and it may end the investigation early: if
-$\kappa_{\text{fix}}$ dominates $\kappa$ for every arm then no candidate decoder is
-"overwhelming", question (1) answers itself, and the decision collapses to maximising $\rho$
-subject to §4.4. Poseidon2 has a custom opcode so this should be low, but its *arithmetized* cost
-is not its cycle cost and both want looking at.
+and checks blob consistency. It may end the investigation early: if $\kappa_{\text{fix}}$
+dominates $\kappa$ for every arm then no candidate decoder is "overwhelming", question (1)
+answers itself, and the decision collapses to maximising $\rho$ subject to §4.4.
+
+The hashing component is measured: [`bench_hash`](../verifier-ray/bench/bench_hash/main.zig)
+runs `verifier_ray.crypto.poseidon2.MDHasher` over a full 780,000-byte payload (the largest
+realistic single-blob payload, §2.2) with the accelerator enabled, and gets **9.50 cycles/byte**
+(7,411,306 net cycles over 24,375 Poseidon2 compressions). Two things about this number:
+
+- The accelerator is confirmed engaged, not merely configured: a same-guest software-path build
+  measures ~256 cycles/byte, a 26.9× penalty consistent with
+  [`bench_compress`](../verifier-ray/bench/bench_compress/run.go)'s own single-compression
+  measurement (141.40 accelerated vs. 8674.20 software cycles/call, Appendix A), so disabling it
+  would make hashing the dominant cost by a wide margin. It must stay on.
+- **This is only the hashing term, and a lower bound on $\kappa_{\text{fix}}$.** Blob unpacking
+  (254-bit field unpacking) and consistency checks are deliberately out of scope for this
+  micro-benchmark — that logic belongs to the real data-availability guest, which is separate,
+  non-trivial scope (EIP-4844 point evaluation, header parsing, batch-sum checks) better scoped
+  as its own branch and PR rather than gating this comparison.
+
+Whether 9.50 cycles/byte "dominates" needed a decoder cycle count to compare against, and now has
+a first one. [`bench_lz4`](../verifier-ray/bench/bench_lz4/main.zig) decodes the first 780,000
+bytes of a real corpus payload (`recent`), LZ4-HC(9)-compressed with the deployed dictionary via
+the same vendored library on the host (round-trip verified there before the guest ever saw it;
+the guest's own output length matched exactly, confirming correctness on-target, not just on the
+host) — **7.26 cycles/byte** (5,660,223 net cycles over a 780,000-byte output).
+
+**Hashing alone already costs more than decoding LZ4** (9.50 vs. 7.26), for the cheapest decoder
+in the whole arm set, before unpacking or consistency checks are added to $\kappa_{\text{fix}}$
+at all. That is a sharper result than "may end the investigation early" — for at least one arm it
+already has. Against §4.2's sensitivity table, hashing alone is $\approx 14$ cycles/byte's worth
+of the entire 1 gwei DA budget on its own; adding even LZ4's decode cost pushes total $\kappa$
+past that budget before unpacking is counted. Still open: where zstd and brotli land, which is
+the comparison that actually decides the arm. If they land near LZ4 rather than far above it —
+plausible for the LZ portion of zstd, less so once FSE table construction is added — then
+$\kappa_{\text{fix}}$ may be the majority cost across every arm, and the compression choice would
+matter far less than ratio differences alone suggest.
+
+One caveat on the 7.26 figure: it is measured on a 3.215 ratio, below the CLI's 3.453 on the same
+window (§8 of `docs/blob-compression`), because this vendored implementation's HC match-finder
+differs slightly from upstream's — a different literal/match mix changes decode cost somewhat.
+Treat 7.26 as representative, not exact.
 
 **Report cycles broken down by phase, not as one number:** bit reading, entropy-table
 construction, symbol decode, match copy, literal copy. This is markers in a harness that already
@@ -333,7 +373,34 @@ does markers — an hour's work, not a specialist's — and it is what separates
 fundamentally too expensive" from "zstd is too expensive as written". Without it a negative
 sprint-1 result cannot be acted on.
 
-### 5.5 What sprint 1 does and does not establish
+### 5.5 Settled: write produce-mode decoders, not verify-mode
+
+A decoder can either *produce* its output into RAM, or be handed the claimed output in the
+read-only `IN` region (`riscv-guests/build_common/linker_script.ld`) and merely *verify* it byte
+by byte. Verify-mode looked attractive: the decompressed payload is already a committed input —
+it is what gets hashed for the public input and checked against the execution proof — so supplying
+it costs nothing extra in trust, it would move the output buffer out of writable memory entirely,
+and the equivalent trick paid off in the Plonk circuit this stack replaces.
+
+Measured directly with a microbenchmark (`verifier-ray/bench/bench_memory`) rather than assumed:
+reading from `IN`, writing to RAM, and read-modify-write RAM (the shape of a backref copy) all
+cost the same **~3.0 cycles/iteration**, within noise of each other. There is no discount for
+read-only access and no penalty for the read-modify-write pattern a decoder actually needs.
+
+**So write straightforward produce-mode decoders.** Verify-mode would have meant patching every
+candidate decoder's two output sites (`dst[i] = literal`, `dst[i] = dst[i-d]` become
+`assert(rom[i] == literal)`, `assert(rom[i] == rom[i-d])`), which is a modest but real surgery
+cost and would have given an unearned edge to whichever scheme we write ourselves. None of that
+is worth paying for a cycle-count difference of zero.
+
+One caveat, not yet closed out: this measures cycles, not AIR trace rows. It remains possible that
+`IN` reads carry a smaller *arithmetization* footprint than RAM access even at equal cycle cost —
+e.g. if RAM access needs a permutation/consistency argument across the whole execution and `IN`
+does not, which is the axis the Plonk-circuit intuition was actually about. Asked upstream on
+2026-08-13; revisit if the answer says trace cost and cycle cost diverge here, but this should not
+block sprint 1 in the meantime.
+
+### 5.6 What sprint 1 does and does not establish
 
 Cycle counts rank candidates and catch order-of-magnitude problems, which is all that is needed to
 kill arms. They are **not** sufficient for final costing: zkC lowers to AIR, and cost per cycle
@@ -350,14 +417,14 @@ The phase breakdown above is the input such a decision needs, and collecting it 
 acting on it requires zkC-side arithmetization work and compression expertise that sprint 1 is
 deliberately structured not to require. Revisit late, and only if one loop dominates the profile.
 
-### 5.6 Scoring
+### 5.7 Scoring
 
 Report each arm's $S(\rho,\kappa) = \Lambda/(\rho B) + \kappa$ from §4.1 **as a function of
 $\Lambda$**, over the plausible range $10^{6}$ to $10^{9}$ cycles. This gives the full ranking
 without waiting for sprint 2, and identifies the crossover values of $\Lambda$ at which the winner
 changes. Those crossovers are the sharpest possible statement of what sprint 2 must resolve.
 
-### 5.7 Sprint 1 deliverable
+### 5.8 Sprint 1 deliverable
 
 One page: payload anatomy; ratio per arm; cycle cost per arm with phase breakdown; and the
 $S$-versus-$\Lambda$ ranking with its crossover points. Enough to decide whether to continue, and
@@ -517,7 +584,9 @@ Four ways that could be wrong, each of which the sprint structure is designed to
 
 - **§5.1 shows bodies are not dominant** — the framing in §1 collapses and §3 needs rework.
 - **$\kappa_{\text{fix}}$ dominates** — decoder cost is irrelevant, and the decision becomes
-  "maximise $\rho$", pushing toward A4b and possibly OpenZL.
+  "maximise $\rho$", pushing toward A4b and possibly OpenZL. Already true for A1: measured
+  hashing (9.50 cycles/byte) costs more than measured LZ4 decode (7.26). Still open whether it
+  holds against zstd/brotli, which is the comparison that actually decides this.
 - **The blob-fee distribution is benign** — A1 is correct and the exercise argues for *less*
   complexity than we have today.
 - **Custom opcodes flatten the curve** (§5.4) — the ranking between A1, A2 and A3 changes once the
@@ -534,7 +603,11 @@ Recorded so the work is not repeated. From the scoping pass preceding this plan.
 | Usable payload bytes per blob | $4096 \times 254/8 = 130\,048$ | `PackingSizeU256 = fr381.Bits - 1` |
 | Current uncompressed cap | 780 000 B at $2^{27}$ constraints | `blob_maker.go:27` |
 | Implied maximum useful ratio | $\approx 6.0$ | derived |
-| Poseidon2 software compress | 8 657.6 cycles/call | `bench-compress.csv`; *software path — a custom opcode exists and should be used instead* |
+| Poseidon2 compress, software | 8 674.20 cycles/call | `bench_compress`, after fixing it (was broken since #3455; see that PR) |
+| Poseidon2 compress, accelerated | 141.40 cycles/call | `bench_compress -accel`; **the accelerator must be used** — 26.9× cheaper |
+| Payload hashing, full 780 kB blob, accelerated | 9.50 cycles/byte | `bench_hash`; measures `MDHasher` end-to-end, not a raw-compress extrapolation |
+| ROM (`IN` region) read vs. RAM read/write | no difference, ~3.0 cycles/iter either way | `bench_memory`; settles §5.5 |
+| LZ4 decode, 780 kB real payload chunk (arm A1) | 7.26 cycles/byte | `bench_lz4`; below $\kappa_{\text{fix}}$'s hashing term (9.50) |
 | OpenZL standard decoders | ~55 | `decoder_registry.c` |
 | OpenZL version tested | `dev` @ `adadd5c`, `zli` 0.2.4 | local build |
 | OpenZL library memory | ~10× payload, no streaming, 500 MB cap | `library-limitations.md` |
