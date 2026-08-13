@@ -543,7 +543,12 @@ class ConflationAppV1(
       // block_number = forceStopConflationAtBlockInclusive + 1 to trigger conflation at
       // forceStopConflationAtBlockInclusive
       lastL2BlockNumberToProcessInclusive = configs.conflation.forceStopConflationAtBlockInclusive?.inc(),
-      lastL2BlockTimestampToProcessInclusive = configs.conflation.forceStopConflationAtBlockTimestampInclusive,
+      // Stop before the RISC-V cutover (riscvStartingBlockTimestampInclusive is V2's first block,
+      // so V1's last block has timestamp = cutover - 1s). Also respect any existing force-stop config.
+      lastL2BlockTimestampToProcessInclusive = listOfNotNull(
+        configs.conflation.riscvStartingBlockTimestampInclusive?.minus(1.seconds),
+        configs.conflation.forceStopConflationAtBlockTimestampInclusive,
+      ).minOrNull(),
     ),
     targetCheckpointPauseController = targetCheckpointPauseController,
   )
