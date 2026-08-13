@@ -1,0 +1,3 @@
+variant,compressed_bytes,decompressed_bytes,net_cycles,cycles_per_byte
+lzss v0.3.0 (A0),218921,780000,12516046,16.05
+lzss + huffman-on-lengths,210040,780000,13559694,17.38

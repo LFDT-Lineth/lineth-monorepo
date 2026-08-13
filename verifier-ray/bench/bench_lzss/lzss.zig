@@ -37,24 +37,61 @@ const sym_short: u8 = 0xFE;
 const sym_dynamic: u8 = 0xFF;
 const header_size = 3; // version (u16 BE) + noCompression flag, both formats
 
-/// MSB-first bit reader over a byte slice, matching icza/bitio as used by
-/// consensys/compress.
-const BitReader = struct {
+/// MSB-first bit reader over a byte slice, yielding the same bit sequence as
+/// icza/bitio (the reader consensys/compress uses). Structured as zstd's
+/// `BIT_DStream_t`: `acc` buffers up to 64 bits left-aligned, so one refill
+/// serves a whole symbol and each field costs a shift and a mask.
+///
+///   peek(n) = acc >> (64 - n)      skip(n) = acc <<= n
+///
+/// `refill` is an explicit byte loop because the guest target is
+/// rv64im_zicclsm: with no Zbb extension there is no `rev8`, so a big-endian
+/// `readInt(u64, ...)` lowers to this same loop, and writing it out keeps the
+/// cost visible and needs no misaligned wide load.
+pub const BitReader = struct {
     buf: []const u8,
-    pos: usize = 0,
+    /// Index of the next byte to pull into `acc` (NOT a bit position).
+    pos: usize,
+    /// Pending bits, left-aligned: bit 63 is the next bit to be consumed.
+    acc: u64 = 0,
+    /// Number of valid bits in `acc`, counted down from the MSB.
+    cnt: u32 = 0,
 
-    fn bits(self: *BitReader, n: u6) u64 {
-        var v: u64 = 0;
-        var i: u6 = 0;
-        while (i < n) : (i += 1) {
-            const byte = self.buf[self.pos >> 3];
-            const bit = (byte >> @intCast(7 - (self.pos & 7))) & 1;
-            v = (v << 1) | bit;
-            self.pos += 1;
-        }
-        return v;
+    pub fn init(buf: []const u8, byte_offset: usize) BitReader {
+        return .{ .buf = buf, .pos = byte_offset };
     }
 
+    /// Top up `acc` to at least 57 valid bits. Reading past the end of `buf`
+    /// yields zero bytes: the caller stops on output length, not on EOF, so
+    /// those padding bits are never part of a real symbol -- they only keep
+    /// `cnt` from underflowing while the final genuine symbol is decoded.
+    pub fn refill(self: *BitReader) void {
+        while (self.cnt <= 56) {
+            const byte: u64 = if (self.pos < self.buf.len) self.buf[self.pos] else 0;
+            self.acc |= byte << @intCast(56 - self.cnt);
+            self.pos += 1;
+            self.cnt += 8;
+        }
+    }
+
+    /// Next `n` bits without consuming them. Requires 1 <= n <= cnt.
+    pub fn peek(self: *const BitReader, n: u6) u64 {
+        return self.acc >> @intCast(64 - @as(u32, n));
+    }
+
+    pub fn skip(self: *BitReader, n: u6) void {
+        self.acc <<= n;
+        self.cnt -= n;
+    }
+
+    /// Consume `n` bits. The caller must have called `refill` this iteration;
+    /// one refill covers a whole symbol, since the widest sequence either
+    /// format reads between refills is 19 + 1 + 21 = 41 bits < 57.
+    pub fn take(self: *BitReader, n: u6) u64 {
+        const v = self.peek(n);
+        self.skip(n);
+        return v;
+    }
 };
 
 /// Canonical Huffman decode tables, built once at comptime from a fixed code-
@@ -66,6 +103,23 @@ pub const HuffmanTable = struct {
     const alphabet = 512;
     const max_len = 19; // measured max from hufftable training ("code lengths 8..19, Kraft 0.984375000")
 
+    /// Width of the direct-lookup table. The trained table's code lengths are
+    /// distributed 8:213, 9:54, 10:20, 11:21, 12:33, 13:35, 14:47, 15:43,
+    /// 16:32, 17:11, 18:1, 19:2, so codes of length <= 12 carry Kraft weight
+    /// 0.9753 -- for an optimal code that is also, to a good approximation, the
+    /// probability mass. So ~97.5% of symbols resolve in a single lookup and
+    /// only ~2.5% reach the canonical walk below. Covering all 19 bits would
+    /// need 2^19 entries for essentially the same hit rate; 12 bits needs 4096,
+    /// or 12 KiB of read-only data.
+    const lookup_bits: u6 = 12;
+    const lookup_size = 1 << lookup_bits;
+
+    /// `lookup_len[i] == 0` marks an index whose code is longer than
+    /// `lookup_bits`; every real code length here is 8..19, so 0 is free as a
+    /// sentinel.
+    lookup_symbol: [lookup_size]u16,
+    lookup_len: [lookup_size]u8,
+
     first_code: [max_len + 1]u64,
     first_index: [max_len + 1]usize,
     count: [max_len + 1]usize,
@@ -73,8 +127,11 @@ pub const HuffmanTable = struct {
 
     pub fn build(comptime lengths: [alphabet]u8) HuffmanTable {
         comptime {
-            @setEvalBranchQuota(alphabet * alphabet); // insertion sort over 512 entries
+            // Insertion sort over 512 entries, plus ~4096 lookup-table fills.
+            @setEvalBranchQuota(1 << 20);
             var table: HuffmanTable = .{
+                .lookup_symbol = @splat(0),
+                .lookup_len = @splat(0),
                 .first_code = @splat(0),
                 .first_index = @splat(0),
                 .count = @splat(0),
@@ -113,24 +170,54 @@ pub const HuffmanTable = struct {
                 index += table.count[length];
             }
             if (index != alphabet) @compileError("not every symbol was assigned a code");
+
+            // Expand every code of length <= lookup_bits into the direct table.
+            // A code of length l occupies the 2^(lookup_bits - l) indices that
+            // share it as a prefix, so peeking a fixed `lookup_bits` bits lands
+            // on the right entry whatever follows the code.
+            for (1..lookup_bits + 1) |l| {
+                for (0..table.count[l]) |i| {
+                    const symbol = table.sorted_symbol[table.first_index[l] + i];
+                    const span = 1 << (lookup_bits - l);
+                    const base = (table.first_code[l] + i) << (lookup_bits - l);
+                    for (0..span) |k| {
+                        table.lookup_symbol[base + k] = symbol;
+                        table.lookup_len[base + k] = l;
+                    }
+                }
+            }
             return table;
         }
     }
 
-    /// Port of lzss/huffman.go's `readHuffmanSymbol`. Returns null at a clean
-    /// end-of-stream (mirrors the `io.EOF` case for a partial final byte);
-    /// this benchmark instead stops once the expected output length is
-    /// reached, so null is not expected in practice here.
+    /// Decodes the symbol lzss/huffman.go's `readHuffmanSymbol` decodes.
+    /// Codes of length <= `lookup_bits` resolve in one table lookup; the ~2.5%
+    /// that are longer fall to the canonical tables, peeking all `max_len` bits
+    /// once and comparing whole codes per candidate length.
+    ///
+    /// Returns null at a clean end-of-stream (mirrors the `io.EOF` case for a
+    /// partial final byte); this benchmark instead stops once the expected
+    /// output length is reached, so null is not expected in practice here.
+    ///
+    /// The caller must have refilled `r` this iteration.
     fn decode(self: *const HuffmanTable, r: *BitReader) ?u16 {
-        var code: u64 = 0;
-        var length: u6 = 1;
-        while (length <= max_len) : (length += 1) {
-            code = (code << 1) | r.bits(1);
-            const first = self.first_code[length];
+        const index: usize = @intCast(r.peek(lookup_bits));
+        const length = self.lookup_len[index];
+        if (length != 0) {
+            r.skip(@intCast(length));
+            return self.lookup_symbol[index];
+        }
+
+        const wide = r.peek(max_len);
+        var l: u6 = lookup_bits + 1;
+        while (l <= max_len) : (l += 1) {
+            const code = wide >> @intCast(max_len - @as(u32, l));
+            const first = self.first_code[l];
             if (code < first) continue;
             const offset = code - first;
-            if (offset < self.count[length]) {
-                return self.sorted_symbol[self.first_index[length] + @as(usize, @intCast(offset))];
+            if (offset < self.count[l]) {
+                r.skip(l);
+                return self.sorted_symbol[self.first_index[l] + @as(usize, @intCast(offset))];
             }
         }
         return null;
@@ -163,10 +250,15 @@ pub fn decompress(
     dict: []const u8,
     expected_len: usize,
 ) usize {
-    var r = BitReader{ .buf = src, .pos = header_size * 8 };
+    var r = BitReader.init(src, header_size);
     var out_i: usize = 0;
 
     while (out_i < expected_len) {
+        // One refill per symbol covers every field read below: the widest
+        // sequence is a 19-bit code, a 1-bit near/far flag and a 21-bit
+        // address, and `refill` guarantees at least 57 bits.
+        r.refill();
+
         var length: usize = undefined;
         var far: bool = undefined;
 
@@ -179,24 +271,24 @@ pub fn decompress(
                 continue;
             }
             length = symbol - 256 + 1;
-            far = r.bits(1) == 1;
+            far = r.take(1) == 1;
         } else {
-            // decompress.go's Decompress main loop, v0.3.0. bitio's
-            // TryReadByte handles a bit cursor that is not byte-aligned
-            // (readUnalignedByte in icza/bitio), which it always is here
-            // after a 14- or 21-bit address read; `bits(8)` does the same.
-            const sym: u8 = @truncate(r.bits(8));
+            // decompress.go's Decompress main loop, v0.3.0. The cursor is
+            // generally not byte-aligned here, since 14- and 21-bit address
+            // reads leave it mid-byte; `take(8)` reads the 8 bits at the
+            // cursor, matching readUnalignedByte in icza/bitio.
+            const sym: u8 = @truncate(r.take(8));
             if (sym != sym_short and sym != sym_dynamic) {
                 dst[out_i] = sym;
                 out_i += 1;
                 continue;
             }
             far = sym == sym_dynamic;
-            length = @as(usize, @intCast(r.bits(8))) + 1;
+            length = @as(usize, @intCast(r.take(8))) + 1;
         }
 
         const addr_bits: u6 = if (far) far_addr_bits else near_addr_bits;
-        const address = @as(usize, @intCast(r.bits(addr_bits))) + 1;
+        const address = @as(usize, @intCast(r.take(addr_bits))) + 1;
 
         // Shared copy logic, identical in both Go source files: a "far"
         // backref whose address reaches further back than we have produced

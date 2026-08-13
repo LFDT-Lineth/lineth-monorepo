@@ -1,42 +1,42 @@
-// Micro-benchmark: is the bit-by-bit BitReader in bench_lzss/lzss.zig actually
-// the bottleneck in the LZSS guest run, or just structurally suspicious?
+// Cycle cost of reading bit fields from a compressed stream, the operation the
+// LZSS decoder performs most: one 8-bit read per literal, and literals are
+// ~90% of the symbols in our corpus.
 //
-// bench_lzss's full run (two 780,000-byte decodes) ran 20+ minutes and 350M+
-// trace lines before being killed -- roughly 20x bench_lz4's single decode
-// (56s, 17M lines) for double the output. The bit reader (one loop iteration
-// PER BIT, always) was the obvious suspect by comparison to LZ4's byte-aligned
-// format and to icza/bitio's actual cached-bits design, which reads whole
-// bytes when possible. But "structurally suspicious" is not "measured", so
-// this isolates exactly that one operation.
+// Two readers are measured against each other. `Legacy` is the bit-at-a-time
+// reader bench_lzss shipped first; `lzss.BitReader` is the 64-bit-container
+// reader that replaced it. The comparison is the justification for that
+// change, so both stay here.
 //
-// Copied verbatim from lzss.zig (not reimplemented) so this measures the
-// actual code under test, not a stand-in for it.
+// Reference points from the other micro-benchmarks: a single byte copy -- the
+// per-byte cost of the backref path -- is ~3.0 cycles (bench_memory), and
+// bench_lz4 decodes at 7.26 cycles/byte end to end.
 //
-// Compared directly against bench_memory's already-measured ram_copy result
-// (~3.0 cycles/iteration for a single self-referencing byte copy) -- the
-// backref-copy path's per-byte cost -- since literals (the dominant symbol,
-// ~90% of the stream per docs/blob-compression's symbol-frequency analysis)
-// go through an 8-bit bits() call, while backref bytes go through the copy
-// loop already measured. If bits(8) costs much more than ~3 cycles, the
-// literal path -- not the copy path -- is where the time is going.
+// Reads of 8 bits (a literal, and the plain format's length field) and 21 bits
+// (the widest field either format reads: a far-backref address) are timed
+// separately. The container reader is timed as it is actually used, one
+// `refill` per symbol, so its refill cost is charged to it and not hidden.
 //
 // Marker IDs:
-//    0 = start baseline,   1 = end baseline
-//   10 = start bits(8) x N, 11 = end
-//   20 = start bits(21) x N, 21 = end (the widest field LZSS reads: far-backref address)
+//    0 = start baseline,       1 = end baseline
+//   10 = start legacy 8-bit,  11 = end
+//   20 = start legacy 21-bit, 21 = end
+//   30 = start container 8-bit,  31 = end
+//   40 = start container 21-bit, 41 = end
 
 const verifier_ray = @import("verifier_ray");
 const accel = @import("lineth_accelerators");
+const lzss = @import("lzss");
 const profiling = verifier_ray.profiling;
 
 const N: u64 = 4096;
 
-// Verbatim copy of lzss.zig's BitReader, unchanged.
-const BitReader = struct {
+/// The reader bench_lzss used before the container reader: one loop iteration
+/// per bit, no buffering.
+const Legacy = struct {
     buf: []const u8,
     pos: usize = 0,
 
-    fn bits(self: *BitReader, n: u6) u64 {
+    fn bits(self: *Legacy, n: u6) u64 {
         var v: u64 = 0;
         var i: u6 = 0;
         while (i < n) : (i += 1) {
@@ -63,20 +63,38 @@ pub export fn main() noreturn {
     var checksum: u64 = 0;
 
     profiling.markR5Value(10, 0);
-    var r8 = BitReader{ .buf = &backing };
+    var legacy8 = Legacy{ .buf = &backing };
     i = 0;
     while (i < N) : (i += 1) {
-        checksum +%= r8.bits(8);
+        checksum +%= legacy8.bits(8);
     }
     profiling.markR5Value(11, checksum);
 
     profiling.markR5Value(20, 0);
-    var r21 = BitReader{ .buf = &backing };
+    var legacy21 = Legacy{ .buf = &backing };
     i = 0;
     while (i < N) : (i += 1) {
-        checksum +%= r21.bits(21);
+        checksum +%= legacy21.bits(21);
     }
     profiling.markR5Value(21, checksum);
+
+    profiling.markR5Value(30, 0);
+    var fast8 = lzss.BitReader.init(&backing, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        fast8.refill();
+        checksum +%= fast8.take(8);
+    }
+    profiling.markR5Value(31, checksum);
+
+    profiling.markR5Value(40, 0);
+    var fast21 = lzss.BitReader.init(&backing, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        fast21.refill();
+        checksum +%= fast21.take(21);
+    }
+    profiling.markR5Value(41, checksum);
 
     accel.zkvm_exit(0);
 }
