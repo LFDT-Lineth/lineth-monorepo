@@ -34,14 +34,17 @@ internal class FileBasedRollupProofRequestDtoMapper(
             chainId = chainId,
             blobs = request.blobs.map { it.fromDomainObject() },
             parentShnarf = request.parentShnarf.encodeHex(),
-            l2ExecutionProofs = l2ExecutionProofResponseDtos.map { it ->
+            l2ExecutionProofs = l2ExecutionProofResponseDtos.mapIndexed { index, response ->
+              val proofResponse = requireNotNull(response) {
+                "L2 execution proof response was not found for proofIndex=${request.l2Executions[index]}"
+              }
               L2ExecutionProofDto(
-                proof = it!!.proof,
-                startBlockNumber = it.startBlockNumber,
-                publicInputs = it.publicInputs,
-                l2L1Messages = it.l2L1Messages,
-                txFroms = it.txFroms,
-                filteredAddresses = it.filteredAddresses,
+                proof = proofResponse.proof,
+                startBlockNumber = proofResponse.startBlockNumber,
+                publicInputs = proofResponse.publicInputs,
+                l2L1Messages = proofResponse.l2L1Messages,
+                txFroms = proofResponse.txFroms,
+                filteredAddresses = proofResponse.filteredAddresses,
               )
             },
           ),

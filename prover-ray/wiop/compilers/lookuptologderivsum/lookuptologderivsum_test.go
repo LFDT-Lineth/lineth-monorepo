@@ -182,8 +182,8 @@ func TestCompile_SingleColumn_NoFilters(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -209,8 +209,8 @@ func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -250,8 +250,8 @@ func buildOverLimitSystem(t *testing.T, aSize, bSize int) *wiop.System {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -295,13 +295,13 @@ func TestCompile_RowLimit_GroupingSplitsIntoSubgroups(t *testing.T) {
 	// One shared B table (same colT pointer ⇒ same canonicalIncludingKey ⇒ all
 	// queries land in the same bucket, to be split into subgroups).
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 	bTable := wiop.NewTable(colT.View())
 
 	const nLookups = 3
 	for i := 0; i < nLookups; i++ {
 		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", i), 1<<29, wiop.PaddingDirectionRight)
-		colS := modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		colS := modS.NewColumn(sys.Context.Childf("S%d", i), r0)
 		sys.NewInclusion(
 			sys.Context.Childf("inc%d", i),
 			[]wiop.Table{wiop.NewTable(colS.View())},
@@ -332,13 +332,13 @@ func TestCompile_RowLimit_MultipleFragmentsCombine(t *testing.T) {
 
 	// Tiny B (including) table.
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	// Two A (included) fragments, each 2^29 rows and individually under budget.
 	modS0 := sys.NewSizedModule(sys.Context.Childf("modS0"), 1<<29, wiop.PaddingDirectionRight)
-	colS0 := modS0.NewColumn(sys.Context.Childf("S0"), wiop.VisibilityOracle, r0)
+	colS0 := modS0.NewColumn(sys.Context.Childf("S0"), r0)
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 1<<29, wiop.PaddingDirectionRight)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -359,9 +359,9 @@ func TestCompile_FilterOnIncluded(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-	filterS := modS.NewColumn(sys.Context.Childf("filterS"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+	filterS := modS.NewColumn(sys.Context.Childf("filterS"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -390,9 +390,9 @@ func TestCompile_FilterOnIncluding(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -424,9 +424,9 @@ func TestCompile_FilterOnIncluding_FilteredTRowCantMatch(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 1, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -455,10 +455,10 @@ func TestCompile_DoubleConditional(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-	filterS := modS.NewColumn(sys.Context.Childf("filterS"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+	filterS := modS.NewColumn(sys.Context.Childf("filterS"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -487,10 +487,10 @@ func TestCompile_MultiColumn(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -521,10 +521,10 @@ func TestCompile_MultiColumn_PartialMatchFails(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 1, wiop.PaddingDirectionNone)
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -555,9 +555,9 @@ func TestCompile_MultipleQueriesSameTable(t *testing.T) {
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 4, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
 
 	tabT := wiop.NewTable(colT.View())
 	sys.NewInclusion(sys.Context.Childf("inc1"),
@@ -600,10 +600,10 @@ func TestCompile_MultipleQueriesDistinctTables(t *testing.T) {
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc1"),
 		[]wiop.Table{wiop.NewTable(colS1.View())},
@@ -650,9 +650,9 @@ func TestCompile_MultiFragmentB(t *testing.T) {
 	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
 	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -698,10 +698,10 @@ func TestCompile_MultiFragmentBothSides(t *testing.T) {
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 4, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{
@@ -747,8 +747,8 @@ func TestCompile_VerifierFailsOnZeroM(t *testing.T) {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -790,8 +790,8 @@ func TestCompile_VerifierFailsOnInflatedM(t *testing.T) {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -832,9 +832,9 @@ func TestCompile_NonBinaryIncludedFilterPanics(t *testing.T) {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-	filterS := modS.NewColumn(sys.Context.Childf("filterS"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+	filterS := modS.NewColumn(sys.Context.Childf("filterS"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -869,11 +869,11 @@ func TestCompile_MultiColumn_FilterOnIncluding(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -908,11 +908,11 @@ func TestCompile_MultiColumn_FilterOnIncluding_MaskedRowFails(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 1, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -947,11 +947,11 @@ func TestCompile_MultiColumn_FilterOnIncluding_InvalidColumnsFails(t *testing.T)
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -992,12 +992,12 @@ func TestCompile_ScrambledColumnOrder_SharesGroup(t *testing.T) {
 	modSa := sys.NewSizedModule(sys.Context.Childf("modSa"), 4, wiop.PaddingDirectionNone)
 	modSb := sys.NewSizedModule(sys.Context.Childf("modSb"), 4, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	sax := modSa.NewColumn(sys.Context.Childf("Sax"), wiop.VisibilityOracle, r0)
-	say := modSa.NewColumn(sys.Context.Childf("Say"), wiop.VisibilityOracle, r0)
-	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), wiop.VisibilityOracle, r0)
-	sby := modSb.NewColumn(sys.Context.Childf("Sby"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	sax := modSa.NewColumn(sys.Context.Childf("Sax"), r0)
+	say := modSa.NewColumn(sys.Context.Childf("Say"), r0)
+	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), r0)
+	sby := modSb.NewColumn(sys.Context.Childf("Sby"), r0)
 
 	// Query 1: (Sax, Say) ⊆ (Tx, Ty).
 	sys.NewInclusion(
@@ -1047,12 +1047,12 @@ func TestCompile_ScrambledColumnOrder_StillSound(t *testing.T) {
 	modSa := sys.NewSizedModule(sys.Context.Childf("modSa"), 2, wiop.PaddingDirectionNone)
 	modSb := sys.NewSizedModule(sys.Context.Childf("modSb"), 2, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	sax := modSa.NewColumn(sys.Context.Childf("Sax"), wiop.VisibilityOracle, r0)
-	say := modSa.NewColumn(sys.Context.Childf("Say"), wiop.VisibilityOracle, r0)
-	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), wiop.VisibilityOracle, r0)
-	sby := modSb.NewColumn(sys.Context.Childf("Sby"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	sax := modSa.NewColumn(sys.Context.Childf("Sax"), r0)
+	say := modSa.NewColumn(sys.Context.Childf("Say"), r0)
+	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), r0)
+	sby := modSb.NewColumn(sys.Context.Childf("Sby"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("incA"),
@@ -1120,10 +1120,10 @@ func TestCompile_ThreeFragmentB_SingleFragmentA(t *testing.T) {
 	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 8, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -1174,11 +1174,11 @@ func TestCompile_AsymmetricFragmentCounts(t *testing.T) {
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 4, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{
@@ -1228,10 +1228,10 @@ func TestCompile_SingleFragmentB_ThreeFragmentA(t *testing.T) {
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 4, wiop.PaddingDirectionNone)
 	modS3 := sys.NewSizedModule(sys.Context.Childf("modS3"), 1, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
-	colS3 := modS3.NewColumn(sys.Context.Childf("S3"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
+	colS3 := modS3.NewColumn(sys.Context.Childf("S3"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{
@@ -1284,8 +1284,8 @@ func TestCompile_DuplicateTEntriesWithinFragment(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -1321,9 +1321,9 @@ func TestCompile_DuplicateTEntriesAcrossFragments(t *testing.T) {
 	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -1365,10 +1365,10 @@ func TestCompile_DuplicateTEntriesAcrossThreeFragments(t *testing.T) {
 	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 2, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
 
-	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
-	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
-	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -1407,8 +1407,8 @@ func TestCompile_DuplicateTEntries_Unreferenced(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -1440,10 +1440,10 @@ func TestCompile_DuplicateTEntries_MultiColumn(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
-	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
-	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
-	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
-	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(sx.View(), sy.View())},
@@ -1485,9 +1485,9 @@ func TestCompile_DuplicateTEntries_FilteredCopy(t *testing.T) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
 
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},

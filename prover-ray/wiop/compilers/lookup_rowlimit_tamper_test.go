@@ -21,35 +21,35 @@ func rowLimitVec(vals ...uint64) *wiop.ConcreteVector {
 // TestFullPipeline_LookupRowLimit_TamperedDynamicSize is the end-to-end
 // soundness companion to the compile-time and unit-level row-limit checks: it
 // drives a real lookup through the full pipeline (including PCS), produces an
-// honest proof, then forges the proof's claimed dynamic-module size to exceed
-// the lookup row budget. The lookup pass's registered per-subgroup verifier
-// action (wired by the lookuptologderivsum pass, which re-sums the subgroup's
-// exact per-run row counts) must reject the forged proof.
+// honest proof, then forges the proof's claimed dynamic-module size. The
+// verifier must reject the forged proof.
 //
-// This is the one scenario the compile-time static check cannot catch: at
-// compile time a dynamic module counts as [wiop.ColumnSizeMaxSupported] (2^22),
-// so the single-fragment lookup clears the budget and compilation succeeds. The
-// domain size a verifier sees, however, comes from the proof — and PCS hides the
-// oracle A-side column, so nothing during transcript replay pins the dynamic
-// module's size to its honest value. A dishonest prover can therefore claim a
-// far larger domain, and only the verifier's runtime row-limit action stands in
-// the way.
+// PCS hides the oracle A-side column, so nothing during transcript replay pins
+// a dynamic module's size to its honest value: the domain size a verifier sees
+// comes from the proof, and a dishonest prover can claim a larger one. Verify's
+// entry guard on Proof.DynamicSizes is what closes that off, capping every
+// claimed size at [wiop.ColumnSizeMaxSupported] (2^22).
 //
-// The row-limit action is registered on the lookup's (early) witness round, so
-// it runs ahead of the coin-dependent PCS / LogDerivativeSum-result checks that
-// the forged size would also break; the row-limit error is the one surfaced.
+// The rejection therefore comes from that guard rather than from the lookup
+// pass's per-subgroup row-limit action, and no forged value reaches the action:
+// collectGroups bin-packs subgroups against [wiop.StaticTableRows], which counts
+// each dynamic module at the same 2^22 maximum, so a subgroup's per-run row sum
+// is bounded by the static cost the packer already kept below the budget. Adding
+// A fragments does not help — it just splits the bucket into more subgroups. The
+// action is covered structurally and per-side in the lookuptologderivsum
+// package's runtime_rowlimit_internal_test.go.
 func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 	sys := wiop.NewSystemf("ll-tamper")
 	r0 := sys.NewRound()
 
 	// B (including) side: a tiny static lookup table {7, 7}.
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	// A (included) side: a dynamic module. At compile time it is assumed to be
 	// at most 2^22 rows, so the lookup passes the compile-time budget check.
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), wiop.PaddingDirectionRight)
-	colS := dynMod.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colS := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -81,11 +81,12 @@ func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 		"sanity: the honest lookup proof must verify")
 
 	// Forge the claimed dynamic domain to 2^30 rows (a power of two, so it clears
-	// the domain-shape checks) — at or above the lookup row budget MaxLookupRows.
+	// the domain-shape checks) — above the supported maximum, and at the lookup
+	// row budget MaxLookupRows had it got that far.
 	require.Contains(t, proof.DynamicSizes, dynIdx, "proof must carry the dynamic module size")
 	proof.DynamicSizes[dynIdx] = 1 << 30
 
 	err := sys.Verify(proof, pub)
-	assert.ErrorContains(t, err, "per-subgroup row limit",
-		"the verifier row-limit action must reject a proof claiming an over-budget dynamic domain")
+	assert.ErrorContains(t, err, "exceeds the maximum supported",
+		"the verifier must reject a proof claiming a dynamic domain above the supported maximum")
 }

@@ -61,11 +61,6 @@ type Expression interface {
 	// modules is undefined behaviour and callers are expected to validate this
 	// before constructing composite expressions.
 	Module() *Module
-	// Visibility returns the most restrictive [Visibility] level of any leaf
-	// in this expression. The ordering from least to most restrictive is:
-	// Public < Oracle < Internal. A result of VisibilityInternal means the
-	// expression cannot appear in any active query.
-	Visibility() Visibility
 }
 
 // VectorPromise is the sub-interface of [Expression] satisfied by all
@@ -355,20 +350,6 @@ func (a *ArithmeticOperation) Module() *Module {
 	return nil
 }
 
-// Visibility implements [Expression]. Returns the most restrictive visibility
-// level among all operands: the minimum of their Visibility values (Internal
-// < Oracle < Public). This reflects that an expression involving any internal
-// leaf cannot appear in an active query.
-func (a *ArithmeticOperation) Visibility() Visibility {
-	best := VisibilityPublic
-	for _, o := range a.Operands {
-		if v := o.Visibility(); v < best {
-			best = v
-		}
-	}
-	return best
-}
-
 // Constant is a fixed-value expression. Its behaviour is determined by whether
 // module is nil:
 //
@@ -380,7 +361,7 @@ func (a *ArithmeticOperation) Visibility() Visibility {
 //     IsMultiValued() == true; EvaluateVector returns Value repeated
 //     Module.Size() times; EvaluateSingle panics.
 //
-// A Constant is never extension-field and is always [VisibilityPublic].
+// A Constant is never extension-field.
 //
 // Constructors:
 //
@@ -417,9 +398,6 @@ func (c *Constant) IsExtension() bool { return false }
 // IsMultiValued implements [Expression]. Returns true iff the constant is
 // bound to a module (vector semantics).
 func (c *Constant) IsMultiValued() bool { return c.module != nil }
-
-// Visibility implements [Expression]. Always returns [VisibilityPublic].
-func (c *Constant) Visibility() Visibility { return VisibilityPublic }
 
 // Degree implements [Expression]. Returns 0 for scalar constants. For vector
 // constants returns Module.Size()-1; panics if the module is unsized.

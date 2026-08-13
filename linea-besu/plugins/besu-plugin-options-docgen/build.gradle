@@ -8,33 +8,14 @@
  */
 
 plugins {
-  id 'java'
   id 'application'
+  id 'lineth.kotlin-common-minimal-conventions'
 }
 
 group = 'net.consensys.linea.besu.plugin'
 
-repositories {
-  mavenCentral()
-  maven {
-    name = 'besu-maven'
-    url = 'https://hyperledger.jfrog.io/artifactory/besu-maven/'
-    content { includeGroupAndSubgroups('org.hyperledger.besu') }
-  }
-  maven {
-    name = 'linea-besu'
-    url = 'https://artifacts.consensys.net/public/linea-besu/maven/'
-  }
-}
-
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(25)
-  }
-}
-
 application {
-  mainClass = 'net.consensys.linea.besu.docgen.CliOptionsManifestGenerator'
+  mainClass = 'lineth.besu.docgen.CliOptionsManifestGenerator'
 }
 
 dependencies {
@@ -54,7 +35,7 @@ tasks.register('generateBesuPluginOptionsManifest', JavaExec) {
   group = 'documentation'
   description = 'Reflect on Linea-Besu plugin @Option classes and write the docs manifest JSON.'
   classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'net.consensys.linea.besu.docgen.CliOptionsManifestGenerator'
+  mainClass = 'lineth.besu.docgen.CliOptionsManifestGenerator'
   def manifestOut = (findProperty('besuPluginOptionsManifest') ?: defaultManifestOutput.absolutePath) as String
   def reportOut = (findProperty('besuPluginOptionsReport') ?: defaultReportOutput.absolutePath) as String
   args = [

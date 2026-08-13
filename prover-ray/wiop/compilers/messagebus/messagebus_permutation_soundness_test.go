@@ -37,8 +37,8 @@ func TestCompile_Permutation_MixedOriginShardPanics(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-mixed-shards")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("A"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-shardA"), "shardA", "h", wiop.NewTable(colA.View()))
@@ -58,10 +58,10 @@ func TestCompile_Permutation_MultiColumnTuples(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		keyA := modA.NewColumn(sys.Context.Childf("kA"), wiop.VisibilityOracle, r0)
-		valA := modA.NewColumn(sys.Context.Childf("vA"), wiop.VisibilityOracle, r0)
-		keyB := modB.NewColumn(sys.Context.Childf("kB"), wiop.VisibilityOracle, r0)
-		valB := modB.NewColumn(sys.Context.Childf("vB"), wiop.VisibilityOracle, r0)
+		keyA := modA.NewColumn(sys.Context.Childf("kA"), r0)
+		valA := modA.NewColumn(sys.Context.Childf("vA"), r0)
+		keyB := modB.NewColumn(sys.Context.Childf("kB"), r0)
+		valB := modB.NewColumn(sys.Context.Childf("vB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "kv",
@@ -70,17 +70,26 @@ func TestCompile_Permutation_MultiColumnTuples(t *testing.T) {
 			sys.Context.Childf("recv-B"), "shard", "kv",
 			wiop.NewTable(keyB.View(), valB.View()))
 
-		compilePermutationBus(sys)
+		// Width-2 folding is only meaningful when α is unpredictable, which
+		// requires the PCS pass -- see compilePermutationBusWithPCS. With α = 0
+		// the tuple collapses onto its key column and this test would pass even
+		// if the value column were ignored outright.
+		//
+		// Going through the PCS pass also means going through Prove/Verify rather
+		// than drive + checkAllVerifierActions: the PCS opening verifier replays
+		// the Fiat-Shamir transcript from scratch, which it can only do on a fresh
+		// verifier runtime, not on the prover's already-advanced one.
+		compilePermutationBusWithPCS(sys)
 
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
-		// B is a reordering of A's (key, value) tuples.
-		rt.AssignColumn(keyB, makeVec(3, 1, 4, 2))
-		rt.AssignColumn(valB, makeVec(30, 10, 40, 20))
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
+			// B is a reordering of A's (key, value) tuples.
+			rt.AssignColumn(keyB, makeVec(3, 1, 4, 2))
+			rt.AssignColumn(valB, makeVec(30, 10, 40, 20))
+		})
 
-		drive(rt)
-		require.NoError(t, checkAllVerifierActions(rt),
+		require.NoError(t, sys.Verify(proof, pub),
 			"a balanced width-2 permutation must be accepted")
 	})
 }
@@ -93,10 +102,10 @@ func TestCompile_Permutation_MultiColumnTuples_Unbalanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		keyA := modA.NewColumn(sys.Context.Childf("kA"), wiop.VisibilityOracle, r0)
-		valA := modA.NewColumn(sys.Context.Childf("vA"), wiop.VisibilityOracle, r0)
-		keyB := modB.NewColumn(sys.Context.Childf("kB"), wiop.VisibilityOracle, r0)
-		valB := modB.NewColumn(sys.Context.Childf("vB"), wiop.VisibilityOracle, r0)
+		keyA := modA.NewColumn(sys.Context.Childf("kA"), r0)
+		valA := modA.NewColumn(sys.Context.Childf("vA"), r0)
+		keyB := modB.NewColumn(sys.Context.Childf("kB"), r0)
+		valB := modB.NewColumn(sys.Context.Childf("vB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "kv",
@@ -105,16 +114,22 @@ func TestCompile_Permutation_MultiColumnTuples_Unbalanced(t *testing.T) {
 			sys.Context.Childf("recv-B"), "shard", "kv",
 			wiop.NewTable(keyB.View(), valB.View()))
 
-		compilePermutationBus(sys)
+		// The PCS pass is load-bearing here: it is what binds the witness into
+		// Fiat-Shamir and makes α unpredictable. Without it α is 0, the (key,
+		// value) tuple folds down to its key alone -- and the keys below DO
+		// match -- so the tampered value slips through and the verifier accepts.
+		// See the completeness counterpart above for why this goes through
+		// Prove/Verify rather than drive + checkAllVerifierActions.
+		compilePermutationBusWithPCS(sys)
 
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
-		rt.AssignColumn(keyB, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valB, makeVec(10, 21, 30, 40)) // (2,21) is not a sent tuple
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
+			rt.AssignColumn(keyB, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valB, makeVec(10, 21, 30, 40)) // (2,21) is not a sent tuple
+		})
 
-		drive(rt)
-		assert.Error(t, checkAllVerifierActions(rt),
+		assert.Error(t, sys.Verify(proof, pub),
 			"a width-2 permutation with a mismatched tuple must be rejected")
 	})
 }
@@ -128,8 +143,8 @@ func TestCompile_Permutation_TamperedValueFailsInShardCheck(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
@@ -157,9 +172,9 @@ func TestCompile_Permutation_TamperedFilterFailsInShardCheck(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "ping",
@@ -191,9 +206,9 @@ func TestCompile_Permutation_MultipleSendersOneReceiver(t *testing.T) {
 		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 		modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 4, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-		colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), wiop.VisibilityOracle, r0)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+		colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
+		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-S1"), "shard", "bus", wiop.NewTable(colS1.View()))
@@ -226,10 +241,10 @@ func TestCompile_Permutation_TwoHandlesIndependent(t *testing.T) {
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
 		modC := sys.NewSizedModule(sys.Context.Childf("modC"), 2, wiop.PaddingDirectionNone)
 		modD := sys.NewSizedModule(sys.Context.Childf("modD"), 2, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		colC := modC.NewColumn(sys.Context.Childf("C"), wiop.VisibilityOracle, r0)
-		colD := modD.NewColumn(sys.Context.Childf("D"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		colC := modC.NewColumn(sys.Context.Childf("C"), r0)
+		colD := modD.NewColumn(sys.Context.Childf("D"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "alpha", wiop.NewTable(colA.View()))
@@ -265,16 +280,16 @@ func TestCompile_Permutation_MixedWidth_Balanced(t *testing.T) {
 		// Width-2 sub-group.
 		modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
-		keyS := modS2.NewColumn(sys.Context.Childf("keyS"), wiop.VisibilityOracle, r0)
-		valS := modS2.NewColumn(sys.Context.Childf("valS"), wiop.VisibilityOracle, r0)
-		keyR := modR2.NewColumn(sys.Context.Childf("keyR"), wiop.VisibilityOracle, r0)
-		valR := modR2.NewColumn(sys.Context.Childf("valR"), wiop.VisibilityOracle, r0)
+		keyS := modS2.NewColumn(sys.Context.Childf("keyS"), r0)
+		valS := modS2.NewColumn(sys.Context.Childf("valS"), r0)
+		keyR := modR2.NewColumn(sys.Context.Childf("keyR"), r0)
+		valR := modR2.NewColumn(sys.Context.Childf("valR"), r0)
 
 		// Width-1 sub-group.
 		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 		modR1 := sys.NewSizedModule(sys.Context.Childf("modR1"), 2, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-		colR1 := modR1.NewColumn(sys.Context.Childf("R1"), wiop.VisibilityOracle, r0)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+		colR1 := modR1.NewColumn(sys.Context.Childf("R1"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-w2"), "shard", "mixed",
@@ -316,9 +331,9 @@ func TestCompile_Permutation_MixedWidth_SentinelPreventsAliasing(t *testing.T) {
 		t.Helper()
 		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), wiop.VisibilityOracle, r0)
-		loR := modR2.NewColumn(sys.Context.Childf("loR"), wiop.VisibilityOracle, r0)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), r0)
+		loR := modR2.NewColumn(sys.Context.Childf("loR"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-w1"), "shard", "alias", wiop.NewTable(colS1.View()))
@@ -352,8 +367,8 @@ func TestCompile_Permutation_DynamicModule_Balanced(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
@@ -393,8 +408,8 @@ func TestCompile_Permutation_DynamicModule_TamperedValueFails(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
@@ -423,9 +438,9 @@ func TestCompile_Permutation_DynamicModule_TamperedFilterFails(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "ping",
@@ -463,8 +478,8 @@ func TestCheckHandleSumInShard_Permutation_Expected(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		// Own the in-shard check ourselves so Compile doesn't pre-register one.
 		send := sys.NewMessageBusSend(
@@ -523,8 +538,8 @@ func TestCompile_Permutation_SkipInShardCheck_SuppressesVerifierAction(t *testin
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		send := sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
@@ -554,8 +569,8 @@ func TestCompile_Permutation_SkipInShardCheck_MismatchPanics(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-skip-mismatch")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("A"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("B"), r0)
 
 	send := sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
@@ -580,10 +595,10 @@ func TestCompile_Permutation_TwoHandles_MixedSkip(t *testing.T) {
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
 		modC := sys.NewSizedModule(sys.Context.Childf("modC"), 2, wiop.PaddingDirectionNone)
 		modD := sys.NewSizedModule(sys.Context.Childf("modD"), 2, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		colC := modC.NewColumn(sys.Context.Childf("C"), wiop.VisibilityOracle, r0)
-		colD := modD.NewColumn(sys.Context.Childf("D"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		colC := modC.NewColumn(sys.Context.Childf("C"), r0)
+		colD := modD.NewColumn(sys.Context.Childf("D"), r0)
 
 		// "deferred" handle: both entries skip the in-shard check.
 		dSend := sys.NewMessageBusSend(

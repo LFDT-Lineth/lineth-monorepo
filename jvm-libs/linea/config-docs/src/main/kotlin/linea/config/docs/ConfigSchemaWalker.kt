@@ -1,8 +1,6 @@
 package linea.config.docs
 
-import com.sksamuel.hoplite.KebabCaseParamMapper
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
@@ -37,8 +35,12 @@ fun sectionByPackagePrefix(vararg packagePrefixes: String): SectionDetector = Se
  * `Masked`, `BlockParameter`, lists, maps, ...) is a leaf. Dynamic maps are documented as a single
  * key rather than enumerating their entries.
  *
- * Config keys are rendered with Hoplite's [KebabCaseParamMapper] so the documented path matches
- * how Hoplite maps property names when parsing the TOML.
+ * Config keys are rendered with an acronym-aware camelCase→kebab-case converter so idiomatic
+ * keys such as `fanoutTTL` → `fanout-ttl` match real TOML usage. Hoplite's runtime
+ * `PathNormalizer` accepts both the idiomatic form and the naive per-capital form.
+ *
+ * When a `@ConfigSection` is marked deprecated, that status (and its replacement, if any)
+ * cascades to nested keys so leaf Status columns stay accurate for shared nested DTOs.
  */
 object ConfigSchemaWalker {
   /**
@@ -72,19 +74,23 @@ object ConfigSchemaWalker {
     onStack: Set<KClass<*>>,
     sectionDetector: SectionDetector,
     sink: MutableList<ConfigKey>,
+    parentDeprecated: Boolean = false,
+    parentReplacement: String? = null,
   ) {
     val constructor = kClass.primaryConstructor ?: return
     val declaringClass = kClass.simpleName ?: kClass.qualifiedName ?: "?"
 
     for (parameter in constructor.parameters) {
       val propertyName = parameter.name ?: continue
-      val path = prefix + kebabKey(parameter, constructor, kClass)
+      val path = prefix + kebabKey(parameter)
       val type = parameter.type
       val required = !parameter.isOptional && !type.isMarkedNullable
       val sectionClass = (type.classifier as? KClass<*>)?.takeIf { sectionDetector.isSection(it) }
 
       if (sectionClass != null) {
         val sectionAnnotation = parameter.findAnnotation<ConfigSection>()
+        val deprecated = (sectionAnnotation?.deprecated ?: false) || parentDeprecated
+        val replacement = sectionAnnotation?.replacement.orNull() ?: parentReplacement
         sink.add(
           ConfigKey(
             path = path,
@@ -93,8 +99,8 @@ object ConfigSchemaWalker {
             default = null,
             description = sectionAnnotation?.description ?: "",
             example = null,
-            deprecated = sectionAnnotation?.deprecated ?: false,
-            replacement = sectionAnnotation?.replacement.orNull(),
+            deprecated = deprecated,
+            replacement = replacement,
             isSection = true,
             annotated = sectionAnnotation != null,
             declaringClass = declaringClass,
@@ -102,10 +108,20 @@ object ConfigSchemaWalker {
           ),
         )
         if (sectionClass !in onStack) {
-          walkClass(sectionClass, "$path.", onStack + kClass, sectionDetector, sink)
+          walkClass(
+            kClass = sectionClass,
+            prefix = "$path.",
+            onStack = onStack + kClass,
+            sectionDetector = sectionDetector,
+            sink = sink,
+            parentDeprecated = deprecated,
+            parentReplacement = replacement,
+          )
         }
       } else {
         val doc = parameter.findAnnotation<ConfigDoc>()
+        val deprecated = (doc?.deprecated ?: false) || parentDeprecated
+        val replacement = doc?.replacement.orNull() ?: parentReplacement
         sink.add(
           ConfigKey(
             path = path,
@@ -114,8 +130,8 @@ object ConfigSchemaWalker {
             default = doc?.default.orNull(),
             description = doc?.description ?: "",
             example = doc?.example.orNull(),
-            deprecated = doc?.deprecated ?: false,
-            replacement = doc?.replacement.orNull(),
+            deprecated = deprecated,
+            replacement = replacement,
             isSection = false,
             annotated = doc != null,
             declaringClass = declaringClass,
@@ -127,16 +143,23 @@ object ConfigSchemaWalker {
   }
 
   /**
-   * Renders the kebab-case config key for a parameter using Hoplite's own
-   * [KebabCaseParamMapper], so the documented key is guaranteed consistent with how Hoplite maps
-   * property names when parsing the TOML. The mapper returns candidate lookup names (it adds a
-   * trailing-digit variant such as `foo-2` alongside `foo2`); the first is the plain kebab form,
-   * which is the natural one to display.
+   * Renders an acronym-aware kebab-case config key for a parameter name.
+   *
+   * Examples: `fanoutTTL` → `fanout-ttl`, `httpTLSPort` → `http-tls-port`, `dLow` → `d-low`.
+   * Prefer this over Hoplite's [com.sksamuel.hoplite.KebabCaseParamMapper], which inserts a hyphen
+   * before every capital (`fanoutTTL` → `fanout-t-t-l`) and does not match idiomatic TOML keys.
    */
-  private fun kebabKey(parameter: KParameter, constructor: KFunction<*>, kClass: KClass<*>): String {
-    @Suppress("UNCHECKED_CAST")
-    return KebabCaseParamMapper.map(parameter, constructor as KFunction<Any>, kClass).first()
+  private fun kebabKey(parameter: KParameter): String {
+    val name = parameter.name ?: return ""
+    return toKebabCase(name)
   }
+
+  /** Acronym-aware camelCase → kebab-case. Visible for tests. */
+  internal fun toKebabCase(name: String): String =
+    name
+      .replace(Regex("([A-Z]+)([A-Z][a-z])"), "$1-$2")
+      .replace(Regex("([a-z0-9])([A-Z])"), "$1-$2")
+      .lowercase()
 
   /** Maps the annotation's `""` "unset" sentinel (and null) to null for the ConfigKey model. */
   private fun String?.orNull(): String? = this?.ifEmpty { null }

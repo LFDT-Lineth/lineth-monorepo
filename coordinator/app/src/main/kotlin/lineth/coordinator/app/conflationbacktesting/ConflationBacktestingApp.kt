@@ -21,6 +21,7 @@ import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
 import lineth.conflation.FixedLaggingHeadSafeBlockProvider
 import lineth.conflation.calculators.CalculatorsFactory
+import lineth.coordination.FtxRollingInfoProviderImpl
 import lineth.coordination.aggregation.AggregationL2StateProviderImpl
 import lineth.coordination.aggregation.InvalidityProofProviderImpl
 import lineth.coordination.aggregation.ProofAggregationCoordinatorService
@@ -353,7 +354,7 @@ class ConflationBacktestingApp(
     aggregationL2StateProvider = AggregationL2StateProviderImpl(
       ethApiClient = l2EthClient,
       messageService = l2MessageService,
-      forcedTransactionsDao = DisabledForcedTransactionsDao(),
+      ftxRollingInfoProvider = FtxRollingInfoProviderImpl(DisabledForcedTransactionsDao()),
     ),
     consecutiveProvenBlobsProvider = inMemoryProvenBlobsTracker,
     proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
@@ -371,7 +372,9 @@ class ConflationBacktestingApp(
   private val blockCreationMonitor = BlockCreationMonitor(
     vertx = vertx,
     ethApi = l2EthClient,
-    startingBlockNumberExclusive = conflationBacktestingAppConfig.startBlockNumber.toLong() - 1,
+    startingPoint = BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(
+      conflationBacktestingAppConfig.startBlockNumber.toLong() - 1,
+    ),
     blockCreationListener = blockToBatchSubmissionCoordinator,
     lastProvenBlockNumberProviderSync = object : LastProvenBlockNumberProviderSync {
       override fun getLastKnownProvenBlockNumber(): Long {

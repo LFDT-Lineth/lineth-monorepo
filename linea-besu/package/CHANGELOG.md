@@ -1,3 +1,13 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(linea-besu)* Support custom liveness signers (#3666)
+## [2.1.1] - 2026-08-11
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Package renaming to lineth.* (#3750)
 ## [2.1.0] - 2026-08-07
 
 ### 🚀 Features

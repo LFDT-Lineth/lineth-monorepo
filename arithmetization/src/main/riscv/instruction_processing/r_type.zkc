@@ -135,11 +135,7 @@ output_write_address:OutputAddress) ->
         case R_SLTU: {
             printf "SLTU "
             print_r_operands(rd, rs1, rs2)
-            if (v1<v2) {
-                tmpDWord1 = 1
-            } else {
-                tmpDWord1 = 0
-            }
+            tmpDWord1 = v1<v2 ? 1:0
         }
         case R_MULHU: {
             printf "MULHU "
@@ -156,12 +152,10 @@ output_write_address:OutputAddress) ->
         case R_DIV: {
             printf "DIV "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                tmpDWord1 = NEGATIVE_ONE_AS_I64
-            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+            if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                 tmpDWord1 = OVERFLOW_DIVIDEND
             } else {
-                tmpDWord1 = div64_ss(v1, v2)
+                tmpDWord1 = v2 == 0 ? NEGATIVE_ONE_AS_I64:div64_ss(v1, v2)
             }
         }
 

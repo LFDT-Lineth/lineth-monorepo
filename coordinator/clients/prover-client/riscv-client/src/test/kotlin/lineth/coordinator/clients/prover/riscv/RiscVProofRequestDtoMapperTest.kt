@@ -3,13 +3,13 @@ package lineth.coordinator.clients.prover.riscv
 import linea.clients.BlobWitness
 import linea.clients.ChainConfig
 import linea.clients.ExecutionInfo
-import linea.clients.ExecutionPayload
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.RollupAggregationProofRequestV1
 import linea.clients.RollupProofRequestV1
-import linea.clients.Withdrawal
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ExecutionPayload
+import linea.domain.Withdrawal
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.encodeHex
@@ -218,6 +218,32 @@ class RiscVProofRequestDtoMapperTest {
   }
 
   @Test
+  fun `FileBasedRollupProofRequestDtoMapper reports a missing l2-execution proof`() {
+    val proofIndex = blockIntervalProofIndex(1000501UL, 1000510UL)
+    val request = RollupProofRequestV1(
+      blobs = listOf(
+        BlobWitness(
+          startBlockNumber = 1000501UL,
+          endBlockNumber = 1000510UL,
+          blobHash = ByteArray(32),
+          blobKzgProof = ByteArray(48),
+          blockRlps = emptyList(),
+        ),
+      ),
+      parentShnarf = ByteArray(32),
+      endShnarf = ByteArray(32),
+      l2Executions = listOf(proofIndex),
+    )
+    val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
+
+    assertThatThrownBy {
+      FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, transport).invoke(request).get()
+    }
+      .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
+      .hasRootCauseMessage("L2 execution proof response was not found for proofIndex=$proofIndex")
+  }
+
+  @Test
   fun `FileBasedRollupAggregationProofRequestDtoMapper inlines transport-resolved rollup proofs`() {
     val rollupProofs = listOf(
       blockIntervalProofIndex(1000501UL, 1000520UL),
@@ -247,6 +273,19 @@ class RiscVProofRequestDtoMapperTest {
         metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000567),
       ),
     )
+  }
+
+  @Test
+  fun `FileBasedRollupAggregationProofRequestDtoMapper reports a missing rollup proof`() {
+    val proofIndex = blockIntervalProofIndex(1000501UL, 1000520UL)
+    val request = RollupAggregationProofRequestV1(rollupProofs = listOf(proofIndex))
+    val transport = FakeRollupProofTransport(responseProvider = { null })
+
+    assertThatThrownBy {
+      FileBasedRollupAggregationProofRequestDtoMapper(guestProgramId, transport).invoke(request).get()
+    }
+      .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
+      .hasRootCauseMessage("Rollup proof response was not found for proofIndex=$proofIndex")
   }
 
   private fun l2Request(
