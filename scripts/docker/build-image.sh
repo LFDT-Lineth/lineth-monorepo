@@ -226,7 +226,10 @@ fi
 BUILD_CMD+=("$DOCKER_CONTEXT")
 
 if [[ -n "$SAVE_TO" && "$PUSH_IMAGE" == "true" ]]; then
-  warn "--save-to is ignored semantics-wise for pushed images: the image is not loaded locally, so 'docker save' will fail."
+  # A pushed image is never loaded into the local image store, so there is
+  # nothing for `docker save` to read. Skip it rather than fail the build.
+  warn "--save-to is ignored for pushed images: nothing is loaded locally to save. Skipping."
+  SAVE_TO=""
 fi
 
 print_cmd() {

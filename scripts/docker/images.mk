@@ -28,7 +28,7 @@ POSTMAN_NATIVE_LIBS_RELEASE_TAG ?= blob-libs-v3.0.1
 
 DOCKER_BUILD := scripts/docker/build-image.sh \
 	--tags $(DOCKER_IMAGE_TAG) \
-	--builder $(DOCKER_BUILDER) \
+	$(if $(DOCKER_BUILDER),--builder $(DOCKER_BUILDER)) \
 	$(if $(filter true,$(REGISTRY_CACHE)),--registry-cache,--no-registry-cache) \
 	$(if $(PLATFORMS),--platforms $(PLATFORMS)) \
 	$(if $(filter true,$(DRY_RUN)),--dry-run)
