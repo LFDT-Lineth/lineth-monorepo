@@ -1,12 +1,16 @@
 const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const field = @import("../field/koalabear.zig");
+pub const public_input = @import("public_input.zig");
 
 /// Error from the bounds-checked cell accessor `Context.cell`. Split out so
 /// sub-verifiers can compose it into their own error sets.
 pub const CellError = error{CellRefOutOfRange};
 
-pub const Error = error{ InvalidRoundCount, MissingDynamicModuleSize } || CellError;
+pub const Error = error{
+    InvalidRoundCount,
+    MissingDynamicModuleSize,
+} || CellError;
 
 pub const Scalar = types.Scalar;
 pub const Coin = types.Coin;
@@ -89,20 +93,7 @@ pub fn replayWithTranscript(
     module_sizes: []const usize,
 ) Error![spec.total_round_coins]Coin {
     comptime {
-        if (spec.round_coin_counts.len == 0)
-            @compileError("spec: round_coin_counts must have at least one entry (the pre-round-1 phase)");
-        if (spec.round_coin_counts[0] != 0)
-            @compileError("spec: round_coin_counts[0] must be 0 — no coins are derived before the first round is absorbed");
-        if (spec.round_coin_offsets.len != spec.round_coin_counts.len)
-            @compileError("spec: round_coin_offsets and round_coin_counts must have equal length");
-        var expected_offset: usize = 0;
-        for (spec.round_coin_counts, spec.round_coin_offsets) |count, offset| {
-            if (offset != expected_offset)
-                @compileError("spec: round_coin_offsets must be prefix sums of round_coin_counts");
-            expected_offset += count;
-        }
-        if (spec.total_round_coins != expected_offset)
-            @compileError("spec: total_round_coins must equal sum of round_coin_counts");
+        validateSpec(spec);
     }
 
     // round_coin_counts[0] is the pre-round-1 phase, so there is one message
@@ -137,4 +128,22 @@ pub fn replayWithTranscript(
     }
 
     return all_coins;
+}
+
+fn validateSpec(comptime spec: Spec) void {
+    if (spec.round_coin_counts.len == 0)
+        @compileError("spec: round_coin_counts must have at least one entry (the pre-round-1 phase)");
+    if (spec.round_coin_counts[0] != 0)
+        @compileError("spec: round_coin_counts[0] must be 0 — no coins are derived before the first round is absorbed");
+    if (spec.round_coin_offsets.len != spec.round_coin_counts.len)
+        @compileError("spec: round_coin_offsets and round_coin_counts must have equal length");
+
+    var expected_offset: usize = 0;
+    for (spec.round_coin_counts, spec.round_coin_offsets) |count, offset| {
+        if (offset != expected_offset)
+            @compileError("spec: round_coin_offsets must be prefix sums of round_coin_counts");
+        expected_offset += count;
+    }
+    if (spec.total_round_coins != expected_offset)
+        @compileError("spec: total_round_coins must equal sum of round_coin_counts");
 }

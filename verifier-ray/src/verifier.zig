@@ -1,4 +1,5 @@
 const protocol = @import("protocol/root.zig");
+const public_input_mod = protocol.public_input;
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
 const rowlimit = @import("query/rowlimit.zig");
@@ -8,9 +9,10 @@ const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
 
-/// Compiled systems for every sub-verifier in the protocol.
-/// One field per sub-verifier; each holds the comptime metadata for that query.
+/// Compiled verifier metadata for the protocol: the public-input transcript
+/// layout plus one field per sub-verifier.
 pub const Systems = struct {
+    public_input: public_input_mod.Spec = .{},
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
     /// Lookup row-limit checks. Independent of vanishing/logderivativesum: it
@@ -26,14 +28,22 @@ pub const Systems = struct {
     pcs: pcs.System,
 };
 
+/// Flat public-input statement in prover-ray registration order. Each entry is
+/// the verifier-visible scalar value of one cell registered via
+/// `System.RegisterPublicInputs` on the prover side.
+pub const PublicInput = []const protocol.Scalar;
+
 /// Proof is the verifier-visible transcript consumed by `verify` in one pass.
 /// It is the verifier-ray analogue of prover-ray's `wiop.Proof`: a
 /// self-contained bundle of exactly the data a verifier is entitled to see.
 ///
-/// Protocol-level round messages (public columns + cells) are shared across
-/// every sub-verifier. Sub-verifier-specific claim slices are routed only to
-/// the verifier that registered them. Coins are not stored here — they are
-/// re-derived deterministically by `protocol.replayWithTranscript` from the round messages.
+/// Protocol-level round messages (commitments + NON-public-input cells) are
+/// shared across every sub-verifier. Registered public-input cells are omitted
+/// from `rounds[*].cells` and carried separately in `VerifyInput.public_inputs`,
+/// mirroring prover-ray's `Proof` + `PublicInput` split. Sub-verifier-specific
+/// claim slices are routed only to the verifier that registered them. Coins are
+/// not stored here — they are re-derived deterministically by
+/// `protocol.replayWithTranscript` from the bound round messages.
 pub const Proof = struct {
     rounds: []const protocol.RoundMessage,
     /// Per-module domain sizes for dynamically-sized vanishing modules.
@@ -66,6 +76,18 @@ pub const PcsOpening = struct {
     proof: pcs.OpeningProof,
 };
 
+/// A bundled verifier input: prover-ray-style proof plus the separate flat
+/// public-input statement, for callers (native mmap / R5 linked-memory /
+/// embedded-rodata loaders) that need the two loaded and passed around as one
+/// value. `verify` itself takes `proof` and `public_inputs` as separate
+/// parameters — pass `input.proof, input.public_inputs`.
+/// `proof.rounds[*].cells` omits public-input cells; `public_inputs` supplies
+/// them in registration order.
+pub const VerifyInput = struct {
+    proof: Proof,
+    public_inputs: PublicInput = &.{},
+};
+
 /// Verifies a proof against the compiled protocol in three steps:
 ///
 ///   1. Replay   — absorb every round message into the shared Fiat-Shamir
@@ -75,17 +97,24 @@ pub const PcsOpening = struct {
 ///   3. Dispatch — call each sub-verifier with the shared context and its own
 ///                 claim slice. Sub-verifiers are independent of each other.
 ///
-/// `spec` carries the protocol-level coin routing (shared across all
-/// sub-verifiers). `systems` holds one compiled system per sub-verifier.
-/// This is the only place in the codebase that knows the full list of
-/// sub-verifiers.
+/// `spec` carries the protocol-level coin routing. `systems` carries the
+/// public-input transcript layout plus one compiled system per sub-verifier.
+/// This is the only place in the codebase that knows the full verifier
+/// metadata bundle.
 pub fn verify(
     comptime spec: protocol.Spec,
     comptime systems: Systems,
     proof: Proof,
+    public_inputs: PublicInput,
 ) !void {
+    comptime if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
+        @compileError("verifier: public_input.round_cell_counts must have one entry per replayed round");
+
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
+
+    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, public_inputs);
+    const rounds = bound_rounds.rounds();
 
     // Step 1 — replay transcript, derive all coins. The transcript is owned here
     // and threaded by pointer: `protocol` absorbs the round messages + squeezes
@@ -94,13 +123,13 @@ pub fn verify(
     // comptime-validates `spec` internal consistency and returns the
     // stack-allocated coin array.
     var transcript = fiat_shamir.Transcript.init();
-    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds, proof.module_sizes);
+    const all_coins = try protocol.replayWithTranscript(&transcript, spec, rounds, proof.module_sizes);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
     const ctx = protocol.Context{
         .all_coins = &all_coins,
-        .rounds = proof.rounds,
+        .rounds = rounds,
     };
 
     // Step 3 — PCS first. It continues the SAME transcript to derive the opening
@@ -118,7 +147,7 @@ pub fn verify(
     // against is provably the same octuplet zeta is bound to. Mirrors
     // prover-ray's `collectRoots` + `inputOpeningRoots`.
     var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
-    try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
+    try resolveRoots(pcs_system.batch_roots, rounds, &bound_roots);
 
     // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring the
     // index at comptime turns a mis-configured PCS system into a build error

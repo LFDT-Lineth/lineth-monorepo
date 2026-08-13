@@ -10,10 +10,11 @@ import (
 // sub-verifier; fields are zero-valued (empty) when the system has no queries
 // of that kind.
 type CompiledSystem struct {
-	Routing   CoinRouting
-	Vanishing VanishingSystem
-	LogDeriv  LogDerivSystem
-	RowLimit  RowLimitSystem
+	Routing     CoinRouting
+	PublicInput PublicInputSystem
+	Vanishing   VanishingSystem
+	LogDeriv    LogDerivSystem
+	RowLimit    RowLimitSystem
 	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
@@ -43,6 +44,13 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 		ProtocolImport: opts.ProtocolImport,
 		ConstName:      fmt.Sprintf("system_%d_spec", index),
 		EmitHeader:     opts.EmitHeader,
+	}); err != nil {
+		return err
+	}
+	if err := WritePublicInputSystemZigWithOptions(w, system.PublicInput, PublicInputZigOptions{
+		ProtocolImport: opts.ProtocolImport,
+		ConstName:      fmt.Sprintf("system_%d_public_input", index),
+		EmitHeader:     false,
 	}); err != nil {
 		return err
 	}
