@@ -403,6 +403,10 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 				// the SAME value GetLayout used (loc.SizeID) at this proving run,
 				// but for a static module it is proof-independent.
 				desc.SizeLog2 = lb.loc.SizeID
+				if desc.SizeLog2 > maxSizeLog2 {
+					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has size_log2 %d, above the verifier envelope's max %d",
+						col.Module.Context.Path(), col.Context.Path(), desc.SizeLog2, maxSizeLog2)
+				}
 			}
 			colDeclByID[col.Context.ID] = len(columns)
 			columns = append(columns, desc)
