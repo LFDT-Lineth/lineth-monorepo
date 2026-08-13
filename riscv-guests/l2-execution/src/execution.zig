@@ -127,8 +127,15 @@ pub fn executeStatelessInputWithLogs(
 
     const ep = &si.new_payload_request.execution_payload;
 
-    const pre_state_root_raw = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number);
-    const pre_state_root = pre_state_root_raw orelse ep.state_root;
+    // A resolvable witness header is required for every non-genesis block: without one, this
+    // would fall back to the payload's OWN claimed (post-execution) state_root as its pre-state
+    // root, which is self-referential and disconnected from the real state behind
+    // `ep.parent_hash`. Genesis — block 0 with an all-zero parent hash — is the only exemption.
+    const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse blk: {
+        const is_genesis = ep.block_number == 0 and std.mem.allEqual(u8, &ep.parent_hash, 0);
+        if (!is_genesis) return error.MissingParentHeaderWitness;
+        break :blk ep.state_root;
+    };
 
     const HeaderInfo = struct { number: u64, parent_hash: [32]u8, hash: [32]u8 };
     var header_infos = std.ArrayListUnmanaged(HeaderInfo).empty;
