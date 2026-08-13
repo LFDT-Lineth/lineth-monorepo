@@ -46,6 +46,7 @@ func main() {
 	}
 
 	var payload bytes.Buffer             // exactly what v1.EncodeBlockForCompression produces
+	var blockEnds []int                  // cumulative payload offset after each block
 	var meta, hashes, froms bytes.Buffer // metadata classes
 	var selectors, calldataRaw, irregular bytes.Buffer
 	var structFields bytes.Buffer // nonce/gas/fees/to/value, RLP-encoded per field
@@ -59,6 +60,10 @@ func main() {
 		if err := v1.EncodeBlockForCompression(&blk, &payload); err != nil {
 			panic(err)
 		}
+		// Blob filling searches over BLOCK counts, not bytes: production cannot
+		// split a block across blobs. Record the boundaries so a driver can slice
+		// the payload at legal points without re-encoding.
+		blockEnds = append(blockEnds, payload.Len())
 
 		var m [6]byte
 		n := uint16(len(blk.Transactions()))
@@ -114,4 +119,13 @@ func main() {
 		lanesCat.Write(lanes[i].Bytes())
 	}
 	write("calldata_lanes.bin", lanesCat.Bytes())
+
+	var offs bytes.Buffer
+	for _, e := range blockEnds {
+		fmt.Fprintf(&offs, "%d\n", e)
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "block_ends.txt"), offs.Bytes(), 0o644); err != nil {
+		panic(err)
+	}
+	fmt.Printf("%-22s %10d  (block boundaries)\n", "block_ends.txt", len(blockEnds))
 }

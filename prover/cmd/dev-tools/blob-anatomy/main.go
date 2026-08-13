@@ -111,6 +111,7 @@ func main() {
 	start := flag.Uint64("start", 0, "first block number to fetch (required)")
 	targetBytes := flag.Int("target-bytes", 20*780_000, "stop once accumulated uncompressed payload reaches this many bytes")
 	maxBlocks := flag.Int("max-blocks", 200_000, "safety cap on blocks fetched")
+	workers := flag.Int("workers", 16, "concurrent block fetches; 1 is the old sequential behaviour")
 	outDir := flag.String("out", "testdata/blob-anatomy", "output directory")
 	name := flag.String("name", "", "window name, e.g. 2025-09-25_busy (required)")
 	label := flag.String("label", "", "human-readable traffic characterization, e.g. busy/median/quiet/current")
@@ -138,8 +139,14 @@ func main() {
 	fmt.Fprintf(os.Stderr, "fetching from block %d, target %d payload bytes...\n", *start, *targetBytes)
 
 	reachedHead := false
+	blocks, stopPrefetch := prefetch(ctx, ec, *start, *workers)
+	defer stopPrefetch()
 	for n := *start; stats.TotalPayloadBytes < *targetBytes && int(n-*start) < *maxBlocks; n++ {
-		blk, err := fetchBlock(ctx, ec, n)
+		res, ok := <-blocks
+		if !ok {
+			break
+		}
+		blk, err := res.blk, res.err
 		if err != nil {
 			if errors.Is(err, gethereum.NotFound) {
 				fmt.Fprintf(os.Stderr, "reached chain head at block %d\n", n)
@@ -247,6 +254,64 @@ func main() {
 			stats.TotalPayloadBytes, *targetBytes)
 		os.Exit(1)
 	}
+}
+
+// prefetch runs a bounded worker pool that fetches blocks ahead of the consumer
+// and delivers them in order. ethclient has no batch API for full blocks, and
+// one sequential BlockByNumber per block is latency-bound at ~10 blocks/s;
+// overlapping `workers` requests reaches ~100 blocks/s against the same
+// endpoint, which is the difference between a minute and a quarter of an hour
+// per window.
+//
+// Ordering is preserved by giving each worker a fixed slot and reading the
+// result channels in sequence, so the caller still sees a contiguous chain and
+// the existing stop-on-NotFound logic is unchanged.
+func prefetch(ctx context.Context, ec *ethclient.Client, start uint64, workers int) (<-chan blockResult, func()) {
+	out := make(chan blockResult, workers)
+	ctx, cancel := context.WithCancel(ctx)
+	slots := make([]chan blockResult, workers)
+	for i := range slots {
+		slots[i] = make(chan blockResult, 1)
+	}
+	for i := 0; i < workers; i++ {
+		go func(i int) {
+			for n := start + uint64(i); ; n += uint64(workers) {
+				blk, err := fetchBlock(ctx, ec, n)
+				select {
+				case slots[i] <- blockResult{blk, err}:
+				case <-ctx.Done():
+					return
+				}
+				if err != nil {
+					return
+				}
+			}
+		}(i)
+	}
+	go func() {
+		defer close(out)
+		for i := 0; ; i = (i + 1) % workers {
+			select {
+			case r := <-slots[i]:
+				select {
+				case out <- r:
+				case <-ctx.Done():
+					return
+				}
+				if r.err != nil {
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return out, cancel
+}
+
+type blockResult struct {
+	blk *ethtypes.Block
+	err error
 }
 
 // fetchBlock retrieves one block, retrying transient failures with backoff.

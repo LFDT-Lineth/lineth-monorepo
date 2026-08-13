@@ -8,13 +8,21 @@
 // The chunks written here are the unit the economics actually operate on, and
 // they are emitted to disk so the same units can be fed to zstd and lz4.
 //
-// Usage: blob-chunks <payload.bin> <dict.bin> <outDir>
+// Usage: blob-chunks <payload.bin> <dict.bin> <outDir> [chunkSize]
+//
+// chunkSize defaults to MaxUncompressedBytes (780 kB), but that is a CIRCUIT
+// ceiling, not the filling rule: it only binds once the ratio exceeds
+// 780000/130048 ~ 6.0. At the ratios actually observed (3.6-4.2) a blob fills
+// first, so the production unit is nearer 490 kB. Being able to vary this
+// matters because schemes with large windows gain from history that a real blob
+// never contains.
 package main
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/consensys/compress/lzss"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
@@ -36,7 +44,12 @@ func main() {
 
 	must(os.MkdirAll(outDir, 0o755))
 
-	const chunkSize = v1.MaxUncompressedBytes // 780_000
+	chunkSize := v1.MaxUncompressedBytes // 780_000
+	if len(os.Args) > 4 {
+		n, err := strconv.Atoi(os.Args[4])
+		must(err)
+		chunkSize = n
+	}
 	fmt.Printf("payload=%d bytes  chunkSize=%d  chunks=%d\n", len(full), chunkSize, (len(full)+chunkSize-1)/chunkSize)
 	fmt.Printf("%-6s %10s %10s %8s\n", "chunk", "raw", "lzss", "ratio")
 

@@ -1,0 +1,25 @@
+# Canonical Huffman code lengths for consensys/compress lzss.
+# Source: feat/huffman-on-lengths @ c509f05
+# 512 symbols: 0-255 literals, 256-511 backref lengths 1..256.
+# One length per symbol, hex, 32 per line.
+#
+# Stored as TEXT deliberately: this repo's `* text eol=lf` strips CR before
+# LF, and code lengths 13 and 10 are both legal, so a raw table can be
+# silently corrupted. This one has 0 such adjacent pairs.
+# Trained on 80 x 780,000 B chunks across all corpus windows.
+08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08
+08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08
+08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08
+08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08
+08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 08 09 08 08 09 09 09 09
+08 09 09 08 08 09 09 09 08 09 09 09 08 08 08 09 08 08 09 09 08 09 09 09 08 08 08 09 09 09 09 09
+08 09 08 09 08 08 08 09 08 09 08 09 08 08 09 09 08 08 08 09 08 09 09 08 08 09 09 09 09 09 08 09
+08 09 08 09 08 09 08 09 08 09 09 08 08 08 08 08 08 08 08 08 08 08 09 09 08 08 08 09 08 08 09 08
+13 13 08 08 08 08 09 0a 0a 0a 0a 0b 0a 0b 0c 0b 0c 0c 0b 08 0a 0a 0a 0a 0a 0a 0a 0a 09 0a 09 08
+0a 0b 0b 0b 0b 0b 0c 0b 0b 0c 0c 0a 0a 0c 0d 0b 0c 0b 0b 0c 0d 0d 0c 0c 0c 0c 0c 0b 0b 0a 09 0a
+0b 0c 0c 0c 0c 0d 0d 0c 0d 0e 0e 0b 0d 0e 0e 0d 0e 0d 0c 0d 0e 0e 0d 0d 0d 0d 0d 0c 0c 0b 0a 0b
+0c 0c 0c 0d 0d 0d 0e 0e 0c 0c 0e 0c 0d 0e 0f 0d 0e 0e 0d 0e 0e 0e 0e 0e 0e 0e 0e 0d 0d 0c 0b 0c
+0d 0e 0e 0f 0f 0e 0f 0e 0e 0e 0e 0c 0e 0f 10 0e 10 0e 0f 0f 0f 0f 0f 0e 0d 0e 0e 0e 0e 0d 0c 0d
+0d 0f 0e 10 0f 10 10 11 0f 0d 0f 0d 0e 10 10 0f 10 10 10 11 10 0f 0f 0f 0f 0f 0f 0e 0d 0e 0d 0d
+0f 0f 0f 0f 0e 10 0d 0f 0f 11 10 0d 0f 10 12 10 11 10 10 10 11 11 10 10 10 10 10 0f 0f 0f 0e 0e
+0e 0f 0f 0f 10 10 10 10 0f 11 10 0e 0f 0f 0f 10 10 11 10 11 11 11 0c 0e 0f 10 0f 0f 0f 0f 0e 08
