@@ -4,7 +4,8 @@ import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.domain.Block
 import linea.domain.BlockParameter
-import linea.ethapi.EthApiBlockClient
+import linea.ethapi.EthApiClient
+import linea.web3j.ethapi.createEthApiClient
 import lineth.coordination.blockcreation.BlockCreationListener
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.BlockCreationMonitor
@@ -26,7 +27,6 @@ import kotlin.time.Instant
  */
 class ConflationAppV2(
   private val vertx: Vertx,
-  private val ethApi: EthApiBlockClient,
   private val lastFinalizedBlock: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
@@ -60,6 +60,13 @@ class ConflationAppV2(
       override fun signalResumeFromApi() = false
     }
 
+  private val l2EthClient: EthApiClient = createEthApiClient(
+    rpcUrl = configs.conflation.l2Endpoint.toString(),
+    log = LogManager.getLogger("clients.l2.eth.conflation"),
+    requestRetryConfig = configs.conflation.l2RequestRetries,
+    vertx = vertx,
+  )
+
   /**
    * Returns the block number of the last block processed by the RISC-V proof pipeline,
    * or null if no RISC-V blocks have been processed yet (cold start).
@@ -72,7 +79,7 @@ class ConflationAppV2(
     val cutover = configs.conflation.riscvStartingBlockTimestampInclusive!!
     return getLastRiscVConflatedBlock().thenCompose { riscvLastBlock ->
       val candidateBlock = maxOf(lastFinalizedBlock, riscvLastBlock ?: lastFinalizedBlock)
-      ethApi
+      l2EthClient
         .ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(candidateBlock.toLong()))
         .thenApply { block ->
           val blockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong())
@@ -104,7 +111,7 @@ class ConflationAppV2(
         val monitor =
           BlockCreationMonitor(
             vertx = vertx,
-            ethApi = ethApi,
+            ethApi = l2EthClient,
             startingPoint = startingPoint,
             blockCreationListener = blockCreationListener,
             lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,

@@ -221,7 +221,6 @@ class CoordinatorApp(
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
       ConflationAppV2(
         vertx = vertx,
-        ethApi = createEthApiClient(rpcUrl = configs.conflation.l2Endpoint.toString()),
         lastFinalizedBlock = lastFinalizedBlock,
         batchesRepository = batchesRepository,
         configs = configs,
