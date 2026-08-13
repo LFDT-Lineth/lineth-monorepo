@@ -532,7 +532,7 @@ class ConflationAppV1(
   private val blockCreationMonitor = BlockCreationMonitor(
     vertx = vertx,
     ethApi = l2EthClient,
-    startingBlockNumberExclusive = lastConflatedBlock.number.toLong(),
+    startingPoint = BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(lastConflatedBlock.number.toLong()),
     blockCreationListener = block2BatchCoordinator,
     lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
     config = BlockCreationMonitor.Config(

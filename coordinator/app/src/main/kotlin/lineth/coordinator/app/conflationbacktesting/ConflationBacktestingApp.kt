@@ -372,7 +372,9 @@ class ConflationBacktestingApp(
   private val blockCreationMonitor = BlockCreationMonitor(
     vertx = vertx,
     ethApi = l2EthClient,
-    startingBlockNumberExclusive = conflationBacktestingAppConfig.startBlockNumber.toLong() - 1,
+    startingPoint = BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(
+      conflationBacktestingAppConfig.startBlockNumber.toLong() - 1,
+    ),
     blockCreationListener = blockToBatchSubmissionCoordinator,
     lastProvenBlockNumberProviderSync = object : LastProvenBlockNumberProviderSync {
       override fun getLastKnownProvenBlockNumber(): Long {
