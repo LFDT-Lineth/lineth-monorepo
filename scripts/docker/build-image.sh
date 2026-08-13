@@ -54,6 +54,7 @@ Options:
                             (<image>:buildcache-<arch>). Export only happens
                             with --push. Default: on in CI, off locally.         [env: REGISTRY_CACHE=true|false]
   --no-registry-cache       Disable the registry build cache.
+  --provenance VALUE        Buildx provenance attestation setting, e.g. false.   [env: PROVENANCE]
   --no-cache                Pass --no-cache to buildx, ignoring all layer cache. [env: NO_CACHE=true]
   --progress MODE           Buildx progress output mode, e.g. plain.             [env: PROGRESS]
   --builder NAME            Use (and create if missing) this buildx builder.     [env: DOCKER_BUILDER]
@@ -79,6 +80,7 @@ DOCKER_BUILDER="${DOCKER_BUILDER:-}"
 DRY_RUN="${DRY_RUN:-false}"
 NO_CACHE="${NO_CACHE:-false}"
 PROGRESS="${PROGRESS:-}"
+PROVENANCE="${PROVENANCE:-}"
 # Registry cache defaults on in CI (where it is populated and warm) and off
 # locally, so a local build needs neither network nor registry credentials.
 REGISTRY_CACHE="${REGISTRY_CACHE:-${GITHUB_ACTIONS:-false}}"
@@ -107,6 +109,7 @@ while [[ $# -gt 0 ]]; do
     --platforms) PLATFORMS="$2"; shift 2 ;;
     --push) PUSH_IMAGE=true; shift ;;
     --save-to) SAVE_TO="$2"; shift 2 ;;
+    --provenance) PROVENANCE="$2"; shift 2 ;;
     --no-cache) NO_CACHE=true; shift ;;
     --progress) PROGRESS="$2"; shift 2 ;;
     --registry-cache) REGISTRY_CACHE=true; shift ;;
@@ -223,6 +226,7 @@ fi
 BUILD_CMD=(docker buildx build)
 [[ -n "$DOCKER_BUILDER" ]] && BUILD_CMD+=(--builder "$DOCKER_BUILDER")
 BUILD_CMD+=(--file "$DOCKERFILE_PATH" --platform "$PLATFORMS")
+[[ -n "$PROVENANCE" ]] && BUILD_CMD+=(--provenance "$PROVENANCE")
 [[ "$NO_CACHE" == "true" ]] && BUILD_CMD+=(--no-cache)
 [[ -n "$PROGRESS" ]] && BUILD_CMD+=(--progress "$PROGRESS")
 

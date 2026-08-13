@@ -35,6 +35,10 @@ inputs:
     description: 'Docker build contexts (multiline)'
     required: false
     default: ''
+  provenance:
+    description: 'Buildx provenance attestation setting (e.g. "false"). Leave empty for the buildx default.'
+    required: false
+    default: ''
   requires_qemu:
     description: 'Whether QEMU setup is required for multi-arch builds'
     required: false
@@ -81,6 +85,7 @@ runs:
         BUILD_CONTEXTS: ${{ inputs.build_contexts }}
         BUILD_SECRETS: ${{ inputs.build_secrets }}
         PUSH_PLATFORMS: ${{ inputs.push_platforms }}
+        PROVENANCE: ${{ inputs.provenance }}
         SAVE_ARTIFACT: ${{ inputs.save_artifact }}
         ARTIFACT_NAME: ${{ inputs.artifact_name }}
         # Runs that have no registry credentials: fork PRs, and dependabot, whose
