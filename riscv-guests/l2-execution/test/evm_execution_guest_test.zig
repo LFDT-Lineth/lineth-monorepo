@@ -37,3 +37,29 @@ test "executeStatelessInputWithLogs matches vanilla executeStatelessInput's root
         try std.testing.expectEqual(@as(usize, 0), receipt.logs.len);
     }
 }
+
+test "guest_errors.exitCode pins one representative code per category" {
+    const guest_errors = guest.guest_errors;
+
+    // The raw numbers are the point: these codes are load-bearing for operators, so renumbering
+    // must break this test. `error.OutOfMemory` stands in for any error outside `linea_errors`.
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 1), guest_errors.exitCode(error.OutOfMemory));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 2), guest_errors.exitCode(error.InvalidSsz));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 3), guest_errors.exitCode(error.InvalidStatelessInput));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 4), guest_errors.exitCode(error.EmptyPayloads));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 5), guest_errors.exitCode(error.UnsupportedFork));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 6), guest_errors.exitCode(error.BadNonceMismatch));
+    try std.testing.expectEqual(@as(guest_errors.ExitCode, 7), guest_errors.exitCode(error.InvalidProof));
+}
+
+test "guest_errors.linea_errors: every listed error maps to a non-unknown category" {
+    const guest_errors = guest.guest_errors;
+    comptime {
+        for (@typeInfo(guest_errors.linea_errors).error_set.?) |e| {
+            const err: anyerror = @field(guest_errors.linea_errors, e.name);
+            if (guest_errors.exitCode(err) == guest_errors.CODE_UNKNOWN) {
+                @compileError("guest_errors.linea_errors: '" ++ e.name ++ "' maps to CODE_UNKNOWN — add an explicit exitCode() category arm");
+            }
+        }
+    }
+}
