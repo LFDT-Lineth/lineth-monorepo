@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -28,16 +29,23 @@ const (
 	defaultOutput = "bench/bench-lzss.csv"
 	// Must match decompressed_len in main.zig — update both together.
 	decompressedLen = 780_000
+	// FNV-1a (64-bit) of the first decompressedLen bytes of
+	// ~/linea-blob-corpus/payloads/2026-07-28_recent.payload.bin, the plaintext
+	// both fixtures were compressed from. The guest recomputes this over its
+	// own output so a decode that is fast because it is wrong cannot be
+	// reported as an improvement.
+	expectedFNV1a = 1498175438430231206
 )
 
 // Marker pairs, matching the IDs main.zig writes.
 var phases = []struct {
 	name           string
 	start, end     uint64
+	hash           uint64
 	compressedFile string
 }{
-	{"lzss v0.3.0 (A0)", 10, 11, "a0_compressed.bin"},
-	{"lzss + huffman-on-lengths", 20, 21, "huffman_compressed.bin"},
+	{"lzss v0.3.0 (A0)", 10, 11, 12, "a0_compressed.bin"},
+	{"lzss + huffman-on-lengths", 20, 21, 22, "huffman_compressed.bin"},
 }
 
 var baseline = struct{ start, end uint64 }{0, 1}
@@ -45,6 +53,8 @@ var baseline = struct{ start, end uint64 }{0, 1}
 var (
 	markRE  = regexp.MustCompile(`VERIFIER-MARK\s+([0-9]+)\s+([0-9]+)`)
 	cycleRE = regexp.MustCompile(`clock cycle: ([0-9]+)`)
+	// A disassembly line, e.g. "ANDI a3, a3, 0x3f" or "LD a4, 0x10(a0)".
+	mnemonicRE = regexp.MustCompile(`^([A-Z][A-Z0-9_.]*)\s`)
 )
 
 type marker struct{ cycle, value uint64 }
@@ -52,7 +62,12 @@ type marker struct{ cycle, value uint64 }
 type traceStats struct {
 	totalCycles uint64
 	markers     map[uint64]marker
-	tail        []string
+	// Executed instruction counts by mnemonic. zkc's -vvv trace disassembles
+	// every retired instruction, so this is what actually ran -- the only way
+	// to confirm on this target whether wide (ld/sd) or byte-at-a-time
+	// (lbu/sb) accesses were emitted for the backref copy.
+	mnemonics map[string]uint64
+	tail      []string
 }
 
 type result struct {
@@ -147,6 +162,14 @@ func main() {
 		if end.value != decompressedLen {
 			fatal(fmt.Errorf("%s decoded %d bytes, want %d", p.name, end.value, decompressedLen))
 		}
+		h, hOK := stats.markers[p.hash]
+		if !hOK {
+			fatal(fmt.Errorf("hash marker %d for %q not found in zkc output", p.hash, p.name))
+		}
+		if h.value != expectedFNV1a {
+			fatal(fmt.Errorf("%s decoded to the wrong bytes: FNV-1a %d, want %d",
+				p.name, h.value, expectedFNV1a))
+		}
 		raw := end.cycle - start.cycle
 		var net uint64
 		if raw > baselineDelta {
@@ -174,10 +197,44 @@ func main() {
 			r.name, r.compressedBytes, r.net, r.cyclesPerByte, ratio)
 	}
 
+	printMix(stats)
+
 	if err := writeCSV(*outFlag, results); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not write CSV: %v\n", err)
 	} else {
 		fmt.Fprintf(os.Stderr, "\nCSV written to %s\n", *outFlag)
+	}
+}
+
+// printMix reports the executed instruction mix: the top mnemonics, and the
+// wide-vs-byte access counts that determine whether the backref copy moved
+// words or bytes.
+func printMix(stats traceStats) {
+	type kv struct {
+		name  string
+		count uint64
+	}
+	all := make([]kv, 0, len(stats.mnemonics))
+	var total uint64
+	for k, v := range stats.mnemonics {
+		all = append(all, kv{k, v})
+		total += v
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].count > all[j].count })
+
+	fmt.Printf("\nexecuted instruction mix (%d retired, %d distinct mnemonics)\n", total, len(all))
+	fmt.Printf("%-12s  %14s  %8s\n", "mnemonic", "count", "share")
+	for i, e := range all {
+		if i >= 15 {
+			break
+		}
+		fmt.Printf("%-12s  %14d  %7.2f%%\n", e.name, e.count, 100*float64(e.count)/float64(total))
+	}
+	fmt.Printf("\nmemory access width:\n")
+	for _, m := range []string{"LD", "SD", "LW", "SW", "LHU", "SH", "LBU", "LB", "SB"} {
+		if c, ok := stats.mnemonics[m]; ok {
+			fmt.Printf("  %-4s %12d\n", m, c)
+		}
 	}
 }
 
@@ -210,7 +267,7 @@ func writeCSV(path string, results []result) error {
 }
 
 func parseTrace(r io.Reader) (traceStats, error) {
-	stats := traceStats{markers: make(map[uint64]marker)}
+	stats := traceStats{markers: make(map[uint64]marker), mnemonics: make(map[string]uint64)}
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 	for scanner.Scan() {
@@ -224,6 +281,10 @@ func parseTrace(r io.Reader) (traceStats, error) {
 			phase, _ := strconv.ParseUint(m[1], 10, 64)
 			value, _ := strconv.ParseUint(m[2], 10, 64)
 			stats.markers[phase] = marker{cycle: stats.totalCycles, value: value}
+			continue
+		}
+		if m := mnemonicRE.FindStringSubmatch(line); m != nil {
+			stats.mnemonics[m[1]]++
 		}
 	}
 	return stats, scanner.Err()

@@ -22,7 +22,15 @@
 // Marker IDs:
 //    0 = start baseline,   1 = end baseline
 //   10 = start A0 decode, 11 = end A0 decode      (value = decoded length)
+//   12 = FNV-1a of the A0 output
 //   20 = start huffman decode, 21 = end huffman decode (value = decoded length)
+//   22 = FNV-1a of the huffman output
+//
+// The two hashes are computed after the timed regions and checked by run.go
+// against the corpus plaintext. A decoder that produced wrong bytes could
+// otherwise report a cycle count that looks like an improvement, which matters
+// here because the backref copy path depends on how the compiler lowers
+// misaligned 64-bit accesses on this target.
 
 const verifier_ray = @import("verifier_ray");
 const accel = @import("lineth_accelerators");
@@ -46,6 +54,17 @@ const huffman_table = lzss.HuffmanTable.build(huffman_lengths);
 var out_a0: [decompressed_len]u8 = @splat(0);
 var out_huffman: [decompressed_len]u8 = @splat(0);
 
+/// FNV-1a, 64-bit. Chosen over a CRC because it needs no lookup table, so the
+/// check itself adds nothing to the guest's read-only data.
+fn fnv1a(data: []const u8) u64 {
+    var h: u64 = 0xcbf29ce484222325;
+    for (data) |b| {
+        h ^= b;
+        h = h *% 0x100000001b3;
+    }
+    return h;
+}
+
 pub export fn main() noreturn {
     profiling.markR5Value(0, 0);
     var i: u64 = 0;
@@ -57,10 +76,12 @@ pub export fn main() noreturn {
     profiling.markR5Value(10, 0);
     const a0_len = lzss.decompress(false, {}, a0_compressed, &out_a0, dict, decompressed_len);
     profiling.markR5Value(11, a0_len);
+    profiling.markR5Value(12, fnv1a(&out_a0));
 
     profiling.markR5Value(20, 0);
     const huffman_len = lzss.decompress(true, huffman_table, huffman_compressed, &out_huffman, dict, decompressed_len);
     profiling.markR5Value(21, huffman_len);
+    profiling.markR5Value(22, fnv1a(&out_huffman));
 
     accel.zkvm_exit(0);
 }
