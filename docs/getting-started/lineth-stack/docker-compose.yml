@@ -710,7 +710,7 @@ services:
     entrypoint: ["sh", "-c", "chown -R 1000:1000 /data"]
     volumes:
       - lineth-local-dev:/data
-    networks: [linea]
+    networks: [lineth]
 
   # ============================================================================
   # L2 services that consume rendered runtime config
