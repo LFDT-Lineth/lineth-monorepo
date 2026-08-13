@@ -2,27 +2,38 @@
 // LZSS decoder performs most: one 8-bit read per literal, and literals are
 // ~90% of the symbols in our corpus.
 //
-// Two readers are measured against each other. `Legacy` is the bit-at-a-time
-// reader bench_lzss shipped first; `lzss.BitReader` is the 64-bit-container
-// reader that replaced it. The comparison is the justification for that
-// change, so both stay here.
+// Four reader designs are compared. Each is driven the way `lzss.decompress`
+// would drive it -- one refill/ensure per symbol, sized for the widest symbol
+// either format reads (19-bit code + 1-bit flag + 21-bit address = 41 bits) --
+// so these are per-symbol costs for the real access pattern, not idealized
+// throughput.
 //
-// Reference points from the other micro-benchmarks: a single byte copy -- the
-// per-byte cost of the backref path -- is ~3.0 cycles (bench_memory), and
-// bench_lz4 decodes at 7.26 cycles/byte end to end.
+//   Legacy    one loop iteration per bit, no buffering.
+//   Accum     lzss.BitReader as shipped: 64-bit container, byte-loop refill,
+//             MSB-first packing (matches icza/bitio, which consensys/compress
+//             uses).
+//   MsbWide   absolute bit position, container recomputed per reload from one
+//             64-bit big-endian load. On a little-endian target that lowers to
+//             a native load plus @byteSwap, which without the Zbb `rev8`
+//             instruction becomes a 3-level masked shift-exchange.
+//   LsbWide   same, but LSB-first packing: the load is native-endian, so no
+//             permutation is needed at all. This is the convention DEFLATE and
+//             zstd use.
 //
-// Reads of 8 bits (a literal, and the plain format's length field) and 21 bits
-// (the widest field either format reads: a far-backref address) are timed
-// separately. The container reader is timed as it is actually used, one
-// `refill` per symbol, so its refill cost is charged to it and not hidden.
+// The comparison answers two questions at once: whether this target executes
+// wide misaligned loads at all (if not, MsbWide and LsbWide collapse toward
+// Accum), and what the MSB-first packing convention costs when it does.
 //
-// Marker IDs:
-//    0 = start baseline,       1 = end baseline
-//   10 = start legacy 8-bit,  11 = end
-//   20 = start legacy 21-bit, 21 = end
-//   30 = start container 8-bit,  31 = end
-//   40 = start container 21-bit, 41 = end
+// Reference points from the other micro-benchmarks: a single byte copy is
+// ~3.0 cycles (bench_memory), and bench_lz4 decodes at 7.26 cycles/byte.
+//
+// Marker IDs: baseline 0/1, then start/end per reader and width --
+//   Legacy 10/11 (8-bit) 20/21 (21-bit)
+//   Accum  30/31         40/41
+//   MsbWide 50/51        60/61
+//   LsbWide 70/71        80/81
 
+const std = @import("std");
 const verifier_ray = @import("verifier_ray");
 const accel = @import("lineth_accelerators");
 const lzss = @import("lzss");
@@ -30,8 +41,10 @@ const profiling = verifier_ray.profiling;
 
 const N: u64 = 4096;
 
-/// The reader bench_lzss used before the container reader: one loop iteration
-/// per bit, no buffering.
+/// Widest sequence a symbol can require, matching `lzss.decompress`.
+const symbol_bits: u32 = 41;
+
+/// One loop iteration per bit, no buffering.
 const Legacy = struct {
     buf: []const u8,
     pos: usize = 0,
@@ -49,7 +62,66 @@ const Legacy = struct {
     }
 };
 
-// Enough backing bytes for N reads of up to 21 bits each, with room to spare.
+/// MSB-first, container recomputed per reload from one big-endian load.
+const MsbWide = struct {
+    buf: []const u8,
+    bit_pos: usize = 0,
+    /// Pending bits, left-aligned: bit 63 is the next bit out.
+    acc: u64 = 0,
+    valid: u32 = 0,
+
+    fn reload(self: *MsbWide) void {
+        const byte_i = self.bit_pos >> 3;
+        const shift: u6 = @intCast(self.bit_pos & 7);
+        const chunk = std.mem.readInt(u64, self.buf[byte_i..][0..8], .big);
+        self.acc = chunk << shift;
+        self.valid = 64 - @as(u32, shift);
+    }
+
+    fn ensure(self: *MsbWide, n: u32) void {
+        if (self.valid < n) self.reload();
+    }
+
+    fn take(self: *MsbWide, n: u6) u64 {
+        const v = self.acc >> @intCast(64 - @as(u32, n));
+        self.acc <<= n;
+        self.valid -= n;
+        self.bit_pos += n;
+        return v;
+    }
+};
+
+/// LSB-first, container recomputed per reload from one native-endian load.
+const LsbWide = struct {
+    buf: []const u8,
+    bit_pos: usize = 0,
+    /// Pending bits, right-aligned: bit 0 is the next bit out.
+    acc: u64 = 0,
+    valid: u32 = 0,
+
+    fn reload(self: *LsbWide) void {
+        const byte_i = self.bit_pos >> 3;
+        const shift: u6 = @intCast(self.bit_pos & 7);
+        const chunk = std.mem.readInt(u64, self.buf[byte_i..][0..8], .little);
+        self.acc = chunk >> shift;
+        self.valid = 64 - @as(u32, shift);
+    }
+
+    fn ensure(self: *LsbWide, n: u32) void {
+        if (self.valid < n) self.reload();
+    }
+
+    fn take(self: *LsbWide, n: u6) u64 {
+        const v = self.acc & ((@as(u64, 1) << n) - 1);
+        self.acc >>= n;
+        self.valid -= n;
+        self.bit_pos += n;
+        return v;
+    }
+};
+
+// Enough backing bytes for N reads of up to 21 bits each, plus the 8-byte
+// lookahead a wide reload performs at the last bit position.
 var backing: [(N * 21 / 8) + 16]u8 = @splat(0xA5);
 
 pub export fn main() noreturn {
@@ -62,39 +134,50 @@ pub export fn main() noreturn {
 
     var checksum: u64 = 0;
 
-    profiling.markR5Value(10, 0);
-    var legacy8 = Legacy{ .buf = &backing };
-    i = 0;
-    while (i < N) : (i += 1) {
-        checksum +%= legacy8.bits(8);
+    inline for (.{ 8, 21 }, .{ 10, 20 }) |width, mark| {
+        profiling.markR5Value(mark, 0);
+        var r = Legacy{ .buf = &backing };
+        i = 0;
+        while (i < N) : (i += 1) {
+            checksum +%= r.bits(width);
+        }
+        profiling.markR5Value(mark + 1, checksum);
     }
-    profiling.markR5Value(11, checksum);
 
-    profiling.markR5Value(20, 0);
-    var legacy21 = Legacy{ .buf = &backing };
-    i = 0;
-    while (i < N) : (i += 1) {
-        checksum +%= legacy21.bits(21);
+    inline for (.{ 8, 21 }, .{ 30, 40 }) |width, mark| {
+        profiling.markR5Value(mark, 0);
+        var r = lzss.BitReader.init(&backing, 0);
+        i = 0;
+        while (i < N) : (i += 1) {
+            r.refill();
+            checksum +%= r.take(width);
+        }
+        profiling.markR5Value(mark + 1, checksum);
     }
-    profiling.markR5Value(21, checksum);
 
-    profiling.markR5Value(30, 0);
-    var fast8 = lzss.BitReader.init(&backing, 0);
-    i = 0;
-    while (i < N) : (i += 1) {
-        fast8.refill();
-        checksum +%= fast8.take(8);
+    inline for (.{ 8, 21 }, .{ 50, 60 }) |width, mark| {
+        profiling.markR5Value(mark, 0);
+        var r = MsbWide{ .buf = &backing };
+        r.reload();
+        i = 0;
+        while (i < N) : (i += 1) {
+            r.ensure(symbol_bits);
+            checksum +%= r.take(width);
+        }
+        profiling.markR5Value(mark + 1, checksum);
     }
-    profiling.markR5Value(31, checksum);
 
-    profiling.markR5Value(40, 0);
-    var fast21 = lzss.BitReader.init(&backing, 0);
-    i = 0;
-    while (i < N) : (i += 1) {
-        fast21.refill();
-        checksum +%= fast21.take(21);
+    inline for (.{ 8, 21 }, .{ 70, 80 }) |width, mark| {
+        profiling.markR5Value(mark, 0);
+        var r = LsbWide{ .buf = &backing };
+        r.reload();
+        i = 0;
+        while (i < N) : (i += 1) {
+            r.ensure(symbol_bits);
+            checksum +%= r.take(width);
+        }
+        profiling.markR5Value(mark + 1, checksum);
     }
-    profiling.markR5Value(41, checksum);
 
     accel.zkvm_exit(0);
 }
