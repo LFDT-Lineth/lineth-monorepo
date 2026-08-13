@@ -25,7 +25,8 @@ const field = verifier_ray.field.koalabear;
 test "all fixture cases: honest proofs verify end-to-end" {
     inline for (0..vf.case_count) |i| {
         const case = comptime vf.get(i);
-        verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+        const input = vf.getInput(i);
+        verifier.verify(case.spec, case.systems, input.proof, input.public_inputs) catch |err| {
             std.debug.print("case {d} ({s}) unexpectedly failed: {s}\n", .{ i, case.name, @errorName(err) });
             return err;
         };
@@ -38,8 +39,8 @@ test "all fixture cases: tampered proofs are rejected" {
         if (comptime vf.hasFailing(i)) {
             checked += 1;
             const case = comptime vf.get(i);
-            const proof = vf.getInputFailing(i);
-            const res = verifier.verify(case.spec, case.systems, proof);
+            const input = vf.getInputFailing(i);
+            const res = verifier.verify(case.spec, case.systems, input.proof, input.public_inputs);
             if (res) |_| {
                 std.debug.print("case {d} ({s}) accepted a tampered proof\n", .{ i, case.name });
                 return error.TamperedProofAccepted;
@@ -66,12 +67,14 @@ test "multi-size: one baked System verifies proofs of two dynamic sizes" {
             checked += 1;
             const case = comptime vf.get(i);
             // Primary size.
-            verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+            const input = vf.getInput(i);
+            verifier.verify(case.spec, case.systems, input.proof, input.public_inputs) catch |err| {
                 std.debug.print("multi-size case {d} ({s}) primary failed: {s}\n", .{ i, case.name, @errorName(err) });
                 return err;
             };
             // Alternate size — SAME System.
-            verifier.verify(case.spec, case.systems, vf.getInputAlt(i)) catch |err| {
+            const alt_input = vf.getInputAlt(i);
+            verifier.verify(case.spec, case.systems, alt_input.proof, alt_input.public_inputs) catch |err| {
                 std.debug.print("multi-size case {d} ({s}) alt size failed: {s}\n", .{ i, case.name, @errorName(err) });
                 return err;
             };
@@ -89,6 +92,7 @@ test "verify rejects proof with wrong round count" {
         .total_round_coins = 1,
     };
     const systems = verifier.Systems{
+        .public_input = .{ .round_cell_counts = &[_]usize{0} },
         .vanishing = vanishing.System{ .modules = &.{} },
         .pcs = empty_pcs_system,
     };
@@ -97,7 +101,7 @@ test "verify rejects proof with wrong round count" {
         verifier.verify(spec, systems, .{
             .rounds = &.{},
             .pcs_opening = empty_pcs_opening,
-        }),
+        }, &.{}),
     );
 }
 
