@@ -35,8 +35,15 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 	if err != nil {
 		b.Fatalf("failed to parse test case: %v", err)
 	}
-	if len(outputs) != 0 {
-		b.Fatalf("expected no outputs, got: %v", outputs)
+	// main.zkc declares `guest_output` as a `pub output`, so the trace always
+	// reports that key even when nothing writes to it — check total bytes
+	// written, not key presence.
+	var outputBytes int
+	for _, v := range outputs {
+		outputBytes += len(v)
+	}
+	if outputBytes != 0 {
+		b.Fatalf("expected no output bytes, got: %v", outputs)
 	}
 	driverInputs := &zkcdriver.PreReadInputs{
 		Inputs: inputsMap,
