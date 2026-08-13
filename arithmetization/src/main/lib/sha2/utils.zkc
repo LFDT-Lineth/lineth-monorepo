@@ -1,0 +1,46 @@
+// SHA-256 uses addition modulo 2^32. Each helper performs the addition in a
+// wide unsigned type and then decomposes the result into a range-constrained
+// carry and low word. The carry is intentionally discarded.
+fn sha2_add2(a:u32, b:u32) -> (result:u32) {
+    var carry:u1
+    carry::result = (a as u33) + (b as u33)
+}
+
+fn sha2_add4(a:u32, b:u32, c:u32, d:u32) -> (result:u32) {
+    var carry:u2
+    carry::result = (a as u34) + (b as u34) + (c as u34) + (d as u34)
+}
+
+fn sha2_add5(a:u32, b:u32, c:u32, d:u32, e:u32) -> (result:u32) {
+    var carry:u3
+    carry::result = (a as u35) + (b as u35) + (c as u35) + (d as u35) + (e as u35)
+}
+
+fn sha2_rotr32(value:u32, amount:u5) -> (result:u32) {
+    var inverse_amount:u6 = 32 - (amount as u6)
+    result = (value >> amount) | (value << inverse_amount)
+}
+
+fn sha2_small_sigma0(value:u32) -> (result:u32) {
+    result = sha2_rotr32(value, 7) ^ sha2_rotr32(value, 18) ^ (value >> 3)
+}
+
+fn sha2_small_sigma1(value:u32) -> (result:u32) {
+    result = sha2_rotr32(value, 17) ^ sha2_rotr32(value, 19) ^ (value >> 10)
+}
+
+fn sha2_big_sigma0(value:u32) -> (result:u32) {
+    result = sha2_rotr32(value, 2) ^ sha2_rotr32(value, 13) ^ sha2_rotr32(value, 22)
+}
+
+fn sha2_big_sigma1(value:u32) -> (result:u32) {
+    result = sha2_rotr32(value, 6) ^ sha2_rotr32(value, 11) ^ sha2_rotr32(value, 25)
+}
+
+fn sha2_choose(e:u32, f:u32, g:u32) -> (result:u32) {
+    result = (e & f) ^ ((~e) & g)
+}
+
+fn sha2_majority(a:u32, b:u32, c:u32) -> (result:u32) {
+    result = (a & b) ^ (a & c) ^ (b & c)
+}
