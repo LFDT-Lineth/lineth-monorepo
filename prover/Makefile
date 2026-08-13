@@ -109,12 +109,6 @@ bin/checker:
 	go build -o $@ ./cmd/dev-tools/corset-checker
 
 ##
-## The prover image is built from the repository root:
-##   make docker-build-prover DOCKER_IMAGE_TAG=<tag>
-## See scripts/docker/README.md.
-##
-
-##
 ## Build compressor library
 ##
 lib/compressor:
