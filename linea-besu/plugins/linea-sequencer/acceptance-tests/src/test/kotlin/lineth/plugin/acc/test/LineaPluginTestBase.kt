@@ -121,7 +121,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       getTestCliOptions(),
       setOf("LINEA", "MINER", "PLUGINS"),
       false,
-      DEFAULT_REQUESTED_PLUGINS,
+      requestedPlugins(),
     )
     minerNode.transactionPoolConfiguration = ImmutableTransactionPoolConfiguration.builder()
       .from(TransactionPoolConfiguration.DEFAULT)
@@ -129,6 +129,8 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       .build()
     cluster.start(minerNode)
   }
+
+  protected open fun requestedPlugins(): List<String> = DEFAULT_REQUESTED_PLUGINS
 
   protected open fun getTestCliOptions(): List<String> {
     return TestCommandLineOptionsBuilder().build()

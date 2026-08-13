@@ -10,6 +10,7 @@ pub const CellError = error{CellRefOutOfRange};
 pub const Error = error{
     InvalidRoundCount,
     MissingDynamicModuleSize,
+    DynamicModuleSizeTooLarge,
 } || CellError;
 
 pub const Scalar = types.Scalar;
@@ -37,6 +38,10 @@ pub const Spec = struct {
     /// with no dynamic modules, in which case the absorption is a no-op and
     /// `module_sizes` may be empty.
     dynamic_module_count: usize = 0,
+    /// Maximum dynamic-module size a proof may declare (prover-ray's
+    /// wiop.ColumnSizeMaxSupported). Any module_sizes entry above this is
+    /// rejected before it reaches downstream arithmetic.
+    column_size_max_supported: usize = 1 << 22,
 };
 
 /// All protocol-level data derived from a proof by the higher-level verifier.
@@ -103,6 +108,10 @@ pub fn replayWithTranscript(
     // Dynamic-module sizes are absorbed once per round advance, so the caller
     // must supply at least `dynamic_module_count` of them.
     if (module_sizes.len < spec.dynamic_module_count) return error.MissingDynamicModuleSize;
+
+    for (module_sizes) |size| {
+        if (size > spec.column_size_max_supported) return error.DynamicModuleSizeTooLarge;
+    }
 
     var all_coins: [spec.total_round_coins]Coin = undefined;
 

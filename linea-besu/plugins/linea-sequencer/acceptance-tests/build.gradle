@@ -95,13 +95,22 @@ tasks.register('acceptanceTests', Test) {
     includeTags("AcceptanceTest")
   }
 
-  // A directory hopefully without plugin jar-s. All plugins are already on classpath as project dependencies
-  systemProperty 'besu.plugins.dir', project.buildDir
+  dependsOn tasks.named('prepareSignerTestPlugin')
+  systemProperty 'besu.plugins.dir', layout.buildDirectory.dir('test-plugins').get().asFile
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
   maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
+}
+
+def signerTestPluginJar =
+    project("${lineaSequencerProjectPath}:signer-test-plugin").tasks.named('jar', Jar)
+
+tasks.register('prepareSignerTestPlugin', Sync) {
+  dependsOn signerTestPluginJar
+  from signerTestPluginJar.flatMap { it.archiveFile }
+  into layout.buildDirectory.dir('test-plugins')
 }
 
 dependencies {
