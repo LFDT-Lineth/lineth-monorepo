@@ -68,13 +68,14 @@ clean-build:
 	$(MAKE) clean-besu-and-maven-local
 	${MAKE} build
 
+# The image itself is built by the monorepo-wide target, which mirrors
+# .github/workflows/prover-build-and-publish.yml. PLATFORMS keeps the host-native
+# default this target had before it was routed through scripts/docker/build-image.sh.
 build-prover:
 	echo "Build prover image from source with tag=$(PROVER_TAG)"
-	cd ../../prover; \
-	echo "Build zkevm.bin for prover" ; \
-	make zkevm/arithmetization/zkevm.bin ; \
-	echo "Build prover docker image" ; \
-	VERSION=$(PROVER_TAG) make docker
+	cd ../../prover && echo "Build zkevm.bin for prover" && make zkevm/arithmetization/zkevm.bin
+	echo "Build prover docker image"
+	$(MAKE) -C ../.. docker-build-prover DOCKER_IMAGE_TAG=$(PROVER_TAG) PLATFORMS=$(DOCKER_HOST_PLATFORM)
 
 build-all:
 	$(MAKE) build

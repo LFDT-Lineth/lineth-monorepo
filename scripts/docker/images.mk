@@ -110,8 +110,7 @@ docker-build-prover:
 		--image-name consensys/linea-prover \
 		--dockerfile ./prover/Dockerfile \
 		--context . \
-		--build-context prover=prover/ \
-		--build-arg 'RUSTFLAGS="-C target-cpu=x86-64-v3"'
+		--build-context prover=prover/
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:
