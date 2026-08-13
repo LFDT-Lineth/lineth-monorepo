@@ -325,6 +325,10 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 				// already rounds it up to a power of two, so log2 is exact. Sizing
 				// was validated above, before any Module.Size() call.
 				desc.SizeLog2 = bits.Len(uint(col.Module.Size())) - 1
+				if desc.SizeLog2 > maxSizeLog2 {
+					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has size_log2 %d, above the verifier envelope's max %d",
+						col.Module.Context.Path(), col.Context.Path(), desc.SizeLog2, maxSizeLog2)
+				}
 			}
 			columns = append(columns, desc)
 		}
