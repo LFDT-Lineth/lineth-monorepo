@@ -51,7 +51,8 @@
         "filteredAddresses": [
           "0x0303030303030303030303030303030303030303",
           "0x0404040404040404040404040404040404040404"
-        ]
+        ],
+        "programVk": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
     ]
   }

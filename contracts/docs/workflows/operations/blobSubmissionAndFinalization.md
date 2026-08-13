@@ -1,16 +1,16 @@
 # 🧩 Blob Submission & Finalization
 
-This document outlines the core data and finalization flows involved in LineaRollup's lifecycle, including blob commitment and zk-proof-based finality.
+This document outlines the core data and finalization flows involved in LinethRollup's lifecycle, including blob commitment and zk-proof-based finality.
 
 ---
 
 ## 📦 Blob Submission
 
-This flow is used by the **Data Submission Operator** to submit blobs to the LineaRollup system.
+This flow is used by the **Data Submission Operator** to submit blobs to the LinethRollup system.
 
 ### 🔄 Steps
 
-1. **Data Submission Operator** calls `submitBlobs()` on the `LineaRollup` contract with **1 to N blobs**, where **N = network maximum**.
+1. **Data Submission Operator** calls `submitBlobs()` on the `LinethRollup` contract with **1 to N blobs**, where **N = network maximum**.
 2. For each submitted blob:
    - The contract verifies data integrity.
    - Performs evaluation checks via the point evaluation precompile.
@@ -18,7 +18,7 @@ This flow is used by the **Data Submission Operator** to submit blobs to the Lin
 3. The final computed `shnarf` is stored.
 4. A corresponding event is emitted to reflect successful blob(s) storage.
 
-**Note:** `Shnarf` denotes a generic and iterative hashing structure for a sequence of values. It is somewhat analog to a stack and supports efficient `proof of append` and `proof of pop`. The structure is similar to how block hashes are computed: for appends, `newShnarf = H(oldShnarf || appendedValue)`. In Linea, the structure is used to encode the sequence of the submitted blobs.
+**Note:** `Shnarf` denotes a generic and iterative hashing structure for a sequence of values. It is somewhat analog to a stack and supports efficient `proof of append` and `proof of pop`. The structure is similar to how block hashes are computed: for appends, `newShnarf = H(oldShnarf || appendedValue)`. In Lineth, the structure is used to encode the sequence of the submitted blobs.
 
 ---
 
@@ -29,7 +29,7 @@ This flow finalizes 1 or more aggregated blob transaction submissions by verifyi
 ### 🔄 Steps
 
 1. **Finalization Submission Operator** calls `finalizeBlocks()`.
-2. `LineaRollup` contract:
+2. `LinethRollup` contract:
    - Verifies submitted data matches the last finalized state and is non-empty to verify proper continuity.
    - Validates the messaging rolling hash feedback loop preventing manipulation or censorship.
    - Emits events for L2 blocks containing L2 → L1 messages.

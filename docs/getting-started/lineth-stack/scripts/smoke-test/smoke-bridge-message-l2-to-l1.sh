@@ -58,14 +58,14 @@ ADDR="$(lineth_deployments_file addresses.json)"
 [ -s "$PRE" ] || die "addresses-precomputed.json missing"
 [ -s "$ADDR" ] || die "addresses.json missing; deploy-contracts has not completed"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
 L2_MESSAGE_SERVICE="$(lineth_json_section_addr "$ADDR" l2 L2MessageService)"
 L1_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l1ChainId)"
 L2_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l2ChainId)"
 L1_POSTMAN_ADDRESS="$(lineth_json_section_addr "$PRE" signers l1PostmanAddress)"
 L2_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" signers l2DeployerAddress)"
 
-lineth_require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+lineth_require_address "L1 LinethRollupV8" "$LINETH_ROLLUP"
 lineth_require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
 lineth_require_address "L1 postman signer" "$L1_POSTMAN_ADDRESS"
 lineth_require_address "L2 deployer" "$L2_DEPLOYER_ADDRESS"
@@ -107,7 +107,7 @@ if [ "$L2_L1_MESSAGE_VALUE_WEI" != "0" ] || [ "$L2_L1_MESSAGE_FEE_WEI" != "0" ];
 fi
 
 section "preflight"
-log "LineaRollupV8: $(lineth_l1_address_link "$LINEA_ROLLUP")"
+log "LinethRollupV8: $(lineth_l1_address_link "$LINETH_ROLLUP")"
 log "L2MessageService: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/address/$L2_MESSAGE_SERVICE"
 log "manual L1 claim signer: $L1_POSTMAN_ADDRESS"
 log "recipient: $RECIPIENT"
@@ -143,7 +143,7 @@ SEND_OUTPUT="$(
   docker run --rm \
     --user 0:0 \
     --entrypoint sh \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
     -e RECIPIENT="$RECIPIENT" \
     -e L2_MESSAGE_SERVICE="$L2_MESSAGE_SERVICE" \
@@ -360,4 +360,4 @@ section "success"
 log "L2 message tx: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/tx/$L2_TX_HASH"
 [ -n "$L2_TX_BLOCK" ] && log "L2 message block: $L2_TX_BLOCK"
 log "L1 claim tx: $(lineth_l1_tx_link "$CLAIM_TX_HASH")"
-log "LineaRollupV8: $(lineth_l1_address_link "$LINEA_ROLLUP")"
+log "LinethRollupV8: $(lineth_l1_address_link "$LINETH_ROLLUP")"

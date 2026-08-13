@@ -10,7 +10,7 @@ tmp="${dst}.tmp"
 mkdir -p "$(dirname "$dst")"
 sed \
   -e "s|__L1_RPC_URL__|$L1_RPC_URL|g" \
-  -e "s|__LINEA_ROLLUP_ADDRESS__|$LINEA_ROLLUP_ADDR|g" \
+  -e "s|__LINETH_ROLLUP_ADDRESS__|$LINETH_ROLLUP_ADDR|g" \
   "$src" > "$tmp"
 
 if grep -qE '__[A-Z0-9_]+__' "$tmp"; then

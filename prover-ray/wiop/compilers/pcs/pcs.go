@@ -4,18 +4,19 @@
 // After the arithmetization passes (range check, lookup, log-derivative, local
 // vanishing, global quotient) have reduced every constraint to a set of
 // [wiop.LagrangeEval] claims — "column C evaluated at the point zeta equals the
-// value in this cell" — the columns themselves are still transported in the
-// clear inside the [wiop.Proof]. This pass closes that gap: it commits to every
-// committed column with a FRI Merkle commitment, hides the columns
-// ([wiop.VisibilityInternal]), and produces a single FRI opening proof that
-// binds every LagrangeEval claim cell to its committed column at zeta.
+// value in this cell" — nothing yet ties those claims to an actual witness: the
+// columns never travel in the [wiop.Proof] and never enter the Fiat-Shamir
+// transcript on their own. This pass closes that gap: it commits to every
+// committed column with a FRI Merkle commitment and produces a single FRI
+// opening proof that binds every LagrangeEval claim cell to its committed
+// column at zeta.
 //
 // Compile wires three kinds of actions:
 //
 //   - one commit prover-action per interactive round that owns columns: it FRI-
 //     commits that round's columns and records the Merkle root in
 //     [Runtime.Commitments]. [Runtime.AdvanceRound] then absorbs that root into
-//     Fiat-Shamir in place of the (now internal) raw columns.
+//     Fiat-Shamir in place of that round's raw columns.
 //   - one opening prover-action, in a fresh final round, that batches every
 //     committed round (plus the static precomputed round) into the FRI opener,
 //     folds, and stores the resulting opening proof on the runtime.
@@ -43,22 +44,26 @@ import (
 )
 
 const (
-	// friInverseRate is the FRI blow-up factor (codeword size / plaintext size).
-	friInverseRate = 2
-	// friNumQueries is the number of FRI query openings. This is obtained from
-	// https://github.com/ethereum/soundcalc
-	//
-	// To match 128 bits of security, we determined that the following number of
-	// queries is required.
-	friNumQueries = 229
+	// FRILogInverseRate is the log2 of the FRI blow-up factor (codeword size /
+	// plaintext size).
+	FRILogInverseRate = 1
 )
+
+// friNumQueries is the number of FRI query openings. This is obtained from
+// https://github.com/ethereum/soundcalc
+//
+// To match 128 bits of security, we determined that the following number of
+// queries is required. It is a variable (rather than a constant) so tests
+// exercising the full compilation pipeline can lower it via
+// [SetFRINumQueriesForTest]; production callers must never mutate it.
+var friNumQueries = 229
 
 var (
 	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
 	// the largest committed column size the PCS supports, 2^22 — matching the
 	// wiop column-size ceiling. Every proof folds only as many rounds as its own
 	// witness needs (see [fri.Params] restriction); this is just the ceiling.
-	maxCommittableSizeLog2 = utils.Log2Ceil(wiop.ColumnSizeMaxSupported)
+	maxCommittableSizeLog2 = uint8(utils.Log2Ceil(wiop.ColumnSizeMaxSupported))
 )
 
 // The FRI parameters and encoder schedule are a pure function of the fixed
@@ -75,15 +80,30 @@ var (
 // fixed maximum capacity.
 func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	staticFRIOnce.Do(func() {
-		d := 1 << maxCommittableSizeLog2
-		params, err := fri.NewParams(friInverseRate*d, d, friNumQueries)
+		params, err := fri.NewParams(FRILogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, uint(friNumQueries))
 		if err != nil {
 			panic(fmt.Errorf("pcs: staticFRI: %w", err))
 		}
 		staticFRIParams = params
-		staticFRIEncoders = buildEncoders(friInverseRate, maxCommittableSizeLog2)
+		staticFRIEncoders = buildEncoders(1<<FRILogInverseRate, maxCommittableSizeLog2)
 	})
 	return staticFRIParams, staticFRIEncoders
+}
+
+// FRINumQueries returns the number of FRI query openings currently configured.
+// It tracks [SetFRINumQueriesForTest]; production callers must never use it to
+// mutate query behaviour.
+func FRINumQueries() int { return friNumQueries }
+
+// FRIMaxCommittableSizeLog2 is the log2 of the largest committed column size the
+// PCS supports — the fixed capacity of the static FRI envelope (2^22).
+func FRIMaxCommittableSizeLog2() uint8 { return maxCommittableSizeLog2 }
+
+// FRIStaticParams returns the process-wide FRI envelope parameters (sized to
+// FRIMaxCommittableSizeLog2).
+func FRIStaticParams() fri.Params {
+	params, _ := staticFRI()
+	return params
 }
 
 // newStaticPCS wraps the shared static parameters in a fresh, per-proof [fri.PCS]
@@ -102,14 +122,14 @@ func newStaticPCS() *fri.PCS {
 // size of the largest committed column. Query positions are drawn from [0, N),
 // so this must match the size the PCS restricts its schedule to (both derive it
 // from the same committed columns).
-func effectiveN(rt *wiop.Runtime, batches []batchRef) int {
+func effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
 	maxSizeIndex := 0
 	for _, b := range batches {
-		if idx := roundMaxSizeIndex(b.round, rt); idx > maxSizeIndex {
+		if idx := roundMaxSizeIndex(b.Round, rt); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
-	return friInverseRate * (1 << maxSizeIndex)
+	return 1 << (maxSizeIndex + FRILogInverseRate)
 }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
@@ -134,18 +154,18 @@ type compiled struct {
 	precomputedRoot field.Octuplet
 }
 
-// batchRef identifies one FRI batch: an interactive round, or the precomputed
-// round when isPrecomp is set.
-type batchRef struct {
-	round     *wiop.Round
-	isPrecomp bool
+// BatchRef identifies one FRI batch: an interactive round, or the precomputed
+// round when IsPrecomp is set.
+type BatchRef struct {
+	Round     *wiop.Round
+	IsPrecomp bool
 }
 
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
 // queries. It is a no-op when no columns are committed.
 func Compile(sys *wiop.System) {
-	batches := committedBatches(sys)
+	batches := CommittedBatches(sys)
 	if len(batches) == 0 {
 		return
 	}
@@ -156,22 +176,21 @@ func Compile(sys *wiop.System) {
 	// runtime exposes the (static) precomputed assignments; its encoders are a
 	// prefix of the static schedule so the root is stable across proof runs.
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		st := commitToRound(friInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
+		st := commitToRound(1<<FRILogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
 	}
 
-	// For each committed interactive round: hide its columns, flag the round as
-	// carrying a commitment (so AdvanceRound absorbs the root), and register the
-	// commit action that computes that root at prove time.
+	// For each committed interactive round: flag the round as carrying a
+	// commitment (so AdvanceRound absorbs the root), and register the commit
+	// action that computes that root at prove time.
 	for _, b := range batches {
-		if b.isPrecomp {
+		if b.IsPrecomp {
 			continue
 		}
-		hideCommittedColumns(b.round)
-		b.round.HasCommitment = true
-		b.round.RegisterAction(&commitRoundAction{c: c, round: b.round})
+		b.Round.HasCommitment = true
+		b.Round.RegisterAction(&commitRoundAction{c: c, round: b.Round})
 	}
 
 	// A fresh final round hosts the opening: putting it after every committed
@@ -179,41 +198,23 @@ func Compile(sys *wiop.System) {
 	// before the opening squeezes alpha_DEEP.
 	openingRound := sys.NewRound()
 	openingRound.RegisterAction(&openingProverAction{c: c})
-	openingRound.RegisterVerifierAction(&openingVerifierAction{c: c})
+	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
 }
 
-// committedBatches returns the canonical batch ordering: every interactive round
+// CommittedBatches returns the canonical batch ordering: every interactive round
 // that owns columns (in round order), then the precomputed round if it owns
 // columns. Deterministic from the System alone, so prover and verifier agree.
-func committedBatches(sys *wiop.System) []batchRef {
-	var refs []batchRef
+func CommittedBatches(sys *wiop.System) []BatchRef {
+	var refs []BatchRef
 	for _, r := range sys.Rounds {
 		if len(r.Columns) > 0 {
-			refs = append(refs, batchRef{round: r})
+			refs = append(refs, BatchRef{Round: r})
 		}
 	}
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		refs = append(refs, batchRef{round: &sys.PrecomputedRound.Round, isPrecomp: true})
+		refs = append(refs, BatchRef{Round: &sys.PrecomputedRound.Round, IsPrecomp: true})
 	}
 	return refs
-}
-
-// hideCommittedColumns turns every column of a committed round internal so it is
-// neither absorbed as raw data into Fiat-Shamir nor carried in the proof; the
-// commitment stands in for it. Verifier-visible (public) columns cannot be
-// replaced by a commitment, so they are rejected explicitly.
-func hideCommittedColumns(round *wiop.Round) {
-	for i := range round.Columns {
-		col := round.Columns[i]
-		if col.Visibility == wiop.VisibilityPublic {
-			panic(fmt.Sprintf(
-				"pcs: committed round %d holds a verifier-visible (public) column %q; "+
-					"public columns cannot be hidden behind a commitment",
-				round.ID, col.Context.Path(),
-			))
-		}
-		round.Columns[i].Visibility = wiop.VisibilityInternal
-	}
 }
 
 // =============================================================================
@@ -229,7 +230,7 @@ type commitRoundAction struct {
 }
 
 func (a *commitRoundAction) Run(rt *wiop.Runtime) {
-	st := commitToRound(friInverseRate, a.round, rt)
+	st := commitToRound(1<<FRILogInverseRate, a.round, rt)
 	rt.Commitments[a.round.ID] = st.Tree.Root()
 	rt.SetState(committedStateKey(a.round.ID), st)
 }
@@ -243,10 +244,10 @@ func (a *openingProverAction) Run(rt *wiop.Runtime) {
 	rt.PCSOpeningProof = &proof
 }
 
-// openingVerifierAction replays the opening transcript and checks the proof.
-type openingVerifierAction struct{ c *compiled }
+// OpeningVerifierAction replays the opening transcript and checks the proof.
+type OpeningVerifierAction struct{ c *compiled }
 
-func (a *openingVerifierAction) Check(rt *wiop.Runtime) error {
+func (a *OpeningVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.c.verify(rt, *rt.PCSOpeningProof)
 }
 
@@ -257,8 +258,8 @@ func (a *openingVerifierAction) Check(rt *wiop.Runtime) error {
 // open runs the full prover-side opening: register every batch on a fresh FRI
 // PCS, seed the DEEP quotient with alpha_DEEP, fold, and open the queries.
 func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
-	batches := committedBatches(rt.System)
-	batchShifts, batchClaims, _, evalPoint := recoverBatchClaims(rt, batches)
+	batches := CommittedBatches(rt.System)
+	batchShifts, batchClaims, _, evalPoint := RecoverBatchClaims(rt, batches)
 
 	pcs := newStaticPCS()
 	states := c.collectCommittedStates(rt, batches)
@@ -269,12 +270,13 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 
 	fs := rt.GetFS()
-	alphaDeep := fs.RandomFext()
 
-	// The DEEP quotient is virtual: it is reconstructed by the verifier from the
-	// opened committed rows, so there is no separate quotient commitment to
-	// absorb. Seeding the FRI prover with alpha_DEEP is enough.
-	state, err := pcs.NewProverState(alphaDeep)
+	// The DEEP quotient is virtual: it is reconstructed by the verifier from
+	// the opened committed rows, so there is no separate quotient commitment
+	// to absorb, and no separate alpha_DEEP challenge either -- each level's
+	// own alpha_DEEP is the square of its own introduction round's fold
+	// challenge (see fri.Level.EvalsAt).
+	state, err := pcs.NewProverState()
 	if err != nil {
 		panic(fmt.Errorf("pcs: open: %w", err))
 	}
@@ -290,38 +292,34 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 		}
 	}
 
-	fs.UpdateExt(state.FinalPolyExt...)
-	positions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
-	return fri.OpeningProof{
-		RowOpenings: pcs.OpenedRows(positions),
-		FRIProof:    state.Open(positions),
-	}
+	fs.UpdateExt(state.FinalPoly...)
+	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
+	return pcs.Open(state, positions)
 }
 
 // verify replays the opening transcript exactly as the prover produced it and
 // checks the opening proof against the transported commitments.
 func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
-	batches := committedBatches(rt.System)
-	batchShifts, batchClaims, shapes, evalPoint := recoverBatchClaims(rt, batches)
+	batches := CommittedBatches(rt.System)
+	batchShifts, batchClaims, shapes, evalPoint := RecoverBatchClaims(rt, batches)
 
 	pcs := newStaticPCS()
 
 	fs := rt.GetFS()
-	alphaDeep := fs.RandomFext()
 
 	// Mirror the prover's Fiat-Shamir transcript: one fold challenge per round,
 	// absorbing each intermediate layer root. The final round reveals the final
 	// polynomial and commits no root, so its challenge is squeezed without a
 	// matching absorption.
-	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.FRIRoots)+1)
-	for _, friRoot := range proof.FRIProof.FRIRoots {
+	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.RoundRoots)+1)
+	for _, friRoot := range proof.FRIProof.RoundRoots {
 		foldAlphas = append(foldAlphas, fs.RandomFext())
 		fs.Update(friRoot[:]...)
 	}
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
-	fs.UpdateExt(proof.FRIProof.FinalPolyExt...)
-	queryPositions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
+	fs.UpdateExt(proof.FRIProof.FinalPoly...)
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
 
 	return pcs.Verify(fri.VerifyInputs{
 		Roots:         c.collectRoots(rt, batches),
@@ -330,7 +328,6 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 		Shifts:        batchShifts,
 		Zeta:          evalPoint,
 		Challenges: fri.Challenges{
-			AlphaDeep:      alphaDeep,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: queryPositions,
 		},
@@ -340,16 +337,16 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 // collectCommittedStates returns the committed states in batch order. Interactive
 // states were stashed on the runtime by the commit actions; the precomputed
 // state was committed once at compile time.
-func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []batchRef) []*fri.CommitterState {
+func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []BatchRef) []*fri.CommitterState {
 	states := make([]*fri.CommitterState, len(batches))
 	for i, b := range batches {
-		if b.isPrecomp {
+		if b.IsPrecomp {
 			states[i] = c.precomputed
 			continue
 		}
-		v, ok := rt.GetState(committedStateKey(b.round.ID))
+		v, ok := rt.GetState(committedStateKey(b.Round.ID))
 		if !ok {
-			panic(fmt.Sprintf("pcs: missing committed state for round %d", b.round.ID))
+			panic(fmt.Sprintf("pcs: missing committed state for round %d", b.Round.ID))
 		}
 		states[i] = v.(*fri.CommitterState)
 	}
@@ -358,16 +355,16 @@ func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []batchRef) 
 
 // collectRoots returns the commitment roots in batch order: interactive roots
 // from the transported [Runtime.Commitments], the precomputed root from compile.
-func (c *compiled) collectRoots(rt *wiop.Runtime, batches []batchRef) []field.Octuplet {
+func (c *compiled) collectRoots(rt *wiop.Runtime, batches []BatchRef) []field.Octuplet {
 	roots := make([]field.Octuplet, len(batches))
 	for i, b := range batches {
-		if b.isPrecomp {
+		if b.IsPrecomp {
 			roots[i] = c.precomputedRoot
 			continue
 		}
-		root, ok := rt.Commitments[b.round.ID]
+		root, ok := rt.Commitments[b.Round.ID]
 		if !ok {
-			panic(fmt.Sprintf("pcs: missing commitment for round %d", b.round.ID))
+			panic(fmt.Sprintf("pcs: missing commitment for round %d", b.Round.ID))
 		}
 		roots[i] = root
 	}
@@ -385,8 +382,8 @@ func committedStateKey(roundID int) string {
 // buildEncoders builds the encoder schedule for sizes 2^0 .. 2^maxSizeIndex at
 // the given inverse rate. The schedule is a deterministic function of (rate,
 // index), so a per-round schedule is always a prefix of the global one.
-func buildEncoders(inverseRate, maxSizeIndex int) []*fri.RSEncoder {
-	encoders := make([]*fri.RSEncoder, maxSizeIndex+1)
+func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
+	encoders := make([]*fri.RSEncoder, int(maxSizeIndex)+1)
 	for i := range encoders {
 		enc := fri.NewEncoder(uint64(inverseRate)*(1<<i), 1<<i)
 		encoders[i] = &enc
@@ -410,8 +407,8 @@ func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime) int {
 // commitToRound sorts a round's columns into a [fri.MultiSizeTable] by padded
 // size (base then extension within each size, in column-declaration order) and
 // FRI-commits it with a freshly-built per-round encoder schedule (a prefix of
-// the global schedule). The column ordering matches [getLayout] exactly.
-func commitToRound(inverseRate int, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
+// the global schedule). The column ordering matches [GetLayout] exactly.
+func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
 
 	var (
 		cols          = round.Columns
@@ -434,25 +431,27 @@ func commitToRound(inverseRate int, round *wiop.Round, rt *wiop.Runtime) *fri.Co
 		if col.IsExtension {
 			sortedColumns[sizeIndex].Ext = append(
 				sortedColumns[sizeIndex].Ext,
-				writeDownVectorExt(assignment, size),
+				writeDownVectorExt(assignment, size, col.Module.Padding),
 			)
 		} else {
 			sortedColumns[sizeIndex].Base = append(
 				sortedColumns[sizeIndex].Base,
-				writeDownVectorBase(assignment, size),
+				writeDownVectorBase(assignment, size, col.Module.Padding),
 			)
 		}
 	}
-
-	committerState := fri.Commit(buildEncoders(inverseRate, maxSizeIndex), sortedColumns[:maxSizeIndex+1])
+	if maxSizeIndex > 255 {
+		panic("pcs: maxSizeIndex too big")
+	}
+	committerState := fri.Commit(buildEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
-// getLayout maps each of a round's columns to its [ColumnLocation] and returns
+// GetLayout maps each of a round's columns to its [ColumnLocation] and returns
 // the round's [fri.Shape] (per-size base/extension widths). The shape length is
 // maxSizeIndex+1, matching the committed table produced by [commitToRound], and
 // positions are assigned in column-declaration order so both agree.
-func getLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+func GetLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
 
 	var (
 		cols   = round.Columns
@@ -502,13 +501,13 @@ type claimKey struct {
 	shift    int
 }
 
-// recoverBatchClaims walks every [wiop.LagrangeEval] and collects, per batch, the
+// RecoverBatchClaims walks every [wiop.LagrangeEval] and collects, per batch, the
 // shift schedule and claimed evaluations of each opened column at the (single,
 // shared) evaluation point zeta. Shifts are normalized into [0, size); repeated
 // (column, shift) openings are deduplicated and cross-checked for a consistent
 // claimed value. It returns the per-batch shifts, claims and shapes aligned with
 // batches, plus zeta.
-func recoverBatchClaims(rt *wiop.Runtime, batches []batchRef) (
+func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 	[]fri.BatchShifts,
 	[]fri.BatchClaimedValues,
 	[]fri.Shape,
@@ -526,10 +525,10 @@ func recoverBatchClaims(rt *wiop.Runtime, batches []batchRef) (
 	)
 
 	for i, b := range batches {
-		layouts[i], shapes[i] = getLayout(b.round, rt)
+		layouts[i], shapes[i] = GetLayout(b.Round, rt)
 		shifts[i] = initializeBatchShift(shapes[i])
 		claims[i] = initializeBatchClaims(shapes[i])
-		batchOf[b.round] = i
+		batchOf[b.Round] = i
 	}
 
 	for _, eval := range sys.LagrangeEvals {
@@ -607,8 +606,9 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 }
 
 // writeDownVectorBase materializes a base-field column assignment padded up to
-// size with its constant padding value.
-func writeDownVectorBase(concrete *wiop.ConcreteVector, size int) []field.Element {
+// size, respecting the module's padding direction so the committed polynomial
+// matches the one evalLagrangePadded evaluates.
+func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
 		panic("is not base")
@@ -616,24 +616,43 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int) []field.Elemen
 
 	plainBase := concrete.Plain.AsBase()
 	plain := make([]field.Element, size)
-	copy(plain, plainBase)
-	for i := len(plainBase); i < size; i++ {
-		plain[i] = concrete.Padding
+
+	if padding == wiop.PaddingDirectionLeft {
+		gap := size - len(plainBase)
+		for i := range gap {
+			plain[i] = concrete.Padding
+		}
+		copy(plain[gap:], plainBase)
+	} else {
+		copy(plain, plainBase)
+		for i := len(plainBase); i < size; i++ {
+			plain[i] = concrete.Padding
+		}
 	}
 
 	return plain
 }
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
-// to size with its constant (lifted) padding value.
-func writeDownVectorExt(concrete *wiop.ConcreteVector, size int) []field.Ext {
+// to size, respecting the module's padding direction so the committed polynomial
+// matches the one evalLagrangePadded evaluates.
+func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
 
 	plainExt := concrete.Plain.AsExt()
 	plain := make([]field.Ext, size)
-	copy(plain, plainExt)
 	padExt := field.Lift(concrete.Padding)
-	for i := len(plainExt); i < size; i++ {
-		plain[i] = padExt
+
+	if padding == wiop.PaddingDirectionLeft {
+		gap := size - len(plainExt)
+		for i := range gap {
+			plain[i] = padExt
+		}
+		copy(plain[gap:], plainExt)
+	} else {
+		copy(plain, plainExt)
+		for i := len(plainExt); i < size; i++ {
+			plain[i] = padExt
+		}
 	}
 
 	return plain

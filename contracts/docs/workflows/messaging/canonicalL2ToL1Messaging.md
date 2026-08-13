@@ -1,7 +1,7 @@
 
 # 📩 Interaction Flow: Canonical Message Sending (L2 → L1)
 
-This document describes the step-by-step flow of how a canonical message is sent from L2 to L1 in the Linea network.
+This document describes the step-by-step flow of how a canonical message is sent from L2 to L1 in the Lineth network.
 
 ---
 
@@ -17,7 +17,7 @@ This document describes the step-by-step flow of how a canonical message is sent
 4. Coordinator:
    - Anchors the messaging Merkle root(s) on L1 during finalization
    - Emits events for the L2 user to construct a Merkle proof
-5. **L1 User** claims the message with proof on the `LineaRollup` / `L1MessageService`.
+5. **L1 User** claims the message with proof on the `LinethRollup` / `L1MessageService`.
 6. The contract verifies and **delivers the message** to the recipient.
 
 ---
