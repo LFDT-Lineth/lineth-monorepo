@@ -21,6 +21,8 @@
 - *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 - *(linea-besu)* Support custom liveness signers (#3666)
+- *(maru)* Support Noise / Yamux (#3751)
+- *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 
 ### 🐛 Bug Fixes
 

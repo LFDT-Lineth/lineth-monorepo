@@ -1,17 +1,31 @@
 const protocol = @import("protocol/root.zig");
+const public_input_mod = protocol.public_input;
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
+const grandproduct = @import("query/grandproduct.zig");
+const rowlimit = @import("query/rowlimit.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
 
-/// Compiled systems for every sub-verifier in the protocol.
-/// One field per sub-verifier; each holds the comptime metadata for that query.
+/// Compiled verifier metadata for the protocol: the public-input transcript
+/// layout plus one field per sub-verifier.
 pub const Systems = struct {
+    public_input: public_input_mod.Spec = .{},
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
+    /// Grand-product boundary checks: permutation arguments (Result == 1) and
+    /// message-bus handles (Result == expected accumulator). The running-product
+    /// Z-column recurrence and row-0 boundary are ordinary vanishing constraints,
+    /// already covered by `vanishing`; this sub-verifier closes the remaining
+    /// ∏Z[n-1] == Result and Result == expected identities.
+    grandproduct: grandproduct.System = .{},
+    /// Lookup row-limit checks. Independent of vanishing/logderivativesum: it
+    /// bounds dynamic-module runtime sizes rather than checking a polynomial
+    /// identity, so it needs only `proof.module_sizes`, never claims or coins.
+    rowlimit: rowlimit.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
     /// challenges, query positions) from the shared Fiat-Shamir transcript and
@@ -21,14 +35,22 @@ pub const Systems = struct {
     pcs: pcs.System,
 };
 
+/// Flat public-input statement in prover-ray registration order. Each entry is
+/// the verifier-visible scalar value of one cell registered via
+/// `System.RegisterPublicInputs` on the prover side.
+pub const PublicInput = []const protocol.Scalar;
+
 /// Proof is the verifier-visible transcript consumed by `verify` in one pass.
 /// It is the verifier-ray analogue of prover-ray's `wiop.Proof`: a
 /// self-contained bundle of exactly the data a verifier is entitled to see.
 ///
-/// Protocol-level round messages (public columns + cells) are shared across
-/// every sub-verifier. Sub-verifier-specific claim slices are routed only to
-/// the verifier that registered them. Coins are not stored here — they are
-/// re-derived deterministically by `protocol.replayWithTranscript` from the round messages.
+/// Protocol-level round messages (commitments + NON-public-input cells) are
+/// shared across every sub-verifier. Registered public-input cells are omitted
+/// from `rounds[*].cells` and carried separately in `VerifyInput.public_inputs`,
+/// mirroring prover-ray's `Proof` + `PublicInput` split. Sub-verifier-specific
+/// claim slices are routed only to the verifier that registered them. Coins are
+/// not stored here — they are re-derived deterministically by
+/// `protocol.replayWithTranscript` from the bound round messages.
 pub const Proof = struct {
     rounds: []const protocol.RoundMessage,
     /// Per-module domain sizes for dynamically-sized vanishing modules.
@@ -61,6 +83,18 @@ pub const PcsOpening = struct {
     proof: pcs.OpeningProof,
 };
 
+/// A bundled verifier input: prover-ray-style proof plus the separate flat
+/// public-input statement, for callers (native mmap / R5 linked-memory /
+/// embedded-rodata loaders) that need the two loaded and passed around as one
+/// value. `verify` itself takes `proof` and `public_inputs` as separate
+/// parameters — pass `input.proof, input.public_inputs`.
+/// `proof.rounds[*].cells` omits public-input cells; `public_inputs` supplies
+/// them in registration order.
+pub const VerifyInput = struct {
+    proof: Proof,
+    public_inputs: PublicInput = &.{},
+};
+
 /// Verifies a proof against the compiled protocol in three steps:
 ///
 ///   1. Replay   — absorb every round message into the shared Fiat-Shamir
@@ -70,17 +104,24 @@ pub const PcsOpening = struct {
 ///   3. Dispatch — call each sub-verifier with the shared context and its own
 ///                 claim slice. Sub-verifiers are independent of each other.
 ///
-/// `spec` carries the protocol-level coin routing (shared across all
-/// sub-verifiers). `systems` holds one compiled system per sub-verifier.
-/// This is the only place in the codebase that knows the full list of
-/// sub-verifiers.
+/// `spec` carries the protocol-level coin routing. `systems` carries the
+/// public-input transcript layout plus one compiled system per sub-verifier.
+/// This is the only place in the codebase that knows the full verifier
+/// metadata bundle.
 pub fn verify(
     comptime spec: protocol.Spec,
     comptime systems: Systems,
     proof: Proof,
+    public_inputs: PublicInput,
 ) !void {
+    comptime if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
+        @compileError("verifier: public_input.round_cell_counts must have one entry per replayed round");
+
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
+
+    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, public_inputs);
+    const rounds = bound_rounds.rounds();
 
     // Step 1 — replay transcript, derive all coins. The transcript is owned here
     // and threaded by pointer: `protocol` absorbs the round messages + squeezes
@@ -89,13 +130,13 @@ pub fn verify(
     // comptime-validates `spec` internal consistency and returns the
     // stack-allocated coin array.
     var transcript = fiat_shamir.Transcript.init();
-    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds, proof.module_sizes);
+    const all_coins = try protocol.replayWithTranscript(&transcript, spec, rounds, proof.module_sizes);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
     const ctx = protocol.Context{
         .all_coins = &all_coins,
-        .rounds = proof.rounds,
+        .rounds = rounds,
     };
 
     // Step 3 — PCS first. It continues the SAME transcript to derive the opening
@@ -113,7 +154,7 @@ pub fn verify(
     // against is provably the same octuplet zeta is bound to. Mirrors
     // prover-ray's `collectRoots` + `inputOpeningRoots`.
     var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
-    try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
+    try resolveRoots(pcs_system.batch_roots, rounds, &bound_roots);
 
     // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring the
     // index at comptime turns a mis-configured PCS system into a build error
@@ -163,6 +204,11 @@ pub fn verify(
     try logderivativesum.verify(systems.logderivativesum, ctx);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
+
+    try grandproduct.verify(systems.grandproduct, ctx);
+
+    try rowlimit.verify(systems.rowlimit, proof.module_sizes);
+
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }
 
@@ -194,24 +240,22 @@ fn routeClaims(
 
 /// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
 /// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
-/// interactive batch's root is the sole oracle commitment of the round message it
-/// names (the same octuplet absorbed to derive zeta); a precomputed batch's root
-/// is the compile-time constant. This is the verifier-ray analogue of prover-ray's
+/// interactive batch's root is the commitment of the round message it names
+/// (the same octuplet absorbed to derive zeta); a precomputed batch's root is
+/// the compile-time constant. This is the verifier-ray analogue of prover-ray's
 /// `collectRoots` reading `rt.Commitments`, so the root a batch is authenticated
 /// against is provably the one zeta is bound to.
 ///
 /// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
-/// name a round message that exists and carries exactly one oracle commitment;
-/// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
-/// an out-of-bounds panic or a silently mis-bound root.
+/// name a round message that exists and carries a commitment; otherwise the
+/// PCS/protocol metadata disagree — surfaced as an error rather than an
+/// out-of-bounds panic or a silently mis-bound root.
 ///
-/// A committed round can never carry public columns alongside its commitment:
-/// prover-ray's `hideCommittedColumns` (wiop/compilers/pcs/pcs.go) panics at
-/// compile time if a committed round holds a `VisibilityPublic` column, and
-/// otherwise rewrites all of that round's columns to `VisibilityInternal`
-/// before the transcript ever absorbs them. So a committed round's message is
-/// provably root-only — `cols.len != 1` below is asserting that invariant, not
-/// over-rejecting a legal mixed-visibility round.
+/// prover-ray columns never travel raw (see wiop_prove_verify.go's Proof
+/// comment): a round is either committed, in which case its message carries
+/// exactly that one root, or it isn't, in which case `commitment` is null. So
+/// `RoundMessage.commitment == null` below directly reflects "this round has no
+/// batch root," not an ambiguous case to disambiguate at runtime.
 fn resolveRoots(
     batch_roots: []const pcs.BatchRoot,
     rounds: []const protocol.RoundMessage,
@@ -223,15 +267,7 @@ fn resolveRoots(
             .precomputed => |root| slot.* = root,
             .round => |round_index| {
                 if (round_index >= rounds.len) return error.BatchRootMismatch;
-                const cols = rounds[round_index].columns;
-                // A committed interactive round carries exactly one oracle
-                // commitment (its batch Merkle root); anything else is a metadata
-                // mismatch, not an honest proof.
-                if (cols.len != 1) return error.BatchRootMismatch;
-                switch (cols[0]) {
-                    .oracle_commitment => |root| slot.* = root,
-                    .public_column => return error.BatchRootMismatch,
-                }
+                slot.* = rounds[round_index].commitment orelse return error.BatchRootMismatch;
             },
         }
     }
