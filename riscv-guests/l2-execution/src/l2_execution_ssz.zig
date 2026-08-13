@@ -2,8 +2,8 @@
 //!
 //! Mirrors the Python reference codec's wire format byte-for-byte: a 2-byte
 //! big-endian schema id (0x0002 for the input, 0x0003 for the output)
-//! followed by the SSZ encoding of the containers below. The Python side is
-//! the oracle: this codec's `encode`/`decode` byte layout must match its
+//! followed by the SSZ encoding of the containers below. This codec's
+//! `encode`/`decode` byte layout must match the Python reference's
 //! `encode_bytes` exactly (verified by the golden-vector test).
 //!
 //! Each payload's `stateless_input_ssz` is carried opaquely — a zero-copy
@@ -11,14 +11,15 @@
 //! vanilla stateless-input SSZ decoder's job (e.g. zesu's `ssz_decode.decode`),
 //! invoked one level up once this codec has split the extended envelope apart.
 //!
-//! Container layouts (fixed-head byte sizes):
-//!   SszL2ExecutionProofPrivateInput:  92 bytes  [32+8+20+20+8+4]
-//!   SszLineaPayloadInput:              8 bytes  [4+4]
-//!   SszForcedTransactionWitness:      21 bytes  [8+4+1+8]
+//! Container layouts (fixed-head byte sizes — see each *_FIXED_SIZE constant below for the field
+//! breakdown):
+//!   SszL2ExecutionProofPrivateInput:  92 bytes
+//!   SszLineaPayloadInput:              8 bytes
+//!   SszForcedTransactionWitness:      21 bytes
 //!   SszL2ExecutionProofOutput:        32 bytes  (ONLY `keccak256(public_inputs)` — see
 //!     `hashPublicInputs`/`encodeOutput`; `L2ExecutionProofOutput`'s other fields —
 //!     `start_block_number`, `l2_l1_messages`, `tx_froms`, `filtered_addresses` — are off-chain/
-//!     native-tooling data (see `l2_execution_json.zig`), never part of this wire format)
+//!     native-tooling data, never part of this wire format)
 //!   SszL2ExecutionProofPublicInput:  368 bytes  (16 fields, all fixed-size) — never written to the
 //!     wire itself; only its hash is (`encodePublicInputsBytes` exists purely for logging/off-chain
 //!     visibility, e.g. the guest's `zkvm_log` call).
@@ -385,7 +386,7 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
 /// `success` field on this type would be permanently `true` and couldn't mean anything.
 /// `start_block_number` and the `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages on
 /// `L2ExecutionProofOutput` are NOT part of this wire format; they exist for off-chain/native
-/// tooling only (see `l2_execution_json.zig`'s `encodeOutputJson`). The plain 16-field
+/// tooling only. The plain 16-field
 /// public-input tuple is never written to the wire either; it is only available via
 /// `encodePublicInputsBytes`/`hashPublicInputs`, for logging or off-chain inspection.
 pub fn encodeOutput(pi: L2ExecutionProofPublicInput) [OUTPUT_SIZE]u8 {

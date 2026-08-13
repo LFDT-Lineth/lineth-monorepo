@@ -1,6 +1,6 @@
 //! l2-execution guest logic: the Linea-specific layer on top of per-block stateless execution.
 //!
-//! Faithful translation of the Python oracle (`rollup_spec.l2_execution.run_l2_execution_guest` and
+//! Faithful translation of the Python reference implementation (`rollup_spec.l2_execution.run_l2_execution_guest` and
 //! its helpers) to Zig, wired against zesu's exposed modules:
 //!   - per-block execution + full logs: `execution.executeStatelessInputWithLogs`;
 //!   - vanilla stateless-input decode: `zesu_ssz_decode.decode`;
@@ -49,7 +49,7 @@ const BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0: [32]u8 = .{
     0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c,
 };
 
-/// Storage layout of L2MessageService (see the Python oracle's docstring for provenance).
+/// Storage layout of L2MessageService (see the Python reference implementation's docstring for provenance).
 const LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: u64 = 280;
 const L1_ROLLING_HASHES_MAPPING_BASE_SLOT: u64 = 281;
 
@@ -105,7 +105,7 @@ fn addToForcedTxRollingHash(prev: [32]u8, tx_hash: [32]u8, deadline: u64, from_a
 }
 
 /// Hash of a list of 32-byte digests (e.g. `l2_l1_messages_hash`'s message-hash preimages). Named
-/// `hashDigestList`, matching the Python oracle's `hash_digest_list` (renamed from `hash_hash_list`
+/// `hashDigestList`, matching the Python reference implementation's `hash_digest_list` (renamed from `hash_hash_list`
 /// for the same reason): "hash a HashList" reads as a typo, not a type name; `Digest` avoids the
 /// verb/noun clash.
 fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
@@ -124,7 +124,7 @@ fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
 
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
 //
-// Semantics (must match the Python oracle exactly — see Readme.md's state_transition.py docstrings):
+// Semantics (must match the Python reference implementation exactly — see Readme.md's state_transition.py docstrings):
 //   - account/slot proven absent from the trie  -> `null` / `0` (NOT an error);
 //   - a witness node needed to resolve the path is missing from the pool -> `error.InvalidProof`
 //     propagates (guest rejection). `verifyAccountIndexed`/`verifyStorageIndexed` already draw this
@@ -141,16 +141,14 @@ fn readAccount(state_root: [32]u8, address: [20]u8, node_index: *const mpt.NodeI
 }
 
 /// Storage value at (`address`, `slot`) proven against `state_root`; `0` if the account or slot is
-/// absent. Mirrors `L2State.storage`: look up the account for its `storage_root`, then walk the
-/// per-account storage trie.
+/// absent. Mirrors `L2State.storage`.
 fn readStorage(state_root: [32]u8, address: [20]u8, slot: [32]u8, node_index: *const mpt.NodeIndex) !u256 {
     const account = try readAccount(state_root, address, node_index) orelse return 0;
     return mpt.verifyStorageIndexed(account.storage_root, slot, node_index);
 }
 
-/// L2->L1 message extraction: for each log across a block's receipts whose address is the
-/// L2MessageService and whose topic0 is the bridge's `MessageSent` signature, the message hash is
-/// `topics[3]`.
+/// L2->L1 message extraction: collects `topics[3]` from each receipt log matching the
+/// L2MessageService's `MessageSent` signature.
 fn extractL2L1Messages(
     alloc: std.mem.Allocator,
     out: *std.ArrayListUnmanaged([32]u8),
@@ -319,7 +317,7 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
     // "No L2MessageService configured" mode: a zero l2MessageServiceAddress means this range's
     // chain has no bridge contract, so there is nothing to read or scan. Both the L1->L2 bridge
     // rolling-hash boundary reads and the L2->L1 message-log extraction are suppressed and the four
-    // bridge PI fields are pinned to zero (mirrors the Python oracle's read_l1l2_bridge_state
+    // bridge PI fields are pinned to zero (mirrors the Python reference implementation's read_l1l2_bridge_state
     // zero-address branch). This is a real semantic, not test scaffolding — but it is also what lets
     // a vanilla EF stateless input (which has no L2MessageService account, and whose witness only
     // covers nodes execution touched) be dummy-wrapped and run through this guest unchanged.
@@ -467,21 +465,3 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         .filtered_addresses = try filtered_addresses.toOwnedSlice(alloc),
     };
 }
-
-// ─── Exposed for unit tests only (test/l2_execution_test.zig) ─────────────────────────────────────
-
-pub const test_api = struct {
-    pub const u64ToSlot32Fn = u64ToSlot32;
-    pub const mappingSlotFn = mappingSlot;
-    pub const chainConfigHashFn = chainConfigHash;
-    pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
-    pub const hashDigestListFn = hashDigestList;
-    pub const hashAddressListFn = hashAddressList;
-    pub const readAccountFn = readAccount;
-    pub const readStorageFn = readStorage;
-    pub const readL1L2BridgeStateFn = readL1L2BridgeState;
-    pub const extractL2L1MessagesFn = extractL2L1Messages;
-    pub const validateForcedTransactionsFn = validateForcedTransactions;
-    pub const recoverSenderFn = tx_signing.recoverSender;
-    pub const Acceptance = ForcedTransactionAcceptance;
-};
