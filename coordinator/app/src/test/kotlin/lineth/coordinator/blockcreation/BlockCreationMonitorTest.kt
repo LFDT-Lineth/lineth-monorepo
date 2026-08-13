@@ -74,6 +74,24 @@ class BlockCreationMonitorTest {
     }
   }
 
+  fun createByTimestampMonitor(
+    targetTimestamp: Instant,
+    config: BlockCreationMonitor.Config = this.config,
+    lastProvenSync: LastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
+  ): BlockCreationMonitor = BlockCreationMonitor(
+    vertx = this.vertx,
+    ethApi = ethApiClient,
+    startingPoint = BlockCreationMonitor.StartingPoint.ByTimestampInclusive(targetTimestamp),
+    blockCreationListener = blockCreationListener,
+    lastProvenBlockNumberProviderSync = lastProvenSync,
+    config = config,
+    targetCheckpointPauseController = object : TargetCheckpointPauseController {
+      override fun shouldPauseConflation(): Boolean = false
+      override fun importBlock(block: Block) = Unit
+      override fun signalResumeFromApi(): Boolean = false
+    },
+  )
+
   fun createBlockCreationMonitor(
     startingBlockNumberExclusive: Long = 99,
     blockCreationListener: BlockCreationListener = this.blockCreationListener,
@@ -82,7 +100,7 @@ class BlockCreationMonitorTest {
     return BlockCreationMonitor(
       vertx = this.vertx,
       ethApi = ethApiClient,
-      startingBlockNumberExclusive = startingBlockNumberExclusive,
+      startingPoint = BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(startingBlockNumberExclusive),
       blockCreationListener = blockCreationListener,
       lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
       config = config,
@@ -387,6 +405,87 @@ class BlockCreationMonitorTest {
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 5))
     monitor.start().get(10, TimeUnit.SECONDS)
     monitor.start().get(10, TimeUnit.SECONDS)
+  }
+
+  @Test
+  fun `ByTimestamp should start monitoring from first block at or after cutover timestamp`() {
+    val startTime = Instant.parse("2025-01-01T00:00:00.00Z")
+    // blocks 99..149, 1s each: block 99 = t+0s, block 110 = t+11s
+    val blocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 50, startTime = startTime)
+    val targetTimestamp = startTime.plus(11.seconds) // exactly block 110's timestamp
+
+    monitor = createByTimestampMonitor(targetTimestamp)
+    setupFakeExecutionLayerWithBlocks(blocks)
+
+    monitor.start()
+
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.first().number).isEqualTo(110UL)
+      }
+  }
+
+  @Test
+  fun `ByTimestamp should wait for L2 to reach cutover timestamp before starting`() {
+    val startTime = Instant.parse("2025-01-01T00:00:00.00Z")
+    val allBlocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 50, startTime = startTime)
+    // block 110 = startTime + 11s
+    val targetTimestamp = startTime.plus(11.seconds)
+
+    monitor = createByTimestampMonitor(targetTimestamp)
+
+    // Initially only blocks 99..107 are available: latest timestamp = startTime+8s < target
+    setupFakeExecutionLayerWithBlocks(allBlocks.filter { it.number <= 107u })
+
+    monitor.start()
+
+    // Monitor should be waiting — no blocks delivered yet
+    await().atLeast(config.pollingInterval.times(3).toJavaDuration())
+    assertThat(blockCreationListener.blocksReceived).isEmpty()
+
+    // Advance the L2 past the cutover
+    setupFakeExecutionLayerWithBlocks(allBlocks)
+
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.first().number).isEqualTo(110UL)
+      }
+  }
+
+  @Test
+  fun `ByTimestamp should walk forward to find exact first block when estimate undershoots`() {
+    val startTime = Instant.parse("2025-01-01T00:00:00.00Z")
+    // 2s block time: block 0 = t+0s, block 15 = t+30s, block 30 = t+60s
+    val blocks = createBlocks(
+      startBlockNumber = 0u,
+      numberOfBlocks = 30,
+      startTime = startTime,
+      blockTime = 2.seconds,
+    )
+    // target = block 15's timestamp
+    val targetTimestamp = startTime.plus(30.seconds)
+    // latest = block 30 (t+60s), estimate = max(0, 30 - (60-30)) = 0
+    // walk: blocks 0(0s)..14(28s) < target, block 15(30s) = target → check 14(28s < target) → start at 15
+
+    monitor = createByTimestampMonitor(
+      targetTimestamp = targetTimestamp,
+      config = config.copy(blocksToFinalization = 0),
+      lastProvenSync = LastProvenBlockNumberProviderDouble(0u),
+    )
+    setupFakeExecutionLayerWithBlocks(blocks)
+
+    monitor.start()
+
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.first().number).isEqualTo(15UL)
+      }
   }
 
   @Test
