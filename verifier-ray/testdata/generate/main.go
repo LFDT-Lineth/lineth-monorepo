@@ -1150,12 +1150,13 @@ func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem
 	var out bytes.Buffer
 	writeCompiledHeader(&out)
 	opts := codegen.CompiledSystemZigOptions{
-		EmitHeader:      false,
-		ProtocolImport:  "verifier_ray.protocol",
-		FieldImport:     "verifier_ray.field.koalabear",
-		VanishingImport: "verifier_ray.query.vanishing",
-		LogDerivImport:  "verifier_ray.query.logderivativesum",
-		RowLimitImport:  "verifier_ray.query.rowlimit",
+		EmitHeader:         false,
+		ProtocolImport:     "verifier_ray.protocol",
+		FieldImport:        "verifier_ray.field.koalabear",
+		VanishingImport:    "verifier_ray.query.vanishing",
+		LogDerivImport:     "verifier_ray.query.logderivativesum",
+		GrandProductImport: "verifier_ray.query.grandproduct",
+		RowLimitImport:     "verifier_ray.query.rowlimit",
 	}
 	for i := range cases {
 		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
@@ -1181,6 +1182,7 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
@@ -1276,12 +1278,13 @@ func writeVerifyFixtures(allCases []fixtureCase, allSystems []codegen.CompiledSy
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
 	opts := codegen.CompiledSystemZigOptions{
-		EmitHeader:      false,
-		ProtocolImport:  "protocol",
-		FieldImport:     "field",
-		VanishingImport: "vanishing",
-		LogDerivImport:  "logderivativesum",
-		RowLimitImport:  "rowlimit",
+		EmitHeader:         false,
+		ProtocolImport:     "protocol",
+		FieldImport:        "field",
+		VanishingImport:    "vanishing",
+		LogDerivImport:     "logderivativesum",
+		GrandProductImport: "grandproduct",
+		RowLimitImport:     "rowlimit",
 	}
 
 	for i := range cases {
@@ -1314,6 +1317,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const merkle = verifier_ray.crypto.merkle;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
 	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
 	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
