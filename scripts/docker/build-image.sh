@@ -54,6 +54,8 @@ Options:
                             (<image>:buildcache-<arch>). Export only happens
                             with --push. Default: on in CI, off locally.         [env: REGISTRY_CACHE=true|false]
   --no-registry-cache       Disable the registry build cache.
+  --no-cache                Pass --no-cache to buildx, ignoring all layer cache. [env: NO_CACHE=true]
+  --progress MODE           Buildx progress output mode, e.g. plain.             [env: PROGRESS]
   --builder NAME            Use (and create if missing) this buildx builder.     [env: DOCKER_BUILDER]
                             Created with the docker-container driver, which is
                             what CI uses. Leave empty to use the current builder.
@@ -71,6 +73,8 @@ PUSH_IMAGE="${PUSH_IMAGE:-false}"
 SAVE_TO="${SAVE_TO:-}"
 DOCKER_BUILDER="${DOCKER_BUILDER:-}"
 DRY_RUN="${DRY_RUN:-false}"
+NO_CACHE="${NO_CACHE:-false}"
+PROGRESS="${PROGRESS:-}"
 # Registry cache defaults on in CI (where it is populated and warm) and off
 # locally, so a local build needs neither network nor registry credentials.
 REGISTRY_CACHE="${REGISTRY_CACHE:-${GITHUB_ACTIONS:-false}}"
@@ -99,6 +103,8 @@ while [[ $# -gt 0 ]]; do
     --platforms) PLATFORMS="$2"; shift 2 ;;
     --push) PUSH_IMAGE=true; shift ;;
     --save-to) SAVE_TO="$2"; shift 2 ;;
+    --no-cache) NO_CACHE=true; shift ;;
+    --progress) PROGRESS="$2"; shift 2 ;;
     --registry-cache) REGISTRY_CACHE=true; shift ;;
     --no-registry-cache) REGISTRY_CACHE=false; shift ;;
     --builder) DOCKER_BUILDER="$2"; shift 2 ;;
@@ -110,8 +116,24 @@ done
 
 [[ -n "$IMAGE_NAME" ]] || { usage >&2; die "--image-name is required"; }
 [[ -n "$DOCKERFILE_PATH" ]] || { usage >&2; die "--dockerfile is required"; }
-[[ -f "$DOCKERFILE_PATH" ]] || die "Dockerfile not found: ${DOCKERFILE_PATH}"
-[[ -d "$DOCKER_CONTEXT" ]] || die "build context not found: ${DOCKER_CONTEXT}"
+# Missing inputs are fatal for a real build, but only a warning under --dry-run:
+# a dry run is for showing the command, which is useful before the artefacts the
+# build context depends on have been assembled.
+require_path() {
+  # `test` is used rather than `[[ ]]` because the -f/-d operator is dynamic here.
+  local kind="$1" flag="$2" path="$3"
+  if test -"$flag" "$path"; then
+    return 0
+  fi
+  if [[ "$DRY_RUN" == "true" ]]; then
+    warn "${kind} not found: ${path}"
+  else
+    die "${kind} not found: ${path}"
+  fi
+}
+
+require_path "Dockerfile" f "$DOCKERFILE_PATH"
+require_path "build context" d "$DOCKER_CONTEXT"
 
 # Append each non-empty, trimmed line of a multiline env var to an array.
 collect_lines() {
@@ -183,6 +205,8 @@ fi
 BUILD_CMD=(docker buildx build)
 [[ -n "$DOCKER_BUILDER" ]] && BUILD_CMD+=(--builder "$DOCKER_BUILDER")
 BUILD_CMD+=(--file "$DOCKERFILE_PATH" --platform "$PLATFORMS")
+[[ "$NO_CACHE" == "true" ]] && BUILD_CMD+=(--no-cache)
+[[ -n "$PROGRESS" ]] && BUILD_CMD+=(--progress "$PROGRESS")
 
 for item in ${BUILD_ARG_ITEMS[@]+"${BUILD_ARG_ITEMS[@]}"}; do
   BUILD_CMD+=(--build-arg "$item")

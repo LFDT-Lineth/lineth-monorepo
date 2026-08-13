@@ -10,6 +10,7 @@
 #   make docker-build-prover DRY_RUN=true           # print the buildx command only
 #   make docker-build-maru SKIP_PREBUILD=true       # reuse the previous gradle dist
 #   make docker-build-all
+#   make docker-build-linea-besu-package            # slow: builds Besu from source
 #
 # See scripts/docker/README.md.
 
@@ -25,6 +26,10 @@ DRY_RUN ?= false
 SKIP_PREBUILD ?= false
 NODE_VERSION ?= $(shell tr -d '[:space:]' < .nvmrc)
 POSTMAN_NATIVE_LIBS_RELEASE_TAG ?= blob-libs-v3.0.1
+# linea-besu-package image metadata, mirroring .github/actions/linea-besu-package/
+# compute-metadata (build_date there is `date --rfc-3339=date`, i.e. date only).
+LINEA_BESU_VCS_REF ?= $(shell git rev-parse HEAD)
+LINEA_BESU_BUILD_DATE ?= $(shell date -u +%Y-%m-%d)
 
 DOCKER_BUILD := scripts/docker/build-image.sh \
 	--tags $(DOCKER_IMAGE_TAG) \
@@ -35,15 +40,17 @@ DOCKER_BUILD := scripts/docker/build-image.sh \
 
 # Pre-build steps (gradle dists) can be skipped with SKIP_PREBUILD=true when the
 # artefacts are already in place — the Docker build itself is what you iterate on.
+# DRY_RUN also skips them, so printing the buildx command never triggers a compile.
 define prebuild
-	@if [ "$(SKIP_PREBUILD)" = "true" ]; then \
-		echo "SKIP_PREBUILD=true — skipping: $(1)"; \
+	@if [ "$(SKIP_PREBUILD)" = "true" ] || [ "$(DRY_RUN)" = "true" ]; then \
+		echo "skipping pre-build: $(1)"; \
 	else \
 		$(1); \
 	fi
 endef
 
 DOCKER_IMAGE_TARGETS := \
+	docker-build-linea-besu-package \
 	docker-build-coordinator \
 	docker-build-transaction-exclusion-api \
 	docker-build-maru \
@@ -121,3 +128,28 @@ docker-build-lido-governance-monitor:
 		--dockerfile ./operations/native-yield/lido-governance-monitor/Dockerfile \
 		--context . \
 		--build-arg NODE_VERSION=$(NODE_VERSION)
+
+# .github/workflows/reusable-linea-besu-package-build-test-push.yml
+#
+# The pre-build chain is the same one CI runs through
+# .github/actions/linea-besu-package/build-plugins-and-assemble: compile Besu from
+# source, build the tracer and sequencer plugins, then assemble them together with
+# the downloaded staterecovery/shomei plugins into linea-besu/package/tmp.
+#
+# CI then does `mv ./tmp/besu ./linea-besu` and builds with linea-besu/ as context.
+# We keep tmp/ as the context instead: the Dockerfile's only context dependency is
+# `COPY besu /opt/besu/`, so the image is identical, and every generated file stays
+# inside tmp/, which `make -C linea-besu/package clean` already removes rather than
+# leaving an untracked besu/ inside the git-tracked linea-besu/ directory.
+#
+# The `-with-fleet` variant is not reproduced: it needs a token for the private
+# Consensys/besu-fleet-plugin repository.
+docker-build-linea-besu-package:
+	$(call prebuild,$(MAKE) -C linea-besu/package build-besu build-tracer-and-sequencer clean assemble)
+	$(DOCKER_BUILD) \
+		--image-name consensys/linea-besu-package \
+		--dockerfile linea-besu/package/linea-besu/Dockerfile \
+		--context linea-besu/package/tmp \
+		--build-arg VERSION=$(DOCKER_IMAGE_TAG) \
+		--build-arg VCS_REF=$(LINEA_BESU_VCS_REF) \
+		--build-arg BUILD_DATE=$(LINEA_BESU_BUILD_DATE)

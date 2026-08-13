@@ -7,6 +7,7 @@ The Docker images published by CI are built by a single script,
 |--------|-------------|
 | CI | [`.github/actions/docker-build-publish/action.yml`](../../.github/actions/docker-build-publish/action.yml), used by `.github/workflows/<image>-build-and-publish.yml` |
 | Local | `make docker-build-<image>` ([`images.mk`](./images.mk), included from the root `Makefile`) |
+| Package-local | `make -C maru docker-build-local-image` and `make -C linea-besu/package build-image`, which delegate here so their documented flags (`BESU_PACKAGE_TAG`, `PLATFORM`, …) keep working |
 
 Both paths produce the same `docker buildx build` command line, so a local build
 reproduces what the pipeline does instead of approximating it.
@@ -26,6 +27,25 @@ Each `docker-build-<image>` target mirrors the corresponding workflow: same
 pre-build step (`./gradlew …:installDist` where the workflow has one), same
 Dockerfile, context, build args and named build contexts.
 
+### linea-besu-package
+
+`make docker-build-linea-besu-package` is the slowest target by a wide margin: its
+pre-build chain compiles Besu from source and builds the tracer and sequencer
+plugins, so expect `docker-build-all` to take a long time because of it. It runs
+the same chain as CI's
+`.github/actions/linea-besu-package/build-plugins-and-assemble`
+(`build-besu` → `build-tracer-and-sequencer` → `clean` → `assemble` in
+`linea-besu/package/Makefile`) and produces `consensys/linea-besu-package:local`,
+the tag `docker/compose-*.yml` expects via `LINEA_BESU_PACKAGE_TAG`.
+
+Once assembled, iterate on the image alone with `SKIP_PREBUILD=true`. Two
+deliberate deviations from CI: the build context stays at `linea-besu/package/tmp`
+instead of CI's `linea-besu/package/linea-besu/.` (identical image — the Dockerfile
+only does `COPY besu /opt/besu/` — but all generated files stay inside `tmp/`,
+which `make -C linea-besu/package clean` removes), and the `-with-fleet` variant is
+not reproduced because it needs a token for the private `Consensys/besu-fleet-plugin`
+repository.
+
 ### Variables
 
 | Variable | Default | Meaning |
@@ -34,9 +54,11 @@ Dockerfile, context, build args and named build contexts.
 | `DOCKER_BUILDER` | `linea-local` | Buildx builder to use; created on demand with the `docker-container` driver, matching CI. Set to empty to use your current builder |
 | `PLATFORMS` | *(empty)* | Comma-separated platforms; empty means `linux/amd64`, as in the CI test build |
 | `REGISTRY_CACHE` | `false` | `true` imports `<image>:buildcache-amd64` from Docker Hub like CI does. Off by default so local builds need no network or credentials |
-| `DRY_RUN` | `false` | `true` prints the commands instead of running them |
+| `DRY_RUN` | `false` | `true` prints the commands instead of running them, and skips the pre-build step. A missing Dockerfile or build context is a warning rather than an error, so you can inspect the command before anything is assembled |
 | `SKIP_PREBUILD` | `false` | `true` skips the gradle/dist step |
 | `NODE_VERSION` | from `.nvmrc` | Passed to the Node-based images, like `.github/actions/get-node-version` does |
+| `LINEA_BESU_VCS_REF` | `git rev-parse HEAD` | `VCS_REF` build arg for `linea-besu-package` (CI passes `github.sha`) |
+| `LINEA_BESU_BUILD_DATE` | today, UTC | `BUILD_DATE` build arg for `linea-besu-package` |
 
 ### Simulating a multi-arch publish build
 

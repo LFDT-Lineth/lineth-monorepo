@@ -37,16 +37,24 @@ assemble:
 	LOCAL_TRACER_DIST_FOLDER=$(LOCAL_TRACER_DIST_FOLDER) \
 	./scripts/assemble-packages.sh
 
+# When PLATFORM is unset, buildx used to pick the host platform implicitly.
+# build-image.sh always passes an explicit --platform, so resolve the host
+# platform here to keep that behaviour.
+DOCKER_HOST_PLATFORM ?= $(shell docker version --format '{{.Server.Os}}/{{.Server.Arch}}' 2>/dev/null)
+BUILD_IMAGE_PLATFORM ?= $(if $(PLATFORM),$(PLATFORM),$(DOCKER_HOST_PLATFORM))
+
+# Delegates to the monorepo-wide build script, which is also what CI and
+# `make docker-build-linea-besu-package` use. See scripts/docker/README.md.
 build-image:
-	echo "IMAGE TAG=$(BESU_PACKAGE_TAG)"
-	echo "PLATFORM=$(PLATFORM)"
-	if [ "$(PLATFORM)" = "" ]; then \
-		echo "Building image for default platform"; \
-		docker buildx build --file linea-besu/Dockerfile --tag consensys/linea-besu-package:$(BESU_PACKAGE_TAG) ./tmp --progress=plain --no-cache --load; \
-	else \
-		echo "Building image for $(PLATFORM)"; \
-		docker buildx build --file linea-besu/Dockerfile --platform $(PLATFORM) --tag consensys/linea-besu-package:$(BESU_PACKAGE_TAG) ./tmp --progress=plain --no-cache --load; \
-	fi
+	../../scripts/docker/build-image.sh \
+		--image-name consensys/linea-besu-package \
+		--tags $(BESU_PACKAGE_TAG) \
+		--dockerfile linea-besu/Dockerfile \
+		--context ./tmp \
+		$(if $(BUILD_IMAGE_PLATFORM),--platforms $(BUILD_IMAGE_PLATFORM)) \
+		--no-registry-cache \
+		--no-cache \
+		--progress plain
 
 build:
 	echo "Build linea-besu-package image from source with tag=$(BESU_PACKAGE_TAG)"
