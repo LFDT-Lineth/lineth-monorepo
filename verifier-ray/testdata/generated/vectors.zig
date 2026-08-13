@@ -43,12 +43,8 @@ pub const PoseidonCompressCase = struct { left: [8]u32, right: [8]u32, expected:
 pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };
 pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };
 
-pub const prover_visibility_oracle: u8 = 1;
-pub const prover_visibility_public: u8 = 2;
-
-pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
-pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };
+pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };
 pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };
 
 pub const field_cases = [_]FieldCase{
@@ -143,25 +139,19 @@ pub const fiat_shamir_cases = [_]FiatShamirCase{
 pub const runtime_trace_cases = [_]RuntimeTraceCase{
     .{ .rounds = &.{
         .{
-            .columns = &.{
-                .{ .oracle = &.{.{ 457422437, 1507660014, 804096924, 2039788297, 2029215976, 1604256236, 365254649, 820778084 }} },
-                .{ .public_ext = &.{ .{ 5, 9, 2, 6, 5, 3 }, .{ 5, 8, 9, 7, 9, 3 }, .{ 2, 3, 8, 4, 6, 2 }, .{ 6, 4, 3, 3, 8, 3 } } },
-            },
+            .commitment = .{ 457422437, 1507660014, 804096924, 2039788297, 2029215976, 1604256236, 365254649, 820778084 },
             .cells = &.{
                 .{ .base = 23 },
                 .{ .ext = .{ 10, 20, 30, 40, 50, 60 } },
             },
-            .expected_coins = &.{ .{ 2017567272, 1778391968, 1167748950, 87048359, 648365507, 1492709184 }, .{ 805362770, 1925645492, 1910453979, 533502493, 1296767730, 105917673 } },
+            .expected_coins = &.{ .{ 672693748, 365195789, 1235613305, 1607518205, 1941975990, 1699831710 }, .{ 276983833, 533535091, 1435052243, 573971, 519684259, 832799144 } },
         },
         .{
-            .columns = &.{
-                .{ .oracle = &.{.{ 1513238224, 1205466055, 1958485117, 1171311743, 1105605557, 2123056526, 1446366138, 1204090127 }} },
-                .{ .public_base = &.{ 11, 22, 33, 44 } },
-            },
+            .commitment = .{ 1513238224, 1205466055, 1958485117, 1171311743, 1105605557, 2123056526, 1446366138, 1204090127 },
             .cells = &.{
                 .{ .base = 77 },
             },
-            .expected_coins = &.{.{ 599462548, 106956218, 1562197620, 1802592085, 1991170243, 971914108 }},
+            .expected_coins = &.{.{ 1069051465, 1943749361, 2082560852, 402027361, 1126835429, 2125676879 }},
         },
     } },
 };

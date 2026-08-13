@@ -10,9 +10,12 @@ import (
 // sub-verifier; fields are zero-valued (empty) when the system has no queries
 // of that kind.
 type CompiledSystem struct {
-	Routing   CoinRouting
-	Vanishing VanishingSystem
-	LogDeriv  LogDerivSystem
+	Routing      CoinRouting
+	PublicInput  PublicInputSystem
+	Vanishing    VanishingSystem
+	LogDeriv     LogDerivSystem
+	GrandProduct GrandProductSystem
+	RowLimit     RowLimitSystem
 	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
@@ -22,13 +25,15 @@ type CompiledSystem struct {
 // CompiledSystemZigOptions configures WriteCompiledSystemZig.
 type CompiledSystemZigOptions struct {
 	// EmitHeader, when true, prepends all necessary import declarations
-	// (protocol, field, vanishing, logderivativesum). Set to false when writing
-	// multiple systems under a shared file header.
-	EmitHeader      bool
-	ProtocolImport  string
-	FieldImport     string
-	VanishingImport string
-	LogDerivImport  string
+	// (protocol, field, vanishing, logderivativesum, rowlimit). Set to false
+	// when writing multiple systems under a shared file header.
+	EmitHeader         bool
+	ProtocolImport     string
+	FieldImport        string
+	VanishingImport    string
+	LogDerivImport     string
+	GrandProductImport string
+	RowLimitImport     string
 }
 
 // WriteCompiledSystemZig writes the spec, vanishing system, and logderiv
@@ -44,6 +49,13 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 	}); err != nil {
 		return err
 	}
+	if err := WritePublicInputSystemZigWithOptions(w, system.PublicInput, PublicInputZigOptions{
+		ProtocolImport: opts.ProtocolImport,
+		ConstName:      fmt.Sprintf("system_%d_public_input", index),
+		EmitHeader:     false,
+	}); err != nil {
+		return err
+	}
 	if err := WriteVanishingSystemZigWithOptions(w, index, system.Vanishing, VanishingZigOptions{
 		FieldImport:     opts.FieldImport,
 		VanishingImport: opts.VanishingImport,
@@ -52,8 +64,20 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 	}); err != nil {
 		return err
 	}
-	return WriteLogDerivSystemZigWithOptions(w, index, system.LogDeriv, LogDerivZigOptions{
+	if err := WriteLogDerivSystemZigWithOptions(w, index, system.LogDeriv, LogDerivZigOptions{
 		EmitImport:     opts.EmitHeader,
 		LogDerivImport: opts.LogDerivImport,
+	}); err != nil {
+		return err
+	}
+	if err := WriteGrandProductSystemZigWithOptions(w, index, system.GrandProduct, GrandProductZigOptions{
+		EmitImport:         opts.EmitHeader,
+		GrandProductImport: opts.GrandProductImport,
+	}); err != nil {
+		return err
+	}
+	return WriteRowLimitSystemZigWithOptions(w, index, system.RowLimit, RowLimitZigOptions{
+		EmitImport: opts.EmitHeader,
+		Import:     opts.RowLimitImport,
 	})
 }

@@ -122,8 +122,8 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 	dynA := sys.NewDynamicModule(sys.Context.Childf("dynA"), wiop.PaddingDirectionRight)
 	sys.NewSizedModule(sys.Context.Childf("static"), 4, wiop.PaddingDirectionNone)
 	dynB := sys.NewDynamicModule(sys.Context.Childf("dynB"), wiop.PaddingDirectionRight)
-	_ = dynA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	_ = dynB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	_ = dynA.NewColumn(sys.Context.Childf("colA"), r0)
+	_ = dynB.NewColumn(sys.Context.Childf("colB"), r0)
 
 	order := DynamicModuleOrder(sys)
 	if len(order) != 2 {
@@ -152,7 +152,7 @@ func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
 	sys := wiop.NewSystemf("dyn-alias")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// Open the column at offsets 1 and 9: at the proving size 8 these alias
 	// (1 == 9 mod 8), so prover-ray produces one opening but the raw schedule two.
 	mod.NewVanishing(
@@ -202,7 +202,7 @@ func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
 	sys := wiop.NewSystemf("dyn-alias-crosssize")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("alias"),
 		wiop.Sub(col.View().Shift(1), col.View().Shift(5)),
@@ -255,7 +255,7 @@ func TestBuildPcsSystemRecordsMinimumSafeSizeAboveOne(t *testing.T) {
 	sys := wiop.NewSystemf("dyn-alias-size-one")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("alias"),
 		wiop.Sub(col.View(), col.View().Shift(1)),
