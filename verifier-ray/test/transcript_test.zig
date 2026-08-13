@@ -17,25 +17,22 @@ test "transcript absorbs elements deterministically" {
     try std.testing.expect(!challenge.isZero());
 }
 
-test "replay absorbs commitments, public columns, and cells, then squeezes coins" {
-    const entries = [_]protocol.ColumnMessage{
-        .{ .oracle_commitment = .{
-            field.Element.init(1),
-            field.Element.init(2),
-            field.Element.init(3),
-            field.Element.init(4),
-            field.Element.init(5),
-            field.Element.init(6),
-            field.Element.init(7),
-            field.Element.init(8),
-        } },
-        .{ .public_column = .{ .base = &.{field.Element.init(9)} } },
+test "replay absorbs a commitment and cells, then squeezes coins" {
+    const commitment: protocol.Commitment = .{
+        field.Element.init(1),
+        field.Element.init(2),
+        field.Element.init(3),
+        field.Element.init(4),
+        field.Element.init(5),
+        field.Element.init(6),
+        field.Element.init(7),
+        field.Element.init(8),
     };
     const cells = [_]protocol.Scalar{
         .{ .base = field.Element.init(10) },
     };
     const rounds = [_]protocol.RoundMessage{
-        .{ .columns = &entries, .cells = &cells },
+        .{ .commitment = commitment, .cells = &cells },
     };
 
     // One message round that squeezes two coins (round 0 is the pre-round-1

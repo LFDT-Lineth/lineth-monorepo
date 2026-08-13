@@ -22,6 +22,7 @@
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 - *(linea-besu)* Support custom liveness signers (#3666)
 - *(maru)* Support Noise / Yamux (#3751)
+- *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 
 ### 🐛 Bug Fixes
 
@@ -133,3 +134,4 @@
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(linea-besu)* Package renaming to lineth.* (#3750)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
+- *(linea-besu)* Logging consistency and noise reduction (#3788)
