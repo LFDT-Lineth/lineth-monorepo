@@ -60,6 +60,10 @@ Options:
                             Created with the docker-container driver, which is
                             what CI uses. Leave empty to use the current builder.
   --dry-run                 Print the commands instead of running them.          [env: DRY_RUN=true]
+
+VERSION, VCS_REF and BUILD_DATE build args are injected automatically (from the
+primary tag, GITHUB_SHA or git HEAD, and the current UTC time) so every image
+carries provenance labels. Override with the VCS_REF / BUILD_DATE env vars.
   -h, --help                Show this help.
 EOF
 }
@@ -176,6 +180,20 @@ fi
 
 PRIMARY_IMAGE="${IMAGE_NAME}:${TAGS[0]}"
 
+# --- image metadata ---------------------------------------------------------
+# Every first-party Dockerfile declares these ARGs and turns them into
+# org.label-schema.* labels. Injecting them here is what keeps published images
+# traceable to a commit without each workflow repeating the same three lines.
+# They are emitted before any caller-supplied --build-arg, so a caller can still
+# override them (buildx takes the last occurrence).
+VCS_REF="${VCS_REF:-${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo unknown)}}"
+BUILD_DATE="${BUILD_DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+METADATA_ARGS=(
+  "VERSION=${TAGS[0]}"
+  "VCS_REF=${VCS_REF}"
+  "BUILD_DATE=${BUILD_DATE}"
+)
+
 # --- platforms --------------------------------------------------------------
 if [[ -z "$PLATFORMS" ]]; then
   if [[ "$PUSH_IMAGE" == "true" ]]; then
@@ -208,6 +226,9 @@ BUILD_CMD+=(--file "$DOCKERFILE_PATH" --platform "$PLATFORMS")
 [[ "$NO_CACHE" == "true" ]] && BUILD_CMD+=(--no-cache)
 [[ -n "$PROGRESS" ]] && BUILD_CMD+=(--progress "$PROGRESS")
 
+for item in ${METADATA_ARGS[@]+"${METADATA_ARGS[@]}"}; do
+  BUILD_CMD+=(--build-arg "$item")
+done
 for item in ${BUILD_ARG_ITEMS[@]+"${BUILD_ARG_ITEMS[@]}"}; do
   BUILD_CMD+=(--build-arg "$item")
 done

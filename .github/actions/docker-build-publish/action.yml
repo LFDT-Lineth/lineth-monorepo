@@ -83,7 +83,10 @@ runs:
         PUSH_PLATFORMS: ${{ inputs.push_platforms }}
         SAVE_ARTIFACT: ${{ inputs.save_artifact }}
         ARTIFACT_NAME: ${{ inputs.artifact_name }}
-        IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true }}
+        # Runs that have no registry credentials: fork PRs, and dependabot, whose
+        # token is read-only. all-tools.yml used to carry the dependabot half of
+        # this rule in its own cache-to expression.
+        SKIP_REGISTRY_CACHE: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true) || github.actor == 'dependabot[bot]' }}
       run: |
         set -euo pipefail
 
@@ -102,8 +105,7 @@ runs:
         if [[ "${SAVE_ARTIFACT}" == "true" ]]; then
           ARGS+=(--save-to "${ARTIFACT_NAME}-docker-image.tar.gz")
         fi
-        # Fork PRs cannot read the registry cache (no registry credentials).
-        if [[ "${IS_FORK_PR}" == "true" ]]; then
+        if [[ "${SKIP_REGISTRY_CACHE}" == "true" ]]; then
           ARGS+=(--no-registry-cache)
         fi
 

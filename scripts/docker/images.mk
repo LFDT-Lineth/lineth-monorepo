@@ -26,10 +26,6 @@ DRY_RUN ?= false
 SKIP_PREBUILD ?= false
 NODE_VERSION ?= $(shell tr -d '[:space:]' < .nvmrc)
 POSTMAN_NATIVE_LIBS_RELEASE_TAG ?= blob-libs-v3.0.1
-# linea-besu-package image metadata, mirroring .github/actions/linea-besu-package/
-# compute-metadata (build_date there is `date --rfc-3339=date`, i.e. date only).
-LINEA_BESU_VCS_REF ?= $(shell git rev-parse HEAD)
-LINEA_BESU_BUILD_DATE ?= $(shell date -u +%Y-%m-%d)
 
 DOCKER_BUILD := scripts/docker/build-image.sh \
 	--tags $(DOCKER_IMAGE_TAG) \
@@ -57,7 +53,8 @@ DOCKER_IMAGE_TARGETS := \
 	docker-build-postman \
 	docker-build-prover \
 	docker-build-native-yield-automation-service \
-	docker-build-lido-governance-monitor
+	docker-build-lido-governance-monitor \
+	docker-build-alltools
 
 .PHONY: $(DOCKER_IMAGE_TARGETS) docker-build-all docker-build-list
 
@@ -128,6 +125,14 @@ docker-build-lido-governance-monitor:
 		--context . \
 		--build-arg NODE_VERSION=$(NODE_VERSION)
 
+# .github/workflows/all-tools.yml
+docker-build-alltools:
+	$(DOCKER_BUILD) \
+		--image-name consensys/linea-alltools \
+		--dockerfile ./operations/cli/Dockerfile \
+		--context . \
+		--build-arg NODE_VERSION=$(NODE_VERSION)
+
 # .github/workflows/reusable-linea-besu-package-build-test-push.yml
 #
 # The pre-build chain is the same one CI runs through
@@ -148,7 +153,4 @@ docker-build-linea-besu-package:
 	$(DOCKER_BUILD) \
 		--image-name consensys/linea-besu-package \
 		--dockerfile linea-besu/package/linea-besu/Dockerfile \
-		--context linea-besu/package/tmp \
-		--build-arg VERSION=$(DOCKER_IMAGE_TAG) \
-		--build-arg VCS_REF=$(LINEA_BESU_VCS_REF) \
-		--build-arg BUILD_DATE=$(LINEA_BESU_BUILD_DATE)
+		--context linea-besu/package/tmp

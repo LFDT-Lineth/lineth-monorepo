@@ -82,13 +82,19 @@ on Linux run `docker run --privileged --rm tonistiigi/binfmt --install arm64`).
   `linux/amd64,linux/arm64` (unless `--platforms` says otherwise) and pushes
   every tag.
 * **Cache** — registry cache at `<image>:buildcache-amd64` / `-arm64`; imported
-  on both paths and exported (`mode=max`) only when pushing. Disabled for fork
-  pull requests, which have no registry credentials.
+  on both paths and exported (`mode=max`) only when pushing. Disabled for runs
+  without registry credentials: fork pull requests and dependabot.
+* **Metadata** — `VERSION` (primary tag), `VCS_REF` (`GITHUB_SHA`, else git
+  `HEAD`) and `BUILD_DATE` (RFC 3339, UTC) are injected as build args on every
+  build. Each first-party Dockerfile declares those three `ARG`s and turns them
+  into `org.label-schema.*` labels, so images are traceable to a commit. A
+  caller-supplied `--build-arg` of the same name still wins.
 * **Artifacts** — `--save-to FILE` runs `docker save … | gzip` on the primary
   image, which CI uploads as a workflow artifact.
 
 The GitHub-specific parts stay in the composite action: QEMU/buildx setup,
-appending `develop_tag` on `main`, fork detection and artifact upload.
+appending `develop_tag` on `main`, credential-less run detection and artifact
+upload.
 
 ## Adding an image
 
