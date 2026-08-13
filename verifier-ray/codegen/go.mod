@@ -4,7 +4,13 @@ go 1.25.7
 
 require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260811123635-a88dfd54fad0
 
+// Local development against prover-ray/zkcdriver/zkcpipeline, which has not
+// been released as a tagged prover-ray version yet. Remove once a prover-ray
+// release containing it is cut and the require above is bumped to it.
+replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../prover-ray
+
 require (
+	github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect

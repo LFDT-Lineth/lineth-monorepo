@@ -255,7 +255,30 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 		})
 		return len(module.Expressions) - 1, nil
 	case *wiop.LagrangeSelector:
-		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: e.Position})
+		position := e.Position
+		// LagrangeSelector.Position may be negative (end-relative: -1 is the
+		// last row, per its own doc comment). The Zig evaluator's
+		// lagrange_selector field is unsigned, and for a STATIC module the
+		// size is already known here at codegen time, so resolve it into an
+		// absolute [0, size) row now rather than pushing signed arithmetic
+		// into the comptime Zig evaluator. A DYNAMIC module's size is only
+		// known at proving/verify time, so its position is left negative;
+		// evalLagrangeSelector resolves it there against ctx.dynamic_n,
+		// mirroring wiop.LagrangeSelector.resolvedRow's own end-relative
+		// convention.
+		if lsModule := e.Module(); lsModule != nil && !lsModule.IsDynamic() {
+			size := lsModule.Size()
+			if position < 0 {
+				position += size
+			}
+			if position < 0 || position >= size {
+				return 0, fmt.Errorf(
+					"codegen: LagrangeSelector position %d out of range [0, %d) for static module %q",
+					e.Position, size, lsModule.Context.Path(),
+				)
+			}
+		}
+		module.Expressions = append(module.Expressions, ExprNode{Kind: ExprLagrangeSelector, SelectorPosition: position})
 		return len(module.Expressions) - 1, nil
 	default:
 		return 0, &UnsupportedExpressionError{Type: fmt.Sprintf("%T", expr)}

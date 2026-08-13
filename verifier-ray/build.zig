@@ -104,6 +104,20 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    // The generated production system for the recursive single-proof
+    // verifier bootstrap (verifier-ray/codegen/generate-riscv-system): one
+    // real CompiledSystem with no baked proof, imported by main_recursive.zig
+    // for its comptime spec/systems and smoke-tested by
+    // test/riscv_system_test.zig.
+    const riscv_system_mod = b.addModule("riscv_system", .{
+        .root_source_file = b.path("testdata/generated/riscv_system.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
     embedded_data_opts.addOption(bool, "embed_input", embedded_input != EmbeddedInputType.none);
@@ -158,6 +172,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_fri_vectors", .module = test_fri_vectors_mod },
                     .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
                     .{ .name = "test_verify", .module = test_verify_mod },
+                    .{ .name = "riscv_system", .module = riscv_system_mod },
                 },
             }),
             .filters = test_filters,
