@@ -179,7 +179,7 @@ public class CompressionAwareTransactionSelector
     if (newConservativeCumulative <= fastExecutionPathLimit) {
       log.atTrace()
           .setMessage(
-              "event=tx_selection path=fast decision=select tx_hash={} tx_compressed_size={} cumulative_conservative={} fast_path_limit={}")
+              "event=tx_selection path=fast decision=select tx={} tx_compressed_size={} cumulative_conservative={} fast_path_limit={}")
           .addArgument(transaction::getHash)
           .addArgument(txCompressedSize)
           .addArgument(newConservativeCumulative)
@@ -198,7 +198,7 @@ public class CompressionAwareTransactionSelector
 
     log.atTrace()
         .setMessage(
-            "event=tx_selection path=slow decision=pending tx_hash={} fast_path_limit={} tentative_tx_count={} tentative_block_rlp_size={}")
+            "event=tx_selection path=slow decision=pending tx={} fast_path_limit={} tentative_tx_count={} tentative_block_rlp_size={}")
         .addArgument(transaction::getHash)
         .addArgument(fastExecutionPathLimit)
         .addArgument(tentativeTxs::size)
@@ -235,7 +235,7 @@ public class CompressionAwareTransactionSelector
         final long waitNs = System.nanoTime() - waitStartNs;
         if (waitNs > 0) {
           log.atDebug()
-              .setMessage("event=tx_selection path=slow compression_wait_us={} tx_hash={}")
+              .setMessage("event=tx_selection path=slow compression_wait_us={} tx={}")
               .addArgument(waitNs / 1_000)
               .addArgument(transaction::getHash)
               .log();
@@ -243,14 +243,13 @@ public class CompressionAwareTransactionSelector
       } catch (final InterruptedException e) {
         Thread.currentThread().interrupt();
         log.atWarn()
-            .setMessage(
-                "event=tx_selection path=slow interrupted waiting for compression tx_hash={}")
+            .setMessage("event=tx_selection path=slow interrupted waiting for compression tx={}")
             .addArgument(transaction::getHash)
             .log();
         return BLOCK_COMPRESSED_SIZE_OVERFLOW;
       } catch (final ExecutionException e) {
         log.atWarn()
-            .setMessage("event=tx_selection path=slow compression failed tx_hash={}")
+            .setMessage("event=tx_selection path=slow compression failed tx={}")
             .addArgument(transaction::getHash)
             .setCause(e.getCause())
             .log();
@@ -270,7 +269,7 @@ public class CompressionAwareTransactionSelector
       newCumulativeSize = appendResult.getCompressedSizeAfter();
       log.atTrace()
           .setMessage(
-              "event=tx_selection path=slow decision=select tx_hash={} compressed_size_after={} fast_path_limit={}")
+              "event=tx_selection path=slow decision=select tx={} compressed_size_after={} fast_path_limit={}")
           .addArgument(transaction::getHash)
           .addArgument(newCumulativeSize)
           .addArgument(fastExecutionPathLimit)
