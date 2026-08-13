@@ -140,7 +140,7 @@ public class ZkTracer implements LineCountingTracer {
     this.debugMode =
         debugLevel.none() ? Optional.empty() : Optional.of(new DebugMode(debugLevel, this.hub));
 
-    log.debug("Created ZkTracer for fork {}", chain.fork);
+    log.trace("Created ZkTracer for fork {}", chain.fork);
   }
 
   public void writeToFile(final Path filename, long startBlock, long endBlock) {
