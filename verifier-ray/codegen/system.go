@@ -3,6 +3,8 @@ package codegen
 import (
 	"fmt"
 	"io"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // CompiledSystem bundles all sub-verifier metadata derived from a single
@@ -20,6 +22,52 @@ type CompiledSystem struct {
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
 	Pcs *PcsSystem
+}
+
+// BuildCompiledSystem builds every sub-verifier system a compiled protocol
+// needs — coin routing, public-input layout, vanishing, log-derivative,
+// grand-product, row-limit, and PCS — from sys alone. PCS is mandatory in the
+// full verifier.verify path, so this errors if sys has no committed batches;
+// callers that legitimately emit the vanishing/logderiv systems standalone
+// should call the individual Build*System functions instead.
+func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	publicInput, err := BuildPublicInputSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	vanishing, err := BuildVanishingSystem(sys, routing)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	logDeriv, err := BuildLogDerivSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	grandProduct, err := BuildGrandProductSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	rowLimit, err := BuildRowLimitSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	pcs, err := BuildPcsSystem(sys, routing)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	return CompiledSystem{
+		Routing:      routing,
+		PublicInput:  publicInput,
+		Vanishing:    vanishing,
+		LogDeriv:     logDeriv,
+		GrandProduct: grandProduct,
+		RowLimit:     rowLimit,
+		Pcs:          &pcs,
+	}, nil
 }
 
 // CompiledSystemZigOptions configures WriteCompiledSystemZig.
