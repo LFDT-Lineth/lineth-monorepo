@@ -82,7 +82,7 @@ const system_0 = vanishing.System{
 const system_0_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "bool-col"
 const system_0_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_0_grandproduct = grandproduct.System{ .queries = &system_0_grandproduct_queries };
@@ -229,7 +229,7 @@ const system_1 = vanishing.System{
 const system_1_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_1_logderiv = logderivativesum.System{ .queries = &system_1_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "fib"
 const system_1_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_1_grandproduct = grandproduct.System{ .queries = &system_1_grandproduct_queries };
@@ -382,7 +382,7 @@ const system_2 = vanishing.System{
 const system_2_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_2_logderiv = logderivativesum.System{ .queries = &system_2_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "geo"
 const system_2_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_2_grandproduct = grandproduct.System{ .queries = &system_2_grandproduct_queries };
@@ -532,7 +532,7 @@ const system_3 = vanishing.System{
 const system_3_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_3_logderiv = logderivativesum.System{ .queries = &system_3_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "ctr"
 const system_3_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_3_grandproduct = grandproduct.System{ .queries = &system_3_grandproduct_queries };
@@ -689,7 +689,7 @@ const system_4 = vanishing.System{
 const system_4_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_4_logderiv = logderivativesum.System{ .queries = &system_4_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "pyth"
 const system_4_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_4_grandproduct = grandproduct.System{ .queries = &system_4_grandproduct_queries };
@@ -844,7 +844,7 @@ const system_5 = vanishing.System{
 const system_5_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_5_logderiv = logderivativesum.System{ .queries = &system_5_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "dyn-fib"
 const system_5_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_5_grandproduct = grandproduct.System{ .queries = &system_5_grandproduct_queries };
@@ -995,7 +995,7 @@ const system_6 = vanishing.System{
 const system_6_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_6_logderiv = logderivativesum.System{ .queries = &system_6_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "const-col"
 const system_6_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_6_grandproduct = grandproduct.System{ .queries = &system_6_grandproduct_queries };
@@ -1140,7 +1140,7 @@ const system_7 = vanishing.System{
 const system_7_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_7_logderiv = logderivativesum.System{ .queries = &system_7_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "fwd-shift"
 const system_7_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_7_grandproduct = grandproduct.System{ .queries = &system_7_grandproduct_queries };
@@ -1292,7 +1292,7 @@ const system_8 = vanishing.System{
 const system_8_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_8_logderiv = logderivativesum.System{ .queries = &system_8_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "bool-cube"
 const system_8_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_8_grandproduct = grandproduct.System{ .queries = &system_8_grandproduct_queries };
@@ -1447,7 +1447,7 @@ const system_9 = vanishing.System{
 const system_9_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_9_logderiv = logderivativesum.System{ .queries = &system_9_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lin-comb"
 const system_9_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_9_grandproduct = grandproduct.System{ .queries = &system_9_grandproduct_queries };
@@ -1602,7 +1602,7 @@ const system_10 = vanishing.System{
 const system_10_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_10_logderiv = logderivativesum.System{ .queries = &system_10_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "fib-16"
 const system_10_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_10_grandproduct = grandproduct.System{ .queries = &system_10_grandproduct_queries };
@@ -1757,7 +1757,7 @@ const system_11 = vanishing.System{
 const system_11_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_11_logderiv = logderivativesum.System{ .queries = &system_11_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "same-ratio"
 const system_11_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_11_grandproduct = grandproduct.System{ .queries = &system_11_grandproduct_queries };
@@ -1912,7 +1912,7 @@ const system_12 = vanishing.System{
 const system_12_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_12_logderiv = logderivativesum.System{ .queries = &system_12_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "mixed-ratio"
 const system_12_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_12_grandproduct = grandproduct.System{ .queries = &system_12_grandproduct_queries };
@@ -2080,7 +2080,7 @@ const system_13 = vanishing.System{
 const system_13_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_13_logderiv = logderivativesum.System{ .queries = &system_13_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "multi-mod"
 const system_13_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_13_grandproduct = grandproduct.System{ .queries = &system_13_grandproduct_queries };
@@ -2235,7 +2235,7 @@ const system_14 = vanishing.System{
 const system_14_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_14_logderiv = logderivativesum.System{ .queries = &system_14_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "manual-cxl"
 const system_14_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_14_grandproduct = grandproduct.System{ .queries = &system_14_grandproduct_queries };
@@ -2385,7 +2385,7 @@ const system_15 = vanishing.System{
 const system_15_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_15_logderiv = logderivativesum.System{ .queries = &system_15_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "pre-sel"
 const system_15_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_15_grandproduct = grandproduct.System{ .queries = &system_15_grandproduct_queries };
@@ -2535,7 +2535,7 @@ const system_16 = vanishing.System{
 const system_16_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_16_logderiv = logderivativesum.System{ .queries = &system_16_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "cell-leaf"
 const system_16_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_16_grandproduct = grandproduct.System{ .queries = &system_16_grandproduct_queries };
@@ -2686,7 +2686,7 @@ const system_17 = vanishing.System{
 const system_17_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_17_logderiv = logderivativesum.System{ .queries = &system_17_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "coin-scaled"
 const system_17_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_17_grandproduct = grandproduct.System{ .queries = &system_17_grandproduct_queries };
@@ -2842,7 +2842,7 @@ const system_18 = vanishing.System{
 const system_18_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_18_logderiv = logderivativesum.System{ .queries = &system_18_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "step3"
 const system_18_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_18_grandproduct = grandproduct.System{ .queries = &system_18_grandproduct_queries };
@@ -2999,7 +2999,7 @@ const system_19 = vanishing.System{
 const system_19_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_19_logderiv = logderivativesum.System{ .queries = &system_19_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "quartic"
 const system_19_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_19_grandproduct = grandproduct.System{ .queries = &system_19_grandproduct_queries };
@@ -3156,7 +3156,7 @@ const system_20 = vanishing.System{
 const system_20_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_20_logderiv = logderivativesum.System{ .queries = &system_20_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "dyn-leftpad"
 const system_20_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_20_grandproduct = grandproduct.System{ .queries = &system_20_grandproduct_queries };
@@ -3308,7 +3308,7 @@ const system_21 = vanishing.System{
 const system_21_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_21_logderiv = logderivativesum.System{ .queries = &system_21_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "cube-shift"
 const system_21_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_21_grandproduct = grandproduct.System{ .queries = &system_21_grandproduct_queries };
@@ -3478,7 +3478,7 @@ const system_22 = vanishing.System{
 const system_22_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_22_logderiv = logderivativesum.System{ .queries = &system_22_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "mixed-hi-ratio"
 const system_22_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_22_grandproduct = grandproduct.System{ .queries = &system_22_grandproduct_queries };
@@ -3669,7 +3669,7 @@ const system_23 = vanishing.System{
 const system_23_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_23_logderiv = logderivativesum.System{ .queries = &system_23_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "multi-mod-hi-ratio"
 const system_23_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_23_grandproduct = grandproduct.System{ .queries = &system_23_grandproduct_queries };
@@ -3834,7 +3834,7 @@ const system_24 = vanishing.System{
 const system_24_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_24_logderiv = logderivativesum.System{ .queries = &system_24_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "cube-32"
 const system_24_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_24_grandproduct = grandproduct.System{ .queries = &system_24_grandproduct_queries };
@@ -3983,7 +3983,7 @@ const system_25 = vanishing.System{
 const system_25_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_25_logderiv = logderivativesum.System{ .queries = &system_25_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "fwd-shift-3"
 const system_25_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_25_grandproduct = grandproduct.System{ .queries = &system_25_grandproduct_queries };
@@ -4135,7 +4135,7 @@ const system_26 = vanishing.System{
 const system_26_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_26_logderiv = logderivativesum.System{ .queries = &system_26_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "two-shift"
 const system_26_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_26_grandproduct = grandproduct.System{ .queries = &system_26_grandproduct_queries };
@@ -4288,7 +4288,7 @@ const system_27 = vanishing.System{
 const system_27_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_27_logderiv = logderivativesum.System{ .queries = &system_27_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "dyn-quad"
 const system_27_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_27_grandproduct = grandproduct.System{ .queries = &system_27_grandproduct_queries };
@@ -4441,7 +4441,7 @@ const system_28 = vanishing.System{
 const system_28_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_28_logderiv = logderivativesum.System{ .queries = &system_28_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "quartic-shift"
 const system_28_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_28_grandproduct = grandproduct.System{ .queries = &system_28_grandproduct_queries };
@@ -4603,7 +4603,7 @@ const system_29 = vanishing.System{
 const system_29_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_29_logderiv = logderivativesum.System{ .queries = &system_29_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "dyn-fib-multisize"
 const system_29_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_29_grandproduct = grandproduct.System{ .queries = &system_29_grandproduct_queries };
@@ -4776,7 +4776,7 @@ const system_30 = vanishing.System{
 const system_30_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_30_logderiv = logderivativesum.System{ .queries = &system_30_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "dyn-fib-two-modules"
 const system_30_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_30_grandproduct = grandproduct.System{ .queries = &system_30_grandproduct_queries };
@@ -4966,7 +4966,7 @@ const system_31_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_31_logderiv = logderivativesum.System{ .queries = &system_31_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-ones"
 const system_31_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_31_grandproduct = grandproduct.System{ .queries = &system_31_grandproduct_queries };
@@ -5124,7 +5124,7 @@ const system_32_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_32_logderiv = logderivativesum.System{ .queries = &system_32_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-partial"
 const system_32_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_32_grandproduct = grandproduct.System{ .queries = &system_32_grandproduct_queries };
@@ -5291,7 +5291,7 @@ const system_33_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_33_logderiv = logderivativesum.System{ .queries = &system_33_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-zeros"
 const system_33_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_33_grandproduct = grandproduct.System{ .queries = &system_33_grandproduct_queries };
@@ -5458,7 +5458,7 @@ const system_34_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_34_logderiv = logderivativesum.System{ .queries = &system_34_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-maskzero"
 const system_34_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_34_grandproduct = grandproduct.System{ .queries = &system_34_grandproduct_queries };
@@ -5690,7 +5690,7 @@ const system_35_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_35_logderiv = logderivativesum.System{ .queries = &system_35_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-pack"
 const system_35_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_35_grandproduct = grandproduct.System{ .queries = &system_35_grandproduct_queries };
@@ -5913,7 +5913,7 @@ const system_36_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_36_logderiv = logderivativesum.System{ .queries = &system_36_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-multi-mod"
 const system_36_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_36_grandproduct = grandproduct.System{ .queries = &system_36_grandproduct_queries };
@@ -6075,7 +6075,7 @@ const system_37_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_37_logderiv = logderivativesum.System{ .queries = &system_37_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-size1"
 const system_37_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_37_grandproduct = grandproduct.System{ .queries = &system_37_grandproduct_queries };
@@ -6283,7 +6283,7 @@ const system_38_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_38_logderiv = logderivativesum.System{ .queries = &system_38_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-cond"
 const system_38_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_38_grandproduct = grandproduct.System{ .queries = &system_38_grandproduct_queries };
@@ -6599,7 +6599,7 @@ const system_39_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_39_logderiv = logderivativesum.System{ .queries = &system_39_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-many"
 const system_39_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_39_grandproduct = grandproduct.System{ .queries = &system_39_grandproduct_queries };
@@ -6791,7 +6791,7 @@ const system_40_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_40_logderiv = logderivativesum.System{ .queries = &system_40_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-size2"
 const system_40_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_40_grandproduct = grandproduct.System{ .queries = &system_40_grandproduct_queries };
@@ -6971,7 +6971,7 @@ const system_41_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_41_logderiv = logderivativesum.System{ .queries = &system_41_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-multi-q"
 const system_41_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_41_grandproduct = grandproduct.System{ .queries = &system_41_grandproduct_queries };
@@ -7135,7 +7135,7 @@ const system_42_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_42_logderiv = logderivativesum.System{ .queries = &system_42_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-vec-den"
 const system_42_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_42_grandproduct = grandproduct.System{ .queries = &system_42_grandproduct_queries };
@@ -7354,7 +7354,7 @@ const system_43_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_43_logderiv = logderivativesum.System{ .queries = &system_43_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lds-ones-pack"
 const system_43_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_43_grandproduct = grandproduct.System{ .queries = &system_43_grandproduct_queries };
@@ -7587,7 +7587,7 @@ const system_44_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_44_logderiv = logderivativesum.System{ .queries = &system_44_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-simple"
 const system_44_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_44_grandproduct = grandproduct.System{ .queries = &system_44_grandproduct_queries };
@@ -7837,7 +7837,7 @@ const system_45_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-filterA"
 const system_45_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_45_grandproduct = grandproduct.System{ .queries = &system_45_grandproduct_queries };
@@ -8102,7 +8102,7 @@ const system_46_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-filterT"
 const system_46_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_46_grandproduct = grandproduct.System{ .queries = &system_46_grandproduct_queries };
@@ -8371,7 +8371,7 @@ const system_47_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-double"
 const system_47_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_47_grandproduct = grandproduct.System{ .queries = &system_47_grandproduct_queries };
@@ -8639,7 +8639,7 @@ const system_48_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-multi-col"
 const system_48_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_48_grandproduct = grandproduct.System{ .queries = &system_48_grandproduct_queries };
@@ -8937,7 +8937,7 @@ const system_49_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_49_logderiv = logderivativesum.System{ .queries = &system_49_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-shared"
 const system_49_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_49_grandproduct = grandproduct.System{ .queries = &system_49_grandproduct_queries };
@@ -9296,7 +9296,7 @@ const system_50_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_50_logderiv = logderivativesum.System{ .queries = &system_50_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-distinct"
 const system_50_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_50_grandproduct = grandproduct.System{ .queries = &system_50_grandproduct_queries };
@@ -9622,7 +9622,7 @@ const system_51_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_51_logderiv = logderivativesum.System{ .queries = &system_51_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-multi-filterT"
 const system_51_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_51_grandproduct = grandproduct.System{ .queries = &system_51_grandproduct_queries };
@@ -9877,7 +9877,7 @@ const system_52_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_52_logderiv = logderivativesum.System{ .queries = &system_52_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-repeated"
 const system_52_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_52_grandproduct = grandproduct.System{ .queries = &system_52_grandproduct_queries };
@@ -10123,7 +10123,7 @@ const system_53_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_53_logderiv = logderivativesum.System{ .queries = &system_53_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-shift-a"
 const system_53_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_53_grandproduct = grandproduct.System{ .queries = &system_53_grandproduct_queries };
@@ -10369,7 +10369,7 @@ const system_54_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_54_logderiv = logderivativesum.System{ .queries = &system_54_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-shift-b"
 const system_54_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_54_grandproduct = grandproduct.System{ .queries = &system_54_grandproduct_queries };
@@ -10663,7 +10663,7 @@ const system_55_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_55_logderiv = logderivativesum.System{ .queries = &system_55_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-multi-A"
 const system_55_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_55_grandproduct = grandproduct.System{ .queries = &system_55_grandproduct_queries };
@@ -10960,7 +10960,7 @@ const system_56_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_56_logderiv = logderivativesum.System{ .queries = &system_56_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-w3"
 const system_56_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_56_grandproduct = grandproduct.System{ .queries = &system_56_grandproduct_queries };
@@ -11195,7 +11195,7 @@ const system_57_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_57_logderiv = logderivativesum.System{ .queries = &system_57_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-size1"
 const system_57_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_57_grandproduct = grandproduct.System{ .queries = &system_57_grandproduct_queries };
@@ -11437,7 +11437,7 @@ const system_58_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_58_logderiv = logderivativesum.System{ .queries = &system_58_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-precomp"
 const system_58_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_58_grandproduct = grandproduct.System{ .queries = &system_58_grandproduct_queries };
@@ -11684,7 +11684,7 @@ const system_59_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_59_logderiv = logderivativesum.System{ .queries = &system_59_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-rep-s"
 const system_59_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_59_grandproduct = grandproduct.System{ .queries = &system_59_grandproduct_queries };
@@ -11934,7 +11934,7 @@ const system_60_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_60_logderiv = logderivativesum.System{ .queries = &system_60_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-empty"
 const system_60_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_60_grandproduct = grandproduct.System{ .queries = &system_60_grandproduct_queries };
@@ -12263,7 +12263,7 @@ const system_61_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_61_logderiv = logderivativesum.System{ .queries = &system_61_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "rc-distinct"
 const system_61_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_61_grandproduct = grandproduct.System{ .queries = &system_61_grandproduct_queries };
@@ -12476,7 +12476,7 @@ const system_62 = vanishing.System{
 const system_62_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "public-input"
 const system_62_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_62_grandproduct = grandproduct.System{ .queries = &system_62_grandproduct_queries };
@@ -12627,7 +12627,7 @@ const system_63 = vanishing.System{
 const system_63_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "public-input-dyn"
 const system_63_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_63_grandproduct = grandproduct.System{ .queries = &system_63_grandproduct_queries };
@@ -12778,7 +12778,7 @@ const system_64 = vanishing.System{
 const system_64_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lagrange-sel"
 const system_64_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_64_grandproduct = grandproduct.System{ .queries = &system_64_grandproduct_queries };
@@ -12925,7 +12925,7 @@ const system_65 = vanishing.System{
 const system_65_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_65_logderiv = logderivativesum.System{ .queries = &system_65_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lagrange-sel-dyn"
 const system_65_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_65_grandproduct = grandproduct.System{ .queries = &system_65_grandproduct_queries };
@@ -13215,7 +13215,7 @@ const system_66_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_66_logderiv = logderivativesum.System{ .queries = &system_66_logderiv_queries };
-// grandproduct system: ""
+// grandproduct system: "lk-multi-col-bench"
 const system_66_grandproduct_queries = [_]grandproduct.Query{};
 
 const system_66_grandproduct = grandproduct.System{ .queries = &system_66_grandproduct_queries };
