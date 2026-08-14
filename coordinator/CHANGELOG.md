@@ -6,6 +6,7 @@
 - *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
+- *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
 
 ### 🐛 Bug Fixes
 
@@ -27,6 +28,7 @@
 - *(misc)* Rename gradle plugins (#3729)
 - *(coordinator)* Apply review cleanups (#3717)
 - *(coordinator)* Package renaming to lineth (#3746)
+- *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
@@ -133,7 +134,7 @@ func (c *Core) runProve(
 	_ = ctx // cancellation not yet propagated into the prover internals
 
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignWithPreRead(rt, preRead)
+		c.driver.AssignWithPreRead(rt, preRead, field.Octuplet{})
 	})
 
 	if err := c.sys.Verify(proof, pub); err != nil {

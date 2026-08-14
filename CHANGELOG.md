@@ -23,6 +23,7 @@
 - *(linea-besu)* Support custom liveness signers (#3666)
 - *(maru)* Support Noise / Yamux (#3751)
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
+- *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
 
 ### 🐛 Bug Fixes
 
@@ -69,6 +70,7 @@
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 
 ### 🚜 Refactor
 
@@ -134,3 +136,6 @@
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(linea-besu)* Package renaming to lineth.* (#3750)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
+- *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)
+- *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)

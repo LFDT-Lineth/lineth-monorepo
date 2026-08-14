@@ -15,6 +15,7 @@
 - *(misc)* Cleanup redundant deps (#3596)
 - *(misc)* Rename gradle plugins (#3729)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
+- *(misc)* Docker image build streamlining (#3790)
 ## [1.3.0] - 2026-07-14
 
 ### 🚀 Features

@@ -72,7 +72,6 @@ jobs:
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover/Dockerfile
-          build_args: RUSTFLAGS="-C target-cpu=x86-64-v3"
           build_contexts: prover=prover/
           push_platforms: linux/amd64
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}

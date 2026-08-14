@@ -1,19 +1,21 @@
 const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const field = @import("../field/koalabear.zig");
+pub const public_input = @import("public_input.zig");
 
 /// Error from the bounds-checked cell accessor `Context.cell`. Split out so
 /// sub-verifiers can compose it into their own error sets.
 pub const CellError = error{CellRefOutOfRange};
 
-pub const Error = error{ InvalidRoundCount, MissingDynamicModuleSize, DynamicModuleSizeTooLarge } || CellError;
+pub const Error = error{
+    InvalidRoundCount,
+    MissingDynamicModuleSize,
+    DynamicModuleSizeTooLarge,
+} || CellError;
 
-pub const Visibility = types.Visibility;
-pub const Vector = types.Vector;
 pub const Scalar = types.Scalar;
 pub const Coin = types.Coin;
 pub const Commitment = types.Commitment;
-pub const ColumnMessage = types.ColumnMessage;
 pub const RoundMessage = types.RoundMessage;
 
 /// Compile-time coin-routing specification shared across all sub-verifiers.
@@ -30,7 +32,7 @@ pub const Spec = struct {
     /// Number of dynamically-sized modules whose runtime sizes the prover
     /// absorbs into the transcript at every round advance (prover-ray's
     /// `Runtime.AdvanceRound`, which feeds `NewElement(size)` for each dynamic
-    /// module before the round's commitment/columns/cells). `replayWithTranscript`
+    /// module before the round's commitment/cells). `replayWithTranscript`
     /// mirrors this by absorbing the first `dynamic_module_count` entries of the
     /// caller-supplied `module_sizes` at the start of each round. 0 for protocols
     /// with no dynamic modules, in which case the absorption is a no-op and
@@ -70,9 +72,9 @@ pub const Context = struct {
 /// Replays the prover–verifier transcript to derive all Fiat-Shamir coins,
 /// using a *caller-owned* `transcript`.
 ///
-/// For each message round, absorbs the round's oracle commitments, public
-/// columns, and cell scalars into the Poseidon2 Merkle-Damgård transcript, then
-/// squeezes that round's coins into `all_coins` at the position fixed by `spec`.
+/// For each message round, absorbs the round's commitment (if any) and cell
+/// scalars into the Poseidon2 Merkle-Damgård transcript, then squeezes that
+/// round's coins into `all_coins` at the position fixed by `spec`.
 ///
 /// The transcript is passed in by pointer and left in place after the last
 /// protocol coin is squeezed, so a transcript-continuing sub-verifier (e.g. PCS,
@@ -96,20 +98,7 @@ pub fn replayWithTranscript(
     module_sizes: []const usize,
 ) Error![spec.total_round_coins]Coin {
     comptime {
-        if (spec.round_coin_counts.len == 0)
-            @compileError("spec: round_coin_counts must have at least one entry (the pre-round-1 phase)");
-        if (spec.round_coin_counts[0] != 0)
-            @compileError("spec: round_coin_counts[0] must be 0 — no coins are derived before the first round is absorbed");
-        if (spec.round_coin_offsets.len != spec.round_coin_counts.len)
-            @compileError("spec: round_coin_offsets and round_coin_counts must have equal length");
-        var expected_offset: usize = 0;
-        for (spec.round_coin_counts, spec.round_coin_offsets) |count, offset| {
-            if (offset != expected_offset)
-                @compileError("spec: round_coin_offsets must be prefix sums of round_coin_counts");
-            expected_offset += count;
-        }
-        if (spec.total_round_coins != expected_offset)
-            @compileError("spec: total_round_coins must equal sum of round_coin_counts");
+        validateSpec(spec);
     }
 
     // round_coin_counts[0] is the pre-round-1 phase, so there is one message
@@ -128,7 +117,7 @@ pub fn replayWithTranscript(
 
     inline for (1..spec.round_coin_counts.len) |round_index| {
         // Mirror prover-ray's `Runtime.AdvanceRound`: before absorbing the
-        // round's commitment/columns/cells, feed each dynamic module's runtime
+        // round's commitment/cells, feed each dynamic module's runtime
         // size (as a base-field element) into the transcript. Runs at every round
         // advance, so a size is absorbed once per replayed round — matching the
         // prover exactly, which is what keeps the derived eval coin `r` in sync.
@@ -139,12 +128,7 @@ pub fn replayWithTranscript(
         }
 
         const message = rounds[round_index - 1];
-        for (message.columns) |entry| {
-            switch (entry) {
-                .oracle_commitment => |c| transcript.updateElements(&c),
-                .public_column => |col| transcript.absorbVector(col),
-            }
-        }
+        if (message.commitment) |c| transcript.updateElements(&c);
         for (message.cells) |cell| transcript.absorbScalar(cell);
 
         const offset = spec.round_coin_offsets[round_index];
@@ -153,4 +137,22 @@ pub fn replayWithTranscript(
     }
 
     return all_coins;
+}
+
+fn validateSpec(comptime spec: Spec) void {
+    if (spec.round_coin_counts.len == 0)
+        @compileError("spec: round_coin_counts must have at least one entry (the pre-round-1 phase)");
+    if (spec.round_coin_counts[0] != 0)
+        @compileError("spec: round_coin_counts[0] must be 0 — no coins are derived before the first round is absorbed");
+    if (spec.round_coin_offsets.len != spec.round_coin_counts.len)
+        @compileError("spec: round_coin_offsets and round_coin_counts must have equal length");
+
+    var expected_offset: usize = 0;
+    for (spec.round_coin_counts, spec.round_coin_offsets) |count, offset| {
+        if (offset != expected_offset)
+            @compileError("spec: round_coin_offsets must be prefix sums of round_coin_counts");
+        expected_offset += count;
+    }
+    if (spec.total_round_coins != expected_offset)
+        @compileError("spec: total_round_coins must equal sum of round_coin_counts");
 }
