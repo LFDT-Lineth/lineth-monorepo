@@ -157,6 +157,8 @@ const CUSTOM_1:Opcode = 0b0101011 // custom-1
 // EVM precompiles
 const FUNCT3_EVM_ECRECOVER:Funct3 = 0b000
 const FUNCT7_EVM_ECRECOVER:Funct7 = 0b0000001
+const FUNCT3_EVM_SHA2:Funct3 = 0b000
+const FUNCT7_EVM_SHA2:Funct7 = 0b0000010
 
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000
@@ -344,6 +346,7 @@ const R_KECCAK:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) |
 const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17)
 const R_WRITE_OUTPUT:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17)
 const R_EVM_ECRECOVER:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECRECOVER as u17) << 7) | (FUNCT7_EVM_ECRECOVER as u17)
+const R_EVM_SHA2:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_SHA2 as u17) << 7) | (FUNCT7_EVM_SHA2 as u17)
 const R_ECRECOVER:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_ECRECOVER as u17) << 7) | (FUNCT7_ECRECOVER as u17)
 
 // Concatenate constant to flatten the I_switch table
@@ -367,4 +370,3 @@ const I_SLLIW:u10 = (((OP_IMM_32 as u10) << 3) | (FUNCT3_SLLIW as u10))
 const I_SRLIW:u10 = (((OP_IMM_32 as u10) << 3) | (FUNCT3_SRLIW as u10))
 const I_JALR:u10 = (((JALR as u10) << 3) | (FUNCT3_JALR as u10))
 const I_ECALL:u10 = (((SYSTEM as u10) << 3) | (FUNCT3_ECALL as u10))
-
