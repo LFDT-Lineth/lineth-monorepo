@@ -647,9 +647,9 @@ verifier-ray/wiop design questions, not serialization ones:
   §5.2's `MAP_FIXED` decision. That was wrong: a *test* only needs an address the
   test process can map, not the production one. Measured on arm64 macOS,
   `MAP_FIXED` fails at `0x08800000`, `0x30000000` and `0x100000000` but succeeds
-  at `0x400000000`, so the golden image is relocated there.
+  at `0x400000000`, so the fixture image is relocated there.
 
-  `wiop/proofserialization/golden_test.go` writes
+  `wiop/proofserialization/abi_agreement_test.go` writes
   `verifier-ray/testdata/proof_image.bin` (936 B) and fails if it goes stale;
   `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
   `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
