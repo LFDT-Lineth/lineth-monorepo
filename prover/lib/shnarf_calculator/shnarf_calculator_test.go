@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	blockRlpBin       = "../../../coordinator/core/src/test/resources/linea/coordination/blob/rlp_blocks.bin"
+	blockRlpBin       = "../../../coordinator/core/src/test/resources/lineth/coordination/blob/rlp_blocks.bin"
 	compressorDictBin = "../compressor/compressor_dict.bin"
 )
 
