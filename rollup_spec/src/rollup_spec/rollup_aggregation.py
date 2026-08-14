@@ -7,6 +7,7 @@ from ethereum.state import Address
 from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
 from .rollup import (
+    BLOB_BYTES_LENGTH,
     RollupProof,
     RollupPublicInput,
     VerifiableRollupProof,
@@ -30,7 +31,7 @@ def run_rollup_aggregation_guest(
     rollup-aggregation: flat recursion over M rollup proofs with continuity
     checks and merged L2-to-L1 root/address commitments.
 
-    Returns a `FinalizationSubmission`: the guest output (the 14-field
+    Returns a `FinalizationSubmission`: the guest output (the 20-field
     public-input tuple + the revealed `l2_l1_roots` / `filtered_addresses`
     preimages L1 needs as calldata). `proof` is attached by the zkVM/prover
     layer above and is a placeholder (`b""`) here.
@@ -95,8 +96,14 @@ def run_rollup_aggregation_guest(
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
-        parent_shnarf=first_proof.public_inputs.parent_shnarf,
-        end_shnarf=last_proof.public_inputs.end_shnarf,
+        # Position-pair pass-through (§3.4): the extremes are exposed, not
+        # asserted here — L1 checks them against committed state (§3.6).
+        parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
+        end_data_rolling_hash=last_proof.public_inputs.end_data_rolling_hash,
+        parent_block_hash=first_proof.public_inputs.parent_block_hash,
+        end_block_hash=last_proof.public_inputs.end_block_hash,
+        start_offset=first_proof.public_inputs.start_offset,
+        end_offset=last_proof.public_inputs.end_offset,
         program_vks=program_vks,
     )
 
@@ -134,14 +141,26 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
 
 
 def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:
-    # Block-number / block-hash continuity is implicit in the shnarf check:
-    # `endShnarf = Hash(parentShnarf, lastBlockHash, blobHash)` binds the
-    # last block hash. Once the next blob's `parentShnarf` matches, the
-    # inner block-hash chain inside that blob anchors block numbers
-    # transitively. No separate block-number assertion is needed at this
-    # layer (the rollup PI does not expose `startBlockNumber` anyway).
-    if left.public_inputs.end_shnarf != right.public_inputs.parent_shnarf:
-        raise Exception("rollup shnarf continuity failed")
+    # Position-pair continuity (§3.4): both the dataRollingHash and the byte offset must
+    # match at the seam, excluding both byte gaps and overlaps — neither KZG
+    # nor block-hash continuity alone can detect either.
+    if left.public_inputs.end_data_rolling_hash != right.public_inputs.parent_data_rolling_hash:
+        raise Exception("rollup dataRollingHash continuity failed")
+    # A chunk filled exactly to its end (`end_offset == BLOB_BYTES_LENGTH`) and
+    # the next proof naturally starting at `start_offset == 0` describe the same
+    # stream position, even though the two integers differ — accept both that
+    # case and plain equality.
+    offsets_continuous = left.public_inputs.end_offset == right.public_inputs.start_offset
+    offsets_at_chunk_boundary = (
+        left.public_inputs.end_offset == BLOB_BYTES_LENGTH and right.public_inputs.start_offset == 0
+    )
+    if not (offsets_continuous or offsets_at_chunk_boundary):
+        raise Exception("rollup offset continuity failed")
+    # Execution continuity is now explicit (§2.4) rather than folded into the
+    # DA accumulator, since a shared chunk's dataRollingHash fold no longer determines
+    # "the last block completing here" on its own.
+    if left.public_inputs.end_block_hash != right.public_inputs.parent_block_hash:
+        raise Exception("rollup block-hash continuity failed")
     if left.public_inputs.end_l1_l2_bridge_rolling_hash != right.public_inputs.parent_l1_l2_bridge_rolling_hash:
         raise Exception("rollup L1-to-L2 rolling-hash continuity failed")
     if (
