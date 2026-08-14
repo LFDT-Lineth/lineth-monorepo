@@ -25,9 +25,7 @@ on:
         type: boolean
         default: false
 
-permissions:
-  actions: read
-  contents: write
+permissions: {} # lock everything by default (least-privilege)
 
 concurrency:
   group: sdk-publish
@@ -35,6 +33,10 @@ concurrency:
 
 jobs:
   guard:
+    permissions:
+      contents: read
+    outputs:
+      release_commit_sha: ${{ steps.verify_release_commit.outputs.release_commit_sha }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Ensure running on main
@@ -48,24 +50,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Verify release commit is on main
+        id: verify_release_commit
         env:
           RELEASE_SHA: ${{ inputs.release_commit_sha }}
         run: |
-          if ! git cat-file -e "${RELEASE_SHA}^{commit}" 2>/dev/null; then
-            echo "::error::Commit $RELEASE_SHA does not exist in this repository"
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Release commit must be a full lowercase 40-character SHA-1"
             exit 1
           fi
-          if ! git merge-base --is-ancestor "$RELEASE_SHA" HEAD; then
+          if [[ "$(git cat-file -t "$RELEASE_SHA" 2>/dev/null)" != "commit" ]]; then
+            echo "::error::$RELEASE_SHA does not identify a commit in this repository"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
             echo "::error::Commit $RELEASE_SHA is not an ancestor of main. Only release commits merged to main can be published."
             exit 1
           fi
+          VERIFIED_RELEASE_SHA=$(git rev-parse "${RELEASE_SHA}^{commit}")
+          echo "release_commit_sha=$VERIFIED_RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
   publish-sdk-core:
     needs: guard
     if: inputs.package == 'sdk-core'
+    # Dry runs perform release preflight checks only; publishing, tagging, and release steps must remain disabled.
+    # Keep dry runs outside the protected environment so they do not require production approval.
+    environment: ${{ !inputs.dry_run && 'npm-publish' || '' }}
     # GitHub-hosted runner required: npm trusted publishing (OIDC) does not support self-hosted runners.
     runs-on: ubuntu-latest
     permissions:
@@ -75,7 +88,7 @@ jobs:
       - name: Checkout release commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ inputs.release_commit_sha }}
+          ref: ${{ needs.guard.outputs.release_commit_sha }}
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
@@ -141,7 +154,7 @@ jobs:
       - name: Tag sdk-core release
         if: ${{ !inputs.dry_run }}
         env:
-          RELEASE_SHA: ${{ inputs.release_commit_sha }}
+          RELEASE_SHA: ${{ needs.guard.outputs.release_commit_sha }}
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-core/package.json').version")
           TAG="@lfdt-lineth/sdk-core@${VERSION}"
@@ -187,7 +200,7 @@ jobs:
           tag_name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           body_path: release-notes.md
-          target_commitish: ${{ inputs.release_commit_sha }}
+          target_commitish: ${{ needs.guard.outputs.release_commit_sha }}
           files: |
             linea-sdk-core-${{ steps.release_notes.outputs.version }}.tar.gz
             linea-sdk-core-${{ steps.release_notes.outputs.version }}.zip
@@ -195,6 +208,9 @@ jobs:
   publish-sdk-viem:
     needs: guard
     if: inputs.package == 'sdk-viem'
+    # Dry runs perform release preflight checks only; publishing, tagging, and release steps must remain disabled.
+    # Keep dry runs outside the protected environment so they do not require production approval.
+    environment: ${{ !inputs.dry_run && 'npm-publish' || '' }}
     # GitHub-hosted runner required: npm trusted publishing (OIDC) does not support self-hosted runners.
     runs-on: ubuntu-latest
     permissions:
@@ -204,7 +220,7 @@ jobs:
       - name: Checkout release commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ inputs.release_commit_sha }}
+          ref: ${{ needs.guard.outputs.release_commit_sha }}
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
@@ -294,7 +310,7 @@ jobs:
       - name: Tag sdk-viem release
         if: ${{ !inputs.dry_run }}
         env:
-          RELEASE_SHA: ${{ inputs.release_commit_sha }}
+          RELEASE_SHA: ${{ needs.guard.outputs.release_commit_sha }}
         run: |
           VERSION=$(node -p "require('./ts-libs/sdk/sdk-viem/package.json').version")
           TAG="@lfdt-lineth/sdk-viem@${VERSION}"
@@ -340,7 +356,7 @@ jobs:
           tag_name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           body_path: release-notes.md
-          target_commitish: ${{ inputs.release_commit_sha }}
+          target_commitish: ${{ needs.guard.outputs.release_commit_sha }}
           files: |
             linea-sdk-viem-${{ steps.release_notes.outputs.version }}.tar.gz
             linea-sdk-viem-${{ steps.release_notes.outputs.version }}.zip
@@ -348,6 +364,9 @@ jobs:
   notify:
     needs: [publish-sdk-core, publish-sdk-viem]
     if: ${{ always() && contains(needs.*.result, 'failure') }}
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/slack-notify-failed-jobs.yml
     with:
       title: "SDK Publish workflow failed"
@@ -355,4 +374,3 @@ jobs:
     secrets:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
-
