@@ -363,9 +363,14 @@ Size is descriptive, not a lever: per §2 the encoder has no packing decisions t
 make. The point of measuring was to know the artifact's size, and to settle
 whether the overhead the format trades away is acceptable.
 
-Measured with `MEASURE_PROOF_IMAGE=1 go test ./zkcdriver/ -run TestMeasureProofImage`
-(`zkcdriver/r5_proof_measure_test.go`), on proofs built through the full
-`proverCompilePipeline` including `pcs.Compile`, each verified before measuring:
+`proofserialization.Measure(sys, proof, pub)` computes an image's size and
+composition without encoding anything. It works on any `wiop.Proof`, so nothing
+here depends on ZKC or the arithmetization: `go test ./wiop/proofserialization/`
+measures PCS-compiled proofs built from wiop primitives alone.
+
+The table below came from applying it to four ZKC testdata programs, as a one-off
+run to get realistic magnitudes. Each proof went through the full pipeline
+including `pcs.Compile` and was verified before being measured.
 
 | program | image | payload | overhead | cells | row data |
 |---|---|---|---|---|---|
@@ -432,27 +437,23 @@ explicitly rather than assumed, since the projection silently discards the field
 the PCS codegen and the projection, so they are Phase 1 numbers. Both are small
 relative to row data, but the total above is a lower bound until they are added.
 
-### 11.4 Blocked: the real R5 program
+### 11.4 Why no R5 number, and why it does not matter
 
-The program we actually want to measure,
-`arithmetization/src/main/riscv/main.zkc`, **does not currently compile against
-the pinned `zkc` version** (`v1.2.25-0.20260727081733-2599d25d9227`):
+The R5 arithmetization's absolute proof size is unmeasured, and the format does
+not depend on knowing it.
 
-```
-zkc compile error: 1162:1163:unexpected token
-zkc compile error: 10558:10616:unknown symbol
-```
+What the format needed from Phase 0 was the *overhead*, and overhead turns out to
+be program-independent: §11.2's structure is fixed by the FRI parameters, so the
+1.33–1.39 MB is the same for any circuit. A bigger circuit adds row data, which
+is pure payload, so the overhead fraction only falls. R5 being much larger than
+these programs means its overhead is *below* 3%, and no measurement is needed to
+conclude that.
 
-This is pre-existing and not caused by this work: every R5 benchmark in
-`zkcdriver/r5_benchmark_test.go` (`BenchmarkR5Trace`, `BenchmarkR5Prove`, …)
-fails identically, as does `BenchmarkRisc5Arithmetization`. It needs an
-arithmetization/`zkc` version sync, owned outside this branch.
-
-The testdata programs above go through the same pipeline and are real proofs, so
-the ratios and the structural conclusions hold. R5's absolute size will differ —
-it is a much larger circuit — but since overhead is dominated by FRI parameters
-rather than circuit size, expect the overhead *fraction* to be lower, not higher.
-Point `MEASURE_PROOF_PROGRAM` at the R5 program to measure it once it builds.
+If someone does want R5's size later, `Measure` takes any `wiop.Proof` — call it
+wherever an R5 proof already exists. (Note that `arithmetization/.../main.zkc`
+does not currently compile against the pinned `zkc` version; every R5 benchmark
+in `zkcdriver/r5_benchmark_test.go` fails identically, so that is a pre-existing
+arithmetization/`zkc` sync issue and unrelated to serialization.)
 
 ## 11.5 Observations that are not ours to act on
 
@@ -503,10 +504,9 @@ verifier-ray/wiop design questions, not serialization ones:
 
 - **Done — pin the ABI.** §7. Prerequisite for everything below: without it the
   encoder's target is unverifiable.
-- **Done — Phase 0, measure.** §11. Image is 9–43 MiB at 3–4% structural
-  overhead, 91–93% opened row data, cells under 1% and all `ext`. Nothing in the
-  numbers argues against the format. Blocked only on measuring the real R5
-  program, which does not currently compile (§11.4).
+- **Done — Phase 0, measure.** §11, via `proofserialization.Measure`. Image is
+  9–43 MiB at 3–4% structural overhead, 91–93% opened row data, cells under 1%
+  and all `ext`. Nothing in the numbers argues against the format.
 - **Phase 1 — projection.** Lift the `wiop.Proof` → `verifier.Proof` projection
   out of `verifier-ray/testdata/generate` into a shared, tested package. No
   behaviour change: the existing Zig-literal generator becomes its first
