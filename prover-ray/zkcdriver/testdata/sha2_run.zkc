@@ -1,0 +1,47 @@
+// Batched SHA-256 driver for sha2_run.json.
+// Run it directly with:  go tool zkc exec -c testdata/sha2_run.json testdata/sha2_run.zkc
+//
+// in_n[0] test vectors are packed by concatenation so that a single case file
+// can exercise arbitrary-length messages (a u256 input would cap each message
+// at 32 bytes and miss every padding / multi-block boundary):
+//   in_msg         concatenated message bytes for all vectors, byte-addressed
+//   in_msg_length  byte length of each vector's message
+//   in_hash        concatenated 32-byte expected digests, byte-addressed
+// Each message is copied into guest RAM, hashed via the sha2 accelerator, and
+// the 32 output bytes are compared against the expected digest.
+//
+// This is a copy of the sha2_direct.zkc in the arithmetization folder. We add it
+// to run the local zkcdriver test covering all the edge cases in the json file
+
+include "../../../arithmetization/src/main/lib/sha2/impl.zkc"
+
+pub input in_n(address:u1)          -> (count:u8)
+pub input in_msg_length(address:u8) -> (length:u32)
+pub input in_msg(address:u16)       -> (byte:u8)
+pub input in_hash(address:u16)      -> (byte:u8)
+
+fn main<ram, sha2_state>() {
+    var input_address:Address = 0x100
+    var output_address:Address = 0
+    var message_offset:u16 = 0
+
+    var n:u8 = in_n[0]
+    for vector:u8 = 0; vector<n; vector = vector + 1 {
+        var length:u32 = in_msg_length[vector]
+
+        for i:u32 = 0; i<length; i = i + 1 {
+            write_8(input_address + (i as Address), in_msg[message_offset + (i as u16)])
+        }
+
+        sha2(input_address, length, output_address)
+
+        var hash_offset:u16 = (vector as u16) * 32
+        for i:u6 = 0; i<32; i = i + 1 {
+            if read_8(output_address + (i as Address)) != in_hash[hash_offset + (i as u16)] {
+                fail
+            }
+        }
+
+        message_offset = message_offset + (length as u16)
+    }
+}
