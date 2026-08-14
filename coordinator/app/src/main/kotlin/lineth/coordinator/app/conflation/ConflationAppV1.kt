@@ -248,6 +248,13 @@ class ConflationAppV1(
   private val log = LogManager.getLogger("conflation.app")
 
   init {
+    configs.conflation.riscvStartingBlockTimestampInclusive?.let { cutover ->
+      require(cutover in configs.conflation.proofAggregation.timestampBasedHardForks) {
+        "riscvStartingBlockTimestampInclusive=$cutover must be present in " +
+          "conflation.proofAggregation.timestampBasedHardForks so that V1 seals its last " +
+          "conflation batch when the cutover block arrives"
+      }
+    }
     log.info(
       "Resuming conflation from block={} inclusive blockTime={}",
       lastConflatedBlock.number + 1UL,
@@ -543,7 +550,13 @@ class ConflationAppV1(
       // block_number = forceStopConflationAtBlockInclusive + 1 to trigger conflation at
       // forceStopConflationAtBlockInclusive
       lastL2BlockNumberToProcessInclusive = configs.conflation.forceStopConflationAtBlockInclusive?.inc(),
-      lastL2BlockTimestampToProcessInclusive = configs.conflation.forceStopConflationAtBlockTimestampInclusive,
+      // riscvStartingBlockTimestampInclusive is the cutover block (V2's first block). V1 needs to
+      // see it so the HARD_FORK calculator (wired via timestampBasedHardForks) seals V1's last
+      // conflation batch at the block before cutover. Also respect any existing force-stop config.
+      lastL2BlockTimestampToProcessInclusive = listOfNotNull(
+        configs.conflation.riscvStartingBlockTimestampInclusive,
+        configs.conflation.forceStopConflationAtBlockTimestampInclusive,
+      ).minOrNull(),
     ),
     targetCheckpointPauseController = targetCheckpointPauseController,
   )
