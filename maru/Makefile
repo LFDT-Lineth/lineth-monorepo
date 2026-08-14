@@ -16,9 +16,11 @@ run-e2e-test:
 clean:
 	./gradlew clean
 
+# Delegates to the monorepo-wide recipe in scripts/docker/images.mk, which mirrors
+# .github/workflows/maru-build-and-publish.yml. Produces consensys/maru:local.
+# Overrides propagate, e.g. `make docker-build-local-image PLATFORMS=linux/arm64`.
 docker-build-local-image:
-	./gradlew :app:installDist
-	docker build app --build-context=libs=./app/build/install/app/lib/ -t consensys/maru:local
+	$(MAKE) -C .. docker-build-maru
 
 docker-run-stack:
 	CREATE_EMPTY_BLOCKS=true $(if $(MARU_TAG),MARU_TAG=$(MARU_TAG)) docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up -d

@@ -69,6 +69,7 @@
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 
 ### 🚜 Refactor
 
@@ -135,3 +136,4 @@
 - *(linea-besu)* Package renaming to lineth.* (#3750)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
 - *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)

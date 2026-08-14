@@ -56,9 +56,12 @@ type Round struct {
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
-	// HasCommitment is an indicator of whether a coded Merkle commitment is to
-	// be expected in the runtime for the current round. This is scaffoling
-	// code for the future, and should be false for all current protocols.
+	// HasCommitment indicates whether a coded Merkle commitment is to be expected
+	// in the runtime for this round. It is set by the PCS compiler on every round
+	// it commits, which is every round owning at least one column, so it doubles
+	// as a marker that the PCS pass has run. A round owning no column keeps it
+	// false even in a PCS-compiled protocol — the opening round the PCS appends
+	// being one such round.
 	HasCommitment bool
 }
 
