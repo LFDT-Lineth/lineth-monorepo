@@ -116,20 +116,22 @@ runs:
     - name: Configure cache
       id: cache-config
       shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
           echo "cache_from_test=" >> $GITHUB_OUTPUT
           echo "cache_from_push=" >> $GITHUB_OUTPUT
           echo "cache_to_push=" >> $GITHUB_OUTPUT
         else
-          echo "cache_from_test=type=registry,ref=${{ inputs.image_name }}:buildcache-amd64" >> $GITHUB_OUTPUT
+          echo "cache_from_test=type=registry,ref=${IMAGE_NAME}:buildcache-amd64" >> $GITHUB_OUTPUT
           echo "cache_from_push<<EOF" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,platform=linux/amd64" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,platform=linux/arm64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${IMAGE_NAME}:buildcache-amd64,platform=linux/amd64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${IMAGE_NAME}:buildcache-arm64,platform=linux/arm64" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "cache_to_push<<EOF" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,mode=max,platform=linux/amd64" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,mode=max,platform=linux/arm64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${IMAGE_NAME}:buildcache-amd64,mode=max,platform=linux/amd64" >> $GITHUB_OUTPUT
+          echo "type=registry,ref=${IMAGE_NAME}:buildcache-arm64,mode=max,platform=linux/arm64" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
         fi
 
@@ -152,8 +154,11 @@ runs:
     - name: Save Docker image as artifact
       if: ${{ inputs.save_artifact == 'true' }}
       shell: bash
+      env:
+        PRIMARY_IMAGE: ${{ steps.set-tags.outputs.primary_image }}
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
       run: |
-        docker save ${{ steps.set-tags.outputs.primary_image }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
+        docker save "$PRIMARY_IMAGE" | gzip > "${ARTIFACT_NAME}-docker-image.tar.gz"
 
     - name: Upload Docker image artifact
       if: ${{ inputs.save_artifact == 'true' }}

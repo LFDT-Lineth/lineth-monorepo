@@ -20,8 +20,11 @@ runs:
       id: last_commit_image_exists
       shell: bash
       continue-on-error: true
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
+        LAST_COMMIT_TAG: ${{ inputs.last_commit_tag }}
       run: |
-        echo last_commit_tag_exists=$(docker pull ${{ inputs.image_name }}:${{ inputs.last_commit_tag }} > /dev/null ; echo $?) >> $GITHUB_OUTPUT
+        echo last_commit_tag_exists=$(docker pull "${IMAGE_NAME}:${LAST_COMMIT_TAG}" > /dev/null ; echo $?) >> $GITHUB_OUTPUT
     - name: Show outputs
       shell: bash
       run: |
