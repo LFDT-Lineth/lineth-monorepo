@@ -52,6 +52,9 @@ ADAPTERS = {
     "bench_zstd_c/bench/bench-zstd-c.csv": {
         "zstd -19 (C reference v1.5.7)": ("zstd-19 C reference", "no", ("zstd-19", "none")),
     },
+    "bench_brotli_c/bench/bench-brotli-c.csv": {
+        "brotli-11 (C reference v1.2.0)": ("brotli-11 C reference", "yes", ("brotli-11", "25-04-21.bin")),
+    },
     "bench_lz4/bench/bench-lz4.csv": {
         "lz4 HC-9": ("LZ4 (HC-9)", "yes", ("lz4-9", "25-04-21.bin")),
     },

@@ -1,0 +1,2 @@
+variant,compressed_bytes,decompressed_bytes,net_cycles,cycles_per_byte
+brotli-11 (C reference v1.2.0),66006,262144,6147001,23.45
