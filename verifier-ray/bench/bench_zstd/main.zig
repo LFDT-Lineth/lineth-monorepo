@@ -44,6 +44,24 @@ const compressed: []const u8 = @embedFile("zstd_compressed.bin");
 const window_len = 1 << 20;
 var out: [decompressed_len]u8 = @splat(0);
 
+/// Word-at-a-time `memcpy`, overriding the byte loop compiler-rt supplies for
+/// this freestanding rv64im target. std's zstd decoder routes literal runs,
+/// match copies and block buffer management through `memcpy`, which the PC
+/// profile attributed 89.5% of the run to, so the byte loop dominated a
+/// measurement that is supposed to be about the format.
+///
+/// `memcpy` is defined as non-overlapping, so whole words move unconditionally
+/// -- no minimum-distance test is needed, unlike the LZSS self-copy.
+export fn memcpy(noalias dest: [*]u8, noalias src: [*]const u8, len: usize) callconv(.c) [*]u8 {
+    var i: usize = 0;
+    while (i + 8 <= len) : (i += 8) {
+        const word = std.mem.readInt(u64, src[i..][0..8], .little);
+        std.mem.writeInt(u64, dest[i..][0..8], word, .little);
+    }
+    while (i < len) : (i += 1) dest[i] = src[i];
+    return dest;
+}
+
 fn fnv1a(data: []const u8) u64 {
     var h: u64 = 0xcbf29ce484222325;
     for (data) |b| {

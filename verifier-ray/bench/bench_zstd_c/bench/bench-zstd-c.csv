@@ -1,2 +1,2 @@
 variant,compressed_bytes,decompressed_bytes,net_cycles,cycles_per_byte
-zstd -19 (no dictionary),69767,262144,95428245,364.03
+zstd -19 (C reference v1.5.7),69767,262144,2446636,9.33

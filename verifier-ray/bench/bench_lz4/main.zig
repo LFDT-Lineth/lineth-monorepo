@@ -39,6 +39,18 @@ const compressed: []const u8 = @embedFile("compressed_block.bin");
 
 var out_buf: [780_000]u8 = @splat(0);
 
+/// FNV-1a, 64-bit. Checked by run.go against the corpus plaintext so a decode
+/// that is fast because it is wrong cannot be reported as a result. Computed
+/// after the timed region.
+fn fnv1a(data: []const u8) u64 {
+    var h: u64 = 0xcbf29ce484222325;
+    for (data) |b| {
+        h ^= b;
+        h = h *% 0x100000001b3;
+    }
+    return h;
+}
+
 pub export fn main() noreturn {
     profiling.markR5Value(0, 0);
     var i: u64 = 0;
@@ -50,6 +62,7 @@ pub export fn main() noreturn {
     profiling.markR5Value(10, 0);
     const d_len = lz4.decompressSafeUsingDict(compressed, &out_buf, dict) catch unreachable;
     profiling.markR5Value(11, d_len);
+    profiling.markR5Value(12, fnv1a(&out_buf));
 
     accel.zkvm_exit(0);
 }
