@@ -160,8 +160,13 @@ func ScalarFrom(g field.Gen) Scalar {
 }
 
 // ElementsFrom converts a slice of prover-side base elements.
+//
+// A zero-length input becomes nil, not an empty slice. The image cannot
+// represent the difference -- Zig's []const T is just {ptr, len} -- so nil is the
+// canonical form, and producing it here keeps a projected proof equal to what
+// decoding its own image gives back.
 func ElementsFrom(xs []field.Element) []Element {
-	if xs == nil {
+	if len(xs) == 0 {
 		return nil
 	}
 	out := make([]Element, len(xs))
@@ -171,9 +176,10 @@ func ElementsFrom(xs []field.Element) []Element {
 	return out
 }
 
-// ExtsFrom converts a slice of prover-side extension elements.
+// ExtsFrom converts a slice of prover-side extension elements. A zero-length
+// input becomes nil; see [ElementsFrom].
 func ExtsFrom(xs []field.Ext) []Ext {
-	if xs == nil {
+	if len(xs) == 0 {
 		return nil
 	}
 	out := make([]Ext, len(xs))
@@ -183,9 +189,10 @@ func ExtsFrom(xs []field.Ext) []Ext {
 	return out
 }
 
-// DigestsFrom converts a slice of prover-side commitments.
+// DigestsFrom converts a slice of prover-side commitments. A zero-length input
+// becomes nil; see [ElementsFrom].
 func DigestsFrom(xs []field.Octuplet) []Digest {
-	if xs == nil {
+	if len(xs) == 0 {
 		return nil
 	}
 	out := make([]Digest, len(xs))

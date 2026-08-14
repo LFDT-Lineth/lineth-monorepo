@@ -383,18 +383,44 @@ including `pcs.Compile` and was verified before being measured.
 "Overhead" is everything the format adds — slice headers, union tags, presence
 flags, padding, struct headers.
 
+### 11.0 Correction: overhead is circuit-dependent
+
+An earlier draft claimed the structural overhead was program-independent, on the
+strength of it being 1.33–1.39 MB across all four programs above. **That was
+wrong, and it was overfitting to four similar circuits.**
+
+Overhead is driven by the number of `?RowPair` slots, which is
+`queries × input_trees × tree_depth`. The FRI query count is fixed at 229, but
+trees and depth are properties of the committed layout, so they move with the
+circuit. All four programs above happened to have 4 trees and depth 17, which is
+what made it look constant.
+
+Measured across the 29 `wioptest` circuits (`TestImageShapeIsCircuitDependent`),
+leaf slots per query ranges **6 to 12** — a 2× spread — and overhead runs **54%
+to 72%** of the image on those small circuits, against 3–4% on the larger
+programs above. The ratio improves as row data grows, but nothing about it is
+constant.
+
+The size model in §11.5 is the thing to trust; the "it's constant" shortcut is
+withdrawn.
+
 ### 11.1 What the numbers settle
 
-**The space tradeoff is a non-issue.** At realistic sizes the in-memory image
-costs **3–4% over a packed encoding**. The whole "less space-efficient, fastest
-to decode" bargain turns out to buy zero-cost decoding for a rounding error.
+**The space tradeoff is a non-issue at production circuit sizes.** For the larger
+programs the image costs **3–4% over a packed encoding**, so zero-cost decoding
+is bought for a rounding error. On small circuits the ratio is much worse (54–72%)
+because the fixed FRI structure dominates a tiny payload — but a proof that small
+is not worth optimising.
 
-**Overhead is essentially constant in absolute terms** — 1.33–1.39 MB across all
-four programs, varying by 4% while the image varies by 4.7×. It is dominated by
-FRI-parameter-driven structure, not by program size: 229 queries × 4 input trees
-× depth 17 = 15,572 `?RowPair` slots × 72 B = 1.12 MB, identical in every proof.
-So the overhead *ratio* only looks bad on tiny proofs, and improves as proofs
-grow.
+**The model is validated against the encoder, not just asserted.**
+`TestMeasureAgreesWithEncode` compares `Measure`'s arithmetic against
+`len(Encode(...))` on real proofs; they now agree **byte for byte, with zero
+padding**. That comparison immediately found a bug in the model: it counted a
+192-byte "pcs_opening header" for `PcsOpening` + `OpeningProof` + `fri.Proof`,
+all three of which are stored *inline* in their parent and were therefore already
+inside the root's 112 bytes. Every figure this document quoted was inflated by
+that fixed 192 bytes — negligible against 43 MB, but the model was unchecked
+until the encoder existed to check it against.
 
 **Opened row data is 91–93% of the image** and is pure field elements. Nothing
 about the format touches it.
@@ -436,6 +462,42 @@ explicitly rather than assumed, since the projection silently discards the field
 `entry_claims` and public columns are absent from `wiop.Proof` — they come out of
 the PCS codegen and the projection, so they are Phase 1 numbers. Both are small
 relative to row data, but the total above is a lower bound until they are added.
+
+### 11.3a Why 43 MiB, and why that is a prover question
+
+43 MiB is a startling number for a FRI proof — a recursion proof would normally be
+around 1 MB — so it is worth showing where it comes from. It is not the format:
+**the image is 97% payload**, so a perfectly packed encoding of the same proof
+would also be ~41 MB. The proof itself is that size.
+
+Decomposing `modexp_u256`, whose 41.3 MB of row data is 93% of the image:
+
+```
+2,960,512 base elements x 4 B  = 11.8 MB
+1,229,272 ext  elements x 24 B = 29.5 MB
+```
+
+which is `229 queries x 4 input trees x 17 levels x 2 conjugate rows x ~140
+values per row`. Three multipliers stack up:
+
+- **229 queries.** `FRILogInverseRate = 1`, i.e. a blow-up factor of 2. At rate
+  1/2 you need ~229 queries for 128 bits (per the soundcalc reference in
+  `pcs.go`). Systems quoting ~1 MB proofs typically use blow-up 4–8 and 30–80
+  queries — a 3–7× difference on its own.
+- **Multi-size openings.** Each query opens one row *per committed size* per tree,
+  so the per-query cost is the total committed column count across all sizes, not
+  one row.
+- **Row width.** ~140 values per opened row, and extension values cost 24 B each.
+
+So proof size ≈ `queries × 2 × (total committed columns) × element size`. All
+three factors are prover-side parameters or circuit properties; none is
+serialization. **If ~1 MB is the target, the lever is the FRI rate and query
+count, and how much is committed — not this format.** Worth a separate
+conversation; flagged here only because measuring the image is what surfaced it.
+
+Two caveats on the 43 MiB itself: it is `secp256k1`/`modexp` rather than the real
+zkEVM circuit, and it excludes `entry_claims` (§11.3). Treat it as the right order
+of magnitude for these circuits, not as a zkEVM proof size.
 
 ### 11.4 Why no R5 number, and why it does not matter
 
@@ -566,10 +628,21 @@ verifier-ray/wiop design questions, not serialization ones:
   discriminant against `layout.go`, reporting which constant disagrees and what it
   would corrupt. Verified to fire by perturbing a pin.
 
-- **Next — the projection.** Lift `wiop.Proof` → these mirror types out of
-  `verifier-ray/testdata/generate`, keeping the Zig-literal generator as its first
-  consumer so the golden vectors stay a regression net. Last piece before an
-  end-to-end proof can be encoded.
+- **Done — the projection.** `project.go`: `Project(sys, proof, pub, entryClaims)`
+  turns a `wiop.Proof` into the verifier's shape. The Go maps disappear here,
+  which is why they were never an obstacle to the dump. Cells go out round-major
+  in declaration order *including public inputs*, since the verifier absorbs them
+  in that order and omitting them would desynchronise the transcript replay.
+
+  `TestProjectEncodeDecode_EndToEnd` closes the loop on real proofs:
+  prove → project → encode → decode → re-encode, over all 29 scenarios.
+
+  **`entry_claims` is still a parameter, not derived.** Its canonical ordering is
+  defined by verifier-ray's PCS codegen, in a separate Go module; reproducing it
+  here would mean two orderings that must agree. `Project` takes it from the
+  caller and the round trip passes nil. That seam has to close before a projected
+  proof can actually verify — the vanishing checks are re-sliced from those
+  claims — so it is the next piece of work, not an optional extra.
 - **Then — wire it up.** Guest input-region writer; remove the
   `loadR5Input`/`loadNativeInput` TODOs so the non-embedded path works. Needs
   §5.2's decision on the native path base — which also unblocks the byte-level
