@@ -27,6 +27,7 @@
 - Local setup: `docs/get-started.md`, `docs/local-development-guide.md`
 - Architecture: `docs/architecture-description.md`
 - Engineering guidelines: `docs/development-guidelines.md`
+- Docker image builds (CI and local simulation): `scripts/docker/README.md`
 - Security and audits: `docs/security.md`, `docs/audits.md`
 - Package-specific agent rules: `*/AGENTS.md` (`contracts/`, `coordinator/`, `prover/`, `tracer/`, `ts-libs/sdk/`, `linea-besu/plugins/`, `transaction-exclusion-api/`, `e2e/`)
 

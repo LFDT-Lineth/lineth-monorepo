@@ -88,3 +88,18 @@ HEALTHCHECK NONE
 USER node
 
 CMD [ "node", "./dist/run.js" ]
+
+# Build-time metadata as defined at http://label-schema.org
+# Values are injected by scripts/docker/build-image.sh.
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.label-schema.build-date=$BUILD_DATE \
+	org.label-schema.name="lido-governance-monitor" \
+	org.label-schema.description="Lineth Lido governance monitor" \
+	org.label-schema.url="https://consensys.io/" \
+	org.label-schema.vcs-ref=$VCS_REF \
+	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
+	org.label-schema.vendor="ConsenSys" \
+	org.label-schema.version=$VERSION \
+	org.label-schema.schema-version="1.0"
