@@ -51,6 +51,10 @@ func runZkcCase(t *testing.T, zkcPath string) {
 	}
 }
 
+func TestSHA2(t *testing.T) {
+	runZkcCase(t, "testdata/sha2_run")
+}
+
 func TestSecp256k1Add(t *testing.T) {
 	runZkcCase(t, "testdata/secp256k1_add_u256")
 }
