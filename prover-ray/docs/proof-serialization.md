@@ -173,24 +173,57 @@ serialize them as they are; §7 covers keeping the numbers honest.
 The root `verifier.Proof` occupies image offsets `[0, 112)`, because the loader
 casts the base address itself.
 
-## 7. Field ordering: working assumption and one live exception
+## 7. Field ordering is pinned and machine-checked
 
-**Working assumption: struct fields are laid out in declaration order.** We take
-verifier-ray's declarations at face value and do not build machinery to police
-it. When the two sides are actually wired together, verifier-ray pins the
-ordering — ideally by making the proof-facing types `extern struct`, which turns
-the assumption into an ABI guarantee.
+Assuming declaration order was not safe: **`merkle.Branch` does not follow it.**
+It declares `leaf` then `siblings`, but Zig's `auto` layout puts `siblings` at
+offset 0 and `leaf` at 16. An encoder written from the declarations alone
+produces a valid-looking, completely wrong image for that type — and because a
+wrong image still casts cleanly, it would surface as an unrelated verification
+failure rather than as a layout bug. Hence pinning up front, not at integration.
 
-One exception to be aware of while that is pending: **`merkle.Branch` does not
-currently follow declaration order.** It declares `leaf` then `siblings`, but
-Zig's `auto` layout puts `siblings` at offset 0 and `leaf` at 16. An encoder
-written purely on the declaration-order assumption produces a valid-looking,
-completely wrong image for this one type today.
+`extern struct` cannot do the pinning. Zig rejects slices in extern structs:
 
-No machinery needed — take §6's offsets as the encoder's source of truth, keep
-them in one place, and fold this into the pinning conversation at integration.
-`extern struct` would make `Branch` match its declaration and the special case
-would disappear.
+```
+error: extern structs cannot contain fields of type '[]const u32'
+note: slices have no guaranteed in-memory representation
+```
+
+That note is worth sitting with: the language explicitly declines to guarantee
+the very representation this format is built on. So the strongest thing
+available for the types as they stand is an *asserted* layout, not a guaranteed
+one.
+
+**Landed** (verifier-ray, additive, no use-site changes):
+
+- `src/proof_abi.zig` — comptime assertions on every proof type's size,
+  alignment, field offsets, and each union's discriminant *values*. Failures name
+  the actual versus pinned number. Exported from `lib.zig` so the checks are
+  analyzed on every build that uses the library, including the guest.
+- `test/proof_abi_test.zig` — the parts `@offsetOf` cannot express: each
+  discriminant's byte offset, and that an empty slice's pointer is non-null.
+  Registered in `test/all.zig`.
+
+Verified two ways: the assertions **fire** (deliberately breaking a pinned offset
+fails the build with `proof ABI drift: @offsetOf(...) is 0, pinned at 8`), and
+they **hold on the rv64 guest target** (`zig build -Dr5=true` passes), so §6's
+numbers are now machine-checked on the target that matters rather than just
+observed by a probe.
+
+Two follow-ups, both verifier-ray's call and neither urgent now that drift is
+caught at build time:
+
+- **Reorder `Branch`'s declaration** to match its layout. Purely cosmetic, no ABI
+  change, but it removes the trap for the next reader.
+- **Explicit extern fat pointer**, if a language-level guarantee is wanted:
+  `Slice(T) = extern struct { ptr: [*]const T, len: usize }` measures 16 B /
+  align 8 — byte-identical to a native slice — and extern layout follows
+  declaration order, so every proof type could become `extern struct`. Measured
+  cost: ~65 field references in `src/`, ~114 in hand-written tests, and 2789 in
+  `testdata/generated/` that are free because the Go emitter regenerates them.
+  The tagged unions and `?RowPair` would additionally need explicit
+  tag-plus-union representations. Worth folding in if these types are touched
+  anyway.
 
 ## 8. Layout: inline payloads, depth-first
 
@@ -328,12 +361,18 @@ not serialization ones:
   straight into verifier-ray. Whatever `backend.SerializeProof` eventually sends
   the coordinator is a separate format and a separate piece of work; this branch
   should not wire it.
-- **Union/tag design and field-order pinning** — for verifier-ray to decide;
-  Alexandre is asking them about their plans. Nothing here blocks on the answer:
-  §2 means the serializer follows whatever they have at the time.
+- **Field-order pinning** — done now rather than deferred, because without it the
+  encoder is untestable in any meaningful sense: see §7 for what landed and why
+  `extern struct` was not available.
+- **Union/tag design** — still for verifier-ray to decide; Alexandre is asking
+  them about their plans. Nothing here blocks on the answer: §2 means the
+  serializer follows whatever they have at the time, and §7's assertions make any
+  change to it a loud build failure rather than a silent wire break.
 
 ## 13. Implementation plan
 
+- **Done — pin the ABI.** §7. Prerequisite for everything below: without it the
+  encoder's target is unverifiable.
 - **Phase 0 — measure.** Build the projected proof for the R5 fixture, fill in
   §11's counts, and record the artifact size.
 - **Phase 1 — projection.** Lift the `wiop.Proof` → `verifier.Proof` projection
