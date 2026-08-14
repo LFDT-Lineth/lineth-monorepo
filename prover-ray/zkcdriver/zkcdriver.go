@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
@@ -74,8 +75,12 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 // according to the given schema.  The expansion process is about filling in
 // computed columns with concrete values, such for determining multiplicative
 // inverses, etc.
-func (a *ZkCDriver) Assign(run *wiop.Runtime, inputsFile string) {
-	a.AssignWithPreRead(run, ReadZkcInputs(inputsFile))
+func (a *ZkCDriver) Assign(
+	run *wiop.Runtime,
+	inputsFile string,
+	sharedRandomness field.Octuplet,
+) {
+	a.AssignWithPreRead(run, ReadZkcInputs(inputsFile), sharedRandomness)
 }
 
 // PreReadInputs holds the result of pre-reading a trace file.
@@ -103,7 +108,11 @@ func ReadZkcInputs(inputsFile string) *PreReadInputs {
 }
 
 // AssignWithPreRead assigns arithmetization columns using a pre-read trace.
-func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead *PreReadInputs) {
+func (a *ZkCDriver) AssignWithPreRead(
+	run *wiop.Runtime,
+	preRead *PreReadInputs,
+	sharedRandomness field.Octuplet,
+) {
 	assignStart := time.Now()
 	var (
 		errs []error
@@ -137,7 +146,7 @@ func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead *PreReadInputs)
 	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
 
 	copyStart := time.Now()
-	AssignFromTrace(run, expandedTrace, a.BinaryFile.AirConstraints())
+	AssignFromTrace(run, expandedTrace, a.BinaryFile.AirConstraints(), sharedRandomness)
 	logrus.Infof("[bootstrapper] column assignment: %v", time.Since(copyStart))
 	logrus.Infof("[bootstrapper] total Arithmetization.Assign: %v", time.Since(assignStart))
 }

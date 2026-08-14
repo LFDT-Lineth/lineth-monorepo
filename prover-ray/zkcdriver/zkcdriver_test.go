@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
@@ -126,7 +127,12 @@ func proverCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys)
+	// Shared randomness is requested even though the zkc driver declares no
+	// message-bus entry yet, so today this registers nothing. It is left on
+	// deliberately: once the arithmetization emits bus entries, the seeded path
+	// engages here on its own and any gap in the γ wiring surfaces as a failing
+	// test rather than staying hidden behind a flag nobody remembers to flip.
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
@@ -169,7 +175,7 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 
 	// Run the ZkC driver to produce a proof and public inputs
 	proof, pub := sys.Prove(
-		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs) },
+		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{}) },
 		wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	// Verify the proof and public inputs
