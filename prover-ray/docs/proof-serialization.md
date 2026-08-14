@@ -643,8 +643,29 @@ verifier-ray/wiop design questions, not serialization ones:
   caller and the round trip passes nil. That seam has to close before a projected
   proof can actually verify — the vanishing checks are re-sliced from those
   claims — so it is the next piece of work, not an optional extra.
-- **Then — wire it up.** Guest input-region writer; remove the
-  `loadR5Input`/`loadNativeInput` TODOs so the non-embedded path works. Needs
-  §5.2's decision on the native path base — which also unblocks the byte-level
-  cross-language golden test, since that needs an image relocated to an address a
-  Zig test can actually place data at. Not faked in the meantime.
+- **Done — the cross-language check.** Earlier drafts called this blocked on
+  §5.2's `MAP_FIXED` decision. That was wrong: a *test* only needs an address the
+  test process can map, not the production one. Measured on arm64 macOS,
+  `MAP_FIXED` fails at `0x08800000`, `0x30000000` and `0x100000000` but succeeds
+  at `0x400000000`, so the golden image is relocated there.
+
+  `wiop/proofserialization/golden_test.go` writes
+  `verifier-ray/testdata/proof_image.bin` (936 B) and fails if it goes stale;
+  `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
+  `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
+  every variant: both `Scalar` discriminants, both `Vector` discriminants, both
+  `ColumnMessage` discriminants, a null and a present `?RowPair`, a jagged
+  `entry_claims` with an empty inner slice, an empty round, and `merkle.Branch`'s
+  reordered fields.
+
+  This is the only place a byte written by Go is interpreted by the actual Zig
+  type. Everything else is indirect: the pins assert Zig's layout, prover-ray
+  asserts its encoder against its own copy of the pins, and prover-ray's round
+  trip cannot see a symmetric error because its encoder and decoder share the
+  constants. Verified to have power by corrupting a byte of the image and
+  confirming the Zig test fails. It skips, rather than passing, when `MAP_FIXED`
+  is unavailable.
+
+- **Next — wire it up.** Guest input-region writer; remove the
+  `loadR5Input`/`loadNativeInput` TODOs so the non-embedded path works. Still
+  needs §5.2's decision on the native path base, but only for production now.
