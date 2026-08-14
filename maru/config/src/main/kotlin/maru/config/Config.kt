@@ -281,6 +281,45 @@ data class ValidatorElNode(
   val payloadValidationEnabled: Boolean,
 )
 
+enum class ValidatorSignerType {
+  LOCAL,
+  CUSTOM,
+}
+
+data class ValidatorSignerConfig(
+  val type: ValidatorSignerType = ValidatorSignerType.LOCAL,
+  val name: String? = null,
+) {
+  init {
+    when (type) {
+      ValidatorSignerType.LOCAL ->
+        require(name == null) {
+          "signer-name must not be set when signer-type is local"
+        }
+
+      ValidatorSignerType.CUSTOM ->
+        require(!name.isNullOrBlank()) {
+          "signer-name must be set and non-blank when signer-type is custom"
+        }
+    }
+  }
+
+  companion object {
+    fun fromConfig(
+      type: String,
+      name: String?,
+    ): ValidatorSignerConfig {
+      val signerType =
+        when (type.lowercase()) {
+          "local" -> ValidatorSignerType.LOCAL
+          "custom" -> ValidatorSignerType.CUSTOM
+          else -> throw IllegalArgumentException("signer-type must be either local or custom, got '$type'")
+        }
+      return ValidatorSignerConfig(signerType, name)
+    }
+  }
+}
+
 data class QbftConfig(
   val minBlockBuildTime: Duration = 500.milliseconds,
   val messageQueueLimit: Int = 1000,
@@ -290,6 +329,7 @@ data class QbftConfig(
   val futureMessageMaxDistance: Long = 10L,
   val futureMessagesLimit: Long = 1000L,
   val feeRecipient: ByteArray,
+  val validatorSigner: ValidatorSignerConfig = ValidatorSignerConfig(),
 ) {
   init {
     feeRecipient.assertIs20Bytes("feeRecipient")
@@ -309,6 +349,7 @@ data class QbftConfig(
     if (roundExpiry != other.roundExpiry) return false
     if (roundExpiryCoefficient != other.roundExpiryCoefficient) return false
     if (!feeRecipient.contentEquals(other.feeRecipient)) return false
+    if (validatorSigner != other.validatorSigner) return false
 
     return true
   }
@@ -322,6 +363,7 @@ data class QbftConfig(
     result = 31 * result + (roundExpiry?.hashCode() ?: 0)
     result = 31 * result + roundExpiryCoefficient.hashCode()
     result = 31 * result + feeRecipient.contentHashCode()
+    result = 31 * result + validatorSigner.hashCode()
     return result
   }
 
@@ -334,7 +376,8 @@ data class QbftConfig(
       "duplicateMessageLimit=$duplicateMessageLimit, " +
       "futureMessageMaxDistance=$futureMessageMaxDistance, " +
       "futureMessagesLimit=$futureMessagesLimit, " +
-      "feeRecipient=${feeRecipient.encodeHex()}" +
+      "feeRecipient=${feeRecipient.encodeHex()}, " +
+      "validatorSigner=$validatorSigner" +
       ")"
 }
 
