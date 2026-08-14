@@ -210,11 +210,45 @@ they **hold on the rv64 guest target** (`zig build -Dr5=true` passes), so §6's
 numbers are now machine-checked on the target that matters rather than just
 observed by a probe.
 
-Two follow-ups, both verifier-ray's call and neither urgent now that drift is
-caught at build time:
+### 7.1 How stable is the ordering, really?
 
-- **Reorder `Branch`'s declaration** to match its layout. Purely cosmetic, no ABI
-  change, but it removes the trap for the next reader.
+Zig's rule, measured on 0.16 and identical on aarch64 and riscv64: **fields are
+stable-sorted by alignment, descending.** Equal alignments keep declaration
+order; align-8 fields precede align-4, which precede align-1.
+
+That is a deterministic and unsurprising rule (minimise padding), not arbitrary
+compiler whim, and it explains everything in §6:
+
+- Eight of the nine proof structs are made entirely of slices — uniformly align
+  8 — so declaration order already *is* memory order for them.
+- `merkle.Branch` was the sole exception, because it mixes an align-8 slice with
+  an align-4 `[8]Element`.
+
+**So the ordering can be made structurally stable rather than merely probable:
+declare fields in descending alignment order and there is nothing left for the
+compiler to reorder.** Verified directly — a struct declared `{slice, [8]u32}`
+and one declared `{[8]u32, slice}` produce byte-identical layouts, so the
+align-descending declaration is the one that tells the truth.
+
+`Branch` has been reordered accordingly (`siblings` then `leaf`) and the
+convention is documented in `proof_abi.zig`. No ABI change — the layout was
+already that; only the source now agrees with it. Declaration order now equals
+memory order across the entire proof graph.
+
+Two caveats worth keeping in view:
+
+- **No version guarantee.** Zig documents `auto` layout as unspecified and
+  reserves the right to change it. The current heuristic is the natural one and a
+  change would be a notable compiler event, but it is not promised, and this is
+  not something we can verify ahead of time.
+- **The likelier risk is us, not Zig.** Adding or reordering a field in
+  verifier-ray is an ordinary code change and shifts offsets immediately —
+  considerably more probable than a Zig codegen change. §7's assertions catch both
+  cases identically, which is the real argument for having them regardless of how
+  stable the layout rule turns out to be.
+
+### 7.2 Remaining follow-up
+
 - **Explicit extern fat pointer**, if a language-level guarantee is wanted:
   `Slice(T) = extern struct { ptr: [*]const T, len: usize }` measures 16 B /
   align 8 — byte-identical to a native slice — and extern layout follows

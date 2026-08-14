@@ -14,8 +14,18 @@
 //! Zig's `auto` layout is deliberately unspecified — `extern struct` rejects
 //! slices outright ("slices have no guaranteed in-memory representation") — so
 //! these numbers are observed, not guaranteed. That is exactly why they are
-//! asserted rather than assumed. Note `merkle.Branch` below: its fields are NOT
-//! in declaration order.
+//! asserted rather than assumed.
+//!
+//! Observed rule (Zig 0.16, identical on aarch64 and riscv64): fields are
+//! **stable-sorted by alignment, descending**. Equal alignments keep declaration
+//! order, which is why every proof struct made only of slices (all align 8) lays
+//! out exactly as declared.
+//!
+//! CONVENTION for the types pinned here: **declare fields in descending
+//! alignment order.** Then declaration order always equals memory order and there
+//! is nothing left for the compiler to reorder. Mixing a `[N]Element` (align 4)
+//! ahead of a slice (align 8) is what made `merkle.Branch` disagree with its own
+//! declaration before it was reordered.
 //!
 //! Discriminant VALUES are pinned below. Their byte OFFSETS cannot be expressed
 //! with `@offsetOf`, so they are pinned by `test/proof_abi_test.zig` instead.
@@ -90,11 +100,9 @@ comptime {
     expectField(merkle.InputTreeOpening, "leaves", 16);
 
     // ---- running-layer branches ---------------------------------------------
-    // NOT in declaration order: `leaf` is declared first but `siblings` lands at
-    // offset 0. An encoder written from the declaration order alone produces a
-    // wrong image for this type. Left as-is to keep this module assertion-only;
-    // reordering the declaration to match (or moving to an explicit extern
-    // representation) would remove the trap.
+    // Declared align-descending (slice before digest array), so these offsets
+    // match the declaration. Swapping the two fields back would silently keep
+    // this same layout while making the source read the other way round.
     expectSize(merkle.Branch, 48, 8);
     expectField(merkle.Branch, "siblings", 0);
     expectField(merkle.Branch, "leaf", 16);
