@@ -135,18 +135,22 @@ class BlockBuildingBeaconBlockImporter(
         nextBlockTimestamp,
         beaconBlockHeader,
       )
-      executionLayerManager.setHeadAndStartBlockBuilding(
-        headHash = beaconBlock.beaconBlockBody.executionPayload.blockHash,
-        safeHash = finalizationState.safeBlockHash,
-        finalizedHash = finalizationState.finalizedBlockHash,
-        nextBlockTimestamp = nextBlockTimestamp,
-        feeRecipient = feeRecipient,
-        prevRandao = prevRandaoProvider.calculateNextPrevRandao(
-          signee = beaconBlock.beaconBlockBody.executionPayload.blockNumber
-            .inc(),
-          prevRandao = beaconBlock.beaconBlockBody.executionPayload.prevRandao,
-        ),
-      )
+      try {
+        executionLayerManager.setHeadAndStartBlockBuilding(
+          headHash = beaconBlock.beaconBlockBody.executionPayload.blockHash,
+          safeHash = finalizationState.safeBlockHash,
+          finalizedHash = finalizationState.finalizedBlockHash,
+          nextBlockTimestamp = nextBlockTimestamp,
+          feeRecipient = feeRecipient,
+          prevRandao = prevRandaoProvider.calculateNextPrevRandao(
+            signee = beaconBlock.beaconBlockBody.executionPayload.blockNumber
+              .inc(),
+            prevRandao = beaconBlock.beaconBlockBody.executionPayload.prevRandao,
+          ),
+        )
+      } catch (error: Exception) {
+        SafeFuture.failedFuture(error)
+      }
     } else {
       log.info(
         "importing block: elBlockNumber={} clBlockNumber={} clBlockHeader={}",
