@@ -212,6 +212,38 @@ func TestEncode_ScalarTagPolarity(t *testing.T) {
 		"an extension-valued Scalar must carry discriminant 1")
 }
 
+// TestEncode_ColumnMessageTagValues asserts the discriminant bytes literally,
+// independently of the package's own constants.
+//
+// Round-trip tests cannot see a wrong tag value: encode and decode share the
+// constant, so changing it keeps them in agreement while making the image
+// disagree with the verifier. Only a literal assertion here or the ABI
+// cross-check catches that.
+func TestEncode_ColumnMessageTagValues(t *testing.T) {
+	p := ps.Proof{Rounds: []ps.RoundMessage{{Columns: []ps.ColumnMessage{
+		{Commitment: ps.Digest{1}},
+		{IsPublic: true, PublicColumn: ps.Vector{Base: []ps.Element{2}}},
+		{IsPublic: true, PublicColumn: ps.Vector{IsExt: true, Ext: []ps.Ext{{3}}}},
+	}}}}
+
+	image, err := ps.Encode(p, testBase)
+	require.NoError(t, err)
+
+	roundOff := int(binary.LittleEndian.Uint64(image[0:]) - testBase)
+	colsOff := int(binary.LittleEndian.Uint64(image[roundOff:]) - testBase)
+
+	require.Equal(t, byte(0), image[colsOff+32],
+		"an oracle column's discriminant must be 0 at byte 32")
+	require.Equal(t, byte(1), image[colsOff+40+32],
+		"a public column's discriminant must be 1 at byte 32")
+
+	// The nested Vector carries its own discriminant at byte 16 of the payload.
+	require.Equal(t, byte(0), image[colsOff+40+16],
+		"a base-valued Vector's discriminant must be 0 at byte 16")
+	require.Equal(t, byte(1), image[colsOff+80+16],
+		"an extension-valued Vector's discriminant must be 1 at byte 16")
+}
+
 func TestScalarFrom_InvertsGoTag(t *testing.T) {
 	base := ps.ScalarFrom(field.ElemFromBase(field.NewElement(5)))
 	require.False(t, base.IsExt, "a base Gen must become the Zig .base variant")
@@ -313,6 +345,18 @@ func TestDecode_RejectsMalformedImages(t *testing.T) {
 			name:  "pointer past the end",
 			image: corrupt(func(b []byte) { binary.LittleEndian.PutUint64(b[0:], testBase+uint64(len(good))+8) }),
 			want:  "past the end",
+		},
+		{
+			// A zero-length slice dereferences nothing, so only the pointer-range
+			// check can reject this. Without a length-0 case the check is dead
+			// weight that no test exercises — a mutation run proved exactly that,
+			// since the case above is really caught by the length check.
+			name: "zero-length slice pointing outside the image",
+			image: corrupt(func(b []byte) {
+				binary.LittleEndian.PutUint64(b[16:], testBase+uint64(len(good))+8) // module_sizes ptr
+				binary.LittleEndian.PutUint64(b[24:], 0)                            // ... with length 0
+			}),
+			want: "past the end",
 		},
 		{
 			name:  "length exceeding the image",
