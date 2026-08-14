@@ -7,6 +7,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)
 ## [2.1.1] - 2026-08-11
 
 ### ⚙️ Miscellaneous Tasks
