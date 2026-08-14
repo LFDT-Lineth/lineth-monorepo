@@ -47,6 +47,20 @@ pub const ProofOutputWithLogs = struct {
     fork_name: []const u8,
 };
 
+/// A block's real transition outcome, computed but not yet checked against the payload's own
+/// declared commitments (`state_root`/`receipts_root`/`block_access_list`) — everything
+/// `block_validation.validatePostExecution` needs to run that check, for a caller that instead
+/// needs to DISCOVER what those values genuinely are (test tooling re-deriving them after altering
+/// a block's conditions) rather than verify a claim against them.
+pub const ComputedBlock = struct {
+    proof: ProofOutputWithLogs,
+    accessed: []const types.AccessedEntry,
+    env: types.Env,
+    spec: primitives.SpecId,
+    total_gas_used: u64,
+    blob_gas_used: u64,
+};
+
 // ─── Private helpers (adapted from Zesu executor/main.zig) ───────────────────────────────────────
 
 fn buildEnv(
@@ -100,37 +114,27 @@ fn finalizeOutputWithLogs(
     };
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────────────────────────
+// ─── Shared preamble ──────────────────────────────────────────────────────────────────────────────
 
-/// High-level, log-preserving stateless execution from a fully-decoded StatelessInput. Mirrors
-/// zesu's `executor.executeStatelessInput` (same preamble: derives `pre_state_root`, builds the
-/// block-hash table, validates the header chain) and its `executeBlockStateless` body (same
-/// WitnessDatabase + Context wiring, same BAL validation), but returns `ProofOutputWithLogs` — full
-/// receipts (with `.logs`) instead of the vanilla guest's bloom-only projection.
-///
-/// `node_index` is caller-built and caller-owned (NOT built here, unlike zesu's own
-/// `executeStatelessInput`): `l2_execution.runL2Execution` already builds ONE `NodeIndex` combining
-/// every payload's witness nodes (it needs that same combined index for its own Linea-specific
-/// reads), and building a second, per-payload index here from `si.witness.nodes` alone — a strict
-/// subset of what the caller already indexed — would just be duplicate work the guest can't afford
-/// to pay for twice. `computeStateRootDelta` (via `finalizeOutputWithLogs` below) mutates
-/// `node_index` in place (inserting the post-execution trie's updated nodes under their own,
-/// distinct hashes); sharing one evolving index across the whole payload range is correct, not just
-/// cheaper, since it's the same content-addressed trie throughout.
-pub fn executeStatelessInputWithLogs(
-    alloc: std.mem.Allocator,
-    si: input.StatelessInput,
-    fork_name: []const u8,
-    node_index: *mpt.NodeIndex,
-) !ProofOutputWithLogs {
-    zesu_allocator.set(alloc);
+/// The pieces of `StatelessInput` a block's computation needs, derived once and shared by both
+/// public entry points below: `pre_state_root` (read off the witness-verified parent header, or
+/// `ep.state_root` at genesis), the block-hash table for the `BLOCKHASH` opcode, and the decoded
+/// parent header `validateBlock` checks the declared base fee/gas limit/timestamp against.
+const Preamble = struct {
+    pre_state_root: [32]u8,
+    block_hashes: []types.BlockHashEntry,
+    parent_header: ?rlp_decode.ParentHeader,
+};
 
+/// A resolvable witness header is required for every non-genesis block: without one, this would
+/// fall back to the payload's OWN claimed (post-execution) state_root as its pre-state root, which
+/// is self-referential and disconnected from the real state behind `ep.parent_hash`. Genesis —
+/// block 0 with an all-zero parent hash — is the only exemption. The witness's headers are also
+/// walked here into a hash chain, verified to terminate at `ep.parent_hash`, so the parent header
+/// `validateBlock` checks against is one this block's own witness actually proves.
+fn derivePreamble(alloc: std.mem.Allocator, si: input.StatelessInput) !Preamble {
     const ep = &si.new_payload_request.execution_payload;
 
-    // A resolvable witness header is required for every non-genesis block: without one, this
-    // would fall back to the payload's OWN claimed (post-execution) state_root as its pre-state
-    // root, which is self-referential and disconnected from the real state behind
-    // `ep.parent_hash`. Genesis — block 0 with an all-zero parent hash — is the only exemption.
     const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse blk: {
         const is_genesis = ep.block_number == 0 and std.mem.allEqual(u8, &ep.parent_hash, 0);
         if (!is_genesis) return error.MissingParentHeaderWitness;
@@ -140,8 +144,11 @@ pub fn executeStatelessInputWithLogs(
     const HeaderInfo = struct { number: u64, parent_hash: [32]u8, hash: [32]u8 };
     var header_infos = std.ArrayListUnmanaged(HeaderInfo).empty;
     defer header_infos.deinit(alloc);
+    // Not deinit'd: `block_hashes.items` is returned as `Preamble.block_hashes` and must outlive
+    // this function, unlike `header_infos` above, which never leaves it. `alloc` is the caller's
+    // arena throughout this codebase's own convention, so this is reclaimed with everything else
+    // when that arena is torn down, not leaked.
     var block_hashes = std.ArrayListUnmanaged(types.BlockHashEntry).empty;
-    defer block_hashes.deinit(alloc);
     for (si.witness.headers) |hdr_rlp| {
         const hash = mpt.keccak256(hdr_rlp);
         const outer = mpt.rlp.decodeItem(hdr_rlp) catch return error.InvalidWitness;
@@ -191,21 +198,16 @@ pub fn executeStatelessInputWithLogs(
             return error.InvalidWitness;
     }
 
-    return executeBlockStatelessWithLogs(
-        alloc,
-        pre_state_root,
-        node_index,
-        si.new_payload_request,
-        si.witness.codes,
-        block_hashes.items,
-        parent_header,
-        fork_name,
-        si.chain_config.chain_id,
-        si.public_keys,
-    );
+    return .{ .pre_state_root = pre_state_root, .block_hashes = block_hashes.items, .parent_header = parent_header };
 }
 
-fn executeBlockStatelessWithLogs(
+/// Runs a block's real transition and computes its outcome, stopping short of checking that
+/// outcome against the payload's own declared commitments — see `ComputedBlock`'s doc comment.
+/// Every step here (env construction, block validation, `WitnessDatabase`/`Context` wiring,
+/// `transitionWithContext`, access-log draining, root computation) is exactly what
+/// `executeBlockStatelessWithLogs` below needs too; that function is this one plus the one
+/// remaining check, not a second implementation of it.
+fn computeBlockStatelessWithLogs(
     alloc: std.mem.Allocator,
     pre_state_root: [32]u8,
     node_index: *mpt.NodeIndex,
@@ -216,7 +218,7 @@ fn executeBlockStatelessWithLogs(
     fork_name: []const u8,
     chain_id: u64,
     public_keys: []const []const u8,
-) !ProofOutputWithLogs {
+) !ComputedBlock {
     const ep = &req.execution_payload;
 
     const spec = hardfork.specForBlock(fork_name, ep.timestamp) orelse return error.UnsupportedFork;
@@ -250,11 +252,90 @@ fn executeBlockStatelessWithLogs(
     defer access_log.deinit();
     const accessed = try executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched);
     const proof = try finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb());
-    try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
-        .computed_state_root = proof.post_state_root,
+
+    return .{
+        .proof = proof,
+        .accessed = accessed,
+        .env = env,
+        .spec = spec,
+        .total_gas_used = result.cumulative_gas,
+        .blob_gas_used = result.blob_gas_used,
+    };
+}
+
+// ─── Public API ────────────────────────────────────────────────────────────────────────────────
+
+/// High-level, log-preserving stateless execution from a fully-decoded StatelessInput. Mirrors
+/// zesu's `executor.executeStatelessInput` (same preamble: derives `pre_state_root`, builds the
+/// block-hash table, validates the header chain) and its `executeBlockStateless` body (same
+/// WitnessDatabase + Context wiring, same BAL validation), but returns `ProofOutputWithLogs` — full
+/// receipts (with `.logs`) instead of the vanilla guest's bloom-only projection.
+///
+/// `node_index` is caller-built and caller-owned (NOT built here, unlike zesu's own
+/// `executeStatelessInput`): `l2_execution.runL2Execution` already builds ONE `NodeIndex` combining
+/// every payload's witness nodes (it needs that same combined index for its own Linea-specific
+/// reads), and building a second, per-payload index here from `si.witness.nodes` alone — a strict
+/// subset of what the caller already indexed — would just be duplicate work the guest can't afford
+/// to pay for twice. `computeStateRootDelta` (via `finalizeOutputWithLogs` below) mutates
+/// `node_index` in place (inserting the post-execution trie's updated nodes under their own,
+/// distinct hashes); sharing one evolving index across the whole payload range is correct, not just
+/// cheaper, since it's the same content-addressed trie throughout.
+pub fn executeStatelessInputWithLogs(
+    alloc: std.mem.Allocator,
+    si: input.StatelessInput,
+    fork_name: []const u8,
+    node_index: *mpt.NodeIndex,
+) !ProofOutputWithLogs {
+    zesu_allocator.set(alloc);
+
+    const preamble = try derivePreamble(alloc, si);
+    const computed = try computeBlockStatelessWithLogs(
+        alloc,
+        preamble.pre_state_root,
+        node_index,
+        si.new_payload_request,
+        si.witness.codes,
+        preamble.block_hashes,
+        preamble.parent_header,
+        fork_name,
+        si.chain_config.chain_id,
+        si.public_keys,
+    );
+
+    const ep = &si.new_payload_request.execution_payload;
+    try block_validation.validatePostExecution(alloc, computed.env, computed.spec, computed.total_gas_used, computed.blob_gas_used, ep.block_access_list, computed.accessed, .{
+        .computed_state_root = computed.proof.post_state_root,
         .expected_state_root = ep.state_root,
-        .computed_receipts_root = proof.receipts_root,
+        .computed_receipts_root = computed.proof.receipts_root,
         .expected_receipts_root = ep.receipts_root,
     });
-    return proof;
+    return computed.proof;
+}
+
+/// Same computation as `executeStatelessInputWithLogs`, without the final check against the
+/// payload's own declared `state_root`/`receipts_root`/`block_access_list` — for a caller that
+/// needs to discover a block's real outcome (test tooling re-deriving it after altering the block's
+/// conditions, e.g. its base fee) rather than verify a claim against it. Exposed via
+/// `l2_execution.test_api`, mirroring `executeStatelessInputWithLogsFn`'s own exposure there.
+pub fn computeStatelessInputWithLogs(
+    alloc: std.mem.Allocator,
+    si: input.StatelessInput,
+    fork_name: []const u8,
+    node_index: *mpt.NodeIndex,
+) !ComputedBlock {
+    zesu_allocator.set(alloc);
+
+    const preamble = try derivePreamble(alloc, si);
+    return computeBlockStatelessWithLogs(
+        alloc,
+        preamble.pre_state_root,
+        node_index,
+        si.new_payload_request,
+        si.witness.codes,
+        preamble.block_hashes,
+        preamble.parent_header,
+        fork_name,
+        si.chain_config.chain_id,
+        si.public_keys,
+    );
 }
