@@ -18,12 +18,13 @@ import (
 //	n := m.Size()
 //	for row := range n { ... }
 //
-// Module.Size() returns 0 for a dynamic module -- the per-Runtime height lives
-// in Module.RuntimeSize(rt). So n == 0, the loop body never executed, and Check
-// returned nil unconditionally. The same wrong size reached
+// Module.Size() used to return 0 for a dynamic module -- the per-Runtime height
+// lives in Module.RuntimeSize(rt). So n == 0, the loop body never executed, and
+// Check returned nil unconditionally. The same wrong size reached
 // ConcreteVector.ElementAt, resolving padding against Size() rather than the
 // runtime height. The fix is n := m.RuntimeSize(rt) with
-// cv.ElementAtN(m.Padding, n, row).
+// cv.ElementAtN(m.Padding, n, row); Module.Size() now panics on a dynamic
+// module so the same silent-zero mistake cannot be made again.
 //
 // IMPACT. Check is the reference oracle for a not-yet-compiled protocol
 // (ProveOptions.CheckUnreducedQueries) and for the wioptest soundness
@@ -50,10 +51,11 @@ func TestRangeCheckChecksDynamicModule(t *testing.T) {
 		rt := wiop.NewRuntime(sys)
 		rt.AssignColumn(col, witness())
 
-		// The precondition that used to empty the loop: Size() is 0, while the
-		// size Check must read is the runtime height.
-		require.Equal(t, 0, mod.Size(),
-			"precondition: Module.Size() is 0 for a dynamic module")
+		// The static size is not merely wrong for a dynamic module, it is
+		// unavailable: Size() panics rather than silently reporting 0 and
+		// emptying the loop. RuntimeSize is the only valid source of the height.
+		require.Panics(t, func() { _ = mod.Size() },
+			"precondition: Module.Size() panics on a dynamic module")
 		require.Equal(t, 4, mod.RuntimeSize(rt),
 			"precondition: the runtime height is 4, so Check must inspect 4 rows")
 
