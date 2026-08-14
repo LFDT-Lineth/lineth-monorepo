@@ -1,9 +1,17 @@
-# Proof serialization — the proof image format
+# proofserialization — the proof image format
 
-Status: **draft for review**. No code yet; this pins the format so the encoder
-can be written against a fixed target.
+The format this package implements, and the reasoning behind it.
 
-Branch: `feat/prover-ray-proof-serde`.
+- `Project` maps a `wiop.Proof` onto the verifier's round-major shape.
+- `Encode` lays that out as the byte image verifier-ray casts straight out of its
+  input region, relocated for a given base address.
+- `Decode` / `Validate` read an image back, host-side.
+- `Measure` reports what an image would cost without building one.
+
+The layout is not a free choice: it mirrors the Zig ABI of verifier-ray's
+`verifier.Proof`, measured from the compiler and pinned by
+`verifier-ray/src/proof_abi.zig`. Sections 5–7 are the load-bearing ones if you
+are changing either side.
 
 ## 1. Goal
 

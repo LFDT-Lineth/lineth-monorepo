@@ -3,7 +3,7 @@
 //! `verifier.Proof` is not parsed — it is cast straight out of the input region
 //! (`main.zig`'s `loadR5Input`/`loadNativeInput`), so prover-ray's encoder has to
 //! reproduce this module's exact byte layout. See
-//! `prover-ray/docs/proof-serialization.md`.
+//! `prover-ray/wiop/proofserialization/README.md`.
 //!
 //! Nothing here changes any layout; it asserts the layout the encoder targets, so
 //! that a field reordering, a new field, or a Zig upgrade that shifts a slice's
@@ -157,7 +157,7 @@ fn expectSize(comptime T: type, comptime size: usize, comptime alignment: usize)
                 "     update. In the SAME change, also update:\n" ++
                 "       - the pinned {d} below,\n" ++
                 "       - prover-ray's proof encoder (it writes these offsets by hand),\n" ++
-                "       - prover-ray/docs/proof-serialization.md section 6 (layout table).\n" ++
+                "       - prover-ray/wiop/proofserialization/README.md section 6 (layout table).\n" ++
                 "     Shipping the struct change alone silently invalidates every proof\n" ++
                 "     produced afterwards.\n" ++
                 "\n" ++
@@ -174,7 +174,7 @@ fn expectSize(comptime T: type, comptime size: usize, comptime alignment: usize)
                 "  Alignment changes when the widest field changes. The encoder pads to\n" ++
                 "  {d}; at {d} every following field in the image is misplaced. Either\n" ++
                 "  revert the field change, or update this pin, prover-ray's encoder and\n" ++
-                "  docs/proof-serialization.md section 6 together.\n",
+                "  prover-ray/wiop/proofserialization/README.md section 6 together.\n",
             .{ @typeName(T), @alignOf(T), alignment, alignment, @alignOf(T) },
         ));
     }
@@ -193,7 +193,7 @@ fn expectField(comptime T: type, comptime name: []const u8, comptime offset: usi
                 "     update. In the SAME change, also update:\n" ++
                 "       - the pinned offset below,\n" ++
                 "       - prover-ray's proof encoder (it writes these offsets by hand),\n" ++
-                "       - prover-ray/docs/proof-serialization.md section 6 (layout table).\n" ++
+                "       - prover-ray/wiop/proofserialization/README.md section 6 (layout table).\n" ++
                 "     Shipping the struct change alone silently invalidates every proof\n" ++
                 "     produced afterwards.\n" ++
                 "\n" ++
@@ -228,7 +228,7 @@ fn expectTag(comptime T: type, comptime variant: std.meta.Tag(T), comptime tag: 
                 "  a) Adding a variant? Append it AFTER the existing ones so the current\n" ++
                 "     discriminants keep their values.\n" ++
                 "  b) Genuinely renumbering? Update the pin below, prover-ray's encoder,\n" ++
-                "     and docs/proof-serialization.md section 6 in the same change.\n",
+                "     and prover-ray/wiop/proofserialization/README.md section 6 in the same change.\n",
             .{ @typeName(T), @tagName(variant), @intFromEnum(variant), tag },
         ));
     }

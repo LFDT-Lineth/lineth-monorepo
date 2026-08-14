@@ -1,9 +1,15 @@
 // Package proofserialization turns a [wiop.Proof] into the byte image the Zig
-// verifier casts straight out of its input region, with no decode step. See
-// prover-ray/docs/proof-serialization.md for the format.
+// verifier casts straight out of its input region, with no decode step.
 //
-// Today it holds only [Measure], which reports how large that image would be and
-// where the bytes go. The encoder lands here next.
+//   - [Project] maps a [wiop.Proof] onto the verifier's round-major shape.
+//   - [Encode] lays that out as the image, relocated for a given base address.
+//   - [Decode] and [Validate] read an image back, host-side.
+//   - [Measure] reports what an image would cost without building one.
+//
+// The layout is not a free choice: it mirrors the Zig ABI of verifier-ray's
+// verifier.Proof, pinned by verifier-ray/src/proof_abi.zig. README.md documents
+// the format and the reasoning; sections 5 to 7 are the ones that matter when
+// changing either side.
 package proofserialization
 
 import (
