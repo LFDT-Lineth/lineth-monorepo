@@ -12,4 +12,5 @@ comptime {
     _ = @import("verifier_test.zig");
     _ = @import("pcs_endpoint_binding_test.zig");
     _ = @import("proof_abi_test.zig");
+    _ = @import("proof_image_test.zig");
 }
