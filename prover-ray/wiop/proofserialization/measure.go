@@ -14,27 +14,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// Byte sizes of the verifier-ray types the image is built from, as pinned by
-// verifier-ray/src/proof_abi.zig. Named so the arithmetic below reads as layout
-// rather than as magic numbers; that file's assertions are what keep them true.
-const (
-	SizeSlice         = 16 // []const T: {ptr, len}, no capacity field
-	SizeElement       = 4  // koalabear.Element, one Montgomery u32
-	SizeExt           = 24 // ext.Ext (E6)
-	SizeDigest        = 32 // poseidon2.Digest / Commitment
-	SizeUsize         = 8
-	SizeScalar        = 28 // value.Scalar: 24B payload + tag + pad
-	SizeColumnMessage = 40 // protocol.ColumnMessage: 32B payload + tag + pad
-	SizeRoundMessage  = 32
-	SizeOptRowPair    = 72 // ?merkle.RowPair: 64B payload (2 x RowOpening) + flag + pad
-	SizeBranch        = 48
-	SizeInputTreeOpen = 32
-	SizeFriProof      = 48
-	SizeOpeningProof  = 64
-	SizePcsOpening    = 80
-	SizeProof         = 112
-)
-
 // Section is one named group of image bytes, so a report can show where the size
 // goes rather than only a total.
 type Section struct {

@@ -507,15 +507,43 @@ verifier-ray/wiop design questions, not serialization ones:
 - **Done — Phase 0, measure.** §11, via `proofserialization.Measure`. Image is
   9–43 MiB at 3–4% structural overhead, 91–93% opened row data, cells under 1%
   and all `ext`. Nothing in the numbers argues against the format.
-- **Phase 1 — projection.** Lift the `wiop.Proof` → `verifier.Proof` projection
-  out of `verifier-ray/testdata/generate` into a shared, tested package. No
-  behaviour change: the existing Zig-literal generator becomes its first
-  consumer, keeping the golden vectors as a regression net.
-- **Phase 2 — encoder.** Depth-first inline writer (§8) + `Validate` (§10) in
-  `wiop/proofserialization`. Round-trip test via a Go reader over the image, plus
-  a cross-language golden test asserting the Go-produced image is byte-identical
-  to the Zig-compiled `verifier.Proof` for the same fixture — that validates the
-  format end to end rather than validating our own assumptions about it.
-- **Phase 3 — wire it up.** Guest input-region writer; remove the
+- **Done — the serializer.** `wiop/proofserialization`:
+  - `layout.go` — the ABI mirror: sizes, field offsets, discriminant values.
+  - `types.go` — Go mirrors of the verifier's proof types, plus the
+    `field.Ext`/`field.Gen` conversions the projection will use.
+  - `encode.go` — `Encode(proof, base)`, depth-first inline layout (§8) with
+    absolute pointers baked in.
+  - `decode.go` — `Decode`/`Validate` (§10), a strict host-side reader.
+
+  Tested: value and image round-trip, determinism, root at offset 0, relocation
+  across bases, tag polarity, zeroed padding, and rejection of null, below-base,
+  past-end, over-length and misaligned pointers plus out-of-range discriminants.
+
+  Two things the implementation settled that this spec had wrong:
+
+  - **`base` must be non-zero.** §8.2's rule of pointing empty slices at `base`
+    makes them null when `base == 0`, breaking the very invariant it exists to
+    uphold. `Encode` and `Decode` now reject base 0: an in-image pointer would be
+    indistinguishable from null, so base 0 is incompatible with the format rather
+    than merely awkward.
+  - **nil and empty slices are indistinguishable**, deliberately. Go separates
+    them; Zig's `[]const T` is just `{ptr, len}`. Both encode identically and
+    decode as nil, so the round trip is a Go-value identity only up to that, and
+    an exact identity on the *image* — which is what the guest reads.
+
+  `abi_agreement_test.go` closes the drift direction nothing else covered:
+  `proof_abi.zig` catches Zig's layout moving, and the encoder's own tests catch
+  Go bugs against Go's constants, but neither notices the two sides' *numbers*
+  diverging. It parses `proof_abi.zig` and compares every pinned size, offset and
+  discriminant against `layout.go`, reporting which constant disagrees and what it
+  would corrupt. Verified to fire by perturbing a pin.
+
+- **Next — the projection.** Lift `wiop.Proof` → these mirror types out of
+  `verifier-ray/testdata/generate`, keeping the Zig-literal generator as its first
+  consumer so the golden vectors stay a regression net. Last piece before an
+  end-to-end proof can be encoded.
+- **Then — wire it up.** Guest input-region writer; remove the
   `loadR5Input`/`loadNativeInput` TODOs so the non-embedded path works. Needs
-  §5.2's decision on the native path base.
+  §5.2's decision on the native path base — which also unblocks the byte-level
+  cross-language golden test, since that needs an image relocated to an address a
+  Zig test can actually place data at. Not faked in the meantime.
