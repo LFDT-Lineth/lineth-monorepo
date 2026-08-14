@@ -504,4 +504,9 @@ pub const test_api = if (@import("builtin").is_test) struct {
     /// same inputs a stub engine receives — this module's own import of it is the only reachable
     /// path without a build-graph module double-claim.
     pub const executeStatelessInputWithLogsFn = execution.executeStatelessInputWithLogs;
+    /// Same seam, without the final check against the payload's own declared commitments — for
+    /// test code that needs to discover a block's real outcome after altering its conditions,
+    /// rather than verify a claim against it. See `execution.computeStatelessInputWithLogs`.
+    pub const computeStatelessInputWithLogsFn = execution.computeStatelessInputWithLogs;
+    pub const ComputedBlock = execution.ComputedBlock;
 } else struct {};

@@ -481,6 +481,39 @@ pub fn build(b: *std.Build) void {
         linkNativeZesuCrypto(l2_execution_range_tests, native_target, native_crypto);
         test_step.dependOn(&b.addRunArtifact(l2_execution_range_tests).step);
 
+        // ── Real multi-block happy-path spike test (test/real_multiblock_test.zig) ──────────────────
+        // Engineers a real, multi-block EF corpus sequence (test/real_multiblock_fixture_gen.zig,
+        // pulled in by relative import — same reasoning as `conflation_plan.zig` above) into a
+        // self-consistent input at test run time and drives it through `l2_execution.runL2Execution`
+        // — the guest's REAL, full pipeline, not `conflation_plan.zig`'s StubEngine. No checked-in
+        // fixture: the chosen corpus JSON is embedded straight from the dependency tree (mirroring
+        // `evm_execution_fixtures.zig`'s own `zkevm_stateless_block.json` embed above), so the
+        // engineered input is always freshly derived from the current code, never stale. This test
+        // therefore lives inside this lazy-dependency block, like the range/parity suites above,
+        // rather than being part of the unconditional default run.
+        const real_multiblock_tests = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/real_multiblock_test.zig"),
+                .target = native_target,
+                .optimize = host_optimize,
+            }),
+        });
+        real_multiblock_tests.root_module.addAnonymousImport("slotnum_distinct_per_block.json", .{
+            .root_source_file = fixtures_dep.path("blockchain_tests/for_amsterdam/amsterdam/eip7843_slotnum/slotnum/slotnum_distinct_per_block.json"),
+        });
+        real_multiblock_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        real_multiblock_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
+        real_multiblock_tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+        real_multiblock_tests.root_module.addImport("zesu_executor", native_imports.executor);
+        real_multiblock_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
+        real_multiblock_tests.root_module.addImport("zesu_input", native_imports.input);
+        real_multiblock_tests.root_module.addImport("l2_execution", l2_execution_mod);
+        real_multiblock_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        real_multiblock_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
+        real_multiblock_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+        linkNativeZesuCrypto(real_multiblock_tests, native_target, native_crypto);
+        test_step.dependOn(&b.addRunArtifact(real_multiblock_tests).step);
+
         // ── extended-vs-fixture validity reference-test guard (permanent) ──
         // The single reference-test runner for the extended guest: wraps the vanilla EF input into a
         // dummy-filled extended input (vanilla_wrap.wrapVanillaAsExtended, single payload, empty
