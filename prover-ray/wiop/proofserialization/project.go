@@ -12,7 +12,7 @@ import (
 // This is the step that makes serialization possible at all: wiop.Proof is keyed
 // by ObjectID through Go maps, and the verifier's Proof is round-major and dense.
 // The maps disappear here, which is why they were never an obstacle to a
-// zero-decode dump. See docs/proof-serialization.md section 3.
+// zero-decode dump. See README.md section 3.
 //
 // entryClaims is supplied by the caller rather than derived. The canonical entry
 // ordering is defined by verifier-ray's PCS codegen (a separate Go module) and

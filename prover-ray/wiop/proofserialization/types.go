@@ -6,7 +6,7 @@ import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 // the encoder has something with the verifier's shape to walk: a wiop.Proof is
 // structurally different (maps keyed by ObjectID rather than round-major dense
 // arrays), so serialization is a projection onto these types followed by an
-// exact dump of them. See docs/proof-serialization.md sections 2 and 3.
+// exact dump of them. See README.md sections 2 and 3.
 //
 // Field order here matches the Zig declarations, which since
 // verifier-ray/src/crypto/merkle.zig declares align-descending is also the

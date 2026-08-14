@@ -4,7 +4,7 @@
 //!
 //! prover-ray's encoder writes these discriminants by hand, so their byte offset
 //! is part of the wire contract. Their numeric values are pinned at comptime in
-//! `src/proof_abi.zig`. See `prover-ray/docs/proof-serialization.md`.
+//! `src/proof_abi.zig`. See `prover-ray/wiop/proofserialization/README.md`.
 //!
 //! The checks read only the discriminant byte and compare it against the value's
 //! own active tag. They deliberately avoid diffing whole values: Zig does not
@@ -66,7 +66,7 @@ fn reportTagDrift(
         \\       - the expected offset in test/proof_abi_test.zig (this file),
         \\       - the size and tag pins in src/proof_abi.zig,
         \\       - prover-ray's proof encoder, which writes the discriminant,
-        \\       - prover-ray/docs/proof-serialization.md section 6 (layout table).
+        \\       - prover-ray/wiop/proofserialization/README.md section 6 (layout table).
         \\     Shipping the type change alone silently invalidates every proof
         \\     produced afterwards.
         \\
@@ -155,7 +155,7 @@ test "empty slices carry a non-null pointer" {
             \\  This test asserts that Zig still does that. If it now emits a null
             \\  pointer for empty slice literals, the encoder's convention should be
             \\  revisited to match — see the determinism rules in
-            \\  prover-ray/docs/proof-serialization.md section 9.
+            \\  prover-ray/wiop/proofserialization/README.md section 9.
             \\
             \\
         , .{});
