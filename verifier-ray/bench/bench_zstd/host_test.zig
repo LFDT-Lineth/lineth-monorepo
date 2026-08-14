@@ -10,16 +10,17 @@ const window_len = 1 << 20;
 
 test "zstd -19 fixture decodes to the corpus plaintext" {
     const gpa = std.testing.allocator;
-    const window = try gpa.alloc(u8, window_len + std.compress.zstd.block_size_max);
-    defer gpa.free(window);
     const out = try gpa.alloc(u8, decompressed_len);
     defer gpa.free(out);
 
+    // Direct mode, matching main.zig: the flat output buffer is the window.
     var input: std.Io.Reader = .fixed(compressed);
-    var d: std.compress.zstd.Decompress = .init(&input, window, .{
+    var d: std.compress.zstd.Decompress = .init(&input, &.{}, .{
         .window_len = window_len,
         .verify_checksum = false,
     });
-    try d.reader.readSliceAll(out);
+    var w: std.Io.Writer = .fixed(out);
+    const n = try d.reader.streamRemaining(&w);
+    try std.testing.expectEqual(decompressed_len, n);
     try std.testing.expectEqual(expected_crc32, std.hash.Crc32.hash(out));
 }

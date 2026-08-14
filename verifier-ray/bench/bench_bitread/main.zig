@@ -10,8 +10,7 @@
 //
 //   Legacy    one loop iteration per bit, no buffering.
 //   Accum     lzss.BitReader as shipped: 64-bit container, byte-loop refill,
-//             MSB-first packing (matches icza/bitio, which consensys/compress
-//             uses).
+//             LSB-first packing.
 //   MsbWide   absolute bit position, container recomputed per reload from one
 //             64-bit big-endian load. On a little-endian target that lowers to
 //             a native load plus @byteSwap, which without the Zbb `rev8`
@@ -20,9 +19,8 @@
 //             permutation is needed at all. This is the convention DEFLATE and
 //             zstd use.
 //
-// The comparison answers two questions at once: whether this target executes
-// wide misaligned loads at all (if not, MsbWide and LsbWide collapse toward
-// Accum), and what the MSB-first packing convention costs when it does.
+// The comparison answers whether this target executes wide misaligned loads
+// at all and what a native wide reload saves over the byte-loop refill.
 //
 // Reference points from the other micro-benchmarks: a single byte copy is
 // ~3.0 cycles (bench_memory), and bench_lz4 decodes at 7.26 cycles/byte.

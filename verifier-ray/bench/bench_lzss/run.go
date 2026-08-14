@@ -1,6 +1,6 @@
 // Runner for the bench_lzss micro-benchmark.
 // Builds the R5 ELF, converts to zkc JSON, runs zkc, and reports decode cycles
-// per output byte for both wire formats, plus a CSV report.
+// per output byte, plus a CSV report.
 //
 // zkc's trace is streamed and reduced as it arrives rather than saved: at these
 // cycle counts the per-instruction trace runs to hundreds of millions of lines.
@@ -44,8 +44,7 @@ var phases = []struct {
 	hash           uint64
 	compressedFile string
 }{
-	{"lzss v0.3.0 (A0)", 10, 11, 12, "a0_compressed.bin"},
-	{"lzss + huffman-on-lengths", 20, 21, 22, "huffman_compressed.bin"},
+	{"lzss v3 huffman", 20, 21, 22, "huffman_compressed.bin"},
 }
 
 var baseline = struct{ start, end uint64 }{0, 1}
@@ -109,7 +108,7 @@ func main() {
 		fatal(err)
 	}
 
-	fmt.Fprintln(os.Stderr, "running zkc (this decodes 2 x 780,000 bytes; expect several minutes)...")
+	fmt.Fprintln(os.Stderr, "running zkc (this decodes 780,000 bytes; expect several minutes)...")
 	// -vvv is required: zkc gates printf output behind verbosity level PRINTF,
 	// and both the "clock cycle:" trace and the guest's VERIFIER-MARK writes go
 	// through printf. --fast executes for cycle counts only; the tracing path

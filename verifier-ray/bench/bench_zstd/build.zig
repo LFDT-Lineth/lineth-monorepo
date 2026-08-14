@@ -7,6 +7,11 @@ pub fn build(b: *std.Build) void {
     const target = common.standardGuestTarget(b);
     const optimize: std.builtin.OptimizeMode = .ReleaseSmall;
 
+    // Symbols are kept (strip = false) so PC-level profiles from the zkc trace
+    // can be attributed to functions; see run.go's -pcprof flag. Symbol tables
+    // do not enter guest memory, so cycle counts are unaffected.
+    const strip = false;
+
     // zstd decode touches no crypto, so accelerators are irrelevant here; kept
     // off by default only to match bench_compress's convention of measuring
     // the plain path unless asked otherwise.
@@ -23,7 +28,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("../../src/lib.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = true,
+        .strip = strip,
     });
     // src/crypto/poseidon2.zig imports `lineth_accelerators` only when
     // r5_config.disable_accelerators is false, so the import must be supplied on
@@ -47,7 +52,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("main.zig"),
         .target = target,
         .optimize = optimize,
-        .strip = true,
+        .strip = strip,
         .imports = &.{
             .{ .name = "verifier_ray", .module = verifier_mod },
             .{ .name = "lineth_accelerators", .module = accel_mod },

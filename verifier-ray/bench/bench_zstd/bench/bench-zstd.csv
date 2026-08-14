@@ -1,0 +1,2 @@
+variant,compressed_bytes,decompressed_bytes,net_cycles,cycles_per_byte
+zstd -19 (no dictionary),69767,262144,186164133,710.16

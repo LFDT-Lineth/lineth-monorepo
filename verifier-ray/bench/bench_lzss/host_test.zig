@@ -10,8 +10,8 @@
 //!         ~/linea-blob-corpus/payloads/2026-07-28_recent.payload.bin)
 //!     = 0xf9c30160
 //!
-//! That payload is the exact input the two embedded fixtures were compressed
-//! from by the Go reference implementations (see main.zig for provenance), so a
+//! That payload is the exact input the embedded fixture was compressed from by
+//! the Go reference implementation (see main.zig for provenance), so a
 //! decoder that reproduces this CRC has inverted the real encoder on real data.
 //! The corpus itself is far too large to track in-repo; the checksum is the
 //! part that has to travel with the code.
@@ -26,7 +26,6 @@ const decompressed_len = 780_000;
 const expected_crc32: u32 = 0xf9c30160;
 
 const dict: []const u8 = @embedFile("dict.bin");
-const a0_compressed: []const u8 = @embedFile("a0_compressed.bin");
 const huffman_compressed: []const u8 = @embedFile("huffman_compressed.bin");
 const huffman_table_bytes: []const u8 = @embedFile("huffman-table.bin");
 
@@ -37,23 +36,15 @@ const huffman_lengths: [512]u8 = blk: {
 };
 const huffman_table = lzss.HuffmanTable.build(huffman_lengths);
 
-fn checkDecode(
-    comptime huffman: bool,
-    comptime table: if (huffman) lzss.HuffmanTable else void,
-    src: []const u8,
-) !void {
+fn checkDecode(comptime table: lzss.HuffmanTable, src: []const u8) !void {
     const out = try std.testing.allocator.alloc(u8, decompressed_len);
     defer std.testing.allocator.free(out);
 
-    const n = lzss.decompress(huffman, table, src, out, dict, decompressed_len);
+    const n = lzss.decompress(table, src, out, dict, decompressed_len);
     try std.testing.expectEqual(decompressed_len, n);
     try std.testing.expectEqual(expected_crc32, std.hash.Crc32.hash(out));
 }
 
-test "A0 (deployed lzss v0.3.0) decodes the corpus fixture" {
-    try checkDecode(false, {}, a0_compressed);
-}
-
-test "huffman-on-lengths decodes the corpus fixture" {
-    try checkDecode(true, huffman_table, huffman_compressed);
+test "v3 Huffman LZSS decodes the corpus fixture" {
+    try checkDecode(huffman_table, huffman_compressed);
 }

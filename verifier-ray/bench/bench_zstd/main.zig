@@ -39,10 +39,9 @@ const decompressed_len = 262_144;
 
 const compressed: []const u8 = @embedFile("zstd_compressed.bin");
 
-/// The frame declares a 780,000-byte window (`zstd -lv`), and std asserts the
-/// buffer holds window_len + one maximum block.
+/// Upper bound accepted for the frame's declared window; the fixture's frame
+/// declares its content size (262,144), which is well under this.
 const window_len = 1 << 20;
-var window: [window_len + std.compress.zstd.block_size_max]u8 = @splat(0);
 var out: [decompressed_len]u8 = @splat(0);
 
 fn fnv1a(data: []const u8) u64 {
@@ -63,17 +62,29 @@ pub export fn main() noreturn {
     profiling.markR5Value(1, 0);
 
     profiling.markR5Value(10, 0);
+    // Direct mode: empty decoder buffer, stream straight into a fixed Writer
+    // over the flat output. The written output doubles as the match-copy
+    // window, which is exactly the shape of the DA use case (whole payload
+    // decoded once into one buffer).
+    //
+    // Mode makes almost no difference here (indirect measured 716.16
+    // cycles/byte, direct 710.16): the PC profile (run.go -pcprof) attributes
+    // 89.5% of the run to `memcpy`, which compiler-rt lowers to a
+    // byte-at-a-time loop on this freestanding rv64im target, and std's
+    // decoder routes literal runs, match copies and block buffer management
+    // through it -- about 109 bytes moved per output byte. That cost is a
+    // property of the implementation on this target, not of the zstd format;
+    // the remaining ~10% (entropy decode, sequence execution, bit reading)
+    // comes to ~69 cycles/byte.
     var input: std.Io.Reader = .fixed(compressed);
-    var d: std.compress.zstd.Decompress = .init(&input, &window, .{
+    var d: std.compress.zstd.Decompress = .init(&input, &.{}, .{
         .window_len = window_len,
         .verify_checksum = false,
     });
-    // readSliceAll fills the whole slice or fails; a short or failed decode is
-    // reported as length 0 so run.go rejects it rather than timing a no-op.
-    var decoded: u64 = decompressed_len;
-    d.reader.readSliceAll(&out) catch {
-        decoded = 0;
-    };
+    var w: std.Io.Writer = .fixed(&out);
+    // A short or failed decode reports length 0 so run.go rejects it rather
+    // than timing a no-op.
+    const decoded: u64 = d.reader.streamRemaining(&w) catch 0;
     profiling.markR5Value(11, decoded);
     profiling.markR5Value(12, fnv1a(&out));
 
