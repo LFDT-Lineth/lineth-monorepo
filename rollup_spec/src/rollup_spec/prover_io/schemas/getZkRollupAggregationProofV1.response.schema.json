@@ -57,10 +57,7 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
-        "parentDataRollingHash": {
-          "description": "The dataRollingHash accumulator value at this proof's start stream position, paired with startOffset (§2.4, §3.1): a pure DA accumulator (Hash(prevDataRollingHash, chunkHash)) carrying no execution continuity. Chained proof-to-proof by checking it against the preceding proof's endDataRollingHash (§2.3); at the start of the aggregated range it is simply forwarded from the first proof, unchecked internally, for L1 to verify at finalization (§5).",
-          "$ref": "#/$defs/hash32"
-        },
+        "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
