@@ -69,6 +69,9 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
     return getProver(proofRequest).requestProof(proofRequest)
   }
 
+  override fun getProofIndex(proofRequest: ProofRequest): TProofIndex =
+    getProver(proofRequest).getProofIndex(proofRequest)
+
   override fun createProofRequest(proofRequest: ProofRequest): SafeFuture<TProofIndex> {
     return getProver(proofRequest).createProofRequest(proofRequest)
   }
