@@ -54,7 +54,7 @@ func TestRunZKCExamples(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse test case: %v", err)
 			}
-			compileFn := proverCompilePipeline
+			compileFn := runCompilePipeline
 			if tc.compileFn != nil {
 				compileFn = tc.compileFn
 			}

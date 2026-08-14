@@ -78,7 +78,7 @@ func run() error {
 			EmitHeader: true,
 		},
 	}
-	if err := codegen.CompileToZig(sys, rt, 0, &systemBuf, opts); err != nil {
+	if err := codegen.CompileToZig(sys, 0, &systemBuf, opts); err != nil {
 		return fmt.Errorf("CompileToZig: %w", err)
 	}
 

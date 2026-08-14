@@ -5,29 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 func TestCompileToZigWritesAllSubsystems(t *testing.T) {
-	sys, col := newBooleanPcsSystem(t)
-
-	rt := wiop.NewRuntime(sys)
-	vals := make([]field.Element, 4)
-	vals[0].SetUint64(0)
-	vals[1].SetUint64(1)
-	vals[2].SetUint64(1)
-	vals[3].SetUint64(0)
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(rt)
-		}
-	}
+	sys, _ := newBooleanPcsSystem(t)
 
 	var buf bytes.Buffer
 	opts := CompileToZigOptions{
@@ -47,7 +29,7 @@ func TestCompileToZigWritesAllSubsystems(t *testing.T) {
 			EmitHeader:  false,
 		},
 	}
-	if err := CompileToZig(sys, rt, 0, &buf, opts); err != nil {
+	if err := CompileToZig(sys, 0, &buf, opts); err != nil {
 		t.Fatalf("CompileToZig() error = %v", err)
 	}
 
@@ -75,9 +57,8 @@ func TestCompileToZigFailsClosedOnUnhandledAction(t *testing.T) {
 	sys.NewRound()
 	sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
-	rt := wiop.NewRuntime(sys)
 	var buf bytes.Buffer
-	if err := CompileToZig(sys, rt, 0, &buf, CompileToZigOptions{}); err == nil {
+	if err := CompileToZig(sys, 0, &buf, CompileToZigOptions{}); err == nil {
 		t.Fatalf("CompileToZig() error = nil, want an error for a non-PCS-compiled system")
 	}
 }

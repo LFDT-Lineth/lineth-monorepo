@@ -38,9 +38,9 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 	// the test output clean)
 	logrus.SetOutput(t.Output())
 
-	// set the proverCompilePipeline to the full prover pipeline, unless we're
+	// set the runCompilePipeline to the full prover pipeline, unless we're
 	// in short mode, in which case we skip the full prover pipeline.
-	sysPipeline := proverCompilePipeline
+	sysPipeline := runCompilePipeline
 	if testing.Short() {
 		t.Log("short mode, skipping full prover pipeline")
 		sysPipeline = func(_ *wiop.System) {}

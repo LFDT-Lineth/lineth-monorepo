@@ -92,7 +92,7 @@ func compileR5BenchmarkSystem(b *testing.B, serialized []byte) (*wiop.System, *z
 		zkcdriver.Settings{},
 		bytes.NewReader(serialized),
 	)
-	proverCompilePipeline(system)
+	runCompilePipeline(system)
 	return system, driver
 }
 

@@ -154,9 +154,7 @@ func EncodeProof(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting, proof 
 	if err := e.writeRounds(sys, proof); err != nil {
 		return nil, fmt.Errorf("codegen: EncodeProof: rounds: %w", err)
 	}
-	if err := e.writeModuleSizes(sys, proof); err != nil {
-		return nil, fmt.Errorf("codegen: EncodeProof: module sizes: %w", err)
-	}
+	e.writeModuleSizes(sys, rt)
 	if err := e.writePcsOpening(sys, rt, routing, proof); err != nil {
 		return nil, fmt.Errorf("codegen: EncodeProof: pcs opening: %w", err)
 	}
@@ -241,55 +239,34 @@ func publicInputIndexForEncoding(sys *wiop.System) map[wiop.ObjectID]int {
 	return idx
 }
 
-// writeModuleSizes turns proof.DynamicSizes (map keyed by the module's
-// position in sys.Modules, per wiop.Proof.DynamicSizes's doc comment) into
-// the positional module_sizes array verifier-ray expects, using
-// DynamicModuleOrder's exact ordering — the same helper BuildPcsSystem uses
-// via DynamicModuleIndex — so the positions match what each dynamic column's
-// DynamicIndex refers to.
-func (e *proofEncoder) writeModuleSizes(sys *wiop.System, proof wiop.Proof) error {
-	order := DynamicModuleOrder(sys)
-	sizes := make([]int, len(order))
-	for i, m := range order {
-		modIdx := moduleIndex(sys, m)
-		size, ok := proof.DynamicSizes[modIdx]
-		if !ok {
-			return fmt.Errorf("dynamic module %q (index %d) has no size in proof.DynamicSizes", m.Context.Path(), modIdx)
-		}
-		sizes[i] = size
-	}
-	e.writeUsizes(sizes)
-	return nil
-}
-
-// moduleIndex returns m's position in sys.Modules — the key
-// wiop.Proof.DynamicSizes uses, per its doc comment ("The module ID
-// corresponds to the module's position in System.Modules").
-func moduleIndex(sys *wiop.System, m *wiop.Module) int {
-	for i, cand := range sys.Modules {
-		if cand == m {
-			return i
-		}
-	}
-	panic(fmt.Sprintf("codegen: EncodeProof: module %q not found in sys.Modules", m.Context.Path()))
+// writeModuleSizes writes rt's dynamic-module sizes in DynamicModuleOrder —
+// the same order every dynamic column's DynamicIndex refers to — via
+// DynamicModuleSizes, which reads them straight off rt (this proof's own
+// runtime), rather than re-deriving them from wiop.Proof.DynamicSizes by hand.
+func (e *proofEncoder) writeModuleSizes(sys *wiop.System, rt *wiop.Runtime) {
+	e.writeUsizes(DynamicModuleSizes(sys, rt))
 }
 
 // writePcsOpening encodes proof.PCSOpeningProof as the PcsOpening shape
-// verifier.zig expects: entry_claims (from BuildPcsSystem, in canonical
-// layout order) followed by the recursive OpeningProof/fri.Proof/
+// verifier.zig expects: entry_claims (from ExtractPcsOpening, in this proof's
+// canonical layout order) followed by the recursive OpeningProof/fri.Proof/
 // merkle.InputTreeOpening tree.
 func (e *proofEncoder) writePcsOpening(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting, proof wiop.Proof) error {
 	if proof.PCSOpeningProof == nil {
 		return fmt.Errorf("proof has no PCSOpeningProof (was pcs.Compile run on this system?)")
 	}
 
-	pcsSys, err := BuildPcsSystem(sys, rt, routing)
+	pcsSys, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		return fmt.Errorf("BuildPcsSystem: %w", err)
 	}
+	entryClaims, err := ExtractPcsOpening(pcsSys, rt)
+	if err != nil {
+		return fmt.Errorf("ExtractPcsOpening: %w", err)
+	}
 
-	e.writeCount(len(pcsSys.EntryClaims))
-	for _, row := range pcsSys.EntryClaims {
+	e.writeCount(len(entryClaims))
+	for _, row := range entryClaims {
 		e.writeExts(row)
 	}
 

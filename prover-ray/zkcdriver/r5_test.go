@@ -49,7 +49,7 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 		Inputs: inputsMap,
 	}
 	b.Logf("prover/verify")
-	if err := runProveVerify(driverInputs, binf, proverCompilePipeline); err != nil {
+	if err := runProveVerify(driverInputs, binf, runCompilePipeline); err != nil {
 		b.Fatalf("failed to run test case: %v", err)
 	}
 }

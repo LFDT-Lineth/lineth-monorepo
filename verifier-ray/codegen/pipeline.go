@@ -37,18 +37,13 @@ type CompileToZigOptions struct {
 // sys must already have the full prover compiler pipeline run on it
 // (nonnative, rangecheck, lookuptologderivsum, messagebus, grandproduct,
 // logderivativesum, localvanishing, global, pcs — mirroring prover-ray's
-// zkcdriver/zkcpipeline.RunCompilePipeline).
-//
-// rt must be a Runtime that has resolved every dynamic module's size and
-// every LagrangeEval claim — i.e. driven through the full round loop at
-// least once (see zkcpipeline.RunProve or the manual round-loop pattern used
-// in this package's own tests). It does NOT need to be an honest witness FOR
-// THE SPECIFIC PROOF this compiled system will later verify: CompileToZig
-// only extracts structural/positional metadata from it. BuildPcsSystem's
-// EntryClaims are read internally but never written to w — a real proof's
-// entry_claims travel in that proof's own wire-format encoding
-// (see EncodeProof/WriteProof), not baked into the compiled system.
-func CompileToZig(sys *wiop.System, rt *wiop.Runtime, index int, w io.Writer, opts CompileToZigOptions) error {
+// zkcdriver/zkcpipeline.RunCompilePipeline). CompileToZig needs no
+// *wiop.Runtime at all — every Build*System call (including BuildPcsSystem)
+// extracts purely structural/positional metadata from sys alone; a real
+// proof's claimed evaluations are extracted separately, once per proof, by
+// ExtractPcsOpening and travel in that proof's own wire-format encoding (see
+// EncodeProof/WriteProof), never baked into the compiled system.
+func CompileToZig(sys *wiop.System, index int, w io.Writer, opts CompileToZigOptions) error {
 	if err := AssertAllVerifierActionsHandled(sys); err != nil {
 		return fmt.Errorf("codegen: CompileToZig: %w", err)
 	}
@@ -77,7 +72,7 @@ func CompileToZig(sys *wiop.System, rt *wiop.Runtime, index int, w io.Writer, op
 	if err != nil {
 		return fmt.Errorf("codegen: CompileToZig: BuildRowLimitSystem: %w", err)
 	}
-	pcsSys, err := BuildPcsSystem(sys, rt, routing)
+	pcsSys, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		return fmt.Errorf("codegen: CompileToZig: BuildPcsSystem: %w", err)
 	}

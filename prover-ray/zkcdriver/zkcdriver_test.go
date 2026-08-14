@@ -13,7 +13,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
-// compileBinaryConstraints, proverCompilePipeline, and runProveVerify are
+// compileBinaryConstraints, runCompilePipeline, and runProveVerify are
 // thin aliases over zkcpipeline's exported equivalents, kept so this test
 // file's call sites don't need to change. The real logic lives in
 // zkcdriver/zkcpipeline so non-test code (codegen generators, driver
@@ -22,7 +22,7 @@ func compileBinaryConstraints(srcPath string) (*constraints.BinaryFile[koalabear
 	return zkcpipeline.CompileBinaryConstraints(srcPath)
 }
 
-func proverCompilePipeline(sys *wiop.System) {
+func runCompilePipeline(sys *wiop.System) {
 	zkcpipeline.RunCompilePipeline(sys)
 }
 
