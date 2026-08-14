@@ -28,6 +28,7 @@
 - *(misc)* Rename gradle plugins (#3729)
 - *(coordinator)* Apply review cleanups (#3717)
 - *(coordinator)* Package renaming to lineth (#3746)
+- *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features
