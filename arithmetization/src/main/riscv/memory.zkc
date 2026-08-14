@@ -38,5 +38,10 @@ const C:u7 = 80
 const D:u7 = 88
 const PIB:u7 = 96
 
+// SHA-256 scratch memory: W[0..64) is the message schedule and H[64..72)
+// stores the chaining state. Every schedule word is overwritten per block and
+// every chaining word is reinitialized per invocation.
+memory sha2_state(address:u7) -> (word:u32)
+
 // guest program output
 pub output guest_output(address:OutputAddress) -> (byte:u8)
