@@ -357,33 +357,107 @@ This is the main risk the format introduces.
 A `Validate(image, base) error` pass belongs alongside the encoder and should be
 mandatory on any path that did not just produce the image itself.
 
-## 11. Size model, and observations that are not ours to act on
+## 11. Measured size (Phase 0)
 
-Size is descriptive here, not a lever: per §2 the encoder has no packing
-decisions to make. The model exists so we know how big the artifact is.
+Size is descriptive, not a lever: per §2 the encoder has no packing decisions to
+make. The point of measuring was to know the artifact's size, and to settle
+whether the overhead the format trades away is acceptable.
+
+Measured with `MEASURE_PROOF_IMAGE=1 go test ./zkcdriver/ -run TestMeasureProofImage`
+(`zkcdriver/r5_proof_measure_test.go`), on proofs built through the full
+`proverCompilePipeline` including `pcs.Compile`, each verified before measuring:
+
+| program | image | payload | overhead | cells | row data |
+|---|---|---|---|---|---|
+| `modexp_u64` | 9.13 MiB | 7.86 MiB | 13.9% (1.16×) | 2185 (0.6%) | 70.3% |
+| `modexp_u256` | 42.51 MiB | 41.19 MiB | **3.1% (1.03×)** | 16044 (1.0%) | 92.8% |
+| `secp256k1_add_u256` | 39.43 MiB | 38.12 MiB | **3.3% (1.03×)** | 12410 (0.8%) | 92.4% |
+| `secp256k1_scalarmul_u256` | 34.99 MiB | 33.69 MiB | **3.7% (1.04×)** | 10191 (0.8%) | 91.6% |
+
+"Payload" is the irreducible content: field elements and Merkle digests.
+"Overhead" is everything the format adds — slice headers, union tags, presence
+flags, padding, struct headers.
+
+### 11.1 What the numbers settle
+
+**The space tradeoff is a non-issue.** At realistic sizes the in-memory image
+costs **3–4% over a packed encoding**. The whole "less space-efficient, fastest
+to decode" bargain turns out to buy zero-cost decoding for a rounding error.
+
+**Overhead is essentially constant in absolute terms** — 1.33–1.39 MB across all
+four programs, varying by 4% while the image varies by 4.7×. It is dominated by
+FRI-parameter-driven structure, not by program size: 229 queries × 4 input trees
+× depth 17 = 15,572 `?RowPair` slots × 72 B = 1.12 MB, identical in every proof.
+So the overhead *ratio* only looks bad on tiny proofs, and improves as proofs
+grow.
+
+**Opened row data is 91–93% of the image** and is pure field elements. Nothing
+about the format touches it.
+
+**Cells are 0.6–1.0%, and every cell is `ext` — zero base cells in all four
+programs.** So §4's base-vs-ext cell packing question, which earlier drafts spent
+the most words on, was worth under 1% of the image and has no instances anyway.
+Removing the `Scalar` tag would save `28 → 24`, i.e. 0.1% of the image. Not worth
+a transcript change on space grounds; the §11.3 soundness argument stands on its
+own.
+
+**`?RowPair`'s presence flag is the one overhead worth naming**: 1.12 MB fixed,
+of which the flag-plus-padding is 125 KB and null slots are 148–577 KB depending
+on the program. §4.4's question — can the verifier derive presence from the
+reconstructed layout? — is worth roughly 1% of the image. Worth asking, not worth
+blocking on.
+
+**Fits the guest comfortably.** At 43 MiB the largest measured image uses 4% of
+the 1 GiB `IN` region (§5.1).
+
+**Reinforces that the coordinator must not receive this** (§12). A 10–43 MB
+memory image is fine as a RAM witness and wrong as a network payload.
+
+### 11.2 Structural constants
+
+Identical across all four programs, since they follow from the FRI parameters
+rather than the circuit: 229 queries, 4 input trees per query, opening depth 17,
+16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
+30,915 branch sibling digests, 1 final-poly coefficient. Only `row data` and
+`cells` scale with the program.
+
+Also confirmed: **all 30,915 `AuxSiblings` slots are nil**, so the Zig
+`merkle.Branch` having no such field (§3) drops nothing. Had any been non-nil it
+would have meant the two verifiers reconstruct different roots — checked
+explicitly rather than assumed, since the projection silently discards the field.
+
+### 11.3 Still not counted
+
+`entry_claims` and public columns are absent from `wiop.Proof` — they come out of
+the PCS codegen and the projection, so they are Phase 1 numbers. Both are small
+relative to row data, but the total above is a lower bound until they are added.
+
+### 11.4 Blocked: the real R5 program
+
+The program we actually want to measure,
+`arithmetization/src/main/riscv/main.zkc`, **does not currently compile against
+the pinned `zkc` version** (`v1.2.25-0.20260727081733-2599d25d9227`):
 
 ```
-112                                    root
-+ 32·R                                 rounds
-+ Σ_r (40·C_r + 28·L_r)                per-round columns and cells
-+ Σ public columns (4 or 24)·size      public column data
-+ 8·M                                  module_sizes
-+ 16·E + 24·Σ_e shifts_e               entry_claims
-+ 16·Q + 32·Σ_q T_q                    input_queries
-+ Σ openings (32·D + 72·D + row data)  input-tree openings
-+ 32·(NR-1) + 24·2^logFinalPolySize    round_roots, final_poly
-+ 16·Q + 48·Q·(NR-1) + 32·Σ siblings   running_queries
+zkc compile error: 1162:1163:unexpected token
+zkc compile error: 10558:10616:unknown symbol
 ```
 
-(R rounds, C_r/L_r columns/cells per round, M dynamic modules, E claim entries,
-Q FRI queries, T_q input trees per query, D tree depth, NR FRI rounds.)
+This is pre-existing and not caused by this work: every R5 benchmark in
+`zkcdriver/r5_benchmark_test.go` (`BenchmarkR5Trace`, `BenchmarkR5Prove`, …)
+fails identically, as does `BenchmarkRisc5Arithmetization`. It needs an
+arithmetization/`zkc` version sync, owned outside this branch.
 
-Phase 0 fills these in from the real R5 fixture. There is nothing to decide from
-the numbers, but it is worth knowing the artifact's size before shipping it.
+The testdata programs above go through the same pipeline and are real proofs, so
+the ratios and the structural conclusions hold. R5's absolute size will differ —
+it is a much larger circuit — but since overhead is dominated by FRI parameters
+rather than circuit size, expect the overhead *fraction* to be lower, not higher.
+Point `MEASURE_PROOF_PROGRAM` at the R5 program to measure it once it builds.
 
-Two things noticed while measuring, recorded here because someone should know and
-then deliberately **left alone** — both are verifier-ray/wiop design questions,
-not serialization ones:
+## 11.5 Observations that are not ours to act on
+
+Recorded because someone should know, then deliberately **left alone** — both are
+verifier-ray/wiop design questions, not serialization ones:
 
 - **Some proof content is redundant with the compiled system.** A cell's
   base/ext kind, a column's oracle-vs-public kind, and possibly `?RowPair`
@@ -429,8 +503,10 @@ not serialization ones:
 
 - **Done — pin the ABI.** §7. Prerequisite for everything below: without it the
   encoder's target is unverifiable.
-- **Phase 0 — measure.** Build the projected proof for the R5 fixture, fill in
-  §11's counts, and record the artifact size.
+- **Done — Phase 0, measure.** §11. Image is 9–43 MiB at 3–4% structural
+  overhead, 91–93% opened row data, cells under 1% and all `ext`. Nothing in the
+  numbers argues against the format. Blocked only on measuring the real R5
+  program, which does not currently compile (§11.4).
 - **Phase 1 — projection.** Lift the `wiop.Proof` → `verifier.Proof` projection
   out of `verifier-ray/testdata/generate` into a shared, tested package. No
   behaviour change: the existing Zig-literal generator becomes its first
