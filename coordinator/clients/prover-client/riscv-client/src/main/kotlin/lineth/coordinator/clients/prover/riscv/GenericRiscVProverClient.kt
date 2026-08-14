@@ -50,6 +50,8 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
       .thenApply { responseDto -> responseDto?.let { parseResponse(it) } }
   }
 
+  override fun getProofIndex(proofRequest: Request): TProofIndex = proofIndexProvider(proofRequest)
+
   override fun createProofRequest(proofRequest: Request): SafeFuture<TProofIndex> {
     val proofIndex = proofIndexProvider(proofRequest)
     log.debug(
