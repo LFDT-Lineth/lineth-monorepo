@@ -107,8 +107,10 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 	add("oracle commitments", s.Commitments*SizeColumnMessage,
 		fmt.Sprintf("%d x ColumnMessage(40)", s.Commitments))
 	add("module_sizes", s.DynamicSizes*SizeUsize, "")
-	add("pcs_opening header", SizePcsOpening+SizeOpeningProof+SizeFriProof,
-		"PcsOpening + OpeningProof + fri.Proof")
+	// No entry for PcsOpening / OpeningProof / fri.Proof: each is stored INLINE in
+	// its parent, so all three already sit inside the root's SizeProof bytes.
+	// Counting them again over-stated every image by a fixed 192 bytes until
+	// TestMeasureAgreesWithEncode compared the model against the real encoder.
 
 	// A cell's 24-byte value is content; its tag and padding are not.
 	s.Payload += s.Cells * SizeExt
