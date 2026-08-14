@@ -204,11 +204,33 @@ one.
   discriminant's byte offset, and that an empty slice's pointer is non-null.
   Registered in `test/all.zig`.
 
-Verified two ways: the assertions **fire** (deliberately breaking a pinned offset
-fails the build with `proof ABI drift: @offsetOf(...) is 0, pinned at 8`), and
-they **hold on the rv64 guest target** (`zig build -Dr5=true` passes), so §6's
-numbers are now machine-checked on the target that matters rather than just
-observed by a probe.
+They **hold on the rv64 guest target** (`zig build -Dr5=true` passes), so §6's
+numbers are machine-checked on the target that matters rather than just observed
+by a probe.
+
+The failure messages are written for whoever trips them, who will not have this
+format in mind and did not write the assertion. Each one states what moved, why
+that happens (Zig's align-descending sort), what it would break downstream (the
+cast still succeeds — the verifier silently reads misplaced bytes and fails
+somewhere unrelated), and what to do, including the type's current field layout
+with alignments and offsets. Every message lists the other places that must change
+in the same commit: the pin, prover-ray's encoder, and §6's table.
+
+All four failure paths were exercised rather than assumed:
+
+| Simulated change | What fires | What it tells you |
+|---|---|---|
+| field added to `Branch` | `@sizeOf` is 56, pinned 48 | "a field was added"; prints the resulting layout |
+| `RowOpening`'s two fields swapped | `@offsetOf("base")` is 16, pinned 0 | equal alignments ⇒ memory order *is* declaration order, so put them back |
+| union variant renumbered | discriminant pin | append new variants rather than inserting |
+| discriminant byte moves | runtime test | dumps the raw bytes so the real offset is visible |
+
+One subtlety that needed fixing: for a struct whose fields share an alignment, a
+re-derived "recommended" order can only echo what is declared now — which, when
+that declaration is the thing that broke, is advice to cement the bug. The
+messages therefore report the **current** layout, labelled as current, and branch
+their advice on whether alignments are mixed (declare align-descending) or equal
+(a plain reorder to undo).
 
 ### 7.1 How stable is the ordering, really?
 

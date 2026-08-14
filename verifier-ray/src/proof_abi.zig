@@ -42,33 +42,196 @@ const fri = @import("query/fri.zig");
 const pcs = @import("query/pcs.zig");
 const verifier = @import("verifier.zig");
 
-/// Asserts a type's size and alignment, naming the actual values on failure.
-fn expectSize(comptime T: type, comptime size: usize, comptime alignment: usize) void {
-    if (@sizeOf(T) != size) @compileError(std.fmt.comptimePrint(
-        "proof ABI drift: @sizeOf({s}) is {d}, pinned at {d} — prover-ray's encoder must be updated in lockstep",
-        .{ @typeName(T), @sizeOf(T), size },
-    ));
-    if (@alignOf(T) != alignment) @compileError(std.fmt.comptimePrint(
-        "proof ABI drift: @alignOf({s}) is {d}, pinned at {d}",
-        .{ @typeName(T), @alignOf(T), alignment },
-    ));
+// ============================================================================
+// Failure diagnostics
+//
+// These assertions fire on people who did not write them and who have no reason
+// to know what a "proof image" is. So a failure has to explain what broke, why
+// it broke, what it would break downstream, and exactly what to do — including
+// the field order to use. Terse "expected X, got Y" is not enough here.
+// ============================================================================
+
+/// The shared explanation attached to every drift message.
+const why =
+    \\
+    \\WHY THIS FIRED
+    \\  Zig's `auto` struct layout stable-sorts fields by alignment, descending
+    \\  (equal alignments keep declaration order). So ANY of these moves offsets:
+    \\    - adding a field, removing one, or changing a field's type
+    \\    - reordering the declaration
+    \\    - declaring a lower-alignment field before a higher-alignment one
+    \\    - a Zig upgrade that changes the layout rule or a slice's representation
+    \\
+    \\WHAT IT BREAKS
+    \\  prover-ray serializes a proof by writing these exact byte offsets, and the
+    \\  verifier casts its input region straight to *const Proof — there is no
+    \\  parsing step and no runtime check. So a layout change does NOT fail fast:
+    \\  the cast still succeeds, the verifier reads misaligned garbage, and you get
+    \\  an unrelated-looking failure somewhere deep in verification. This assertion
+    \\  exists to convert that into the build error you are reading now.
+    \\
+;
+
+/// Lists the type's fields in actual memory order, as
+/// "name: align A, size S -> offset O".
+///
+/// Deliberately reports offset order rather than a re-derived "ideal" order: the
+/// compiler lays fields out align-descending, so memory order is ALWAYS a valid
+/// align-descending declaration order. Re-deriving one would be a guess, and for
+/// equal alignments it could only echo whatever is declared now — which, when
+/// that declaration is the thing that broke, would be advice to cement the bug.
+fn layoutInMemoryOrder(comptime T: type) []const u8 {
+    const fields = @typeInfo(T).@"struct".fields;
+    if (fields.len == 0) return "      (no fields)\n";
+
+    comptime var order: [fields.len]usize = undefined;
+    for (0..fields.len) |i| order[i] = i;
+    comptime var i: usize = 1;
+    inline while (i < fields.len) : (i += 1) {
+        comptime var j: usize = i;
+        inline while (j > 0 and
+            @offsetOf(T, fields[order[j - 1]].name) > @offsetOf(T, fields[order[j]].name)) : (j -= 1)
+        {
+            const tmp = order[j - 1];
+            order[j - 1] = order[j];
+            order[j] = tmp;
+        }
+    }
+
+    comptime var out: []const u8 = "";
+    inline for (order) |k| {
+        const f = fields[k];
+        out = out ++ std.fmt.comptimePrint(
+            "      {s}: align {d}, size {d}  -> offset {d}\n",
+            .{ f.name, @alignOf(f.type), @sizeOf(f.type), @offsetOf(T, f.name) },
+        );
+    }
+    return out;
 }
 
-/// Asserts a tagged union variant's numeric discriminant. The encoder writes
-/// these values as raw bytes, so reordering a union's variants is a wire change.
-fn expectTag(comptime T: type, comptime variant: std.meta.Tag(T), comptime tag: usize) void {
-    if (@intFromEnum(variant) != tag) @compileError(std.fmt.comptimePrint(
-        "proof ABI drift: {s}.{s} has discriminant {d}, pinned at {d} — reordering union variants is a wire change",
-        .{ @typeName(T), @tagName(variant), @intFromEnum(variant), tag },
-    ));
+/// True when every field shares one alignment, so the compiler's align-descending
+/// sort is a no-op and memory order is exactly declaration order. That changes the
+/// advice: there is no "declare it align-descending" fix, only "put the fields
+/// back in the order the format expects".
+fn allFieldsSameAlignment(comptime T: type) bool {
+    const fields = @typeInfo(T).@"struct".fields;
+    if (fields.len < 2) return true;
+    inline for (fields) |f| {
+        if (@alignOf(f.type) != @alignOf(fields[0].type)) return false;
+    }
+    return true;
+}
+
+/// Shows the current layout, labelled as current — never as a target.
+fn currentLayoutOf(comptime T: type) []const u8 {
+    if (@typeInfo(T) != .@"struct") return "";
+    return "\n     CURRENT layout of " ++ @typeName(T) ++ " (what you have right now):\n\n" ++
+        layoutInMemoryOrder(T);
+}
+
+/// The reorder-specific advice, which depends on whether alignments differ.
+fn orderingAdvice(comptime T: type) []const u8 {
+    if (allFieldsSameAlignment(T)) {
+        return "     Every field here has the SAME alignment, so the compiler does not\n" ++
+            "     reorder anything: memory order is exactly your declaration order.\n" ++
+            "     So this is a plain declaration reorder (or an inserted field) —\n" ++
+            "     move the fields back so each lands on its pinned offset.\n";
+    }
+    return "     Fields here have MIXED alignments and the compiler sorts them\n" ++
+        "     align-descending, so declaring a lower-alignment field ahead of a\n" ++
+        "     higher-alignment one silently moves both. Declare them in the memory\n" ++
+        "     order shown above and source order will match the layout.\n";
+}
+
+/// Asserts a type's size and alignment.
+fn expectSize(comptime T: type, comptime size: usize, comptime alignment: usize) void {
+    if (@sizeOf(T) != size) {
+        @compileError(std.fmt.comptimePrint(
+            "\n\nPROOF ABI DRIFT: @sizeOf({s}) is {d}, but the proof format is pinned to {d}.\n" ++
+                why ++
+                "\nHOW TO FIX\n" ++
+                "  A size change almost always means A FIELD WAS ADDED (or removed, or\n" ++
+                "  retyped). That is why this fired. Decide which applies:\n" ++
+                "\n" ++
+                "  a) Did you mean to change {s}? Then this file is not the only place to\n" ++
+                "     update. In the SAME change, also update:\n" ++
+                "       - the pinned {d} below,\n" ++
+                "       - prover-ray's proof encoder (it writes these offsets by hand),\n" ++
+                "       - prover-ray/docs/proof-serialization.md section 6 (layout table).\n" ++
+                "     Shipping the struct change alone silently invalidates every proof\n" ++
+                "     produced afterwards.\n" ++
+                "\n" ++
+                "  b) Did you not mean to? Revert the field change.\n" ++
+                currentLayoutOf(T),
+            .{ @typeName(T), @sizeOf(T), size, @typeName(T), size },
+        ));
+    }
+    if (@alignOf(T) != alignment) {
+        @compileError(std.fmt.comptimePrint(
+            "\n\nPROOF ABI DRIFT: @alignOf({s}) is {d}, but the proof format is pinned to {d}.\n" ++
+                why ++
+                "\nHOW TO FIX\n" ++
+                "  Alignment changes when the widest field changes. The encoder pads to\n" ++
+                "  {d}; at {d} every following field in the image is misplaced. Either\n" ++
+                "  revert the field change, or update this pin, prover-ray's encoder and\n" ++
+                "  docs/proof-serialization.md section 6 together.\n",
+            .{ @typeName(T), @alignOf(T), alignment, alignment, @alignOf(T) },
+        ));
+    }
 }
 
 /// Asserts a struct field's byte offset.
 fn expectField(comptime T: type, comptime name: []const u8, comptime offset: usize) void {
-    if (@offsetOf(T, name) != offset) @compileError(std.fmt.comptimePrint(
-        "proof ABI drift: @offsetOf({s}, \"{s}\") is {d}, pinned at {d}",
-        .{ @typeName(T), name, @offsetOf(T, name), offset },
-    ));
+    if (@offsetOf(T, name) != offset) {
+        @compileError(std.fmt.comptimePrint(
+            "\n\nPROOF ABI DRIFT: field \"{s}\" of {s} is at byte offset {d}, but the\n" ++
+                "proof format is pinned to offset {d}. The encoder will write \"{s}\" at {d}\n" ++
+                "while the verifier reads it from {d}.\n" ++
+                why ++
+                "\nHOW TO FIX\n" ++
+                "  a) Did you mean to change {s}? Then this file is not the only place to\n" ++
+                "     update. In the SAME change, also update:\n" ++
+                "       - the pinned offset below,\n" ++
+                "       - prover-ray's proof encoder (it writes these offsets by hand),\n" ++
+                "       - prover-ray/docs/proof-serialization.md section 6 (layout table).\n" ++
+                "     Shipping the struct change alone silently invalidates every proof\n" ++
+                "     produced afterwards.\n" ++
+                "\n" ++
+                "  b) Did you not mean to? Then get \"{s}\" back to offset {d}:\n" ++
+                currentLayoutOf(T) ++
+                "\n" ++ orderingAdvice(T),
+            .{
+                name, @typeName(T), @offsetOf(T, name), offset,
+                name, offset,       @offsetOf(T, name), @typeName(T),
+                name, offset,
+            },
+        ));
+    }
+}
+
+/// Asserts a tagged union variant's numeric discriminant. The encoder writes
+/// these as raw bytes, so reordering a union's variants is a wire change.
+fn expectTag(comptime T: type, comptime variant: std.meta.Tag(T), comptime tag: usize) void {
+    if (@intFromEnum(variant) != tag) {
+        @compileError(std.fmt.comptimePrint(
+            "\n\nPROOF ABI DRIFT: {s}.{s} has discriminant {d}, but the proof format is\n" ++
+                "pinned to {d}.\n" ++
+                "\nWHY THIS FIRED\n" ++
+                "  A tagged union's discriminant is its variant's position in the\n" ++
+                "  declaration, so INSERTING OR REORDERING VARIANTS RENUMBERS THEM.\n" ++
+                "  prover-ray writes this number into the image as a raw byte.\n" ++
+                "\nWHAT IT BREAKS\n" ++
+                "  Nothing crashes. The verifier reads the wrong variant of a value it\n" ++
+                "  is otherwise happy to accept — e.g. a base field element interpreted\n" ++
+                "  as an extension element — and fails much later, or not at all.\n" ++
+                "\nHOW TO FIX\n" ++
+                "  a) Adding a variant? Append it AFTER the existing ones so the current\n" ++
+                "     discriminants keep their values.\n" ++
+                "  b) Genuinely renumbering? Update the pin below, prover-ray's encoder,\n" ++
+                "     and docs/proof-serialization.md section 6 in the same change.\n",
+            .{ @typeName(T), @tagName(variant), @intFromEnum(variant), tag },
+        ));
+    }
 }
 
 comptime {
