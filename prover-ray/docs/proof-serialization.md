@@ -531,6 +531,34 @@ verifier-ray/wiop design questions, not serialization ones:
     decode as nil, so the round trip is a Go-value identity only up to that, and
     an exact identity on the *image* — which is what the guest reads.
 
+  **Mutation-tested, because passing tests are not evidence of powerful ones.**
+  52 deliberate defects were injected — wrong offsets, inverted tags, dropped
+  coordinates, removed bounds checks, perturbed layout constants — and 51 were
+  caught. The single survivor is an unreachable invariant assertion (`alloc` on
+  an empty buffer provably returns 0), which no test can exercise by
+  construction.
+
+  Two genuine blind spots only showed up this way, both since closed:
+
+  - **The ABI cross-check was vacuous for discriminants.** It compared Zig's
+    pinned values against *hardcoded copies of those values* rather than the Go
+    constants, so changing `TagColumnPublic` to 2 left every test green. It now
+    references the constants, and byte-level assertions on the discriminants back
+    it up.
+  - **`GuestBase`, `MaxImageSize` and the `field` conversions were untested.**
+    Every other test relocates relative to whatever `GuestBase` happens to be, so
+    changing it kept them all green while making every image point at the wrong
+    region; `ExtFrom` could drop a coordinate unnoticed. `GuestBase` and
+    `MaxImageSize` are now checked against `ORIGIN(IN)`/`LENGTH(IN)` in the guest
+    linker script, and the conversions against distinct per-coordinate values.
+
+  Worth noting what mutation testing exposed about round-trip tests generally:
+  they cannot see a *symmetric* error, because encode and decode share the
+  constants. Changing an offset in `layout.go` keeps them in perfect agreement
+  while making the image disagree with the verifier. Only the ABI cross-check and
+  the literal byte assertions have power there — which is the argument for
+  keeping both, and for the cross-language golden test still outstanding.
+
   `abi_agreement_test.go` closes the drift direction nothing else covered:
   `proof_abi.zig` catches Zig's layout moving, and the encoder's own tests catch
   Go bugs against Go's constants, but neither notices the two sides' *numbers*

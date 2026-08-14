@@ -36,17 +36,35 @@ func Encode(proof Proof, base uint64) ([]byte, error) {
 
 	// The root must occupy [0, SizeProof): the loaders cast the base address
 	// itself, so nothing may precede it.
+	//
+	// The guard below is unreachable as written — alloc on an empty buffer needs
+	// no padding and returns 0 — so no test can exercise it. It is kept as an
+	// invariant assertion against a future change to alloc that prefixed
+	// anything, which would silently move the root. The observable property, that
+	// the root's fields land at their documented offsets, is covered by
+	// TestEncode_RootAtOffsetZero.
 	root := e.alloc(SizeProof, 8)
 	if root != 0 {
 		return nil, fmt.Errorf("proofserialization: root landed at %d, must be 0", root)
 	}
 	e.putProof(root, proof)
 
-	if len(e.buf) > MaxImageSize {
-		return nil, fmt.Errorf("proofserialization: image is %d bytes, exceeds the guest "+
-			"input region's %d", len(e.buf), MaxImageSize)
+	if err := checkImageSize(len(e.buf)); err != nil {
+		return nil, err
 	}
 	return e.buf, nil
+}
+
+// checkImageSize rejects an image too large for the guest's input region.
+//
+// Split out so it can be tested without allocating a gigabyte: exercising it
+// through [Encode] would mean actually building an oversized image.
+func checkImageSize(n int) error {
+	if n > MaxImageSize {
+		return fmt.Errorf("proofserialization: image is %d bytes, exceeds the guest "+
+			"input region's %d (LENGTH(IN) in the guest linker script)", n, MaxImageSize)
+	}
+	return nil
 }
 
 // encoder is a bump allocator over the image being built.

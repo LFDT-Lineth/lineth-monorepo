@@ -90,13 +90,18 @@ func TestABIAgreement(t *testing.T) {
 		{"verifier.Proof", "pcs_opening"}:  ps.OffProofPcsOpening,
 	}
 
+	// These must reference the package's constants, not literal copies of the
+	// pinned values. Hardcoding the numbers here compares Zig's pin against a
+	// copy of itself, which passes no matter what the encoder actually writes —
+	// a mutation run caught exactly that, with TagColumnPublic changed to 2 and
+	// every test still green.
 	wantTag := map[[2]string]int{
-		{"value.Scalar", "base"}:                        0,
-		{"value.Scalar", "ext"}:                         1,
-		{"value.Vector", "base"}:                        0,
-		{"value.Vector", "ext"}:                         1,
-		{"protocol.ColumnMessage", "oracle_commitment"}: 0,
-		{"protocol.ColumnMessage", "public_column"}:     1,
+		{"value.Scalar", "base"}:                        ps.TagScalarBase,
+		{"value.Scalar", "ext"}:                         ps.TagScalarExt,
+		{"value.Vector", "base"}:                        ps.TagVectorBase,
+		{"value.Vector", "ext"}:                         ps.TagVectorExt,
+		{"protocol.ColumnMessage", "oracle_commitment"}: ps.TagColumnOracle,
+		{"protocol.ColumnMessage", "public_column"}:     ps.TagColumnPublic,
 	}
 
 	sizeRe := regexp.MustCompile(`expectSize\((\??[\w.\[\]\s]+?),\s*(\d+),\s*(\d+)\);`)
