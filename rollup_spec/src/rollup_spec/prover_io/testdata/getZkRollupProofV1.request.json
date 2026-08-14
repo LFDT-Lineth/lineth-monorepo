@@ -6,19 +6,21 @@
   },
   "proofRequest": {
     "chainId": 59144,
-    "blobs": [
+    "conflations": [
       {
-        "startBlockNumber": 1000501,
-        "endBlockNumber": 1000510,
-        "blobHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
-        "blobKzgProof": "0x949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494949494",
         "blockRlps": [
           "0xf90215a0",
           "0xf90216b1"
         ]
       }
     ],
-    "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
+    "chunks": [
+      "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+    ],
+    "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
+    "startOffset": 4,
+    "opaquePrefixBytes": "0xabababab",
+    "boundaryPrevDataRollingHash": "0x3939393939393939393939393939393939393939393939393939393939393939",
     "l2ExecutionProofs": [
       {
         "proof": "0xabcdef",
