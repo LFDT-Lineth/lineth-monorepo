@@ -1,9 +1,10 @@
 // Package multiset_hashing implements a LtHash-style multiset hash over the
-// Koalabear field, and exposes a [Hasher] that satisfies the
-// [preflight.AdditiveHasher] interface so it can drive the cross-shard
-// shared-randomness protocol.
+// Koalabear field. On top of the [MSetHash] accumulator it exposes an additive
+// group API ([Hash], [Combine], [Identity], [ToSeed]) that drives the
+// cross-shard shared-randomness protocol in
+// [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/preflight].
 //
-// The accumulator [MSetHash] is an array of [MSetHashSize] field elements
+// The accumulator [MSetHash] is an array of [MSetHashSizeNumFieldElement] field elements
 // initialised to zero (the empty-set digest). Inserting a message M maps M
 // through Poseidon2 in 41 independent 8-element chunks and adds each chunk
 // componentwise to the accumulator; removing subtracts instead. Because the
@@ -29,13 +30,13 @@ const (
 	// constant; the actual hashing still uses poseidon2.NewMDHasher.
 	blockSize = poseidon2.BlockSize
 
-	// MSetHashSize is the number of field elements in the accumulator.
-	MSetHashSize = chunkSize * blockSize
+	// MSetHashSizeNumFieldElement is the number of field elements in the accumulator.
+	MSetHashSizeNumFieldElement = chunkSize * blockSize
 )
 
 // MSetHash is a multiset hash accumulator over the Koalabear field. The zero
 // value represents the empty set and is ready to use without initialisation.
-type MSetHash [MSetHashSize]field.Element
+type MSetHash [MSetHashSizeNumFieldElement]field.Element
 
 // Insert adds msg to the accumulator. Panics on an empty msg.
 func (m *MSetHash) Insert(msg ...field.Element) {
@@ -91,37 +92,35 @@ func (m *MSetHash) update(rem bool, msg ...field.Element) {
 	}
 }
 
-// Hasher implements [preflight.AdditiveHasher][MSetHash]. The zero value is
-// ready to use.
-//
-// Hash maps a Merkle root (8 field elements) into an MSetHash accumulator by
-// inserting the root elements. Combine adds two accumulators componentwise.
-// ToSeed compresses the 328-element accumulator to a single [field.Octuplet]
-// by hashing all elements through Poseidon2; the result seeds SetFSState.
-type Hasher struct{}
+// The functions below present the multiset hash as an additive group over
+// [MSetHash]: [Hash] maps a value in, [Combine] is the group operation,
+// [Identity] is the neutral element, and [ToSeed] compresses a group element
+// back to a single octuplet.
 
-// Hash implements [preflight.AdditiveHasher].
-func (Hasher) Hash(root field.Octuplet) MSetHash {
+// Hash maps a Merkle root (8 field elements) into a fresh accumulator by
+// inserting the root elements.
+func Hash(root field.Octuplet) MSetHash {
 	var m MSetHash
 	m.Insert(root[:]...)
 	return m
 }
 
-// Combine implements [preflight.AdditiveHasher].
-func (Hasher) Combine(a, b MSetHash) MSetHash {
+// Combine is the group operation: componentwise field addition, hence
+// commutative and associative.
+func Combine(a, b MSetHash) MSetHash {
 	a.Add(b)
 	return a
 }
 
-// Identity implements [preflight.AdditiveHasher].
-func (Hasher) Identity() MSetHash {
+// Identity returns the neutral element of the group, i.e. the empty-set digest.
+func Identity() MSetHash {
 	return MSetHash{}
 }
 
-// ToSeed implements [preflight.AdditiveHasher]. It hashes all MSetHashSize
-// elements of the accumulator through Poseidon2 and returns the resulting
-// octuplet, which is suitable for use as a Fiat-Shamir FS state seed.
-func (Hasher) ToSeed(p MSetHash) field.Octuplet {
+// ToSeed hashes all MSetHashSize elements of the accumulator through Poseidon2
+// and returns the resulting octuplet, which is suitable for use as a
+// Fiat-Shamir FS state seed.
+func ToSeed(p MSetHash) field.Octuplet {
 	hsh := poseidon2.NewMDHasher()
 	hsh.WriteElements(p[:]...)
 	return hsh.SumDigest()
