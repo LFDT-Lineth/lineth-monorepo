@@ -46,7 +46,7 @@
           "$ref": "#/$defs/hex"
         },
         "parentDataRollingHash": {
-          "description": "The dataRollingHash accumulator value this proof starts from, paired with startOffset (§2.2, §3.1). If startOffset = 0, this is R_0 (the accumulator before the first touched chunk, folded forward normally from chunk 1). If startOffset > 0 (mid-chunk start), this is already R_1 (the accumulator after the first touched chunk), whose preimage is opened via boundaryPrevDataRollingHash before folding continues from chunk 2.",
+          "description": "The dataRollingHash accumulator value this proof starts from, paired with startOffset (§2.2, §3.1). If startOffset = 0, this is R_0 (the accumulator before the first touched chunk, folded forward normally from chunk 1). If startOffset > 0 (mid-chunk start), this is already R_1 (the accumulator after the first touched chunk), whose preimage is opened via boundaryPrevDataRollingHash before folding continues from chunk 2 (if any).",
           "$ref": "#/$defs/hash32"
         },
         "startOffset": {
