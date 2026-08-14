@@ -17,6 +17,7 @@ import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.api.Api
 import lineth.coordinator.app.conflation.ConflationAppV1
+import lineth.coordinator.app.conflation.ConflationAppV2
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
@@ -216,6 +217,18 @@ class CoordinatorApp(
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
   )
 
+  private val conflationAppV2: ConflationAppV2? =
+    if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
+      ConflationAppV2(
+        vertx = vertx,
+        lastFinalizedBlock = lastFinalizedBlock,
+        batchesRepository = batchesRepository,
+        configs = configs,
+      )
+    } else {
+      null
+    }
+
   private val l1FinalizationMonitorApp = L1FinalizationMonitorApp(
     configs = configs,
     vertx = vertx,
@@ -312,6 +325,7 @@ class CoordinatorApp(
     SafeFuture.completedFuture(Unit)
       .thenCompose { l1FinalizationMonitorApp.start() }
       .thenCompose { conflationApp.start() }
+      .thenCompose { conflationAppV2?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { l1RelayingAppV1.start() }
       .thenCompose { messageAnchoringApp.start() }
       .thenCompose { l2PricingApp.start() }
@@ -329,6 +343,7 @@ class CoordinatorApp(
     return try {
       l1FinalizationMonitorApp.stop()
         .thenCompose { conflationApp.stop() }
+        .thenCompose { conflationAppV2?.stop() ?: SafeFuture.completedFuture(Unit) }
         .thenCompose {
           SafeFuture.allOf(
             SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
