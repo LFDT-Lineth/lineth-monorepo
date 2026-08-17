@@ -58,7 +58,7 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "flags forwarded to zkc exec")
+	zkcFlags := flag.String("zkc-flags", "--gogen --fast -vvv", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
