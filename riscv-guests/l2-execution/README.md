@@ -24,23 +24,28 @@ make -C l2-execution exec
 ## Compilation
 
 `make -C l2-execution compile` (and `exec`/`debug`) build the guest with
-the **standard** zig keccak by default. Pass `KECCAK_ACCEL=true` to build with the
-arithmetization keccak wrapper (the prover-accelerated custom op) instead:
+the **standard** Zig Keccak and SHA-256 implementations by default. Pass
+`KECCAK_ACCEL=true` and/or `SHA2_ACCEL=true` to use the corresponding
+arithmetization wrapper (a prover-accelerated custom op) instead:
 
 ```bash
-make -C l2-execution compile                     # standard zig keccak
-make -C l2-execution compile KECCAK_ACCEL=true   # arithmetization keccak wrapper
+make -C l2-execution compile                                 # standard Zig Keccak and SHA-256
+make -C l2-execution compile KECCAK_ACCEL=true               # accelerated Keccak
+make -C l2-execution compile SHA2_ACCEL=true                  # accelerated SHA-256
+make -C l2-execution compile KECCAK_ACCEL=true SHA2_ACCEL=true # both wrappers
 ```
 
 Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
 
     make linker-script
-    zig build                       # standard zig keccak
-    zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
+    zig build                                      # standard Zig Keccak and SHA-256
+    zig build -Dkeccak-accel=true                  # accelerated Keccak
+    zig build -Dsha2-accel=true                    # accelerated SHA-256
+    zig build -Dkeccak-accel=true -Dsha2-accel=true # both wrappers
 
 ## Shell alias
 
-`agp` (accelerated guest program): build this guest with the keccak wrapper and run
+`agp` (accelerated guest program): build this guest with the Keccak and SHA-256 wrappers and run
 it in the ZKC interpreter on an SSZ input, from anywhere. Add to `~/.zshrc`:
 
 ```bash
@@ -48,7 +53,7 @@ agp() {
     local input
     input="$(realpath "$1")" || { echo "agp: no such file: $1" >&2; return 1; }
     /usr/bin/time -p make -C /path/to/lineth-monorepo/riscv-guests/l2-execution \
-        exec KECCAK_ACCEL=true INPUT="$input" "${@:2}"
+        exec KECCAK_ACCEL=true SHA2_ACCEL=true INPUT="$input" "${@:2}"
 }
 ```
 

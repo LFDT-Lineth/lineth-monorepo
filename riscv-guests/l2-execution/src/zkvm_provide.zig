@@ -6,7 +6,7 @@
 //! all of them, from two sources:
 //!
 //!   • Lineth accelerator wrappers (`lineth_zkvm_accel`) — for the precompiles the prover accelerates
-//!     (keccak today). We re-export each wrapper under the C name zesu references; HOW a wrapper
+//!     (Keccak and SHA-256 today). We re-export each wrapper under the C name zesu references; HOW a wrapper
 //!     accelerates is the wrapper module's own concern. The *set of wrappers that exist* is what is
 //!     accelerated, and grows as the prover implements more.
 //!   • zesu-zkvm `stdlibs_accel` (`zesu_zkvm_accel`) — every precompile without a wrapper yet, via a
@@ -19,18 +19,22 @@
 const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
 const linea_io = @import("linea_zkvm_io"); // zesu-zkvm's zkvm_io: default (stdout ecall) write_output
-const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
+const build_options = @import("build_options"); // Selects standard Zig providers or Lineth wrappers.
 
-// The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
-// the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
-// by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
+// The manifest: every `zkvm_*` symbol zesu references, and where each comes from — Keccak and SHA-256
+// each select either the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim at
+// build time; the rest come from the stdlibs_accel shims defined below.
 comptime {
     if (build_options.keccak_accel) {
         @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
     } else {
         @export(&keccak256, .{ .name = "zkvm_keccak256" });
     }
-    @export(&sha256, .{ .name = "zkvm_sha256" });
+    if (build_options.sha2_accel) {
+        @export(&lineth_accel.zkvm_sha256, .{ .name = "zkvm_sha256" });
+    } else {
+        @export(&sha256, .{ .name = "zkvm_sha256" });
+    }
     @export(&secp256k1_verify, .{ .name = "zkvm_secp256k1_verify" });
     @export(&secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
     @export(&ripemd160, .{ .name = "zkvm_ripemd160" });
@@ -85,6 +89,7 @@ fn keccak256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
     zesu_accel.keccak256(data[0..len], output);
     return OK;
 }
+// Standard zig SHA-256 (std.crypto via stdlibs_accel); used unless -Dsha2-accel selects the wrapper.
 fn sha256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
     zesu_accel.sha256(data[0..len], output);
     return OK;
