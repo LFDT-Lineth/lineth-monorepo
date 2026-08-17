@@ -80,16 +80,15 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	require.Equal(t, len(proof.Cells)+len(pub), total,
 		"every proof cell and public input must appear exactly once")
 
-	// One oracle commitment per committed round, and none anywhere else.
+	// One Merkle root per committed round, and none anywhere else.
 	commitments := 0
 	for i, rm := range projected.Rounds {
 		if _, committed := proof.Commitments[i]; committed {
-			require.Len(t, rm.Columns, 1, "round %d commits, so it carries one commitment", i)
-			require.False(t, rm.Columns[0].IsPublic, "wiop transports no public columns")
-			require.Equal(t, ps.DigestFrom(proof.Commitments[i]), rm.Columns[0].Commitment)
+			require.NotNil(t, rm.Commitment, "round %d commits, so it carries its root", i)
+			require.Equal(t, ps.DigestFrom(proof.Commitments[i]), *rm.Commitment)
 			commitments++
 		} else {
-			require.Empty(t, rm.Columns, "round %d does not commit", i)
+			require.Nil(t, rm.Commitment, "round %d does not commit", i)
 		}
 	}
 	require.Equal(t, len(proof.Commitments), commitments)

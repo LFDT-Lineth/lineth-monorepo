@@ -14,6 +14,8 @@ const testBase = ps.GuestBase
 // richProof exercises every branch of the encoder: both Scalar variants, both
 // ColumnMessage variants, both Vector variants, present and null RowPairs, jagged
 // entry claims, and empty slices at several depths.
+func ptr[T any](v T) *T { return &v }
+
 func richProof() ps.Proof {
 	ext := func(n uint32) ps.Ext {
 		return ps.Ext{ps.Element(n), ps.Element(n + 1), ps.Element(n + 2),
@@ -30,21 +32,15 @@ func richProof() ps.Proof {
 	return ps.Proof{
 		Rounds: []ps.RoundMessage{
 			{
-				// An oracle commitment plus a base-valued public column.
-				Columns: []ps.ColumnMessage{
-					{Commitment: dig(100)},
-					{IsPublic: true, PublicColumn: ps.Vector{Base: []ps.Element{7, 8, 9}}},
-				},
+				// A committed round, with one cell of each variant.
+				Commitment: ptr(dig(100)),
 				Cells: []ps.Scalar{
 					{Value: ext(200)},              // base variant
 					{Value: ext(300), IsExt: true}, // ext variant
 				},
 			},
 			{
-				// An extension-valued public column, and no cells at all.
-				Columns: []ps.ColumnMessage{
-					{IsPublic: true, PublicColumn: ps.Vector{IsExt: true, Ext: []ps.Ext{ext(400), ext(410)}}},
-				},
+				// A round that commits nothing and opens no cells.
 			},
 			// A completely empty round.
 			{},
@@ -204,44 +200,12 @@ func TestEncode_ScalarTagPolarity(t *testing.T) {
 
 	cellsPtr := binary.LittleEndian.Uint64(image[0:]) // rounds payload
 	roundOff := int(cellsPtr - testBase)
-	cellsOff := int(binary.LittleEndian.Uint64(image[roundOff+16:]) - testBase)
+	cellsOff := int(binary.LittleEndian.Uint64(image[roundOff:]) - testBase)
 
 	require.Equal(t, byte(0), image[cellsOff+24],
 		"a base-valued Scalar must carry discriminant 0")
 	require.Equal(t, byte(1), image[cellsOff+ps.SizeScalar+24],
 		"an extension-valued Scalar must carry discriminant 1")
-}
-
-// TestEncode_ColumnMessageTagValues asserts the discriminant bytes literally,
-// independently of the package's own constants.
-//
-// Round-trip tests cannot see a wrong tag value: encode and decode share the
-// constant, so changing it keeps them in agreement while making the image
-// disagree with the verifier. Only a literal assertion here or the ABI
-// cross-check catches that.
-func TestEncode_ColumnMessageTagValues(t *testing.T) {
-	p := ps.Proof{Rounds: []ps.RoundMessage{{Columns: []ps.ColumnMessage{
-		{Commitment: ps.Digest{1}},
-		{IsPublic: true, PublicColumn: ps.Vector{Base: []ps.Element{2}}},
-		{IsPublic: true, PublicColumn: ps.Vector{IsExt: true, Ext: []ps.Ext{{3}}}},
-	}}}}
-
-	image, err := ps.Encode(p, testBase)
-	require.NoError(t, err)
-
-	roundOff := int(binary.LittleEndian.Uint64(image[0:]) - testBase)
-	colsOff := int(binary.LittleEndian.Uint64(image[roundOff:]) - testBase)
-
-	require.Equal(t, byte(0), image[colsOff+32],
-		"an oracle column's discriminant must be 0 at byte 32")
-	require.Equal(t, byte(1), image[colsOff+40+32],
-		"a public column's discriminant must be 1 at byte 32")
-
-	// The nested Vector carries its own discriminant at byte 16 of the payload.
-	require.Equal(t, byte(0), image[colsOff+40+16],
-		"a base-valued Vector's discriminant must be 0 at byte 16")
-	require.Equal(t, byte(1), image[colsOff+80+16],
-		"an extension-valued Vector's discriminant must be 1 at byte 16")
 }
 
 func TestScalarFrom_InvertsGoTag(t *testing.T) {
@@ -265,7 +229,7 @@ func TestEncode_PaddingIsZeroed(t *testing.T) {
 	require.NoError(t, err)
 
 	roundOff := int(binary.LittleEndian.Uint64(image[0:]) - testBase)
-	cellsOff := int(binary.LittleEndian.Uint64(image[roundOff+16:]) - testBase)
+	cellsOff := int(binary.LittleEndian.Uint64(image[roundOff:]) - testBase)
 
 	// Scalar is 28 bytes: 24 payload, 1 tag, 3 padding.
 	require.Equal(t, []byte{0, 0, 0}, image[cellsOff+25:cellsOff+28],
@@ -388,15 +352,14 @@ func TestDecode_RejectsMalformedImages(t *testing.T) {
 
 func TestDecode_RejectsUnknownDiscriminants(t *testing.T) {
 	p := ps.Proof{Rounds: []ps.RoundMessage{{
-		Columns: []ps.ColumnMessage{{Commitment: ps.Digest{1}}},
-		Cells:   []ps.Scalar{{Value: ps.Ext{1}}},
+		Commitment: ptr(ps.Digest{1}),
+		Cells:      []ps.Scalar{{Value: ps.Ext{1}}},
 	}}}
 	good, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
 
 	roundOff := int(binary.LittleEndian.Uint64(good[0:]) - testBase)
-	colsOff := int(binary.LittleEndian.Uint64(good[roundOff:]) - testBase)
-	cellsOff := int(binary.LittleEndian.Uint64(good[roundOff+16:]) - testBase)
+	cellsOff := int(binary.LittleEndian.Uint64(good[roundOff:]) - testBase)
 
 	for _, tc := range []struct {
 		name string
@@ -404,7 +367,8 @@ func TestDecode_RejectsUnknownDiscriminants(t *testing.T) {
 		want string
 	}{
 		{"Scalar", cellsOff + 24, "Scalar: discriminant 7"},
-		{"ColumnMessage", colsOff + 32, "ColumnMessage: discriminant 7"},
+		// The commitment's presence flag is stored inline in the RoundMessage.
+		{"RoundMessage.commitment", roundOff + 16 + 32, "presence flag 7"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := make([]byte, len(good))

@@ -56,8 +56,7 @@ func TestABIAgreement(t *testing.T) {
 		"verifier.PcsOpening":     ps.SizePcsOpening,
 		"verifier.Proof":          ps.SizeProof,
 		"value.Scalar":            ps.SizeScalar,
-		"value.Vector":            ps.SizeVector,
-		"protocol.ColumnMessage":  ps.SizeColumnMessage,
+		"?protocol.Commitment":    ps.SizeOptCommitment,
 		"?merkle.RowPair":         ps.SizeOptRowPair,
 	}
 
@@ -67,8 +66,8 @@ func TestABIAgreement(t *testing.T) {
 		{"ext.Ext", "B1"}: 8,
 		{"ext.Ext", "B2"}: 16,
 
-		{"protocol.RoundMessage", "columns"}: ps.OffRoundMessageColumns,
-		{"protocol.RoundMessage", "cells"}:   ps.OffRoundMessageCells,
+		{"protocol.RoundMessage", "cells"}:      ps.OffRoundMessageCells,
+		{"protocol.RoundMessage", "commitment"}: ps.OffRoundMessageCommitment,
 
 		{"merkle.RowOpening", "base"}: ps.OffRowOpeningBase,
 		{"merkle.RowOpening", "ext"}:  ps.OffRowOpeningExt,
@@ -100,12 +99,8 @@ func TestABIAgreement(t *testing.T) {
 	// a mutation run caught exactly that, with TagColumnPublic changed to 2 and
 	// every test still green.
 	wantTag := map[[2]string]int{
-		{"value.Scalar", "base"}:                        ps.TagScalarBase,
-		{"value.Scalar", "ext"}:                         ps.TagScalarExt,
-		{"value.Vector", "base"}:                        ps.TagVectorBase,
-		{"value.Vector", "ext"}:                         ps.TagVectorExt,
-		{"protocol.ColumnMessage", "oracle_commitment"}: ps.TagColumnOracle,
-		{"protocol.ColumnMessage", "public_column"}:     ps.TagColumnPublic,
+		{"value.Scalar", "base"}: ps.TagScalarBase,
+		{"value.Scalar", "ext"}:  ps.TagScalarExt,
 	}
 
 	sizeRe := regexp.MustCompile(`expectSize\((\??[\w.\[\]\s]+?),\s*(\d+),\s*(\d+)\);`)
@@ -185,25 +180,16 @@ func verifierRayFixture() ps.Proof {
 	return ps.Proof{
 		Rounds: []ps.RoundMessage{
 			{
-				// An oracle commitment, and one cell of each variant.
-				Columns: []ps.ColumnMessage{
-					{Commitment: ps.Digest{10, 11, 12, 13, 14, 15, 16, 17}},
-				},
+				// A committed round: its Merkle root, and one cell of each variant.
+				Commitment: &ps.Digest{10, 11, 12, 13, 14, 15, 16, 17},
 				Cells: []ps.Scalar{
 					{Value: ps.Ext{100, 101, 102, 103, 104, 105}},              // base
 					{Value: ps.Ext{200, 201, 202, 203, 204, 205}, IsExt: true}, // ext
 				},
 			},
 			{
-				// Both Vector variants. wiop does not currently produce public
-				// columns, but the format carries them and the encoder must get
-				// both discriminants right.
-				Columns: []ps.ColumnMessage{
-					{IsPublic: true, PublicColumn: ps.Vector{Base: []ps.Element{31, 32, 33}}},
-					{IsPublic: true, PublicColumn: ps.Vector{IsExt: true, Ext: []ps.Ext{
-						{41, 42, 43, 44, 45, 46},
-					}}},
-				},
+				// A round that commits nothing: the presence flag must be clear.
+				Cells: []ps.Scalar{{Value: ps.Ext{31, 32, 33, 34, 35, 36}}},
 			},
 			{}, // an empty round: empty slices must still be readable
 		},

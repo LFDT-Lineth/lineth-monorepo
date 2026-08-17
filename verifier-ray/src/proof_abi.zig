@@ -247,9 +247,12 @@ comptime {
     expectSize(poseidon2.Digest, 32, 4);
 
     // ---- round messages ------------------------------------------------------
-    expectSize(protocol.RoundMessage, 32, 8);
-    expectField(protocol.RoundMessage, "columns", 0);
-    expectField(protocol.RoundMessage, "cells", 16);
+    // A committed round is represented solely by its Merkle root; columns never
+    // travel raw, so there is no ColumnMessage union any more.
+    expectSize(protocol.RoundMessage, 56, 8);
+    expectField(protocol.RoundMessage, "cells", 0);
+    expectField(protocol.RoundMessage, "commitment", 16);
+    expectSize(?protocol.Commitment, 36, 4);
 
     // ---- PCS input-tree openings --------------------------------------------
     expectSize(merkle.RowOpening, 32, 8);
@@ -298,14 +301,6 @@ comptime {
     expectSize(value.Scalar, 28, 4);
     expectTag(value.Scalar, .base, 0);
     expectTag(value.Scalar, .ext, 1);
-
-    expectSize(value.Vector, 24, 8);
-    expectTag(value.Vector, .base, 0);
-    expectTag(value.Vector, .ext, 1);
-
-    expectSize(protocol.ColumnMessage, 40, 8);
-    expectTag(protocol.ColumnMessage, .oracle_commitment, 0);
-    expectTag(protocol.ColumnMessage, .public_column, 1);
 
     expectSize(?merkle.RowPair, 72, 8);
 }

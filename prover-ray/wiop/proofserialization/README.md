@@ -55,7 +55,7 @@ structurally different:
 | | prover-ray (`wiop.Proof`) | verifier-ray (`verifier.Proof`) |
 |---|---|---|
 | cells | `map[ObjectID]field.Gen`, keyed globally | `rounds[r].cells []Scalar`, round-major, dense |
-| columns | not carried | `rounds[r].columns []ColumnMessage` |
+| columns | not carried | `rounds[r].commitment ?Commitment` (Merkle root only) |
 | module sizes | `map[int]int` | `module_sizes []usize`, canonical dynamic-module order |
 | PCS claims | inside `Cells` | `pcs_opening.entry_claims [][]Ext`, canonical entry order |
 | FRI proof | `*fri.OpeningProof` | `pcs_opening.proof` |
@@ -157,7 +157,7 @@ Recommend (1), keeping the `base` parameter so (2) stays available for tests.
 | `base.Element` | 4 | 4 | one Montgomery `u32` |
 | `ext.Ext` (E6) | 24 | 4 | `B0` @0, `B1` @8, `B2` @16; each E2 = `a0,a1` |
 | `poseidon2.Digest` / `Commitment` | 32 | 4 | `[8]Element` |
-| `protocol.RoundMessage` | 32 | 8 | `columns` @0, `cells` @16 |
+| `protocol.RoundMessage` | 56 | 8 | `cells` @0, `commitment` @16 |
 | `merkle.RowOpening` | 32 | 8 | `base` @0, `ext` @16 |
 | `merkle.RowPair` = `[2]RowOpening` | 64 | 8 | `[0]` @0, `[1]` @32 |
 | `merkle.Branch` | 48 | 8 | **`siblings` @0, `leaf` @16** — see §7 |
@@ -174,8 +174,7 @@ serialize them as they are; §7 covers keeping the numbers honest.
 | Type | Size | Align | Payload | Tag | Tag values |
 |---|---|---|---|---|---|
 | `value.Scalar` | 28 | 4 | @0, 24B | `u8` @24, 3B pad | `0` = base, `1` = ext |
-| `value.Vector` | 24 | 8 | @0, 16B | `u8` @16, 7B pad | `0` = base, `1` = ext |
-| `protocol.ColumnMessage` | 40 | 8 | @0, 32B | `u8` @32, 7B pad | `0` = oracle, `1` = public |
+| `?protocol.Commitment` | 36 | 4 | @0, 32B | `u8` @32, 3B pad | `0` = absent, `1` = present |
 | `?merkle.RowPair` | 72 | 8 | @0, 64B | `u8` @64, 7B pad | `0` = null, `1` = present |
 
 The root `verifier.Proof` occupies image offsets `[0, 112)`, because the loader
@@ -536,15 +535,18 @@ verifier-ray/wiop design questions, not serialization ones:
   union discriminants in the proof. Moving them into the system description would
   shrink the image and delete every tagged union from it — including the
   unspecified-layout concern in §6/§7. Entirely verifier-ray's call.
-- **`Gen.isBase` is prover-supplied and transcript-affecting.**
-  `Runtime.AdvanceRound` absorbs cells via `fs.UpdateGeneric`, which branches on
-  the tag (`crypto/koalabear/fiatshamir/poseidon2.go:52-58`): base absorbs 1
-  field element, ext absorbs 6. Since `Proof.Cells` comes from the prover and the
-  verifier replays absorption from those values, flipping a base cell's tag
-  changes the coins without changing any claimed value — free coin grinding at no
-  witness cost. This is a pre-existing wiop soundness gap, unrelated to
-  serialization except that the image will faithfully carry the tag. Tracked
-  separately; it needs its own branch and a transcript change.
+- **A cell's declared field kind is not checked against its assigned value.**
+  `Cell.IsExtension()` is fixed at construction from the expression's static type
+  (`query_lagrange_eval.go` builds claim cells with `pv.IsExtension()`), so the
+  kind is a compile-time property of the system. But `Runtime.AssignCell` stores
+  the supplied `field.Gen` verbatim without comparing its tag against
+  `cell.IsExtension()`, and `AdvanceRound` then absorbs on that tag
+  (`fs.UpdateGeneric`: 1 element for base, 6 for ext).
+
+  So this is a **missing validation of a statically-known property**, not a hole
+  in the design — the protocol knows the answer and simply does not assert it.
+  Adding the check is the fix. Tracked as its own issue; out of scope here, and
+  the image faithfully carries whatever tag it is given either way.
 
 ## 12. Answers settled in review
 
@@ -662,7 +664,7 @@ verifier-ray/wiop design questions, not serialization ones:
   `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
   `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
   every variant: both `Scalar` discriminants, both `Vector` discriminants, both
-  `ColumnMessage` discriminants, a null and a present `?RowPair`, a jagged
+  a present and an absent round commitment, a null and a present `?RowPair`, a jagged
   `entry_claims` with an empty inner slice, an empty round, and `merkle.Branch`'s
   reordered fields.
 

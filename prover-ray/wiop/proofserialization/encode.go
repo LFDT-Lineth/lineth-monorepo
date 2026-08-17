@@ -165,35 +165,19 @@ func (e *encoder) putProof(off int, p Proof) {
 }
 
 func (e *encoder) putRoundMessage(off int, r RoundMessage) {
-	cols := e.putSlice(off+OffRoundMessageColumns, len(r.Columns), SizeColumnMessage, 8)
-	for i, c := range r.Columns {
-		e.putColumnMessage(cols+i*SizeColumnMessage, c)
+	commitment := off + OffRoundMessageCommitment
+	if r.Commitment != nil {
+		e.buf[commitment+OffOptCommitmentFlag] = TagOptCommitmentPresent
+		e.putDigest(commitment+OffOptCommitmentPayload, *r.Commitment)
+	} else {
+		// Flag stays 0 and the payload stays zeroed: Zig reads neither.
+		e.buf[commitment+OffOptCommitmentFlag] = TagOptCommitmentNull
 	}
 
 	cells := e.putSlice(off+OffRoundMessageCells, len(r.Cells), SizeScalar, SizeElement)
 	for i, c := range r.Cells {
 		e.putScalar(cells+i*SizeScalar, c)
 	}
-}
-
-func (e *encoder) putColumnMessage(off int, c ColumnMessage) {
-	if c.IsPublic {
-		e.buf[off+OffColumnMessageTag] = TagColumnPublic
-		e.putVector(off+OffColumnMessagePayload, c.PublicColumn)
-		return
-	}
-	e.buf[off+OffColumnMessageTag] = TagColumnOracle
-	e.putDigest(off+OffColumnMessagePayload, c.Commitment)
-}
-
-func (e *encoder) putVector(off int, v Vector) {
-	if v.IsExt {
-		e.buf[off+OffVectorTag] = TagVectorExt
-		e.putExts(off+OffVectorPayload, v.Ext)
-		return
-	}
-	e.buf[off+OffVectorTag] = TagVectorBase
-	e.putElements(off+OffVectorPayload, v.Base)
 }
 
 func (e *encoder) putScalar(off int, s Scalar) {

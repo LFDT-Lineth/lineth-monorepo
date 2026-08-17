@@ -80,11 +80,9 @@ test "a Go-encoded image reads as a verifier.Proof" {
     try std.testing.expectEqual(@as(usize, 3), proof.rounds.len);
 
     const r0 = proof.rounds[0];
-    try std.testing.expectEqual(@as(usize, 1), r0.columns.len);
-    switch (r0.columns[0]) {
-        .oracle_commitment => |c| try expectDigest(c, 10),
-        .public_column => return error.WrongColumnVariant,
-    }
+    // A committed round carries only its Merkle root, as an optional.
+    const root = r0.commitment orelse return error.MissingCommitment;
+    try expectDigest(root, 10);
     try std.testing.expectEqual(@as(usize, 2), r0.cells.len);
     // The discriminant must survive: same 24-byte payload, different variant.
     switch (r0.cells[0]) {
@@ -96,35 +94,19 @@ test "a Go-encoded image reads as a verifier.Proof" {
         .ext => |e| try expectExt(e, 200),
     }
 
+    // A round that commits nothing: the presence flag must read as absent.
     const r1 = proof.rounds[1];
-    try std.testing.expectEqual(@as(usize, 2), r1.columns.len);
-    switch (r1.columns[0]) {
-        .oracle_commitment => return error.WrongColumnVariant,
-        .public_column => |v| switch (v) {
-            .base => |xs| {
-                try std.testing.expectEqual(@as(usize, 3), xs.len);
-                try std.testing.expectEqual(@as(u32, 31), xs[0].value);
-                try std.testing.expectEqual(@as(u32, 33), xs[2].value);
-            },
-            .ext => return error.WrongVectorVariant,
-        },
+    try std.testing.expect(r1.commitment == null);
+    try std.testing.expectEqual(@as(usize, 1), r1.cells.len);
+    switch (r1.cells[0]) {
+        .base => |b| try std.testing.expectEqual(@as(u32, 31), b.value),
+        .ext => return error.WrongCellVariant,
     }
-    switch (r1.columns[1]) {
-        .oracle_commitment => return error.WrongColumnVariant,
-        .public_column => |v| switch (v) {
-            .base => return error.WrongVectorVariant,
-            .ext => |xs| {
-                try std.testing.expectEqual(@as(usize, 1), xs.len);
-                try expectExt(xs[0], 41);
-            },
-        },
-    }
-    try std.testing.expectEqual(@as(usize, 0), r1.cells.len);
 
     // An empty round: zero-length slices must be readable, and their pointers
     // non-null, which is why the encoder never writes a null there.
     const r2 = proof.rounds[2];
-    try std.testing.expectEqual(@as(usize, 0), r2.columns.len);
+    try std.testing.expect(r2.commitment == null);
     try std.testing.expectEqual(@as(usize, 0), r2.cells.len);
     try std.testing.expect(@intFromPtr(r2.cells.ptr) != 0);
 
