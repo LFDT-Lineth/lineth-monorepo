@@ -9,8 +9,13 @@
 # <name> to GUESTS. Only targets that every guest implements are fanned out here; guest-specific
 # targets (e.g. l2-execution's EF spec-test, ZKC exec/debug) live in that guest's own Makefile and
 # run directly: `make -C <name> spec-test`.
+#
+# guest-common isn't a guest program itself (no ELF to link, just a shared Zig package other
+# guests consume as a path dependency — the same role lineth-accelerators plays) but is listed
+# here anyway so its own unit tests run as part of `make test`, and its build.zig/src/test get the
+# same `zig fmt --check` gate every guest's own sources get.
 
-GUESTS ?= l2-execution
+GUESTS ?= guest-common l2-execution
 ZIG    ?= zig
 
 # Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +

@@ -1,0 +1,16 @@
+.{
+    .name = .guest_common,
+    .version = "0.0.0",
+    .fingerprint = 0xff235abbe665c79f,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain + the common freestanding rv64im guest target).
+        .build_common = .{ .path = "../build_common" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // Generic Zig primitives (compiled into any consumer's rv64im guest or native tests)
+        "test", // host-only: unit tests for the exposed primitives
+    },
+}

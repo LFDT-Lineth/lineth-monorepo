@@ -10,6 +10,7 @@ riscv-guests/
   Makefile             Top-level orchestrator — fans compile/test/… out to every guest in GUESTS
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
   lineth-accelerators/ Shared library package: Lineth accelerator wrappers + C headers
+  guest-common/        Shared library package: generic SSZ decode/encode primitives, with its own unit tests
   l2-execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
 ```
 

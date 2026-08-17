@@ -57,6 +57,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+    const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
 
     const modexp_impl_mod = b.createModule(.{
         .root_source_file = zesu_guest.path("src/crypto/backends/modexp_impl.zig"),
@@ -108,6 +109,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    l2_execution_ssz_guest_mod.addImport("guest_common", guest_common_mod);
 
     const guest_module = b.createModule(.{
         .root_source_file = b.path(source),
@@ -177,11 +179,13 @@ pub fn build(b: *std.Build) void {
     }));
     test_step.dependOn(&b.addRunArtifact(stdlibs_tests).step);
 
+    const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = host_optimize }).module("guest_common");
     const l2_execution_ssz_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),
         .target = native_target,
         .optimize = host_optimize,
     });
+    l2_execution_ssz_mod.addImport("guest_common", guest_common_native_mod);
     const l2_execution_ssz_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("test/l2_execution_ssz_test.zig"),
