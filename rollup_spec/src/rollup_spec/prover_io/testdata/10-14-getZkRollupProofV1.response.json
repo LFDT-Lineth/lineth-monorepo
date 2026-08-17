@@ -12,7 +12,7 @@
     "endL1L2BridgeRollingHashMessageNumber": 7,
     "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
     "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
-    "parentProcessedFtxNumber": 7,
+    "parentFtxNumber": 7,
     "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
     "endProcessedFtxNumber": 9,
     "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",

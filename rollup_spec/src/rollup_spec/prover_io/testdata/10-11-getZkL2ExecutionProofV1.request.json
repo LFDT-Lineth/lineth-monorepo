@@ -12,7 +12,7 @@
       "forkName": "Amsterdam"
     },
     "parentFtxRollingHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
-    "parentProcessedFtxNumber": 15,
+    "parentFtxNumber": 15,
     "payloads": [
       {
         "statelessInput": {

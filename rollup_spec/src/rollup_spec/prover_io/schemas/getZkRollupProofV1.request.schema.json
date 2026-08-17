@@ -124,7 +124,7 @@
         "endL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "dynamicChainConfigHash": { "$ref": "#/$defs/hash32" },
         "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
-        "parentProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "parentFtxNumber": { "$ref": "#/$defs/uint" },
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },

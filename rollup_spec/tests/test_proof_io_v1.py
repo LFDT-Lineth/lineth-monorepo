@@ -176,8 +176,8 @@ def test_malformed_hex_is_rejected() -> None:
 
 def test_non_hex_quantity_is_rejected() -> None:
     req = _valid_request()
-    req["proofRequest"]["parentLastProcessedFtxNumber"] = "100"  # decimal string, not int / 0x-hex
-    with pytest.raises(ProofIoError, match="parentLastProcessedFtxNumber"):
+    req["proofRequest"]["parentFtxNumber"] = "100"  # decimal string, not int / 0x-hex
+    with pytest.raises(ProofIoError, match="parentFtxNumber"):
         decode_request(req)
 
 

@@ -245,8 +245,8 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
             )
         ),
         parent_last_processed_ftx_number=_u64(
-            _require(proof_request, "parentLastProcessedFtxNumber", "proofRequest."),
-            "proofRequest.parentLastProcessedFtxNumber",
+            _require(proof_request, "parentFtxNumber", "proofRequest."),
+            "proofRequest.parentFtxNumber",
         ),
         chain_config=chain_config,
         payloads=[
