@@ -21,7 +21,7 @@ const (
 	l2MessageServiceAddressKey      = "l2MessageServiceAddress"
 	coinbaseKey                     = "coinbase"
 	parentFtxRollingHashKey         = "parentFtxRollingHash"
-	parentLastProcessedFtxNumberKey = "parentLastProcessedFtxNumber"
+	parentFtxNumberKey = "parentFtxNumber"
 	statelessInputKey               = "statelessInput"
 	newPayloadRequestKey            = "newPayloadRequest"
 	executionPayloadKey             = "executionPayload"
@@ -126,15 +126,15 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 	if err := validateFixedHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
 		return nil, err
 	}
-	parentLastProcessedFtxNumberRaw, err := requireField(
+	parentFtxNumberRaw, err := requireField(
 		proofRequest,
-		parentLastProcessedFtxNumberKey,
+		parentFtxNumberKey,
 		"proofRequest.",
 	)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := u64(parentLastProcessedFtxNumberRaw, "proofRequest."+parentLastProcessedFtxNumberKey); err != nil {
+	if _, err := u64(parentFtxNumberRaw, "proofRequest."+parentFtxNumberKey); err != nil {
 		return nil, err
 	}
 
