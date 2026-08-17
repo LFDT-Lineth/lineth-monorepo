@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|zkc-exec|zkc-debug|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|zkc-exec|zkc-debug|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|sha2-zkc-exec|sha2-zkc-check|sha2-zig-build|sha2-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -202,6 +202,10 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make keccak-rust-build`                                 | Build the Keccak Rust vector test and helper binaries                                  |
 | `make keccak-rust-json`                                  | Generate one batched Keccak vector JSON input                                          |
 | `make keccak-rust-exec`                                  | Run the batched Keccak vector JSON input                                               |
+| `make sha2-zkc-exec`                                     | Run focused SHA-256 core vectors in fast mode                                          |
+| `make sha2-zkc-check`                                    | Run the SHA-256 core vectors and verify their constraints                              |
+| `make sha2-zig-build`                                    | Build the self-checking Zig SHA-256 accelerator guest                                  |
+| `make sha2-zig-exec`                                     | Run SHA-256 boundary, state-reset, unaligned, and overlap checks through the accelerator in tracing mode |
 | `make blake-rust-build`                                  | Build the Blake Rust vector test and helper binaries                                   |
 | `make blake-rust-json`                                   | Generate Blake vector JSON inputs                                                      |
 | `make blake-rust-exec`                                   | Run all Blake vectors from `rust/src/blake/blake10.all`                                |
@@ -229,6 +233,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `VECTOR_SUBSET_FILE`         | `$(BIN).all`                                                                           | Intermediate `.all` file selected from `VECTOR_FILE`; one line per vector, or one blob including all vectors                                  |
 | `IN_BYTES`                   | `""`                                                                                   | Hex big-endian input written in RAM at `IN_ORIGIN` as little-endian bytes before execution (either string or `@path/to/in_bytes`)             |
 | `KECCAK_ACCEL`               | `false`                                                                                | Set to `true` for Zig tests using `keccak_provide` to call the Linea keccak wrapper instead of Zesu stdlibs_accel                             |
+| `SHA2_ACCEL`                 | `false`                                                                                | Set to `true` for Zig tests to call the Linea SHA-256 wrapper instead of Zesu stdlibs_accel                                                    |
 | `STACK_ORIGIN`               | `0x00000000`                                                                           | Low stack boundary; `_stack_end` is generated from this value                                                                                 |
 | `SP`                         | `STACK_ORIGIN + 0x00800000`                                                            | Initial stack pointer; `_stack_start` is generated from this value                                                                            |
 | `PROGRAM_ORIGIN`             | `SP`                                                                                   | Program start address                                                                                                                         |
