@@ -36,7 +36,9 @@ data class ProverToml(
   @param:ConfigSection("Execution (block) prover request/response directories.")
   val execution: ProverDirectoriesToml,
   @param:ConfigSection("Blob compression prover request/response directories.")
-  val blobCompression: ProverDirectoriesToml,
+  val blobCompression: ProverDirectoriesToml? = null,
+  @param:ConfigSection("Risc5 rollup prover request/response directories.")
+  val rollup: ProverDirectoriesToml? = null,
   @param:ConfigSection("Invalidity prover request/response directories; omit to disable.")
   val invalidity: ProverDirectoriesToml? = null,
   @param:ConfigSection("Proof aggregation prover request/response directories.")
@@ -74,6 +76,16 @@ data class ProverToml(
     val fsResponsesDirectory: String,
   )
 
+  init {
+    require(this.blobCompression != null || this.rollup != null) {
+      "Blob Compression or Rollup need to be defined."
+    }
+
+    require(this.blobCompression == null || this.rollup == null) {
+      "Only blob compression or rollup can be defined."
+    }
+  }
+
   fun reified(): ProversConfig {
     val mergedSwitchBlockNumberInclusive = switchBlockNumberInclusive ?: new?.switchBlockNumberInclusive
     val mergedSwitchBlockTimestamp = switchBlockTimestamp ?: new?.switchBlockTimestamp
@@ -82,89 +94,89 @@ data class ProverToml(
     }
     return ProversConfig(
       proverA =
-      ProverConfig(
-        execution =
-        FileBasedProverConfig(
-          requestsDirectory = Path.of(this.execution.fsRequestsDirectory),
-          responsesDirectory = Path.of(this.execution.fsResponsesDirectory),
-          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
-          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
-          pollingInterval = this.fsPollingInterval,
-          pollingTimeout = this.fsPollingTimeout,
-        ),
-        blobCompression =
-        FileBasedProverConfig(
-          requestsDirectory = Path.of(this.blobCompression.fsRequestsDirectory),
-          responsesDirectory = Path.of(this.blobCompression.fsResponsesDirectory),
-          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
-          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
-          pollingInterval = this.fsPollingInterval,
-          pollingTimeout = this.fsPollingTimeout,
-        ),
-        invalidity = this.invalidity?.let {
-          FileBasedProverConfig(
-            requestsDirectory = Path.of(this.invalidity.fsRequestsDirectory),
-            responsesDirectory = Path.of(this.invalidity.fsResponsesDirectory),
-            inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
-            inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
-            pollingInterval = this.fsPollingInterval,
-            pollingTimeout = this.fsPollingTimeout,
-          )
-        },
-        proofAggregation =
-        FileBasedProverConfig(
-          requestsDirectory = Path.of(this.proofAggregation.fsRequestsDirectory),
-          responsesDirectory = Path.of(this.proofAggregation.fsResponsesDirectory),
-          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
-          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
-          pollingInterval = this.fsPollingInterval,
-          pollingTimeout = this.fsPollingTimeout,
-        ),
-      ),
-      switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
-      switchBlockTimestamp = mergedSwitchBlockTimestamp,
-      proverB =
-      this.new?.let { newProverConfig ->
         ProverConfig(
           execution =
-          FileBasedProverConfig(
-            requestsDirectory = Path.of(newProverConfig.execution.fsRequestsDirectory),
-            responsesDirectory = Path.of(newProverConfig.execution.fsResponsesDirectory),
-            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
-            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
-            pollingInterval = newProverConfig.fsPollingInterval,
-            pollingTimeout = newProverConfig.fsPollingTimeout,
-          ),
-          blobCompression =
-          FileBasedProverConfig(
-            requestsDirectory = Path.of(newProverConfig.blobCompression.fsRequestsDirectory),
-            responsesDirectory = Path.of(newProverConfig.blobCompression.fsResponsesDirectory),
-            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
-            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
-            pollingInterval = newProverConfig.fsPollingInterval,
-            pollingTimeout = newProverConfig.fsPollingTimeout,
-          ),
-          invalidity = newProverConfig.invalidity?.let {
             FileBasedProverConfig(
-              requestsDirectory = Path.of(newProverConfig.invalidity.fsRequestsDirectory),
-              responsesDirectory = Path.of(newProverConfig.invalidity.fsResponsesDirectory),
-              inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
-              inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
-              pollingInterval = newProverConfig.fsPollingInterval,
-              pollingTimeout = newProverConfig.fsPollingTimeout,
+              requestsDirectory = Path.of(this.execution.fsRequestsDirectory),
+              responsesDirectory = Path.of(this.execution.fsResponsesDirectory),
+              inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+              inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+              pollingInterval = this.fsPollingInterval,
+              pollingTimeout = this.fsPollingTimeout,
+            ),
+          blobCompression =
+            FileBasedProverConfig(
+              requestsDirectory = Path.of(this.blobCompression.fsRequestsDirectory),
+              responsesDirectory = Path.of(this.blobCompression.fsResponsesDirectory),
+              inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+              inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+              pollingInterval = this.fsPollingInterval,
+              pollingTimeout = this.fsPollingTimeout,
+            ),
+          invalidity = this.invalidity?.let {
+            FileBasedProverConfig(
+              requestsDirectory = Path.of(this.invalidity.fsRequestsDirectory),
+              responsesDirectory = Path.of(this.invalidity.fsResponsesDirectory),
+              inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+              inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+              pollingInterval = this.fsPollingInterval,
+              pollingTimeout = this.fsPollingTimeout,
             )
           },
           proofAggregation =
-          FileBasedProverConfig(
-            requestsDirectory = Path.of(newProverConfig.proofAggregation.fsRequestsDirectory),
-            responsesDirectory = Path.of(newProverConfig.proofAggregation.fsResponsesDirectory),
-            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
-            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
-            pollingInterval = newProverConfig.fsPollingInterval,
-            pollingTimeout = newProverConfig.fsPollingTimeout,
-          ),
-        )
-      },
+            FileBasedProverConfig(
+              requestsDirectory = Path.of(this.proofAggregation.fsRequestsDirectory),
+              responsesDirectory = Path.of(this.proofAggregation.fsResponsesDirectory),
+              inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+              inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+              pollingInterval = this.fsPollingInterval,
+              pollingTimeout = this.fsPollingTimeout,
+            ),
+        ),
+      switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
+      switchBlockTimestamp = mergedSwitchBlockTimestamp,
+      proverB =
+        this.new?.let { newProverConfig ->
+          ProverConfig(
+            execution =
+              FileBasedProverConfig(
+                requestsDirectory = Path.of(newProverConfig.execution.fsRequestsDirectory),
+                responsesDirectory = Path.of(newProverConfig.execution.fsResponsesDirectory),
+                inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+                inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+                pollingInterval = newProverConfig.fsPollingInterval,
+                pollingTimeout = newProverConfig.fsPollingTimeout,
+              ),
+            blobCompression =
+              FileBasedProverConfig(
+                requestsDirectory = Path.of(newProverConfig.blobCompression.fsRequestsDirectory),
+                responsesDirectory = Path.of(newProverConfig.blobCompression.fsResponsesDirectory),
+                inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+                inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+                pollingInterval = newProverConfig.fsPollingInterval,
+                pollingTimeout = newProverConfig.fsPollingTimeout,
+              ),
+            invalidity = newProverConfig.invalidity?.let {
+              FileBasedProverConfig(
+                requestsDirectory = Path.of(newProverConfig.invalidity.fsRequestsDirectory),
+                responsesDirectory = Path.of(newProverConfig.invalidity.fsResponsesDirectory),
+                inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+                inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+                pollingInterval = newProverConfig.fsPollingInterval,
+                pollingTimeout = newProverConfig.fsPollingTimeout,
+              )
+            },
+            proofAggregation =
+              FileBasedProverConfig(
+                requestsDirectory = Path.of(newProverConfig.proofAggregation.fsRequestsDirectory),
+                responsesDirectory = Path.of(newProverConfig.proofAggregation.fsResponsesDirectory),
+                inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+                inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+                pollingInterval = newProverConfig.fsPollingInterval,
+                pollingTimeout = newProverConfig.fsPollingTimeout,
+              ),
+          )
+        },
       enableRequestFilesCleanup = this.enableRequestFilesCleanup,
     )
   }
