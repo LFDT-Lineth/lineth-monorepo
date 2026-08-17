@@ -88,7 +88,7 @@ def _sample_proof() -> L2ExecutionProof:
         end_l1_l2_bridge_rolling_hash_message_number=U64(5),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x04]) * 32),
-        parent_processed_ftx_number=U64(15),
+        parent_ftx_number=U64(15),
         end_ftx_rolling_hash=Hash32(bytes([0x05]) * 32),
         end_processed_ftx_number=U64(18),
         filtered_addresses_hash=Hash32(bytes([0x06]) * 32),
@@ -285,7 +285,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=U64(7),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x44]) * 32),
-        parent_processed_ftx_number=U64(7),
+        parent_ftx_number=U64(7),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(9),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
@@ -340,7 +340,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof.public_inputs.end_block_number) == 11
     assert bytes(proof.public_inputs.parent_block_hash) == bytes([0x0A]) * 32
     assert bytes(proof.public_inputs.l2_l1_messages_hash) == bytes([0x01]) * 32
-    assert int(proof.public_inputs.parent_processed_ftx_number) == 15
+    assert int(proof.public_inputs.parent_ftx_number) == 15
     assert int(proof.public_inputs.end_processed_ftx_number) == 18
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
@@ -354,7 +354,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert bytes(proof2.proof) == bytes.fromhex("abcdff")
     assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 14
-    assert int(proof2.public_inputs.parent_processed_ftx_number) == 18
+    assert int(proof2.public_inputs.parent_ftx_number) == 18
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -509,7 +509,7 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert int(pi.end_block_timestamp) == 1763000457
     assert bytes(pi.l2_l1_bridge_transaction_tree) == bytes([0x11]) * 32
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 7
-    assert int(pi.parent_processed_ftx_number) == 15
+    assert int(pi.parent_ftx_number) == 15
     assert int(pi.end_processed_ftx_number) == 18
     assert bytes(pi.parent_data_rolling_hash) == bytes([0x47]) * 32
     assert bytes(pi.end_data_rolling_hash) == bytes([0x8D]) * 32
@@ -519,7 +519,7 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert bytes(proof2.proof) == bytes.fromhex("abcdff")
     assert int(proof2.start_block_number) == 15
     assert int(proof2.public_inputs.end_block_number) == 18
-    assert int(proof2.public_inputs.parent_processed_ftx_number) == 18
+    assert int(proof2.public_inputs.parent_ftx_number) == 18
 
 
 def test_decode_aggregation_request_empty_rollup_proofs_is_rejected() -> None:

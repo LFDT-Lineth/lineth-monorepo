@@ -175,7 +175,7 @@ def finalize_rollup(
         raise Exception("dynamic chain config hash mismatch")
     if pi.parent_ftx_rolling_hash != state.current_finalized_ftx_rolling_hash:
         raise Exception("FTX rolling hash continuity mismatch")
-    if pi.parent_processed_ftx_number != state.current_finalized_processed_ftx_number:
+    if pi.parent_ftx_number != state.current_finalized_processed_ftx_number:
         raise Exception("processed FTX number continuity mismatch")
     if pi.end_processed_ftx_number < state.current_finalized_processed_ftx_number:
         raise Exception("endProcessedFtxNumber cannot decrease")
