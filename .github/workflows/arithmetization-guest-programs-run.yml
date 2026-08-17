@@ -65,6 +65,15 @@ jobs:
         working-directory: arithmetization/src/test
         timeout-minutes: 30
 
+      # Builds sha2_provider.zig with SHA2_ACCEL=true (the Zig SHA-256 wrapper) and runs it through
+      # the full interpreter, exercising the R_EVM_SHA2 custom-op dispatch. The target forces tracing
+      # mode (ZKC_EXEC_FLAGS=) because the interpreter's fast backend currently fails on an unrelated
+      # pre-existing instruction; the guest is self-checking and exits non-zero on any mismatch.
+      - name: Run SHA-256 accelerator guest with zkc interpreter
+        run: make sha2-zig-exec
+        working-directory: arithmetization/src/test
+        timeout-minutes: 30
+
       - name: Run l2-execution guest program with zkc interpreter
         run: make -C riscv-guests/l2-execution exec
         timeout-minutes: 30
