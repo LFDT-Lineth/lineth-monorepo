@@ -15,8 +15,10 @@ data class ProversConfig(
 data class ProverConfig(
   val execution: FileBasedProverConfig,
   val invalidity: FileBasedProverConfig? = null,
-  val blobCompression: FileBasedProverConfig,
+  val blobCompression: FileBasedProverConfig? = null,
+  val rollup: FileBasedProverConfig? = null,
   val proofAggregation: FileBasedProverConfig,
+  val forkName: String? = null,
 )
 
 data class FileBasedProverConfig(
@@ -26,4 +28,5 @@ data class FileBasedProverConfig(
   val inprogressRequestWritingSuffix: String,
   val pollingInterval: Duration,
   val pollingTimeout: Duration,
+  val guestProgramId: String? = null,
 )

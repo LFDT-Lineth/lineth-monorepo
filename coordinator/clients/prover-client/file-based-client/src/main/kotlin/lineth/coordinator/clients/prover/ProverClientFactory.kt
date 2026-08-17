@@ -70,7 +70,9 @@ class ProverClientFactory(
     log: Logger = FileBasedBlobCompressionProverClientV2.LOG,
   ): BlobCompressionProverClientV2 {
     return createClient(
-      proverAConfig = config.proverA.blobCompression,
+      proverAConfig = requireNotNull(config.proverA.blobCompression) {
+        "proverA.blobCompression must be configured to use blobCompressionProverClient"
+      },
       proverBConfig = config.proverB?.blobCompression,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
