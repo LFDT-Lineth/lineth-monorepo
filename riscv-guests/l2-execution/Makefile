@@ -1,15 +1,16 @@
 # l2-execution guest — self-contained lifecycle.
 #
 # This folder is its own Zig package (build.zig + build.zig.zon). The riscv-guests/ top-level
-# Makefile fans `compile`/`test`/`spec-test`/`fetch`/`clean` out to this file for every guest;
-# guest-specific targets (the ZKC fixture-exec/fixture-debug below) live here, not in the orchestrator.
+# Makefile fans `compile`/`test`/`fetch`/`clean` out to this file for every guest; guest-specific
+# targets (reference-test, the ZKC fixture-exec/fixture-debug below) live here, not in the
+# orchestrator.
 #
 # Scope split: building + host-testing is proving-system-AGNOSTIC and lives here (`compile` links the
 # statically-linked rv64im ELF — the zkvm-standards artifact — via build_common). Only the ZKC run
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -33,12 +34,12 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
-# printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
-# zkc's generated-Go backend in fast mode, the runnability path CI uses to stay cheap. Omitting
-# --fast traces; "--check" adds constraint checking. Both are measured weekly by
-# arithmetization-weekly-zkc-metrics.yml.
-ZKC_EXEC_FLAGS ?=-q 
+# Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
+# -v/-vv/-vvv raise verbosity. Override to pick the execution backend — e.g. "--gogen --fast" runs
+# the guest via zkc's generated-Go backend in fast mode, the runnability path used while the
+# interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
+# tracing enabled.
+ZKC_EXEC_FLAGS ?=
 
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
@@ -61,12 +62,15 @@ fetch:
 test:
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
 
-# Run the guest against the full EF zkevm stateless fixture set on the host. Fixtures come from the
-# lazy execution_spec_tests_zkevm dependency. Narrow/triage with SPEC_ARGS, e.g.
-# `make spec-test SPEC_ARGS="--fork Amsterdam -x"` or `SPEC_ARGS="--report-only"`.
-SPEC_ARGS ?=
-spec-test:
-	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
+# Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
+# host (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
+# delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the EF
+# fixture's own expected validity verdict — the property `run-execution-specs-ssz-fixtures`
+# (below) depends on. Scoped to --fork Amsterdam to keep runtime bounded; narrow further with
+# REFERENCE_ARGS.
+REFERENCE_ARGS ?= --fork Amsterdam
+reference-test:
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:

@@ -7,8 +7,10 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,6 +21,11 @@ import (
 	"strings"
 	"time"
 )
+
+// Exit code the l2-execution-wrap tool returns for a vanilla input that carries EIP-7685 execution
+// requests: the extended guest rejects these by Linea policy, so the harness skips them instead of
+// proving a guaranteed-reject block.
+const wrapSkipExitCode = 3
 
 const (
 	fixturePathColumnWidth = 40
@@ -46,8 +53,9 @@ type selectedInput struct {
 	jsonFile      string
 	testName      string
 	blockIndex    int
-	file          string
-	size          int
+	vanillaFile   string // raw vanilla stateless-input .ssz written from the fixture
+	file          string // wrapped extended-input .ssz fed to the guest
+	size          int    // size of the wrapped input actually run
 	expectedValid bool
 }
 
@@ -57,7 +65,7 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
+	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
@@ -121,11 +129,40 @@ func main() {
 		}
 	}
 
+	// Wrap pass: the guest reads the EXTENDED input, so wrap each vanilla .ssz (dummy rollup
+	// fields, zero l2MessageServiceAddress -> bridge suppression, so the guest runs it like
+	// vanilla). Inputs the wrap tool flags as carrying EIP-7685 execution requests are SKIPPED
+	// (the guest would reject them by policy) and counted — never silently dropped.
+	wrapBin := filepath.Join(guestDir, "zig-out", "bin", "l2-execution-wrap")
+	var runnable []selectedInput
+	skipped := 0
+	for _, input := range inputs {
+		skip, err := wrapInput(wrapBin, input.vanillaFile, input.file)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			hadError = true
+			continue
+		}
+		if skip {
+			skipped++
+			testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
+			fmt.Fprintf(os.Stderr, "skip (execution requests unsupported): %s\n", testName)
+			continue
+		}
+		if info, statErr := os.Stat(input.file); statErr == nil {
+			input.size = int(info.Size())
+		}
+		runnable = append(runnable, input)
+	}
+
+	runnerBin := filepath.Join(guestDir, "zig-out", "bin", "l2-execution-runner")
+
 	printTableHeader()
 
 	passed := 0
-	for _, input := range inputs {
-		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
+	seenFailures := make(map[string]string) // tail output -> first test name that showed it
+	for _, input := range runnable {
+		success, userTime, output := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
 			passed++
@@ -134,14 +171,23 @@ func main() {
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
+		if !ok {
+			// zkc's own output is just "machine panic: EXIT CODE = 1" — the riscv64 guest ABI has no
+			// room for an error name (see evm_execution_guest.zig's guestMain: `catch exit(1)`
+			// discards it). Re-run the SAME input through the native l2-execution-runner, which calls
+			// the identical runL2Execution and prints the real @errorName(err), to actually explain
+			// the mismatch instead of just restating that it happened.
+			nativeDetail := runNativeRunner(runnerBin, input.file)
+			reportFailure(testName, success, input.expectedValid, output, nativeDetail, seenFailures)
+		}
 	}
 
-	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
-	if len(inputs) == 0 {
+	fmt.Fprintf(os.Stderr, "summary: %d/%d passed (%d skipped: execution requests unsupported)\n", passed, len(runnable), skipped)
+	if len(runnable) == 0 {
 		fmt.Fprintln(os.Stderr, "no tests ran")
 		os.Exit(1)
 	}
-	if hadError || passed != len(inputs) {
+	if hadError || passed != len(runnable) {
 		os.Exit(1)
 	}
 }
@@ -255,8 +301,10 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 		if limit > 0 && len(out) >= limit {
 			break
 		}
-		outPath := filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i))
-		if err := os.WriteFile(outPath, block.input, 0o644); err != nil {
+		// The guest now consumes the EXTENDED input, so write the vanilla fixture bytes to a
+		// `.vanilla.ssz` here and let the wrap pass in main() produce the `.ssz` the guest reads.
+		vanillaPath := filepath.Join(outDir, fmt.Sprintf("%04d.vanilla.ssz", i))
+		if err := os.WriteFile(vanillaPath, block.input, 0o644); err != nil {
 			return nil, err
 		}
 		out = append(out, selectedInput{
@@ -264,12 +312,30 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 			jsonFile:      jsonRel,
 			testName:      block.testName,
 			blockIndex:    block.blockIndex,
-			file:          outPath,
+			vanillaFile:   vanillaPath,
+			file:          filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i)),
 			size:          len(block.input),
 			expectedValid: block.expectedValid,
 		})
 	}
 	return out, nil
+}
+
+// Wraps one vanilla stateless-input .ssz into the extended .ssz the guest reads, using the native
+// l2-execution-wrap tool. Returns skip=true when the tool signals the input carries EIP-7685
+// execution requests (unsupported by Linea policy).
+func wrapInput(wrapBin, vanillaFile, wrappedFile string) (skip bool, err error) {
+	cmd := exec.Command(wrapBin, vanillaFile, wrappedFile)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if runErr := cmd.Run(); runErr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) && exitErr.ExitCode() == wrapSkipExitCode {
+			return true, nil
+		}
+		return false, fmt.Errorf("wrap %s: %w: %s", vanillaFile, runErr, strings.TrimSpace(stderr.String()))
+	}
+	return false, nil
 }
 
 // Extracts stateless inputs from one fixture JSON file.
@@ -341,20 +407,64 @@ func run(w io.Writer, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
+// Runs the guest, capturing combined output so a mismatch (see reportFailure) can show the actual
+// zkc/make diagnostic instead of a bare "fail" — e.g. a rejected-by-guest panic vs. a broken zkc
+// invocation (bad flag, build error) look identical as a pass/fail boolean but very different here.
+func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, string) {
 	cmd := exec.Command(
 		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
 	err := cmd.Run()
 	if cmd.ProcessState == nil {
-		return err == nil, 0
+		return err == nil, 0, output.String()
 	}
-	return err == nil, cmd.ProcessState.UserTime()
+	return err == nil, cmd.ProcessState.UserTime(), output.String()
+}
+
+func runNativeRunner(runnerBin, inputFile string) string {
+	cmd := exec.Command(runnerBin, inputFile, "--json")
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	_ = cmd.Run()
+	return strings.TrimSpace(output.String())
+}
+
+func reportFailure(testName string, success, expectedValid bool, output, nativeDetail string, seen map[string]string) {
+	tail := tailLines(output, 20)
+	key := tail + "\x00" + nativeDetail
+	if first, ok := seen[key]; ok {
+		fmt.Fprintf(os.Stderr, "--- %s: same failure as %s ---\n", testName, first)
+		return
+	}
+	seen[key] = testName
+	fmt.Fprintf(os.Stderr, "--- %s (zkc exec %s, expected valid=%v) ---\n", testName, execOutcome(success), expectedValid)
+	if tail != "" {
+		fmt.Fprintf(os.Stderr, "zkc exec output:\n%s\n", tail)
+	} else {
+		fmt.Fprintln(os.Stderr, "zkc exec output: (empty)")
+	}
+	fmt.Fprintf(os.Stderr, "native l2-execution-runner:\n%s\n", nativeDetail)
+}
+
+func execOutcome(success bool) string {
+	if success {
+		return "succeeded"
+	}
+	return "failed"
+}
+
+func tailLines(s string, n int) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Escapes table cells.
