@@ -314,36 +314,28 @@ output_write_address:OutputAddress) ->
             tmpDWord1 = sgn_extension_u32_u64(rem32_uu(v1_lower, v2_lower))
         }
 
-        // case CUSTOM_0: {
-        //     if funct3 == FUNCT3_EVM_ECRECOVER && funct7 == FUNCT7_EVM_ECRECOVER {
-        //         printf "EVM ECRECOVER precompile "
-        //         evm_ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
-        //     } else {
-        //         printf "[ERROR] Unsupported R-type custom-0 instruction with\n"
-        //         printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-        //         printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-        //         fail
-        //     }
-        // }
-        // case CUSTOM_1: {
-        //     if funct3 == FUNCT3_KECCAK && funct7 == FUNCT7_KECCAK {
-        //         printf "KECCAK precompile "
-        //         keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-        //     } else if funct3 == FUNCT3_ECRECOVER && funct7 == FUNCT7_ECRECOVER {
-        //         printf "ECRECOVER precompile "
-        //         ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
-        //     } else if (funct3 == FUNCT3_POSEIDON2) && (funct7 == FUNCT7_POSEIDON2) {
-        //         printf "POSEIDON2 precompile "
-        //         // Note: registers[rd] isn't changed by this instruction, it's merely read.
-        //         // poseidon2(input_addr, output_addr) applies the permutation to the
-        //         // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
-        //         poseidon2(v1 as Address, registers[rd] as Address)
+        //
+        // case CUSTOM_0
+        //
+        case R_EVM_ECRECOVER: {
+            printf "EVM ECRECOVER precompile "
+            evm_ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
 
+        // 
         // case CUSTOM_1
         //
         case R_KECCAK: {
             printf "KECCAK precompile "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
+        case R_ECRECOVER: {
+            printf "ECRECOVER precompile "
+            ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
             new_output_write_address = output_write_address
             return
         }
@@ -357,7 +349,6 @@ output_write_address:OutputAddress) ->
             new_output_write_address = output_write_address
             return
         }
-
         case R_WRITE_OUTPUT: {
             printf "zkvm_io.write_output call "
             new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
