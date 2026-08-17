@@ -16,7 +16,7 @@ const guestProgramID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a144
 
 const invalidNumber = "not-a-number"
 
-const referenceL2ExecutionRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.request.json"
+const referenceL2ExecutionRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.request.json"
 
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
@@ -76,8 +76,8 @@ func TestDecodeL2ExecutionRequest_ReferenceFixture(t *testing.T) {
 	assert.Equal(t, uint64(59144), req.ChainID)
 	assert.Equal(t, "Amsterdam", req.ForkName)
 	require.Len(t, req.Payloads, 2)
-	assert.Equal(t, uint64(1000501), req.Payloads[0].BlockNumber)
-	assert.Equal(t, uint64(1000502), req.Payloads[1].BlockNumber)
+	assert.Equal(t, uint64(10), req.Payloads[0].BlockNumber)
+	assert.Equal(t, uint64(11), req.Payloads[1].BlockNumber)
 	assert.Len(t, req.Payloads[0].ForcedTransactions, 1)
 	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
 }

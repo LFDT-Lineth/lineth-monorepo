@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const referenceL2ExecutionResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.response.json"
+const referenceL2ExecutionResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
 
 func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	result := backend.Result{
