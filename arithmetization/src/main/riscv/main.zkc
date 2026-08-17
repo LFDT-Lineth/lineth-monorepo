@@ -18,7 +18,6 @@ include "../lib/poseidon2/ram.zkc"
 
 // TODO @Ghost
 fn main<registers, ram, keccak_state, poseidon2_state>() {
-    var instruction:Instruction
     var clock_cycle:u32 = 0
     var entry_point:Address
     var blobs_count:u64
