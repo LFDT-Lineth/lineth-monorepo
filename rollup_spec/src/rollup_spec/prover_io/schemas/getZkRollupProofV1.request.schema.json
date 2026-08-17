@@ -106,7 +106,7 @@
         "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash",
         "parentFtxRollingHash",
-        "parentProcessedFtxNumber",
+        "parentFtxNumber",
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
