@@ -425,7 +425,7 @@ func TestEncode_RelocatesForBase(t *testing.T) {
 	atOther, err := ps.Encode(p, otherBase)
 	require.NoError(t, err)
 
-	require.Equal(t, len(atGuest), len(atOther),
+	require.Len(t, atGuest, len(atOther),
 		"the base shifts pointers but must not change the layout or size")
 	require.NotEqual(t, atGuest, atOther,
 		"pointers are absolute, so a different base must produce different bytes")

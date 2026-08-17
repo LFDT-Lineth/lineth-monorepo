@@ -265,7 +265,7 @@ func TestVerifierRayImageIsUpToDate(t *testing.T) {
 	require.Equal(t, image, reencoded)
 
 	if os.Getenv("UPDATE_VERIFIER_RAY_IMAGE") != "" {
-		require.NoError(t, os.WriteFile(verifierRayImagePath, image, 0o644))
+		require.NoError(t, os.WriteFile(verifierRayImagePath, image, 0o600))
 		t.Logf("wrote %d bytes to %s", len(image), verifierRayImagePath)
 		return
 	}
