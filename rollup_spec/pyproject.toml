@@ -20,6 +20,7 @@ where = ["src"]
 "rollup_spec" = [
   "prover_io/schemas/*.json",
   "prover_io/testdata/*.json",
+  "prover_io/testdata/*.ssz",
 ]
 
 [tool.pytest.ini_options]
