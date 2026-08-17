@@ -190,18 +190,18 @@ func (d *decoder) proof(off int) (Proof, error) {
 
 func (d *decoder) roundMessage(off int) (RoundMessage, error) {
 	var r RoundMessage
+	var err error
 
-	colsOff, n, err := d.slice(off+OffRoundMessageColumns, SizeColumnMessage, 8, "RoundMessage.columns")
-	if err != nil {
-		return r, err
-	}
-	if n > 0 {
-		r.Columns = make([]ColumnMessage, n)
-		for i := range r.Columns {
-			if r.Columns[i], err = d.columnMessage(colsOff + i*SizeColumnMessage); err != nil {
-				return r, err
-			}
-		}
+	commitment := off + OffRoundMessageCommitment
+	switch flag := d.buf[commitment+OffOptCommitmentFlag]; flag {
+	case TagOptCommitmentNull:
+		r.Commitment = nil
+	case TagOptCommitmentPresent:
+		digest := d.digest(commitment + OffOptCommitmentPayload)
+		r.Commitment = &digest
+	default:
+		return r, fmt.Errorf("proofserialization: RoundMessage.commitment: presence flag %d "+
+			"is neither null (%d) nor present (%d)", flag, TagOptCommitmentNull, TagOptCommitmentPresent)
 	}
 
 	cellsOff, n, err := d.slice(off+OffRoundMessageCells, SizeScalar, SizeElement, "RoundMessage.cells")
@@ -229,35 +229,6 @@ func (d *decoder) scalar(off int) (Scalar, error) {
 	default:
 		return Scalar{}, fmt.Errorf("proofserialization: Scalar: discriminant %d is neither "+
 			"base (%d) nor ext (%d)", tag, TagScalarBase, TagScalarExt)
-	}
-}
-
-func (d *decoder) columnMessage(off int) (ColumnMessage, error) {
-	tag := d.buf[off+OffColumnMessageTag]
-	switch tag {
-	case TagColumnOracle:
-		return ColumnMessage{Commitment: d.digest(off + OffColumnMessagePayload)}, nil
-	case TagColumnPublic:
-		v, err := d.vector(off + OffColumnMessagePayload)
-		return ColumnMessage{PublicColumn: v, IsPublic: true}, err
-	default:
-		return ColumnMessage{}, fmt.Errorf("proofserialization: ColumnMessage: discriminant %d is "+
-			"neither oracle (%d) nor public (%d)", tag, TagColumnOracle, TagColumnPublic)
-	}
-}
-
-func (d *decoder) vector(off int) (Vector, error) {
-	tag := d.buf[off+OffVectorTag]
-	switch tag {
-	case TagVectorBase:
-		xs, err := d.elements(off+OffVectorPayload, "Vector.base")
-		return Vector{Base: xs}, err
-	case TagVectorExt:
-		xs, err := d.exts(off+OffVectorPayload, "Vector.ext")
-		return Vector{Ext: xs, IsExt: true}, err
-	default:
-		return Vector{}, fmt.Errorf("proofserialization: Vector: discriminant %d is neither "+
-			"base (%d) nor ext (%d)", tag, TagVectorBase, TagVectorExt)
 	}
 }
 

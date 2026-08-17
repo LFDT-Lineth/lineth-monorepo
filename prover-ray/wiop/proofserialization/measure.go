@@ -110,8 +110,10 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 	add("root", SizeProof, "verifier.Proof")
 	add("rounds array", s.Rounds*SizeRoundMessage, fmt.Sprintf("%d x RoundMessage", s.Rounds))
 	add("cells", s.Cells*SizeScalar, fmt.Sprintf("%d x Scalar(28)", s.Cells))
-	add("oracle commitments", s.Commitments*SizeColumnMessage,
-		fmt.Sprintf("%d x ColumnMessage(40)", s.Commitments))
+	// A committed round carries its Merkle root inline in the RoundMessage, so
+	// the commitments cost nothing beyond the rounds array itself.
+	add("oracle commitments", 0,
+		fmt.Sprintf("%d, stored inline in RoundMessage", s.Commitments))
 	add("module_sizes", s.DynamicSizes*SizeUsize, "")
 	// No entry for PcsOpening / OpeningProof / fri.Proof: each is stored INLINE in
 	// its parent, so all three already sit inside the root's SizeProof bytes.

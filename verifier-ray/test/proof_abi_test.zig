@@ -102,22 +102,14 @@ test "Scalar discriminant byte is at offset 24" {
     try expectTagByte(value.Scalar, .{ .ext = ext.Ext.zero() }, 24);
 }
 
-test "Vector discriminant byte is at offset 16" {
-    try expectTagByte(value.Vector, .{ .base = &.{} }, 16);
-    try expectTagByte(value.Vector, .{ .ext = &.{} }, 16);
-}
+test "optional Commitment has_value byte is at offset 32" {
+    // A committed round carries only its Merkle root, as an optional rather than
+    // a column union, so this flag is what the encoder writes per round.
+    const absent: ?commitment.Commitment = null;
+    try std.testing.expectEqual(@as(u8, 0), std.mem.asBytes(&absent)[32]);
 
-test "ColumnMessage discriminant byte is at offset 32" {
-    try expectTagByte(
-        protocol.ColumnMessage,
-        .{ .oracle_commitment = std.mem.zeroes(commitment.Commitment) },
-        32,
-    );
-    try expectTagByte(
-        protocol.ColumnMessage,
-        .{ .public_column = .{ .base = &.{} } },
-        32,
-    );
+    const present: ?commitment.Commitment = std.mem.zeroes(commitment.Commitment);
+    try std.testing.expectEqual(@as(u8, 1), std.mem.asBytes(&present)[32]);
 }
 
 test "optional RowPair has_value byte is at offset 64" {

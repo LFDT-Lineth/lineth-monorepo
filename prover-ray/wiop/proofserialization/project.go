@@ -73,12 +73,11 @@ func projectRounds(
 	for _, r := range sys.Rounds {
 		msg := RoundMessage{}
 
-		// wiop no longer transports columns: every column is committed, and a
-		// committed round contributes exactly its Merkle commitment. There is no
-		// public-column case to project, so ColumnMessage's other variant is
-		// currently unreachable from this path.
+		// wiop does not transport columns: every column is committed, and a
+		// committed round contributes exactly its Merkle root.
 		if commitment, ok := proof.Commitments[r.ID]; ok {
-			msg.Columns = []ColumnMessage{{Commitment: DigestFrom(commitment)}}
+			digest := DigestFrom(commitment)
+			msg.Commitment = &digest
 		}
 
 		// Cells in declaration order, which is the order the transcript absorbs

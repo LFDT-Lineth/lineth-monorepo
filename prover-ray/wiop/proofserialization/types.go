@@ -38,29 +38,14 @@ type Scalar struct {
 	IsExt bool
 }
 
-// Vector is a public column's values. Mirrors Zig's value.Vector, a tagged union
-// over two slice types. Exactly one of Base and Ext is meaningful, selected by
-// IsExt.
-type Vector struct {
-	Base  []Element
-	Ext   []Ext
-	IsExt bool
-}
-
-// ColumnMessage is one column's verifier-visible data. Mirrors Zig's
-// protocol.ColumnMessage: either the Merkle commitment of an oracle column or a
-// public column's raw values. IsPublic selects which.
-type ColumnMessage struct {
-	Commitment   Digest
-	PublicColumn Vector
-	IsPublic     bool
-}
-
 // RoundMessage is one round's verifier-visible data. Mirrors Zig's
 // protocol.RoundMessage.
+//
+// Columns never travel raw: a committed round is represented solely by its
+// Merkle root, and Commitment is nil for a round that commits nothing.
 type RoundMessage struct {
-	Columns []ColumnMessage
-	Cells   []Scalar
+	Cells      []Scalar
+	Commitment *Digest
 }
 
 // RowOpening is one committed row's preimage. Mirrors Zig's merkle.RowOpening.

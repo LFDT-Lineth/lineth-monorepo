@@ -29,13 +29,12 @@ const (
 
 	// SizeScalar is value.Scalar: a 24-byte Ext payload, a discriminant, padding.
 	SizeScalar = 28
-	// SizeVector is value.Vector: a 16-byte slice payload, a discriminant, padding.
-	SizeVector = 24
-	// SizeColumnMessage is protocol.ColumnMessage: a 32-byte payload (a Digest,
-	// or a Vector using its first 24 bytes), a discriminant, padding.
-	SizeColumnMessage = 40
+	// SizeOptCommitment is ?protocol.Commitment: a 32-byte Digest, a presence
+	// flag, padding. A committed round carries only its Merkle root -- columns
+	// never travel raw, so there is no column union.
+	SizeOptCommitment = 36
 	// SizeRoundMessage is protocol.RoundMessage.
-	SizeRoundMessage = 32
+	SizeRoundMessage = 56
 
 	// SizeRowOpening is merkle.RowOpening: two slice headers.
 	SizeRowOpening = 32
@@ -81,16 +80,12 @@ const (
 	OffFriProofFinalPoly      = 16
 	OffFriProofRunningQueries = 32
 
-	OffRoundMessageColumns = 0
-	OffRoundMessageCells   = 16
+	OffRoundMessageCells      = 0
+	OffRoundMessageCommitment = 16
 
-	// ColumnMessage's payload holds either a Digest (32B) or a Vector (24B).
-	OffColumnMessagePayload = 0
-	OffColumnMessageTag     = 32
-
-	// Vector's payload is the active variant's slice header.
-	OffVectorPayload = 0
-	OffVectorTag     = 16
+	// ?Commitment: the 32-byte Digest, then the presence flag.
+	OffOptCommitmentPayload = 0
+	OffOptCommitmentFlag    = 32
 
 	// Scalar's payload is always a 24-byte Ext; only the tag distinguishes the
 	// variants.
@@ -118,11 +113,8 @@ const (
 	TagScalarBase = 0
 	TagScalarExt  = 1
 
-	TagVectorBase = 0
-	TagVectorExt  = 1
-
-	TagColumnOracle = 0
-	TagColumnPublic = 1
+	TagOptCommitmentNull    = 0
+	TagOptCommitmentPresent = 1
 
 	TagOptRowPairNull    = 0
 	TagOptRowPairPresent = 1
