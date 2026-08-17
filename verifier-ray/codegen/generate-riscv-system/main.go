@@ -3,7 +3,7 @@
 // CompiledSystem to testdata/generated/riscv_system.zig. It exercises the full
 // codegen path against a real proof rather than a synthetic fixture:
 // AssertAllVerifierActionsHandled -> BuildCompiledSystem ->
-// WriteCompiledSystemZig -> WritePcsSystemZig.
+// WriteCompiledSystemZig.
 //
 // compileBinaryConstraints and runCompilePipeline below mirror
 // prover-ray/zkcdriver/zkcdriver_test.go's own private test helpers of the
@@ -57,6 +57,7 @@ func main() {
 }
 
 func run() error {
+	// Step 1: compile zkc_02.zkc down to R5's binary constraint format.
 	binF, err := compileBinaryConstraints(zkcSourcePath)
 	if err != nil {
 		return fmt.Errorf("compiling %s: %w", zkcSourcePath, err)
@@ -73,11 +74,18 @@ func run() error {
 		"data": {0x00, 0x03, 0x00, 0x08},
 	}}
 
+	// Step 2: build the wiop.System driving the constraints through zkcdriver,
+	// then run it through the full compiler pipeline (nonnative, rangecheck,
+	// lookups, message bus, grand product, log-derivative sum, local
+	// vanishing, global, PCS).
 	sys := wiop.NewSystemf("zkc-riscv-system")
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiledConstraints))
 	runCompilePipeline(sys)
 
+	// Step 3: assign the witness for the honest inputs above, produce a real
+	// proof, and sanity-check it against the Go verifier before generating
+	// any Zig fixtures from it.
 	proof, pub := sys.Prove(
 		func(assignRt *wiop.Runtime) {
 			driver.AssignWithPreRead(assignRt, inputs)
@@ -87,6 +95,9 @@ func run() error {
 		return fmt.Errorf("verifying %s proof: %w", zkcSourcePath, err)
 	}
 
+	// Step 4: confirm codegen can handle every verifier action the compiled
+	// system produced, then extract the CompiledSystem (spec, vanishing,
+	// log-derivative, grand-product, row-limit, PCS) codegen needs.
 	if err := verifierraycodegen.AssertAllVerifierActionsHandled(sys); err != nil {
 		return fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
 	}
@@ -95,6 +106,8 @@ func run() error {
 		return fmt.Errorf("BuildCompiledSystem: %w", err)
 	}
 
+	// Step 5: render the CompiledSystem (including PCS, via WritePcs) as Zig
+	// source into systemBuf.
 	var systemBuf bytes.Buffer
 	if err := verifierraycodegen.WriteCompiledSystemZig(&systemBuf, 0, system, verifierraycodegen.CompiledSystemZigOptions{
 		EmitHeader:         true,
@@ -104,22 +117,20 @@ func run() error {
 		LogDerivImport:     `@import("verifier_ray").query.logderivativesum`,
 		GrandProductImport: `@import("verifier_ray").query.grandproduct`,
 		RowLimitImport:     `@import("verifier_ray").query.rowlimit`,
+		WritePcs:           true,
+		PcsImport:          `@import("verifier_ray").query.pcs`,
+		FriImport:          `@import("verifier_ray").query.fri`,
 	}); err != nil {
 		return fmt.Errorf("WriteCompiledSystemZig: %w", err)
 	}
-	if err := verifierraycodegen.WritePcsSystemZigWithOptions(&systemBuf, 0, *system.Pcs, verifierraycodegen.PcsZigOptions{
-		PcsImport:  `@import("verifier_ray").query.pcs`,
-		FriImport:  `@import("verifier_ray").query.fri`,
-		EmitHeader: true,
-	}); err != nil {
-		return fmt.Errorf("WritePcsSystemZig: %w", err)
-	}
+
+	// Step 6: stitch the sub-verifier systems just written into a single
+	// verifier.Systems value, the top-level struct verifier.verify expects.
 	fmt.Fprintf(&systemBuf,
 		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .pcs = pcs_system_0 };\n",
 	)
 
 	outDir := "../../testdata/generated"
-
 	systemPath := filepath.Join(outDir, "riscv_system.zig")
 	formatted, err := runZigFmt(systemBuf.Bytes())
 	if err != nil {
