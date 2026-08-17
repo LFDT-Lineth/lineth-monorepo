@@ -157,7 +157,7 @@ data class PayloadInputDto(
 
 data class L2ExecutionProofRequestParamsDto(
   val parentFtxRollingHash: String,
-  val parentLastProcessedFtxNumber: Long,
+  val parentFtxNumber: Long,
   val payloads: List<PayloadInputDto>,
   val chainConfig: ChainConfigDto,
 )
