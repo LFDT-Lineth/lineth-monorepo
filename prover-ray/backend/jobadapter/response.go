@@ -75,7 +75,7 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		EndL1L2BridgeRollingHashMessageNumber:    pi.EndL1L2BridgeRollingHashMessageNumber,
 		DynamicChainConfigHash:                   hexHash(pi.DynamicChainConfigHash),
 		ParentFtxRollingHash:                     hexHash(pi.ParentFtxRollingHash),
-		ParentFtxNumber:                 pi.ParentFtxNumber,
+		ParentFtxNumber:                          pi.ParentFtxNumber,
 		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
 		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
 		FilteredAddressesHash:                    hexHash(pi.FilteredAddressesHash),
