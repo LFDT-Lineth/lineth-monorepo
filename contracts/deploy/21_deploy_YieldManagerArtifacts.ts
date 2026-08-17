@@ -2,7 +2,7 @@
 // pnpm exec hardhat deploy --network <network> --tags YieldManagerArtifacts
 //
 // Required environment variables:
-//   LINEA_ROLLUP_ADDRESS               (or registry: LineaRollup)
+//   LINETH_ROLLUP_ADDRESS               (or registry: LinethRollup)
 //   L1_SECURITY_COUNCIL                (or registry: L1_SECURITY_COUNCIL)
 //   MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS
 //   TARGET_WITHDRAWAL_RESERVE_PERCENTAGE_BPS
@@ -68,8 +68,12 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
 
     // YieldManager DEPLOYED AS UPGRADEABLE PROXY
-    const lineaRollupAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
-    const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+    const linethRollupAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "LinethRollup",
+      "LINETH_ROLLUP_ADDRESS",
+    );
+    const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
       hre.network.name,
       "L1_SECURITY_COUNCIL",
       "L1_SECURITY_COUNCIL",
@@ -95,11 +99,11 @@ const func: DeployFunction = withSignerUiSession(
       "GI_PENDING_PARTIAL_WITHDRAWALS_ROOT",
       GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
     );
-    const verifierAdmin = getEnvVarOrDefault("VALIDATOR_CONTAINER_PROOF_VERIFIER_ADMIN", lineaRollupSecurityCouncil);
+    const verifierAdmin = getEnvVarOrDefault("VALIDATOR_CONTAINER_PROOF_VERIFIER_ADMIN", linethRollupSecurityCouncil);
 
     const securityCouncilRoles = generateRoleAssignments(
       YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
-      lineaRollupSecurityCouncil,
+      linethRollupSecurityCouncil,
       [],
     );
     const automationServiceRoles = generateRoleAssignments(
@@ -120,7 +124,7 @@ const func: DeployFunction = withSignerUiSession(
       YieldManagerAbi,
       YieldManagerBytecode,
       signer,
-      lineaRollupAddress,
+      linethRollupAddress,
     );
 
     const yieldManagerInitData: YieldManagerInitializationData = {
@@ -128,7 +132,7 @@ const func: DeployFunction = withSignerUiSession(
       unpauseTypeRoles: unpauseTypeRoles,
       roleAddresses: roleAddresses,
       initialL2YieldRecipients: [],
-      defaultAdmin: lineaRollupSecurityCouncil,
+      defaultAdmin: linethRollupSecurityCouncil,
       initialMinimumWithdrawalReservePercentageBps: initialMinimumWithdrawalReservePercentageBps,
       initialTargetWithdrawalReservePercentageBps: initialTargetWithdrawalReservePercentageBps,
       initialMinimumWithdrawalReserveAmount: initialMinimumWithdrawalReserveAmount,
@@ -167,7 +171,7 @@ const func: DeployFunction = withSignerUiSession(
       LidoStVaultYieldProviderFactoryAbi,
       LidoStVaultYieldProviderFactoryBytecode,
       signer,
-      lineaRollupAddress,
+      linethRollupAddress,
       yieldManagerAddress,
       vaultHub,
       vaultFactory,

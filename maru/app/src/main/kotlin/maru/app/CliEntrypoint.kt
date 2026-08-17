@@ -17,7 +17,17 @@ object CliEntrypoint {
 
   @JvmStatic
   fun main(args: Array<String>) {
-    val cmd = CommandLine(MaruAppCli())
+    val exitCode = execute(args)
+    if (exitCode != 0) {
+      exitProcess(exitCode)
+    }
+  }
+
+  fun execute(
+    args: Array<String>,
+    maruAppFactory: MaruAppFactoryCreator = MaruAppFactory(),
+  ): Int {
+    val cmd = CommandLine(MaruAppCli(maruAppFactory))
     cmd.registerConverter(
       Network::class.java,
       KebabToEnumConverter(Network::class.java),
@@ -30,9 +40,6 @@ object CliEntrypoint {
       log.error("Invalid args!: ", ex)
       1
     }
-    val exitCode = cmd.execute(*args)
-    if (exitCode != 0) {
-      exitProcess(exitCode)
-    }
+    return cmd.execute(*args)
   }
 }

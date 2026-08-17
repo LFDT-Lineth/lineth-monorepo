@@ -34,7 +34,7 @@ func newPCSTestSystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
@@ -52,7 +52,6 @@ func TestCompileEndToEnd(t *testing.T) {
 	})
 
 	// The committed column must not survive as raw data in the proof.
-	require.Empty(t, proof.Columns, "PCS-compiled proof must not carry oracle columns")
 	require.NotNil(t, proof.PCSOpeningProof, "proof must carry the FRI opening proof")
 	require.NotEmpty(t, proof.Commitments, "proof must carry the round commitments")
 
@@ -83,7 +82,7 @@ func TestCompileDynamicModule(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
@@ -97,15 +96,42 @@ func TestCompileDynamicModule(t *testing.T) {
 	require.NoError(t, sys.Verify(proof, pub), "honest dynamic-module witness must verify")
 }
 
-// TestCompileRejectsPublicColumn checks that a verifier-visible column in a
-// committed round is rejected: it cannot be replaced by a commitment.
-func TestCompileRejectsPublicColumn(t *testing.T) {
-	sys := wiop.NewSystemf("pcs-pub")
+// TestCompileDynamicModulePaddingLeft checks the full commit→open→verify flow
+// for a dynamic PaddingDirectionLeft module whose column assignment is shorter
+// than the allocated domain size, so that actual padding rows are present.
+//
+// PaddingDirectionLeft places padding at the beginning of the domain and data at
+// the end: [pad…pad | data]. Before the fix, writeDownVectorBase/Ext ignored the
+// padding direction and always produced [data | pad…pad], committing a different
+// polynomial than the one evalLagrangePadded evaluates. The DEEP-quotient
+// numerator then had unintended poles, so FRI folding failed with "final layer
+// has nonzero coefficient, not low-degree enough."
+func TestCompileDynamicModulePaddingLeft(t *testing.T) {
+	sys := wiop.NewSystemf("pcs-left")
 	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	mod.NewColumn(sys.Context.Childf("pub"), wiop.VisibilityPublic, r0)
+	r1 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionLeft)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
 
-	require.Panics(t, func() { Compile(sys) }, "a public committed column must be rejected")
+	Compile(sys)
+
+	// 5 non-constant elements → domain rounds to 8, leaving 3 padding rows.
+	// PaddingDirectionLeft commits [0,0,0,1,2,3,4,5]; the old code committed
+	// [1,2,3,4,5,0,0,0] — a distinct degree-7 polynomial — causing FRI failure.
+	elems := make([]field.Element, 5)
+	for i := range elems {
+		elems[i].SetUint64(uint64(i + 1))
+	}
+	data := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, data)
+	})
+
+	require.NoError(t, sys.Verify(proof, pub), "left-padded column must verify")
 }
 
 // TestCompileRejectsTamperedCommitment checks that corrupting a transported

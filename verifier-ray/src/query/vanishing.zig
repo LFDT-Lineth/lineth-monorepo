@@ -8,6 +8,7 @@ pub const Error = error{
     InvalidClaimCount,
     QuotientIdentityMismatch,
     LagrangeSelectorInDomain,
+    CellRefOutOfRange,
 };
 
 pub const ModuleSize = union(enum) {
@@ -203,7 +204,7 @@ fn evalExpr(
     const node = module.expressions[expr_index];
     return switch (node) {
         .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
-        .cell_value => |ref| input.ctx.rounds[ref.round].cells[ref.index].toExt(),
+        .cell_value => |ref| (try input.ctx.cell(ref.round, ref.index)).toExt(),
         .coin_value => |coin_index| input.ctx.all_coins[coin_index],
         .constant => |value| ext.Ext.lift(value),
         .op => |op| try evalOp(module, op, static_n, ctx, input),

@@ -1,0 +1,26 @@
+# `LinethRollup`
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(struct ILinethRollup.InitializationData _initializationData) external
+```
+
+Initializes LinethRollup and underlying service dependencies - used for new networks only.
+
+_DEFAULT_ADMIN_ROLE is set for the security council.
+OPERATOR_ROLE is set for operators.
+Note: This is used for new testnets and local/CI testing, and will not replace existing proxy based contracts._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _initializationData | struct ILinethRollup.InitializationData | The initial data used for proof verification. |
+

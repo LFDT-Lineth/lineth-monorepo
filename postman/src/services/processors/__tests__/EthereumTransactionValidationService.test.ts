@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
 
 import { TestLogger } from "../../../../src/utils/testing/helpers";
-import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { ILinethRollupClient } from "../../../core/clients/blockchain/ethereum/ILinethRollupClient";
 import { IEthereumGasProvider } from "../../../core/clients/blockchain/IGasProvider";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
@@ -15,17 +15,17 @@ import { EthereumTransactionValidationService } from "../../EthereumTransactionV
 
 describe("EthereumTransactionValidationService", () => {
   let lineaTransactionValidationService: EthereumTransactionValidationService;
-  let lineaRollupClient: ILineaRollupClient;
+  let linethRollupClient: ILinethRollupClient;
   let gasProvider: IEthereumGasProvider;
 
   const logger = new TestLogger(EthereumTransactionValidationService.name);
 
   beforeEach(() => {
-    lineaRollupClient = mock<ILineaRollupClient>();
+    linethRollupClient = mock<ILinethRollupClient>();
     gasProvider = mock<IEthereumGasProvider>();
 
     lineaTransactionValidationService = new EthereumTransactionValidationService(
-      lineaRollupClient,
+      linethRollupClient,
       gasProvider,
       {
         profitMargin: DEFAULT_PROFIT_MARGIN,
@@ -49,8 +49,8 @@ describe("EthereumTransactionValidationService", () => {
   describe("evaluateTransaction", () => {
     it("Should return transaction evaluation criteria with hasZeroFee = true", async () => {
       const estimatedGasLimit = 50_000n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
 
       testMessage.fee = 0n;
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
@@ -69,8 +69,8 @@ describe("EthereumTransactionValidationService", () => {
 
     it("Should return transaction evaluation criteria with isUnderPriced = true", async () => {
       const estimatedGasLimit = 50_000n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
 
       testMessage.fee = 1n;
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
@@ -89,8 +89,8 @@ describe("EthereumTransactionValidationService", () => {
 
     it("Should return transaction evaluation criteria with estimatedGasLimit = null", async () => {
       const estimatedGasLimit = DEFAULT_MAX_CLAIM_GAS_LIMIT + 1n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
 
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
 
@@ -108,8 +108,8 @@ describe("EthereumTransactionValidationService", () => {
 
     it("Should return transaction evaluation criteria with isRateLimitExceeded = true", async () => {
       const estimatedGasLimit = DEFAULT_MAX_CLAIM_GAS_LIMIT + 1n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(true);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(true);
 
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
 
@@ -127,8 +127,8 @@ describe("EthereumTransactionValidationService", () => {
 
     it("Should return transaction evaluation criteria for a valid message", async () => {
       const estimatedGasLimit = 50_000n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
 
       testMessage.fee = 100000000000000000000n;
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
@@ -147,8 +147,8 @@ describe("EthereumTransactionValidationService", () => {
 
     it("When isPostmanSponsorshipEnabled is false, should return transaction evaluation criteria with isForSponsorship = false", async () => {
       const estimatedGasLimit = 50_000n;
-      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
       testMessage.fee = 0n;
 
       const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
@@ -163,7 +163,7 @@ describe("EthereumTransactionValidationService", () => {
           maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         });
         lineaTransactionValidationService = new EthereumTransactionValidationService(
-          lineaRollupClient,
+          linethRollupClient,
           gasProvider,
           {
             profitMargin: DEFAULT_PROFIT_MARGIN,
@@ -177,8 +177,8 @@ describe("EthereumTransactionValidationService", () => {
 
       it("When gas limit < sponsor threshold, should return transaction evaluation criteria with isForSponsorship = true", async () => {
         const estimatedGasLimit = DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT - 1n;
-        jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-        jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+        jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+        jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
         testMessage.fee = 0n;
 
         const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
@@ -188,8 +188,8 @@ describe("EthereumTransactionValidationService", () => {
 
       it("When gas limit > sponsor threshold, should return transaction evaluation criteria with isForSponsorship = false", async () => {
         const estimatedGasLimit = DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT + 1n;
-        jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
-        jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+        jest.spyOn(linethRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+        jest.spyOn(linethRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
 
         testMessage.fee = 0n;
         const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);

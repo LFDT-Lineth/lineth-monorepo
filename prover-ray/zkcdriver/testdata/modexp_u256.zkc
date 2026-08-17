@@ -1,0 +1,53 @@
+include "./lib/nonnative/u256.zkc"
+
+type tAddr = u8
+
+pub input in_base(address:tAddr) -> (val:u256)
+pub input in_exp(address:tAddr) -> (val:u256)
+pub input in_mod(address:tAddr) -> (val:u256)
+pub input in_res(address:tAddr) -> (val:u256)
+
+fn main() {
+    var base:u256 = in_base[0]
+    var exp:u256 = in_exp[0]
+    var mod:u256 = in_mod[0]
+    var expected:u256 = in_res[0]
+    var res:u256 = modexp_recursion(base, exp, mod)
+    if res != in_res[0] {
+        fail
+    }
+}
+
+// recursive modexp seems to be better than the loop
+fn modexp_recursion(base:u256, exp:u256, mod:u256) -> (res:u256) {
+    if exp == 0 {
+        res = 1 % mod
+    } else {
+        var half:u256
+        var bit:u1
+        half::bit = exp as u257
+        var half_res:u256 = modexp_recursion(base, half, mod)
+        var sq:u256 = mulmod_256(half_res, half_res, mod)
+        if bit == 1 {
+            res = mulmod_256(sq, base, mod)
+        } else {
+            res = sq
+        }
+    }
+}
+
+fn modexp_loop(base:u256, exp:u256, mod:u256) -> (res:u256) {
+    var acc:u256 = base
+    var e:u256 = exp
+    var half:u256
+    var bit:u1
+    res = 1 % mod
+    while e != 0 {
+        half::bit = e as u257
+        if bit == 1 {
+            res = mulmod_256(res, acc, mod)
+        }
+        acc = mulmod_256(acc, acc, mod)
+        e = half
+    }
+}

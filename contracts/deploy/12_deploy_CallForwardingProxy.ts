@@ -15,8 +15,8 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "CallForwardingProxy";
     const signer = await getUiSigner(hre);
 
-    // This should be the LineaRollup
-    const targetAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    // This should be the LinethRollup
+    const targetAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
 
     const contract = await deployFromFactory(contractName, signer, targetAddress);
 

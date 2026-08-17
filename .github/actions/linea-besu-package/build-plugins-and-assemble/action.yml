@@ -6,12 +6,12 @@ inputs:
   release_version:
     description: "Release version"
     required: true
-  
+
   image_tag_suffix:
     description: 'Custom docker image tag suffix'
     required: false
     default: ''
-  
+
   with_besu_fleet_plugin:
     description: When "true", assemble with besu fleet plugin
     required: true
@@ -74,7 +74,7 @@ runs:
   steps:
     - name: Setup Tracer Environment
       uses: ./.github/actions/setup-tracer-environment
-    
+
     - name: Build besu from source
       shell: bash
       run: ./gradlew :linea-besu:besu:build -PskipDownloadBesuDist=false

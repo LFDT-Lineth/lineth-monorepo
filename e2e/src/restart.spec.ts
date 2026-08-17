@@ -86,13 +86,13 @@ describe("Coordinator restart test suite", () => {
       }
 
       const l1PublicClient = context.l1PublicClient();
-      const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
 
       // Phase 1: Confirm coordinator was working before restart
       const [dataSubmittedEventsSnapshot, dataFinalizedEventsSnapshot] = await Promise.all([
         waitForEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -100,8 +100,8 @@ describe("Coordinator restart test suite", () => {
           strict: true,
         }),
         waitForEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -134,16 +134,16 @@ describe("Coordinator restart test suite", () => {
 
       const [submittedDelta, finalizedDelta] = await Promise.all([
         getEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: lastSubmittedSnapshot.blockNumber + 1n,
           toBlock: baselineBlockNumber,
           strict: true,
         }),
         getEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: lastFinalizedSnapshot.blockNumber + 1n,
           toBlock: baselineBlockNumber,
@@ -161,8 +161,8 @@ describe("Coordinator restart test suite", () => {
       // Phase 4: Wait for new events produced after coordinator resumes
       logger.debug("Waiting for DataSubmittedV3 event after coordinator restart...");
       const [dataSubmittedV3EventAfterRestart] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "DataSubmittedV3",
         fromBlock: baselineBlockNumber,
         toBlock: "latest",
@@ -179,8 +179,8 @@ describe("Coordinator restart test suite", () => {
 
       logger.debug("Waiting for DataFinalizedV3 event after coordinator restart...");
       const [dataFinalizedEventAfterRestart] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "DataFinalizedV3",
         fromBlock: baselineBlockNumber,
         toBlock: "latest",
@@ -213,7 +213,7 @@ describe("Coordinator restart test suite", () => {
 
       const l1PublicClient = context.l1PublicClient();
       const l2PublicClient = context.l2PublicClient();
-      const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const l2MessageService = context.l2Contracts.l2MessageService(l2PublicClient);
 
       const l1MessageSender = await l1AccountManager.generateAccount();
@@ -289,7 +289,7 @@ describe("Coordinator restart test suite", () => {
 
       // Phase 4: Verify anchored data matches on-chain state
       const [lastNewMessageRollingHashAfterRestart, lastAnchoredL1MessageNumberAfterRestart] = await Promise.all([
-        lineaRollup.read.rollingHashes([rollingHashUpdatedEventAfterRestart.args.messageNumber]),
+        linethRollup.read.rollingHashes([rollingHashUpdatedEventAfterRestart.args.messageNumber]),
         l2MessageService.read.lastAnchoredL1MessageNumber(),
       ]);
 

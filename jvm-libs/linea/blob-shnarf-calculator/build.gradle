@@ -1,9 +1,9 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   id 'linea.download-native-libs'
 }
 
-description = 'Java JNA wrapper for Linea Blob Shnarf Calculator implemented in GO Lang'
+description = 'Java JNA wrapper for Lineth Blob Shnarf Calculator implemented in GO Lang'
 
 dependencies {
   compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"

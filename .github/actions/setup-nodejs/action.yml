@@ -15,6 +15,10 @@ inputs:
           pnpm run build:libs
     required: false
     default: ''
+  working-directory:
+    description: 'Directory (relative to github.workspace) containing package.json/.nvmrc/pnpm-lock.yaml'
+    required: false
+    default: '.'
 
 outputs:
   node-version:
@@ -29,13 +33,16 @@ runs:
   steps:
     - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       name: setup-pnpm
+      with:
+        package_json_file: ${{ inputs.working-directory }}/package.json
 
     - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       name: setup-nodejs
       with:
-        node-version-file: .nvmrc
+        node-version-file: ${{ inputs.working-directory }}/.nvmrc
         cache: 'pnpm'
-    
+        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
     - id: versions
       name: Capture versions
       shell: bash
@@ -44,11 +51,12 @@ runs:
         echo "pnpm=$(pnpm -v)" >> "$GITHUB_OUTPUT"
 
     - name: pnpm install
+      working-directory: ${{ inputs.working-directory }}
       run: pnpm i ${{ inputs.pnpm-install-options }}
       shell: bash
 
     - name: Run post-install commands
       if: inputs.commands != ''
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: ${{ inputs.commands }}
-

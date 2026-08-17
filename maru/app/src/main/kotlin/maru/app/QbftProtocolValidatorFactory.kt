@@ -8,6 +8,8 @@
  */
 package maru.app
 
+import linea.crypto.Secp256k1Signature
+import linea.crypto.Signer
 import maru.config.QbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
@@ -34,7 +36,7 @@ import java.time.Clock
 
 class QbftProtocolValidatorFactory(
   private val qbftOptions: QbftConfig,
-  private val privateKeyBytes: ByteArray,
+  private val signer: Signer<Secp256k1Signature>,
   private val validatorELNodeEngineApiWeb3JClient: Web3JClient,
   private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
   private val metricsSystem: MetricsSystem,
@@ -90,7 +92,7 @@ class QbftProtocolValidatorFactory(
     val qbftValidatorFactory =
       QbftValidatorFactory(
         beaconChain = beaconChain,
-        privateKeyBytes = privateKeyBytes,
+        signer = signer,
         qbftOptions = qbftOptions,
         metricsSystem = metricsSystem,
         finalizationStateProvider = finalizationStateProvider,

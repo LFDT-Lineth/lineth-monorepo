@@ -111,6 +111,30 @@ describe("getMessageProof", () => {
     );
   });
 
+  it("throws if the settlement client chain has no default rollup address and rollupAddress is not provided", async () => {
+    const client = mockClient(lineaId);
+    const l2Client = mockL2Client(lineaId);
+    const messageSentLog = generateMessageSentLog({ blockNumber: l2BlockNumber });
+    (getMessageSentEvents as jest.Mock<ReturnType<typeof getMessageSentEvents>>).mockResolvedValue([
+      {
+        messageSender: messageSentLog.args._from!,
+        destination: messageSentLog.args._to!,
+        fee: messageSentLog.args._fee!,
+        value: messageSentLog.args._value!,
+        messageNonce: messageSentLog.args._nonce!,
+        calldata: messageSentLog.args._calldata!,
+        messageHash: messageSentLog.args._messageHash!,
+        blockNumber: messageSentLog.blockNumber,
+        logIndex: messageSentLog.logIndex,
+        contractAddress: messageSentLog.address,
+        transactionHash: messageSentLog.transactionHash,
+      },
+    ]);
+    await expect(getMessageProof(client, { l2Client, messageHash })).rejects.toThrow(
+      `Cannot resolve a default rollup contract address for chain ID ${lineaId}.`,
+    );
+  });
+
   it("throws if no MessageSent events in block range", async () => {
     const client = mockClient(mainnetId);
     const l2Client = mockL2Client(lineaId);

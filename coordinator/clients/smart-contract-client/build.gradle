@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 dependencies {
@@ -13,4 +13,5 @@ dependencies {
   implementation "io.vertx:vertx-core"
 
   testImplementation "io.vertx:vertx-junit5"
+  testImplementation testFixtures(project(':coordinator:core-interfaces'))
 }

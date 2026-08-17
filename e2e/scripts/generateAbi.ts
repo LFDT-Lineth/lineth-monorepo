@@ -9,7 +9,7 @@ const ABI_INPUT_DIRS = [
 ];
 
 const INCLUDE_FILES: string[] = [
-  "LineaRollupV8",
+  "LinethRollupV8",
   "L2MessageServiceV1",
   "TokenBridgeV1_1",
   "ProxyAdmin",
