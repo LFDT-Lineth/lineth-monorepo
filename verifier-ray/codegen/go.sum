@@ -1,5 +1,7 @@
 github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260811123635-a88dfd54fad0 h1:yNY/K9xaiVEh33G8O+A8VaZqN5Ac7b2YdC8y9V74FNQ=
 github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260811123635-a88dfd54fad0/go.mod h1:68nFvO0Fy0oBJM/ssYjlExChHkM1aJWt3UiK66Z3Mzs=
+github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227 h1:W+YQE2gdD5qNfmiUzrpjvHcHvEkUnWyMzHfMsQtyUeg=
+github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227/go.mod h1:sBRNMvovYHKzGBhayuSA5m5HMadXWmI/rX8nNsaMidE=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
 github.com/bits-and-blooms/bitset v1.24.4/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=

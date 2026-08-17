@@ -43,7 +43,15 @@ pub const ExprNode = union(enum) {
     coin_value: usize,
     constant: field.Element,
     op: ExprOp,
-    lagrange_selector: usize,
+    // i32, not usize (matching Vanishing.cancelled_positions' own type): a
+    // LagrangeSelector position may be end-relative (negative — -1 is the
+    // module's last row, mirroring prover-ray wiop.LagrangeSelector's own
+    // convention). Codegen resolves a STATIC module's negative position into
+    // [0, size) at codegen time (the size is already known there); a DYNAMIC
+    // module's position is left negative and resolved here at verify time
+    // against the runtime size, since the size isn't known until then. See
+    // evalLagrangeSelector / normalizePosition.
+    lagrange_selector: i32,
 };
 
 pub const Vanishing = struct {
@@ -242,19 +250,25 @@ fn evalOp(
 // mirrors prover-ray wiop.LagrangeSelector.EvaluateOutOfDomain, the reference
 // used by global.Verifier.
 //
-// position is comptime-known (it lives in the comptime expression DAG), so for
-// static modules (static_n != 0) omega^position folds to a comptime field
-// constant via staticRootPower — no runtime exponentiation. Dynamic modules
-// (static_n == 0) derive the n-th root of unity from ctx.dynamic_n and take the
-// runtime pow. Everything else (the annihilator, the r - omega^position
-// denominator, the division) depends on the runtime eval coin r and stays
-// runtime in both cases.
-fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
+// position is comptime-known (it lives in the comptime expression DAG) and
+// may be end-relative (negative — -1 is the module's last row, mirroring
+// prover-ray wiop.LagrangeSelector's own convention), the same shape
+// cancellationAtPoint's `positions` already handles via normalizePosition. For
+// a STATIC module (static_n != 0), codegen has already resolved a negative
+// position into [0, static_n) (the module size is known at codegen time), so
+// normalizePosition is a no-op there in practice, but is still used for
+// consistency with cancellationAtPoint. Its result folds to a comptime field
+// constant via staticRootPower — no runtime exponentiation. A DYNAMIC
+// module's size is only known at verify time, so its position is normalized
+// into [0, ctx.dynamic_n) here at runtime before the runtime pow. Everything
+// else (the annihilator, the r - omega^position denominator, the division)
+// depends on the runtime eval coin r and stays runtime in both cases.
+fn evalLagrangeSelector(comptime position: i32, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
     const omega_pos = if (static_n != 0)
-        comptime staticRootPower(static_n, position)
+        comptime staticRootPower(static_n, normalizePosition(position, static_n, 0))
     else blk: {
         const omega = field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize;
-        break :blk omega.powComptime(position);
+        break :blk omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
     };
 
     // numerator = omega^position * (r^n - 1).
