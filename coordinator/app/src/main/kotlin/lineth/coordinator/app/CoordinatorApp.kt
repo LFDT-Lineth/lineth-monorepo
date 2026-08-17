@@ -375,6 +375,7 @@ class CoordinatorApp(
         batchesRepository = batchesRepository,
         configs = configs,
         forcedTransactionsApp = forcedTransactionsApp,
+        metricsFacade = micrometerMetricsFacade,
       )
     } else {
       null

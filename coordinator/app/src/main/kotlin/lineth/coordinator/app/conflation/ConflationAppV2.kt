@@ -2,19 +2,39 @@ package lineth.coordinator.app.conflation
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.domain.Batch
 import linea.domain.Block
+import linea.domain.BlockCounters
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.web3j.ethapi.createEthApiClient
+import lineth.conflation.AlwaysSafeBlockNumberProvider
+import lineth.conflation.ConflationService
+import lineth.conflation.calculators.ConflationTriggerCalculatorByBlockLimit
+import lineth.conflation.calculators.GlobalBlockConflationCalculator
+import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
+import lineth.coordination.conflation.ConflationServiceImpl
+import lineth.coordination.proofcreation.BatchProofHandlerImpl
+import lineth.coordination.riscv.execution.ExecutionProofGeneratingCoordinator
+import lineth.coordination.riscv.execution.L2ExecutionProofHandler
+import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
+import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository
+import lineth.persistence.ForcedTransactionsDao
+import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.traces.TracesCountersV2
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Instant
 
@@ -32,6 +52,7 @@ class ConflationAppV2(
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
+  private val metricsFacade: MetricsFacade,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppV2::class.java)
@@ -41,11 +62,9 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.riscvStartingBlockTimestampInclusive) {
       "riscvStartingBlockTimestampInclusive must be set to use ConflationAppV2"
     }
-  }
-
-  private val blockCreationListener = BlockCreationListener { blockCreated ->
-    log.info("ConflationAppV2: received block number={}", blockCreated.block.number)
-    SafeFuture.completedFuture(Unit)
+    requireNotNull(configs.riscvProversConfig) {
+      "riscvProversConfig must be set to use ConflationAppV2"
+    }
   }
 
   private val lastProvenBlockNumberProvider =
@@ -68,6 +87,107 @@ class ConflationAppV2(
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
   )
+
+  private val coinbase: String = l2EthClient.ethCoinbase().get().encodeHex()
+  private val chainId: ULong = l2EthClient.ethChainId().get()
+
+  private val riscvProverClientFactory = RiscvProverClientFactory(
+    vertx = vertx,
+    config = configs.riscvProversConfig!!,
+    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+    coinbase = coinbase,
+    metricsFacade = metricsFacade,
+  )
+
+  private val chainConfigProvider = ChainConfigProvider(
+    chainId = chainId,
+    proversConfig = configs.riscvProversConfig!!,
+  )
+
+  private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
+    val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
+      "conflation.blocksLimit must be set when riscv is enabled"
+    }
+
+    val conflationCalculator = GlobalBlockConflationCalculator(
+      lastBlockNumber = lastFinalizedBlock,
+      syncCalculators = listOf(ConflationTriggerCalculatorByBlockLimit(blocksPerBatch)),
+      deferredTriggerConflationCalculators = emptyList(),
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+    )
+    val conflationService = ConflationServiceImpl(
+      calculator = conflationCalculator,
+      safeBlockNumberProvider = AlwaysSafeBlockNumberProvider(),
+      metricsFacade = metricsFacade,
+    )
+
+    val l2ExecutionProverClient = riscvProverClientFactory.executionProverClient()
+
+    val executionWitnessClient = Web3jExecutionWitnessClient(
+      web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString()),
+    )
+    val requestBuilder = L2ExecutionRequestBuilderImpl(
+      executionWitnessClient = executionWitnessClient,
+      forcedTransactionsDao = forcedTransactionsDao,
+      chainConfigProvider = chainConfigProvider,
+    )
+
+    val batchProofHandler = BatchProofHandlerImpl(batchesRepository)
+    val l2ExecutionProofHandler = L2ExecutionProofHandler { proof ->
+      batchProofHandler.acceptNewBatch(
+        Batch(startBlockNumber = proof.startBlockNumber, endBlockNumber = proof.endBlockNumber),
+      )
+    }
+
+    val coordinator = ExecutionProofGeneratingCoordinator(
+      l2ExecutionProverClient = l2ExecutionProverClient,
+      l2ExecutionRequestBuilder = requestBuilder,
+      l2ExecutionProofHandler = l2ExecutionProofHandler,
+      vertx = vertx,
+      config = ExecutionProofGeneratingCoordinator.Config(
+        conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
+        executionProofPollingInterval = riscvProversConfig.proverA.execution.pollingInterval,
+      ),
+      metricsFacade = metricsFacade,
+    )
+    conflationService.onConflatedBatch(coordinator::handleConflatedBatch)
+
+    ExecutionPipeline(conflationCalculator, conflationService, coordinator)
+  }
+
+  // When pipeline is active, on the first block we initialize the calculator's lastBlockNumber
+  // to firstBlock - 1. This handles the ByTimestampInclusive cold-start case where the
+  // monitor binary-searches to an arbitrary block number rather than lastFinalizedBlock + 1.
+  // The listener returns the encoding+newBlock future so the monitor processes blocks
+  // sequentially, avoiding any initialization race.
+  private var firstBlockSeen = false
+
+  private fun encodeBlock(block: Block): SafeFuture<ByteArray> =
+    vertx.executeBlocking(Callable { BlockRLPEncoder.encode(block) }).toSafeFutureNonNull()
+
+  private val blockCreationListener: BlockCreationListener = BlockCreationListener { blockCreated: BlockCreated ->
+    val block = blockCreated.block
+    encodeBlock(block)
+      .thenApply { blockRlp ->
+        if (!firstBlockSeen) {
+          executionPipeline.conflationCalculator.lastBlockNumber = block.number - 1uL
+          firstBlockSeen = true
+        }
+        executionPipeline.conflationService.newBlock(
+          block,
+          BlockCounters(
+            blockNumber = block.number,
+            blockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong()),
+            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+            blockRLPEncoded = blockRlp,
+            numOfTransactions = block.transactions.size.toUInt(),
+            gasUsed = block.gasUsed,
+          ),
+        )
+      }.whenException { th ->
+        log.error("Failed to conflate block={} errorMessage={}", block.number, th.message, th)
+      }.thenApply { }
+  }
 
   /**
    * Returns the block number of the last block processed by the RISC-V proof pipeline,
@@ -126,15 +246,24 @@ class ConflationAppV2(
             targetCheckpointPauseController = targetCheckpointPauseController,
           )
         blockCreationMonitor = monitor
-        monitor
-          .start()
+        val coordinatorStart = executionPipeline.executionProofCoordinator.start().toSafeFuture()
+        coordinatorStart
+          .thenCompose { monitor.start() }
           .thenPeek { log.info("ConflationAppV2 started with startingPoint={}", startingPoint) }
       }
   }
 
   override fun stop(): CompletableFuture<Unit> {
-    return blockCreationMonitor
+    val monitorStop = blockCreationMonitor
       ?.let { SafeFuture.allOf(it.stop()).thenApply { log.info("ConflationAppV2 stopped") } }
       ?: SafeFuture.completedFuture(Unit)
+    val coordinatorStop = executionPipeline.executionProofCoordinator.stop().toSafeFuture()
+    return SafeFuture.allOf(monitorStop, coordinatorStop).thenApply { }
   }
+
+  private data class ExecutionPipeline(
+    val conflationCalculator: GlobalBlockConflationCalculator,
+    val conflationService: ConflationService,
+    val executionProofCoordinator: ExecutionProofGeneratingCoordinator,
+  )
 }
