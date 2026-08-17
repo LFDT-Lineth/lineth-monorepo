@@ -1,0 +1,18 @@
+.{
+    .name = .minimal_keccak_guest,
+    .version = "0.0.0",
+    .fingerprint = 0xa926511dea8022ee,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers for all riscv-guests packages (sibling path dependency).
+        .build_common = .{ .path = "../build_common" },
+        // Lineth zkVM accelerator wrappers (sibling path dependency): zkvm_keccak256,
+        // write_output, zkvm_exit — everything this guest needs, no zesu/SSZ.
+        .lineth_accelerators = .{ .path = "../lineth-accelerators" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

@@ -11,6 +11,12 @@ extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
+// zkvm-standards io-interface `write_output`, DEFINED by zkvm_provide.zig (either the Lineth
+// custom-opcode accelerator or zesu's stdout ecall, per -Dwrite-output-accel). Declared directly
+// here rather than through zesu's `linea_zkvm_io` import above `guestMain` (that module is a
+// different, private zkvm_io wrapper that always uses the ecall path and ignores the build flag).
+extern fn write_output(ptr: [*]const u8, len: usize) callconv(.c) void;
+
 // This guest is a thin wrapper over zesu's vanilla stateless execution: it decodes an SSZ-encoded
 // StatelessInput, executes the block, and serializes the SSZ validation result — the same pipeline
 // as zesu's `runner.runStateless` / `zkevm-blockchain-test-runner`.
@@ -66,6 +72,7 @@ fn guestMain() callconv(.c) noreturn {
     const ssz_input = buf_ptr[0..buf_size];
 
     const result = runStateless(allocator, ssz_input) catch exit(1);
+    write_output(&result.out, result.out.len);
     exit(if (result.success) 0 else 1);
 }
 
