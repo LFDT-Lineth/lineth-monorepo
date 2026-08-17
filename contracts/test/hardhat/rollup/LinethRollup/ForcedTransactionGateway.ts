@@ -298,7 +298,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         libraries: { Mimc: mimcLibraryAddress },
       });
       const gateway = (await factory.deploy(
-        await lineaRollup.getAddress(),
+        await linethRollup.getAddress(),
         LINEA_MAINNET_CHAIN_ID,
         THREE_DAYS_IN_SECONDS,
         MIN_FORCED_TRANSACTION_GAS_LIMIT,
@@ -319,7 +319,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         libraries: { Mimc: mimcLibraryAddress },
       });
       const gateway = (await factory.deploy(
-        await lineaRollup.getAddress(),
+        await linethRollup.getAddress(),
         LINEA_MAINNET_CHAIN_ID,
         THREE_DAYS_IN_SECONDS,
         MIN_FORCED_TRANSACTION_GAS_LIMIT,
@@ -506,7 +506,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         libraries: { Mimc: mimcLibraryAddress },
       });
       const strictGateway = (await factory.deploy(
-        await lineaRollup.getAddress(),
+        await linethRollup.getAddress(),
         LINEA_MAINNET_CHAIN_ID,
         THREE_DAYS_IN_SECONDS,
         MIN_FORCED_TRANSACTION_GAS_LIMIT,
@@ -519,7 +519,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         BLOCK_NUMBER_DEADLINE_BUFFER,
       )) as unknown as ForcedTransactionGateway;
       await strictGateway.waitForDeployment();
-      await lineaRollup
+      await linethRollup
         .connect(securityCouncil)
         .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await strictGateway.getAddress());
 
@@ -540,7 +540,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         libraries: { Mimc: mimcLibraryAddress },
       });
       const strictGateway = (await factory.deploy(
-        await lineaRollup.getAddress(),
+        await linethRollup.getAddress(),
         LINEA_MAINNET_CHAIN_ID,
         THREE_DAYS_IN_SECONDS,
         MIN_FORCED_TRANSACTION_GAS_LIMIT,
@@ -553,7 +553,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         BLOCK_NUMBER_DEADLINE_BUFFER,
       )) as unknown as ForcedTransactionGateway;
       await strictGateway.waitForDeployment();
-      await lineaRollup
+      await linethRollup
         .connect(securityCouncil)
         .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await strictGateway.getAddress());
 
@@ -568,7 +568,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         libraries: { Mimc: mimcLibraryAddress },
       });
       const gaslessGateway = (await factory.deploy(
-        await lineaRollup.getAddress(),
+        await linethRollup.getAddress(),
         LINEA_MAINNET_CHAIN_ID,
         THREE_DAYS_IN_SECONDS,
         MIN_FORCED_TRANSACTION_GAS_LIMIT,
@@ -581,7 +581,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         BLOCK_NUMBER_DEADLINE_BUFFER,
       )) as unknown as ForcedTransactionGateway;
       await gaslessGateway.waitForDeployment();
-      await lineaRollup
+      await linethRollup
         .connect(securityCouncil)
         .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await gaslessGateway.getAddress());
 
