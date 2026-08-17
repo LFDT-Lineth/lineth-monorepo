@@ -66,23 +66,28 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	projected, err := ps.Project(sc.Sys, proof, pub, nil)
 	require.NoError(t, err)
 
-	require.Len(t, projected.Rounds, len(sc.Sys.Rounds), "one round message per round")
+	require.Len(t, projected.Proof.Rounds, len(sc.Sys.Rounds), "one round message per round")
 
-	// Cells are round-major and in declaration order, including public inputs:
-	// the verifier absorbs them in that order, so any other ordering would
-	// desynchronise the transcript replay.
+	// Cells are round-major and in declaration order, but OMIT public inputs:
+	// verifier.Proof documents that rounds[*].cells excludes them and the flat
+	// PublicInputs statement supplies them instead. Carrying them in both places
+	// would absorb them twice and desynchronise the transcript replay.
 	total := 0
-	for i, r := range sc.Sys.Rounds {
-		require.Len(t, projected.Rounds[i].Cells, len(r.Cells),
-			"round %d must carry every declared cell", i)
-		total += len(r.Cells)
+	for _, rm := range projected.Proof.Rounds {
+		total += len(rm.Cells)
 	}
-	require.Equal(t, len(proof.Cells)+len(pub), total,
-		"every proof cell and public input must appear exactly once")
+	require.Equal(t, len(proof.Cells), total,
+		"every non-public-input cell must appear exactly once")
+	require.Len(t, projected.PublicInputs, len(pub),
+		"the public-input statement must carry one entry per registered cell")
+	for i := range pub {
+		require.Equal(t, ps.ScalarFrom(pub[i]), projected.PublicInputs[i],
+			"public input %d must keep its registration-order slot", i)
+	}
 
 	// One Merkle root per committed round, and none anywhere else.
 	commitments := 0
-	for i, rm := range projected.Rounds {
+	for i, rm := range projected.Proof.Rounds {
 		if _, committed := proof.Commitments[i]; committed {
 			require.NotNil(t, rm.Commitment, "round %d commits, so it carries its root", i)
 			require.Equal(t, ps.DigestFrom(proof.Commitments[i]), *rm.Commitment)
@@ -93,14 +98,14 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	}
 	require.Equal(t, len(proof.Commitments), commitments)
 
-	require.Len(t, projected.ModuleSizes, len(proof.DynamicSizes),
+	require.Len(t, projected.Proof.ModuleSizes, len(proof.DynamicSizes),
 		"one size per dynamic module")
 
 	// The FRI opening must survive with its shape intact.
 	require.NotNil(t, proof.PCSOpeningProof, "the full pipeline ends with the PCS pass")
-	require.Len(t, projected.PcsOpening.Proof.InputQueries, pcs.FRINumQueries())
-	require.Len(t, projected.PcsOpening.Proof.FriProof.RunningQueries, pcs.FRINumQueries())
-	require.Len(t, projected.PcsOpening.Proof.FriProof.RoundRoots,
+	require.Len(t, projected.Proof.PcsOpening.Proof.InputQueries, pcs.FRINumQueries())
+	require.Len(t, projected.Proof.PcsOpening.Proof.FriProof.RunningQueries, pcs.FRINumQueries())
+	require.Len(t, projected.Proof.PcsOpening.Proof.FriProof.RoundRoots,
 		len(proof.PCSOpeningProof.FRIProof.RoundRoots))
 }
 

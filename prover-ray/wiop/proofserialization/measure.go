@@ -107,7 +107,7 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 		s.Sections = append(s.Sections, Section{name, n, note})
 	}
 
-	add("root", SizeProof, "verifier.Proof")
+	add("root", SizeVerifyInput, "verifier.VerifyInput (Proof + public inputs)")
 	add("rounds array", s.Rounds*SizeRoundMessage, fmt.Sprintf("%d x RoundMessage", s.Rounds))
 	add("cells", s.Cells*SizeScalar, fmt.Sprintf("%d x Scalar(28)", s.Cells))
 	// A committed round carries its Merkle root inline in the RoundMessage, so
@@ -120,8 +120,11 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 	// Counting them again over-stated every image by a fixed 192 bytes until
 	// TestMeasureAgreesWithEncode compared the model against the real encoder.
 
+	add("public inputs", s.PublicInputs*SizeScalar,
+		fmt.Sprintf("%d x Scalar(28), in registration order", s.PublicInputs))
+
 	// A cell's 24-byte value is content; its tag and padding are not.
-	s.Payload += s.Cells * SizeExt
+	s.Payload += (s.Cells + s.PublicInputs) * SizeExt
 	s.Payload += s.Commitments * SizeDigest
 
 	if op := proof.PCSOpeningProof; op != nil {
@@ -213,7 +216,7 @@ func (s Stats) String() string {
 
 	fmt.Fprintf(&b, "rounds                     %d\n", s.Rounds)
 	fmt.Fprintf(&b, "cells (in proof)           %d  (base %d, ext %d)\n", s.Cells, s.BaseCells, s.ExtCells)
-	fmt.Fprintf(&b, "public inputs              %d  (carried separately, not in the image today)\n", s.PublicInputs)
+	fmt.Fprintf(&b, "public inputs              %d  (flat statement, separate from round cells)\n", s.PublicInputs)
 	fmt.Fprintf(&b, "oracle commitments         %d  (one per committed round)\n", s.Commitments)
 	fmt.Fprintf(&b, "dynamic modules            %d\n", s.DynamicSizes)
 

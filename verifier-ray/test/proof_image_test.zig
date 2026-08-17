@@ -1,4 +1,4 @@
-//! Reads an image produced by prover-ray's encoder as a real `verifier.Proof`.
+//! Reads an image produced by prover-ray's encoder as a real `verifier.VerifyInput`.
 //!
 //! Every other check on the format is indirect: `proof_abi.zig` asserts Zig's
 //! layout against pinned numbers, and prover-ray's tests assert its encoder
@@ -41,7 +41,7 @@ extern fn close(fd: c_int) c_int;
 
 /// Maps the fixture image at `fixture_base` and casts it, exactly as
 /// `loadR5Input` casts the guest's input region: no parsing, no fix-up.
-fn mapFixtureImage() !*const verifier.Proof {
+fn mapFixtureImage() !*const verifier.VerifyInput {
     const fd = open(image_path, o_rdonly);
     if (fd < 0) return error.ImageMissing;
     defer _ = close(fd);
@@ -68,13 +68,26 @@ fn expectExt(actual: anytype, comptime first: u32) !void {
     try std.testing.expectEqual(first + 5, actual.B2.a1.value);
 }
 
-test "a Go-encoded image reads as a verifier.Proof" {
-    const proof = mapFixtureImage() catch |err| switch (err) {
+test "a Go-encoded image reads as a verifier.VerifyInput" {
+    const input = mapFixtureImage() catch |err| switch (err) {
         error.ImageMissing => return error.SkipZigTest,
         // Some sandboxes refuse MAP_FIXED. Skipping is right: the format is not
         // broken, the environment cannot host the test.
         error.MapFixedUnavailable => return error.SkipZigTest,
     };
+
+    const proof = &input.proof;
+
+    // ---- the flat public-input statement, separate from the round cells ------
+    try std.testing.expectEqual(@as(usize, 2), input.public_inputs.len);
+    switch (input.public_inputs[0]) {
+        .base => |b| try std.testing.expectEqual(@as(u32, 201), b.value),
+        .ext => return error.WrongCellVariant,
+    }
+    switch (input.public_inputs[1]) {
+        .base => return error.WrongCellVariant,
+        .ext => |e| try expectExt(e, 211),
+    }
 
     // ---- rounds --------------------------------------------------------------
     try std.testing.expectEqual(@as(usize, 3), proof.rounds.len);

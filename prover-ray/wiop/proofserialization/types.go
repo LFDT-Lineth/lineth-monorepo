@@ -101,14 +101,28 @@ type PcsOpening struct {
 	Proof       OpeningProof
 }
 
-// Proof is the root of the image. Mirrors Zig's verifier.Proof.
+// Proof mirrors Zig's verifier.Proof: the verifier-visible transcript.
 //
-// It must land at image offset 0, because verifier-ray's loaders cast the input
-// region's base address directly to *const Proof without parsing.
+// Note that Rounds[*].Cells OMITS public-input cells; those travel in
+// [VerifyInput.PublicInputs] instead, in registration order.
 type Proof struct {
 	Rounds      []RoundMessage
 	ModuleSizes []uint64
 	PcsOpening  PcsOpening
+}
+
+// VerifyInput is the root of the image. Mirrors Zig's verifier.VerifyInput.
+//
+// It must land at image offset 0: verifier-ray's loaders cast the input region's
+// base address directly to *const VerifyInput without parsing.
+//
+// PublicInputs is the flat public-input statement in prover-ray registration
+// order — one entry per cell registered via System.RegisterPublicInputs. The
+// verifier absorbs these separately from the round messages, which is why
+// Proof.Rounds[*].Cells must not repeat them.
+type VerifyInput struct {
+	Proof        Proof
+	PublicInputs []Scalar
 }
 
 // ---------------------------------------------------------------------------

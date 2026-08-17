@@ -25,37 +25,47 @@ func Project(
 	proof wiop.Proof,
 	pub wiop.PublicInput,
 	entryClaims [][]Ext,
-) (Proof, error) {
+) (VerifyInput, error) {
 	if sys == nil {
-		return Proof{}, fmt.Errorf("proofserialization: Project: nil system")
+		return VerifyInput{}, fmt.Errorf("proofserialization: Project: nil system")
 	}
 	if len(pub) != len(sys.PublicInputs) {
-		return Proof{}, fmt.Errorf("proofserialization: Project: %d public inputs, system declares %d",
+		return VerifyInput{}, fmt.Errorf("proofserialization: Project: %d public inputs, system declares %d",
 			len(pub), len(sys.PublicInputs))
 	}
 
-	out := Proof{PcsOpening: PcsOpening{EntryClaims: entryClaims}}
+	out := VerifyInput{Proof: Proof{PcsOpening: PcsOpening{EntryClaims: entryClaims}}}
 
-	// publicInputAt maps a public-input cell to its slot in pub. Those values
-	// live in pub rather than proof.Cells, but the verifier still absorbs them in
-	// round order, so the round messages have to carry them.
-	publicInputAt := make(map[wiop.ObjectID]int, len(sys.PublicInputs))
-	for i, c := range sys.PublicInputs {
-		publicInputAt[c.Context.ID] = i
+	// The flat public-input statement, in registration order. These are absorbed
+	// separately from the round messages, so the round cells below must not
+	// repeat them.
+	if len(pub) > 0 {
+		out.PublicInputs = make([]Scalar, len(pub))
+		for i, v := range pub {
+			out.PublicInputs[i] = ScalarFrom(v)
+		}
 	}
 
-	rounds, err := projectRounds(sys, proof, pub, publicInputAt)
+	// publicInputAt marks which cells are public inputs, so the round messages can
+	// skip them: verifier.Proof documents that rounds[*].cells omits public-input
+	// cells and PublicInputs supplies them instead.
+	publicInputAt := make(map[wiop.ObjectID]bool, len(sys.PublicInputs))
+	for _, c := range sys.PublicInputs {
+		publicInputAt[c.Context.ID] = true
+	}
+
+	rounds, err := projectRounds(sys, proof, publicInputAt)
 	if err != nil {
-		return Proof{}, err
+		return VerifyInput{}, err
 	}
-	out.Rounds = rounds
+	out.Proof.Rounds = rounds
 
-	if out.ModuleSizes, err = projectModuleSizes(sys, proof); err != nil {
-		return Proof{}, err
+	if out.Proof.ModuleSizes, err = projectModuleSizes(sys, proof); err != nil {
+		return VerifyInput{}, err
 	}
 
 	if proof.PCSOpeningProof != nil {
-		out.PcsOpening.Proof = projectOpeningProof(*proof.PCSOpeningProof)
+		out.Proof.PcsOpening.Proof = projectOpeningProof(*proof.PCSOpeningProof)
 	}
 
 	return out, nil
@@ -65,8 +75,7 @@ func Project(
 func projectRounds(
 	sys *wiop.System,
 	proof wiop.Proof,
-	pub wiop.PublicInput,
-	publicInputAt map[wiop.ObjectID]int,
+	isPublicInput map[wiop.ObjectID]bool,
 ) ([]RoundMessage, error) {
 	rounds := make([]RoundMessage, len(sys.Rounds))
 
@@ -80,23 +89,19 @@ func projectRounds(
 			msg.Commitment = &digest
 		}
 
-		// Cells in declaration order, which is the order the transcript absorbs
-		// them in. Public inputs are included: the verifier absorbs them too, and
-		// leaving them out would desynchronise the replay.
-		if len(r.Cells) > 0 {
-			msg.Cells = make([]Scalar, len(r.Cells))
-			for i, cell := range r.Cells {
-				if slot, isPI := publicInputAt[cell.Context.ID]; isPI {
-					msg.Cells[i] = ScalarFrom(pub[slot])
-					continue
-				}
-				v, ok := proof.Cells[cell.Context.ID]
-				if !ok {
-					return nil, fmt.Errorf("proofserialization: Project: cell %q is in round %d "+
-						"but absent from the proof", cell.Context.Path(), r.ID)
-				}
-				msg.Cells[i] = ScalarFrom(v)
+		// Non-public-input cells, in declaration order. Public inputs are skipped:
+		// they travel in VerifyInput.PublicInputs, and repeating them here would
+		// absorb them twice and desynchronise the transcript replay.
+		for _, cell := range r.Cells {
+			if isPublicInput[cell.Context.ID] {
+				continue
 			}
+			v, ok := proof.Cells[cell.Context.ID]
+			if !ok {
+				return nil, fmt.Errorf("proofserialization: Project: cell %q is in round %d "+
+					"but absent from the proof", cell.Context.Path(), r.ID)
+			}
+			msg.Cells = append(msg.Cells, ScalarFrom(v))
 		}
 
 		rounds[r.ID] = msg
