@@ -11,6 +11,7 @@ include "utils/signed_sum.zkc"
 include "ram/read.zkc"
 include "ram/write.zkc"
 include "../lib/keccak/impl.zkc"
+include "../lib/io/write_output.zkc"
 
 // Execute one instruction slot and return the next program counter.
 //
@@ -201,6 +202,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
     var mem_address:Address
 
     new_pc = (pc + 4) as Address
+    new_output_write_address = output_write_address
 
     switch compute_op {
         // =========
@@ -801,6 +803,13 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             // fall through
         }
+        case RTYPE_WRITE_OUTPUT: {
+            v1 = registers[rs1]
+            v2 = registers[rs2]
+            printf "RTYPE_WRITE_OUTPUT "
+            new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
+            // fall through
+        }
         // ============================
         // R-type — writeback variants 
         // ============================
@@ -1221,9 +1230,6 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             fail
         }
     }
-
-    // true in all cases, except potentially for R_TYPE instructions, for which already returned
-    new_output_write_address = output_write_address
 }
 
 fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {

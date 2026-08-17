@@ -290,13 +290,14 @@ const (
 	rtypeOpRemuw   = 54
 	rtypeOpRemuwWB = 55
 
-	rtypeOpKeccak    = 56
-	rtypeOpPoseidon2 = 57
-	rtypeInvalid     = 63
+	rtypeOpKeccak      = 56
+	rtypeOpPoseidon2   = 57
+	rtypeOpWriteOutput = 58
+	rtypeInvalid       = 63
 )
 
 func rtypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeOpPoseidon2 || baseOp == rtypeInvalid {
+	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeOpPoseidon2 || baseOp == rtypeOpWriteOutput || baseOp == rtypeInvalid {
 		return baseOp
 	}
 	if baseOp&1 == 0 && baseOp < rtypeOpKeccak {
@@ -622,6 +623,8 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 			return rtypeOpKeccak
 		case 0b001:
 			return rtypeOpPoseidon2
+		case 0b010:
+			return rtypeOpWriteOutput
 		default:
 			return rtypeInvalid
 		}
