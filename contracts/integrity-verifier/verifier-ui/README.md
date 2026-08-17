@@ -345,8 +345,8 @@ interface VerifierService {
 
 ## Dependencies
 
-- `@consensys/linea-contract-integrity-verifier` - Core library
-- `@consensys/linea-contract-integrity-verifier-viem` - Viem adapter (browser)
+- `@lfdt-lineth/contract-integrity-verifier` - Core library
+- `@lfdt-lineth/contract-integrity-verifier-viem` - Viem adapter (browser)
 - `next` - React framework
 - `zustand` - State management
 

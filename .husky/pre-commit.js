@@ -88,6 +88,15 @@ const FOLDER_RUNTIME = {
     [FOLDER["SDK-VIEM"]]: RUNTIME.NODEJS,
 };
 
+// Paths that affect whether every Coordinator config key is documented. When any of these change,
+// the pre-commit hook verifies documentation completeness so undocumented keys never get committed.
+const COORDINATOR_CONFIG_DOCS_PATHS = [
+    "^coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/",
+    "^coordinator/app/src/configDocs/",
+    "^jvm-libs/linea/config-docs/",
+    "^buildSrc/src/main/groovy/ConfigDocs",
+];
+
 /**
  * MAIN FUNCTION
  */
@@ -108,7 +117,29 @@ function main() {
         executeCommand(folder, changedFileExtensions, FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND);
     }
 
+    checkCoordinatorConfigDocs(changedFileList);
+
     updateGitIndex();
+}
+
+/**
+ * Runs `:coordinator:app:checkConfigDocs` when any config schema / config-docs tooling file
+ * changed, aborting the commit if a config key is missing @ConfigDoc / @ConfigSection.
+ * @param {string[]} _changedFileList
+ */
+function checkCoordinatorConfigDocs(_changedFileList) {
+    const relevant = _changedFileList.some(
+        file => COORDINATOR_CONFIG_DOCS_PATHS.some(pattern => file.match(new RegExp(pattern))));
+    if (!relevant) return;
+
+    console.log("Coordinator config changed, verifying documentation (checkConfigDocs)...");
+    try {
+        execSync("./gradlew :coordinator:app:checkConfigDocs", { stdio: 'inherit' });
+    } catch (error) {
+        console.error("checkConfigDocs failed: every config key must have @ConfigDoc / @ConfigSection.");
+        console.error("Exiting...");
+        process.exit(1);
+    }
 }
 
 /**

@@ -8,6 +8,7 @@ import (
 	"io"
 	"iter"
 	"math"
+	"math/big"
 	"reflect"
 	"sort"
 	"strconv"
@@ -176,6 +177,26 @@ func RepeatSlice[T any](s []T, n int) []T {
 	return res
 }
 
+func BigsToBytes(ins []*big.Int) []byte {
+	res := make([]byte, len(ins))
+	for i := range ins {
+		res[i] = byte(ins[i].Uint64())
+	}
+	return res
+}
+
+func BigsToInts(ints []*big.Int) []int {
+	res := make([]int, len(ints))
+	for i := range ints {
+		u := ints[i].Uint64()
+		res[i] = int(u) // #nosec G115 - checked below
+		if !ints[i].IsUint64() || uint64(res[i]) != u {
+			panic("overflow")
+		}
+	}
+	return res
+}
+
 // ToInt converts a uint, uint64 or int64 to an int, panicking on overflow.
 // Due to its use of generics, it is inefficient to use in loops than run a "cryptographic" number of iterations. Use type-specific functions in such cases.
 func ToInt[T ~uint | ~uint64 | ~int64](i T) int {
@@ -190,6 +211,13 @@ func ToUint16[T ~int | ~uint](i T) uint16 {
 		panic("out of range")
 	}
 	return uint16(i) // #nosec G115 -- Checked for overflow
+}
+
+func ToUint64[T constraints.Signed](i T) uint64 {
+	if i < 0 {
+		panic("negative")
+	}
+	return uint64(i)
 }
 
 func countInts[I constraints.Integer](s []I) []I {

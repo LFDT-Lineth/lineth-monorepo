@@ -1,5 +1,5 @@
 /**
- * Browser-compatible exports for @consensys/linea-contract-integrity-verifier
+ * Browser-compatible exports for @lfdt-lineth/contract-integrity-verifier
  *
  * This entry point excludes Node.js-only functions (loadArtifact, loadStorageSchema, loadConfig)
  * that depend on the 'fs' module.
@@ -81,8 +81,8 @@ export {
   ERC7201_NAMESPACE_PREFIX,
   KNOWN_NAMESPACES,
   // Sepolia addresses
-  SEPOLIA_LINEA_ROLLUP_PROXY,
-  SEPOLIA_LINEA_ROLLUP_IMPLEMENTATION,
+  SEPOLIA_LINETH_ROLLUP_PROXY,
+  SEPOLIA_LINETH_ROLLUP_IMPLEMENTATION,
   SEPOLIA_YIELD_MANAGER,
   SEPOLIA_SAFE_ADDRESS,
   // Role hashes

@@ -8,6 +8,8 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions
@@ -20,8 +22,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.assertMinedBlocks
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
 import testutils.maru.MaruFactory
 
 class MaruFollowerDelayedStartTest {

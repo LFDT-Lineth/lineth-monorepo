@@ -1,5 +1,5 @@
-import { serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { serialize } from "@lfdt-lineth/shared-utils";
 
 import { awaitUntil, execDockerCommand } from "./common/utils";
 import { L2RpcEndpoint } from "./config/clients/l2-client";

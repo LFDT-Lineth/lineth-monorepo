@@ -12,8 +12,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/ifaces"
 	sym "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/symbolic"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/parallel"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/google/uuid"
 )
 
@@ -385,21 +385,4 @@ func computeLogDerivativeSumPair(run ifaces.Runtime, num, den *sym.Expression, s
 
 func (q LogDerivativeSum) UUID() uuid.UUID {
 	return q.uuid
-}
-
-func fieldAsInt(f field.Element) int {
-
-	if f.IsUint64() {
-		return int(f.Uint64())
-	}
-
-	f_ := f
-	f_.Neg(&f_)
-
-	if f_.IsUint64() {
-		return -int(f_.Uint64())
-	}
-
-	// utils.Panic("unsupported field type: %v", f.String())
-	return 0
 }

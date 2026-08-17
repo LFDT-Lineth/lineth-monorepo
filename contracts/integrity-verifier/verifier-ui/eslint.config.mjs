@@ -1,4 +1,4 @@
-import { nextjs } from "@consensys/eslint-config/nextjs";
+import { nextjs } from "@lfdt-lineth/eslint-config/nextjs";
 
 /** @type {import("eslint").Linter.Config[]} */
 export default [

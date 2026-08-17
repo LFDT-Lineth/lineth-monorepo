@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { Address } from "viem";
 
 import { RebalanceDirection } from "../core/entities/RebalanceRequirement.js";

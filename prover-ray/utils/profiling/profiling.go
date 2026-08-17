@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
 )

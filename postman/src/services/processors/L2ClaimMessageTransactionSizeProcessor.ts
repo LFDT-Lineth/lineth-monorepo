@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import { Message } from "../../core/entities/Message";

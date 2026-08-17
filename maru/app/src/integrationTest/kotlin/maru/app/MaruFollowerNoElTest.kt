@@ -10,6 +10,7 @@ package maru.app
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import linea.testing.besu.BesuTransactionsHelper
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
@@ -24,7 +25,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import testutils.SingleNodeNetworkStack
-import testutils.besu.BesuTransactionsHelper
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.io.File

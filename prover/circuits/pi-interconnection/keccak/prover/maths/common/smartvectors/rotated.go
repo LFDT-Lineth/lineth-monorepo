@@ -5,11 +5,9 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field/fext"
-
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Rotated represents a rotated version of a regular smartvector and also
@@ -62,12 +60,6 @@ func (r *Rotated) GetBase(n int) (field.Element, error) {
 	return r.v.GetBase(utils.PositiveMod(n+r.offset, r.Len()))
 }
 
-// Returns a particular element of the vector
-func (r *Rotated) GetExt(n int) fext.Element {
-	temp, _ := r.v.GetBase(utils.PositiveMod(n+r.offset, r.Len()))
-	return *new(fext.Element).SetFromBase(&temp)
-}
-
 func (r *Rotated) Get(n int) field.Element {
 	res, err := r.GetBase(n)
 	if err != nil {
@@ -116,14 +108,6 @@ func (r *Rotated) WriteInSlice(s []field.Element) {
 	res.WriteInSlice(s)
 }
 
-func (r *Rotated) WriteInSliceExt(s []fext.Element) {
-	temp := rotatedAsRegular(r)
-	for i := 0; i < temp.Len(); i++ {
-		elem, _ := temp.GetBase(i)
-		s[i].SetFromBase(&elem)
-	}
-}
-
 func (r *Rotated) Pretty() string {
 	return fmt.Sprintf("Rotated[%v, %v]", r.v.Pretty(), r.offset)
 }
@@ -137,22 +121,13 @@ func rotatedAsRegular(r *Rotated) *Regular {
 func (r *Rotated) IntoRegVecSaveAlloc() []field.Element {
 	res, err := r.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(err)
 	}
 	return res
 }
 
 func (r *Rotated) IntoRegVecSaveAllocBase() ([]field.Element, error) {
 	return *rotatedAsRegular(r), nil
-}
-
-func (r *Rotated) IntoRegVecSaveAllocExt() []fext.Element {
-	temp := *rotatedAsRegular(r)
-	res := make([]fext.Element, temp.Len())
-	for i := 0; i < temp.Len(); i++ {
-		res[i].SetFromBase(&temp[i])
-	}
-	return res
 }
 
 func (r *Rotated) IntoRegVec() []field.Element {
@@ -245,5 +220,4 @@ func (r *Rotated) WriteSubVectorInSlice(start, stop int, s []field.Element) {
 	for i := 0; i < howManyElementLeftToCopy; i++ {
 		s[howManyAlreadyCopied+i] = r.v.Regular[i]
 	}
-	return
 }

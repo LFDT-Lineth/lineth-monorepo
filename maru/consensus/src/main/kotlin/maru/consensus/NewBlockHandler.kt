@@ -8,9 +8,9 @@
  */
 package maru.consensus
 
+import linea.kotlin.encodeHex
 import maru.core.BeaconBlock
 import maru.core.SealedBeaconBlock
-import maru.extensions.encodeHex
 import maru.p2p.SealedBeaconBlockHandler
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -102,7 +102,7 @@ class NewBlockHandlerMultiplexer(
       handlerName,
       input.beaconBlockHeader.number,
       input.beaconBlockBody.executionPayload.blockNumber,
-      input.beaconBlockHeader.hash.encodeHex(),
+      input.beaconBlockHeader.beaconBlockIdHash.encodeHex(),
       ex.message,
       ex,
     )

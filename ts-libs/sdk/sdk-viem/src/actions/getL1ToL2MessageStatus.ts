@@ -1,4 +1,4 @@
-import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -11,6 +11,8 @@ import {
   Transport,
 } from "viem";
 import { readContract } from "viem/actions";
+
+import { INBOX_L1_L2_MESSAGE_STATUS_ABI } from "../abis";
 
 export type GetL1ToL2MessageStatusReturnType = OnChainMessageStatus;
 
@@ -32,7 +34,7 @@ export type GetL1ToL2MessageStatusErrorType = ReadContractErrorType | ChainNotFo
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getL1ToL2MessageStatus } from '@consensys/linea-sdk-viem'
+ * import { getL1ToL2MessageStatus } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,
@@ -57,15 +59,7 @@ export async function getL1ToL2MessageStatus<chain extends Chain | undefined, ac
 
   const status = await readContract(client, {
     address: l2MessageService,
-    abi: [
-      {
-        inputs: [{ internalType: "bytes32", name: "messageHash", type: "bytes32" }],
-        name: "inboxL1L2MessageStatus",
-        outputs: [{ internalType: "uint256", name: "messageStatus", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: INBOX_L1_L2_MESSAGE_STATUS_ABI,
     functionName: "inboxL1L2MessageStatus",
     args: [messageHash],
   });

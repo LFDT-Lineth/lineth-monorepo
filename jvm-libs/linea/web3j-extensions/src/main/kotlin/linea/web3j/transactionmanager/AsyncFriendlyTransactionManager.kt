@@ -135,7 +135,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     data: String,
     maxFeePerBlobGas: BigInteger,
   ): RawTransaction {
-    return RawTransaction.createTransaction(
+    return RawTransaction.createEip7594Transaction(
       blobs,
       chainId,
       nonce,

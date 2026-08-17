@@ -5,16 +5,16 @@
  * Command-line interface using ethers.js adapter.
  *
  * Usage:
- *   pnpx @consensys/linea-contract-integrity-verifier-ethers -c config.json -v
+ *   pnpx @lfdt-lineth/contract-integrity-verifier-ethers -c config.json -v
  */
 
-import { runCli, type CliRunnerConfig } from "@consensys/linea-contract-integrity-verifier";
+import { runCli, type CliRunnerConfig } from "@lfdt-lineth/contract-integrity-verifier";
 
 import { EthersAdapter } from "./index";
 
 const config: CliRunnerConfig = {
   adapterName: "Ethers",
-  packageName: "@consensys/linea-contract-integrity-verifier-ethers",
+  packageName: "@lfdt-lineth/contract-integrity-verifier-ethers",
   createAdapter: (chainConfig) => new EthersAdapter({ rpcUrl: chainConfig.rpcUrl, chainId: chainConfig.chainId }),
 };
 

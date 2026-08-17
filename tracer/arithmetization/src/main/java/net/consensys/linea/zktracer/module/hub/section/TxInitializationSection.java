@@ -144,7 +144,7 @@ public final class TxInitializationSection extends TraceSection implements EndTr
             .dontCheckForDelegation(hub);
     latestAccountSnapshots.put(senderAddress, senderGasPaymentNew);
 
-    final Wei value = (Wei) tx.getBesuTransaction().getValue();
+    final Wei value = tx.getBesuTransaction().getValue();
 
     senderValueTransfer =
         deepCopyAndMaybeCheckForDelegation(hub, senderAddress, "sender [value transfer]", false);

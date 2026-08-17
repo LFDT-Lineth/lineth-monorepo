@@ -20,14 +20,19 @@ import kotlin.random.Random
 import kotlin.random.nextULong
 
 class MaruCompressorRLPSerDeTest {
+  // Round-trip (deserialize) → the sealed block SerDe must inject a fork-aware header hash function.
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
   private val compressorRLPSerDe =
     MaruCompressorRLPSerDe(
-      serDe = RLPSerializers.SealedBeaconBlockSerializer,
+      serDe = blockHashing.sealedBeaconBlockSerializer,
     )
 
   @Test
   fun `can serialize and deserialize same value`() {
-    val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(Random.nextULong())
+    val beaconBlockHeader =
+      DataGenerators.randomBeaconBlockHeader(
+        Random.nextULong(),
+      )
     val beaconBlockBody =
       BeaconBlockBody(
         prevCommitSeals = buildSet(3) { add(Seal(Random.nextBytes(96))) },

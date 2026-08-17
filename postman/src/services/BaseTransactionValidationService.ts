@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
 import { Message } from "../core/entities/Message";

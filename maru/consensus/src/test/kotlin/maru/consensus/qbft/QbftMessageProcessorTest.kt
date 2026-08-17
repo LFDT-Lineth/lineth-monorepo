@@ -43,11 +43,14 @@ class QbftMessageProcessorTest {
   private val keyData = PrivateKeyGenerator.generatePrivateKey()
   private val nodeKey = keyData.nodeKey
   private val messageAuthor = Address.wrap(Bytes.wrap(keyData.address))
-  private val localAddress = Address.fromHexString("0x1234567890123456789012345678901234567890")
+  private val localAddress = Address.fromHexStringStrict("0x1234567890123456789012345678901234567890")
 
   private val validatorProvider = mock<QbftValidatorProviderAdapter>()
   private val bftEventQueue = BftEventQueue(10)
   private val messageDecoder = MinimalQbftMessageDecoder(SecpCrypto)
+
+  // Decoding proposal blocks must inject a fork-aware header hash function (PHASE0 fork at timestamp 0).
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
 
   init {
     bftEventQueue.start()
@@ -66,12 +69,14 @@ class QbftMessageProcessorTest {
   }
 
   private fun createBeaconChainAtHeight(targetHeight: ULong): InMemoryBeaconChain {
-    val beaconChain = InMemoryBeaconChain.fromGenesis()
+    val beaconChain = inMemoryBeaconChainFromGenesis()
     var currentState = beaconChain.getLatestBeaconState()
 
     // Advance chain to target height
     for (blockNumber in 1UL..targetHeight) {
-      val beaconBlock = DataGenerators.randomBeaconBlock(blockNumber)
+      val beaconBlock = DataGenerators.randomBeaconBlock(
+        blockNumber,
+      )
       val sealedBlock = SealedBeaconBlock(beaconBlock, emptySet())
       currentState = currentState.copy(beaconBlockHeader = beaconBlock.beaconBlockHeader)
 
@@ -83,6 +88,11 @@ class QbftMessageProcessorTest {
     }
 
     return beaconChain
+  }
+
+  private fun inMemoryBeaconChainFromGenesis(): InMemoryBeaconChain {
+    val (beaconState, sealedBlock) = DataGenerators.genesisState()
+    return InMemoryBeaconChain(beaconState, sealedBlock)
   }
 
   @Test
@@ -126,7 +136,7 @@ class QbftMessageProcessorTest {
 
   @Test
   fun `should reject current message from unknown validator`() {
-    val knownValidator = Address.fromHexString("0xABCDEF1234567890123456789012345678901234")
+    val knownValidator = Address.fromHexStringStrict("0xABCDEF1234567890123456789012345678901234")
     val messageProcessor = createMessageProcessor(chainHeight = 100UL)
     whenever(validatorProvider.getValidatorsForBlock(any())).thenReturn(
       listOf(knownValidator, localAddress), // messageAuthor is not in this list
@@ -168,10 +178,14 @@ class QbftMessageProcessorTest {
 
   private fun createQbftMessage(sequenceNumber: Long): QbftMessage {
     val roundIdentifier = ConsensusRoundIdentifier(sequenceNumber, 1)
-    val beaconBlock = DataGenerators.randomBeaconBlock(sequenceNumber.toULong())
+    val beaconBlock =
+      DataGenerators.randomBeaconBlock(
+        sequenceNumber.toULong(),
+      )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
 
-    val proposalPayload = ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter)
+    val proposalPayload =
+      ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer))
     val signature = nodeKey.sign(Bytes32.wrap(proposalPayload.hashForSignature().bytes))
     val signedPayload = SignedData.create(proposalPayload, signature)
     val proposal = Proposal(signedPayload, emptyList(), emptyList())

@@ -25,7 +25,7 @@ WEB3_SIGNER_KEYSTORE_PATH="$(pwd)/docker/config/linea-besu-sequencer/tls-files/s
 WEB3_SIGNER_KEYSTORE_PASSPHRASE=changeit \
 WEB3_SIGNER_TRUST_STORE_PATH="$(pwd)/docker/config/linea-besu-sequencer/tls-files/web3signer_truststore.p12" \
 WEB3_SIGNER_TRUST_STORE_PASSPHRASE=changeit \
-pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-web3-signer-client-adapter.ts
+pnpm --filter @lfdt-lineth/shared-utils exec tsx scripts/test-web3-signer-client-adapter.ts
 
 // Optional overrides (defaults shown):
 //   TX_CHAIN_ID=1337

@@ -71,9 +71,12 @@ func (as *Module) ConnectToStateSummary(comp *wizard.CompiledIOP, ss *statesumma
 		ss.AccumulatorStatement.IsDelete,
 	)
 
-	comp.InsertInclusion(0, "LOOKUP_STATE_MGR_ACCUMULATOR_SUMMARY_TO_STATE_SUMMARY", stateSummaryTable, accSummaryTable)
-	// Perform the reverse check as well to make sure that some traces are not excluded
-	comp.InsertInclusion(0, "LOOKUP_STATE_MGR_ACCUMULATOR_SUMMARY_TO_STATE_SUMMARY_REVERSED", accSummaryTable, stateSummaryTable)
+	// Filter out padding: a fully-packed accumulator has no zero row to match
+	// the state summary's zero padding.
+	accActive := as.Inputs.Accumulator.Cols.IsActiveAccumulator
+	comp.InsertInclusionDoubleConditional(0, "LOOKUP_STATE_MGR_ACCUMULATOR_SUMMARY_TO_STATE_SUMMARY", stateSummaryTable, accSummaryTable, ss.IsActive, accActive)
+	// Reverse check as well, to make sure that some traces are not excluded.
+	comp.InsertInclusionDoubleConditional(0, "LOOKUP_STATE_MGR_ACCUMULATOR_SUMMARY_TO_STATE_SUMMARY_REVERSED", accSummaryTable, stateSummaryTable, accActive, ss.IsActive)
 
 	return as
 }

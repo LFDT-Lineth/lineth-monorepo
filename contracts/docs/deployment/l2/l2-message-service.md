@@ -14,8 +14,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| L2_SECURITY_COUNCIL | true   | address | L2 Security council address |
-| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER  | true  |  address | L1L2 Message Setter address on L2 |
+| L2_SECURITY_COUNCIL | registry\|env | address | L2 Security council address. Read from registry on stable networks; env var used as fallback. |
+| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER  | registry\|env  |  address | L1L2 Message Setter address on L2. Read from registry on stable networks; env var used as fallback. |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD    | true  |  uint256 | L2 Rate Limit Period |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT    | true  |  uint256 | L2 Rate Limit Amount |
 
@@ -46,8 +46,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| L2_SECURITY_COUNCIL | true | address | L2 Security council address |
-| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER | true | address | L1L2 Message Setter address on L2 |
+| L2_SECURITY_COUNCIL | registry\|env | address | L2 Security council address. Read from registry on stable networks; env var used as fallback. |
+| L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER | registry\|env | address | L1L2 Message Setter address on L2. Read from registry on stable networks; env var used as fallback. |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD | true | uint256 | L2 Rate Limit Period |
 | L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT | true | uint256 | L2 Rate Limit Amount |
 
@@ -69,7 +69,7 @@ Deploys a new L2MessageService implementation and generates encoded upgrade call
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|
 | \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
-| L2_MESSAGE_SERVICE_ADDRESS | true | address | Existing L2MessageService proxy address |
+| L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | Existing L2MessageService proxy address. Read from registry on stable networks; env var used as fallback. |
 
 ```shell
 pnpm exec hardhat deploy --network linea_sepolia --tags L2MessageServiceWithReinitialization

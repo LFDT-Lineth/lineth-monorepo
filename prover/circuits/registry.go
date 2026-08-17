@@ -70,21 +70,20 @@ const (
 //
 //	execution-dummy (ID 0, bit 0)                              = 0 → DISALLOWED
 //	data-availability-dummy (ID 1, bit 1)                      = 0 → DISALLOWED
-//	emulation-dummy (ID 2, bit 2)                              = 0 → DISALLOWED
-//	execution (ID 3, bit 3)                                    = 1 → ALLOWED
-//	execution-large (ID 4, bit 4)                              = 1 → ALLOWED
-//	execution-limitless (ID 5, bit 5)                          = 1 → ALLOWED
-//	data-availability-v2 (ID 6, bit 6)                         = 1 → ALLOWED
-//	invalidity-nonce-balance-dummy (ID 7, bit 7)               = 0 → DISALLOWED
-//	invalidity-precompile-logs-dummy (ID 8, bit 8)             = 0 → DISALLOWED
-//	invalidity-filtered-address-dummy (ID 9, bit 9)            = 0 → DISALLOWED
-//	invalidity-nonce-balance (ID 10, bit 10)                   = 1 → ALLOWED
-//	invalidity-precompile-logs (ID 11, bit 11)                 = 1 → ALLOWED
-//	invalidity-filtered-address (ID 12, bit 12)                = 1 → ALLOWED
-//	invalidity-precompile-logs-limitless (ID 13, bit 13)       = 1 → ALLOWED
-//	invalidity-precompile-logs-large (ID 14, bit 14)           = 1 → ALLOWED
-//	Binary: 0b111110001111000 = 31864 (decimal)
-//	is_allowed_circuit_id = 31864
+//	execution (ID 2, bit 2)                                    = 1 → ALLOWED
+//	execution-large (ID 3, bit 3)                              = 1 → ALLOWED
+//	execution-limitless (ID 4, bit 4)                          = 1 → ALLOWED
+//	data-availability-v2 (ID 5, bit 5)                         = 1 → ALLOWED
+//	invalidity-nonce-balance-dummy (ID 6, bit 6)               = 0 → DISALLOWED
+//	invalidity-precompile-logs-dummy (ID 7, bit 7)             = 0 → DISALLOWED
+//	invalidity-filtered-address-dummy (ID 8, bit 8)            = 0 → DISALLOWED
+//	invalidity-nonce-balance (ID 9, bit 9)                     = 1 → ALLOWED
+//	invalidity-precompile-logs (ID 10, bit 10)                 = 1 → ALLOWED
+//	invalidity-filtered-address (ID 11, bit 11)               = 1 → ALLOWED
+//	invalidity-precompile-logs-limitless (ID 12, bit 12)       = 1 → ALLOWED
+//	invalidity-precompile-logs-large (ID 13, bit 13)           = 1 → ALLOWED
+//	Binary: 0b11111000111100 = 15932 (decimal)
+//	is_allowed_circuit_id = 15932
 //
 // Use ComputeIsAllowedCircuitID() to calculate the bitmask from circuit names.
 var GlobalCircuitIDMapping = map[string]uint{

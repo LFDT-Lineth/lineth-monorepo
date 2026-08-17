@@ -35,15 +35,15 @@ class MakefileContractDeploymentHelperKtTest {
   }
 
   @Test
-  fun getDeployedAddress_LineaRollup() {
+  fun getDeployedAddress_LinethRollup() {
     assertThat(
       getDeployedAddress(
         listOf(
-          "LineaRollup artifact has been deployed in 1.855172125s ",
-          "contract=LineaRollup deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
+          "LinethRollup artifact has been deployed in 1.855172125s ",
+          "contract=LinethRollup deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
           "",
         ),
-        lineaRollupAddressPattern,
+        linethRollupAddressPattern,
       ),
     ).isEqualTo(
       DeployedContract("0x8613180dF1485B8b87DEE3BCf31896659eb1a092", 1414),
@@ -52,11 +52,11 @@ class MakefileContractDeploymentHelperKtTest {
     assertThat(
       getDeployedAddress(
         listOf(
-          "LineaRollup6.2.1 artifact has been deployed in 1.855172125s ",
-          "contract=LineaRollupV6.2.1 deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
+          "LinethRollup6.2.1 artifact has been deployed in 1.855172125s ",
+          "contract=LinethRollupV6.2.1 deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
           "",
         ),
-        lineaRollupAddressPattern,
+        linethRollupAddressPattern,
       ),
     ).isEqualTo(
       DeployedContract("0x8613180dF1485B8b87DEE3BCf31896659eb1a092", 1414),

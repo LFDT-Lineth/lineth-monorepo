@@ -8,6 +8,7 @@
  */
 package maru.consensus
 
+import linea.timer.TestablePeriodicTimerFactory
 import linea.timer.TimerFactory
 import maru.core.Protocol
 import maru.subscription.InOrderFanoutSubscriptionManager
@@ -15,7 +16,6 @@ import maru.subscription.SubscriptionNotifier
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import testutils.maru.TestablePeriodicTimerFactory
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId

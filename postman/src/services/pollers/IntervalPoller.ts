@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { IPoller } from "../../core/services/pollers/IPoller";
 import { wait } from "../../core/utils/shared";

@@ -3,7 +3,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import {
   MockSTETH,
-  MockLineaRollup,
+  MockLinethRollup,
   TestYieldManager,
   MockDashboard,
   MockStakingVault,
@@ -26,7 +26,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
   let securityCouncil: SignerWithAddress;
   let l2YieldRecipient: SignerWithAddress;
   let mockSTETH: MockSTETH;
-  let mockLineaRollup: MockLineaRollup;
+  let mockLinethRollup: MockLinethRollup;
   let yieldManager: TestYieldManager;
   let mockDashboard: MockDashboard;
   let mockStakingVault: MockStakingVault;
@@ -48,7 +48,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       mockStakingVault,
       yieldManager,
       mockSTETH,
-      mockLineaRollup,
+      mockLinethRollup,
     } = await loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
 
     mockStakingVaultAddress = await mockStakingVault.getAddress();
@@ -95,7 +95,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - Set up userFunds and lstLiabilityPrincipals
       const liabilityPrincipalBefore = ONE_ETHER * 2n;
       const call = getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -188,7 +188,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - setup lst liability
       const liabilityPrincipalBefore = ONE_ETHER;
       await getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -213,7 +213,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - setup lst liability principal
       const liabilityPrincipalBefore = ONE_ETHER;
       await getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -242,7 +242,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - setup lst liability principal
       const liabilityPrincipalBefore = ONE_ETHER;
       await getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -273,7 +273,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - setup lst liability principal
       const liabilityPrincipalBefore = ONE_ETHER;
       await getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -316,7 +316,7 @@ describe("LidoStVaultYieldProvider contract - yield operations", () => {
       // Arrange - setup lst liability principal
       const liabilityPrincipalBefore = (ONE_ETHER * 3n) / 2n;
       await getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,

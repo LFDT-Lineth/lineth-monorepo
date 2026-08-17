@@ -11,7 +11,8 @@ interface EthApiClient :
   EthLogsClient,
   EthApiAccountClient,
   EthApiTransactionClient,
-  EthApiExecutionClientInfo
+  EthApiExecutionClientInfo,
+  ExecutionWitnessClient
 // future methods to eventually add if necessary
 // fun ethGetCode(address: ByteArray, blockParameter: BlockParameter): SafeFuture<ByteArray>
 // fun ethGetStorageAt(address: ByteArray, position: BigInteger, blockParameter: BlockParameter): SafeFuture<ByteArray>

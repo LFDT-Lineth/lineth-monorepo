@@ -9,6 +9,7 @@ import linea.domain.Transaction
 import linea.domain.TransactionForEthCall
 import linea.domain.TransactionReceipt
 import linea.ethapi.EthApiClient
+import linea.ethapi.ExecutionWitnessClient
 import linea.ethapi.StateOverride
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
@@ -38,7 +39,8 @@ import kotlin.jvm.optionals.getOrNull
 class Web3jEthApiClient(
   val web3jClient: Web3j,
   val web3jService: Web3jService = web3jClient.getWeb3jService(),
-) : EthApiClient {
+  val executionWitnessClient: ExecutionWitnessClient = Web3jExecutionWitnessClient(web3jService),
+) : EthApiClient, ExecutionWitnessClient by executionWitnessClient {
   override fun getLogs(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,

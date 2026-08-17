@@ -8,6 +8,8 @@
  */
 package maru.api.beacon
 
+import linea.kotlin.decodeHex
+import linea.kotlin.isPositiveNumber
 import maru.api.BeaconStateNotFoundException
 import maru.api.BlockNotFoundException
 import maru.api.ChainDataProvider
@@ -15,8 +17,6 @@ import maru.api.HandlerException
 import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
-import maru.extensions.fromHexToByteArray
-import maru.extensions.isPositiveNumber
 
 fun getBlock(
   blockId: String,
@@ -50,7 +50,7 @@ fun getBeaconState(
         "Finalized state is not supported for validators endpoint",
       )
       stateId.lowercase() == "genesis" -> chainDataProvider.getGenesisBeaconState()
-      stateId.lowercase().startsWith("0x") -> chainDataProvider.getBeaconStateByStateRoot(stateId.fromHexToByteArray())
+      stateId.lowercase().startsWith("0x") -> chainDataProvider.getBeaconStateByStateRoot(stateId.decodeHex())
       else -> throw HandlerException(400, "Invalid state ID: $stateId")
     }
   } catch (e: BeaconStateNotFoundException) {
@@ -65,7 +65,7 @@ fun getValidator(
     when {
       validatorId.isPositiveNumber() -> beaconState.validators.withIndex().find { it.index == validatorId.toInt() }
       validatorId.lowercase().startsWith(prefix = "0x") -> {
-        val address = validatorId.fromHexToByteArray()
+        val address = validatorId.decodeHex()
         beaconState.validators.withIndex().find { it.value.address.contentEquals(address) }
       }
       else -> throw HandlerException(400, "Invalid validator ID: $validatorId")

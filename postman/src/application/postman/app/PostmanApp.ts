@@ -1,4 +1,4 @@
-import { IApplication, ILogger, IMetricsService, WinstonLogger } from "@consensys/linea-shared-utils";
+import { IApplication, ILogger, IMetricsService, WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { DataSource } from "typeorm";
 
 import { PostmanConfig, PostmanOptions } from "./config/config";

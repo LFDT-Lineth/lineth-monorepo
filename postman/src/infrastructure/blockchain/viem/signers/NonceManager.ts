@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { ITransactionCountProvider } from "../../../../core/clients/blockchain/IProvider";
 import { IDbNonceProvider } from "../../../../core/services/IDbNonceProvider";

@@ -16,6 +16,15 @@ class StringExtensionsTest {
   }
 
   @Test
+  fun `String#isPositiveNumber`() {
+    assertThat("0".isPositiveNumber()).isTrue()
+    assertThat("123456".isPositiveNumber()).isTrue()
+    assertThat("".isPositiveNumber()).isFalse()
+    assertThat("-1".isPositiveNumber()).isFalse()
+    assertThat("12a".isPositiveNumber()).isFalse()
+  }
+
+  @Test
   fun `String#containsAny`() {
     val stringList = listOf(
       "This is a TEST",

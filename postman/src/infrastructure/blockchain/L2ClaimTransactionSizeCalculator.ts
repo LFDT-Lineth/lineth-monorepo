@@ -1,4 +1,4 @@
-import { GoNativeCompressor } from "@consensys/linea-native-libs";
+import { GoNativeCompressor } from "@lfdt-lineth/native-libs";
 
 import { LineaGasFees } from "../../core/clients/blockchain/IGasProvider";
 import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";

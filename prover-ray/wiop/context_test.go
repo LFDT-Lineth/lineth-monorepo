@@ -3,7 +3,7 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

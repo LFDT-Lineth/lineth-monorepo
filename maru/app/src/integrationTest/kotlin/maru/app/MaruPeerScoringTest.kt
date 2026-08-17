@@ -10,18 +10,20 @@ package maru.app
 
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.web3j.ethapi.createEthApiClient
 import maru.config.P2PConfig
-import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.BlockRetrievalStrategy
 import maru.p2p.messages.DefaultBlockRetrievalStrategy
 import maru.p2p.messages.StatusManager
-import maru.serialization.SerDe
+import maru.serialization.rlp.ForkAwareBlockHashing
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -38,9 +40,6 @@ import testutils.FourEmptyResponsesStrategy
 import testutils.MisbehavingP2PNetwork
 import testutils.PeeringNodeNetworkStack
 import testutils.TimeOutResponsesStrategy
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
 import testutils.maru.MaruFactory
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -184,7 +183,7 @@ class MaruPeerScoringTest {
             privateKeyBytes: ByteArray,
             p2pConfig: P2PConfig,
             chainId: UInt,
-            serDe: SerDe<SealedBeaconBlock>,
+            blockHashing: ForkAwareBlockHashing,
             metricsFacade: MetricsFacade,
             metricsSystem: MetricsSystem,
             statusManager: StatusManager,
@@ -198,7 +197,7 @@ class MaruPeerScoringTest {
             privateKeyBytes = privateKeyBytes,
             p2pConfig = p2pConfig,
             chainId = chainId,
-            serDe = serDe,
+            blockHashing = blockHashing,
             metricsFacade = metricsFacade,
             metricsSystem = metricsSystem,
             statusManager = statusManager,

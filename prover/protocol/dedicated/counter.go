@@ -15,17 +15,14 @@ import (
 )
 
 // NewCyclicCounter creates a structured [CyclicCounter]. When passing period
-// = math.MaxInt it turns into a non-periodic counter. callerName must be a
-// unique string per call-site to ensure stable column names across scale
-// changes.
+// = math.MaxInt it turns into a non-periodic counter.
 func NewCyclicCounter(comp *wizard.CompiledIOP, round, period int, isActiveAny any, callerName string) *CyclicCounter {
 
 	var (
 		isActive, fullyActive, size = cleanIsActive(isActiveAny)
-		// callerName disambiguates the column name independently of the number
-		// of columns registered in the IOP (which varies with trace-limit
-		// scaling). Period is intentionally excluded because it can be
-		// size-dependent (e.g. keccak COL_ROUND where period = keccakfSize).
+		// The appending of the round to the name is necessary to disambiguate
+		// the name of the column when serializing. This is particularly useful
+		// for self-recursion columns.
 		name = fmt.Sprintf("CYCLIC_COUNTER_%v_%v", callerName, round)
 	)
 

@@ -3,6 +3,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { getRequiredEnvVar, LogContractDeployment, tryVerifyContractWithConstructorArgs } from "../common/helpers";
+import { formatEnvVarForLog, formatEnvVarValueForMessage } from "../common/helpers/envVarLogging";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployFromFactory } from "../scripts/hardhat/utils";
 
@@ -41,7 +42,9 @@ const func: DeployFunction = withSignerUiSession(
     // Validate addresses
     for (let i = 0; i < payeesArray.length; i++) {
       if (!isAddress(payeesArray[i]!)) {
-        throw new Error(`Invalid address at index ${i}: ${payeesArray[i]}`);
+        throw new Error(
+          `Invalid address at index ${i}: ${formatEnvVarValueForMessage("PAYMENT_SPLITTER_PAYEES", payeesArray[i]!)}`,
+        );
       }
     }
 
@@ -58,11 +61,8 @@ const func: DeployFunction = withSignerUiSession(
 
     // --- Log params ---
     console.log("Params:");
-    console.log("  payees:", payeesArray);
-    console.log(
-      "  shares:",
-      sharesBigInt.map((share) => share.toString()),
-    );
+    console.log(`  payees: ${formatEnvVarForLog("PAYMENT_SPLITTER_PAYEES", payeesRaw)}`);
+    console.log(`  shares: ${formatEnvVarForLog("PAYMENT_SPLITTER_SHARES", sharesRaw)}`);
 
     // --- Deploy contract ---
     const contract = await deployFromFactory(contractName, signer, payeesArray, sharesBigInt);

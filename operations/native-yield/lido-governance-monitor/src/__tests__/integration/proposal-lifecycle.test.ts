@@ -1,5 +1,5 @@
-import { ILogger } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 
 import { IAIClient } from "../../core/clients/IAIClient.js";
 import { ISlackClient } from "../../core/clients/ISlackClient.js";

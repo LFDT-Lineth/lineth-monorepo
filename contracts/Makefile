@@ -27,6 +27,6 @@ coverage:
 	pnpm run coverage
 
 clean-fmt-test:
-	make clean
-	make fmt-fix
-	make test
+	$(MAKE) clean
+	$(MAKE) fmt-fix
+	$(MAKE) test

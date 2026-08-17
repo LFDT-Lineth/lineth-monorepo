@@ -8,6 +8,10 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
+import linea.testing.besu.startWithRetry
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig
 import org.apache.logging.log4j.LogManager
@@ -24,10 +28,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.Checks
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
-import testutils.besu.startWithRetry
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import java.net.URI

@@ -5,11 +5,9 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field/fext"
-
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // It's a slice - zero padded up to a certain length - and rotated
@@ -74,11 +72,6 @@ func (p *PaddedCircularWindow) GetBase(n int) (field.Element, error) {
 	}
 	// Else, return the padding value
 	return p.PaddingVal_, nil
-}
-
-func (p *PaddedCircularWindow) GetExt(n int) fext.Element {
-	elem, _ := p.GetBase(n)
-	return *new(fext.Element).SetFromBase(&elem)
 }
 
 func (r *PaddedCircularWindow) Get(n int) field.Element {
@@ -208,16 +201,6 @@ func (p *PaddedCircularWindow) WriteInSlice(buff []field.Element) {
 		pos := utils.PositiveMod(i+p.Offset_, p.TotLen_)
 		buff[pos] = p.PaddingVal_
 	}
-}
-
-func (p *PaddedCircularWindow) WriteInSliceExt(buff []fext.Element) {
-	temp := make([]field.Element, len(buff))
-	p.WriteInSlice(temp)
-	for i := 0; i < len(buff); i++ {
-		elem := temp[i]
-		buff[i].SetFromBase(&elem)
-	}
-
 }
 
 func (p *PaddedCircularWindow) Pretty() string {
@@ -399,7 +382,7 @@ func (w *PaddedCircularWindow) DeepCopy() SmartVector {
 func (w *PaddedCircularWindow) IntoRegVecSaveAlloc() []field.Element {
 	res, err := w.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(err)
 	}
 	return res
 
@@ -407,16 +390,6 @@ func (w *PaddedCircularWindow) IntoRegVecSaveAlloc() []field.Element {
 
 func (w *PaddedCircularWindow) IntoRegVecSaveAllocBase() ([]field.Element, error) {
 	return IntoRegVec(w), nil
-}
-
-func (w *PaddedCircularWindow) IntoRegVecSaveAllocExt() []fext.Element {
-	temp, _ := w.IntoRegVecSaveAllocBase()
-	res := make([]fext.Element, len(temp))
-	for i := 0; i < len(temp); i++ {
-		elem := temp[i]
-		res[i].SetFromBase(&elem)
-	}
-	return res
 }
 
 func (w *PaddedCircularWindow) GetPtr(n int) *field.Element {

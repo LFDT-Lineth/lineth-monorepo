@@ -1,7 +1,7 @@
 import { parseJestLog } from "./parse-jest-log";
 
 // Raw log fixture copied from the GitHub Actions E2E job below.
-// Source: https://github.com/Consensys/linea-monorepo/actions/runs/23834802065/job/69476754215
+// Source: https://github.com/LFDT-Lineth/lineth-monorepo/actions/runs/23834802065/job/69476754215
 const RAW_LOG = `pnpm run -F e2e test:local
   shell: /usr/bin/bash -e {0}
   env:
@@ -14,11 +14,11 @@ const RAW_LOG = `pnpm run -F e2e test:local
     TRANSACTION_EXCLUSION_API_TAG: 67f147a
     PROVER_TAG: 2fc4392
 
-> e2e@1.0.0 test:local /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:local /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > pnpm run test:local:run --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts && pnpm run test:liveness:local
 
 
-> e2e@1.0.0 test:local:run /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:local:run /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > TEST_ENV=local npx jest --testPathIgnorePatterns=linea-besu-fleet.spec.ts --testPathIgnorePatterns=liveness.spec.ts
 
 timestamp=2026-04-01T06:24:19.543Z level=info | message=Configuring once-off prerequisite contracts
@@ -28,7 +28,7 @@ timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 Test contract deploye
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 Poseidon2 contract deployed. address=0xfcc2155b495b6bf6701eb322d3a97b7817898306
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 LineaSequencerUptimeFeed contract deployed. address=0x7917abb0cdbf3d3c4057d6a2808ee85ec16260c1
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 SparseMerkleProof contract deployed. address=0x670365526a9971e4a225c38538c5d7ac248e4087
-timestamp=2026-04-01T06:24:27.711Z level=info | message=LineaRollup funded with 500 ETH on L1
+timestamp=2026-04-01T06:24:27.711Z level=info | message=LinethRollup funded with 500 ETH on L1
 timestamp=2026-04-01T06:24:27.711Z level=info | message=Generating L2 traffic...
 timestamp=2026-04-01T06:24:39.797Z level=info | message=L2 traffic generation started.
 PASS src/common/test-helpers/deny-list.spec.ts
@@ -111,7 +111,7 @@ Snapshots:   0 total
 Time:        159.28 s
 Ran all test suites.
 
-> e2e@1.0.0 test:liveness:local /home/runner/_work/linea-monorepo/linea-monorepo/e2e
+> e2e@1.0.0 test:liveness:local /home/runner/_work/lineth-monorepo/lineth-monorepo/e2e
 > TEST_ENV=local npx jest liveness.spec.ts
 
 timestamp=2026-04-01T06:27:21.734Z level=info | message=Generating L2 traffic...

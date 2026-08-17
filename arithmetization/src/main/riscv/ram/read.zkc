@@ -1,14 +1,92 @@
 include "../memory.zkc"
+include "../utils/constants.zkc"
 
-fn read_64<ram>(address:Address) -> (value:u64) {
-    value = ram[address + 7]::ram[address + 6]::ram[address + 5]::ram[address + 4]::ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
-}
-
-fn read_32<ram>(address:Address) -> (value:u32) {
-    value = ram[address + 3]::ram[address + 2]::ram[address + 1]::ram[address + 0]
+fn read_8<ram>(address:Address) -> (value:u8) {
+    var boffset:u2
+    var woffset:u62
+    var trash:u24
+    var word:u32
+    //
+    woffset::boffset = address
+    // read enclosing word
+    word = ram[woffset as u64]
+    //
+    switch boffset {
+        case 0: {
+            trash::value = word
+        }
+        case 1: {
+            trash::value = word >> 8
+        }
+        case 2: {
+            trash::value = word >> 16
+        }
+        default: {
+            trash::value = word >> 24
+        }
+    }
 }
 
 fn read_16<ram>(address:Address) -> (value:u16) {
-    value = ram[address + 1]::ram[address + 0]
+    var boffset:u2
+    var woffset:u62
+    var tmp16:u16
+    var lo:u32
+    //
+    woffset::boffset = address
+    // read enclosing word
+    lo = ram[woffset as u64]
+    //
+    switch boffset {
+        case 0: {
+            tmp16::value = lo
+        }
+        case 1: {
+            tmp16::value = lo >> 8
+        }
+        case 2: {
+            tmp16::value = lo >> 16
+        }
+        default: {
+            var tmp32:u32
+            var hi:u32 = ram[(woffset + 1) as u64]
+            //
+            tmp32::tmp16::value = (hi::lo) >> 24
+        }
+    }
 }
 
+fn read_32<ram>(address:Address) -> (value:u32) {
+    var boffset:u2
+    var woffset:u62
+    var trash:u32
+    var shift:u5
+    //
+    woffset::boffset = address
+    // check for aligned access
+    if boffset == 0 {
+        value = ram[woffset as u64]
+        return
+    }
+    // extract double word
+    var dw:u64 = ram[(woffset + 1) as u64]::ram[woffset as u64]
+    // calculate shift
+    shift = (boffset as u5) << 3
+    // shift double word into place
+    trash::value = dw >> shift
+}
+
+fn read_64<ram>(address:Address) -> (value:u64) {
+    var boffset:u2
+    var woffset:u62
+    //
+    woffset::boffset = address
+    //
+    if boffset == 0 {
+        value = ram[(woffset + 1) as u64]::ram[woffset as u64]
+    } else {
+        var lo:u32 = read_32(address)
+        var hi:u32 = read_32(address + 4)
+        value = hi::lo
+    }
+}

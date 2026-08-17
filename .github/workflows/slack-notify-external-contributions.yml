@@ -11,27 +11,27 @@ jobs:
   notify-if-external:
     runs-on: ubuntu-latest
     steps:
-      - name: Check if user is member of Consensys/linea team
+      - name: Check if user is member of LFDT-Lineth/lineth-write team
         id: check-team-membership
         run: |
           AUTHOR="${{ github.event.sender.login }}"
 
-          # Check if user is member of @Consensys/linea team
+          # Check if user is member of @LFDT-Lineth/lineth-write team
           HTTP_STATUS=$(curl -s -w "%{http_code}" -o /tmp/team_response.json \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.SLACK_ORG_ACCESS }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/orgs/Consensys/teams/linea/memberships/$AUTHOR)
+            https://api.github.com/orgs/LFDT-Lineth/teams/lineth-write/memberships/$AUTHOR)
 
           echo "Team membership check status: $HTTP_STATUS"
           echo "Response body:"
           cat /tmp/team_response.json || echo "No response body"
 
           if [ "$HTTP_STATUS" -eq 200 ]; then
-            echo "User $AUTHOR is a member of @Consensys/linea team"
+            echo "User $AUTHOR is a member of @LFDT-Lineth/lineth-write team"
             echo "is_team_member=true" >> $GITHUB_OUTPUT
           elif [ "$HTTP_STATUS" -eq 404 ]; then
-            echo "User $AUTHOR is NOT a member of @Consensys/linea team"
+            echo "User $AUTHOR is NOT a member of @LFDT-Lineth/lineth-write team"
             echo "is_team_member=false" >> $GITHUB_OUTPUT
           else
             echo "Error checking team membership (HTTP $HTTP_STATUS). Treating as external to be safe."

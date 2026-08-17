@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import {
   IBeaconNodeAPIClient,
   IRetryService,
@@ -5,8 +6,7 @@ import {
   PendingPartialWithdrawal,
   safeSub,
   SHARD_COMMITTEE_PERIOD,
-} from "@consensys/linea-shared-utils";
-import { jest } from "@jest/globals";
+} from "@lfdt-lineth/shared-utils";
 
 import { createLoggerMock } from "../../__tests__/helpers/index.js";
 import { ALL_VALIDATORS_BY_LARGEST_BALANCE_QUERY } from "../../core/entities/graphql/ActiveValidatorsByLargestBalance.js";

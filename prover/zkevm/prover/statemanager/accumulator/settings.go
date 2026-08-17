@@ -20,7 +20,12 @@ type Settings struct {
 	Round int
 }
 
-// leaveSizes returns the column length for the
+// NumRows returns the column length for the accumulator module. The +1 keeps at
+// least one trailing padding row so the module is never fully packed: the
+// distributed prover pads columns to the segment size by repeating the last row,
+// which only yields the correct padding when that row is genuine padding. A fully
+// packed module otherwise breaks cross-row constraints (e.g. the counter
+// increment) on the padded rows.
 func (s Settings) NumRows() int {
-	return utils.NextPowerOfTwo(s.MaxNumProofs)
+	return utils.NextPowerOfTwo(s.MaxNumProofs + 1)
 }

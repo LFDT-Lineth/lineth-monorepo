@@ -13,6 +13,7 @@ import maru.consensus.state.StateTransition
 import maru.core.BeaconBlockHeader
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
+import maru.serialization.rlp.ForkAwareBlockHashing
 
 fun interface BeaconBlockValidatorFactory {
   fun createValidatorForBlock(beaconBlockHeader: BeaconBlockHeader): BlockValidator
@@ -24,8 +25,9 @@ class BeaconBlockValidatorFactoryImpl(
   stateTransition: StateTransition,
   executionLayerManager: ExecutionLayerManager?,
   val allowEmptyBlocks: Boolean,
+  blockHashing: ForkAwareBlockHashing,
 ) : BeaconBlockValidatorFactory {
-  private val stateRootValidator = StateRootValidator(stateTransition)
+  private val stateRootValidator = StateRootValidator(stateTransition, blockHashing::stateRoot)
   private val bodyRootValidator = BodyRootValidator()
   private val executionPayloadValidator =
     if (executionLayerManager != null) ExecutionPayloadValidator(executionLayerManager) else null

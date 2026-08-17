@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/crypto/state-management/hashtypes"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/types"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Config specifies the parameters of the tree (choice of hash function, depth).
@@ -158,108 +158,6 @@ func (t *Tree) getNode(level, posInLevel int) types.Bytes32 {
 		utils.Panic("Got level %v", level)
 	}
 	panic("unreachable")
-}
-
-// updateNode updates a node at a given level:
-//   - 0 is a leaf
-//   - 1 - 39 : is an intermediate node
-//   - 40 is the root
-//
-// (for config.Depth == 40)
-func (t *Tree) updateNode(level, posInLevel int, newVal types.Bytes32) {
-	switch {
-	case level == t.Config.Depth:
-		// The only logical posInLevels value is zero in this case
-		if posInLevel > 0 {
-			utils.Panic("there is only one root but posInLevel was %v", posInLevel)
-		}
-		// Opportunistic sanity-checks. Parenthesis are necessary because
-		// of a hole in my linter.
-		if t.Root == (types.Bytes32{}) {
-			utils.Panic("sanity-check failed : the root is zero.")
-		}
-		t.Root = newVal
-	case level >= 1 && level < t.Config.Depth:
-		// Check that the accessed node is within the bounds of the SMT
-		maxPos := 1 << (t.Config.Depth - level)
-		if posInLevel >= maxPos {
-			utils.Panic("node is out of bound level %v (maxPos %v), pos=%v", level, maxPos, posInLevel)
-		}
-		// Check if this is an empty node : and reserve if necessary
-		if posInLevel >= len(t.OccupiedNodes[level-1]) {
-			t.reserveLevel(level, posInLevel+1)
-		}
-		// Or return an non-empty one
-		t.OccupiedNodes[level-1][posInLevel] = newVal
-	case level == 0:
-		// Check that the accessed node is within the bounds of the SMT
-		maxPos := 1 << t.Config.Depth
-		if posInLevel >= maxPos {
-			utils.Panic("nodeID is out of bound")
-		}
-		// Check if this is an empty leaf
-		if posInLevel >= len(t.OccupiedLeaves) {
-			t.reserveLevel(0, posInLevel+1)
-		}
-		// Return the leaf if occupied
-		t.OccupiedLeaves[posInLevel] = newVal
-	default:
-		utils.Panic("Got level %v", level)
-	}
-}
-
-// reserveLevel extends the `OccupiedLeaves` and `OccupiedNodes` fields of the
-// tree by appending `trivial nodes` to the specified level/
-//
-// Level == 0 : reserve in the leaves
-// Level == 1..39 : reserve in the nodes
-// Level == 40 : panic, can't reserve at the root level
-//
-// (for config.Depth == 40)
-func (t *Tree) reserveLevel(level, newSize int) {
-
-	// Edge-case, level out of bound
-	if level > t.Config.Depth {
-		utils.Panic("level out of bound %v", level)
-	}
-
-	// Edge : case root level
-	if level == t.Config.Depth {
-		utils.Panic("tried extending the root level %v", newSize)
-	}
-
-	// Will work for both the leaves and the intermediate nodes
-	if newSize > 1<<(t.Config.Depth-level) {
-		utils.Panic("overextending the tree %v, %v", level, newSize)
-	}
-
-	if level == 0 {
-		if newSize <= len(t.OccupiedLeaves) {
-			// already big enough
-			return
-		}
-		// else, we add extra "empty leaves" at the end of the slice
-		padding := make([]types.Bytes32, newSize-len(t.OccupiedLeaves))
-		for i := range padding {
-			padding[i] = EmptyLeaf()
-		}
-		t.OccupiedLeaves = append(t.OccupiedLeaves, padding...)
-		return
-	}
-
-	/*
-		Else we want to reserve within the occupiedNodes
-	*/
-	if newSize <= len(t.OccupiedNodes[level-1]) {
-		// already big enough
-		return
-	}
-	// else, we add extra "empty nodes" at the end of the slice
-	padding := make([]types.Bytes32, newSize-len(t.OccupiedNodes[level-1]))
-	for i := range padding {
-		padding[i] = t.EmptyNodes[level-1]
-	}
-	t.OccupiedNodes[level-1] = append(t.OccupiedNodes[level-1], padding...)
 }
 
 // BuildComplete builds from scratch a complete Merkle-tree. Requires that the

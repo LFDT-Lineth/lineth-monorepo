@@ -11,8 +11,8 @@ package maru.api.beacon
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.javalin.http.Context
 import io.javalin.http.Handler
+import linea.kotlin.encodeHex
 import maru.api.ChainDataProvider
-import maru.extensions.encodeHex
 
 data class GetStateValidatorResponse(
   @JsonProperty("execution_optimistic") val executionOptimistic: Boolean,

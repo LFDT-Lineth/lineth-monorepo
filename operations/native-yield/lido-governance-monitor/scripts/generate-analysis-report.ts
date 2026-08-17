@@ -8,9 +8,9 @@ import { extractAnalysisEntriesFromLog, generateAnalysisReportHtml } from "./uti
  *
  * Typical usage:
  * 1) Capture monitor run output:
- *    pnpm --filter @consensys/lido-governance-monitor exec tsx run.ts > run.log
+ *    pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx run.ts > run.log
  * 2) Generate HTML report:
- *    pnpm --filter @consensys/lido-governance-monitor exec tsx scripts/generate-analysis-report.ts run.log
+ *    pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx scripts/generate-analysis-report.ts run.log
  * 3) Open the generated `run.analysis-report.html` file in your browser.
  */
 

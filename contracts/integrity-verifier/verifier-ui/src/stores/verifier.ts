@@ -16,7 +16,7 @@ import type {
 } from "@/types";
 import { defaultVerificationOptions } from "@/types";
 
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
+import type { VerificationSummary } from "@lfdt-lineth/contract-integrity-verifier";
 
 // ============================================================================
 // State Interface

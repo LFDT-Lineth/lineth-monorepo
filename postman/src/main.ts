@@ -1,4 +1,4 @@
-import { WinstonLogger } from "@consensys/linea-shared-utils";
+import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 import * as dotenv from "dotenv";
 
 import { loadPostmanOptionsFromEnv } from "./application/postman/app/config/envLoader";

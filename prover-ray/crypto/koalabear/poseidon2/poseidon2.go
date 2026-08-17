@@ -7,9 +7,9 @@ import (
 
 	"github.com/consensys/gnark-crypto/hash"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // BlockSize is the number of field elements in a Poseidon2 compression block.

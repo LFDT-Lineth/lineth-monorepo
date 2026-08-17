@@ -1,4 +1,4 @@
-import { PendingPartialWithdrawal } from "@consensys/linea-shared-utils";
+import { PendingPartialWithdrawal } from "@lfdt-lineth/shared-utils";
 
 import {
   AggregatedPendingWithdrawal,

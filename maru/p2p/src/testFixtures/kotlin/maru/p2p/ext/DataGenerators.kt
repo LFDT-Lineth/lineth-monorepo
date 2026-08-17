@@ -9,15 +9,27 @@
 package maru.p2p.ext
 
 import maru.core.SealedBeaconBlock
-import maru.core.ext.DataGenerators
 import maru.p2p.GossipMessageType
 import maru.p2p.Message
 import maru.p2p.MessageData
 import maru.p2p.Version
+import maru.p2p.messages.Status
+import kotlin.random.Random
+import maru.core.ext.DataGenerators as CoreDataGenerators
 
 object DataGenerators {
+  fun randomStatus(latestBlockNumber: ULong): Status =
+    Status(
+      forkIdHash = Random.nextBytes(32),
+      latestStateRoot = Random.nextBytes(32),
+      latestBlockNumber = latestBlockNumber,
+    )
+
   fun randomBlockMessage(blockNumber: ULong = 1uL): Message<SealedBeaconBlock, GossipMessageType> {
-    val sealedBeaconBlock = DataGenerators.randomSealedBeaconBlock(blockNumber)
+    val sealedBeaconBlock =
+      CoreDataGenerators.randomSealedBeaconBlock(
+        blockNumber,
+      )
     return MessageData(GossipMessageType.BEACON_BLOCK, Version.V1, sealedBeaconBlock)
   }
 }

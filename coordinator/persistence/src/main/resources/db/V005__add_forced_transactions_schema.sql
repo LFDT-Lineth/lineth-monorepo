@@ -24,7 +24,7 @@ COMMENT ON TABLE forced_transactions IS 'Stores forced transaction execution sta
 COMMENT ON COLUMN forced_transactions.created_epoch_milli IS 'Timestamp (epoch millis) when record was created';
 COMMENT ON COLUMN forced_transactions.updated_epoch_milli IS 'Timestamp (epoch millis) when record was last updated';
 COMMENT ON COLUMN forced_transactions.ftx_number IS 'Forced transaction number (unique identifier)';
-COMMENT ON COLUMN forced_transactions.inclusion_result IS 'Result of forced transaction inclusion attempt (1=Included, 2=BadNonce, 3=BadBalance, 4=BadPrecompile, 5=TooManyLogs, 6=FilteredAddressFrom, 7=FilteredAddressTo, 8=Phylax)';
+COMMENT ON COLUMN forced_transactions.inclusion_result IS 'Result of forced transaction inclusion attempt (1=Included, 2=BadNonce, 3=BadBalance, 4=BadPrecompile, 5=TooManyLogs, 6=FilteredAddressFrom, 7=FilteredAddressTo, 8=ChainSecurityRuleViolation)';
 COMMENT ON COLUMN forced_transactions.simulated_execution_block_number IS 'Block number where FTX was simulated for execution';
 COMMENT ON COLUMN forced_transactions.simulated_execution_block_timestamp IS 'Timestamp (epoch millis) of simulated execution block';
 COMMENT ON COLUMN forced_transactions.ftx_block_number_deadline IS 'Block number deadline for the forced transaction';

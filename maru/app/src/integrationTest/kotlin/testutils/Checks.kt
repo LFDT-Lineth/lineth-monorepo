@@ -8,13 +8,13 @@
  */
 package testutils
 
+import linea.testing.besu.BesuFactory
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.methods.response.EthBlock
-import testutils.besu.BesuFactory
 import java.math.BigInteger
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration

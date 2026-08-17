@@ -3,7 +3,6 @@ package limitless
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
@@ -168,7 +167,7 @@ func ProveOnTheFly(cfg *config.Config, req *execution.Request) (*execution.Respo
 
 	// Launch conglomeration pipeline
 	go func() {
-		proof, err := RunConglomerationHierarchical(ctx, mt, cong, proofStream, totalProofs, nil)
+		proof, err := RunConglomerationHierarchical(ctx, mt, cong, proofStream, totalProofs)
 		resultCh <- congResult{proof: proof, err: err}
 	}()
 
@@ -245,7 +244,6 @@ func ProveOnTheFly(cfg *config.Config, req *execution.Request) (*execution.Respo
 			if int(n) < numGL && n%4 == 0 {
 				if glGCMu.TryLock() {
 					logrus.Infof("GL inter-job GC after %d/%d jobs", n, numGL)
-					runtime.GC()
 					debug.FreeOSMemory()
 					glGCMu.Unlock()
 				}
@@ -272,7 +270,6 @@ func ProveOnTheFly(cfg *config.Config, req *execution.Request) (*execution.Respo
 	proofGLs = nil
 
 	// GC between phases
-	runtime.GC()
 	debug.FreeOSMemory()
 
 	// LPP proving
@@ -344,7 +341,6 @@ func ProveOnTheFly(cfg *config.Config, req *execution.Request) (*execution.Respo
 	}
 
 	// Post-LPP GC
-	runtime.GC()
 	debug.FreeOSMemory()
 
 	close(proofStream)

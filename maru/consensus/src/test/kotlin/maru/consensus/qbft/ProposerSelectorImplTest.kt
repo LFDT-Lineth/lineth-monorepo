@@ -77,7 +77,10 @@ class ProposerSelectorImplTest {
     expectedValidators: SequencedSet<Validator>,
     expectedProposer: Validator = expectedValidators.first(),
   ): BeaconState {
-    val latestBlockHeader = DataGenerators.randomBeaconBlockHeader(expectedBlockNumber, proposer = expectedProposer)
+    val latestBlockHeader = DataGenerators.randomBeaconBlockHeader(
+      expectedBlockNumber,
+      proposer = expectedProposer,
+    )
     return BeaconState(latestBlockHeader, expectedValidators)
   }
 }

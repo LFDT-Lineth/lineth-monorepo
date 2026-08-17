@@ -8,6 +8,9 @@
  */
 package maru.consensus.qbft
 
+import linea.teku.TekuWeb3JClientFactory
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock
@@ -17,7 +20,6 @@ import maru.core.BeaconBlock
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.GENESIS_EXECUTION_PAYLOAD
-import maru.core.HashUtil
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.core.ext.DataGenerators
@@ -27,10 +29,8 @@ import maru.executionlayer.client.PragueWeb3JJsonRpcExecutionLayerEngineApiClien
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
-import maru.mappers.Mappers.toDomain
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.headerHash
-import maru.serialization.rlp.stateRoot
+import maru.executionlayer.mappers.Mappers.toDomain
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
@@ -55,17 +55,14 @@ import org.mockito.kotlin.reset
 import org.mockito.kotlin.whenever
 import org.web3j.protocol.core.DefaultBlockParameter
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3jClientBuilder
 import tech.pegasys.teku.infrastructure.async.SafeFuture.completedFuture
-import tech.pegasys.teku.infrastructure.time.SystemTimeProvider
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
+import java.net.URI
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class EagerQbftBlockCreatorTest {
   private lateinit var cluster: Cluster
@@ -80,6 +77,11 @@ class EagerQbftBlockCreatorTest {
   private val prevRandaoProvider = { _: ULong, _: ByteArray -> Bytes32.random().toArray() }
   private lateinit var executionLayerManager: ExecutionLayerManager
   private val validatorSet = (DataGenerators.randomValidators() + validator).toSortedSet()
+  private val blockHashing =
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
+    )
 
   @BeforeEach
   fun beforeEach() {
@@ -91,12 +93,10 @@ class EagerQbftBlockCreatorTest {
     besuInstance = BesuFactory.buildTestBesu().also {
       cluster.start(it)
     }
-    ethApiClient = Web3jClientBuilder()
-      .endpoint(besuInstance.engineRpcUrl().get())
-      .timeout(Duration.ofMinutes(1))
-      .timeProvider(SystemTimeProvider.SYSTEM_TIME_PROVIDER)
-      .executionClientEventsPublisher { }
-      .build()
+    ethApiClient = TekuWeb3JClientFactory.create(
+      endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
+      timeout = 1.minutes,
+    )
     reset(
       proposerSelector,
       validatorProvider,
@@ -118,7 +118,7 @@ class EagerQbftBlockCreatorTest {
     round: Int,
   ): EagerQbftBlockCreator {
     whenever(
-      beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.hash()),
+      beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
     ).thenReturn(
       sealedGenesisBeaconBlock,
     )
@@ -165,7 +165,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val parentBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ),
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = genesisExecutionPayload),
@@ -210,9 +212,9 @@ class EagerQbftBlockCreatorTest {
       HashUtil.bodyRoot(acceptedBeaconBlock.beaconBlockBody),
     )
     assertThat(createdBlockHeader.stateRoot).isEqualTo(stateRoot)
-    assertThat(createdBlockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().hash())
+    assertThat(createdBlockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().beaconBlockIdHash())
     assertThat(
-      acceptedBeaconBlock.beaconBlockHeader.hash(),
+      acceptedBeaconBlock.beaconBlockHeader.beaconBlockIdHash(),
     ).isEqualTo(HashUtil.headerHash(acceptedBeaconBlock.beaconBlockHeader))
 
     // block body fields
@@ -238,7 +240,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val genesisBeaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U),
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ),
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),
@@ -291,7 +295,9 @@ class EagerQbftBlockCreatorTest {
         .toDomain()
     val genesisBeaconBlock =
       BeaconBlock(
-        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(0U), // Genesis block has number 0
+        beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+          0U,
+        ), // Genesis block has number 0
         beaconBlockBody = DataGenerators
           .randomBeaconBlockBody()
           .copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),
@@ -353,12 +359,10 @@ class EagerQbftBlockCreatorTest {
 
   private fun createExecutionLayerManager(): ExecutionLayerManager {
     val engineApiClient =
-      Web3jClientBuilder()
-        .endpoint(besuInstance.engineRpcUrl().get())
-        .timeout(Duration.ofMinutes(1))
-        .timeProvider(SystemTimeProvider.SYSTEM_TIME_PROVIDER)
-        .executionClientEventsPublisher { }
-        .build()
+      TekuWeb3JClientFactory.create(
+        endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
+        timeout = 1.minutes,
+      )
     return JsonRpcExecutionLayerManager(
       PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
         web3jClient = engineApiClient,
@@ -377,6 +381,7 @@ class EagerQbftBlockCreatorTest {
       validatorProvider = validatorProvider,
       beaconChain = beaconChain,
       round = round,
+      blockHashing = blockHashing,
     )
 
   /*

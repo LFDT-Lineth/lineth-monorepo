@@ -1,5 +1,5 @@
 # ZKC toolchain for RISC-V arithmetization.
-# Usage from linea-monorepo root:
+# Usage from lineth-monorepo root:
 #   make -C arithmetization check
 # Or from this directory:
 #   make check
@@ -7,61 +7,75 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 
-# Used to install zkc from go-corset repository (while zkc is not released yet).
-GO_CORSET ?= $(REPO_ROOT)/go-corset
-GO_CORSET_REPO ?= https://github.com/consensys/go-corset.git
+# Used to install zkc from repository (while zkc is not released yet).
+ZKC ?= $(REPO_ROOT)/zkc
+ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-GO_CORSET_REF_FOR_ZKC ?=414e7b73971eaa77afcb6a4797b44d0fdf8c99db
-
-# Used to install go-corset
-GO_CORSET_VERSION ?= v1.2.17
+ZKC_REF ?= v1.2.27
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
 SAIL_RISCV_VERSION ?= 0.11
 
-ZKC_FILES ?= $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
+ZKC_RISCV_INTERPRETER ?= $(shell find $(MAKEFILE_DIR)src/main/riscv/* -name "*.zkc")
+ZKC_ZKVM_LIBRARY ?= $(shell find $(MAKEFILE_DIR)src/main/lib/* -name "*.zkc")
+ZKC_FILES ?= $(ZKC_RISCV_INTERPRETER) $(ZKC_ZKVM_LIBRARY)
 ZKC_MAIN ?= $(MAKEFILE_DIR)src/main/riscv/main.zkc
 ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin
 ZKC_INPUT ?= input.json
 
-.PHONY: checkout-go-corset install-go-corset install-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
+.PHONY: checkout-zkc-repo echo-zkc-version install-zkc install-zkc-to install-sail zkc-compile zkc-check zkc-compile-and-check check
 
-# Fetch go-corset if missing (no-op when CI already checked it out into GO_CORSET).
-checkout-go-corset:
-	@if [ -d "$(GO_CORSET)/.git" ]; then \
-		echo "go-corset already present at $(GO_CORSET)"; \
+# Print the pinned zkc ref (used by CI setup to populate $GITHUB_ENV).
+echo-zkc-version:
+	@echo $(ZKC_REF)
+
+# Fetch zkc repository if missing (no-op when CI already checked it out into ZKC).
+checkout-zkc-repo:
+	@if [ -d "$(ZKC)/.git" ]; then \
+		echo "zkc already present at $(ZKC)"; \
 	else \
-		echo "Cloning $(GO_CORSET_REPO) -> $(GO_CORSET)"; \
-		git clone "$(GO_CORSET_REPO)" "$(GO_CORSET)"; \
+		echo "Cloning $(ZKC_REPO) -> $(ZKC)"; \
+		git clone --depth=1 "$(ZKC_REPO)" "$(ZKC)"; \
 	fi
-	@if [ -n "$(GO_CORSET_REF_FOR_ZKC)" ]; then \
-		git -C "$(GO_CORSET)" fetch origin "$(GO_CORSET_REF_FOR_ZKC)" || true; \
-		git -C "$(GO_CORSET)" checkout "$(GO_CORSET_REF_FOR_ZKC)"; \
-		git -C "$(GO_CORSET)" pull --ff-only origin "$(GO_CORSET_REF_FOR_ZKC)" 2>/dev/null || true; \
+	@if [ -n "$(ZKC_REF)" ]; then \
+		git -C "$(ZKC)" fetch --depth=1 origin "$(ZKC_REF)" && git -C "$(ZKC)" checkout FETCH_HEAD || true; \
 	fi
 
-# Install the zkc CLI from the go-corset repository.
-# - When GO_CORSET_REF_FOR_ZKC is set: always checkout the pinned ref and reinstall.
-# - When GO_CORSET_REF_FOR_ZKC is empty: skip if zkc is already on PATH.
-# To update zkc version with latest, make install-zkc GO_CORSET_REF_FOR_ZKC=main
+# Install the zkc CLI from the repository.
+# - When ZKC_REF is set: always checkout the pinned ref and reinstall.
+# - When ZKC_REF is empty: skip if zkc is already on PATH.
+# To update zkc version with latest, make install-zkc ZKC_REF=main
 install-zkc:
 	@set -eu; \
-	if [ -z "$(GO_CORSET_REF_FOR_ZKC)" ] && command -v zkc >/dev/null 2>&1; then \
+	if [ -z "$(ZKC_REF)" ] && command -v zkc >/dev/null 2>&1; then \
 		exit 0; \
 	fi; \
-	$(MAKE) checkout-go-corset; \
-	echo "Installing zkc from $(GO_CORSET)..."; \
-	cd "$(GO_CORSET)" && go install ./cmd/zkc
+	$(MAKE) checkout-zkc-repo; \
+	echo "Installing zkc from $(ZKC)..."; \
+	cd "$(ZKC)" && go install ./cmd/zkc
+
+# Build the zkc CLI to an explicit path instead of GOBIN, so a caller can pin one build without
+# disturbing the zkc already on PATH. Pass the result on with ZKC=... (see src/test/Makefile).
+# Building from the checkout also makes Go stamp vcs.revision into the binary, which `go version -m`
+# can then report as provenance.
+#   make install-zkc-to ZKC_BIN=/tmp/zkc-under-test ZKC_REF=v1.2.27
+install-zkc-to:
+	@[ -n "$(ZKC_BIN)" ] || { echo "ZKC_BIN is mandatory: make install-zkc-to ZKC_BIN=path/to/zkc [ZKC_REF=ref]"; exit 1; }
+	$(MAKE) checkout-zkc-repo
+	@echo "Building zkc from $(ZKC) -> $(ZKC_BIN)..."
+	@mkdir -p "$(dir $(ZKC_BIN))"
+	cd "$(ZKC)" && go build -o "$(abspath $(ZKC_BIN))" ./cmd/zkc
 
 # Compile zkc program in a binary file
 zkc-compile: $(ZKC_FILES)
 	mkdir -p $(ZKC_BINDIR)
-	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --wir $(ZKC_MAIN)
+	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --bci $(ZKC_MAIN)
 
-# Check execution of the compiled zkc binary against an input JSON
-# Only works for small zkc programs for now
+# Check execution of the compiled zkc binary against an input JSON.
+# Only practical for small zkc programs: constraint checking, not tracing, is the expensive half.
+# Measured weekly for the l2-execution guest — see arithmetization/src/test/scripts/README-weekly-metrics.md.
 zkc-check:
 	zkc exec --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
 
@@ -77,23 +91,6 @@ zkc-lint-apply:
 riscv-check-compilation: install-zkc zkc-compile
 
 riscv-check-lint: install-zkc zkc-lint
-
-# Install the go-corset CLI from a released version (skips if already at the target version).
-install-go-corset:
-	@if command -v go-corset >/dev/null 2>&1; then \
-		installed=$$(go-corset --version | sed 's/go-corset//;s/^ *//'); \
-		if [ "$$installed" = "$(GO_CORSET_VERSION)" ]; then \
-			echo "go-corset $(GO_CORSET_VERSION) already installed"; \
-		else \
-			echo "go-corset version mismatch: installed=$$installed expected=$(GO_CORSET_VERSION)"; \
-			echo "Installing go-corset@$(GO_CORSET_VERSION)..."; \
-			go install github.com/consensys/go-corset/cmd/go-corset@$(GO_CORSET_VERSION); \
-		fi; \
-	else \
-		echo "go-corset not found in PATH"; \
-		echo "Installing go-corset@$(GO_CORSET_VERSION)..."; \
-		go install github.com/consensys/go-corset/cmd/go-corset@$(GO_CORSET_VERSION); \
-	fi
 
 # Install Sail for ACT4 host builds. Other host tools are prerequisites.
 install-sail:

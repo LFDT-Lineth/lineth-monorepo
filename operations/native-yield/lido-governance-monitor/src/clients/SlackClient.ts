@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "@consensys/linea-shared-utils";
+import { fetchWithTimeout } from "@lfdt-lineth/shared-utils";
 
 import { ISlackClient, SlackNotificationResult } from "../core/clients/ISlackClient.js";
 import { Assessment, RiskLevel } from "../core/entities/Assessment.js";

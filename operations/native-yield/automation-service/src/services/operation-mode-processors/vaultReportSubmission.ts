@@ -1,4 +1,4 @@
-import { ILogger, attempt } from "@consensys/linea-shared-utils";
+import { ILogger, attempt } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";

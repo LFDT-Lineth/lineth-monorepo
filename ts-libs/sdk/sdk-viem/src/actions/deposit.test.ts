@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Client,
   Transport,
@@ -115,6 +115,14 @@ describe("deposit", () => {
     const l2Client = mockL2Client(undefined, mockAccount);
     await expect(deposit(client, { l2Client, token, to, amount, account: mockAccount })).rejects.toThrow(
       ClientChainNotConfiguredError,
+    );
+  });
+
+  it("throws if the settlement client chain has no default rollup address and rollupAddress is not provided", async () => {
+    const client = mockClient(linea.id, mockAccount);
+    const l2Client = mockL2Client(l2ChainId, mockAccount);
+    await expect(deposit(client, { l2Client, token, to, amount, account: mockAccount })).rejects.toThrow(
+      `Cannot resolve a default rollup contract address for chain ID ${linea.id}.`,
     );
   });
 
@@ -415,7 +423,7 @@ describe("deposit", () => {
       amount,
       data,
       account: mockAccount,
-      lineaRollupAddress: customAddress,
+      rollupAddress: customAddress,
       l2MessageServiceAddress: customAddress,
     });
     expect(sendTransaction).toHaveBeenCalledTimes(1);

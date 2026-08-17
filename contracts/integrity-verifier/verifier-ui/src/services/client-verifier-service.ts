@@ -15,8 +15,8 @@ import {
   type VerifierConfig,
   type NormalizedArtifact,
   type StorageSchema,
-} from "@consensys/linea-contract-integrity-verifier/browser";
-import { ViemAdapter } from "@consensys/linea-contract-integrity-verifier-viem";
+} from "@lfdt-lineth/contract-integrity-verifier/browser";
+import { ViemAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem";
 
 import { parseConfig, interpolateEnvVarsInContent, parseMarkdownConfig } from "@/lib/config-parser";
 import { DEFAULT_VERIFICATION_TIMEOUT_MS } from "@/lib/constants";

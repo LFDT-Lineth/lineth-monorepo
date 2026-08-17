@@ -22,7 +22,7 @@ func TestInvalidityBadNonceBalance(t *testing.T) {
 	for _, invalidityType := range []circuitInvalidity.InvalidityType{circuitInvalidity.BadNonce, circuitInvalidity.BadBalance} {
 
 		spec := &InvalidityProofSpec{
-			ChainID:             big.NewInt(51),
+			ChainID:             big.NewInt(59139),
 			ExpectedBlockHeight: 1_000_000_000,
 			FtxNumber:           1678,
 			InvalidityType:      &invalidityType,
@@ -48,7 +48,7 @@ func TestInvalidityFilteredAddress(t *testing.T) {
 		invType := invalidityType
 		t.Run(invType.String(), func(t *testing.T) {
 			spec := &InvalidityProofSpec{
-				ChainID:             big.NewInt(51),
+				ChainID:             big.NewInt(59139),
 				ExpectedBlockHeight: 1_000_000_000,
 				FtxNumber:           1678,
 				InvalidityType:      &invType,
@@ -74,7 +74,7 @@ func TestInvalidityBadPrecompile(t *testing.T) {
 		invType := invalidityType
 		t.Run(invType.String(), func(t *testing.T) {
 			spec := &InvalidityProofSpec{
-				ChainID:             big.NewInt(51),
+				ChainID:             big.NewInt(59139),
 				ExpectedBlockHeight: 1_000_000_000,
 				FtxNumber:           1678,
 				InvalidityType:      &invType,

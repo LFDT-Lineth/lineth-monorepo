@@ -454,6 +454,43 @@ describe("loadConfigFromEnv", () => {
     expect(config.riskAssessment.maxNotifyAttempts).toBe(5);
   });
 
+  it("loads the LiteLLM base URL from ANTHROPIC_BASE_URL when set", () => {
+    // Arrange
+    const env = {
+      DATABASE_URL: "postgresql://localhost:5432/test",
+      DISCOURSE_PROPOSALS_URL: "https://research.lido.fi/c/proposals/9/l/latest.json",
+      ANTHROPIC_API_KEY: "sk-litellm-xxx",
+      ANTHROPIC_BASE_URL: "https://example.com",
+      SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx",
+      ETHEREUM_RPC_URL: "https://mainnet.infura.io/v3/xxx",
+      LDO_VOTING_CONTRACT_ADDRESS: "0x2e59a20f205bb85a89c53f1936454680651e618e",
+    };
+
+    // Act
+    const config = loadConfigFromEnv(env);
+
+    // Assert
+    expect(config.anthropic.baseUrl).toBe("https://example.com");
+  });
+
+  it("leaves the base URL undefined when ANTHROPIC_BASE_URL is missing (direct Anthropic)", () => {
+    // Arrange
+    const env = {
+      DATABASE_URL: "postgresql://localhost:5432/test",
+      DISCOURSE_PROPOSALS_URL: "https://research.lido.fi/c/proposals/9/l/latest.json",
+      ANTHROPIC_API_KEY: "sk-ant-xxx",
+      SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx",
+      ETHEREUM_RPC_URL: "https://mainnet.infura.io/v3/xxx",
+      LDO_VOTING_CONTRACT_ADDRESS: "0x2e59a20f205bb85a89c53f1936454680651e618e",
+    };
+
+    // Act
+    const config = loadConfigFromEnv(env);
+
+    // Assert
+    expect(config.anthropic.baseUrl).toBeUndefined();
+  });
+
   it("uses default values when optional env vars are missing", () => {
     // Arrange
     const env = {

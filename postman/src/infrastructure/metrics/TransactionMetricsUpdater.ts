@@ -1,4 +1,4 @@
-import { IMetricsService } from "@consensys/linea-shared-utils";
+import { IMetricsService } from "@lfdt-lineth/shared-utils";
 
 import { LineaPostmanMetrics, ITransactionMetricsUpdater } from "../../core/metrics";
 

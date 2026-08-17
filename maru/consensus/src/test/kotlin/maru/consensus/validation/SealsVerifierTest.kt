@@ -36,7 +36,9 @@ class SealsVerifierTest {
   private val validSeal1 = Seal(ByteArray(32) { 10 })
   private val validSeal2 = Seal(ByteArray(32) { 11 })
 
-  private val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(1u)
+  private val beaconBlockHeader = DataGenerators.randomBeaconBlockHeader(
+    1u,
+  )
 
   @Test
   fun `test quorum threshold met`() {

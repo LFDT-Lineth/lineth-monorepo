@@ -1,7 +1,11 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { LogContractDeployment, getRequiredEnvVar, tryVerifyContractWithConstructorArgs } from "../common/helpers";
+import {
+  LogContractDeployment,
+  requireAddressFromRegistryOrEnv,
+  tryVerifyContractWithConstructorArgs,
+} from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 import { deployFromFactory } from "../scripts/hardhat/utils";
 
@@ -11,8 +15,8 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "CallForwardingProxy";
     const signer = await getUiSigner(hre);
 
-    // This should be the LineaRollup
-    const targetAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+    // This should be the LinethRollup
+    const targetAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
 
     const contract = await deployFromFactory(contractName, signer, targetAddress);
 

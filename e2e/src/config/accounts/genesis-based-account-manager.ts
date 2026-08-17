@@ -1,4 +1,4 @@
-import { normalizeAddress } from "@consensys/linea-shared-utils";
+import { normalizeAddress } from "@lfdt-lineth/shared-utils";
 import { readFileSync } from "fs";
 import { Client } from "viem";
 

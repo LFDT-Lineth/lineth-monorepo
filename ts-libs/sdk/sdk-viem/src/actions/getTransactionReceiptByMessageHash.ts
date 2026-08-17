@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -14,12 +14,17 @@ import {
 } from "viem";
 import { getContractEvents, getTransactionReceipt } from "viem/actions";
 
+import { MESSAGE_SENT_EVENT_ABI } from "../abis";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
 
 export type GetTransactionReceiptByMessageHashParameters = {
   messageHash: Hex;
   // Defaults to the message service address for the chain
   messageServiceAddress?: Address;
+  // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
+  // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
+  // not support large block ranges; otherwise the default full-range query will be rejected.
+  messageBlockNumber?: bigint;
 };
 
 export type GetTransactionReceiptByMessageHashReturnType<chain extends Chain | undefined> =
@@ -41,7 +46,7 @@ export type GetTransactionReceiptByMessageHashErrorType =
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getTransactionReceiptByMessageHash } from '@consensys/linea-sdk-viem'
+ * import { getTransactionReceiptByMessageHash } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,
@@ -50,6 +55,9 @@ export type GetTransactionReceiptByMessageHashErrorType =
  *
  * const transactionReceipt = await getTransactionReceiptByMessageHash(client, {
  *   transactionHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+ *   // Required if the RPC provider does not support large block ranges.
+ *   // It restricts the lookup to a single block.
+ *   messageBlockNumber: 1_234_567n,
  * });
  */
 export async function getTransactionReceiptByMessageHash<
@@ -59,7 +67,7 @@ export async function getTransactionReceiptByMessageHash<
   client: Client<Transport, chain, account>,
   parameters: GetTransactionReceiptByMessageHashParameters,
 ): Promise<GetTransactionReceiptByMessageHashReturnType<chain>> {
-  const { messageHash, messageServiceAddress } = parameters;
+  const { messageHash, messageServiceAddress, messageBlockNumber } = parameters;
 
   if (!client.chain) {
     throw new ChainNotFoundError();
@@ -67,28 +75,13 @@ export async function getTransactionReceiptByMessageHash<
 
   const [event] = await getContractEvents(client, {
     address: messageServiceAddress ?? getContractsAddressesByChainId(client.chain.id).messageService,
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          { indexed: true, internalType: "address", name: "_from", type: "address" },
-          { indexed: true, internalType: "address", name: "_to", type: "address" },
-          { indexed: false, internalType: "uint256", name: "_fee", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_value", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_nonce", type: "uint256" },
-          { indexed: false, internalType: "bytes", name: "_calldata", type: "bytes" },
-          { indexed: true, internalType: "bytes32", name: "_messageHash", type: "bytes32" },
-        ],
-        name: "MessageSent",
-        type: "event",
-      },
-    ] as const,
+    abi: MESSAGE_SENT_EVENT_ABI,
     eventName: "MessageSent",
     args: {
       _messageHash: messageHash,
     },
-    fromBlock: "earliest",
-    toBlock: "latest",
+    fromBlock: messageBlockNumber ?? "earliest",
+    toBlock: messageBlockNumber ?? "latest",
   });
 
   if (!event) {

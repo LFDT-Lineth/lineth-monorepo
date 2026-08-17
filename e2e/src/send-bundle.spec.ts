@@ -1,5 +1,5 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 import { Hash, Hex, parseEther, parseGwei, toHex, TransactionReceipt } from "viem";
 
 import { generateRandomUUIDv4, getRawTransactionHex, getTransactionHash, pollForBlockNumber } from "./common/utils";

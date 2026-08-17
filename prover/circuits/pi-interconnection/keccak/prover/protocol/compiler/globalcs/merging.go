@@ -13,7 +13,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/symbolic"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // mergingCtx collects all the compilation input, output and artefacts pertaining
@@ -200,12 +200,6 @@ func getExprRatio(expr *symbolic.Expression) int {
 		ratio        = utils.DivCeil(quotientSize, domainSize)
 	)
 	return utils.NextPowerOfTwo(max(1, ratio))
-}
-
-func getDegreeSimple() func(any) int {
-	return func(any) int {
-		return 1
-	}
 }
 
 // GetDegree is a generator returning a DegreeGetter that can be passed to

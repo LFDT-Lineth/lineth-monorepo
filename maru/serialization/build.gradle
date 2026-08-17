@@ -14,14 +14,13 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 dependencies {
   implementation(project(':maru:core'))
   implementation(project(':maru:config'))
   implementation(project(':maru:crypto'))
-  implementation(project(':maru:jvm-libs:extensions'))
   implementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
   implementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
   implementation "org.hyperledger.besu:besu-datatypes"

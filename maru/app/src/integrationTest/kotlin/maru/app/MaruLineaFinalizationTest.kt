@@ -10,6 +10,9 @@ package maru.app
 
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
+import linea.testing.besu.ethGetBlockByNumber
 import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -25,9 +28,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import testutils.FakeL1JsonRpcServer
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
-import testutils.besu.ethGetBlockByNumber
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.time.Duration.Companion.milliseconds

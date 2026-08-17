@@ -1,4 +1,4 @@
-import { etherToWei, normalizeAddress } from "@consensys/linea-shared-utils";
+import { etherToWei, normalizeAddress } from "@lfdt-lineth/shared-utils";
 import { Client, Hex, PrivateKeyAccount } from "viem";
 import { privateKeyToAccount, generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 

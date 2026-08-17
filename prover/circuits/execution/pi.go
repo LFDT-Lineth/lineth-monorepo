@@ -124,6 +124,9 @@ func (spiq *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	for i := range spiq.FinalRollingHashUpdate {
 		rc.Check(spiq.FinalRollingHashUpdate[i], 8)
 	}
+	for i := range spiq.InitialRollingHashUpdate {
+		rc.Check(spiq.InitialRollingHashUpdate[i], 8)
+	}
 	rc.Check(spiq.FinalBlockNumber, 64)
 	rc.Check(spiq.FinalBlockTimestamp, 64)
 	rc.Check(spiq.InitialBlockTimestamp, 64)
@@ -224,6 +227,7 @@ func (ds *DataChecksumSnark) Check(api frontend.API) error {
 	}
 
 	api.AssertIsEqual(compressor.Compress(ds.PartialHash, ds.Length), ds.Hash)
+	api.AssertIsLessOrEqual(ds.Length, uint64(1<<63)) // sanity check the length so it can't be used to roll around the modulus.
 
 	return nil
 }

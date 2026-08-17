@@ -38,7 +38,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * These tests address issue <a
- * href="https://github.com/Consensys/linea-monorepo/issues/2322">[ZkTracer] Test refunds for
+ * href="https://github.com/LFDT-Lineth/lineth-monorepo/issues/2322">[ZkTracer] Test refunds for
  * EIP-7702</a>
  */
 public class AccountDelegationAndRevertTests extends TracerTestBase {

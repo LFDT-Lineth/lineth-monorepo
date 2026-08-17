@@ -11,10 +11,10 @@ package maru.syncing.beaconchain.pipeline
 import maru.consensus.blockimport.SealedBeaconBlockImporter
 import maru.core.SealedBeaconBlock
 import maru.core.ext.DataGenerators.randomSealedBeaconBlock
-import maru.core.ext.DataGenerators.randomStatus
 import maru.p2p.MaruPeer
 import maru.p2p.PeerLookup
 import maru.p2p.ValidationResult
+import maru.p2p.ext.DataGenerators.randomStatus
 import maru.p2p.messages.BeaconBlocksByRangeResponse
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory.Config
 import org.assertj.core.api.Assertions.assertThat
@@ -80,9 +80,24 @@ class BeaconChainDownloadPipelineFactoryTest {
     val rangeResponses = mutableMapOf<Pair<ULong, ULong>, List<SealedBeaconBlock>>()
 
     // Ranges: [100, 109], [110, 119], [120, 125]
-    rangeResponses[100uL to 10uL] = (100uL..109uL).map { randomSealedBeaconBlock(it) }
-    rangeResponses[110uL to 10uL] = (110uL..119uL).map { randomSealedBeaconBlock(it) }
-    rangeResponses[120uL to 6uL] = (120uL..125uL).map { randomSealedBeaconBlock(it) }
+    rangeResponses[100uL to 10uL] =
+      (100uL..109uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
+    rangeResponses[110uL to 10uL] =
+      (110uL..119uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
+    rangeResponses[120uL to 6uL] =
+      (120uL..125uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
 
     rangeResponses.forEach { (range, blocks) ->
       val response = mock<BeaconBlocksByRangeResponse>()
@@ -116,9 +131,24 @@ class BeaconChainDownloadPipelineFactoryTest {
     val rangeResponses = mutableMapOf<Pair<ULong, ULong>, List<SealedBeaconBlock>>()
 
     // Ranges: [100, 109], [110, 119], [120, 125]
-    rangeResponses[100uL to 10uL] = (100uL..109uL).map { randomSealedBeaconBlock(it) }
-    rangeResponses[110uL to 10uL] = (110uL..119uL).map { randomSealedBeaconBlock(it) }
-    rangeResponses[120uL to 6uL] = (120uL..125uL).map { randomSealedBeaconBlock(it) }
+    rangeResponses[100uL to 10uL] =
+      (100uL..109uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
+    rangeResponses[110uL to 10uL] =
+      (110uL..119uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
+    rangeResponses[120uL to 6uL] =
+      (120uL..125uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
 
     rangeResponses.forEach { (range, blocks) ->
       val response = mock<BeaconBlocksByRangeResponse>()
@@ -150,7 +180,12 @@ class BeaconChainDownloadPipelineFactoryTest {
     val peer = mock<MaruPeer>()
     whenever(peerLookup.getPeers()).thenReturn(listOf(peer))
 
-    val blocks = listOf(randomSealedBeaconBlock(42uL))
+    val blocks =
+      listOf(
+        randomSealedBeaconBlock(
+          42uL,
+        ),
+      )
     val response = mock<BeaconBlocksByRangeResponse>()
     whenever(response.blocks).thenReturn(blocks)
     whenever(peer.sendBeaconBlocksByRange(42uL, 1uL)).thenReturn(completedFuture(response))
@@ -186,7 +221,12 @@ class BeaconChainDownloadPipelineFactoryTest {
     whenever(peerLookup.getPeers()).thenReturn(listOf(peer))
 
     // Create blocks for range [0, 50]
-    val blocks = (0uL..50uL).map { randomSealedBeaconBlock(it) }
+    val blocks =
+      (0uL..50uL).map {
+        randomSealedBeaconBlock(
+          it,
+        )
+      }
     val response = mock<BeaconBlocksByRangeResponse>()
     whenever(response.blocks).thenReturn(blocks)
     whenever(peer.sendBeaconBlocksByRange(0uL, 51uL)).thenReturn(completedFuture(response))
@@ -236,8 +276,14 @@ class BeaconChainDownloadPipelineFactoryTest {
     val peer = mock<MaruPeer>()
     whenever(peerLookup.getPeers()).thenReturn(listOf(peer))
 
-    val block1 = randomSealedBeaconBlock(ULong.MAX_VALUE - 2uL)
-    val block2 = randomSealedBeaconBlock(ULong.MAX_VALUE - 1uL)
+    val block1 =
+      randomSealedBeaconBlock(
+        ULong.MAX_VALUE - 2uL,
+      )
+    val block2 =
+      randomSealedBeaconBlock(
+        ULong.MAX_VALUE - 1uL,
+      )
 
     // Test with a range very close to ULong.MAX_VALUE
     val startBlock = ULong.MAX_VALUE - 2uL

@@ -1,5 +1,5 @@
-import { etherToWei } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { etherToWei } from "@lfdt-lineth/shared-utils";
 
 import { sendL1ToL2Message, sendL2ToL1Message } from "./common/test-helpers/messaging";
 import { getMessageSentEventFromLogs, waitForEvents } from "./common/utils";
@@ -136,7 +136,7 @@ describe("Messaging test suite", () => {
     async () => {
       const l2Account = await l2AccountManager.generateAccount();
       const l1PublicClient = context.l1PublicClient();
-      const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const l1BlockBeforeSend = await l1PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL2ToL1Message(context, {
@@ -152,8 +152,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for L2MessagingBlockAnchored event... blockNumber=${messageSentEvent.blockNumber}`);
       const [l2MessagingBlockAnchoredEvent] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "L2MessagingBlockAnchored",
         args: {
           l2Block: messageSentEvent.blockNumber,
@@ -168,8 +168,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for MessageClaimed event on L1... messageHash=${messageHash}`);
       const [messageClaimedEvent] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "MessageClaimed",
         args: {
           _messageHash: messageHash,
@@ -193,7 +193,7 @@ describe("Messaging test suite", () => {
     async () => {
       const l2Account = await l2AccountManager.generateAccount();
       const l1PublicClient = context.l1PublicClient();
-      const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const l1BlockBeforeSend = await l1PublicClient.getBlockNumber();
 
       const { txHash, receipt } = await sendL2ToL1Message(context, {
@@ -209,8 +209,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for L2MessagingBlockAnchored event... blockNumber=${messageSentEvent.blockNumber}`);
       const [l2MessagingBlockAnchoredEvent] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "L2MessagingBlockAnchored",
         args: {
           l2Block: messageSentEvent.blockNumber,
@@ -225,8 +225,8 @@ describe("Messaging test suite", () => {
 
       logger.debug(`Waiting for MessageClaimed event on L1. messageHash=${messageHash}`);
       const [messageClaimedEvent] = await waitForEvents(l1PublicClient, {
-        abi: lineaRollup.abi,
-        address: lineaRollup.address,
+        abi: linethRollup.abi,
+        address: linethRollup.address,
         eventName: "MessageClaimed",
         args: {
           _messageHash: messageHash,

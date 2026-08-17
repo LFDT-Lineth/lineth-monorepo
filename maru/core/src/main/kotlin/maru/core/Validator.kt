@@ -8,7 +8,7 @@
  */
 package maru.core
 
-import maru.extensions.encodeHex
+import linea.kotlin.encodeHex
 import org.apache.tuweni.bytes.Bytes
 
 data class Validator(
@@ -34,4 +34,9 @@ data class Validator(
   override fun toString(): String = "Validator(address=${address.encodeHex()})"
 
   override fun compareTo(other: Validator): Int = Bytes.wrap(address).compareTo(Bytes.wrap(other.address))
+
+  companion object {
+    /** The zero (20-byte) validator address. Used as a placeholder where the real proposer is irrelevant. */
+    val ZERO: Validator = Validator(ByteArray(20))
+  }
 }

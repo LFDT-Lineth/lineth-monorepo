@@ -1,0 +1,13 @@
+diff --git a/lib/config.js b/lib/config.js
+index 2701935576c82816c8944dfc021e8bd9f8f19d9e..3992035c068e0361e05e7fd436ad296a2ebf1266 100644
+--- a/lib/config.js
++++ b/lib/config.js
+@@ -432,7 +432,7 @@ function loadFile(file, overrides) {
+             console.error('Loading config: ' + file);
+         }
+         configObject = file.match(YML_PATTERN) ?
+-            yaml.safeLoad(fs.readFileSync(file, 'utf8'), { filename: file }) :
++            yaml.load(fs.readFileSync(file, 'utf8'), { filename: file }) :
+             require(path.resolve(file));
+     }
+ 

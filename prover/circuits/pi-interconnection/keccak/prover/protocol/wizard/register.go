@@ -1,8 +1,8 @@
 package wizard
 
 import (
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/collection"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // ByRoundRegister is a an abstract data-structure used to register the

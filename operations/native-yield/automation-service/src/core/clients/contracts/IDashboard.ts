@@ -1,4 +1,4 @@
-import { IBaseContractClient } from "@consensys/linea-shared-utils";
+import { IBaseContractClient } from "@lfdt-lineth/shared-utils";
 
 export interface IDashboard<TTransactionReceipt> extends IBaseContractClient {
   getNodeOperatorFeesPaidFromTxReceipt(txReceipt: TTransactionReceipt): bigint;

@@ -27,10 +27,6 @@ func Prove(cfg *config.Config, req *backendInvalidity.Request) (*backendInvalidi
 
 	profiling.SetMonitorParams(cfg)
 
-	// Initialize JSONL performance event logger
-	plog := execLimitless.NewPerfLogger()
-	defer plog.Close()
-
 	exit.SetIssueHandlingMode(exit.ExitOnUnsatisfiedConstraint | exit.ExitOnMissingTraceFile)
 
 	logrus.Infof("Starting limitless invalidity proof for type: %s", req.InvalidityType)
@@ -43,6 +39,8 @@ func Prove(cfg *config.Config, req *backendInvalidity.Request) (*backendInvalidi
 	if err != nil {
 		return nil, fmt.Errorf("could not decode the RlpEncodedTx: %w", err)
 	}
+
+	backendInvalidity.SanityCheckInvalidityChainConfig(cfg, tx)
 
 	funcInput := backendInvalidity.FuncInput(req, cfg)
 
@@ -99,6 +97,7 @@ func Prove(cfg *config.Config, req *backendInvalidity.Request) (*backendInvalidi
 			proof,
 			*funcInput,
 			req.InvalidityType,
+			cfg.TracesLimits.BlockL2L1Logs(),
 			config.ProverModeLimitless,
 		); err != nil {
 			utils.Panic("outer proof constraint check failed (DEBUG MODE): %v", err)
@@ -110,7 +109,7 @@ func Prove(cfg *config.Config, req *backendInvalidity.Request) (*backendInvalidi
 
 	// -- 1-4. Run the distributed pipeline: bootstrapper → GL/LPP segment
 	// proofs → shared randomness → hierarchical conglomeration.
-	pipeline, err := execLimitless.RunDistributedPipeline(cfg, zkevmWitness, plog)
+	pipeline, err := execLimitless.RunDistributedPipeline(cfg, zkevmWitness)
 	if err != nil {
 		return nil, fmt.Errorf("distributed pipeline failed: %w", err)
 	}

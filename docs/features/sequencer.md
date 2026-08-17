@@ -1,10 +1,10 @@
 # Sequencer
 
-> Linea's block-producing Besu plugin with transaction selection, validation, and gas estimation.
+> The block-producing Besu plugin with transaction selection, validation, and gas estimation.
 
 ## Overview
 
-The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](https://github.com/Consensys/maru) consensus client) that serves as the block producer. It uses a plugin architecture (`linea-besu/plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
+The sequencer is a Linea Besu node with QBFT consensus (via the [Maru](../../maru/) consensus client) that serves as the block producer. It uses a plugin architecture (`linea-besu/plugins/linea-sequencer/`) to enforce Linea-specific transaction selection and validation rules beyond standard Ethereum mempool logic. The sequencer is not directly accessible externally; RPC nodes forward transactions to it via P2P.
 
 Blocks are only produced when transactions exist — no empty blocks are created.
 
@@ -50,7 +50,7 @@ Before entering the mempool, transactions pass through:
 
 ## Priority Transactions
 
-Transactions from addresses in a predefined priority list are processed before normal transactions. These typically correspond to Linea system transactions (message anchoring, forced transactions).
+Transactions from addresses in a predefined priority list are processed before normal transactions. These typically correspond to Lineth system transactions (message anchoring, forced transactions).
 
 ## Gas Estimation
 
@@ -58,7 +58,7 @@ The sequencer exposes `linea_estimateGas` via the Besu plugin, which accounts fo
 
 ## Transaction Bundles
 
-Linea supports atomic transaction bundles via two custom JSON-RPC methods:
+Lineth supports atomic transaction bundles via two custom JSON-RPC methods:
 
 - `linea_sendBundle` — Submit a bundle of raw signed transactions targeting a specific block number. All transactions must be individually valid; if any fails, the entire bundle is reverted.
 - `linea_cancelBundle` — Cancel a previously submitted bundle by its bundle hash.

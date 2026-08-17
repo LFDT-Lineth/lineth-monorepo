@@ -4,7 +4,7 @@ import {
   ILogger,
   ViemWalletSignerClientAdapter,
   Web3SignerClientAdapter,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 import { type Chain } from "viem";
 
 import { SignerConfig } from "./SignerConfig";

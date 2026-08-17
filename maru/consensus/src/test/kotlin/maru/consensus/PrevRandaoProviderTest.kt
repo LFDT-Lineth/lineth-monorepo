@@ -8,9 +8,9 @@
  */
 package maru.consensus
 
+import linea.kotlin.encodeHex
+import linea.kotlin.xor
 import maru.crypto.Hashing
-import maru.extensions.encodeHex
-import maru.extensions.xor
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.random.Random
 import kotlin.test.Test

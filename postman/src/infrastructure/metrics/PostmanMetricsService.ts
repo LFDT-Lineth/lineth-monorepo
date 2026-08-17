@@ -1,4 +1,4 @@
-import { SingletonMetricsService } from "@consensys/linea-shared-utils";
+import { SingletonMetricsService } from "@lfdt-lineth/shared-utils";
 
 import { LineaPostmanMetrics } from "../../core/metrics/LineaPostmanMetrics";
 

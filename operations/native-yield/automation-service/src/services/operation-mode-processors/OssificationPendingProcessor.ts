@@ -1,4 +1,4 @@
-import { ILogger, attempt, msToSeconds } from "@consensys/linea-shared-utils";
+import { ILogger, attempt, msToSeconds } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";

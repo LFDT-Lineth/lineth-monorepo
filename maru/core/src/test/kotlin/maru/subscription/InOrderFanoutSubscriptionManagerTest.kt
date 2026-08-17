@@ -189,7 +189,6 @@ class InOrderFanoutSubscriptionManagerTest {
           notifications.add("handler$i called with: $data")
           SafeFuture.runAsync({
             Thread.sleep(5) // Simulate async processing delay
-            "handler2 called with: $data"
           })
         })
       }

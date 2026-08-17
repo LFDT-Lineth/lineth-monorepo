@@ -8,8 +8,8 @@
  */
 package maru.executionlayer.client
 
+import linea.teku.getEndpoint
 import maru.executionlayer.manager.LatestBlockMetadata
-import maru.extensions.getEndpoint
 import maru.metrics.MaruMetricsCategory
 import net.consensys.linea.metrics.DynamicTagTimer
 import net.consensys.linea.metrics.MetricsFacade

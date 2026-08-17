@@ -8,6 +8,8 @@
  */
 package maru.config.consensus
 
+import com.sksamuel.hoplite.ConfigException
+import linea.kotlin.decodeHex
 import maru.config.MaruConfigLoader.parseBeaconChainConfig
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
@@ -17,7 +19,6 @@ import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.core.Validator
-import maru.extensions.fromHexToByteArray
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -62,7 +63,7 @@ class JsonFriendlyForksScheduleTest {
             blockTimeSeconds = 4U,
             DifficultyAwareQbftConfig(
               QbftConsensusConfig(
-                validatorSet = setOf(Validator("0x121212ec3215d8ade8a33607f2cf0f4f60e5f0d0".fromHexToByteArray())),
+                validatorSet = setOf(Validator("0x121212ec3215d8ade8a33607f2cf0f4f60e5f0d0".decodeHex())),
                 fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Paris),
               ),
               terminalTotalDifficulty = 12U,
@@ -72,7 +73,7 @@ class JsonFriendlyForksScheduleTest {
             timestampSeconds = 4UL,
             blockTimeSeconds = 6U,
             configuration = QbftConsensusConfig(
-              validatorSet = setOf(Validator("0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0".fromHexToByteArray())),
+              validatorSet = setOf(Validator("0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0".decodeHex())),
               fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
             ),
           ),
@@ -99,5 +100,54 @@ class JsonFriendlyForksScheduleTest {
         invalidConfiguration,
       )
     }.isInstanceOf(Exception::class.java)
+  }
+
+  @Test
+  fun parserFailsWithReadableErrorIfClForkIsUnknown() {
+    val invalidConfiguration =
+      """
+      {
+        "chainId": 1337,
+        "config": {
+          "4": {
+            "type": "qbft",
+            "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+            "blockTimeSeconds": 6,
+            "clFork": "QBFT_PHASE2",
+            "elFork": "Prague"
+          }
+        }
+      }
+      """.trimIndent()
+    assertThatThrownBy {
+      parseBeaconChainConfig(
+        invalidConfiguration,
+      )
+    }.isInstanceOf(ConfigException::class.java)
+      .hasMessageContaining("Unknown clfork value 'QBFT_PHASE2'")
+  }
+
+  @Test
+  fun parserFailsWithReadableErrorIfElForkIsUnknown() {
+    val invalidConfiguration =
+      """
+      {
+        "chainId": 1337,
+        "config": {
+          "4": {
+            "type": "qbft",
+            "validatorSet": ["0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0"],
+            "blockTimeSeconds": 6,
+            "elFork": "Berlin"
+          }
+        }
+      }
+      """.trimIndent()
+    assertThatThrownBy {
+      parseBeaconChainConfig(
+        invalidConfiguration,
+      )
+    }.isInstanceOf(ConfigException::class.java)
+      .hasMessageContaining("Unknown elfork value 'Berlin'")
   }
 }

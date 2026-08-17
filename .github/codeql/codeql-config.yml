@@ -1,8 +1,8 @@
-name: "linea-monorepo"
+name: "lineth-monorepo"
 
 paths-ignore:
   # Gradle build output directories — generated sources, compiled classes, etc.
-  # Note: cannot use **/build/** because src/main/kotlin/build/linea/ is a real package
+  # Note: cannot use **/build/** because src/main/kotlin/build/lineth/ is a real package
   - "**/build/generated/**"
   - "**/build/classes/**"
   - "**/build/libs/**"
@@ -10,3 +10,13 @@ paths-ignore:
   - "**/build/reports/**"
   # Auto-generated Swagger client for load-testing tools
   - "testing-tools/traffic-generator/src/main/java/net/consensys/zkevm/load/swagger/**"
+  # Test and tooling sources (not shipped).
+  - "**/src/test/**"
+  - "**/src/testFixtures/**"
+  - "**/src/integrationTest/**"
+  - "**/*Test.java"
+  - "**/*Tests.java"
+  - "**/*_test.go"
+  - "**/test_*.py"
+  - "testing-tools/**"
+  - "tracer/testing/**"

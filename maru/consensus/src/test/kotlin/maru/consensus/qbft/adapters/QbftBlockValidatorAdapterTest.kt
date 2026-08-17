@@ -20,7 +20,9 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Optional
 
 class QbftBlockValidatorAdapterTest {
-  private val newBlock = DataGenerators.randomBeaconBlock(10u)
+  private val newBlock = DataGenerators.randomBeaconBlock(
+    10u,
+  )
   private lateinit var blockValidator: BlockValidator
 
   @Test

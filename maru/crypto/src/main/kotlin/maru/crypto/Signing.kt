@@ -8,19 +8,24 @@
  */
 package maru.crypto
 
+import linea.crypto.Secp256k1Signature
+import linea.kotlin.toBytes32
 import maru.core.Signer
-import maru.extensions.toBytes32
-import org.apache.tuweni.bytes.Bytes32
-import org.hyperledger.besu.cryptoservices.NodeKey
+import linea.crypto.Signer as AsyncSigner
 
 object Signing {
   class ULongSigner(
-    private val nodeKey: NodeKey,
+    private val signer: AsyncSigner<Secp256k1Signature>,
   ) : Signer<ULong> {
     override fun sign(signee: ULong): ByteArray =
-      nodeKey
-        .sign(Bytes32.wrap(signee.toBytes32()))
-        .encodedBytes()
-        .toArray()
+      try {
+        signer
+          .sign(signee.toBytes32())
+          .get()
+          .toRSBytes()
+      } catch (error: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw error
+      }
   }
 }

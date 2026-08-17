@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // Options controls the output of [Generate].
@@ -44,7 +44,7 @@ func Generate(sys *wiop.System, vars ActionVars, opts Options, w io.Writer) erro
 	extraImports := collectActionImports(vars)
 	allImports := dedup(append([]string{
 		"fmt",
-		"github.com/consensys/linea-monorepo/prover-ray/wiop",
+		"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop",
 	}, append(extraImports, opts.Imports...)...))
 	sort.Strings(allImports)
 
@@ -189,7 +189,7 @@ func (v *ActionVars) sortedVerifier() []namedVerifier {
 // For *pkg.Type it returns "*alias.Type" where alias is the last path segment.
 func concreteTypeName(v any) string {
 	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		alias := pkgAlias(t.Elem().PkgPath())
 		if alias == "" {
 			return "*" + t.Elem().Name()
@@ -204,7 +204,7 @@ func collectActionImports(vars ActionVars) []string {
 	seen := make(map[string]bool)
 	add := func(v any) {
 		t := reflect.TypeOf(v)
-		if t.Kind() == reflect.Ptr {
+		if t.Kind() == reflect.Pointer {
 			path := t.Elem().PkgPath()
 			if path != "" {
 				seen[path] = true

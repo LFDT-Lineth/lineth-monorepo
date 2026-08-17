@@ -1,16 +1,9 @@
-import {
-  bigintReplacer,
-  ILogger,
-  attempt,
-  msToSeconds,
-  weiToGweiNumber,
-  ONE_ETHER,
-} from "@consensys/linea-shared-utils";
+import { bigintReplacer, ILogger, attempt, msToSeconds, weiToGweiNumber, ONE_ETHER } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";
 import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
-import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
+import { ILinethRollupYieldExtension } from "../../core/clients/contracts/ILinethRollupYieldExtension.js";
 import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
 import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakingClient.js";
@@ -37,7 +30,7 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    * @param {IOperationModeMetricsRecorder} operationModeMetricsRecorder - Service for recording operation mode metrics from transaction receipts.
    * @param {IYieldManager<TransactionReceipt>} yieldManagerContractClient - Client for interacting with YieldManager contracts.
    * @param {ILazyOracle<TransactionReceipt>} lazyOracleContractClient - Client for waiting on LazyOracle events.
-   * @param {ILineaRollupYieldExtension<TransactionReceipt>} lineaRollupYieldExtensionClient - Client for interacting with LineaRollupYieldExtension contracts.
+   * @param {ILinethRollupYieldExtension<TransactionReceipt>} linethRollupYieldExtensionClient - Client for interacting with LinethRollupYieldExtension contracts.
    * @param {ILidoAccountingReportClient} lidoAccountingReportClient - Client for submitting Lido accounting reports.
    * @param {IBeaconChainStakingClient} beaconChainStakingClient - Client for managing beacon chain staking operations.
    * @param {IVaultHub<TransactionReceipt>} vaultHubContractClient - Client for interacting with VaultHub contracts.
@@ -56,7 +49,7 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     private readonly operationModeMetricsRecorder: IOperationModeMetricsRecorder,
     private readonly yieldManagerContractClient: IYieldManager<TransactionReceipt>,
     private readonly lazyOracleContractClient: ILazyOracle<TransactionReceipt>,
-    private readonly lineaRollupYieldExtensionClient: ILineaRollupYieldExtension<TransactionReceipt>,
+    private readonly linethRollupYieldExtensionClient: ILinethRollupYieldExtension<TransactionReceipt>,
     private readonly lidoAccountingReportClient: ILidoAccountingReportClient,
     private readonly beaconChainStakingClient: IBeaconChainStakingClient,
     private readonly vaultHubContractClient: IVaultHub<TransactionReceipt>,
@@ -282,7 +275,7 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     // Rebalance first - tolerate failures because fresh vault report should not be blocked
     const transferFundsForNativeYieldResult = await attempt(
       this.logger,
-      () => this.lineaRollupYieldExtensionClient.transferFundsForNativeYield(rebalanceAmount),
+      () => this.linethRollupYieldExtensionClient.transferFundsForNativeYield(rebalanceAmount),
       "_handleStakingRebalance - transferFundsForNativeYield failed (tolerated)",
     );
     // Only do YieldManager->YieldProvider, if L1MessageService->YieldManager succeeded

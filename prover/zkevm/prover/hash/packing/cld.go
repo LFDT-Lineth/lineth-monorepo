@@ -192,7 +192,7 @@ func (decomposed decomposition) csDecomposedLimbs(
 		))
 
 	// For columns 1 to last-1
-	for i := 1; i < last-1; i++ {
+	for i := 1; i < last; i++ {
 		comp.InsertGlobal(0, ifaces.QueryIDf("%v_DecomposedLimbs_%v", decomposed.Inputs.Name, i),
 			sym.Mul(
 				sym.Sub(

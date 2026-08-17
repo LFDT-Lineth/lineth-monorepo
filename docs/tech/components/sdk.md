@@ -1,12 +1,12 @@
 # SDK
 
-> TypeScript SDK for bridging and cross-chain messaging between Ethereum and Linea.
+> TypeScript SDK for bridging and cross-chain messaging between Ethereum and Lineth.
 
 > **Diagrams:** [SDK Architecture](../diagrams/sdk-architecture.mmd) | [L1→L2 Deposit Flow](../diagrams/l1-to-l2-deposit-flow.mmd) | [L2→L1 Withdrawal Flow](../diagrams/l2-to-l1-withdrawal-flow.mmd)
 
 ## Overview
 
-The Linea SDK enables developers to:
+The Lineth SDK enables developers to:
 - Bridge ETH and ERC20 tokens between L1 and L2
 - Send cross-chain messages
 - Track message and bridge transaction status
@@ -16,20 +16,20 @@ The Linea SDK enables developers to:
 
 ```
 ts-libs/sdk/
-├── sdk-core/           # @consensys/linea-sdk-core
+├── sdk-core/           # @lfdt-lineth/sdk-core
 │   │                   # Shared types, utilities, constants
 │   └── src/
 │       ├── types/
 │       ├── utils/
 │       └── constants/
 │
-├── sdk-viem/           # @consensys/linea-sdk-viem
+├── sdk-viem/           # @lfdt-lineth/sdk-viem
 │   │                   # Viem-based implementation
 │   └── src/
 │       ├── actions/
 │       └── decorators/
 │
-└── sdk-ethers/         # @consensys/linea-sdk
+└── sdk-ethers/         # @lfdt-lineth/sdk
                         # Ethers.js v6 implementation
 ```
 
@@ -42,9 +42,9 @@ ts-libs/sdk/
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │                       User Application                           │  │
 │  │                                                                  │  │
-│  │  import { LineaSDK } from "@consensys/linea-sdk"                 │  │
+│  │  import { LineaSDK } from "@lfdt-lineth/sdk"                 │  │
 │  │  // OR                                                           │  │
-│  │  import { publicActionsL1 } from "@consensys/linea-sdk-viem"     │  │
+│  │  import { publicActionsL1 } from "@lfdt-lineth/sdk-viem"     │  │
 │  │                                                                  │  │
 │  └──────────────────────────────┬───────────────────────────────────┘  │
 │                                 │                                      │
@@ -62,7 +62,7 @@ ts-libs/sdk/
 │  │  └──────────────────────┘  │  │  │ - claimOnL1()        │  │        │
 │  │                            │  │  │ - claimOnL2()        │  │        │
 │  │  ┌──────────────────────┐  │  │  └──────────────────────┘  │        │
-│  │  │ LineaRollupClient    │  │  │                            │        │
+│  │  │ LinethRollupClient    │  │  │                            │        │
 │  │  │ L2MessageService     │  │  │  ┌──────────────────────┐  │        │
 │  │  │    Client            │  │  │  │   Public Actions     │  │        │
 │  │  └──────────────────────┘  │  │  │                      │  │        │
@@ -98,11 +98,11 @@ Each SDK package has its own detailed documentation:
 
 | Package | Install | Documentation |
 |---------|---------|---------------|
-| **sdk-viem** (recommended) | `npm install @consensys/linea-sdk-viem viem` | [README](../../../ts-libs/sdk/sdk-viem/README.md) |
-| **sdk-ethers** | `npm install @consensys/linea-sdk` | [README](../../../ts-libs/sdk/sdk-ethers/README.md) |
-| **sdk-core** | `npm install @consensys/linea-sdk-core` | Types & utilities only |
+| **sdk-viem** (recommended) | `npm install @lfdt-lineth/sdk-viem viem` | [README](../../../ts-libs/sdk/sdk-viem/README.md) |
+| **sdk-ethers** | `npm install @lfdt-lineth/sdk` | [README](../../../ts-libs/sdk/sdk-ethers/README.md) |
+| **sdk-core** | `npm install @lfdt-lineth/sdk-core` | Types & utilities only |
 
-> **Note:** `viem@>=2.22.0` is a required peer dependency for `@consensys/linea-sdk-viem`.
+> **Note:** `viem@>=2.22.0` is a required peer dependency for `@lfdt-lineth/sdk-viem`.
 
 ### Quick Comparison
 
@@ -156,7 +156,7 @@ interface MessageProof {
 ```typescript
 const mainnetAddresses = {
   l1: {
-    lineaRollup: '0xd19d4B5d358258f05D7B411E21A1460D11B0876F',
+    linethRollup: '0xd19d4B5d358258f05D7B411E21A1460D11B0876F',
     tokenBridge: '0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319',
   },
   l2: {
@@ -171,7 +171,7 @@ const mainnetAddresses = {
 ```typescript
 const sepoliaAddresses = {
   l1: {
-    lineaRollup: '0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5',
+    linethRollup: '0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5',
     tokenBridge: '0x5506A3805fB6C857D16e3ce28e8D13fCB12F6433',
   },
   l2: {

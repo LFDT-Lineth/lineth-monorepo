@@ -69,11 +69,11 @@ func (circuit *BadNonceBalanceCircuit) Define(api frontend.API) error {
 	// Reconstruct account nonce from limbs (4 x 16-bit, big-endian)
 	accountNonce := combine16BitLimbs(api, toNativeSlice(account.Nonce[:]))
 
-	// Bad nonce: if invalidityType == 0 ----> tx nonce != account nonce + 1
+	// Bad nonce: if invalidityType == 0 ----> tx nonce != account nonce
 	nonceDiff := api.Add(
 		api.Mul(
 			api.Sub(1, circuit.InvalidityType),
-			api.Sub(circuit.TxNonce, api.Add(accountNonce, 1)),
+			api.Sub(circuit.TxNonce, accountNonce),
 		),
 		circuit.InvalidityType)
 	api.AssertIsDifferent(nonceDiff, 0)
@@ -179,7 +179,7 @@ func (cir *BadNonceBalanceCircuit) Assign(assi AssigningInputs) {
 	if assi.InvalidityType != BadNonce && assi.InvalidityType != BadBalance {
 		utils.Panic("expected invalidity type BadNonce or BadBalance but received %v", assi.InvalidityType)
 	}
-	if txNonce == uint64(acNonce+1) && assi.InvalidityType == BadNonce {
+	if txNonce == uint64(acNonce) && assi.InvalidityType == BadNonce {
 		utils.Panic("tried to generate a bad-nonce proof for a possibly valid transaction")
 	}
 	if txCost.Cmp(balance) != 1 && assi.InvalidityType == BadBalance {

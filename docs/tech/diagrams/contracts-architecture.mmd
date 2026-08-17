@@ -2,19 +2,19 @@
 flowchart TB
     subgraph L1["L1 (ETHEREUM)"]
         subgraph Rollup["Rollup Core"]
-            LineaRollup["LineaRollup<br/>(Transparent Proxy)<br/><br/>- Data submission<br/>- State finalization<br/>- Message anchoring"]
+            LinethRollup["LinethRollup<br/>(Transparent Proxy)<br/><br/>- Data submission<br/>- State finalization<br/>- Message anchoring"]
             PlonkVerifier["PlonkVerifier<br/><br/>- ZK proof verification"]
         end
 
         subgraph MessagingL1["Messaging"]
-            L1MessageService["L1MessageService<br/>(in LineaRollup)<br/><br/>- sendMessage()<br/>- claimMessageWithProof()"]
+            L1MessageService["L1MessageService<br/>(in LinethRollup)<br/><br/>- sendMessage()<br/>- claimMessageWithProof()"]
         end
 
         subgraph BridgeL1["Token Bridge"]
             TokenBridgeL1["TokenBridge L1<br/><br/>- bridgeToken()<br/>- Native bridge support"]
         end
 
-        LineaRollup --> PlonkVerifier
+        LinethRollup --> PlonkVerifier
     end
 
     subgraph L2["L2 (LINEA)"]

@@ -9,7 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/consensys/gnark/frontend"
 	snarkHash "github.com/consensys/gnark/std/hash"
@@ -67,19 +67,24 @@ type ReaderHashSnark struct {
 	api frontend.API
 }
 
-// GetRepoRootPath assumes that current working directory is within the repo
+// GetRepoRootPath returns the monorepo root by walking up from the current
+// working directory until it finds the .git marker. Independent of the
+// checkout directory name.
 func GetRepoRootPath() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
-	const repoName = "linea-monorepo"
-	i := strings.LastIndex(wd, repoName)
-	if i == -1 {
-		return "", errors.New("could not find repo root")
+	for dir := wd; ; {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errors.New("could not find repo root")
+		}
+		dir = parent
 	}
-	i += len(repoName)
-	return wd[:i], nil
 }
 
 // GetZkevmWitness returns a [zkevm.Witness]

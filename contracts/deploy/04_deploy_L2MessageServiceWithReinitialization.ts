@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
+import { tryVerifyContract, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
@@ -12,7 +12,11 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
     const contractName = "L2MessageService";
 
-    const proxyAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
+    const proxyAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L2MessageService",
+      "L2_MESSAGE_SERVICE_ADDRESS",
+    );
 
     const factory = await ethers.getContractFactory(contractName, signer);
 

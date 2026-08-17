@@ -8,7 +8,7 @@ import {
   PendingPartialWithdrawal,
   safeSub,
   SHARD_COMMITTEE_PERIOD,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 
 import { IValidatorDataClient } from "../core/clients/IValidatorDataClient.js";
 import { ALL_VALIDATORS_BY_LARGEST_BALANCE_QUERY } from "../core/entities/graphql/ActiveValidatorsByLargestBalance.js";

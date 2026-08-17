@@ -51,6 +51,9 @@ class MinimalQbftMessageDecoderTest {
   private val roundIdentifier = ConsensusRoundIdentifier(sequenceNumber.toLong(), roundNumber)
   private val blockHash = Hash.hash(Bytes.wrap(Random.nextBytes(32)))
 
+  // Decoding proposal/round-change blocks must inject a fork-aware header hash function (PHASE0 at ts 0).
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
+
   @Test
   fun `should decode Prepare message`() {
     val preparePayload = PreparePayload(roundIdentifier, blockHash)
@@ -88,9 +91,13 @@ class MinimalQbftMessageDecoderTest {
 
   @Test
   fun `should decode Proposal message`() {
-    val beaconBlock = DataGenerators.randomBeaconBlock(sequenceNumber.toULong())
+    val beaconBlock =
+      DataGenerators.randomBeaconBlock(
+        sequenceNumber.toULong(),
+      )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
-    val proposalPayload = ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter)
+    val proposalPayload =
+      ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer))
     val signature = nodeKey.sign(Bytes32.wrap(proposalPayload.hashForSignature().bytes))
     val signedPayload = SignedData.create(proposalPayload, signature)
     val proposal = Proposal(signedPayload, emptyList(), emptyList())
@@ -110,7 +117,14 @@ class MinimalQbftMessageDecoderTest {
     val roundChangePayload = RoundChangePayload(roundIdentifier, Optional.empty())
     val signature = nodeKey.sign(Bytes32.wrap(roundChangePayload.hashForSignature().bytes))
     val signedPayload = SignedData.create(roundChangePayload, signature)
-    val roundChange = RoundChange(signedPayload, Optional.empty(), Optional.empty(), QbftBlockCodecAdapter, emptyList())
+    val roundChange =
+      RoundChange(
+        signedPayload,
+        Optional.empty(),
+        Optional.empty(),
+        QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer),
+        emptyList(),
+      )
     val messageData = RoundChangeMessageData.create(roundChange)
     val qbftMessage = mock<QbftMessage>()
     whenever(qbftMessage.data).thenReturn(messageData)

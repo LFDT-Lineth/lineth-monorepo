@@ -2,7 +2,7 @@
 
 > **Diagram:** [Component Dependency Graph](../diagrams/component-dependency-graph.mmd) (Mermaid source)
 
-This section provides detailed documentation for each component in the Linea monorepo.
+This section provides detailed documentation for each component in the Lineth monorepo.
 
 ## Component Index
 
@@ -127,8 +127,8 @@ root package.json
 
 ### TypeScript
 
-- Node.js >= 24.14.1 required
-- pnpm >= 10.32.1 for package management
+- Node.js >= 24.18.0 required
+- pnpm >= 11.9.0 for package management
 - Build: `pnpm run build`
 - Test: `pnpm run test`
 - Lint: `pnpm run lint`

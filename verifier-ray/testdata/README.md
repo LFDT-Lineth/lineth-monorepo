@@ -1,15 +1,23 @@
 # verifier-ray testdata
 
-Fixtures in this directory should be exported from `prover-ray` and consumed by
-the Zig verifier tests. Keep files small and deterministic.
+Fixtures in this directory are exported from local `prover-ray` references and consumed by verifier-ray tests. Keep files small and deterministic.
 
-Suggested groups:
+Generated Zig fixtures live in:
 
-- `field/` for Koalabear and extension arithmetic vectors.
-- `transcript/` for Fiat-Shamir transcript vectors.
-- `vortex/` for commitment opening vectors.
-- `generated/` for generated verifier golden files.
+```text
+testdata/generated/vectors.zig
+testdata/generated/vanishing.zig
+```
 
-Run `make generate-testdata` from `verifier-ray/` to refresh the generated Zig
-vectors from local `prover-ray` references. `make verify-testdata` refreshes the
-vectors and fails if the checked-in output is stale.
+Native and R5 smoke-test binary inputs live in:
+
+```text
+testdata/inputs/passing.bin
+testdata/inputs/failing.bin
+```
+
+Refresh generated Zig fixtures from `verifier-ray/` with:
+
+```bash
+make generate-testdata
+```

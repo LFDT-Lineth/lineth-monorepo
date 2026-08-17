@@ -8,7 +8,7 @@
  */
 package maru.executionlayer.manager
 
-import maru.extensions.encodeHex
+import linea.kotlin.encodeHex
 
 enum class ExecutionPayloadStatus(
   private val validity: Validity,

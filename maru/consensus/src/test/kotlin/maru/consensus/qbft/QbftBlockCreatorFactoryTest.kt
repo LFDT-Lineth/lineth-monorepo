@@ -30,6 +30,11 @@ class QbftBlockCreatorFactoryTest {
 
   @Suppress("UNCHECKED_CAST")
   private val prevRandaoProvider = Mockito.mock(PrevRandaoProvider::class.java) as PrevRandaoProvider<ULong>
+  private val blockHashing =
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
+    )
 
   private fun createFactory(): QbftBlockCreatorFactory {
     whenever(beaconChain.getLatestBeaconState()).thenReturn(
@@ -44,6 +49,7 @@ class QbftBlockCreatorFactoryTest {
       prevRandaoProvider = prevRandaoProvider,
       feeRecipient = ByteArray(20),
       eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(100.milliseconds),
+      blockHashing = blockHashing,
     )
   }
 

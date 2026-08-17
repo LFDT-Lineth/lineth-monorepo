@@ -8,9 +8,9 @@
  */
 package maru.executionlayer.manager
 
+import linea.kotlin.encodeHex
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
-import maru.extensions.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class ForkChoiceUpdatedResult(

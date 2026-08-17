@@ -9,35 +9,15 @@
 package maru.serialization.rlp
 
 import maru.core.BeaconBlockHeader
-import maru.core.Hasher
-import maru.core.HeaderHashFunction
-import maru.serialization.SerDe
-import org.apache.tuweni.bytes.Bytes
+import maru.core.BeaconBlockIdHashFunction
 import org.hyperledger.besu.ethereum.rlp.RLPInput
-import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 class BeaconBlockHeaderSerDe(
+  beaconBlockHeaderRLPSerializer: BeaconBlockHeaderRLPSerializer,
   private val validatorSerializer: ValidatorSerDe,
-  private val hasher: Hasher,
-  private val headerHashFunction: (SerDe<BeaconBlockHeader>, Hasher) -> HeaderHashFunction,
-) : RLPSerDe<BeaconBlockHeader> {
-  override fun writeTo(
-    value: BeaconBlockHeader,
-    rlpOutput: RLPOutput,
-  ) {
-    rlpOutput.startList()
-
-    rlpOutput.writeLong(value.number.toLong())
-    rlpOutput.writeInt(value.round.toInt())
-    rlpOutput.writeLong(value.timestamp.toLong())
-    validatorSerializer.writeTo(value.proposer, rlpOutput)
-    rlpOutput.writeBytes(Bytes.wrap(value.parentRoot))
-    rlpOutput.writeBytes(Bytes.wrap(value.stateRoot))
-    rlpOutput.writeBytes(Bytes.wrap(value.bodyRoot))
-
-    rlpOutput.endList()
-  }
-
+  private val beaconBlockIdHashFunction: BeaconBlockIdHashFunction,
+) : RLPSerDe<BeaconBlockHeader>,
+  RLPSerializer<BeaconBlockHeader> by beaconBlockHeaderRLPSerializer {
   override fun readFrom(rlpInput: RLPInput): BeaconBlockHeader {
     rlpInput.enterList()
 
@@ -59,7 +39,7 @@ class BeaconBlockHeaderSerDe(
       parentRoot = parentRoot,
       stateRoot = stateRoot,
       bodyRoot = bodyRoot,
-      headerHashFunction(this, hasher),
+      beaconBlockIdHashFunction = beaconBlockIdHashFunction,
     )
   }
 }

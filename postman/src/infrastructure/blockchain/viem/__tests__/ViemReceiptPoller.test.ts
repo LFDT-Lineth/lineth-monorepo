@@ -1,5 +1,5 @@
-import { ILogger } from "@consensys/linea-shared-utils";
 import { describe, it, beforeEach, expect } from "@jest/globals";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { mock } from "jest-mock-extended";
 
 import { ITransactionProvider } from "../../../../core/clients/blockchain/IProvider";

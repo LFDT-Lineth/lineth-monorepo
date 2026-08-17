@@ -1,4 +1,4 @@
-import { serialize } from "@consensys/linea-shared-utils";
+import { serialize } from "@lfdt-lineth/shared-utils";
 import { Abi, Address, BlockNumber, BlockTag, ContractEventArgs, ContractEventName } from "viem";
 
 export class WaitForEventsTimeoutError<

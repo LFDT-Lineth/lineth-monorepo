@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -42,10 +42,18 @@ import {
 } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
+import {
+  BRIDGED_TO_NATIVE_TOKEN_ABI,
+  BRIDGE_TOKEN_ABI,
+  CLAIM_MESSAGE_ABI,
+  COMPLETE_BRIDGING_ABI,
+  SEND_MESSAGE_ABI,
+} from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash } from "../utils/computeMessageHash";
 import { getNextMessageNonce, GetNextMessageNonceErrorType } from "../utils/getNextMessageNonce";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type DepositParameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -64,7 +72,7 @@ export type DepositParameters<
     amount: bigint;
     data?: Hex;
     // defaults to the message service address for the chain
-    lineaRollupAddress?: Address;
+    rollupAddress?: Address;
     // defaults to the L2 message service address for the chain
     l2MessageServiceAddress?: Address;
     // defaults to the L1 token bridge address for the chain
@@ -87,7 +95,8 @@ export type DepositErrorType =
   | EncodeAbiParametersErrorType
   | ChainNotFoundErrorType
   | ClientChainNotConfiguredErrorType
-  | AccountNotFoundErrorType;
+  | AccountNotFoundErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Deposits tokens from L1 to L2 or ETH if `token` is set to `zeroAddress`.
@@ -100,7 +109,7 @@ export type DepositErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet, linea } from 'viem/chains'
- * import { deposit } from '@consensys/linea-sdk-viem'
+ * import { deposit } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -126,7 +135,7 @@ export type DepositErrorType =
  * import { createPublicClient, createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet, linea } from 'viem/chains'
- * import { deposit } from '@consensys/linea-sdk-viem'
+ * import { deposit } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),
@@ -180,7 +189,7 @@ export async function deposit<
   const l1ChainId = client.chain.id;
   const l2ChainId = l2Client.chain.id;
 
-  const lineaRollupAddress = parameters.lineaRollupAddress ?? getContractsAddressesByChainId(l1ChainId).messageService;
+  const rollupAddress = resolveRollupAddress(l1ChainId, parameters.rollupAddress);
   const l2MessageServiceAddress =
     parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(l2ChainId).messageService;
   const l1TokenBridgeAddress = parameters.l1TokenBridgeAddress ?? getContractsAddressesByChainId(l1ChainId).tokenBridge;
@@ -190,7 +199,7 @@ export async function deposit<
     return depositETH(client, {
       l2Client,
       account,
-      lineaRollupAddress,
+      rollupAddress,
       l2MessageServiceAddress,
       to: to as Address,
       fee,
@@ -203,7 +212,7 @@ export async function deposit<
   return depositERC20(client, {
     l2Client,
     account,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     l1TokenBridgeAddress,
     l2TokenBridgeAddress,
@@ -242,23 +251,7 @@ async function estimateEthBridgingGasUsed<chain extends Chain | undefined, _acco
 
   return estimateContractGas(client, {
     address: l2MessageServiceAddress,
-    abi: [
-      {
-        inputs: [
-          { internalType: "address", name: "_from", type: "address" },
-          { internalType: "address", name: "_to", type: "address" },
-          { internalType: "uint256", name: "_fee", type: "uint256" },
-          { internalType: "uint256", name: "_value", type: "uint256" },
-          { internalType: "address payable", name: "_feeRecipient", type: "address" },
-          { internalType: "bytes", name: "_calldata", type: "bytes" },
-          { internalType: "uint256", name: "_nonce", type: "uint256" },
-        ],
-        name: "claimMessage",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ] as const,
+    abi: CLAIM_MESSAGE_ABI,
     functionName: "claimMessage",
     account: account as `0x${string}`,
     args: [account, recipient, 0n, amount, zeroAddress as `0x${string}`, "0x" as `0x${string}`, nextMessageNonce],
@@ -308,41 +301,7 @@ async function estimateERC20BridgingGasUsed<
   });
 
   const encodedData = encodeFunctionData({
-    abi: [
-      {
-        inputs: [
-          {
-            internalType: "address",
-            name: "_nativeToken",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "_amount",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "_recipient",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "_chainId",
-            type: "uint256",
-          },
-          {
-            internalType: "bytes",
-            name: "_tokenMetadata",
-            type: "bytes",
-          },
-        ],
-        name: "completeBridging",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ],
+    abi: COMPLETE_BRIDGING_ABI,
     functionName: "completeBridging",
     args: [tokenAddress, amount, recipient, BigInt(chainId), tokenMetadata],
   });
@@ -361,23 +320,7 @@ async function estimateERC20BridgingGasUsed<
 
   return estimateContractGas(client, {
     address: l2MessageServiceAddress,
-    abi: [
-      {
-        inputs: [
-          { internalType: "address", name: "_from", type: "address" },
-          { internalType: "address", name: "_to", type: "address" },
-          { internalType: "uint256", name: "_fee", type: "uint256" },
-          { internalType: "uint256", name: "_value", type: "uint256" },
-          { internalType: "address payable", name: "_feeRecipient", type: "address" },
-          { internalType: "bytes", name: "_calldata", type: "bytes" },
-          { internalType: "uint256", name: "_nonce", type: "uint256" },
-        ],
-        name: "claimMessage",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ] as const,
+    abi: CLAIM_MESSAGE_ABI,
     functionName: "claimMessage",
     account: account,
     args: [l1TokenBridgeAddress, l2TokenBridgeAddress, 0n, 0n, zeroAddress, encodedData, nextMessageNonce],
@@ -414,27 +357,7 @@ async function prepareERC20TokenParams<chain extends Chain | undefined, _account
       },
       {
         address: getContractsAddressesByChainId(l1ChainId).tokenBridge,
-        abi: [
-          {
-            inputs: [
-              {
-                internalType: "address",
-                name: "bridged",
-                type: "address",
-              },
-            ],
-            name: "bridgedToNativeToken",
-            outputs: [
-              {
-                internalType: "address",
-                name: "native",
-                type: "address",
-              },
-            ],
-            stateMutability: "view",
-            type: "function",
-          },
-        ],
+        abi: BRIDGED_TO_NATIVE_TOKEN_ABI,
         functionName: "bridgedToNativeToken",
         args: [token],
       },
@@ -512,7 +435,7 @@ async function depositETH<
   parameters: {
     l2Client: Client<Transport, chainL2, accountL2>;
     account: Account;
-    lineaRollupAddress: Address;
+    rollupAddress: Address;
     l2MessageServiceAddress: Address;
     to: Address;
     fee: bigint | undefined;
@@ -524,24 +447,14 @@ async function depositETH<
     >;
   },
 ): Promise<DepositReturnType> {
-  const {
-    l2Client,
-    account: account_,
-    lineaRollupAddress,
-    l2MessageServiceAddress,
-    amount,
-    to,
-    data,
-    fee,
-    tx,
-  } = parameters;
+  const { l2Client, account: account_, rollupAddress, l2MessageServiceAddress, amount, to, data, fee, tx } = parameters;
 
   let bridgingFee = fee ?? 0n;
 
   if (fee === undefined) {
     const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
       getNextMessageNonce(client, {
-        lineaRollupAddress,
+        rollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
       estimateFeesPerGas(l2Client, { type: "eip1559", chain: l2Client.chain }),
@@ -558,23 +471,11 @@ async function depositETH<
   }
 
   return sendTransaction(client, {
-    to: lineaRollupAddress,
+    to: rollupAddress,
     value: amount + bridgingFee,
     account: account_,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            { internalType: "address", name: "_to", type: "address" },
-            { internalType: "uint256", name: "_fee", type: "uint256" },
-            { internalType: "bytes", name: "_calldata", type: "bytes" },
-          ],
-          name: "sendMessage",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ],
+      abi: SEND_MESSAGE_ABI,
       functionName: "sendMessage",
       args: [to, bridgingFee, data],
     }),
@@ -594,7 +495,7 @@ async function depositERC20<
   parameters: {
     l2Client: Client<Transport, chainL2, accountL2>;
     account: Account;
-    lineaRollupAddress: Address;
+    rollupAddress: Address;
     l2MessageServiceAddress: Address;
     l1TokenBridgeAddress: Address;
     l2TokenBridgeAddress: Address;
@@ -615,7 +516,7 @@ async function depositERC20<
     account,
     l1TokenBridgeAddress,
     l2TokenBridgeAddress,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     l1ChainId,
     l2ChainId,
@@ -631,7 +532,7 @@ async function depositERC20<
   if (fee === undefined) {
     const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
       getNextMessageNonce(client, {
-        lineaRollupAddress,
+        rollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
       estimateFeesPerGas(l2Client, { type: "eip1559", chain: l2Client.chain }),
@@ -698,31 +599,7 @@ async function depositERC20<
     value: bridgingFee,
     account: account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_token",
-              type: "address",
-            },
-            {
-              internalType: "uint256",
-              name: "_amount",
-              type: "uint256",
-            },
-            {
-              internalType: "address",
-              name: "_recipient",
-              type: "address",
-            },
-          ],
-          name: "bridgeToken",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ],
+      abi: BRIDGE_TOKEN_ABI,
       functionName: "bridgeToken",
       args: [token, amount, to],
     }),

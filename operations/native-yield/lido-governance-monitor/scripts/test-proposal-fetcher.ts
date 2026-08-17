@@ -23,7 +23,7 @@
  *   CLEANUP=true          # Delete created proposals after test (default: false)
  */
 
-import { ExponentialBackoffRetryService, WinstonLogger } from "@consensys/linea-shared-utils";
+import { ExponentialBackoffRetryService, WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { DiscourseClient } from "../src/clients/DiscourseClient.js";

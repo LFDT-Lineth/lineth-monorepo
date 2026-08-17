@@ -302,14 +302,14 @@ export interface SubmissionSetupResult {
  * Helper to submit calldata before finalization tests.
  * Encapsulates the repeated pattern of generating and submitting calldata in a loop.
  *
- * @param lineaRollup - The LineaRollup contract instance (connected to operator)
+ * @param linethRollup - The LinethRollup contract instance (connected to operator)
  * @param config - Configuration for the submission
  * @returns Final index for use in subsequent operations
  *
  * @example
  * ```typescript
  * const { finalIndex } = await submitCalldataBeforeFinalization(
- *   lineaRollup.connect(operator),
+ *   linethRollup.connect(operator),
  *   { startIndex: 0, finalIndex: 4, maxGasLimit: MAX_GAS_LIMIT }
  * );
  * // Use finalIndex for generateParentShnarfData(finalIndex)
@@ -317,7 +317,7 @@ export interface SubmissionSetupResult {
  */
 export async function submitCalldataBeforeFinalization(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lineaRollup: any,
+  linethRollup: any,
   config: SubmissionSetupConfig,
 ): Promise<SubmissionSetupResult> {
   const { startIndex, finalIndex, useMultipleProofs = false, maxGasLimit } = config;
@@ -333,7 +333,7 @@ export async function submitCalldataBeforeFinalization(
   let index = startIndex;
   for (const data of submissionData) {
     const parentAndExpectedShnarf = getShnarfFn(index);
-    await lineaRollup.submitDataAsCalldata(
+    await linethRollup.submitDataAsCalldata(
       data,
       parentAndExpectedShnarf.parentShnarf,
       parentAndExpectedShnarf.expectedShnarf,

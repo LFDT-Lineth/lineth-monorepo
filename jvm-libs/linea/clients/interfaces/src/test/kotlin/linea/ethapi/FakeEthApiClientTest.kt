@@ -1,9 +1,10 @@
 package linea.ethapi
 
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.kotlin.decodeHex
+import net.consensys.linea.async.get
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -189,5 +190,22 @@ class FakeEthApiClientTest {
       assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(20UL)
       assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
     }
+  }
+
+  @Test
+  fun `getExecutionWitness should find witness by block hash key`() {
+    val blockHash = BlockParameter.fromHash(ByteArray(32) { 3 })
+    val witness = ExecutionWitness(
+      state = listOf(byteArrayOf(1)),
+      codes = emptyList(),
+      headers = emptyList(),
+    )
+    val client = FakeEthApiClient(
+      witnessesByBlock = mapOf(blockHash to witness),
+    )
+
+    val result = client.getExecutionWitness(BlockParameter.fromHash(blockHash.hashBytes)).get()
+
+    assertThat(result).isEqualTo(witness)
   }
 }

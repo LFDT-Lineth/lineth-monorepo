@@ -38,9 +38,9 @@ publishing {
         }
 
         scm {
-          url = 'https://github.com/Consensys/linea-monorepo'
-          connection = 'scm:git://github.com/Consensys/linea-monorepo.git'
-          developerConnection = 'scm:git:ssh://github.com:Consensys/linea-monorepo.git'
+          url = 'https://github.com/LFDT-Lineth/lineth-monorepo'
+          connection = 'scm:git://github.com/LFDT-Lineth/lineth-monorepo.git'
+          developerConnection = 'scm:git:ssh://github.com:LFDT-Lineth/lineth-monorepo.git'
         }
 
         developers {

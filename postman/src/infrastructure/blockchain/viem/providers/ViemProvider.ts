@@ -1,4 +1,4 @@
-import { ILogger } from "@consensys/linea-shared-utils";
+import { ILogger } from "@lfdt-lineth/shared-utils";
 import { BlockNumber, type BlockTag, type PublicClient } from "viem";
 
 import { GasFees } from "../../../../core/clients/blockchain/IGasProvider";

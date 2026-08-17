@@ -3,7 +3,7 @@ package smartvectors
 import (
 	"sort"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // CircularInterval represents an interval over a discretized circle. The

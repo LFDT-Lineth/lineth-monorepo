@@ -1,4 +1,4 @@
-name: Reusable Component Push Tag and Changelog and GitHub Release
+name: "Reusable: Component Push Tag and Changelog and GitHub Release"
 
 permissions:
   actions: read
@@ -21,6 +21,10 @@ on:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
+      scopes:
+        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
+        required: true
+        type: string
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -34,15 +38,20 @@ on:
       draft_release:
         description: 'Draft Release'
         required: false
-        default: false
         type: boolean
+        default: false
       pre_release:
         description: 'Pre Release'
         required: false
-        default: false
         type: boolean
+        default: false
       upload_changelog:
         description: "Upload the updated CHANGELOG.md and skip pushing the commit or creating PR"
+        required: false
+        type: boolean
+        default: false
+      dry_run_release:
+        description: "Dry run a release (without build and push the docker image to dockerhub)"
         required: false
         type: boolean
         default: false
@@ -61,12 +70,14 @@ jobs:
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}
+      scopes: ${{ inputs.scopes }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       upload_changelog: ${{ inputs.upload_changelog }}
     secrets: inherit
 
   compute-docker-tag:
     needs: [release-push-tag-changelog]
+    if: inputs.dry_run_release == false
     uses: ./.github/workflows/reusable-component-docker-tag.yml
     with:
       version-prefix: ${{ needs.release-push-tag-changelog.outputs.release_version }}
@@ -74,64 +85,73 @@ jobs:
 
   build-and-publish-image-coordinator:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'coordinator'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'coordinator'
     uses: ./.github/workflows/coordinator-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
       develop_tag: develop
-      image_name: consensys/linea-coordinator
       push_image: true
     secrets: inherit
 
   build-and-publish-image-postman:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'postman'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'postman'
     uses: ./.github/workflows/postman-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
       develop_tag: develop
-      image_name: consensys/linea-postman
       push_image: true
     secrets: inherit
 
   build-and-publish-image-prover:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'prover'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'prover'
     uses: ./.github/workflows/prover-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
       develop_tag: develop
-      image_name: consensys/linea-prover
+      push_image: true
+    secrets: inherit
+
+  build-and-publish-image-maru:
+    needs: [compute-docker-tag]
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'maru'
+    uses: ./.github/workflows/maru-build-and-publish.yml
+    with:
+      image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
+      image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+      develop_tag: develop
       push_image: true
     secrets: inherit
 
   build-and-publish-image-tx-exclusion-api:
     needs: [compute-docker-tag]
-    if: inputs.component-name == 'tx-exclusion-api'
+    if: always() && !cancelled() && !inputs.dry_run_release && inputs.component-name == 'tx-exclusion-api'
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
     with:
       image_tag: ${{ needs.compute-docker-tag.outputs.docker_tag }}
       image_tag_with_suffix: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
       develop_tag: develop
-      image_name: consensys/linea-transaction-exclusion-api
       push_image: true
     secrets: inherit
 
   gh-release:
-    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api]
+    needs: [release-push-tag-changelog, compute-docker-tag, build-and-publish-image-coordinator, build-and-publish-image-postman, build-and-publish-image-prover, build-and-publish-image-tx-exclusion-api, build-and-publish-image-maru]
     if: >
       always() && !cancelled() &&
-      (needs.build-and-publish-image-coordinator.result   == 'success' ||
-       needs.build-and-publish-image-postman.result       == 'success' ||
-       needs.build-and-publish-image-prover.result        == 'success' ||
-       needs.build-and-publish-image-tx-exclusion-api.result == 'success')
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+      (inputs.dry_run_release ||
+      (needs.build-and-publish-image-coordinator.result       == 'success' ||
+       needs.build-and-publish-image-postman.result           == 'success' ||
+       needs.build-and-publish-image-prover.result            == 'success' ||
+       needs.build-and-publish-image-tx-exclusion-api.result  == 'success' ||
+       needs.build-and-publish-image-maru.result              == 'success'))
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Append Changelog Action to release note
         id: append_change_log
@@ -142,21 +162,56 @@ jobs:
           CHANGELOG: ${{ needs.release-push-tag-changelog.outputs.changelog }}
           DOCKER_TAG: ${{ needs.compute-docker-tag.outputs.docker_tag }}
           DOCKER_TAG_WITH_SUFFIX: ${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          COMPONENT_NAME: ${{ inputs.component-name }}
           DOCKER_IMAGE_SUFFIX: ${{ inputs.folder-name }}
+          SKIP_DOCKER_IMAGE_INFO: ${{ inputs.dry_run_release }}
         run: |
           mkdir release && cd release
-          printf '%s\n' "$CHANGELOG" >> output.md
-          echo "### Docker Image Details" >> output.md
-          echo "" >> output.md
-          echo "To pull the image, use any of the following commands:" >> output.md
-          echo "\`\`\`" >> output.md
-          printf 'docker pull consensys/linea-%s:%s\n' "$DOCKER_IMAGE_SUFFIX" "$DOCKER_TAG" >> output.md
-          echo "\`\`\`" >> output.md
-          if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
-            echo "\`\`\`" >> output.md
-            printf 'docker pull consensys/linea-%s:%s\n' "$DOCKER_IMAGE_SUFFIX" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
-            echo "\`\`\`" >> output.md
+          # maru's image is published as consensys/maru rather than consensys/linea-maru.
+          if [ "$COMPONENT_NAME" = "maru" ]; then
+            IMAGE_NAME="consensys/maru"
+          else
+            IMAGE_NAME="consensys/linea-${DOCKER_IMAGE_SUFFIX}"
           fi
+          printf '%s\n' "$CHANGELOG" >> output.md
+          # Only include docker pull instructions when an image was actually published.
+          if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
+            echo "### Docker Image Details" >> output.md
+            echo "" >> output.md
+            echo "To pull the image, use any of the following commands:" >> output.md
+            echo "\`\`\`" >> output.md
+            printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG" >> output.md
+            echo "\`\`\`" >> output.md
+            if [ -n "$DOCKER_TAG_WITH_SUFFIX" ] && [ "$DOCKER_TAG_WITH_SUFFIX" != "$DOCKER_TAG" ]; then
+              echo "\`\`\`" >> output.md
+              printf 'docker pull %s:%s\n' "$IMAGE_NAME" "$DOCKER_TAG_WITH_SUFFIX" >> output.md
+              echo "\`\`\`" >> output.md
+            fi
+          fi
+
+      - name: Download Coordinator config docs artifact
+        if: inputs.component-name == 'coordinator' && !inputs.dry_run_release
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: coordinator-config-docs-${{ needs.compute-docker-tag.outputs.docker_tag_with_suffix }}
+          path: release/config-docs
+
+      - name: Append Coordinator config reference to release note
+        if: inputs.component-name == 'coordinator' && !inputs.dry_run_release
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-push-tag-changelog.outputs.release_tag }}
+        run: |
+          {
+            echo ""
+            echo "### Configuration Reference"
+            echo ""
+            echo "Generated config documentation attached to this release:"
+            echo ""
+            echo "- [coordinator-config-reference.md](https://github.com/${REPO}/releases/download/${TAG}/coordinator-config-reference.md)"
+            echo "- [coordinator-config-schema.json](https://github.com/${REPO}/releases/download/${TAG}/coordinator-config-schema.json)"
+          } >> release/output.md
 
       - name: Set capitalized component name
         env:
@@ -165,13 +220,16 @@ jobs:
           echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
 
       - name: gh-release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
         with:
           name: ${{ env.COMPONENT_CAP }} v${{ needs.release-push-tag-changelog.outputs.release_version }}
           tag_name: ${{ needs.release-push-tag-changelog.outputs.release_tag }}
           body_path: release/output.md
+          # Attach the coordinator config docs (downloaded above) as release assets.
+          files: ${{ (inputs.component-name == 'coordinator' && !inputs.dry_run_release) && 'release/config-docs/*' || '' }}
           draft: ${{ inputs.draft_release }}
           prerelease: ${{ inputs.pre_release }}
           generate_release_notes: false
           target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true
+

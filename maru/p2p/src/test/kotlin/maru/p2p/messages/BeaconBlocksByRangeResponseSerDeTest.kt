@@ -9,21 +9,27 @@
 package maru.p2p.messages
 
 import maru.core.ext.DataGenerators
-import maru.serialization.rlp.RLPSerializers
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class BeaconBlocksByRangeResponseSerDeTest {
+  // Round-trip (deserialize) → the sealed block SerDe must inject a fork-aware header hash function.
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
+
   @Test
   fun `response serDe serializes and deserializes correctly`() {
     val serDe =
       BeaconBlocksByRangeResponseSerDe(
-        RLPSerializers.SealedBeaconBlockSerializer,
+        blockHashing.sealedBeaconBlockSerializer,
       )
 
     val response =
       BeaconBlocksByRangeResponse(
-        blocks = listOf(DataGenerators.randomSealedBeaconBlock(number = 5UL)),
+        blocks = listOf(
+          DataGenerators.randomSealedBeaconBlock(
+            number = 5UL,
+          ),
+        ),
       )
 
     val serialized = serDe.serialize(response)

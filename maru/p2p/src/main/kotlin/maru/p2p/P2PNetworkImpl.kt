@@ -26,6 +26,7 @@ import maru.p2p.topics.ImmediateTopicHandler
 import maru.p2p.topics.QbftMessageSerDe
 import maru.p2p.topics.TopicHandlerWithInOrderDelivering
 import maru.serialization.SerDe
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.MaruCompressorRLPSerDe
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
@@ -59,7 +60,7 @@ class P2PNetworkImpl(
   private val privateKeyBytes: ByteArray,
   private val p2pConfig: P2PConfig,
   private val chainId: UInt,
-  private val serDe: SerDe<SealedBeaconBlock>,
+  private val blockHashing: ForkAwareBlockHashing,
   private val metricsFacade: MetricsFacade,
   metricsSystem: BesuMetricsSystem,
   private val statusManager: StatusManager,
@@ -74,9 +75,11 @@ class P2PNetworkImpl(
     LineaRpcProtocolIdGenerator,
     () -> PeerLookup,
     BeaconChain,
+    ForkAwareBlockHashing,
   ) -> RpcMethods = ::RpcMethods,
   private val qbftMessageSerDe: SerDe<QbftMessage> = MaruCompressorRLPSerDe(QbftMessageSerDe()),
 ) : P2PNetwork {
+  private val serDe: SerDe<SealedBeaconBlock> = blockHashing.sealedBeaconBlockCompressorSerializer
   private val log: Logger = LogManager.getLogger(this.javaClass)
   internal lateinit var maruPeerManager: MaruPeerManager
   private val topicIdGenerator = LineaMessageIdGenerator(chainId)
@@ -130,7 +133,7 @@ class P2PNetworkImpl(
     val reputationManager =
       MaruReputationManager(besuMetricsSystem, SystemTimeProvider(), this::isStaticPeer, p2pConfig.reputation)
 
-    val rpcMethods = rpcMethodsFactory(statusManager, rpcIdGenerator, { maruPeerManager }, beaconChain)
+    val rpcMethods = rpcMethodsFactory(statusManager, rpcIdGenerator, { maruPeerManager }, beaconChain, blockHashing)
     maruPeerManager = MaruPeerManager(
       maruPeerFactory = DefaultMaruPeerFactory(
         rpcMethods = rpcMethods,

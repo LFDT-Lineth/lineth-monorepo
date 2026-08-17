@@ -9,6 +9,12 @@ fun <T> Future<T>.get(): T = this.toCompletionStage().toCompletableFuture().get(
 
 fun <T> Future<T>.toSafeFuture(): SafeFuture<T> = SafeFuture.of(this.toCompletionStage())
 
+// Kotlin 2.4+ strictly propagates Vert.x's @Nullable annotation on executeBlocking's return type,
+// yielding Future<T?> even when the Callable never returns null. This overload re-asserts non-null.
+@Suppress("UNCHECKED_CAST")
+fun <T : Any> Future<T?>.toSafeFutureNonNull(): SafeFuture<T> =
+  SafeFuture.of(this.toCompletionStage()) as SafeFuture<T>
+
 fun <T> SafeFuture<T>.toVertxFuture(): Future<T> {
   val result = Promise.promise<T>()
   this.thenAccept(result::complete)

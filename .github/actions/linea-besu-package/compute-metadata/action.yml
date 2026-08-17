@@ -3,8 +3,8 @@ name: 'compute metadata'
 description: 'Composite action to compute the metadata for linea-besu-package'
 
 inputs:
-  release_tag_prefix:
-    description: "Release version tag prefix"
+  release_version:
+    description: "Release version"
     required: true
 
   image_tag_suffix:
@@ -32,10 +32,6 @@ outputs:
   dockerimage:
     description: docker image
     value: ${{ steps.dockerimage.outputs.dockerimage }}
-
-  releasetag:
-    description: release tag
-    value: ${{ steps.releasetag.outputs.releasetag }}
 
   tracer_plugin_version:
     description: tracer plugin version
@@ -76,7 +72,7 @@ runs:
     
     - name: get versions via dotenv
       id: dotenv
-      uses: falti/dotenv-action@a33be0b8cf6a6e6f1b82cc9f3782061ab1022be5 #v1.1.4
+      uses: falti/dotenv-action@fff81fa3263fb96221c521b5e526e57c0c56d760 #v1.2.1
       with:
         path: linea-besu/package/versions.env
         mode: development
@@ -95,18 +91,13 @@ runs:
       id: dockertag
       uses: ./.github/actions/compute-docker-tag
       with:
-        version_prefix: ${{ inputs.release_tag_prefix }}
+        version_prefix: ${{ inputs.release_version }}
         image_tag_suffix: ${{ inputs.image_tag_suffix }}
         commit_tag: ${{ steps.compute_version_tags.outputs.commit_tag }}
-  
-    - name: set release tag
-      id: releasetag
-      shell: bash
-      run: |
-        echo "releasetag=${{ steps.dockertag.outputs.dockertag }}" >> $GITHUB_OUTPUT
 
     - name: set docker image
       id: dockerimage
       shell: bash
       run: |
         echo "dockerimage=consensys/linea-besu-package:${{ steps.dockertag.outputs.dockertag }}" >> "$GITHUB_OUTPUT"
+

@@ -1,4 +1,4 @@
-import { Message } from "@consensys/linea-sdk-core";
+import { Message } from "@lfdt-lineth/sdk-core";
 import { Block, Hex, Log, padHex, toHex, TransactionReceipt } from "viem";
 
 import {

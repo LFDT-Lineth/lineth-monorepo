@@ -1,5 +1,5 @@
-import { IMetricsService } from "@consensys/linea-shared-utils";
 import { jest } from "@jest/globals";
+import { IMetricsService } from "@lfdt-lineth/shared-utils";
 import { Address, Hex } from "viem";
 
 import { RebalanceDirection } from "../../../core/entities/RebalanceRequirement.js";

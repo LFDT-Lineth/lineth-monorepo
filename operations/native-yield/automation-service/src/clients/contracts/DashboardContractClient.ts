@@ -1,4 +1,4 @@
-import { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import { IBlockchainClient, ILogger } from "@lfdt-lineth/shared-utils";
 import { Address, getContract, GetContractReturnType, parseEventLogs, PublicClient, TransactionReceipt } from "viem";
 
 import { DashboardABI } from "../../core/abis/Dashboard.js";

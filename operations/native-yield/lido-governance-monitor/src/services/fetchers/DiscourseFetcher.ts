@@ -1,4 +1,4 @@
-import { wait } from "@consensys/linea-shared-utils";
+import { wait } from "@lfdt-lineth/shared-utils";
 
 import { IDiscourseClient } from "../../core/clients/IDiscourseClient.js";
 import { CreateProposalInput } from "../../core/entities/Proposal.js";

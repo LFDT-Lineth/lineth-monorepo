@@ -1,5 +1,5 @@
-import { attempt } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { attempt } from "@lfdt-lineth/shared-utils";
 import { ResultAsync, ok, err } from "neverthrow";
 
 import { createLoggerMock } from "../../../__tests__/helpers/index.js";
@@ -8,11 +8,11 @@ import { submitVaultReportIfNotFresh } from "../vaultReportSubmission.js";
 import type { IVaultHub } from "../../../core/clients/contracts/IVaultHub.js";
 import type { ILidoAccountingReportClient } from "../../../core/clients/ILidoAccountingReportClient.js";
 import type { INativeYieldAutomationMetricsUpdater } from "../../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
-import type { ILogger } from "@consensys/linea-shared-utils";
+import type { ILogger } from "@lfdt-lineth/shared-utils";
 import type { Address, TransactionReceipt } from "viem";
 
-jest.mock("@consensys/linea-shared-utils", () => {
-  const actual = jest.requireActual("@consensys/linea-shared-utils") as typeof import("@consensys/linea-shared-utils");
+jest.mock("@lfdt-lineth/shared-utils", () => {
+  const actual = jest.requireActual("@lfdt-lineth/shared-utils") as typeof import("@lfdt-lineth/shared-utils");
   return {
     ...actual,
     attempt: jest.fn(),

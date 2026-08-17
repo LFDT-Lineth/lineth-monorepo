@@ -27,6 +27,5 @@ class QbftGossiper : QbftGossiper {
     message: QbftMessage,
     replayed: Boolean,
   ) {
-    Unit
   }
 }

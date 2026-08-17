@@ -3,9 +3,9 @@ package polynomials
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	"github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // fftExtInplace applies the FFT to each of the 6 coordinates of an []Ext slice
@@ -171,7 +171,7 @@ func TestComputeLagrangeAtZ(t *testing.T) {
 		reference[i] = field.ElemFromExt(hornerExt(indicator, z.AsExt()))
 	}
 
-	got := ComputeLagrangeAtZ(z, d.Cardinality)
+	got := EvalLagrangeBasisAtZ(z, d.Cardinality)
 	if len(got) != size {
 		t.Fatalf("len: got %d, want %d", len(got), size)
 	}

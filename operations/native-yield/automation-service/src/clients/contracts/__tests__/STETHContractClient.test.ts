@@ -4,7 +4,7 @@ import { getContract } from "viem";
 import { STETHABI } from "../../../core/abis/STETH.js";
 import { STETHContractClient } from "../STETHContractClient.js";
 
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import type { IBlockchainClient, ILogger } from "@lfdt-lineth/shared-utils";
 import type { PublicClient, TransactionReceipt, Address } from "viem";
 
 jest.mock("viem", () => {

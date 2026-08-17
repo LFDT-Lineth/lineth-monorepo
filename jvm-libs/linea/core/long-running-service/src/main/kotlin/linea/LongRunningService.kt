@@ -23,11 +23,11 @@ interface LongRunningService {
 
 internal class ServiceAggregator<T : LongRunningService>(private val services: List<T>) : LongRunningService {
   override fun start(): CompletableFuture<Unit> {
-    return CompletableFuture.allOf(*services.map { it.start() }.toTypedArray()).thenApply { Unit }
+    return CompletableFuture.allOf(*services.map { it.start() }.toTypedArray()).thenApply { }
   }
 
   override fun stop(): CompletableFuture<Unit> {
-    return CompletableFuture.allOf(*services.reversed().map { it.stop() }.toTypedArray()).thenApply { Unit }
+    return CompletableFuture.allOf(*services.reversed().map { it.stop() }.toTypedArray()).thenApply { }
   }
 }
 

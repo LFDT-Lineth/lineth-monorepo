@@ -14,7 +14,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| L1_SECURITY_COUNCIL | true | address | L1 Security Council address (receives `DEFAULT_ADMIN_ROLE` after filtered addresses are applied) |
+| L1_SECURITY_COUNCIL | registry\|env | address | L1 Security Council address (receives `DEFAULT_ADMIN_ROLE` after filtered addresses are applied). Read from the address registry on stable networks; env var used as fallback or on unregistered networks. |
 | ADDRESS_FILTER_FILE_PATH | false | path | Absolute or relative path to the filtered addresses file. Defaults to `contracts/addresses-filter.txt` |
 
 <br />

@@ -113,15 +113,27 @@ func (ec *ECPair) csConstantWhenIsComputing(comp *wizard.CompiledIOP) {
 	// we want to ensure that when we compute lines then PAIRING_ID and
 	// TOTAL_PAIRINGS is consistent with the projected values
 
-	// IF IS_COMPUTING AND IS_ACTIVE AND NOT FIRST_LINE => PAIRING_ID_{i} = PAIRING_ID_{i-1} AND TOTAL_PAIRINGS_{i} = TOTAL_PAIRINGS_{i-1}
+	// PairID may only change on the first computed row of a new pair.
 	comp.InsertGlobal(
 		roundNr,
-		ifaces.QueryIDf("%v_COUNTERS_CONSISTENCY", nameECPair),
+		ifaces.QueryIDf("%v_PAIR_ID_CONSISTENCY", nameECPair),
 		sym.Mul(
 			ec.UnalignedPairingData.IsActive,
 			ec.UnalignedPairingData.IsComputed,
 			sym.Sub(1, ec.UnalignedPairingData.IsFirstLineOfInstance),
+			sym.Sub(1, ec.UnalignedPairingData.IsFirstLineOfPrevAccumulator),
 			sym.Sub(ec.UnalignedPairingData.PairID, column.Shift(ec.UnalignedPairingData.PairID, -1)),
+		),
+	)
+
+	// IF IS_COMPUTING AND IS_ACTIVE AND NOT FIRST_LINE => TOTAL_PAIRS_{i} = TOTAL_PAIRS_{i-1}
+	comp.InsertGlobal(
+		roundNr,
+		ifaces.QueryIDf("%v_TOTAL_PAIRS_CONSISTENCY", nameECPair),
+		sym.Mul(
+			ec.UnalignedPairingData.IsActive,
+			ec.UnalignedPairingData.IsComputed,
+			sym.Sub(1, ec.UnalignedPairingData.IsFirstLineOfInstance),
 			sym.Sub(ec.UnalignedPairingData.TotalPairs, column.Shift(ec.UnalignedPairingData.TotalPairs, -1)),
 		),
 	)

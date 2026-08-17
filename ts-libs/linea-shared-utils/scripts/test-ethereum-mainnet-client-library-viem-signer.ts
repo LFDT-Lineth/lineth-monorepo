@@ -2,7 +2,7 @@
 
 RPC_URL=http://127.0.0.1:8545 \
 PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-ethereum-mainnet-client-library-viem-signer.ts
+pnpm --filter @lfdt-lineth/shared-utils exec tsx scripts/test-ethereum-mainnet-client-library-viem-signer.ts
 
  */
 import { Hex } from "viem";

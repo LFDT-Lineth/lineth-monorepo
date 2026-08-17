@@ -13,8 +13,6 @@ import (
 	invalidity "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/invalidity_pi"
 )
 
-const MAX_L2_LOGS = 16
-
 // BadPrecompileCircuit defines the circuit for the transaction with a bad precompile.
 type BadPrecompileCircuit struct {
 	//  simulated execution context.
@@ -29,6 +27,9 @@ type BadPrecompileCircuit struct {
 	// Derived from execution PI extractor (gnark:"-" = no wires, set during Define)
 	stateRootHash      [2]frontend.Variable `gnark:"-"`
 	initialBlockNumber frontend.Variable    `gnark:"-"`
+
+	// MaxL2Logs from config (compile-time constant, not a wire)
+	MaxL2Logs int `gnark:"-"`
 
 	// Witness fields, cross-checked against extraction
 	// when the extracted value is non-zero.
@@ -62,6 +63,11 @@ type ExecutionCtx struct {
 }
 
 func (circuit *BadPrecompileCircuit) Allocate(config Config) {
+
+	if config.MaxL2Logs <= 0 {
+		panic("MaxL2Logs must be set in config (from BLOCK_L2_L1_LOGS traces limit)")
+	}
+	circuit.MaxL2Logs = config.MaxL2Logs
 
 	wverifier := wizard.AllocateWizardCircuit(
 		config.ZkEvmComp,
@@ -105,13 +111,13 @@ func (circuit *BadPrecompileCircuit) Define(api frontend.API) error {
 			binaryType),
 		0)
 
-	// check that NbL2Logs is greater than MAX_L2_LOGS, if invalidityType == 3 (TooManyLogs)
-	// When binaryType=1: 17 <= 1*NbL2Logs + 0 = NbL2Logs
-	// When binaryType=0: 17 <= 0*NbL2Logs + 17 = 17  (always passes)
-	api.AssertIsLessOrEqual(MAX_L2_LOGS+1,
+	// check that NbL2Logs is greater than MaxL2Logs, if invalidityType == 3 (TooManyLogs)
+	// When binaryType=1: MaxL2Logs+1 <= 1*NbL2Logs + 0 = NbL2Logs
+	// When binaryType=0: MaxL2Logs+1 <= 0*NbL2Logs + MaxL2Logs+1 = MaxL2Logs+1  (always passes)
+	api.AssertIsLessOrEqual(circuit.MaxL2Logs+1,
 		api.Add(
 			api.Mul(binaryType, circuit.NbL2Logs),
-			api.Mul(api.Sub(1, binaryType), MAX_L2_LOGS+1),
+			api.Mul(api.Sub(1, binaryType), circuit.MaxL2Logs+1),
 		),
 	)
 

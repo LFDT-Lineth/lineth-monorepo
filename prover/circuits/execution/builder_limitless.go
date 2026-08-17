@@ -97,10 +97,27 @@ func (c *CircuitExecution) CheckLimitlessConglomerationCompletion(api frontend.A
 		vkMerkleRoot[i] = wvc.GetPublicInput(api, fmt.Sprintf("%s_%d", distributed.VerifyingKeyMerkleRootPublicInput, i))
 	}
 
+	segmentCount := frontend.Variable(0)
 	for module := 0; module < numModule; module++ {
+		segmentCount = api.Add(segmentCount, target[module])
 		api.AssertIsEqual(target[module], countGL[module])
 		api.AssertIsEqual(target[module], countLPP[module])
 	}
+
+	// The multiplication by 6 is because we need to account for the fact that
+	// in each segment, we do the following updates:
+	//
+	//				| GL		| LPP		|
+	//  | General	| 3			| 3			|
+	//  | Rand		| 1			| 0			|
+	//
+	// General and Rand are distinct multiset hashes that we accumulate in
+	// each segments. The LPP segment does not use the Rand multiset.
+	msetOpsCount := api.Mul(segmentCount, 6)
+
+	// This rangechecks that the total number of segments does not overflow the
+	// multiset hash limit.
+	_ = api.ToBinary(msetOpsCount, multisethashing.OverflowBoundBits)
 
 	for k := range generalMSet {
 		api.AssertIsEqual(generalMSet[k], 0)

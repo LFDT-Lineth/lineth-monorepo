@@ -1,3 +1,4 @@
+import { network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import {
@@ -11,6 +12,7 @@ import {
   generateRoleAssignments,
   getEnvVarOrDefault,
   getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
   tryVerifyContract,
   LogContractDeployment,
 } from "../common/helpers";
@@ -20,8 +22,16 @@ import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 const func: DeployFunction = withSignerUiSession("04_deploy_L2MessageService.ts", async function () {
   const contractName = "L2MessageService";
 
-  const l2MessageServiceSecurityCouncil = getRequiredEnvVar("L2_SECURITY_COUNCIL");
-  const l2MessageServiceL1L2MessageSetter = getRequiredEnvVar("L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER");
+  const l2MessageServiceSecurityCouncil = requireAddressFromRegistryOrEnv(
+    network.name,
+    "L2_SECURITY_COUNCIL",
+    "L2_SECURITY_COUNCIL",
+  );
+  const l2MessageServiceL1L2MessageSetter = requireAddressFromRegistryOrEnv(
+    network.name,
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+  );
   const l2MessageServiceRateLimitPeriod = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD");
   const l2MessageServiceRateLimitAmount = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT");
 

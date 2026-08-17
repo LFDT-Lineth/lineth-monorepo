@@ -196,6 +196,15 @@ func toCrumbsHint(_ *big.Int, ins, outs []*big.Int) error {
 	return nil
 }
 
+func readNumLittleEndian(api frontend.API, c []frontend.Variable, radix frontend.Variable) frontend.Variable {
+	res := frontend.Variable(0)
+	for i := len(c) - 1; i >= 0; i-- {
+		res = api.Mul(radix, res)
+		res = api.Add(res, c[i])
+	}
+	return res
+}
+
 // TODO add to gnark: bits.ToBase
 // ToCrumbs decomposes scalar v into nbCrumbs 2-bit digits.
 // It uses Little Endian order for compatibility with gnark, even though we use Big Endian order in the circuit
@@ -207,6 +216,9 @@ func ToCrumbs(api frontend.API, v frontend.Variable, nbCrumbs int) []frontend.Va
 	for _, c := range res {
 		api.AssertIsCrumb(c)
 	}
+
+	// Prove the hinted crumbs recompose to v (little-endian, Horner scan from MSB).
+	api.AssertIsEqual(v, readNumLittleEndian(api, res, 4))
 	return res
 }
 
@@ -733,7 +745,8 @@ func SelectMany(api frontend.API, c frontend.Variable, ifSo, ifNot []frontend.Va
 	return res
 }
 
-// DivEuclidean conventional integer division with a remainder
+// DivEuclidean conventional integer division with a remainder.
+// a = b * quotient + remainder
 // TODO @Tabaie replace all/most special-case divisions with this, barring performance issues
 func DivEuclidean(api frontend.API, a, b frontend.Variable) (quotient, remainder frontend.Variable) {
 	api.AssertIsDifferent(b, 0)
@@ -742,8 +755,11 @@ func DivEuclidean(api frontend.API, a, b frontend.Variable) (quotient, remainder
 		panic(err)
 	}
 	quotient, remainder = outs[0], outs[1]
+	// remainder <= b-1
 	api.AssertIsLessOrEqual(remainder, api.Sub(b, 1))
+	// quotient <= a
 	api.AssertIsLessOrEqual(quotient, a)
+	api.AssertIsEqual(api.Sub(a, remainder), api.Mul(quotient, b))
 
 	return
 }

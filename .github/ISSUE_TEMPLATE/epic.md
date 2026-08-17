@@ -1,7 +1,7 @@
 ---
 name: Epic/Major Feature
 about: File an Epic
-assignees: 'dfox-consensys,julien-marchand'
+assignees: ''
 ---
 
 ## Description

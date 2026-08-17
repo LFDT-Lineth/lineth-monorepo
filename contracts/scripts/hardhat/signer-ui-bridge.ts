@@ -150,6 +150,8 @@ type SessionState = {
   batchRunActive: boolean;
   /** Comma-separated tags from `--tags`, if any. */
   batchTagsSummary: string | null;
+  /** Count of browser-signed transactions requested in this session (OpenZeppelin proxy deploys use several). */
+  transactionOrdinal: number;
   /**
    * Set just before the deploy batch closes the bridge so the UI can stop polling gracefully.
    * `null` while the run is in progress.
@@ -206,7 +208,7 @@ const SERVER_CLOSE_TIMEOUT_MS = 3000;
 const HARDHAT_SIGNER_UI_SESSION_TOKEN_HEADER = "x-hardhat-signer-ui-session-token";
 /** Reject huge JSON bodies on the local bridge (DoS / accidental OOM). */
 const MAX_JSON_BODY_BYTES = 256 * 1024;
-const TX_LOOKUP_TIMEOUT_MS_DEFAULT = 12_000;
+const TX_LOOKUP_TIMEOUT_MS_DEFAULT = 60_000;
 const TX_LOOKUP_INTERVAL_MS = 200;
 const TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS = 5_000;
 
@@ -781,7 +783,40 @@ async function getTransactionWithRetry(
     await new Promise((resolveSleep) => setTimeout(resolveSleep, Math.min(intervalMs, remainingMs)));
     remainingMs = timeoutMs - (Date.now() - startedAt);
   }
+
+  // Wallets / RPCs sometimes expose the receipt before `eth_getTransactionByHash` indexes the tx.
+  try {
+    const receipt = await getTransactionReceiptWithTimeout(
+      provider,
+      hash,
+      Math.min(TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS, timeoutMs),
+    );
+    if (receipt) {
+      return await getTransactionWithTimeout(provider, hash, TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS);
+    }
+  } catch {
+    /* fall through */
+  }
+
   return null;
+}
+
+async function getTransactionReceiptWithTimeout(
+  provider: Provider,
+  hash: string,
+  timeoutMs: number,
+): Promise<{ blockNumber: number | null } | null> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      provider.getTransactionReceipt(hash),
+      new Promise<null>((resolveTimeout) => {
+        timeoutHandle = setTimeout(() => resolveTimeout(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 }
 
 async function getTransactionWithTimeout(
@@ -1213,6 +1248,7 @@ class SignerUiSession {
   private sessionOutcome: "complete" | "error" | null = null;
   private sessionOutcomeMessage: string | null = null;
   private sessionAuthenticated = false;
+  private transactionOrdinal = 0;
 
   public constructor(context: SignerUiContext) {
     this.context = context;
@@ -1438,6 +1474,7 @@ class SignerUiSession {
       scriptOrdinal: this.scriptOrdinal,
       batchRunActive: signerUiHardhatDeployBatchActive,
       batchTagsSummary: this.batchTagsSummary,
+      transactionOrdinal: this.transactionOrdinal,
       sessionOutcome: this.sessionOutcome,
       outcomeMessage: this.sessionOutcomeMessage,
     };
@@ -1570,11 +1607,21 @@ class SignerUiSession {
       );
     }
 
+    this.transactionOrdinal += 1;
+    const stepLabel = this.transactionOrdinal > 1 ? `${label} (step ${this.transactionOrdinal})` : label;
+    console.log(
+      `HARDHAT_SIGNER_UI: waiting for wallet signature — ${stepLabel} (${this.activeScriptContext}). ` +
+        "OpenZeppelin proxy deploys may require multiple signatures.",
+    );
+
     const extra = this.takeNextTransactionDetails();
     const prompt: TransactionPrompt = {
       id: randomUUID(),
-      label,
-      description,
+      label: stepLabel,
+      description:
+        this.transactionOrdinal > 1
+          ? `${description} Proxy deploys often need several sequential wallet approvals.`
+          : description,
       createdAt: new Date().toISOString(),
       request: await serializeTransactionRequest(transactionRequest),
       transactionDetails: extra,
@@ -1586,7 +1633,11 @@ class SignerUiSession {
         resolve: resolvePrompt,
         reject: rejectPrompt,
       };
-      this.setTransactionProgress(prompt.id, "awaiting_wallet_approval", `Waiting for wallet approval for ${label}.`);
+      this.setTransactionProgress(
+        prompt.id,
+        "awaiting_wallet_approval",
+        `Waiting for wallet approval for ${stepLabel}.`,
+      );
     });
   }
 
@@ -1601,6 +1652,18 @@ class SignerUiSession {
         "waiting_for_hardhat_confirmation",
         `Validation passed. Waiting for Hardhat/provider confirmation for transaction ${hash}.`,
       );
+    }
+
+    try {
+      const receipt = await provider.waitForTransaction(hash, 1, SESSION_TIMEOUT_MS);
+      if (receipt) {
+        const transaction = await getTransactionWithTimeout(provider, hash, TX_LOOKUP_RPC_ATTEMPT_TIMEOUT_MS);
+        if (transaction) {
+          return transaction;
+        }
+      }
+    } catch {
+      /* fall back to polling below */
     }
 
     while (Date.now() - startedAt < SESSION_TIMEOUT_MS) {
@@ -1834,13 +1897,12 @@ class SignerUiSession {
         tx: onChain,
         promptRequest: pendingRequest.prompt.request,
       });
-      this.setTransactionProgress(
-        payload.requestId,
-        "failed",
-        `Submitted transaction did not match the pending Hardhat request. ${mismatch}`,
-      );
-      writeJson(response, 400, {
-        error: `On-chain transaction does not match the pending signer UI request. ${mismatch}`,
+      const message = `Submitted transaction did not match the pending Hardhat request. ${mismatch}`;
+      this.setTransactionProgress(payload.requestId, "failed", message);
+      const rejectOutcome = pendingRequest.reject;
+      this.pendingRequest = undefined;
+      writeJson(response, 400, { error: message }, () => {
+        queueMicrotask(() => rejectOutcome(new Error(message)));
       });
       return;
     }

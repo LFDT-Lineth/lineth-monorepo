@@ -8,6 +8,8 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
@@ -20,8 +22,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import testutils.Checks.getBlockNumber
 import testutils.PeeringNodeNetworkStack
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
 import testutils.maru.MaruFactory
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -189,13 +189,6 @@ class MaruDiscoveryTest {
       }
 
     log.info("All nodes have discovered their peers!")
-
-    // Verify each node can see the others
-    maruApps.forEachIndexed { index, app ->
-      val peers = app.p2pNetwork.getPeers()
-      log.info("Node $index peers: ${peers.map { it.nodeId }}")
-      assertThat(peers.size).isGreaterThanOrEqualTo(expectedPeers.toInt())
-    }
 
     log.info("Verifying followers sync EL blocks")
     val validatorBlockHeight =

@@ -1,0 +1,16 @@
+.{
+    .name = .lineth_accelerators,
+    .version = "0.0.0",
+    .fingerprint = 0xbb46af775b3e4be3,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers (pinned toolchain + the common freestanding rv64im guest target).
+        .build_common = .{ .path = "../build_common" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // Zig wrapper modules (compiled into the rv64im guest)
+        "include", // C interface headers for guest programs
+    },
+}

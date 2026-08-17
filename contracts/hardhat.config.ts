@@ -11,9 +11,11 @@ import { createRequire } from "node:module";
 import "solidity-docgen";
 
 import { getBlockchainNode, getL2BlockchainNode } from "./common";
+import { clearHandoffStore } from "./common/helpers/deploymentHandoff";
 import { SupportedChainIds } from "./common/supportedNetworks";
 import { overrides } from "./hardhat_overrides";
 import { resolveDeployerAccounts } from "./scripts/hardhat/deployer-accounts";
+import "./scripts/hardhat/solcWarningFilter";
 import "./scripts/operational/tasks/getCurrentFinalizedBlockNumberTask";
 import "./scripts/operational/tasks/grantContractRolesTask";
 import "./scripts/operational/tasks/renounceContractRolesTask";
@@ -32,6 +34,7 @@ const requireFromConfig = createRequire(__filename);
 
 /** Lazy `require` avoids HH9 (signer-ui-bridge pulls in `hardhat`) and avoids native `import()` of `.ts`, which uses Node ESM resolution (directory `common/` vs `common.ts`, CJS `hardhat`, type-only `ethers` exports). */
 subtask(TASK_DEPLOY_RUN_DEPLOY).setAction(async (args, hre, runSuper) => {
+  clearHandoffStore();
   const { signerUiHardhatDeployRunSubtaskAction } = requireFromConfig(
     "./scripts/hardhat/signer-ui-bridge",
   ) as typeof import("./scripts/hardhat/signer-ui-bridge");

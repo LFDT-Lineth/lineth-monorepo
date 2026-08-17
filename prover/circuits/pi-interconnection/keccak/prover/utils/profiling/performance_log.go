@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/config"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/sirupsen/logrus"
 )

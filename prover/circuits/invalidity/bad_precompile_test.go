@@ -144,9 +144,8 @@ func TestBadPrecompileCircuit(t *testing.T) {
 			// Allocate the circuit
 			circuit.Allocate(invalidity.Config{
 				ZkEvmComp: comp,
+				MaxL2Logs: 16,
 			})
-
-			// Compile the circuit
 			cs, err := frontend.Compile(
 				ecc.BLS12_377.ScalarField(),
 				scs.NewBuilder,

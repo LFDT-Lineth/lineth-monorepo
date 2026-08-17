@@ -17,6 +17,7 @@ import maru.p2p.RequestMessageAdapter
 import maru.p2p.RpcMessageType
 import maru.p2p.Version
 import maru.p2p.messages.BeaconBlocksByRangeHandler.Companion.MAX_BLOCKS_PER_REQUEST
+import maru.serialization.rlp.RLPSerializers
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -82,9 +83,15 @@ class BeaconBlocksByRangeHandlerTest {
 
     val blocks =
       listOf(
-        DataGenerators.randomSealedBeaconBlock(number = 100UL),
-        DataGenerators.randomSealedBeaconBlock(number = 101UL),
-        DataGenerators.randomSealedBeaconBlock(number = 102UL),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 100UL,
+        ),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 101UL,
+        ),
+        DataGenerators.randomSealedBeaconBlock(
+          number = 102UL,
+        ),
       )
 
     whenever(beaconChain.getSealedBeaconBlocks(100UL, 3UL)).thenReturn(blocks)
@@ -115,7 +122,9 @@ class BeaconBlocksByRangeHandlerTest {
     // Handler should limit to MAX_BLOCKS_PER_REQUEST
     val limitedBlocks =
       (0UL until MAX_BLOCKS_PER_REQUEST).map { i ->
-        DataGenerators.randomSealedBeaconBlock(number = i)
+        DataGenerators.randomSealedBeaconBlock(
+          number = i,
+        )
       }
 
     // handler should limit to MAX_BLOCKS_PER_REQUEST
@@ -137,7 +146,10 @@ class BeaconBlocksByRangeHandlerTest {
   fun `handles and returns subset of requested blocks for request with blocks that would exceed the size limit`() {
     handler = BeaconBlocksByRangeHandler(
       beaconChain = beaconChain,
-      blockRetrievalStrategy = SizeLimitBlockRetrievalStrategy(sizeLimit = 9000),
+      blockRetrievalStrategy = SizeLimitBlockRetrievalStrategy(
+        sealedBeaconBlockSerializer = RLPSerializers.SealedBeaconBlockCompressorRLPSerializer,
+        sizeLimit = 9000,
+      ),
     )
 
     val request = BeaconBlocksByRangeRequest(startBlockNumber = 0UL, count = 10UL)
@@ -152,7 +164,9 @@ class BeaconBlocksByRangeHandlerTest {
 
     val limitedBlocks =
       (0UL until 10UL).map { i ->
-        DataGenerators.randomSealedBeaconBlock(number = i)
+        DataGenerators.randomSealedBeaconBlock(
+          number = i,
+        )
       }
 
     var startBlockNumber = 0UL

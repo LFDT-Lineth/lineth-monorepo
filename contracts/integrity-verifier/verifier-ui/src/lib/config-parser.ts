@@ -1,6 +1,6 @@
 import type { ParsedConfig, FileRef, ConfigFormat, FieldType, FormField } from "@/types";
 
-import type { VerifierConfig } from "@consensys/linea-contract-integrity-verifier";
+import type { VerifierConfig } from "@lfdt-lineth/contract-integrity-verifier";
 
 // ============================================================================
 // Environment Variable Extraction

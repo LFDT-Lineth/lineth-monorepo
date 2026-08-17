@@ -1,7 +1,7 @@
 /**
- * @consensys/linea-contract-integrity-verifier-viem
+ * @lfdt-lineth/contract-integrity-verifier-viem
  *
- * Viem adapter for @consensys/linea-contract-integrity-verifier
+ * Viem adapter for @lfdt-lineth/contract-integrity-verifier
  *
  * @packageDocumentation
  */
@@ -23,8 +23,8 @@ import {
 } from "viem";
 
 // Import from /adapter to avoid pulling in Node.js 'fs' module in browser bundles
-import type { Web3Adapter, Web3AdapterOptions } from "@consensys/linea-contract-integrity-verifier/adapter";
-import type { AbiElement } from "@consensys/linea-contract-integrity-verifier/browser";
+import type { Web3Adapter, Web3AdapterOptions } from "@lfdt-lineth/contract-integrity-verifier/adapter";
+import type { AbiElement } from "@lfdt-lineth/contract-integrity-verifier/browser";
 
 /**
  * Options for creating a ViemAdapter.
@@ -41,8 +41,8 @@ export interface ViemAdapterOptions extends Web3AdapterOptions {
  *
  * @example
  * ```typescript
- * import { ViemAdapter } from "@consensys/linea-contract-integrity-verifier-viem";
- * import { Verifier } from "@consensys/linea-contract-integrity-verifier";
+ * import { ViemAdapter } from "@lfdt-lineth/contract-integrity-verifier-viem";
+ * import { Verifier } from "@lfdt-lineth/contract-integrity-verifier";
  *
  * const adapter = new ViemAdapter({ rpcUrl: "https://rpc.linea.build" });
  * const verifier = new Verifier(adapter);
@@ -166,4 +166,4 @@ export function createViemAdapterFromClient(client: PublicClient): ViemAdapter {
 
 // Note: Schema generation tools are in a separate entry point (verifier-viem/tools)
 // to avoid bundling Node.js-only dependencies in browser builds.
-// Import { createCryptoAdapter, generateSchema, ... } from "@consensys/linea-contract-integrity-verifier-viem/tools"
+// Import { createCryptoAdapter, generateSchema, ... } from "@lfdt-lineth/contract-integrity-verifier-viem/tools"

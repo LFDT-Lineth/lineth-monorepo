@@ -1,7 +1,7 @@
 package linea.rlp
 
 import io.vertx.core.Vertx
-import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
 import org.hyperledger.besu.ethereum.core.Block
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
@@ -25,7 +25,7 @@ class BesuRlpMainnetEncoderAsyncVertxImpl(
       },
       false,
     )
-      .toSafeFuture()
+      .toSafeFutureNonNull()
   }
 }
 
@@ -55,6 +55,6 @@ class BesuRlpDecoderAsyncVertxImpl(
       },
       false,
     )
-      .toSafeFuture()
+      .toSafeFutureNonNull()
   }
 }

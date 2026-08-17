@@ -1,4 +1,4 @@
-import { ExtendedMessage, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { ExtendedMessage, OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import { Client, Transport, Chain, Account, Hex, TransactionReceipt } from "viem";
 
 import { publicActionsL2 } from "./publicL2";

@@ -8,10 +8,10 @@ import (
 
 const (
 	// lineaVerifierConstants contains additional constant declarations for the
-	// Linea verifier contract.
+	// Lineth verifier contract.
 	lineaVerifierConstants = `  bytes32 private immutable CHAIN_CONFIGURATION;`
 
-	// lineaVerifierConstructor contains the constructor for the Linea verifier contract.
+	// lineaVerifierConstructor contains the constructor for the Lineth verifier contract.
 	lineaVerifierConstructor = `  /// @notice Constructor.
   /// @param _chainConfiguration The chain configuration parameters.
   constructor(ChainConfigurationParameter[] memory _chainConfiguration) {
@@ -26,7 +26,7 @@ const (
     emit ChainConfigurationSet(chainConfigurationHash, _chainConfiguration);
   }`
 
-	// lineaVerifierFunctions contains additional functions for the Linea verifier contract.
+	// lineaVerifierFunctions contains additional functions for the Lineth verifier contract.
 	lineaVerifierFunctions = `  /// @notice Compute the chain configuration hash.
   /// @param _chainConfiguration The chain configuration parameters.
   /// @return chainConfigurationHash The hash of the chain configuration.
@@ -68,7 +68,7 @@ const (
 )
 
 // LineaVerifierExportOptions returns the Solidity export options for generating
-// the Linea verifier contract with chain configuration support. These options
+// the Lineth verifier contract with chain configuration support. These options
 // configure gnark's Solidity template with:
 //   - Pragma version 0.8.33
 //   - Imports for Mimc library and IPlonkVerifier interface

@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuTransactionsHelper
 import maru.config.QbftConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.Test
 import testutils.Checks.getMinedBlocks
 import testutils.RecordingEngineProxy
 import testutils.SingleNodeNetworkStack
-import testutils.besu.BesuTransactionsHelper
 import testutils.maru.MaruFactory
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds

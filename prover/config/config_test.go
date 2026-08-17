@@ -58,3 +58,21 @@ func TestEnvironment(t *testing.T) {
 
 	assert.NotEqual(0, count, "no config file found")
 }
+
+func TestMustFindModuleLimitsReturnsLongestMatch(t *testing.T) {
+	tl := GetTestTracesLimits()
+	// For every module in the config, mustFindModuleLimits must return that
+	// exact module's limits (not a shorter prefix match like "").
+	for _, m := range tl.Modules {
+		if m.Module == "" {
+			continue
+		}
+		got := tl.mustFindModuleLimits(m.Module)
+		if got.Module != m.Module {
+			t.Errorf("mustFindModuleLimits(%q) returned %q, want exact match", m.Module, got.Module)
+		}
+		if got.Limit != m.Limit {
+			t.Errorf("mustFindModuleLimits(%q) returned limit %d, want %d", m.Module, got.Limit, m.Limit)
+		}
+	}
+}

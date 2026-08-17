@@ -5,7 +5,7 @@ import { createLoggerMock } from "../../__tests__/helpers/index.js";
 import { LidoAccountingReportClient } from "../LidoAccountingReportClient.js";
 
 import type { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
-import type { IRetryService } from "@consensys/linea-shared-utils";
+import type { IRetryService } from "@lfdt-lineth/shared-utils";
 import type { Address, Hex, TransactionReceipt } from "viem";
 
 jest.mock("@lidofinance/lsv-cli/dist/utils/report/report-proof.js", () => ({

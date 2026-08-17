@@ -5,7 +5,7 @@ import {
   ONE_GWEI,
   safeSub,
   weiToGweiNumber,
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 import { Address, Hex, maxUint256, TransactionReceipt } from "viem";
 
 import { IYieldManager } from "../core/clients/contracts/IYieldManager.js";

@@ -28,17 +28,12 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set timestamp
-      id: timestamp
-      shell: bash
-      run: |
-        echo "TIMESTAMP=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
-
     - name: set docker tag
       id: dockertag
       shell: bash
       run: |
-        base="${{ inputs.version_prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ inputs.commit_tag }}"
+        timestamp="$(date -u +%Y%m%d)"
+        base="${{ inputs.version_prefix }}-${timestamp}-${{ inputs.commit_tag }}"
         suffix="${{ inputs.image_tag_suffix && format('-{0}', inputs.image_tag_suffix) || '' }}"
         echo "dockertag_with_suffix=${base}${suffix}" >> "$GITHUB_OUTPUT"
         echo "dockertag=${base}" >> "$GITHUB_OUTPUT"

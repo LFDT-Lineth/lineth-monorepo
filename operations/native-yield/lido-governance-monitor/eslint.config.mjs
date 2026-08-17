@@ -1,4 +1,4 @@
-import { node } from "@consensys/eslint-config/node";
+import { node } from "@lfdt-lineth/eslint-config/node";
 
 export default [
   ...node,

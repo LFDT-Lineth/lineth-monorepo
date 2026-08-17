@@ -79,7 +79,7 @@ public abstract class BlockDataInstruction {
   public void trace(
       Trace.Blockdata trace, boolean shouldTraceTsAndNb, boolean shouldTraceRelTxNumMax) {
     int nbRows = nbRows();
-    for (short ct = 0; ct < nbRows; ct++) {
+    for (int ct = 0; ct < nbRows; ct++) {
       trace
           .iomf(true)
           .ctMax(nbRows - 1)

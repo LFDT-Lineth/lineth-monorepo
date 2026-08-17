@@ -8,11 +8,11 @@
  */
 package testutils
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.startWithRetry
 import maru.app.MaruApp
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
-import testutils.besu.BesuFactory
-import testutils.besu.startWithRetry
 import java.nio.file.Files
 import java.nio.file.Path
 

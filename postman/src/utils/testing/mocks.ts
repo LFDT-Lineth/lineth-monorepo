@@ -1,9 +1,9 @@
-import { ILogger, IMetricsService, IApplication } from "@consensys/linea-shared-utils";
+import { ILogger, IMetricsService, IApplication } from "@lfdt-lineth/shared-utils";
 import { mock, MockProxy } from "jest-mock-extended";
 import { DataSource, EntityManager } from "typeorm";
 
-import { ILineaRollupClient } from "../../core/clients/blockchain/ethereum/ILineaRollupClient";
-import { ILineaRollupLogClient } from "../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
+import { ILinethRollupClient } from "../../core/clients/blockchain/ethereum/ILinethRollupClient";
+import { ILinethRollupLogClient } from "../../core/clients/blockchain/ethereum/ILinethRollupLogClient";
 import { IMerkleTreeService } from "../../core/clients/blockchain/ethereum/IMerkleTreeService";
 import { IEthereumGasProvider, ILineaGasProvider } from "../../core/clients/blockchain/IGasProvider";
 import { IMessageSentEventLogClient } from "../../core/clients/blockchain/ILogClient";
@@ -42,12 +42,12 @@ export function mockLineaProvider(): MockProxy<ILineaProvider> {
   return mock<ILineaProvider>();
 }
 
-export function mockLineaRollupClient(): MockProxy<ILineaRollupClient> {
-  return mock<ILineaRollupClient>();
+export function mockLinethRollupClient(): MockProxy<ILinethRollupClient> {
+  return mock<ILinethRollupClient>();
 }
 
-export function mockLineaRollupLogClient(): MockProxy<ILineaRollupLogClient> {
-  return mock<ILineaRollupLogClient>();
+export function mockLinethRollupLogClient(): MockProxy<ILinethRollupLogClient> {
+  return mock<ILinethRollupLogClient>();
 }
 
 export function mockL2MessageServiceClient(): MockProxy<IL2MessageServiceClient> {

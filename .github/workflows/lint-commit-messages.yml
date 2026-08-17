@@ -19,21 +19,21 @@ concurrency:
 
 jobs:
   lint-commit-messages:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Lint PR title and commit messages
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Need both PR head and base so we can list commits in the PR.
           fetch-depth: 0
           submodules: false
 
        # Check if PR title is in Conventional Commits format
-       # It's important, as in a squash merge, the PR title becomes 
+       # It's important, as in a squash merge, the PR title becomes
        # the single commit message on main.
       - name: Lint PR title
         if: github.event_name == 'pull_request'
@@ -93,3 +93,4 @@ jobs:
             exit 1
           fi
           echo "✓ All commit messages OK."
+

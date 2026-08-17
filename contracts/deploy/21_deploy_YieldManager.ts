@@ -13,6 +13,7 @@ import {
   generateRoleAssignments,
   getEnvVarOrDefault,
   getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
   LogContractDeployment,
   tryVerifyContractWithConstructorArgs,
 } from "../common/helpers";
@@ -31,12 +32,24 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "YieldManager";
 
     // YieldManager DEPLOYED AS UPGRADEABLE PROXY
-    const lineaRollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
-    const lineaRollupSecurityCouncil = getRequiredEnvVar("L1_SECURITY_COUNCIL");
-    const nativeYieldAutomationServiceAddress = getRequiredEnvVar("NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS");
-    const vaultHub = getRequiredEnvVar("VAULT_HUB");
-    const vaultFactory = getRequiredEnvVar("VAULT_FACTORY");
-    const steth = getRequiredEnvVar("STETH");
+    const linethRollupAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "LinethRollup",
+      "LINETH_ROLLUP_ADDRESS",
+    );
+    const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L1_SECURITY_COUNCIL",
+      "L1_SECURITY_COUNCIL",
+    );
+    const nativeYieldAutomationServiceAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS",
+      "NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS",
+    );
+    const vaultHub = requireAddressFromRegistryOrEnv(hre.network.name, "VAULT_HUB", "VAULT_HUB");
+    const vaultFactory = requireAddressFromRegistryOrEnv(hre.network.name, "VAULT_FACTORY", "VAULT_FACTORY");
+    const steth = requireAddressFromRegistryOrEnv(hre.network.name, "STETH", "STETH");
     const initialMinimumWithdrawalReservePercentageBps = parseInt(
       getRequiredEnvVar("MINIMUM_WITHDRAWAL_RESERVE_PERCENTAGE_BPS"),
     );
@@ -50,11 +63,11 @@ const func: DeployFunction = withSignerUiSession(
       "GI_PENDING_PARTIAL_WITHDRAWALS_ROOT",
       GI_PENDING_PARTIAL_WITHDRAWALS_ROOT,
     );
-    const verifierAdmin = getEnvVarOrDefault("VALIDATOR_CONTAINER_PROOF_VERIFIER_ADMIN", lineaRollupSecurityCouncil);
+    const verifierAdmin = getEnvVarOrDefault("VALIDATOR_CONTAINER_PROOF_VERIFIER_ADMIN", linethRollupSecurityCouncil);
 
     const securityCouncilRoles = generateRoleAssignments(
       YIELD_MANAGER_SECURITY_COUNCIL_ROLES,
-      lineaRollupSecurityCouncil,
+      linethRollupSecurityCouncil,
       [],
     );
     const automationServiceRoles = generateRoleAssignments(
@@ -75,7 +88,7 @@ const func: DeployFunction = withSignerUiSession(
       unpauseTypeRoles: unpauseTypeRoles,
       roleAddresses: roleAddresses,
       initialL2YieldRecipients: [],
-      defaultAdmin: lineaRollupSecurityCouncil,
+      defaultAdmin: linethRollupSecurityCouncil,
       initialMinimumWithdrawalReservePercentageBps: initialMinimumWithdrawalReservePercentageBps,
       initialTargetWithdrawalReservePercentageBps: initialTargetWithdrawalReservePercentageBps,
       initialMinimumWithdrawalReserveAmount: initialMinimumWithdrawalReserveAmount,
@@ -84,7 +97,7 @@ const func: DeployFunction = withSignerUiSession(
 
     const yieldManager = (await deployUpgradableFromFactoryWithConstructorArgs(
       "YieldManager",
-      [lineaRollupAddress],
+      [linethRollupAddress],
       [yieldManagerInitData],
       {
         initializer: YIELD_MANAGER_INITIALIZE_SIGNATURE,
@@ -95,7 +108,7 @@ const func: DeployFunction = withSignerUiSession(
     await LogContractDeployment(contractName, yieldManager);
     const yieldManagerAddress = await yieldManager.getAddress();
     await tryVerifyContractWithConstructorArgs(yieldManagerAddress, "src/yield/YieldManager.sol:YieldManager", [
-      lineaRollupAddress,
+      linethRollupAddress,
     ]);
 
     /********************************************************************
@@ -122,7 +135,7 @@ const func: DeployFunction = withSignerUiSession(
     const factory = await deployFromFactory(
       "LidoStVaultYieldProviderFactory",
       signer,
-      lineaRollupAddress,
+      linethRollupAddress,
       yieldManagerAddress,
       vaultHub,
       vaultFactory,
@@ -134,7 +147,7 @@ const func: DeployFunction = withSignerUiSession(
     await tryVerifyContractWithConstructorArgs(
       factoryAddress,
       "src/yield/LidoStVaultYieldProviderFactory.sol:LidoStVaultYieldProviderFactory",
-      [lineaRollupAddress, yieldManagerAddress, vaultHub, vaultFactory, steth, verifierAddress],
+      [linethRollupAddress, yieldManagerAddress, vaultHub, vaultFactory, steth, verifierAddress],
     );
 
     /********************************************************************
@@ -148,7 +161,7 @@ const func: DeployFunction = withSignerUiSession(
     await tryVerifyContractWithConstructorArgs(
       yieldProvider,
       "src/yield/LidoStVaultYieldProvider.sol:LidoStVaultYieldProvider",
-      [lineaRollupAddress, yieldManagerAddress, vaultHub, vaultFactory, steth, verifierAddress],
+      [linethRollupAddress, yieldManagerAddress, vaultHub, vaultFactory, steth, verifierAddress],
     );
   },
 );

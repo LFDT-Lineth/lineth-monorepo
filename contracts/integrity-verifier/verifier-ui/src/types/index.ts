@@ -4,7 +4,7 @@ import type {
   ChainConfig,
   ContractVerificationResult,
   VerificationSummary,
-} from "@consensys/linea-contract-integrity-verifier";
+} from "@lfdt-lineth/contract-integrity-verifier";
 
 // Re-export core types
 export type { VerifierConfig, ContractConfig, ChainConfig, ContractVerificationResult, VerificationSummary };

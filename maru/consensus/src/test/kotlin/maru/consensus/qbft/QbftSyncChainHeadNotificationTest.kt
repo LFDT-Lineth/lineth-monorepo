@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 class QbftSyncChainHeadNotificationTest {
   @Test
   fun `sync completion enqueues QbftNewChainHead with current chain head`() {
-    val beaconChain = InMemoryBeaconChain.fromGenesis()
+    val beaconChain = inMemoryBeaconChainFromGenesis()
     val blockChain = QbftBlockchainAdapter(beaconChain)
     val bftEventQueue = BftEventQueue(100).also { it.start() }
 
@@ -41,7 +41,9 @@ class QbftSyncChainHeadNotificationTest {
     // Simulate the sync pipeline advancing the chain to block 5
     var currentState = beaconChain.getLatestBeaconState()
     for (blockNumber in 1UL..5UL) {
-      val beaconBlock = DataGenerators.randomBeaconBlock(blockNumber)
+      val beaconBlock = DataGenerators.randomBeaconBlock(
+        blockNumber,
+      )
       val sealedBlock = SealedBeaconBlock(beaconBlock, emptySet())
       currentState = currentState.copy(beaconBlockHeader = beaconBlock.beaconBlockHeader)
       beaconChain.newBeaconChainUpdater().run {
@@ -57,5 +59,10 @@ class QbftSyncChainHeadNotificationTest {
     val event = bftEventQueue.poll(1, TimeUnit.SECONDS)
     assertThat(event).isInstanceOf(QbftNewChainHead::class.java)
     assertThat((event as QbftNewChainHead).newChainHeadHeader().number).isEqualTo(5L)
+  }
+
+  private fun inMemoryBeaconChainFromGenesis(): InMemoryBeaconChain {
+    val (beaconState, sealedBlock) = DataGenerators.genesisState()
+    return InMemoryBeaconChain(beaconState, sealedBlock)
   }
 }

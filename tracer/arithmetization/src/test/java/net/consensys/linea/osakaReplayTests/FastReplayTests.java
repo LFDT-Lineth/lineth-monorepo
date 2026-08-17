@@ -55,7 +55,7 @@ public class FastReplayTests extends TracerTestBase {
     replay(MAINNET_TESTCONFIG(OSAKA, false), "osaka/6569423.mainnet.json.gz", testInfo);
   }
 
-  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
+  @Disabled("https://github.com/LFDT-Lineth/lineth-monorepo/issues/1912")
   @Test
   void incident777zkGethMainnet(TestInfo testInfo) {
     replay(MAINNET_TESTCONFIG(OSAKA, false), "osaka/7461019-7461030.mainnet.json.gz", testInfo);
@@ -103,7 +103,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
-  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
+  @Disabled("https://github.com/LFDT-Lineth/lineth-monorepo/issues/1912")
   @Test
   void negativeNumberOfMmioInstruction(TestInfo testInfo) {
     replay(
@@ -122,7 +122,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
-  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
+  @Disabled("https://github.com/LFDT-Lineth/lineth-monorepo/issues/1912")
   @Test
   void failedCreate2(TestInfo testInfo) {
     replay(
@@ -187,7 +187,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
-  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
+  @Disabled("https://github.com/LFDT-Lineth/lineth-monorepo/issues/1912")
   @Test
   void stateManagerIntegrationTest(TestInfo testInfo) {
     replay(

@@ -1,4 +1,4 @@
-import { ILogger, attempt, msToSeconds, wait } from "@consensys/linea-shared-utils";
+import { ILogger, attempt, msToSeconds, wait } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";

@@ -9,11 +9,11 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/crypto/state-management/smt"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/arena"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/parallel"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/profiling"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/types"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -198,6 +198,15 @@ func (p *Params) noSisTransversalHash(v []smartvectors.SmartVector) []field.Elem
 				x := v[row].Get(col)
 				xBytes := x.Bytes()
 				hasher.Write(xBytes[:])
+			}
+			// Zero-pad to nextPow2(numRows) so the hash is consistent with
+			// the self-recursion's CheckLinearHash which uses nextPow2(Pi) as
+			// the period (required for EvalCoeffBivariate's PeriodicSample).
+			paddedRows := utils.NextPowerOfTwo(numRows)
+			var zero field.Element
+			zeroBytes := zero.Bytes()
+			for row := numRows; row < paddedRows; row++ {
+				hasher.Write(zeroBytes[:])
 			}
 
 			digest := hasher.Sum(nil)

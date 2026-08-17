@@ -27,7 +27,6 @@ import maru.p2p.messages.StatusManager
 import maru.p2p.testutils.NetworkUtil.findFreePort
 import maru.p2p.testutils.NetworkUtil.findFreePorts
 import maru.p2p.topics.BesuMessageDataSerDe
-import maru.serialization.rlp.RLPSerializers
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
@@ -94,13 +93,28 @@ class P2PTest {
     private val key3 = "080212204437acb8e84bc346f7640f239da84abe99bc6f97b7855f204e34688d2977fd57".fromHex()
     private val p2PState = InMemoryP2PState()
 
-    private val beaconChain: InMemoryBeaconChain = InMemoryBeaconChain.fromGenesis()
+    private val beaconChain: InMemoryBeaconChain = inMemoryBeaconChainFromGenesis()
     private val forkIdHashManager: ForkPeeringManager =
       createForkIdHashManager(
         chainId = chainId,
         beaconChain = beaconChain,
       )
     private val statusManager: StatusManager = StatusManager(beaconChain, forkIdHashManager)
+    private val blockHashing =
+      DataGenerators.testForkAwareBlockHashing(
+        chainId = chainId,
+        validatorSet = setOf(DataGenerators.randomValidator()),
+      )
+
+    private fun inMemoryBeaconChainFromGenesis(
+      genesisTimestampSeconds: ULong = 0UL,
+    ): InMemoryBeaconChain {
+      val (beaconState, sealedBlock) =
+        DataGenerators.genesisState(
+          genesisTimestamp = genesisTimestampSeconds,
+        )
+      return InMemoryBeaconChain(beaconState, sealedBlock)
+    }
 
     private fun createP2PNetwork(
       privateKey: ByteArray,
@@ -125,7 +139,7 @@ class P2PTest {
           reputation = reputationConfig,
         ),
         chainId = chainId,
-        serDe = RLPSerializers.SealedBeaconBlockCompressorSerializer,
+        blockHashing = blockHashing,
         metricsFacade = TestMetrics.TestMetricsFacade,
         statusManager = statusManager,
         beaconChain = beaconChain,
@@ -241,7 +255,13 @@ class P2PTest {
 
   @Test
   fun `two peers can gossip blocks with each other`() {
-    val beaconChain2 = InMemoryBeaconChain(DataGenerators.randomBeaconState(number = 0u, timestamp = 0u))
+    val beaconChain2 =
+      InMemoryBeaconChain(
+        DataGenerators.randomBeaconState(
+          number = 0u,
+          timestamp = 0u,
+        ),
+      )
     val p2pNetworkImpl1 = createAndStartP2PNetwork(privateKey = key1)
 
     val blocksReceived = mutableListOf<SealedBeaconBlock>()
@@ -307,8 +327,20 @@ class P2PTest {
 
   @Test
   fun `peer receiving block gossip passes message on`() {
-    val beaconChain2 = InMemoryBeaconChain(DataGenerators.randomBeaconState(number = 0u, timestamp = 0u))
-    val beaconChain3 = InMemoryBeaconChain(DataGenerators.randomBeaconState(number = 0u, timestamp = 0u))
+    val beaconChain2 =
+      InMemoryBeaconChain(
+        DataGenerators.randomBeaconState(
+          number = 0u,
+          timestamp = 0u,
+        ),
+      )
+    val beaconChain3 =
+      InMemoryBeaconChain(
+        DataGenerators.randomBeaconState(
+          number = 0u,
+          timestamp = 0u,
+        ),
+      )
     val p2pNetworkImpl1 = createAndStartP2PNetwork(privateKey = key1, staticPeers = emptyList())
     val p2pNetworkImpl3 =
       createAndStartP2PNetwork(privateKey = key3, staticPeers = emptyList(), beaconChain = beaconChain3)
@@ -381,7 +413,7 @@ class P2PTest {
     val expectedStatus =
       Status(
         forkIdHash = forkIdHashManager.currentForkHash(),
-        latestStateRoot = latestBeaconBlockHeader.hash,
+        latestStateRoot = latestBeaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = latestBeaconBlockHeader.number,
       )
     val peer1 =
@@ -398,10 +430,17 @@ class P2PTest {
   fun `peer can send beacon blocks by range request`() {
     // Set up beacon chain with some blocks
     val testBeaconChain =
-      InMemoryBeaconChain(initialBeaconState = DataGenerators.randomBeaconState(number = 0u, timestamp = 0u))
+      InMemoryBeaconChain(
+        initialBeaconState = DataGenerators.randomBeaconState(
+          number = 0u,
+          timestamp = 0u,
+        ),
+      )
     val storedBlocks =
       (0UL..10UL).map { blockNumber ->
-        DataGenerators.randomSealedBeaconBlock(number = blockNumber)
+        DataGenerators.randomSealedBeaconBlock(
+          number = blockNumber,
+        )
       }
 
     testBeaconChain.newBeaconChainUpdater().use { updater ->
@@ -549,7 +588,10 @@ class P2PTest {
         privateKey = key2,
         port = p2pPort2.toUInt(),
         beaconChain = InMemoryBeaconChain(
-          initialBeaconState = DataGenerators.randomBeaconState(number = 0u, timestamp = 0u),
+          initialBeaconState = DataGenerators.randomBeaconState(
+            number = 0u,
+            timestamp = 0u,
+          ),
         ),
         discovery = P2PConfig.Discovery(
           port = findFreePort(),
@@ -566,7 +608,10 @@ class P2PTest {
         privateKey = key3,
         port = p2pPort3.toUInt(),
         beaconChain = InMemoryBeaconChain(
-          initialBeaconState = DataGenerators.randomBeaconState(number = 0u, timestamp = 0u),
+          initialBeaconState = DataGenerators.randomBeaconState(
+            number = 0u,
+            timestamp = 0u,
+          ),
         ),
         discovery = P2PConfig.Discovery(
           port = findFreePort(),
@@ -647,7 +692,10 @@ class P2PTest {
       createAndStartP2PNetwork(
         privateKey = key2,
         beaconChain = InMemoryBeaconChain(
-          initialBeaconState = DataGenerators.randomBeaconState(number = 0u, timestamp = 0u),
+          initialBeaconState = DataGenerators.randomBeaconState(
+            number = 0u,
+            timestamp = 0u,
+          ),
         ),
         staticPeers = listOf(createPeerAddress(p2pNetworkImpl1.port, PEER_ID_NODE_1)),
         statusUpdate = P2PConfig.StatusUpdate(
@@ -707,7 +755,10 @@ class P2PTest {
         privateKey = key2,
         staticPeers = listOf(createPeerAddress(p2pNetworkImpl1.port, PEER_ID_NODE_1)),
         beaconChain = InMemoryBeaconChain(
-          initialBeaconState = DataGenerators.randomBeaconState(number = 0u, timestamp = 0u),
+          initialBeaconState = DataGenerators.randomBeaconState(
+            number = 0u,
+            timestamp = 0u,
+          ),
         ),
         reconnectDelay = 100.milliseconds,
         statusUpdate = P2PConfig.StatusUpdate(
@@ -775,7 +826,7 @@ class P2PTest {
     val beaconBlockHeader = mock<BeaconBlockHeader>()
     whenever(beaconChain.getLatestBeaconState()).thenReturn(beaconState)
     whenever(beaconState.beaconBlockHeader).thenReturn(beaconBlockHeader)
-    whenever(beaconBlockHeader.hash).thenReturn(ByteArray(32))
+    whenever(beaconBlockHeader.beaconBlockIdHash).thenReturn(ByteArray(32))
     whenever(beaconBlockHeader.number).thenReturn(0uL, 1uL, 2uL, 3uL, 4uL, 5uL)
 
     val statusManager = StatusManager(beaconChain, forkIdHashManager)

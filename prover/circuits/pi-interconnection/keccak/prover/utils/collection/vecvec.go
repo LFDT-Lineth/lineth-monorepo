@@ -1,6 +1,6 @@
 package collection
 
-import "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+import "github.com/consensys/linea-monorepo/prover/utils"
 
 // VecVec is a wrapper around double vecs
 // The inner slice is append only

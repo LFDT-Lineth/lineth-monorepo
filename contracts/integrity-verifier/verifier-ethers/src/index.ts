@@ -1,7 +1,7 @@
 /**
- * @consensys/linea-contract-integrity-verifier-ethers
+ * @lfdt-lineth/contract-integrity-verifier-ethers
  *
- * Ethers v6 adapter for @consensys/linea-contract-integrity-verifier
+ * Ethers v6 adapter for @lfdt-lineth/contract-integrity-verifier
  *
  * @packageDocumentation
  */
@@ -9,8 +9,8 @@
 import { ethers } from "ethers";
 
 // Import from /adapter to avoid pulling in Node.js 'fs' module in browser bundles
-import type { Web3Adapter, Web3AdapterOptions } from "@consensys/linea-contract-integrity-verifier/adapter";
-import type { AbiElement } from "@consensys/linea-contract-integrity-verifier/browser";
+import type { Web3Adapter, Web3AdapterOptions } from "@lfdt-lineth/contract-integrity-verifier/adapter";
+import type { AbiElement } from "@lfdt-lineth/contract-integrity-verifier/browser";
 
 /**
  * Options for creating an EthersAdapter.
@@ -25,8 +25,8 @@ export interface EthersAdapterOptions extends Web3AdapterOptions {
  *
  * @example
  * ```typescript
- * import { EthersAdapter } from "@consensys/linea-contract-integrity-verifier-ethers";
- * import { Verifier } from "@consensys/linea-contract-integrity-verifier";
+ * import { EthersAdapter } from "@lfdt-lineth/contract-integrity-verifier-ethers";
+ * import { Verifier } from "@lfdt-lineth/contract-integrity-verifier";
  *
  * const adapter = new EthersAdapter({ rpcUrl: "https://rpc.linea.build" });
  * const verifier = new Verifier(adapter);
@@ -123,4 +123,4 @@ export function createEthersAdapter(rpcUrl: string, chainId?: number): EthersAda
 
 // Note: Schema generation tools are in a separate entry point (verifier-ethers/tools)
 // to avoid bundling Node.js-only dependencies in browser builds.
-// Import { createCryptoAdapter, generateSchema, ... } from "@consensys/linea-contract-integrity-verifier-ethers/tools"
+// Import { createCryptoAdapter, generateSchema, ... } from "@lfdt-lineth/contract-integrity-verifier-ethers/tools"

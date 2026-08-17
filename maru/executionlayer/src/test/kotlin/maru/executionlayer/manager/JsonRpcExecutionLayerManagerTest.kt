@@ -11,7 +11,7 @@ package maru.executionlayer.manager
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
-import maru.mappers.Mappers.toDomain
+import maru.executionlayer.mappers.Mappers.toDomain
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat

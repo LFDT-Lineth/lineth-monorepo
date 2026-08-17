@@ -8,6 +8,8 @@
  */
 package maru.app
 
+import linea.testing.besu.BesuFactory
+import linea.testing.besu.BesuTransactionsHelper
 import maru.core.Seal
 import maru.p2p.NoOpP2PNetwork
 import maru.p2p.ValidationResult
@@ -26,8 +28,6 @@ import testutils.Checks.getMinedBlocks
 import testutils.InjectableSealedBlocksFakeNetwork
 import testutils.SingleNodeNetworkStack
 import testutils.SpyingP2PNetwork
-import testutils.besu.BesuFactory
-import testutils.besu.BesuTransactionsHelper
 import testutils.maru.MaruFactory
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds

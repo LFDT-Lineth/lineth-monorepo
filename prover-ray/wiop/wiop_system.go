@@ -1,6 +1,9 @@
 package wiop
 
-import "github.com/consensys/linea-monorepo/prover-ray/utils/arena"
+import (
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+)
 
 // System is the top-level container for an abstract cryptographic protocol.
 // It owns all rounds, modules, and the single precomputed round. It is also
@@ -23,19 +26,36 @@ type System struct {
 	// system via [System.NewLagrangeEval] and [System.NewLagrangeEvalFrom],
 	// in declaration order.
 	LagrangeEvals []*LagrangeEval
-	// TableRelations holds all [TableRelation] queries registered with this
-	// system via [System.NewPermutation] and [System.NewInclusion], in
+	// TableRelations holds all [TableRelationQuery] queries registered with this
+	// system via [System.NewInclusion] and [System.NewPermutation], in
 	// declaration order.
-	TableRelations []*TableRelation
+	TableRelations []*TableRelationQuery
 	// LogDerivativeSums holds all [LogDerivativeSum] queries registered with
 	// this system via [System.NewLogDerivativeSum], in declaration order.
 	LogDerivativeSums []*LogDerivativeSum
+	// GrandProducts holds all [GrandProduct] queries registered with this
+	// system via [System.NewGrandProduct], in declaration order. The
+	// grandproduct compiler also creates these when reducing permutation
+	// [TableRelationQuery] queries.
+	GrandProducts []*GrandProduct
+	// MessageBuses holds all [MessageBus] queries registered with this system
+	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
+	// declaration order.
+	MessageBuses []*MessageBus
+	// PublicInputs holds the cells promoted to public inputs via
+	// [System.RegisterPublicInputs], in registration order. That order is the
+	// layout of the flat [PublicInput] vector, and each cell carries a
+	// [PublicInputTag] naming its role — mainly used for inter-shard consistency.
+	PublicInputs []*Cell
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena
 	// Annotation is some user-defined information that can be attached to the
 	// System.
 	Annotations Annotations
+	// PrecomputedCommitment commitment bears the commitment to the precomputed
+	// values.
+	PrecomputedCommitment field.Octuplet
 }
 
 // NewSystemf constructs an empty System. It creates a root [ContextFrame]
@@ -48,6 +68,7 @@ func NewSystemf(msg string, args ...any) *System {
 	sys := &System{
 		Context:          ctx,
 		PrecomputedRound: &PrecomputedRound{Round: Round{system: nil}},
+		PublicInputs:     []*Cell{},
 	}
 
 	// Wire the back-reference after the System pointer is stable.

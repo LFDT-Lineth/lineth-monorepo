@@ -120,7 +120,7 @@ Plugins are documented [here](PLUGINS.md).
 Here are the steps for releasing a new version of the plugins:
 
 1. Update [tracer/build.gradle](../tracer/build.gradle) property `targetReleaseVersion`with the release version number's expected tag in the format vX.Y.Z (e.g., v0.2.0 creates a release version 0.2.0).
-2. Launch [Linea tracer release Github action](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-tracer-plugin-release.yml) with the chosen tag
+2. Launch [Linea tracer release Github action](https://github.com/LFDT-Lineth/lineth-monorepo/actions/workflows/linea-tracer-plugin-release.yml) with the chosen tag
 3. Once the release workflow completes, check and update the release notes.
 
 Note: Release tags (of the form v\*) are protected and can only be pushed by organization and/or repository owners.

@@ -8,8 +8,8 @@
  */
 package maru.consensus.state
 
+import linea.kotlin.encodeHex
 import maru.core.BeaconBlockBody
-import maru.extensions.encodeHex
 import org.apache.logging.log4j.LogManager
 
 typealias FinalizationProvider = (BeaconBlockBody) -> FinalizationState

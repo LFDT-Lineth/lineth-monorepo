@@ -1,4 +1,4 @@
-import { IBaseContractClient } from "@consensys/linea-shared-utils";
+import { IBaseContractClient } from "@lfdt-lineth/shared-utils";
 import { Address } from "viem";
 
 import { WithdrawalRequests } from "../../entities/LidoStakingVaultWithdrawalParams.js";

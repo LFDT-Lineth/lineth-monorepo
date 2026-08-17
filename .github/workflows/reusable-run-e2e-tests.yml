@@ -1,0 +1,129 @@
+name: "Reusable: Run E2E Tests"
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'The commit tag to use'
+        required: true
+        type: string
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-containers-list:
+        description: List containers before starting end to end tests
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      linea_besu_package_tag:
+        required: false
+        type: string
+        default: ""
+      coordinator_tag:
+        required: false
+        type: string
+        default: ""
+      postman_tag:
+        required: false
+        type: string
+        default: ""
+      prover_tag:
+        required: false
+        type: string
+        default: ""
+      tx_exclusion_api_tag:
+        required: false
+        type: string
+        default: ""
+      maru_tag:
+        required: false
+        type: string
+        default: ""
+      linea_coordinator_image_name:
+        description: 'Coordinator Docker image name (overrides the compose default)'
+        required: false
+        type: string
+        default: consensys/linea-coordinator
+      linea_coordinator_jar:
+        description: 'Coordinator JAR filename to launch'
+        required: false
+        type: string
+        default: coordinator.jar
+      linea_coordinator_artifact_name:
+        description: 'Artifact name prefix for the coordinator Docker image'
+        required: false
+        type: string
+        default: linea-coordinator
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-containers-list:
+        description: List containers before starting end to end tests
+        required: false
+        type: boolean
+        default: true
+      has-changes-requiring-e2e-testing:
+        type: string
+    outputs:
+      tests_outcome:
+        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+jobs:
+  # Required job
+  run-e2e-tests:
+    # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+    if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
+    outputs:
+      tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run e2e tests
+        id: run-e2e-tests
+        uses: ./.github/actions/run-e2e-tests
+        with:
+          image_tag: ${{ inputs.image_tag }}
+          linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
+          coordinator_tag: ${{ inputs.coordinator_tag }}
+          postman_tag: ${{ inputs.postman_tag }}
+          prover_tag: ${{ inputs.prover_tag }}
+          tx_exclusion_api_tag: ${{ inputs.tx_exclusion_api_tag }}
+          maru_tag: ${{ inputs.maru_tag }}
+          linea_coordinator_image_name: ${{ inputs.linea_coordinator_image_name }}
+          linea_coordinator_jar: ${{ inputs.linea_coordinator_jar }}
+          linea_coordinator_artifact_name: ${{ inputs.linea_coordinator_artifact_name }}
+          e2e-tests-with-ssh: ${{ inputs.e2e-tests-with-ssh }}
+          e2e-tests-logs-dump: ${{ inputs.e2e-tests-logs-dump }}
+          e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}

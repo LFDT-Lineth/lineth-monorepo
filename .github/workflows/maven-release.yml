@@ -10,14 +10,8 @@ on:
     inputs:
       libToRelease:
         required: true
-        type: choice
-        description: 'Library to release'
-        options:
-          - ':jvm-libs:linea:blob-compressor'
-          - ':jvm-libs:linea:blob-decompressor'
-          - ':jvm-libs:linea:blob-shnarf-calculator'
-          - ':jvm-libs:linea:linea-contracts:l1-rollup'
-          - ':jvm-libs:linea:linea-contracts:l2-message-service'
+        type: string
+        description: 'Library to release, e.g :jvm-libs:linea:blob-compressor'
       version:
         required: true
         type: string
@@ -25,19 +19,25 @@ on:
 
 jobs:
   release:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Validate inputs
         env:
+          LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
           INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
+          if ! [[ "$LIB_TO_RELEASE" =~ ^(:[a-z0-9][a-z0-9-]*)+$ ]]; then
+            echo "Error: library must be a Gradle subproject path, got: '$LIB_TO_RELEASE'" >&2
+            exit 1
+          fi
+
           if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: version must be a semantic version (MAJOR.MINOR.PATCH, digits only), got: '$INPUT_VERSION'" >&2
             exit 1
           fi
 
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 

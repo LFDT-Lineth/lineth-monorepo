@@ -77,7 +77,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
    * @notice Initializes the forced transaction gateway.
    * @dev `_minimumBaseGasFee` can be set to zero for gasless networks. When zero, zero EIP-1559 fee
    *      parameters are allowed. When non-zero, the transaction's maxFeePerGas must be >= this value.
-   * @param _lineaRollup The Linea rollup contract address.
+   * @param _rollup The Lineth rollup contract address.
    * @param _destinationChainId The L2 destination chain ID.
    * @param _l2BlockBuffer The L2 block buffer for forced transaction inclusion.
    * @param _minGasLimit The minimum gas limit for forced transactions. Must cover worst-case intrinsic
@@ -91,7 +91,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
    * @param _blockNumberDeadlineBuffer The buffer used when the computed block number deadline is too low.
    */
   constructor(
-    address _lineaRollup,
+    address _rollup,
     uint256 _destinationChainId,
     uint256 _l2BlockBuffer,
     uint256 _minGasLimit,
@@ -103,7 +103,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     uint256 _l2BlockDurationSeconds,
     uint256 _blockNumberDeadlineBuffer
   ) {
-    require(_lineaRollup != address(0), IGenericErrors.ZeroAddressNotAllowed());
+    require(_rollup != address(0), IGenericErrors.ZeroAddressNotAllowed());
     require(_destinationChainId != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_l2BlockBuffer != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_minGasLimit != 0, IGenericErrors.ZeroValueNotAllowed());
@@ -115,7 +115,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     require(_l2BlockDurationSeconds != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_blockNumberDeadlineBuffer != 0, IGenericErrors.ZeroValueNotAllowed());
 
-    LINEA_ROLLUP = IAcceptForcedTransactions(_lineaRollup);
+    LINEA_ROLLUP = IAcceptForcedTransactions(_rollup);
     DESTINATION_CHAIN_ID = _destinationChainId;
     L2_BLOCK_BUFFER = _l2BlockBuffer;
     MIN_GAS_LIMIT = _minGasLimit;

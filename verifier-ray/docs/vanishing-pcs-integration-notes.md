@@ -1,0 +1,13 @@
+# Vanishing PCS Integration Notes
+
+These notes track assumptions in the current vanishing quotient compatibility tests that must be revisited when PCS verification is wired in.
+
+- Dynamic `module_sizes` are trusted fixture inputs for now. PCS integration must authenticate or cross-check every dynamic size against commitment/proof metadata before `vanishing.verify` consumes it; the quotient identity alone can be size-independent when the evaluated numerator and quotient are both zero.
+- Static module sizes are generated into `vanishing.System` and use a comptime-specialized path. The static path must remain semantically equivalent to the dynamic fallback for the same `n`.
+- Current vanishing fixtures feed raw prover-ray oracle and quotient vectors into the transcript because prover-ray currently derives the corresponding coins from those vectors. PCS integration should replace those raw oracle/quotient transcript messages with authenticated commitments/openings while keeping coin derivation compatible.
+- `vanishing.verify` currently owns a fixed three-round transcript: initial/witness messages, quotient messages, then evaluation checks. PCS/FRI integration will likely add more transcript rounds, so the full verifier should own the round schedule or receive generated proof metadata instead of baking the round count into the vanishing query checker.
+- Merge and evaluation coins are currently sampled one per module in generated module order. PCS integration must preserve that deterministic ordering, or make the ordering explicit in generated metadata, so prover-ray and verifier-ray derive the same coins after additional PCS rounds are inserted.
+- Shifted openings for `ColumnView.Shift` must be checked against the same module size/domain used by cancellation roots and quotient recombination. This is especially important for dynamic modules, where the size is supplied at proof time.
+- Witness and quotient evaluations are trusted fixture inputs in this phase. PCS integration must authenticate those claimed evaluations before the quotient identity checker accepts them.
+- Some full-pipeline prover scenarios can compile to no `global.Verifier` modules while still having cell-only verifier actions, such as `lookuptologderivsum.resultIsZeroVerifierAction` and `logderivativesum.verifierAction`. Current vanishing fixture generation skips those systems because verifier-ray only generates `global.Verifier` quotient checks; revisit this when adding compatibility support for those verifier action types.
+- Any future FRI-backed PCS metadata that implies a domain size must be reconciled with `CheckInput.module_sizes`; disagreement should be a verifier error, not an unchecked assumption.

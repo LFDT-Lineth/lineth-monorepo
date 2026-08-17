@@ -105,7 +105,6 @@ func VerifyBlobConsistency(api frontend.API, blobCrumbs []frontend.Variable, eva
 	l := bls12381ScalarToBls12377Scalars(api, lagrangeEval)
 	p := bls12381ScalarToBls12377Scalars(api, polyEval)
 
-	api.AssertIsBoolean(eip4844Enabled)
 	evaluation[0] = api.Select(eip4844Enabled, l[0], p[0])
 	evaluation[1] = api.Select(eip4844Enabled, l[1], p[1])
 

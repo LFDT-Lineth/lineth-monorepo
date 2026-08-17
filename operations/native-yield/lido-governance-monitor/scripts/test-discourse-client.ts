@@ -5,13 +5,13 @@
  *
  * Example usage:
  * DISCOURSE_PROPOSALS_URL=https://research.lido.fi/c/proposals/9/l/latest.json \
- * pnpm --filter @consensys/lido-governance-monitor exec tsx scripts/test-discourse-client.ts
+ * pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx scripts/test-discourse-client.ts
  *
  * Optional env vars:
  * PROPOSAL_ID=11107    # Specific proposal ID to fetch details for
  */
 
-import { ExponentialBackoffRetryService, WinstonLogger } from "@consensys/linea-shared-utils";
+import { ExponentialBackoffRetryService, WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { DiscourseClient } from "../src/clients/DiscourseClient.js";
 
 async function main() {

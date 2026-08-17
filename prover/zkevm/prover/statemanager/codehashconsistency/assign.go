@@ -250,20 +250,6 @@ func (mod Module) Assign(run *wizard.ProverRuntime) {
 			newCRom = cRom + 1
 		}
 
-		// Advance the SS cursor only when ROM was already exhausted at the
-		// START of this iteration (cRom), not when it just became exhausted
-		// (newCRom). This defers the drain by one step.
-		//
-		// Without this deferral, if the last ROM entry is a phantom entry from
-		// an OOG-reverted CREATE2 (present in ROM but not in the state trie),
-		// the drain fires in the same step that ROM is exhausted. At that step
-		// the SS cursor is still ahead of the phantom (SSIsGtRom=1, RomOngoing=1),
-		// so STATE_SUM_STAY_SAME requires SSIsConst=1 on the next row — but the
-		// drain already advanced SS, producing SSIsConst=0 and panicking the prover.
-		//
-		// By checking cRom instead of newCRom, the drain fires one row later
-		// (when ROM is already in its exhausted state), at which point RomOngoing=0
-		// and the constraint no longer requires SS to stay constant.
 		if cSS < len(ssData) && cRom >= len(romData) {
 			newCSS = cSS + 1
 		}

@@ -1,16 +1,16 @@
 # SDK
 
-> TypeScript SDKs for programmatic interaction with Linea messaging and bridging.
+> TypeScript SDKs for programmatic interaction with Lineth messaging and bridging.
 
 ## Overview
 
-The Linea SDK is split into three packages providing different integration paths:
+The Lineth SDK is split into three packages providing different integration paths:
 
 | Package | npm | Dependency |
 |---------|-----|------------|
-| `@consensys/linea-sdk-core` | `ts-libs/sdk/sdk-core/` | None (pure types + utilities) |
-| `@consensys/linea-sdk` | `ts-libs/sdk/sdk-ethers/` | ethers |
-| `@consensys/linea-sdk-viem` | `ts-libs/sdk/sdk-viem/` | viem, `@consensys/linea-sdk-core` |
+| `@lfdt-lineth/sdk-core` | `ts-libs/sdk/sdk-core/` | None (pure types + utilities) |
+| `@lfdt-lineth/sdk` | `ts-libs/sdk/sdk-ethers/` | ethers |
+| `@lfdt-lineth/sdk-viem` | `ts-libs/sdk/sdk-viem/` | viem, `@lfdt-lineth/sdk-core` |
 
 ## SDK Core (`ts-libs/sdk/sdk-core/`)
 
@@ -21,7 +21,7 @@ Provides framework-agnostic types, utilities, and the sparse Merkle tree impleme
 | Export | Description |
 |--------|-------------|
 | `SparseMerkleTree` | SMT implementation for Merkle proof construction |
-| `parseBlockExtraData` | Parse Linea gas pricing from block `extraData` |
+| `parseBlockExtraData` | Parse Linea-specific block extra data |
 | `formatMessageStatus` | Human-readable message status |
 | `getContractsAddressesByChainId` | Contract address lookup by chain ID |
 | `isLineaMainnet`, `isLineaSepolia`, `isMainnet`, `isSepolia` | Chain identification helpers |
@@ -60,7 +60,7 @@ Wraps `linea-sdk-core` with ethers bindings and TypeChain-generated contract typ
 Provides viem-native client decorators:
 
 ```typescript
-import { lineaPublicActionsL1 } from "@consensys/linea-sdk-viem";
+import { lineaPublicActionsL1 } from "@lfdt-lineth/sdk-viem";
 
 const client = createPublicClient({ ... }).extend(lineaPublicActionsL1());
 const status = await client.getL2ToL1MessageStatus({ messageHash });

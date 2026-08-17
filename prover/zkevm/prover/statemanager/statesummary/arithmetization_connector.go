@@ -859,14 +859,14 @@ func defineInsertionFilterForFinalStorage(comp *wizard.CompiledIOP, smc HubColum
 	)
 
 	selectorEmptySTValue := sym.Mul(
-		sc.SelectorEmptySTValueHi[0], sc.SelectorEmptySTValueHi[1],
-		sc.SelectorEmptySTValueHi[2], sc.SelectorEmptySTValueHi[3],
-		sc.SelectorEmptySTValueHi[4], sc.SelectorEmptySTValueHi[5],
-		sc.SelectorEmptySTValueHi[6], sc.SelectorEmptySTValueHi[7],
-		sc.SelectorEmptySTValueLo[0], sc.SelectorEmptySTValueLo[1],
-		sc.SelectorEmptySTValueLo[2], sc.SelectorEmptySTValueLo[3],
-		sc.SelectorEmptySTValueLo[4], sc.SelectorEmptySTValueLo[5],
-		sc.SelectorEmptySTValueLo[6], sc.SelectorEmptySTValueLo[7],
+		sc.SelectorEmptySTValueNextHi[0], sc.SelectorEmptySTValueNextHi[1],
+		sc.SelectorEmptySTValueNextHi[2], sc.SelectorEmptySTValueNextHi[3],
+		sc.SelectorEmptySTValueNextHi[4], sc.SelectorEmptySTValueNextHi[5],
+		sc.SelectorEmptySTValueNextHi[6], sc.SelectorEmptySTValueNextHi[7],
+		sc.SelectorEmptySTValueNextLo[0], sc.SelectorEmptySTValueNextLo[1],
+		sc.SelectorEmptySTValueNextLo[2], sc.SelectorEmptySTValueNextLo[3],
+		sc.SelectorEmptySTValueNextLo[4], sc.SelectorEmptySTValueNextLo[5],
+		sc.SelectorEmptySTValueNextLo[6], sc.SelectorEmptySTValueNextLo[7],
 	)
 	// if the filter is set to 0, then all the emoty value selectors must be 1.
 	// but this only must be true for the last values seen in the relevant segment.
@@ -962,34 +962,23 @@ func assignInsertionFilterForStorage(run *wizard.ProverRuntime, smc HubColumnSet
 				existsAtBlockStart := smc.ExistsFirstInBlock.GetColAssignmentAt(run, lastSegmentStart)
 				if existsAtBlockStart.IsZero() {
 					// we are indeed dealing with an insertion segment
-					// now check if indeed all the storage values on the last row are 0
-					valueNextHi := smc.ValueHINext[0].GetColAssignmentAt(run, index)
-					valueNextLo := smc.ValueLONext[0].GetColAssignmentAt(run, index)
-					if valueNextHi.IsZero() && valueNextLo.IsZero() {
-						// we are indeed dealing with an insertion segment, check if indeed all the storage values are 0
-						allStorageIsZero := true
+					// check if valueNext is zero on the last row across all limbs
+					valueNextIsZero := true
+					for i := range common.NbLimbU128 {
+						valueNextHi := smc.ValueHINext[i].GetColAssignmentAt(run, index)
+						valueNextLo := smc.ValueLONext[i].GetColAssignmentAt(run, index)
+						if !valueNextHi.IsZero() || !valueNextLo.IsZero() {
+							valueNextIsZero = false
+							break
+						}
+					}
+
+					if valueNextIsZero {
+						// indeed we are dealing with a zeroed insertion segment
 						for j := lastSegmentStart; j <= index; j++ {
-							for i := range common.NbLimbU128 {
-								valueCurrentHi := smc.ValueHICurr[i].GetColAssignmentAt(run, j)
-								valueCurrentLo := smc.ValueLOCurr[i].GetColAssignmentAt(run, j)
-								valueNextHi := smc.ValueHINext[i].GetColAssignmentAt(run, j)
-								valueNextLo := smc.ValueLONext[i].GetColAssignmentAt(run, j)
-
-								if !valueCurrentHi.IsZero() || !valueCurrentLo.IsZero() || !valueNextHi.IsZero() || !valueNextLo.IsZero() {
-									allStorageIsZero = false
-									break
-								}
-							}
+							// set the filter to zeros on the insertion segment
+							filterAccountInsert[j].SetZero()
 						}
-
-						if allStorageIsZero {
-							// indeed we are dealing with a zeroed insertion segment
-							for j := lastSegmentStart; j <= index; j++ {
-								// set the filter to zeros on the insertion segment
-								filterAccountInsert[j].SetZero()
-							}
-						}
-
 					}
 				}
 			}

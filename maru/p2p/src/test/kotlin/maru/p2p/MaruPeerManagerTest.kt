@@ -302,6 +302,40 @@ class MaruPeerManagerTest {
     assertThat(manager.getPeer(nodeId1)).isEqualTo(maruPeer1)
   }
 
+  @Test
+  fun `peerCount is unchanged when duplicate simultaneous connection is closed`() {
+    // When both nodes connect to each other at the same time, Teku fires onConnect for both.
+    // The second onConnect overwrites the first entry in peers.  When the first (now-duplicate)
+    // connection is subsequently closed, onDisconnect must NOT evict the surviving peer.
+    val nodeId = mock<NodeId>()
+    val address = Fixtures.peerAddress(nodeId)
+    val firstPeer = Fixtures.tekuPeer(id = nodeId, address = address, initiatedLocally = true)
+    val secondPeer = Fixtures.tekuPeer(id = nodeId, address = address, initiatedLocally = false)
+
+    val closedMaruPeer = Fixtures.maruPeer(isConnected = false, address = address)
+    val survivingMaruPeer = Fixtures.maruPeer(isConnected = true, address = address)
+
+    val maruPeerFactory = mock<MaruPeerFactory>()
+    whenever(maruPeerFactory.createMaruPeer(firstPeer)).thenReturn(closedMaruPeer)
+    whenever(maruPeerFactory.createMaruPeer(secondPeer)).thenReturn(survivingMaruPeer)
+
+    val manager =
+      MaruPeerManager(
+        maruPeerFactory = maruPeerFactory,
+        p2pConfig = P2PConfig(maxPeers = 10),
+        reputationManager = reputationManager,
+        isStaticPeer = { true },
+      )
+    manager.start(discoveryService = null, p2pNetwork = mock())
+
+    manager.onConnect(firstPeer) // peers[nodeId] = closedMaruPeer
+    manager.onConnect(secondPeer) // peers[nodeId] = survivingMaruPeer (overwrites)
+    manager.onDisconnect(firstPeer) // first connection closes; survivingMaruPeer still alive
+
+    assertThat(manager.peerCount).isEqualTo(1)
+    assertThat(manager.getPeer(nodeId)).isEqualTo(survivingMaruPeer)
+  }
+
   private fun addConnectedPeer(
     manager: MaruPeerManager,
     maruPeer: MaruPeer,

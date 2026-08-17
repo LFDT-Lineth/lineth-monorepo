@@ -100,11 +100,12 @@ func chiTestingModule(
 	// The module is only used a placeholder to let us the `assignInput`
 	// function
 	var (
-		mod          = &Module{}
-		size         = int(utils.NextPowerOfTwo(uint64(maxNumKeccakf) * common.NumRounds))
-		stateCurr    = common.StateInBits{} // input to the rho module
-		blocks       = [common.NumLanesInBlock][common.NumSlices]ifaces.Column{}
-		isBlockOther ifaces.Column
+		mod           = &Module{}
+		size          = int(utils.NextPowerOfTwo(uint64(maxNumKeccakf) * common.NumRounds))
+		stateCurr     = common.StateInBits{} // input to the rho module
+		blocks        = [common.NumLanesInBlock][common.NumSlices]ifaces.Column{}
+		isBlockOther  ifaces.Column
+		isBlockActive ifaces.Column
 	)
 
 	/*
@@ -126,12 +127,14 @@ func chiTestingModule(
 		}
 
 		isBlockOther = comp.InsertCommit(0, "IS_BLOCK_OTHER", size, true)
+		isBlockActive = comp.InsertCommit(0, "IS_BLOCK_ACTIVE", size, true)
 
 		mod.ChiIota = newChi(comp, chiInputs{
-			StateCurr:    stateCurr,
-			Blocks:       blocks,
-			IsBlockOther: isBlockOther,
-			KeccakfSize:  size,
+			StateCurr:     stateCurr,
+			Blocks:        blocks,
+			IsBlockOther:  isBlockOther,
+			IsBlockActive: isBlockActive,
+			KeccakfSize:   size,
 		})
 	}
 
@@ -243,6 +246,14 @@ func chiTestingModule(
 			}
 
 			run.AssignColumn(isBlockOther.GetColID(), smartvectors.RightZeroPadded(isBlockOtherWit, size))
+
+			// Assign isBlockActive: 1 for real keccak rows, 0 for padding
+			unpaddedSize := len(traces.KeccakFInps) * keccak.NumRound
+			isBlockActiveWit := make([]field.Element, unpaddedSize)
+			for j := range isBlockActiveWit {
+				isBlockActiveWit[j] = field.One()
+			}
+			run.AssignColumn(isBlockActive.GetColID(), smartvectors.RightZeroPadded(isBlockActiveWit, size))
 
 			// Then assigns all the columns of the rho module
 			mod.ChiIota.assignChi(run, stateCurr)

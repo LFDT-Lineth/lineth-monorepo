@@ -1,0 +1,47 @@
+{
+  "$schema": "./schema.json",
+  "network": "linea_mainnet",
+  "chainId": 59144,
+  "contracts": {
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER": {
+      "address": "0x2b0F9C76970975aec03784EFd763623757EF7652",
+      "notes": "L2 Anchorer"
+    },
+    "ROLLUP_REVENUE_VAULT_BURNER": {
+      "address": "0x8b36A2355F1516A0F21F2FEce301F36692A23811",
+      "notes": "Burn And Bridge Submitter"
+    },
+    "ROLLUP_REVENUE_VAULT_INVOICE_SUBMITTER": {
+      "address": "0x0200501DFf077b658D16757fA3090Ef9a08a2393",
+      "notes": "Revenue Invoice Submitter"
+    },
+    "ROLLUP_REVENUE_VAULT_DEX_SWAP_ADAPTER": {
+      "address": "0x30A20a3a9991c939290f4329cb52daac8e97F353",
+      "notes": "V3 Dex Swap Adapter"
+    },
+    "ROLLUP_REVENUE_VAULT_LINEA_TOKEN": {
+      "address": "0x1789e0043623282D5DCc7F213d703C6D8BAfBB04",
+      "notes": "L2 Linea Token"
+    },
+    "ROLLUP_REVENUE_VAULT_ADDRESS": {
+      "address": "0xFD5FB23e06e46347d8724486cDb681507592e237",
+      "notes": "Rollup Revenue Vault"
+    },
+    "L2_MESSAGE_SERVICE_ADDRESS": {
+      "address": "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      "notes": "L2 Message Service"
+    },
+    "L2_SECURITY_COUNCIL": {
+      "address": "0xf5cc7604a5ef3565b4D2050D65729A06B68AA0bD",
+      "notes": "L2 Main Security Council Safe"
+    },
+    "BRIDGED_TOKEN_ADDRESS": {
+      "address": "0xE798695d2e78f7caeb5BbF3385433959324c02c0",
+      "notes": "L2 Bridged Token Template"
+    },
+    "TOKEN_BRIDGE_ADDRESS": {
+      "address": "0x353012dc4a9A6cF55c941bADC267f82004A8ceB9",
+      "notes": "L2 Token Bridge"
+    }
+  }
+}

@@ -64,7 +64,7 @@ fun org.web3j.protocol.core.methods.response.Transaction.toDomain(): Transaction
     r = this.r.toBigIntegerFromHex(),
     s = this.s.toBigIntegerFromHex(),
     v = this.v.toULong(),
-    yParity = this.getyParity()?.toULongFromHex(),
+    yParity = this.yParity?.toULongFromHex(),
     type = mapType(this.type), // Optional field for EIP-2718 typed transactions
     chainId = chainId, // Optional field for EIP-155 transactions
     gasPrice = gasPrice, // Optional field for EIP-1559 transactions

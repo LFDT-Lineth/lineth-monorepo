@@ -1,6 +1,6 @@
-# @consensys/linea-native-libs
+# @lfdt-lineth/native-libs
 
-`@consensys/linea-native-libs` is a Node.js library that provides an interface to native Go libraries using the `koffi` package.
+`@lfdt-lineth/native-libs` is a Node.js library that provides an interface to native Go libraries using the `koffi` package.
 It provides the following Go libraries wrapper:
 
 - `GoNativeCompressor`: This class allows you to initialize the transaction compressor, check for errors, and get the worst compressed transaction size for a given RLP-encoded transaction.
@@ -10,7 +10,7 @@ It provides the following Go libraries wrapper:
 Install the required npm package:
 
 ```bash
-npm install @consensys/linea-native-libs
+npm install @lfdt-lineth/native-libs
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ npm install @consensys/linea-native-libs
 #### Importing the Class
 
 ```javascript
-import { GoNativeCompressor } from '@consensys/linea-native-libs';
+import { GoNativeCompressor } from '@lfdt-lineth/native-libs';
 ```
 
 #### Initializing the Compressor
@@ -73,7 +73,7 @@ If an error occurs during initialization or compression, an `Error` will be thro
 #### Example
 
 ```javascript
-import { GoNativeCompressor } from '@consensys/linea-native-libs';
+import { GoNativeCompressor } from '@lfdt-lineth/native-libs';
 
 const dataLimit = 1024;
 const compressor = new GoNativeCompressor(dataLimit);

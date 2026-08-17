@@ -466,7 +466,12 @@ func createNewPcsCtx(translator *compTranslator, srcComp *wizard.CompiledIOP) *v
 	}
 	dstVortexCtx.Items.OpenedColumns = translator.AddColumnList(srcVortexCtx.Items.OpenedColumns, false, 2)
 	dstVortexCtx.Items.OpenedSISColumns = translator.AddColumnList(srcVortexCtx.Items.OpenedSISColumns, false, 2)
-	dstVortexCtx.Items.OpenedNonSISColumns = translator.AddColumnList(srcVortexCtx.Items.OpenedNonSISColumns, false, 2)
+	dstVortexCtx.Items.OpenedNonSISColumns = make([][blockSize]ifaces.Column, len(srcVortexCtx.Items.OpenedNonSISColumns))
+	for i, roundCols := range srcVortexCtx.Items.OpenedNonSISColumns {
+		for j := 0; j < blockSize; j++ {
+			dstVortexCtx.Items.OpenedNonSISColumns[i][j] = translator.AddColumnAtRound(roundCols[j], false, 2)
+		}
+	}
 
 	return dstVortexCtx
 }

@@ -8,9 +8,10 @@ import { join } from "node:path";
 import {
   LogContractDeployment,
   getOptionalEnvVar,
-  getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
   tryVerifyContractWithConstructorArgs,
 } from "../common/helpers";
+import { formatEnvVarForLog } from "../common/helpers/envVarLogging";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const DEFAULT_FILTERED_ADDRESS_PATH = join(__dirname, "..", "addresses-filter.txt");
@@ -27,10 +28,17 @@ const SET_FILTERED_STATUS_BATCH_SIZE = 300;
  * Hardhat deploy runs that load this module for other `--tags`.
  */
 export function loadAddressFilterFilteredAddressesFromFile(): string[] {
-  const filePath = getOptionalEnvVar("ADDRESS_FILTER_FILE_PATH") ?? DEFAULT_FILTERED_ADDRESS_PATH;
+  const customPath = getOptionalEnvVar("ADDRESS_FILTER_FILE_PATH");
+  const filePath = customPath ?? DEFAULT_FILTERED_ADDRESS_PATH;
   const precompileSet = new Set(PRECOMPILES_ADDRESSES.map((a) => a.toLowerCase()));
   const text = readFileSync(filePath, "utf8");
-  console.log(`AddressFilter: loading filtered addresses from ${filePath}`);
+  if (customPath) {
+    console.log(
+      `AddressFilter: loading filtered addresses from ${formatEnvVarForLog("ADDRESS_FILTER_FILE_PATH", customPath)}`,
+    );
+  } else {
+    console.log("AddressFilter: loading filtered addresses from default addresses-filter.txt");
+  }
   const entryRe = /-\s*"(0x[a-fA-F0-9]{40})"/g;
   const seen = new Set<string>();
   const out: string[] = [];
@@ -53,7 +61,11 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "AddressFilter";
     const signer = await getUiSigner(hre);
 
-    const councilAddress = ethers.getAddress(getRequiredEnvVar("L1_SECURITY_COUNCIL"));
+    const councilAddress = requireAddressFromRegistryOrEnv(
+      hre.network.name,
+      "L1_SECURITY_COUNCIL",
+      "L1_SECURITY_COUNCIL",
+    );
     const deployerAddress = ethers.getAddress(await signer.getAddress());
     const filteredAddresses = loadAddressFilterFilteredAddressesFromFile();
 

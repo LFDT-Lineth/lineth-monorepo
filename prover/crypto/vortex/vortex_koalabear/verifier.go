@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt_koalabear"
 	"github.com/consensys/linea-monorepo/prover/crypto/vortex"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Check the merkle proof opening (merkleProofs[i][j], root[i]) for columns[i][j].
@@ -22,15 +23,20 @@ func CheckColumnInclusion(sis *ringsis.Key, columns [][][]field.Element,
 			var leaf field.Octuplet
 			if WithSis[i] {
 
-				// compute leaf = poseidon2_bls12377(columns[i][j]))
+				// compute leaf = poseidon2_koalabear(sisHash)
+				// The MDHasher left-pads partial blocks, matching PrepareToHashWitness.
 				sis.SisGnarkCrypto.Hash(columns[i][j], sisHash)
 				h.Reset()
 				h.WriteElements(sisHash...)
 				leaf = h.SumElement()
 			} else {
-				// compute leaf = poseidon2_bls12377(columns[i][j]))
+				// compute leaf = poseidon2_koalabear(right-padded columns[i][j])
+				colSize := len(columns[i][j])
+				colChunksPad := utils.NextPowerOfTwo((colSize + 7) / 8)
+				paddedCol := make([]field.Element, colChunksPad*8)
+				copy(paddedCol, columns[i][j])
 				h.Reset()
-				h.WriteElements(columns[i][j]...)
+				h.WriteElements(paddedCol...)
 				leaf = h.SumElement()
 			}
 

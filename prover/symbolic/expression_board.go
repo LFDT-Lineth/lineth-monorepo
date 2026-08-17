@@ -22,6 +22,10 @@ type ExpressionBoard struct {
 	NumSlots          int
 	ResultSlot        int
 	ProgramNodesCount int
+
+	// compiled is set to 1 atomically once the program above is built. Unexported
+	// so serde skips it: it resets to 0 on load, triggering one compile on use.
+	compiled uint32
 }
 
 // BytecodeStats holds counts of each opcode kind in a compiled board.

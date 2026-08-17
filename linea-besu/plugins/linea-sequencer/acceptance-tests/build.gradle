@@ -10,19 +10,30 @@ import java.time.LocalTime
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.web3jSolidity)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)
-  alias(libs.plugins.dependencyManagement)
   id "org.jetbrains.kotlin.kapt"
+  id "linea.solc-toolchain"
 }
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
+
+// Besu acceptance-test dependencies pull strict Kotlin stdlib constraints that conflict with the repository Kotlin
+// version. Keep stdlib artifacts aligned with the repo version without reintroducing io.spring.dependency-management.
+configurations.configureEach {
+  resolutionStrategy.eachDependency { details ->
+    if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
+      details.useVersion("${libs.versions.kotlin.get()}")
+      details.because('Align Kotlin stdlib with the repository Kotlin version')
+    }
+  }
+}
 
 kapt {
   arguments {
@@ -41,11 +52,16 @@ compileJava {
 }
 
 web3j {
-  generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
+  generatedPackageName = 'lineth.plugin.acc.test.tests.web3j.generated'
+}
+
+solcToolchain {
+  version = '0.8.30'
 }
 
 solidity {
   resolvePackages = false
+  version = solcToolchain.version
   optimizeRuns = 1
 }
 
@@ -55,8 +71,10 @@ sourceSets.test.solidity.srcDirs = [
 ]
 sourceSets.test.solidity.exclude("IntegrationTestTrueVerifier.sol")
 
-tasks.matching { it.name == "kaptGenerateStubsKotlin" || it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
+tasks.matching { it.name == "kaptGenerateStubsKotlin" }.configureEach {
   dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateContractWrappers")
+}
+tasks.matching { it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
   dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateTestContractWrappers")
 }
 
@@ -77,13 +95,22 @@ tasks.register('acceptanceTests', Test) {
     includeTags("AcceptanceTest")
   }
 
-  // A directory hopefully without plugin jar-s. All plugins are already on classpath as project dependencies
-  systemProperty 'besu.plugins.dir', project.buildDir
+  dependsOn tasks.named('prepareSignerTestPlugin')
+  systemProperty 'besu.plugins.dir', layout.buildDirectory.dir('test-plugins').get().asFile
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
   maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
+}
+
+def signerTestPluginJar =
+    project("${lineaSequencerProjectPath}:signer-test-plugin").tasks.named('jar', Jar)
+
+tasks.register('prepareSignerTestPlugin', Sync) {
+  dependsOn signerTestPluginJar
+  from signerTestPluginJar.flatMap { it.archiveFile }
+  into layout.buildDirectory.dir('test-plugins')
 }
 
 dependencies {

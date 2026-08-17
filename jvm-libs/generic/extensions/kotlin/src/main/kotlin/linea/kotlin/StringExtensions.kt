@@ -8,6 +8,8 @@ fun String.decodeHex(): ByteArray {
   return HexFormat.of().parseHex(removePrefix("0x"))
 }
 
+fun String.isPositiveNumber(): Boolean = this.isNotEmpty() && this.all { it.isDigit() }
+
 fun String.containsAny(strings: List<String>, ignoreCase: Boolean): Boolean {
   return strings.any { this.contains(it, ignoreCase) }
 }

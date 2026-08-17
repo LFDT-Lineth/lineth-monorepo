@@ -16,7 +16,7 @@ package public_input
 //    Used to validate that both #1 and #2 match expected values.
 //
 // The chain configuration hash uses MiMC and processes parameters in order:
-// chainID -> baseFee -> coinBase -> l2MessageServiceAddr
+// chainID -> baseFee -> coinBase -> l2MessageServiceAddr -> isAllowedCircuitID
 
 import (
 	"encoding/hex"
@@ -29,60 +29,66 @@ import (
 	"github.com/consensys/gnark/test"
 	mimc "github.com/consensys/linea-monorepo/prover/crypto/mimc_bls12377"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
 func init() {
 	utils.RegisterHints()
+	gnarkutil.RegisterHintsAndGkrGates()
 }
 
 // chainConfigTestCase defines test data for chain configuration hashing tests.
 type chainConfigTestCase struct {
-	name             string
-	chainID          uint64
-	chainIDHex       string
-	baseFee          uint64
-	baseFeeHex       string
-	coinBase         string
-	l2MessageService string
-	expectedPayload  string
-	expectedHash     string
+	name               string
+	chainID            uint64
+	chainIDHex         string
+	baseFee            uint64
+	baseFeeHex         string
+	coinBase           string
+	l2MessageService   string
+	isAllowedCircuitID uint64
+	expectedPayload    string
+	expectedHash       string
 }
 
 // Common test cases shared across all chain configuration tests
 var chainConfigTestCases = []chainConfigTestCase{
 	{
-		name:             "devnet",
-		chainID:          59139,
-		chainIDHex:       "0x000000000000000000000000000000000000000000000000000000000000e703",
-		baseFee:          7,
-		baseFeeHex:       "0x0000000000000000000000000000000000000000000000000000000000000007",
-		coinBase:         "0x4D517Aef039A48b3B6bF921e210b7551C8E37107",
-		l2MessageService: "0x33bf916373159a8c1b54b025202517bfdbb7863d",
-		expectedPayload:  "0x000000000000000000000000000000000000000000000000000000000000e70300000000000000000000000000000000000000000000000000000000000000070000000000000000000000004d517aef039a48b3b6bf921e210b7551c8e3710700000000000000000000000033bf916373159a8c1b54b025202517bfdbb7863d",
-		expectedHash:     "0x0a360bbb44ebc0eee111237f7e11565f2f271a24a35465ee78a3a8bc3f503acb",
+		name:               "devnet",
+		chainID:            59139,
+		chainIDHex:         "0x000000000000000000000000000000000000000000000000000000000000e703",
+		baseFee:            7,
+		baseFeeHex:         "0x0000000000000000000000000000000000000000000000000000000000000007",
+		coinBase:           "0x4D517Aef039A48b3B6bF921e210b7551C8E37107",
+		l2MessageService:   "0x33bf916373159a8c1b54b025202517bfdbb7863d",
+		isAllowedCircuitID: 0,
+		expectedPayload:    "0x000000000000000000000000000000000000000000000000000000000000e70300000000000000000000000000000000000000000000000000000000000000070000000000000000000000004d517aef039a48b3b6bf921e210b7551c8e3710700000000000000000000000033bf916373159a8c1b54b025202517bfdbb7863d0000000000000000000000000000000000000000000000000000000000000000",
+		expectedHash:       "0x0fd5bee7e2b1ecb629505003af36fe8e731c32a43e8a482fcb5296e462b9680b",
 	},
 	{
-		name:             "sepolia",
-		chainID:          59141,
-		chainIDHex:       "0x000000000000000000000000000000000000000000000000000000000000e705",
-		baseFee:          7,
-		baseFeeHex:       "0x0000000000000000000000000000000000000000000000000000000000000007",
-		coinBase:         "0xA27342f1b74c0cfB2cda74bac1628d0C1A9752f2",
-		l2MessageService: "0x971e727e956690b9957be6d51Ec16E73AcAC83A7",
-		expectedPayload:  "0x000000000000000000000000000000000000000000000000000000000000e7050000000000000000000000000000000000000000000000000000000000000007000000000000000000000000a27342f1b74c0cfb2cda74bac1628d0c1a9752f2000000000000000000000000971e727e956690b9957be6d51ec16e73acac83a7",
-		expectedHash:     "0x03cd9edb7bad18416642423fef504154c0c0b7f9e6809627bd7aa4abeec4e326",
+		name:               "sepolia",
+		chainID:            59141,
+		chainIDHex:         "0x000000000000000000000000000000000000000000000000000000000000e705",
+		baseFee:            7,
+		baseFeeHex:         "0x0000000000000000000000000000000000000000000000000000000000000007",
+		coinBase:           "0xA27342f1b74c0cfB2cda74bac1628d0C1A9752f2",
+		l2MessageService:   "0x971e727e956690b9957be6d51Ec16E73AcAC83A7",
+		isAllowedCircuitID: 0,
+		expectedPayload:    "0x000000000000000000000000000000000000000000000000000000000000e7050000000000000000000000000000000000000000000000000000000000000007000000000000000000000000a27342f1b74c0cfb2cda74bac1628d0c1a9752f2000000000000000000000000971e727e956690b9957be6d51ec16e73acac83a70000000000000000000000000000000000000000000000000000000000000000",
+		expectedHash:       "0x12619dc226442fcdd6b0dfdbbb6d792cc8c51f673d37ea49030c29204b5e0c52",
 	},
 	{
-		name:             "mainnet",
-		chainID:          59144,
-		chainIDHex:       "0x000000000000000000000000000000000000000000000000000000000000e708",
-		baseFee:          7,
-		baseFeeHex:       "0x0000000000000000000000000000000000000000000000000000000000000007",
-		coinBase:         "0x8F81e2E3F8b46467523463835F965fFE476E1c9E",
-		l2MessageService: "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
-		expectedPayload:  "0x000000000000000000000000000000000000000000000000000000000000e70800000000000000000000000000000000000000000000000000000000000000070000000000000000000000008f81e2e3f8b46467523463835f965ffe476e1c9e000000000000000000000000508ca82df566dcd1b0de8296e70a96332cd644ec",
-		expectedHash:     "0x0881dc6ffdc69ebfeca27fd8449922c32d0fd16ea33807e984881b08e7100988",
+		name:               "mainnet",
+		chainID:            59144,
+		chainIDHex:         "0x000000000000000000000000000000000000000000000000000000000000e708",
+		baseFee:            7,
+		baseFeeHex:         "0x0000000000000000000000000000000000000000000000000000000000000007",
+		coinBase:           "0x8F81e2E3F8b46467523463835F965fFE476E1c9E",
+		l2MessageService:   "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+		isAllowedCircuitID: 0,
+		expectedPayload:    "0x000000000000000000000000000000000000000000000000000000000000e70800000000000000000000000000000000000000000000000000000000000000070000000000000000000000008f81e2e3f8b46467523463835f965ffe476e1c9e000000000000000000000000508ca82df566dcd1b0de8296e70a96332cd644ec0000000000000000000000000000000000000000000000000000000000000000",
+		expectedHash:       "0x12129f65fcc391d5561c34b201c77c0467bf4bbae4ad26d82f59aee3a4144f8e",
 	},
 }
 
@@ -94,6 +100,7 @@ type ChainConfigurationTestCircuit struct {
 	BaseFee                 frontend.Variable
 	CoinBase                frontend.Variable
 	L2MessageServiceAddress frontend.Variable
+	IsAllowedCircuitID      frontend.Variable
 
 	// Expected output from Go implementation
 	ExpectedHash [32]frontend.Variable `gnark:",public"`
@@ -107,11 +114,12 @@ func (c *ChainConfigurationTestCircuit) Define(api frontend.API) error {
 		BaseFee:                 c.BaseFee,
 		CoinBase:                c.CoinBase,
 		L2MessageServiceAddress: c.L2MessageServiceAddress,
+		IsAllowedCircuitID:      c.IsAllowedCircuitID,
 	}
 
 	// This is where ChainConfigurationFPISnark.Sum() is actually tested
 	computedHash := chainConfig.Sum(api)
-	computedHashBytes := utils.ToBytes(api, computedHash)
+	computedHashBytes := gnarkutil.ToBytes32(api, computedHash)
 
 	// Constrain that the circuit output matches the expected hash from the reference implementation
 	for i := 0; i < 32; i++ {
@@ -133,7 +141,8 @@ func TestChainConfigurationFPISnark_Sum(t *testing.T) {
 			l2MessageService := hexToBigInt(tt.l2MessageService)
 
 			// Compute expected hash using reference implementation
-			_, expectedHashBytes := computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageService)
+			isAllowedCircuitID := new(big.Int).SetUint64(tt.isAllowedCircuitID)
+			_, expectedHashBytes := computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageService, isAllowedCircuitID)
 
 			t.Logf("Input chainID: %s", tt.chainIDHex)
 			t.Logf("Input baseFee: %s", tt.baseFeeHex)
@@ -156,6 +165,7 @@ func TestChainConfigurationFPISnark_Sum(t *testing.T) {
 				BaseFee:                 baseFee,
 				CoinBase:                coinBase,
 				L2MessageServiceAddress: l2MessageService,
+				IsAllowedCircuitID:      isAllowedCircuitID,
 				ExpectedHash:            expectedHashVars,
 			}
 
@@ -198,7 +208,7 @@ func TestComputeChainConfigurationHash(t *testing.T) {
 			copy(l2MessageService[:], l2MessageServiceBytes)
 
 			// Call the production function
-			computedHash := computeChainConfigurationHash(tt.chainID, tt.baseFee, coinBase, l2MessageService)
+			computedHash := computeChainConfigurationHash(tt.chainID, tt.baseFee, coinBase, l2MessageService, tt.isAllowedCircuitID)
 			expectedHashBytes := hexToBytes(tt.expectedHash)
 
 			// Compare
@@ -225,7 +235,8 @@ func TestComputeChainConfigurationHash(t *testing.T) {
 			coinBaseBig := new(big.Int).SetBytes(coinBase[:])
 			l2MessageServiceBig := new(big.Int).SetBytes(l2MessageService[:])
 
-			_, referenceHash := computeChainConfigurationReference(chainIDBig, baseFeeBig, coinBaseBig, l2MessageServiceBig)
+			isAllowedCircuitIDBig := new(big.Int).SetUint64(tt.isAllowedCircuitID)
+			_, referenceHash := computeChainConfigurationReference(chainIDBig, baseFeeBig, coinBaseBig, l2MessageServiceBig, isAllowedCircuitIDBig)
 
 			for i := 0; i < len(referenceHash); i++ {
 				if referenceHash[i] != computedHash[i] {
@@ -247,7 +258,8 @@ func TestComputeChainConfigurationReference(t *testing.T) {
 			coinBase := hexToBigInt(tt.coinBase)
 			l2MessageService := hexToBigInt(tt.l2MessageService)
 			// Compute hash and payload
-			computedPayload, computedHash := computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageService)
+			isAllowedCircuitID := new(big.Int).SetUint64(tt.isAllowedCircuitID)
+			computedPayload, computedHash := computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageService, isAllowedCircuitID)
 			expectedPayloadBytes := hexToBytes(tt.expectedPayload)
 			expectedHashBytes := hexToBytes(tt.expectedHash)
 			// Debug output
@@ -282,14 +294,14 @@ func TestComputeChainConfigurationReference(t *testing.T) {
 //
 // This function mimics the Solidity verifier's computeChainConfigurationHash and uses MiMC to hash
 // the chain configuration parameters in order: chainID, baseFee, coinBase,
-// l2MessageServiceAddr.
+// l2MessageServiceAddr, isAllowedCircuitID.
 //
 // Returns: (mimcPayload []byte, hash []byte) - the full payload and resulting 32-byte hash
-func computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageServiceAddr *big.Int) ([]byte, []byte) {
+func computeChainConfigurationReference(chainID, baseFee, coinBase, l2MessageServiceAddr, isAllowedCircuitID *big.Int) ([]byte, []byte) {
 	hasher := mimc.NewMiMC()
 	var mimcPayload []byte
 
-	values := []*big.Int{chainID, baseFee, coinBase, l2MessageServiceAddr}
+	values := []*big.Int{chainID, baseFee, coinBase, l2MessageServiceAddr, isAllowedCircuitID}
 
 	for _, value := range values {
 		// Check if first bit is zero (bit 255 for 256-bit number)

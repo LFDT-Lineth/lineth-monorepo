@@ -1,5 +1,5 @@
-import { IContractSignerClient } from "@consensys/linea-shared-utils";
 import { describe, it, expect, beforeEach } from "@jest/globals";
+import { IContractSignerClient } from "@lfdt-lineth/shared-utils";
 import { mock } from "jest-mock-extended";
 import { bytesToHex } from "viem/utils";
 

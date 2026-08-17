@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ExponentialBackoffRetryService } from "@consensys/linea-shared-utils";
+import { ExponentialBackoffRetryService } from "@lfdt-lineth/shared-utils";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
@@ -50,7 +50,12 @@ export class LidoGovernanceMonitorBootstrap {
       config.http.timeoutMs,
     );
 
-    const anthropicClient = new Anthropic({ apiKey: config.anthropic.apiKey });
+    // Route Claude calls through the LiteLLM proxy when a base URL is configured
+    // otherwise the SDK targets Anthropic directly.
+    const anthropicClient = new Anthropic({
+      apiKey: config.anthropic.apiKey,
+      ...(config.anthropic.baseUrl ? { baseURL: config.anthropic.baseUrl } : {}),
+    });
     const aiClient = new ClaudeAIClient(
       createLidoGovernanceMonitorLogger("ClaudeAIClient"),
       anthropicClient,

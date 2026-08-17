@@ -1,9 +1,9 @@
+import { describe, it, expect } from "@jest/globals";
 import {
   AwsKmsSignerClientAdapter,
   ViemWalletSignerClientAdapter,
   Web3SignerClientAdapter,
-} from "@consensys/linea-shared-utils";
-import { describe, it, expect } from "@jest/globals";
+} from "@lfdt-lineth/shared-utils";
 import { mainnet } from "viem/chains";
 
 import { TEST_L1_SIGNER_PRIVATE_KEY, TEST_RPC_URL } from "../../../../../utils/testing/constants";
@@ -12,7 +12,7 @@ import { createSignerClient } from "../createSignerClient";
 
 import type { SignerConfig } from "../SignerConfig";
 
-jest.mock("@consensys/linea-shared-utils", () => ({
+jest.mock("@lfdt-lineth/shared-utils", () => ({
   ViemWalletSignerClientAdapter: jest.fn().mockImplementation(() => ({ type: "viem-wallet" })),
   Web3SignerClientAdapter: jest.fn().mockImplementation(() => ({ type: "web3signer" })),
   AwsKmsSignerClientAdapter: {

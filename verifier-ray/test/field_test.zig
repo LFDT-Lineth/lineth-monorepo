@@ -15,11 +15,13 @@ test "koalabear element multiplication uses the field modulus" {
     try std.testing.expect(a.mul(a).eql(field.Element.one()));
 }
 
-test "extension pow: a^(p^6-1) == 1 for non-zero element" {
-    const p: u256 = field.modulus;
-    const field_order = p * p * p * p * p * p - 1;
-    const a = ext.Ext.fromUints(1, 2, 3, 4, 5, 6);
-    try std.testing.expect(a.pow(field_order).eql(ext.Ext.one()));
+test "extension pow: lift(b)^(p-1) == 1 for non-zero base element" {
+    // Ext.pow takes a u64 exponent (max meaningful exponent is p - 1). A base
+    // element lifted into the extension lies in the prime subfield, so by
+    // Fermat's little theorem it satisfies b^(p-1) == 1 there. p - 1 fits in u64.
+    const exponent: u64 = field.modulus - 1;
+    const b = ext.Ext.lift(field.Element.init(7));
+    try std.testing.expect(b.pow(exponent).eql(ext.Ext.one()));
 }
 
 test "extension lift stores base element in the first limb" {

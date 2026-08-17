@@ -8,6 +8,7 @@
  */
 package maru.syncing
 
+import linea.kotlin.encodeHex
 import linea.timer.PeriodicPollingService
 import linea.timer.TimerFactory
 import linea.timer.TimerSchedule
@@ -16,7 +17,6 @@ import maru.core.GENESIS_EXECUTION_PAYLOAD
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionPayloadStatus
 import maru.executionlayer.manager.ForkChoiceUpdatedResult
-import maru.extensions.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

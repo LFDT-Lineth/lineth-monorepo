@@ -16,7 +16,7 @@ export default {
   },
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
-    "^@consensys/linea-shared-utils$": "<rootDir>/src/__mocks__/linea-shared-utils.ts",
+    "^@lfdt-lineth/shared-utils$": "<rootDir>/src/__mocks__/linea-shared-utils.ts",
     "^@anthropic-ai/sdk$": "<rootDir>/src/__mocks__/anthropic-sdk.ts",
   },
   transformIgnorePatterns: ["/node_modules/(?!(@anthropic-ai/sdk)/)"],

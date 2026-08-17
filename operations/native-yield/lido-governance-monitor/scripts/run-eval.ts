@@ -6,7 +6,7 @@
  *
  * Usage:
  * ANTHROPIC_API_KEY=sk-ant-xxx \
- * pnpm --filter @consensys/lido-governance-monitor exec tsx scripts/run-eval.ts
+ * pnpm --filter @lfdt-lineth/lido-governance-monitor exec tsx scripts/run-eval.ts
  *
  * Optional env vars:
  * RISK_THRESHOLD=60                          # effectiveRisk threshold for alerting (default: 60)
@@ -197,7 +197,10 @@ async function main(): Promise<void> {
   console.log(`Threshold: ${threshold}, Model: ${model}`);
   console.log("");
 
-  const anthropicClient = new Anthropic({ apiKey });
+  const anthropicClient = new Anthropic({
+    apiKey,
+    ...(process.env.ANTHROPIC_BASE_URL ? { baseURL: process.env.ANTHROPIC_BASE_URL } : {}),
+  });
   const aiClient = new ClaudeAIClient(noopLogger, anthropicClient, model, systemPrompt, maxOutputTokens, maxProposalChars);
 
   const results: EvalResult[] = [];

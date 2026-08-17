@@ -1,4 +1,4 @@
-import { claimOnL2, getL1ToL2MessageStatus } from "@consensys/linea-sdk-viem";
+import { claimOnL2, getL1ToL2MessageStatus } from "@lfdt-lineth/sdk-viem";
 import { type PublicClient, type WalletClient, decodeErrorResult, encodeFunctionData } from "viem";
 
 import { ILineaGasProvider, LineaGasFees } from "../../../../core/clients/blockchain/IGasProvider";

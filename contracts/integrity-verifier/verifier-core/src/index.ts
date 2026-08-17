@@ -1,5 +1,5 @@
 /**
- * @consensys/linea-contract-integrity-verifier
+ * @lfdt-lineth/contract-integrity-verifier
  *
  * A tool to verify deployed smart contract integrity (bytecode, ABI, and state)
  * against local artifact files.
@@ -122,8 +122,8 @@ export {
   ERC7201_NAMESPACE_PREFIX,
   KNOWN_NAMESPACES,
   // Sepolia addresses
-  SEPOLIA_LINEA_ROLLUP_PROXY,
-  SEPOLIA_LINEA_ROLLUP_IMPLEMENTATION,
+  SEPOLIA_LINETH_ROLLUP_PROXY,
+  SEPOLIA_LINETH_ROLLUP_IMPLEMENTATION,
   SEPOLIA_YIELD_MANAGER,
   SEPOLIA_SAFE_ADDRESS,
   // Role hashes

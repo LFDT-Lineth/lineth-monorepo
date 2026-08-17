@@ -94,8 +94,8 @@ func (c *Circuit) Define(api frontend.API) error {
 	nbBatchesSums := rDA.PartialSumsF(func(i int) frontend.Variable { return api.Mul(rDA.InRange[i], c.DataAvailabilityFPIQ[i].NbBatches) })
 	nbExecution := nbBatchesSums[len(nbBatchesSums)-1] // implicit: CHECK_NB_EXEC
 
-	// These two checks prevents constructing a proof where no execution or no
-	// compression proofs are provided. This is to prevent corner cases from
+	// These two checks prevent the construction of a proof without execution or
+	// compression proofs. This is to prevent corner cases from
 	// arising.
 	api.AssertIsDifferent(c.NbDataAvailability, 0)
 	api.AssertIsDifferent(nbExecution, 0)
@@ -235,17 +235,19 @@ func (c *Circuit) Define(api frontend.API) error {
 			return errors.New("number of L2 messages must be the same for all executions")
 		}
 
+		// Do not read data from unconstrained execution padding.
+		l2MessagesLength := api.Mul(pi.L2MessageHashes.Length, rExecution.InRange[i])
 		// "transpose" the L2 messages by byte for Concat -> Merkle
 		for j := range l2MessagesByByte { // perf-TODO probably better to change all 32bytes into four uint64s instead.
 			for k := range pi.L2MessageHashes.Values {
 				l2MessagesByByte[j][i].Values[k] = pi.L2MessageHashes.Values[k][j]
 			}
-			l2MessagesByByte[j][i].Length = pi.L2MessageHashes.Length
+			l2MessagesByByte[j][i].Length = l2MessagesLength
 		}
 	}
 
 	merkleLeavesConcat := internal.Var32Slice{Values: make([][32]frontend.Variable, c.L2MessageMaxNbMerkle*merkleNbLeaves)}
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		ithBytes := internal.Concat(api, len(merkleLeavesConcat.Values), l2MessagesByByte[i]...)
 		for j := range merkleLeavesConcat.Values {
 			merkleLeavesConcat.Values[j][i] = ithBytes.Values[j]
@@ -553,7 +555,7 @@ func InnerCircuitTypesToIndexes(cfg *config.PublicInput, types []InnerCircuitTyp
 // koalabear modulus.
 func isActuallyKoalaHash(api frontend.API, hash [2]frontend.Variable) frontend.Variable {
 
-	// The cmpRes is computed by adding the result of Cmp for each (allegedly)
+	// The cmpRes is computed by adding the result of Cmp for each (alleged)
 	// koalabear element. If the limbs are koalabear, the result of cmp will
 	// be -1. Thus, at the end of the function cmpRes would be equal to 0 and
 	// to some positive value if any of the cmpRes is NOT -1. Thus, it is
@@ -561,7 +563,7 @@ func isActuallyKoalaHash(api frontend.API, hash [2]frontend.Variable) frontend.V
 	cmpRes := frontend.Variable(8)
 
 	for i := range hash {
-		// The decomposition is done by splitting in bits, and then recombining
+		// The decomposition is done by splitting into bits, and then recombining
 		// them in 4 uint32s.
 		bitsOfHalf := api.ToBinary(hash[i], 128)
 		for k := range 4 {

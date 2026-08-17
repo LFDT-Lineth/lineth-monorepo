@@ -1,4 +1,37 @@
-# Linea Deployment Scripts
+# Lineth Deployment Scripts
+
+## Address Registry
+
+For stable, named networks (`mainnet`, `sepolia`, `hoodi`, `linea_mainnet`, `linea_sepolia`) the deploy scripts read contract addresses from a **PR-reviewed registry** committed to the repository:
+
+```
+contracts/deployments/addresses/
+  mainnet.json
+  sepolia.json
+  hoodi.json
+  linea_mainnet.json
+  linea_sepolia.json
+```
+
+See [contracts/deployments/addresses/README.md](../../deployments/addresses/README.md) for the full guide — how addresses are resolved, how to update the registry, and the registry-key-to-env-var mapping.
+
+### Resolution order
+
+| Registry entry | Env var set | Outcome |
+|---|---|---|
+| Present (non-zero) | Not set | Registry address used — env var is **optional** |
+| Present (non-zero) | **Matches** registry | Registry address used |
+| Present (non-zero) | **Conflicts** with registry | **Hard fail before any transaction is sent** |
+| Absent or zero | Set | Env var used (format-validated) |
+| Absent or zero | Not set | Hard fail — no source available |
+
+Networks without a registry (`custom`, `zkevm_dev`, `l2`) fall back to env var only — same behavior as before.
+
+### Address validation
+
+Registry-backed address env vars are validated with `ethers.isAddress` before use and normalized to EIP-55 checksum form. The registry validator is stricter: committed JSON addresses must already be EIP-55 checksummed. An invalid address (wrong length, bad checksum, etc.) throws immediately with a clear message before any RPC call is made.
+
+<br />
 
 ## Environment Variables Naming Convention
 
@@ -7,23 +40,23 @@ Environment variables follow a consistent naming pattern:
 | Prefix | Usage |
 |--------|-------|
 | `L1_` | Ethereum L1 (e.g. `L1_SECURITY_COUNCIL`, `L1_RPC_URL`) |
-| `L2_` | Linea L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
-| `LINEA_ROLLUP_*` | Linea Rollup contract (L1) — product-specific |
+| `L2_` | Lineth L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
+| `LINETH_ROLLUP_*` | LinethRollup contract (L1), using the Lineth env namespace |
 
 **Shared per layer:**
 
-- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (Linea Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
+- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (Lineth Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
 - `L2_SECURITY_COUNCIL` — shared across all L2 contracts (L2 Message Service, Rollup Revenue Vault, Token Bridge L2)
 
-**Shared L1 base (Linea Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
+**Shared L1 base (Lineth Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
 
-**Product-specific:** `LINEA_ROLLUP_OPERATORS`, `LINEA_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
+**Product-specific:** `LINETH_ROLLUP_OPERATORS`, `LINETH_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
 
 **RPC endpoints:** `L1_RPC_URL`, `L2_RPC_URL`, `CUSTOM_RPC_URL` (replaces legacy `BLOCKCHAIN_NODE`, `L2_BLOCKCHAIN_NODE`, `CUSTOM_BLOCKCHAIN_URL`)
 
 <br />
 
-This document aims to explain how to get started with deploying the Linea deployment scripts. There are several ways the scripts can be executed dependent on: 
+This document aims to explain how to get started with deploying the Lineth deployment scripts. There are several ways the scripts can be executed depending on:
 - If you're storing deployment variables in an environment file (.env)
 - If you plan to deploy an individual script which will deploy a single contract.
 - If you plan to deploy a chained deployment script that will include multiple contracts.
@@ -116,12 +149,12 @@ Selected **operational Hardhat tasks** (under `scripts/operational/`) also suppo
 
 ## Order of Precedence
 
- When deploying, if required variables such as deployed contract addresses are not defined in the .env or provided as CLI arguments, the script will look and check if it can use the addresses stored in the deployments/<network_name>/ folder. 
- <br />
- The order of priority (unless specified otherwise) will be:
- - CLI arguments, 
- - .env variables ,
- - deployments/<network_name>/
+When deploying, the address resolution priority for deploy scripts is:
+
+1. **Address registry** (`contracts/deployments/addresses/<network>.json`) — for stable, named networks. If an entry is present and a conflicting env var is also set, the deploy **hard fails before sending any transaction**.
+2. **CLI arguments / env vars** — used when no registry entry exists (e.g. ephemeral addresses, unregistered contracts, or local networks like `custom` / `zkevm_dev`).
+
+The old fallback to `deployments/<network_name>/ContractName.json` (hardhat-deploy artefact format) is deprecated in favour of the address registry above.
 
 <br />
 
@@ -129,10 +162,12 @@ Selected **operational Hardhat tasks** (under `scripts/operational/`) also suppo
 
 ### L1 Contracts (Ethereum)
 
+Verifier deployments require chain-configuration inputs in addition to the contract name and proof type. See [verifier.md](l1/verifier.md) for the full list, including `VERIFIER_IS_ALLOWED_CIRCUIT_ID`.
+
 | Contract | Doc | Tags |
 |----------|-----|------|
 | PlonkVerifier | [verifier.md](l1/verifier.md) | `PlonkVerifier` |
-| LineaRollup | [linea-rollup.md](l1/linea-rollup.md) | `LineaRollup`, `LineaRollupWithReinitialization`, `LineaRollupV8WithReinitialization` |
+| LinethRollup | [lineth-rollup.md](l1/lineth-rollup.md) | `LinethRollup`, `LinethRollupWithReinitialization`, `LinethRollupV8WithReinitialization` |
 | Validium | [validium.md](l1/validium.md) | `Validium` |
 | Timelock | [timelock.md](l1/timelock.md) | `Timelock` |
 | YieldManager | [yield-manager.md](l1/yield-manager.md) | `YieldManager`, `YieldManagerArtifacts`, `YieldManagerImplementation` |
@@ -142,7 +177,7 @@ Selected **operational Hardhat tasks** (under `scripts/operational/`) also suppo
 | AddressFilter | [address-filter.md](l1/address-filter.md) | `AddressFilter` |
 | ForcedTransactionGateway | [forced-transaction-gateway.md](l1/forced-transaction-gateway.md) | `ForcedTransactionGateway` |
 
-### L2 Contracts (Linea)
+### L2 Contracts (Lineth)
 
 | Contract | Doc | Tags |
 |----------|-----|------|

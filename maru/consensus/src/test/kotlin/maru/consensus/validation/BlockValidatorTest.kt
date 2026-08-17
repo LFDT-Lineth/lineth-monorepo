@@ -11,6 +11,7 @@ package maru.consensus.validation
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getError
+import linea.kotlin.encodeHex
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
@@ -20,7 +21,6 @@ import maru.core.BeaconBlock
 import maru.core.BeaconBlockHeader
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
@@ -29,9 +29,7 @@ import maru.database.InMemoryBeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.ExecutionPayloadStatus
 import maru.executionlayer.manager.PayloadStatus
-import maru.extensions.encodeHex
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.BftHelpers
 import org.junit.jupiter.api.Test
@@ -39,6 +37,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.SequencedSet
+import maru.executionlayer.manager.ext.DataGenerators as ExecutionLayerDataGenerators
 
 class BlockValidatorTest {
   private val validators = (1..3).map { DataGenerators.randomValidator() }
@@ -49,7 +48,9 @@ class BlockValidatorTest {
 
   private val validCurrBlockBody = DataGenerators.randomBeaconBlockBody(numSeals = validators.size)
   private val validCurrBlockHeader =
-    DataGenerators.randomBeaconBlockHeader(currBlockNumber).copy(
+    DataGenerators.randomBeaconBlockHeader(
+      currBlockNumber,
+    ).copy(
       proposer = validators[0],
       bodyRoot = HashUtil.bodyRoot(validCurrBlockBody),
     )
@@ -70,9 +71,11 @@ class BlockValidatorTest {
       )
     }
   private val validNewBlockStateRootHeader =
-    DataGenerators.randomBeaconBlockHeader(newBlockNumber).copy(
+    DataGenerators.randomBeaconBlockHeader(
+      newBlockNumber,
+    ).copy(
       proposer = validators[1],
-      parentRoot = validCurrBlockHeader.hash,
+      parentRoot = validCurrBlockHeader.beaconBlockIdHash,
       timestamp = validCurrBlockHeader.timestamp + 1u,
       bodyRoot = HashUtil.bodyRoot(validNewBlockBody),
       stateRoot = EMPTY_HASH,
@@ -111,13 +114,19 @@ class BlockValidatorTest {
 
   private val stateTransition = StateTransitionImpl(validatorProvider)
 
+  private val blockHashing =
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
+    )
+
   @Test
   fun `test validator's validation on a valid block`() {
     val executionLayerEngineApiClient =
       mock<ExecutionLayerManager> {
         on { newPayload(any()) }.thenReturn(
           SafeFuture.completedFuture(
-            DataGenerators.randomValidPayloadStatus(),
+            ExecutionLayerDataGenerators.randomValidPayloadStatus(),
           ),
         )
       }
@@ -129,6 +138,7 @@ class BlockValidatorTest {
         stateTransition = stateTransition,
         executionLayerManager = executionLayerEngineApiClient,
         allowEmptyBlocks = false,
+        blockHashing = blockHashing,
       ).createValidatorForBlock(validNewBlock.beaconBlockHeader)
     blockValidator.also {
       assertThat(it.validateBlock(block = validNewBlock).get()).isEqualTo(BlockValidator.ok())
@@ -139,7 +149,7 @@ class BlockValidatorTest {
   fun `test invalid state root`() {
     val invalidNewBlockHeader = validNewBlockHeader.copy(stateRoot = validNewStateRoot.reversedArray())
     val invalidNewBlock = validNewBlock.copy(beaconBlockHeader = invalidNewBlockHeader)
-    val stateRootValidator = StateRootValidator(stateTransition)
+    val stateRootValidator = StateRootValidator(stateTransition, HashUtil::stateRoot)
     val result = stateRootValidator.validateBlock(block = invalidNewBlock).get()
     val expectedResult =
       error(
@@ -261,7 +271,9 @@ class BlockValidatorTest {
   @Test
   fun `test invalid parent root`() {
     val parentRootValidator = ParentRootValidator(parentBlockHeader = validCurrBlockHeader)
-    val invalidBlockHeader = validNewBlockHeader.copy(parentRoot = validCurrBlockHeader.hash.reversedArray())
+    val invalidBlockHeader = validNewBlockHeader.copy(
+      parentRoot = validCurrBlockHeader.beaconBlockIdHash.reversedArray(),
+    )
     val invalidBlock = validNewBlock.copy(beaconBlockHeader = invalidBlockHeader)
     val result =
       parentRootValidator
@@ -272,7 +284,7 @@ class BlockValidatorTest {
       error(
         "Parent beacon root does not match parent block root " +
           "parentRoot=${invalidBlockHeader.parentRoot.encodeHex()} " +
-          "expectedParentRoot=${validCurrBlockHeader.hash.encodeHex()}",
+          "expectedParentRoot=${validCurrBlockHeader.beaconBlockIdHash.encodeHex()}",
       )
     assertThat(result).isEqualTo(expectedResult)
   }
@@ -430,7 +442,7 @@ class BlockValidatorTest {
       error(
         "Block is empty number=${validNewBlock.beaconBlockHeader.number} " +
           "executionPayloadBlockNumber=${validNewBlock.beaconBlockBody.executionPayload.blockNumber} " +
-          "hash=${validNewBlock.beaconBlockHeader.hash.encodeHex()}",
+          "hash=${validNewBlock.beaconBlockHeader.beaconBlockIdHash.encodeHex()}",
       )
     assertThat(result).isEqualTo(expectedResult)
   }

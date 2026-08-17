@@ -7,7 +7,7 @@
 
 import type { ParsedConfig, VerificationOptions, FileRef, AdapterType } from "@/types";
 
-import type { VerificationSummary } from "@consensys/linea-contract-integrity-verifier";
+import type { VerificationSummary } from "@lfdt-lineth/contract-integrity-verifier";
 
 // ============================================================================
 // Stored Data Types

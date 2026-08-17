@@ -21,14 +21,17 @@ import {
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
 } from "../common/constants";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
-import { getEnvVarOrDefault } from "../common/helpers/environment";
+import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
+import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
+import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 
 dotenv.config();
 
 async function main() {
   const messageServiceName = process.env.L2_MESSAGE_SERVICE_CONTRACT_NAME;
+  const networkName = getDeploymentNetworkName();
 
   if (!messageServiceName) {
     throw new Error("L2_MESSAGE_SERVICE_CONTRACT_NAME is required");
@@ -36,13 +39,7 @@ async function main() {
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
-  let walletNonce;
-
-  if (!process.env.L2_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L2_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE");
 
   const l2MessageServiceContractImplementationName = "L2MessageServiceImplementation";
 
@@ -54,19 +51,30 @@ async function main() {
       wallet,
       {
         nonce: walletNonce,
-        maxFeePerGas: 7_200_000_000_000n,
-        maxPriorityFeePerGas: 7_000_000_000_000n,
+        ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
       },
     ),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 1,
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     }),
   ]);
 
   const proxyAdminAddress = await proxyAdmin.getAddress();
   const l2MessageServiceImplementationAddress = await l2MessageServiceImplementation.getAddress();
+
+  const l2MessageServiceSecurityCouncil = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L2_SECURITY_COUNCIL",
+    "L2_SECURITY_COUNCIL",
+  );
+  const l2MessageServiceL1L2MessageSetter = requireAddressFromRegistryOrEnv(
+    networkName,
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+    "L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER",
+  );
+  const l2MessageServiceRateLimitPeriod = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD");
+  const l2MessageServiceRateLimitAmount = getRequiredEnvVar("L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT");
 
   const pauseTypeRoles = getEnvVarOrDefault(
     "L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES",
@@ -76,15 +84,15 @@ async function main() {
     "L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES",
     L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
   );
-  const defaultRoleAddresses = generateRoleAssignments(L2_MESSAGE_SERVICE_ROLES, process.env.L2_SECURITY_COUNCIL!, [
-    { role: L1_L2_MESSAGE_SETTER_ROLE, addresses: [process.env.L2_MESSAGE_SERVICE_L1L2_MESSAGE_SETTER!] },
+  const defaultRoleAddresses = generateRoleAssignments(L2_MESSAGE_SERVICE_ROLES, l2MessageServiceSecurityCouncil, [
+    { role: L1_L2_MESSAGE_SETTER_ROLE, addresses: [l2MessageServiceL1L2MessageSetter] },
   ]);
   const roleAddresses = getEnvVarOrDefault("L2_MESSAGE_SERVICE_ROLE_ADDRESSES", defaultRoleAddresses);
 
   const initializer = getInitializerData(L2MessageServiceAbi, "initialize", [
-    process.env.L2_MESSAGE_SERVICE_RATE_LIMIT_PERIOD,
-    process.env.L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT,
-    process.env.L2_SECURITY_COUNCIL,
+    l2MessageServiceRateLimitPeriod,
+    l2MessageServiceRateLimitAmount,
+    l2MessageServiceSecurityCouncil,
     roleAddresses,
     pauseTypeRoles,
     unpauseTypeRoles,
@@ -99,8 +107,7 @@ async function main() {
     proxyAdminAddress,
     initializer,
     {
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     },
   );
 }

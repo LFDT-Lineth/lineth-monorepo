@@ -145,8 +145,8 @@ public class Mmio implements Module {
     final boolean isRamToRamTwoSource = (mmioData.instruction() == MMIO_INST_RAM_TO_RAM_TWO_SOURCE);
     final boolean isRamToRamTwoTarget = (mmioData.instruction() == MMIO_INST_RAM_TO_RAM_TWO_TARGET);
     final boolean isRamVanishes = (mmioData.instruction() == MMIO_INST_RAM_VANISHES);
-    int mmioLineCountingInstruction = lineCountOfMmioInstruction(mmioData.instruction());
-    for (short ct = 0; ct < mmioLineCountingInstruction; ct++) {
+    final int mmioLineCountingInstruction = lineCountOfMmioInstruction(mmioData.instruction());
+    for (int ct = 0; ct < mmioLineCountingInstruction; ct++) {
       trace
           .cnA(Bytes.minimalBytes(mmioData.cnA()))
           .cnB(Bytes.minimalBytes(mmioData.cnB()))
@@ -185,14 +185,8 @@ public class Mmio implements Module {
           .exoIsEcdata(effectiveExoIsEcData)
           .exoIsBlakemodexp(effectiveExoIsBlakeModexp)
           .exoIsRipsha(effectiveExoIsRipSha)
-          .exoIsKec(effectiveExoIsKeccak);
-      try {
-        trace.exoIsBls(effectiveExoIsBls);
-      }
-      // ignore exception, this columns appears in cancun
-      catch (final Exception ignored) {
-      }
-      trace
+          .exoIsKec(effectiveExoIsKeccak)
+          .exoIsBls(effectiveExoIsBls)
           .kecId(mmioData.kecId())
           .phase(mmioData.phase())
           .successBit(mmioData.successBit())

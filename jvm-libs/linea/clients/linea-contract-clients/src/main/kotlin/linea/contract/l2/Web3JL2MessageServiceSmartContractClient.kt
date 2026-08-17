@@ -1,5 +1,6 @@
 package linea.contract.l2
 
+import linea.EthLogsSearcher
 import linea.contract.ContractDeploymentBlockNumberProvider
 import linea.contract.EventBasedContractDeploymentBlockNumberProvider
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
@@ -35,6 +36,7 @@ class Web3JL2MessageServiceSmartContractClient(
     fun create(
       web3jClient: Web3j,
       ethApiClient: EthApiClient,
+      ethLogsSearcher: EthLogsSearcher,
       contractAddress: String,
       gasLimit: ULong,
       maxFeePerGasCap: ULong,
@@ -64,7 +66,7 @@ class Web3JL2MessageServiceSmartContractClient(
       val deploymentBlockNumberProvider = smartContractDeploymentBlockNumber
         ?.let { StaticContractDeploymentBlockNumberProvider(it) }
         ?: EventBasedContractDeploymentBlockNumberProvider(
-          ethApiClient = ethApiClient,
+          ethLogsSearcher = ethLogsSearcher,
           contractAddress = contractAddress,
           log = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java),
         )
@@ -80,6 +82,7 @@ class Web3JL2MessageServiceSmartContractClient(
     fun createReadOnly(
       web3jClient: Web3j,
       ethApiClient: EthApiClient,
+      ethLogsSearcher: EthLogsSearcher,
       contractAddress: String,
       smartContractErrors: SmartContractErrors,
       smartContractDeploymentBlockNumber: ULong?,
@@ -92,6 +95,7 @@ class Web3JL2MessageServiceSmartContractClient(
       return create(
         web3jClient = web3jClient,
         ethApiClient = ethApiClient,
+        ethLogsSearcher = ethLogsSearcher,
         contractAddress = contractAddress,
         gasLimit = 0UL,
         maxFeePerGasCap = 0UL,

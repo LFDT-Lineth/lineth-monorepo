@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, MessageProof, Message } from "@consensys/linea-sdk-core";
+import { MessageProof, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -23,6 +23,7 @@ import { sendTransaction } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
 import { getMessageProof } from "./getMessageProof";
+import { CLAIM_MESSAGE_WITH_PROOF_ABI } from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import {
   MissingMessageProofOrClientForClaimingOnL1Error,
@@ -30,6 +31,7 @@ import {
 } from "../errors/bridge";
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash, ComputeMessageHashErrorType } from "../utils/computeMessageHash";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type ClaimOnL1Parameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -48,16 +50,20 @@ export type ClaimOnL1Parameters<
         messageNonce: bigint;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        lineaRollupAddress?: Address;
+        rollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
+        // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
+        // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
+        // not support large block ranges; otherwise the default full-range query will be rejected.
+        messageL2BlockNumber?: bigint;
       }
     | {
         messageNonce: bigint;
         messageProof: MessageProof;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        lineaRollupAddress?: Address;
+        rollupAddress?: Address;
       }
   >;
 
@@ -69,7 +75,8 @@ export type ClaimOnL1ErrorType =
   | ClientChainNotConfiguredErrorType
   | ComputeMessageHashErrorType
   | AccountNotFoundErrorType
-  | MissingMessageProofOrClientForClaimingOnL1ErrorType;
+  | MissingMessageProofOrClientForClaimingOnL1ErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Claim a message on L1.
@@ -82,7 +89,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -113,7 +120,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: mainnet,
@@ -145,7 +152,7 @@ export type ClaimOnL1ErrorType =
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { mainnet } from 'viem/chains'
- * import { claimOnL1 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL1 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),
@@ -194,8 +201,9 @@ export async function claimOnL1<
     feeRecipient,
     l2Client,
     messageProof,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
+    messageL2BlockNumber,
     ...tx
   } = parameters;
 
@@ -222,7 +230,7 @@ export async function claimOnL1<
   if (l2Client) {
     proof = await getMessageProof(client, {
       l2Client,
-      lineaRollupAddress,
+      rollupAddress,
       l2MessageServiceAddress,
       messageHash: computeMessageHash({
         from,
@@ -232,44 +240,21 @@ export async function claimOnL1<
         nonce: messageNonce,
         calldata,
       }),
+      ...(messageL2BlockNumber
+        ? { l2LogsBlockRange: { fromBlock: messageL2BlockNumber, toBlock: messageL2BlockNumber } }
+        : {}),
     });
   } else {
     proof = messageProof;
   }
 
-  const lineaRollup = parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const resolvedRollupAddress = resolveRollupAddress(client.chain.id, rollupAddress);
 
   return sendTransaction(client, {
-    to: lineaRollup,
+    to: resolvedRollupAddress,
     account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              components: [
-                { internalType: "bytes32[]", name: "proof", type: "bytes32[]" },
-                { internalType: "uint256", name: "messageNumber", type: "uint256" },
-                { internalType: "uint32", name: "leafIndex", type: "uint32" },
-                { internalType: "address", name: "from", type: "address" },
-                { internalType: "address", name: "to", type: "address" },
-                { internalType: "uint256", name: "fee", type: "uint256" },
-                { internalType: "uint256", name: "value", type: "uint256" },
-                { internalType: "address payable", name: "feeRecipient", type: "address" },
-                { internalType: "bytes32", name: "merkleRoot", type: "bytes32" },
-                { internalType: "bytes", name: "data", type: "bytes" },
-              ],
-              internalType: "struct IL1MessageService.ClaimMessageWithProofParams",
-              name: "_params",
-              type: "tuple",
-            },
-          ],
-          name: "claimMessageWithProof",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-      ],
+      abi: CLAIM_MESSAGE_WITH_PROOF_ABI,
       functionName: "claimMessageWithProof",
       args: [
         {

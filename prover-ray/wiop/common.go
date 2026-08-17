@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Annotations is a string-keyed map of arbitrary values. Both compiler passes
@@ -11,41 +11,6 @@ import (
 // entries in its Annotations map. The label string conventionally uses
 // lower-case, dot-separated namespacing (e.g. "compiler.committed").
 type Annotations map[string]any
-
-// Visibility represents the visibility scope of an object (column or value)
-// within the protocol transcript. It controls which queries may reference the
-// object and whether the verifier can observe it directly.
-type Visibility int
-
-const (
-	// VisibilityInternal marks an object as purely prover-internal. Internal
-	// objects may not appear in active queries (i.e. queries that have not yet
-	// been compiled away) and are invisible to the verifier.
-	VisibilityInternal Visibility = iota
-	// VisibilityOracle marks an object as usable in active queries but not
-	// directly sent to the verifier. For columns, this implicitly signals an
-	// intent to commit to the column. SingleValues assertedly cannot carry
-	// this visibility.
-	VisibilityOracle
-	// VisibilityPublic marks an object as both queryable and verifier-visible.
-	// Public objects are part of the protocol transcript and may be read by
-	// verifier execution steps.
-	VisibilityPublic
-)
-
-// String implements [fmt.Stringer].
-func (v Visibility) String() string {
-	switch v {
-	case VisibilityInternal:
-		return "Internal"
-	case VisibilityOracle:
-		return "Oracle"
-	case VisibilityPublic:
-		return "Public"
-	default:
-		return fmt.Sprintf("Visibility(%d)", int(v))
-	}
-}
 
 // PaddingDirection specifies how a column's assignment vector is padded to
 // match the declared module size when the provided data is shorter than

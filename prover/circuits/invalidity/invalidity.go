@@ -12,6 +12,8 @@ import (
 	emPlonk "github.com/consensys/gnark/std/recursion/plonk"
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	wizardk "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed"
 	wizard "github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/ethereum/go-ethereum/common"
@@ -54,6 +56,7 @@ type AssigningInputs struct {
 	// inputs related to zkevm-wizard
 	ZkEvmComp        *wizard.CompiledIOP
 	ZkEvmWizardProof wizard.Proof
+	MaxL2Logs        int
 
 	// CachedProofPath, if set, enables proof caching: on first run the proof
 	// is written to this path; on subsequent runs with the same witness the
@@ -182,7 +185,7 @@ func (c *CircuitInvalidity) CheckOnly(assi AssigningInputs) error {
 		if assi.ZkEvmComp == nil {
 			return fmt.Errorf("ZkEvmComp is nil for %s", assi.InvalidityType)
 		}
-		err = CheckOnlyNativeBadPrecompile(assi.ZkEvmComp, assi.ZkEvmWizardProof, assi.FuncInputs, assi.InvalidityType)
+		err = CheckOnlyNativeBadPrecompile(assi.ZkEvmComp, assi.ZkEvmWizardProof, assi.FuncInputs, assi.InvalidityType, assi.MaxL2Logs)
 
 	case BadNonce, BadBalance:
 		err = CheckOnlyNativeNonceBalance(assi)
@@ -205,6 +208,9 @@ type Config struct {
 	KeccakCompiledIOP *wizardk.CompiledIOP
 	MaxRlpByteSize    int
 	ZkEvmComp         *wizard.CompiledIOP
+	// MaxL2Logs is the maximum number of L2->L1 logs allowed.
+	// Used by the BadPrecompile/TooManyLogs circuit.
+	MaxL2Logs int
 }
 
 type builder struct {
@@ -226,20 +232,29 @@ func (b *builder) Compile() (constraint.ConstraintSystem, error) {
 }
 
 type limitlessBuilder struct {
-	congWIOP *wizard.CompiledIOP
+	congWIOP     *wizard.CompiledIOP
+	vkMerkleRoot field.Octuplet
+	maxL2Logs    int
 }
 
-func NewBuilderLimitless(congWIOP *wizard.CompiledIOP) *limitlessBuilder {
-	return &limitlessBuilder{congWIOP: congWIOP}
+func NewBuilderLimitless(congWIOP *wizard.CompiledIOP, vkMerkleRoot field.Octuplet, maxL2Logs int) *limitlessBuilder {
+	return &limitlessBuilder{congWIOP: congWIOP, vkMerkleRoot: vkMerkleRoot, maxL2Logs: maxL2Logs}
 }
 
 func (b *limitlessBuilder) Compile() (constraint.ConstraintSystem, error) {
+	vk0 := b.congWIOP.ExtraData[distributed.VerifyingKeyPublicInput].(field.Octuplet)
+	vk1 := b.congWIOP.ExtraData[distributed.VerifyingKey2PublicInput].(field.Octuplet)
+
 	circuit := &CircuitInvalidity{
 		SubCircuit: &BadPrecompileCircuit{
-			ExecutionCtx: ExecutionCtx{LimitlessMode: true},
+			ExecutionCtx: ExecutionCtx{
+				LimitlessMode: true,
+				CongloVK:      [2]field.Octuplet{vk0, vk1},
+				VKMerkleRoot:  b.vkMerkleRoot,
+			},
 		},
 	}
-	circuit.Allocate(Config{ZkEvmComp: b.congWIOP})
+	circuit.Allocate(Config{ZkEvmComp: b.congWIOP, MaxL2Logs: b.maxL2Logs})
 
 	ccs, err := frontend.Compile(ecc.BLS12_377.ScalarField(), scs.NewBuilder, circuit, frontend.WithCapacity(1<<24))
 	if err != nil {

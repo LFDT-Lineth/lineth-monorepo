@@ -8,8 +8,8 @@
  */
 package maru.syncing.beaconchain.pipeline
 
+import linea.kotlin.encodeHex
 import maru.consensus.blockimport.SealedBeaconBlockImporter
-import maru.extensions.encodeHex
 import maru.p2p.ValidationResult
 import maru.p2p.ValidationResultCode
 import maru.p2p.ValidationResultCode.ACCEPT
@@ -39,7 +39,7 @@ class ImportBlocksStep(
               log::info,
               "Imported block: " +
                 "clBlockNumber=${beaconBlockHeader.number} " +
-                "clBlockHash=${beaconBlockHeader.hash.encodeHex()}",
+                "clBlockHash=${beaconBlockHeader.beaconBlockIdHash.encodeHex()}",
               shouldLog,
               30,
             )
@@ -49,7 +49,7 @@ class ImportBlocksStep(
             log.error(
               "Block validation failed for block: clBlockNumber:{} clBlockHash={}",
               beaconBlockHeader.number,
-              beaconBlockHeader.hash.encodeHex(),
+              beaconBlockHeader.beaconBlockIdHash.encodeHex(),
             )
             return
           }
@@ -57,7 +57,7 @@ class ImportBlocksStep(
             log.warn(
               "Block validation ignored for block: clBlockNumber:{}, clBlockHash={}",
               beaconBlockHeader.number,
-              beaconBlockHeader.hash.encodeHex(),
+              beaconBlockHeader.beaconBlockIdHash.encodeHex(),
             )
             return
           }
@@ -66,7 +66,7 @@ class ImportBlocksStep(
         log.error(
           "Exception importing block: clBlockNumber:{}, clBlockHash={}",
           beaconBlockHeader.number,
-          beaconBlockHeader.hash
+          beaconBlockHeader.beaconBlockIdHash
             .encodeHex(),
           e,
         )

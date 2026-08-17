@@ -1,5 +1,5 @@
-import { serialize } from "@consensys/linea-shared-utils";
 import { describe, expect, it } from "@jest/globals";
+import { serialize } from "@lfdt-lineth/shared-utils";
 import { PrepareTransactionRequestReturnType, encodeFunctionData, parseGwei } from "viem";
 
 import { getTransactionHash, awaitUntil } from "./common/utils";

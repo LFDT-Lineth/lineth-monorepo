@@ -1,6 +1,6 @@
 // Take operation results and record the relevant figures into metrics
 
-import { ILogger, weiToGweiNumber } from "@consensys/linea-shared-utils";
+import { ILogger, weiToGweiNumber } from "@lfdt-lineth/shared-utils";
 import { Result } from "neverthrow";
 import { Address, TransactionReceipt } from "viem";
 

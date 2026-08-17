@@ -1,8 +1,8 @@
 # Context & Goals
 
-Linea's Yield Boost depends on Lido V3 StakingVaults, which are governed by **Lido's on-chain governance process**. Governance decisions - particularly contract upgrades, parameter changes, or governance process changes - represent a primary external risk vector for Yield Boost.
+Lineth's Yield Boost depends on Lido V3 StakingVaults, which are governed by **Lido's on-chain governance process**. Governance decisions - particularly contract upgrades, parameter changes, or governance process changes - represent a primary external risk vector for Yield Boost.
 
-A malicious, compromised, or poorly designed governance change affecting the StakingVault or closely related contracts could materially impact Yield Boost operations, including withdrawal guarantees or yield accounting. Linea must gain early visibility into governance proposals *before execution*, with sufficient time for the Security Council to evaluate risk and take protective actions such as ossifying the vault.
+A malicious, compromised, or poorly designed governance change affecting the StakingVault or closely related contracts could materially impact Yield Boost operations, including withdrawal liveness or yield accounting. Lineth must gain early visibility into governance proposals *before execution*, with sufficient time for the Security Council to evaluate risk and take protective actions such as ossifying the vault.
 
 The **Lido Governance Monitor** is an off-chain service that provides this early warning. It regularly checks the Lido governance proposal pipeline, evaluates proposals for risk to Yield Boost using an AI-assisted judge, and escalates proposals that may pose a material risk to the Security Council.
 
@@ -414,7 +414,7 @@ Forum and on-chain content is treated as untrusted input. Adversaries may craft 
 
 # Operational Considerations
 
-**LLM access** - Service account API key for Anthropic Claude.
+**LLM access** - Claude is reached through the shared LiteLLM proxy
 
 **Observability** - Structured logging via custom logger. Per-run metrics (items fetched, LLM calls, notifications sent).
 

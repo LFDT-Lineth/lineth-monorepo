@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, Message } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -19,6 +19,7 @@ import {
 import { sendTransaction } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
+import { CLAIM_MESSAGE_ABI } from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import { GetAccountParameter } from "../types/account";
 
@@ -52,7 +53,7 @@ export type ClaimOnL2ErrorType = SendTransactionErrorType | ChainNotFoundErrorTy
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { claimOnL2 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL2 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   chain: linea,
@@ -78,7 +79,7 @@ export type ClaimOnL2ErrorType = SendTransactionErrorType | ChainNotFoundErrorTy
  * import { createWalletClient, http, zeroAddress } from 'viem'
  * import { privateKeyToAccount } from 'viem/accounts'
  * import { linea } from 'viem/chains'
- * import { claimOnL2 } from '@consensys/linea-sdk-viem'
+ * import { claimOnL2 } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createWalletClient({
  *   account: privateKeyToAccount('0x…'),
@@ -139,51 +140,7 @@ export async function claimOnL2<
     to: l2MessageServiceAddress,
     account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_from",
-              type: "address",
-            },
-            {
-              internalType: "address",
-              name: "_to",
-              type: "address",
-            },
-            {
-              internalType: "uint256",
-              name: "_fee",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "_value",
-              type: "uint256",
-            },
-            {
-              internalType: "address payable",
-              name: "_feeRecipient",
-              type: "address",
-            },
-            {
-              internalType: "bytes",
-              name: "_calldata",
-              type: "bytes",
-            },
-            {
-              internalType: "uint256",
-              name: "_nonce",
-              type: "uint256",
-            },
-          ],
-          name: "claimMessage",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-      ],
+      abi: CLAIM_MESSAGE_ABI,
       functionName: "claimMessage",
       args: [from, to, fee, value, feeRecipient ?? zeroAddress, calldata, messageNonce],
     }),

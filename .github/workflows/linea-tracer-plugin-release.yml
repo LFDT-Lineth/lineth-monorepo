@@ -20,7 +20,7 @@ jobs:
   # Build - for release and for tests
   # ==================================================================
   build:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     outputs:
       versionTag: ${{ steps.config.outputs.VERSION_TAG }}
     steps:
@@ -37,7 +37,7 @@ jobs:
           tag_name: ${{ inputs.release_tag }}
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -72,10 +72,10 @@ jobs:
   # ==================================================================
   replay-tests:
     needs: [ build ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -116,14 +116,14 @@ jobs:
   publish:
     needs: [ build ]
     if: github.event_name != 'pull_request'
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       architecture: "amd64"
       GRADLE_OPTS: "-Xmx6g -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
@@ -133,3 +133,4 @@ jobs:
         env:
           CLOUDSMITH_USER: ${{ secrets.CLOUDSMITH_USER }}
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+

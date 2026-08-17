@@ -57,15 +57,21 @@ export class ViemWalletSignerClientAdapter implements IContractSignerClient {
    */
   async sign(tx: TransactionSerializable): Promise<Hex> {
     this.logger.debug("sign started...", { tx });
-    // Remove any signature fields if they exist on the object
+    // Remove any signature fields if they exist on the object, as well as the
+    // `account` field that viem's WalletClient injects into the transaction
+    // before delegating to `account.signTransaction` (viem >= 2.52). If left in
+    // place, that leaked `account` overrides this adapter's own wallet account
+    // (viem's `signTransaction` reads `parameters.account` first), which re-enters
+    // this signer through the wrapping account and causes infinite recursion.
     // 'as any' required to avoid enforcing strict structural validation
     // Fine because we are only removing fields, not depending on them existing
     // Practical way to strip off optional keys from a union type
-    const { r: r_void, s: s_void, v: v_void, yParity: yParity_void, ...unsigned } = tx as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { r: r_void, s: s_void, v: v_void, yParity: yParity_void, account: account_void, ...unsigned } = tx as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     void r_void;
     void s_void;
     void v_void;
     void yParity_void;
+    void account_void;
 
     const serializedSignedTx = await this.wallet.signTransaction({ ...unsigned });
     const parsedTx = parseTransaction(serializedSignedTx);
