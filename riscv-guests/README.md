@@ -12,11 +12,13 @@ riscv-guests/
   lineth-accelerators/ Shared library package: Lineth accelerator wrappers + C headers
   guest-common/        Shared library package: generic SSZ decode/encode primitives, with its own unit tests
   l2-execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
+  rollup/              Rollup guest stub (echo/sentinel, no proof verification/folding): build.zig + build.zig.zon + Makefile + src/ + test/
+  rollup-aggregation/  Rollup-aggregation guest stub (echo/sentinel, no proof verification/aggregation): build.zig + build.zig.zon + Makefile + src/ + test/
 ```
 
 Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**; host-only code (unit tests, the reference-test harness, fixture parsing) lives in `test/`, and committed sample/test data in `test/testdata/`. The split mirrors what `build.zig` builds: the object + `elf` step compile `src/`; `zig build test` / `extended-vanilla` compile `test/`. (Automated tests pull their EF fixtures from the lazy `execution_spec_tests_zkevm` dependency, not from committed data — `test/testdata/` is just the manual ZkC-run samples.)
 
-**Add a guest:** create `riscv-guests/<name>/` (its own `build.zig`, `build.zig.zon`, `Makefile`, `src/` for production code + `test/` for host tests, depending on `../build_common`) and append `<name>` to `GUESTS` in the top-level `Makefile`. Future guests (Rollup, Aggregation) slot in this way — each with its own dependencies and compile/lint sequence.
+**Add a guest:** create `riscv-guests/<name>/` (its own `build.zig`, `build.zig.zon`, `Makefile`, `src/` for production code + `test/` for host tests, depending on `../build_common`) and append `<name>` to `GUESTS` in the top-level `Makefile`. `rollup` and `rollup-aggregation` slot in this way — each with its own dependencies and compile/lint sequence.
 
 ## Required Toolchain
 
@@ -106,4 +108,6 @@ These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `e
 Each guest folder is a complete package: its own dependencies (`build.zig.zon`), compile/test logic (`build.zig`), lifecycle (`Makefile`), production source (`src/`) and host-only test code (`test/`). Shared build helpers are factored into `build_common/`; the toolchain pin (`.zigversion`) is shared at this level.
 
 - `l2-execution/`: the Rollup's extended l2-execution guest. See `l2-execution/README.md`.
+- `rollup/`: the rollup guest stub (echo/sentinel mapping, no proof verification or chunk/conflation folding). See `rollup/README.md`.
+- `rollup-aggregation/`: the rollup-aggregation guest stub (echo/sentinel mapping, no proof verification or rollup aggregation). See `rollup-aggregation/README.md`.
 ```

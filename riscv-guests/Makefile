@@ -15,7 +15,7 @@
 # here anyway so its own unit tests run as part of `make test`, and its build.zig/src/test get the
 # same `zig fmt --check` gate every guest's own sources get.
 
-GUESTS ?= guest-common l2-execution
+GUESTS ?= guest-common l2-execution rollup rollup-aggregation
 ZIG    ?= zig
 
 # Sources to format: the shared build helper plus each guest's build.zig and hand-written src/ +
