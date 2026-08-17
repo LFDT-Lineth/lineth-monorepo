@@ -17,7 +17,7 @@ import {
 
 export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
   const { context, proofConfig, overrides = {} } = params;
-  const { lineaRollup, operator } = context;
+  const { linethRollup, operator } = context;
   const { proofData } = proofConfig;
 
   const finalizationData = await generateFinalizationData({
@@ -25,20 +25,20 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
     ...overrides,
   });
 
-  await lineaRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
 
-  const finalizeCompressedCall = lineaRollup
+  const finalizeCompressedCall = linethRollup
     .connect(operator)
     .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-  await expectEvent(lineaRollup, finalizeCompressedCall, "FinalizedStateUpdated", [
+  await expectEvent(linethRollup, finalizeCompressedCall, "FinalizedStateUpdated", [
     finalizationData.endBlockNumber,
     finalizationData.finalTimestamp,
     finalizationData.l1RollingHashMessageNumber,
     finalizationData.finalForcedTransactionNumber,
   ]);
 
-  await expectEvent(lineaRollup, finalizeCompressedCall, "DataFinalizedV3", [
+  await expectEvent(linethRollup, finalizeCompressedCall, "DataFinalizedV3", [
     BigInt(proofData.lastFinalizedBlockNumber) + 1n,
     finalizationData.endBlockNumber,
     proofData.finalShnarf,
@@ -47,9 +47,9 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
   ]);
 
   const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-    lineaRollup.stateRootHashes(finalizationData.endBlockNumber),
-    lineaRollup.currentL2BlockNumber(),
-    lineaRollup.currentFinalizedState(),
+    linethRollup.stateRootHashes(finalizationData.endBlockNumber),
+    linethRollup.currentL2BlockNumber(),
+    linethRollup.currentFinalizedState(),
   ]);
 
   expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
@@ -67,7 +67,7 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
 
 export async function expectFailedCustomErrorFinalize(params: FailedFinalizeParams) {
   const { context, proofConfig, expectedError, overrides = {} } = params;
-  const { lineaRollup, operator } = context;
+  const { linethRollup, operator } = context;
   const { proofData } = proofConfig;
 
   const finalizationData = await generateFinalizationData({
@@ -75,13 +75,13 @@ export async function expectFailedCustomErrorFinalize(params: FailedFinalizePara
     ...overrides,
   });
 
-  await lineaRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  await linethRollup.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
 
-  const finalizeCompressedCall = lineaRollup
+  const finalizeCompressedCall = linethRollup
     .connect(operator)
     .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-  await expectRevertWithCustomError(lineaRollup, finalizeCompressedCall, expectedError.name, expectedError.args ?? []);
+  await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, expectedError.name, expectedError.args ?? []);
 }
 
 export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFinalizeParamsCallForwardingProxy) {

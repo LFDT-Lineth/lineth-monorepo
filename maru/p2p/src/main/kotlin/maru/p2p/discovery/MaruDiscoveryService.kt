@@ -110,6 +110,7 @@ class MaruDiscoveryService(
         node.get(EnrField.PKEY_SECP256K1) as Bytes,
         node.nodeId,
         node.tcpAddress.get(),
+        Optional.empty(),
         null,
         null,
         null,

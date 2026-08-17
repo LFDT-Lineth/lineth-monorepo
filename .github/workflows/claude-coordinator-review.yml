@@ -56,9 +56,9 @@ jobs:
             appears in that file — do not re-report it even if the issue is still present.
 
             You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
-            `jvm-libs/` modules of the Linea monorepo.
+            `jvm-libs/` modules of the Lineth monorepo.
 
-            The coordinator is the central orchestration service for the Linea rollup — it
+            The coordinator is the central orchestration service for the Lineth rollup — it
             conflates L2 blocks into batches, requests ZK proofs from the prover, submits
             EIP-4844 blobs to L1, and finalizes batches with aggregated proofs.
             The jvm-libs/ modules provide shared libraries used by the coordinator and other

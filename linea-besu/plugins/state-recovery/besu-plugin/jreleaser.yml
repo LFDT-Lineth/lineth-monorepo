@@ -1,7 +1,7 @@
 project:
   name: staterecovery
-  description: Linea State Recovery Besu Plugin
-  longDescription: Besu Plugin to allow Linea rollup state recovery from L1 Blob data
+  description: Lineth State Recovery Besu Plugin
+  longDescription: Besu Plugin to allow Lineth rollup state recovery from L1 Blob data
   links:
     homepage: https://github.com/LFDT-Lineth/lineth-monorepo
   authors:

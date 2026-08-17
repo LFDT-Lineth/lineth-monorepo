@@ -1,0 +1,10 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+}
+
+description = "Hoplite configuration decoders extensions"
+
+dependencies {
+  api "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
+  implementation(project(':jvm-libs:generic:extensions:kotlin'))
+}

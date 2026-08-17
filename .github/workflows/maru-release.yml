@@ -35,6 +35,9 @@ jobs:
     with:
       component-name: maru
       folder-name: maru
+      # Scope-and-path gated: the shared cliff.template.toml (scope `maru`) keeps only `maru`-scoped commits,
+      # AND include-path restricts to the maru paths.
+      scopes: maru|deps|misc
       include-path: maru/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}

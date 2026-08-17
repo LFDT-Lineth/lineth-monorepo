@@ -46,7 +46,7 @@ data class RollupAggregationProofRequestV1(
 /**
  * Response of a rollup-aggregation proof.
  *
- * Mirrors `linea.coordinator.clients.prover.riscv.RollupAggregationProofResponseDto`: the DTO's `String` (hex) proof
+ * Mirrors `lineth.coordinator.clients.prover.riscv.RollupAggregationProofResponseDto`: the DTO's `String` (hex) proof
  * is `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint —
  * deserializes into the DTO and maps onto this domain type.
  */

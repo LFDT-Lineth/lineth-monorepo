@@ -6,9 +6,9 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
 
 /*
   *******************************************************************************************
-  Setup and execute TestLineaRollup.claimMessageWithProofAndWithdrawLST.
+  Setup and execute TestLinethRollup.claimMessageWithProofAndWithdrawLST.
 
-  1) Signer must have DEFAULT_ADMIN_ROLE role for TestLineaRollup
+  1) Signer must have DEFAULT_ADMIN_ROLE role for TestLinethRollup
   2) L1MessageService balance must be < `value` (LST withdrawal requires deficit)
   3) Caller must be the `to` address (LST withdrawal recipient)
 
@@ -18,7 +18,7 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
   DEPLOYER_PRIVATE_KEY=<key> \
   CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   pnpm exec hardhat addAndClaimMessageForLST \
-    --linea-rollup-address <address> \
+    --lineth-rollup-address <address> \
     --to <address> \
     --value <uint256> \
     --data <hex_string> \
@@ -30,9 +30,9 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
 // TASKS
 task(
   "addAndClaimMessageForLST",
-  "Setup and execute TestLineaRollup.claimMessageWithProofAndWithdrawLST by adding L2->L1 message merkle tree root",
+  "Setup and execute TestLinethRollup.claimMessageWithProofAndWithdrawLST by adding L2->L1 message merkle tree root",
 )
-  .addOptionalParam("lineaRollupAddress")
+  .addOptionalParam("linethRollupAddress")
   .addOptionalParam("from")
   .addOptionalParam("to")
   .addOptionalParam("value")
@@ -40,7 +40,7 @@ task(
   .addOptionalParam("yieldProvider")
   .setAction(async (taskArgs, hre) => {
     return runWithSignerUiSession(hre, "task:addAndClaimMessageForLST", async () => {
-      const { claimParams, lineaRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, true);
+      const { claimParams, linethRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, true);
 
       if (!claimParams.yieldProvider) {
         throw new Error("yieldProvider is required but was not provided");
@@ -50,7 +50,7 @@ task(
         console.log("Waiting for 10 seconds...");
         await delay(10000);
         console.log("Claiming message with LST withdrawal...");
-        const tx = await lineaRollup.claimMessageWithProofAndWithdrawLST(
+        const tx = await linethRollup.claimMessageWithProofAndWithdrawLST(
           {
             proof: claimParams.proof,
             messageNumber: claimParams.messageNumber,

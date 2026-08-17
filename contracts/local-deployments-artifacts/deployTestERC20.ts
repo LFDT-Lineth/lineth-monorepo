@@ -11,7 +11,7 @@ import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
 import { get1559Fees } from "../scripts/utils";
 
 async function main() {
-  const ORDERED_NONCE_POST_LINEAROLLUP = 7;
+  const ORDERED_NONCE_POST_LINETHROLLUP = 7;
   const ORDERED_NONCE_POST_TOKENBRIDGE = 5;
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
 
@@ -29,7 +29,7 @@ async function main() {
     walletNonce = await getDeployNonceFromEnv(
       wallet,
       "L1_NONCE",
-      ORDERED_NONCE_POST_LINEAROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE,
+      ORDERED_NONCE_POST_LINETHROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE,
     );
     fees = { gasPrice: (await get1559Fees(provider)).gasPrice };
   } else {

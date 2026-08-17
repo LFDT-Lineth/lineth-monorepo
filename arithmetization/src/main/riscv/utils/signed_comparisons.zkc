@@ -2,7 +2,7 @@ include "sign_bit.zkc"
 include "type.zkc"
 
 // signed_LT should return true (i.e. 1) iff a < b where a and b are interpreted as signed i64's
-#[inline]
+//#[inline]
 fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:Boolean) {
 
     var a_sign:SignBit

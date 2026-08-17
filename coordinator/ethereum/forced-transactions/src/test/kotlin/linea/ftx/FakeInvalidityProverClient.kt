@@ -15,6 +15,10 @@ class FakeInvalidityProverClient() : InvalidityProverClientV1 {
     TODO("Not yet implemented")
   }
 
+  override fun getProofIndex(proofRequest: InvalidityProofRequest): InvalidityProofIndex {
+    TODO("Not yet implemented")
+  }
+
   override fun createProofRequest(proofRequest: InvalidityProofRequest): SafeFuture<InvalidityProofIndex> {
     TODO("Not yet implemented")
   }

@@ -10,6 +10,10 @@ on:
       include-path:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         type: string
+      scopes:
+        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
+        required: true
+        type: string
       release_tag_suffix:
         description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
         required: false
@@ -57,6 +61,7 @@ jobs:
         with:
           component-name: ${{ inputs.component-name }}
           include-path: ${{ inputs.include-path }}
+          scopes: ${{ inputs.scopes }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
 

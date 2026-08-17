@@ -1,7 +1,7 @@
 import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
 
-import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { ILinethRollupClient } from "../../../core/clients/blockchain/ethereum/ILinethRollupClient";
 import { IEthereumGasProvider } from "../../../core/clients/blockchain/IGasProvider";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
@@ -40,7 +40,7 @@ describe("TestMessageClaimingProcessor", () => {
   let getNextMessageToClaim: jest.Mock<Promise<Message | null>, []>;
   let transactionValidationService: EthereumTransactionValidationService;
   let mockedDate: Date;
-  const lineaRollupContractMock = mock<ILineaRollupClient>();
+  const linethRollupContractMock = mock<ILinethRollupClient>();
   const nonceManager = mock<INonceManager>();
   const errorParser = new ViemErrorParser();
 
@@ -51,7 +51,7 @@ describe("TestMessageClaimingProcessor", () => {
     messageRepository = mock<IMessageRepository>();
     getNextMessageToClaim = jest.fn();
     transactionValidationService = new EthereumTransactionValidationService(
-      lineaRollupContractMock,
+      linethRollupContractMock,
       gasProvider,
       {
         profitMargin: DEFAULT_PROFIT_MARGIN,
@@ -62,7 +62,7 @@ describe("TestMessageClaimingProcessor", () => {
       logger,
     );
     messageClaimingProcessor = new MessageClaimingProcessor(
-      lineaRollupContractMock,
+      linethRollupContractMock,
       nonceManager,
       messageRepository,
       getNextMessageToClaim,
@@ -90,17 +90,17 @@ describe("TestMessageClaimingProcessor", () => {
 
   describe("process", () => {
     it("Should return without calling any get message status if getFirstMessageToClaim return null", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       getNextMessageToClaim.mockResolvedValue(null);
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(0);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(0);
     });
 
     it("Should log as warning and save message as zero fee if message has zero fee", async () => {
       const loggerWarnSpy = jest.spyOn(logger, "warn");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest
         .spyOn(gasProvider, "getGasFees")
@@ -126,7 +126,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledWith("Found message with zero fee. This message will not be processed.", {
         messageHash: expectedLoggingMessage.messageHash,
@@ -137,19 +137,19 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should log as info and save message as claimed if message was claimed", async () => {
       const loggerInfoSpy = jest.spyOn(logger, "info");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testClaimedMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMED);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMED);
       const expectedLoggingMessage = new Message(testClaimedMessage);
       const expectedSavedMessage = new Message({ ...testClaimedMessage, updatedAt: mockedDate });
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(loggerInfoSpy).toHaveBeenCalledTimes(2);
       expect(loggerInfoSpy).toHaveBeenCalledWith("Found already claimed message.", {
         messageHash: expectedLoggingMessage.messageHash,
@@ -160,14 +160,14 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should log as warning and save message as non-executable if message gas limit was above max gas limit", async () => {
       const loggerWarnSpy = jest.spyOn(logger, "warn");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(DEFAULT_MAX_CLAIM_GAS_LIMIT * 2n);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(DEFAULT_MAX_CLAIM_GAS_LIMIT * 2n);
       const expectedLoggingMessage = new Message(testAnchoredMessage);
       const expectedSavedMessage = new Message({
         ...testAnchoredMessage,
@@ -177,7 +177,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         "Estimated gas limit is higher than the max allowed gas limit for this message.",
@@ -194,14 +194,14 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should log as warning and save message as fee underpriced if message fee was underpriced", async () => {
       const loggerWarnSpy = jest.spyOn(logger, "warn");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testUnderpricedAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
       const expectedLoggingMessage = new Message({
         ...testUnderpricedAnchoredMessage,
         claimGasEstimationThreshold: 10,
@@ -216,7 +216,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnSpy).toHaveBeenCalledWith("Fee underpriced found in this message.", {
         messageHash: expectedLoggingMessage.messageHash,
@@ -230,15 +230,15 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should log as warning and save message with reset claimGasEstimationThreshold if rate limit exceeded on L1", async () => {
       const loggerWarnSpy = jest.spyOn(logger, "warn");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(true);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(true);
       const expectedLoggingMessage = new Message({
         ...testAnchoredMessage,
         claimGasEstimationThreshold: 10000000000,
@@ -247,7 +247,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
       expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
@@ -258,17 +258,17 @@ describe("TestMessageClaimingProcessor", () => {
     });
 
     it("Should update message if successful", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest.spyOn(nonceManager, "acquireNonce").mockResolvedValue(101);
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
-      jest.spyOn(lineaRollupContractMock, "claim").mockResolvedValue({
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "claim").mockResolvedValue({
         hash: TEST_TRANSACTION_HASH,
         nonce: 101,
         gasLimit: 100_000n,
@@ -291,7 +291,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedFinalMessage);
       expect(nonceManager.commitNonce).toHaveBeenCalledWith(101);
@@ -304,10 +304,10 @@ describe("TestMessageClaimingProcessor", () => {
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(localAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
-      jest.spyOn(lineaRollupContractMock, "claim").mockRejectedValue(new Error("chain call failed"));
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "claim").mockRejectedValue(new Error("chain call failed"));
 
       await messageClaimingProcessor.process();
 
@@ -325,8 +325,8 @@ describe("TestMessageClaimingProcessor", () => {
         status: MessageStatus.FEE_UNDERPRICED,
       });
       getNextMessageToClaim.mockResolvedValue(underpricedMsg);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
       jest.spyOn(transactionValidationService, "evaluateTransaction").mockResolvedValueOnce({
         hasZeroFee: false,
         isRateLimitExceeded: false,
@@ -353,7 +353,7 @@ describe("TestMessageClaimingProcessor", () => {
       const localAnchoredMessage = new Message(testAnchoredMessage);
 
       const localProcessor = new MessageClaimingProcessor(
-        lineaRollupContractMock,
+        linethRollupContractMock,
         nonceManager,
         localRepo,
         localGetNext,
@@ -374,7 +374,7 @@ describe("TestMessageClaimingProcessor", () => {
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       localGetNext.mockResolvedValue(localAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockRejectedValue(new Error("non-retryable"));
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockRejectedValue(new Error("non-retryable"));
 
       await localProcessor.process();
 
@@ -385,7 +385,7 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should rollback nonce and log error if claim throws", async () => {
       const loggerErrorSpy = jest.spyOn(logger, "error");
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const actionRejectedError = {
         code: "ACTION_REJECTED",
         shortMessage: "action rejected error for testing",
@@ -402,11 +402,11 @@ describe("TestMessageClaimingProcessor", () => {
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
       // claim() succeeds; the subsequent DB write is what fails
-      jest.spyOn(lineaRollupContractMock, "claim").mockResolvedValue({
+      jest.spyOn(linethRollupContractMock, "claim").mockResolvedValue({
         hash: TEST_TRANSACTION_HASH,
         nonce: 101,
         gasLimit: 100_000n,
@@ -421,7 +421,7 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
       expect(rollbackSpy).toHaveBeenCalledWith(101);
@@ -457,10 +457,10 @@ describe("TestMessageClaimingProcessor", () => {
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(freshMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
-      jest.spyOn(lineaRollupContractMock, "claim").mockResolvedValue({
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "claim").mockResolvedValue({
         hash: TEST_TRANSACTION_HASH,
         nonce: 101,
         gasLimit: 100_000n,
@@ -497,7 +497,7 @@ describe("TestMessageClaimingProcessor", () => {
   describe("process with sponsorship", () => {
     beforeEach(() => {
       transactionValidationService = new EthereumTransactionValidationService(
-        lineaRollupContractMock,
+        linethRollupContractMock,
         gasProvider,
         {
           profitMargin: DEFAULT_PROFIT_MARGIN,
@@ -508,7 +508,7 @@ describe("TestMessageClaimingProcessor", () => {
         logger,
       );
       messageClaimingProcessor = new MessageClaimingProcessor(
-        lineaRollupContractMock,
+        linethRollupContractMock,
         nonceManager,
         messageRepository,
         getNextMessageToClaim,
@@ -527,16 +527,16 @@ describe("TestMessageClaimingProcessor", () => {
     });
 
     it("Should successfully claim message with fee", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest.spyOn(nonceManager, "acquireNonce").mockResolvedValue(101);
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
       const expectedLoggingMessage = new Message({
         ...testAnchoredMessage,
         claimGasEstimationThreshold: 10000000000,
@@ -545,23 +545,23 @@ describe("TestMessageClaimingProcessor", () => {
       });
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
     });
 
     it("Should successfully claim message with zero fee", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest.spyOn(nonceManager, "acquireNonce").mockResolvedValue(101);
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testZeroFeeAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
-      jest.spyOn(lineaRollupContractMock, "claim").mockResolvedValue({
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "claim").mockResolvedValue({
         hash: TEST_TRANSACTION_HASH,
         nonce: 101,
         gasLimit: 100_000n,
@@ -584,23 +584,23 @@ describe("TestMessageClaimingProcessor", () => {
 
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedFinalMessage);
       expect(nonceManager.commitNonce).toHaveBeenCalledWith(101);
     });
 
     it("Should successfully claim message with underpriced fee", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest.spyOn(nonceManager, "acquireNonce").mockResolvedValue(101);
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testUnderpricedAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "claim").mockResolvedValue({
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "claim").mockResolvedValue({
         hash: TEST_TRANSACTION_HASH,
         nonce: 101,
         gasLimit: 100_000n,
@@ -609,7 +609,7 @@ describe("TestMessageClaimingProcessor", () => {
       });
       await messageClaimingProcessor.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -627,16 +627,16 @@ describe("TestMessageClaimingProcessor", () => {
     });
 
     it("Should successfully claim message on a specified contract address if specified", async () => {
-      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const linethRollupContractMsgStatusSpy = jest.spyOn(linethRollupContractMock, "getMessageStatus");
       const messageRepositorySaveSpy = jest.spyOn(messageRepository, "updateMessage");
       jest.spyOn(nonceManager, "acquireNonce").mockResolvedValue(101);
       jest
         .spyOn(gasProvider, "getGasFees")
         .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
       getNextMessageToClaim.mockResolvedValue(testAnchoredMessage);
-      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
-      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
-      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      jest.spyOn(linethRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(linethRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(linethRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
       const expectedLoggingMessage = new Message({
         ...testAnchoredMessage,
         claimGasEstimationThreshold: 10000000000,
@@ -645,7 +645,7 @@ describe("TestMessageClaimingProcessor", () => {
       });
 
       const messageClaimingProcessorWithSpecifiedClaimAddress = new MessageClaimingProcessor(
-        lineaRollupContractMock,
+        linethRollupContractMock,
         nonceManager,
         messageRepository,
         getNextMessageToClaim,
@@ -664,7 +664,7 @@ describe("TestMessageClaimingProcessor", () => {
       );
       await messageClaimingProcessorWithSpecifiedClaimAddress.process();
 
-      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(linethRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
     });

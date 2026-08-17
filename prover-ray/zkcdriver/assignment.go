@@ -6,9 +6,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/consensys/go-corset/pkg/ir/air"
-	"github.com/consensys/go-corset/pkg/trace"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
+	"github.com/LFDT-Lineth/zkc/pkg/trace"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,7 +21,20 @@ var _ [1]uint32 = field.Element{}
 
 // ReadExpandedTraces parses the provided trace file, expands it and returns the
 // corset object holding the expanded traces.
-func AssignFromTrace(run *wiop.Runtime, traces trace.Trace[koalabear.Element], schema air.Schema[koalabear.Element]) {
+func AssignFromTrace(
+	run *wiop.Runtime,
+	traces trace.Trace[koalabear.Element],
+	schema air.Schema[koalabear.Element],
+	sharedRandomness field.Octuplet,
+) {
+
+	// Only when the system was compiled to expect a γ. The driver does not choose
+	// the compiler options, so it cannot assume the caller asked for shared
+	// randomness — an unsharded protocol, or one whose compilation was skipped
+	// entirely, declares no γ cell to write to.
+	if messagebus.HasSharedRandomness(run.System) {
+		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
+	}
 
 	// Parallelize across modules
 	eg := &errgroup.Group{}

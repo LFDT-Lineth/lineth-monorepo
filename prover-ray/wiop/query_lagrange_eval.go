@@ -6,6 +6,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -120,25 +121,31 @@ func (le *LagrangeEval) Check(rt *Runtime) error {
 // evalPolynomials evaluates each polynomial in le.Polynomials at the
 // EvaluationPoint, applying the cyclic-shift adjustment for each [ColumnView].
 // It is the shared kernel used by both [Check] and [SelfAssign].
+//
+// Each polynomial is an independent O(n) barycentric evaluation writing its
+// own results slot, so the batch is chunked across CPUs.
 func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
 	results := make([]field.Gen, len(le.Polynomials))
-	for i, pv := range le.Polynomials {
-		// Adjust the evaluation point for the column view's cyclic shift.
-		// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
-		// so we evaluate the original column data at ω^k · z instead.
-		z := evalPoint.Value
-		if k := pv.ShiftingOffset; k != 0 {
-			var (
-				n      = pv.Column.Module.RuntimeSize(rt)
-				omega  = field.RootOfUnityBy(n)
-				omegaK field.Element
-			)
-			omegaK.ExpInt64(omega, int64(k))
-			z = z.Mul(field.ElemFromBase(omegaK))
+	parallel.Execute(len(le.Polynomials), func(start, end int) {
+		for i := start; i < end; i++ {
+			pv := le.Polynomials[i]
+			// Adjust the evaluation point for the column view's cyclic shift.
+			// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
+			// so we evaluate the original column data at ω^k · z instead.
+			z := evalPoint.Value
+			if k := pv.ShiftingOffset; k != 0 {
+				var (
+					n      = pv.Column.Module.RuntimeSize(rt)
+					omega  = field.RootOfUnityBy(n)
+					omegaK field.Element
+				)
+				omegaK.ExpInt64(omega, int64(k))
+				z = z.Mul(field.ElemFromBase(omegaK))
+			}
+			results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
 		}
-		results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
-	}
+	})
 	return results
 }
 

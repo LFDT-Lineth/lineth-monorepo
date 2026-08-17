@@ -1,8 +1,8 @@
-export { ILineaRollupClient } from "./ILineaRollupClient";
+export { ILinethRollupClient } from "./ILinethRollupClient";
 export {
   MessageSentEventFilters,
   L2MessagingBlockAnchoredFilters,
   MessageClaimedFilters,
-  ILineaRollupLogClient,
-} from "./ILineaRollupLogClient";
+  ILinethRollupLogClient,
+} from "./ILinethRollupLogClient";
 export { BlockRange, FinalizationMessagingInfo, Proof, IMerkleTreeService } from "./IMerkleTreeService";

@@ -23,6 +23,10 @@ runs:
         # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
         # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        with:
+          # Non-main branches read from the main branch's warm cache but don't write new entries,
+          # reducing Maven Central dependency fetches and avoiding 429 rate-limit errors.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
 
 

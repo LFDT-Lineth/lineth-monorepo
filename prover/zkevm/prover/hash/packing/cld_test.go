@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
@@ -61,6 +62,42 @@ func TestCLDModule(t *testing.T) {
 			comp := wizard.Compile(define, dummy.Compile)
 			proof := wizard.Prove(comp, prover)
 			assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
+		})
+	}
+}
+
+// TestCLDDecomposedLimbsBindingQueriesExist is a regression guard for the
+// index-(last-1) off-by-one in [decomposition.csDecomposedLimbs].
+//
+// The carry-ripple recurrence is the SOLE constraint binding each decomposed
+// limb back to the imported message limbs; downstream the decomposed limbs are
+// spaghettified and projected onto the committed Lanes (the keccak/sha2 block
+// input) with no further re-binding to imported.Limb. The recurrence must
+// therefore bind every intermediate index 1..last-1. A loop bound of
+// `i < last-1` (instead of `i < last`) silently dropped the binding for index
+// last-1, leaving that content byte (and the final decomposed limb fed from its
+// carry) prover-free on byte-misaligned rows. This asserts the binding query
+// exists for every index, so the off-by-one cannot be reintroduced unnoticed.
+func TestCLDDecomposedLimbsBindingQueriesExist(t *testing.T) {
+	for _, uc := range testCases {
+		t.Run(uc.Name, func(t *testing.T) {
+			define, _ := makeTestCaseCLDModule(uc.UseCase)
+			comp := wizard.Compile(define)
+
+			// base case and last column.
+			require.True(t, comp.QueriesNoParams.Exists(ifaces.QueryIDf("Decomposition_DecomposedLimbs_0")),
+				"missing base-case binding constraint for decomposed limb index 0")
+			require.True(t, comp.QueriesNoParams.Exists(ifaces.QueryIDf("Decomposition_DecomposedLimbs_Last")),
+				"missing last-column binding constraint")
+
+			// every intermediate index 1..last-1 must carry-bind to imported.Limb;
+			// index last-1 is the one the off-by-one used to skip.
+			last := nbDecomposedLen - 1
+			for i := 1; i < last; i++ {
+				q := ifaces.QueryIDf("Decomposition_DecomposedLimbs_%v", i)
+				require.Truef(t, comp.QueriesNoParams.Exists(q),
+					"missing carry-ripple binding constraint for decomposed limb index %d (off-by-one regression)", i)
+			}
 		})
 	}
 }

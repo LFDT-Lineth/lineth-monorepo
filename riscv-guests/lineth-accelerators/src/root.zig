@@ -10,6 +10,7 @@ const evm_ecrecover = @import("evm_ecrecover.zig");
 const keccak = @import("keccak.zig");
 const secp256k1_verify = @import("secp256k1_verify.zig");
 const poseidon2 = @import("poseidon2.zig");
+const io = @import("io.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
 pub const zkvm_exit = lineth_std.zkvm_exit;
@@ -35,6 +36,8 @@ pub const zkvm_keccak256 = keccak.zkvm_keccak256;
 // ── secp256k1 accelerators (include/zkvm_accelerators.h) ────────────────────
 pub const zkvm_secp256k1_ecrecover = evm_ecrecover.zkvm_secp256k1_ecrecover;
 pub const zkvm_secp256k1_verify = secp256k1_verify.zkvm_secp256k1_verify;
+// ── io accelerator (zkvm-standards io-interface, include/zkvm_io.h) ──────────
+pub const write_output = io.write_output;
 
 // ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────
 pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;

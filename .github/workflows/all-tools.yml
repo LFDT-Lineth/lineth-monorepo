@@ -100,7 +100,7 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -113,33 +113,22 @@ jobs:
       #   uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 #v3.7.0
       #   with:
       #     platforms: 'arm64,arm'
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f #v3.12.0
-      - name: Validate version tag
-        run: |
-          if [[ -z "${{ env.COMMIT_TAG }}" ]]; then
-            echo "::error::COMMIT_TAG is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
-            exit 1
-          fi
-          echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
-
       - name: "Get Node.js version"
         id: get-node-version
         uses: ./.github/actions/get-node-version
 
+      # Buildx setup, empty-tag validation and the registry build cache all come
+      # from the shared action; see scripts/docker/README.md.
       - name: Build and push all tools image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: .
-          file: ./operations/cli/Dockerfile
-          platforms: linux/amd64 # Note: Build amd64 image only
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: ${{ github.actor != 'dependabot[bot]' && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE_NAME) || '' }}
-          build-args: |
-            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tags: ${{ env.COMMIT_TAG }}
+          push_image: ${{ github.event_name != 'pull_request' }}
+          dockerfile_path: ./operations/cli/Dockerfile
+          docker_context: .
+          push_platforms: linux/amd64 # Note: Build amd64 image only
+          build_args: NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
 
   notify:
     needs:

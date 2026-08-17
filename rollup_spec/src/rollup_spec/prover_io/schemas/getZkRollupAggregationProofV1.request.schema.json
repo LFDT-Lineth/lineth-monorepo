@@ -56,8 +56,13 @@
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
-        "parentShnarf",
-        "endShnarf"
+        "parentDataRollingHash",
+        "endDataRollingHash",
+        "parentBlockHash",
+        "endBlockHash",
+        "startOffset",
+        "endOffset",
+        "programVks"
       ],
       "properties": {
         "endBlockNumber": { "$ref": "#/$defs/uint" },
@@ -73,8 +78,18 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
-        "parentShnarf": { "$ref": "#/$defs/hash32" },
-        "endShnarf": { "$ref": "#/$defs/hash32" }
+        "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
+        "endDataRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentBlockHash": { "$ref": "#/$defs/hash32" },
+        "endBlockHash": { "$ref": "#/$defs/hash32" },
+        "startOffset": { "$ref": "#/$defs/uint" },
+        "endOffset": { "$ref": "#/$defs/uint" },
+        "programVks": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/hash32" }
+        }
       }
     },
     "rollupProof": {
@@ -85,14 +100,16 @@
         "startBlockNumber",
         "publicInputs",
         "l2L1Roots",
-        "filteredAddresses"
+        "filteredAddresses",
+        "programVk"
       ],
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/rollupPublicInputs" },
         "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } }
+        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+        "programVk": { "$ref": "#/$defs/hash32" }
       }
     }
   }

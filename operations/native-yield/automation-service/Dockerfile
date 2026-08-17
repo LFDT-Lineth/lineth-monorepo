@@ -22,7 +22,6 @@ ENV PNPM_STORE_DIR=/pnpm/store
 WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
-
 COPY patches/ ./patches/
 COPY ./operations/native-yield/automation-service/package.json ./operations/native-yield/automation-service/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
@@ -55,3 +54,18 @@ USER node
 COPY --from=builder /usr/src/app/prod/operations/native-yield/automation-service ./operations/native-yield/automation-service
 
 CMD [ "node", "./operations/native-yield/automation-service/dist/run.js" ]
+
+# Build-time metadata as defined at http://label-schema.org
+# Values are injected by scripts/docker/build-image.sh.
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.label-schema.build-date=$BUILD_DATE \
+	org.label-schema.name="native-yield-automation-service" \
+	org.label-schema.description="Lineth Native Yield automation service" \
+	org.label-schema.url="https://consensys.io/" \
+	org.label-schema.vcs-ref=$VCS_REF \
+	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
+	org.label-schema.vendor="ConsenSys" \
+	org.label-schema.version=$VERSION \
+	org.label-schema.schema-version="1.0"

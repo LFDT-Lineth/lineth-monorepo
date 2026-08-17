@@ -114,7 +114,11 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 	out := VanishingSystem{
 		SourceName: sys.Context.Path(),
 	}
-	dynamicIndices := map[*wiop.Module]int{}
+	// DynamicIndex must point into `module_sizes` using the canonical
+	// sys.Modules order the transcript absorption uses (see DynamicModuleOrder),
+	// NOT verifier-action-registration order — otherwise a multi-dynamic-module
+	// protocol would index the wrong size and desync from the prover.
+	dynamicIndices := DynamicModuleIndex(sys)
 
 	for _, round := range sys.Rounds {
 		for _, action := range round.VerifierActions {
@@ -127,8 +131,7 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 			if moduleRef.IsDynamic() {
 				idx, ok := dynamicIndices[moduleRef]
 				if !ok {
-					idx = len(dynamicIndices)
-					dynamicIndices[moduleRef] = idx
+					return VanishingSystem{}, fmt.Errorf("codegen: dynamic module %q not found in sys.Modules order", moduleRef.Context.Path())
 				}
 				module.Size = ModuleSize{Dynamic: true, DynamicIndex: idx}
 			} else {
@@ -246,8 +249,6 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 		module.Expressions = append(module.Expressions, ExprNode{
 			Kind: ExprCoinValue,
 			Coin: ScalarRef{
-				Round:      e.Context.ID.Slot(),
-				Index:      e.Context.ID.Position(),
 				FlatIndex:  flatIdx,
 				SourceName: e.Context.Label,
 			},
