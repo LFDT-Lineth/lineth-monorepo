@@ -6,8 +6,8 @@ import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_GUEST_PROGRAM_ID
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blobWitness
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.conflationWitness
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupProofRequestV1
@@ -61,7 +61,7 @@ class FileBasedRollupProverClientTest {
   @Test
   fun `createProofRequest writes the request DTO to a json file`() {
     val request = rollupProofRequestV1(
-      blobs = listOf(blobWitness(1000501UL, 1000503UL)),
+      conflations = listOf(conflationWitness()),
       l2Executions = listOf(blockIntervalProofIndex(1000501UL, 1000503UL)),
     )
 

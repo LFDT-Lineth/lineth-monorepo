@@ -32,8 +32,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
           guestProgramId = guestProgramId,
           proofRequest = FileBasedRollupProofRequestParamsDto(
             chainId = chainId,
-            blobs = request.blobs.map { it.fromDomainObject() },
-            parentShnarf = request.parentShnarf.encodeHex(),
+            conflations = request.conflations.map { it.fromDomainObject() },
             l2ExecutionProofs = l2ExecutionProofResponseDtos.mapIndexed { index, response ->
               val proofResponse = requireNotNull(response) {
                 "L2 execution proof response was not found for proofIndex=${request.l2Executions[index]}"
@@ -47,6 +46,12 @@ internal class FileBasedRollupProofRequestDtoMapper(
                 filteredAddresses = proofResponse.filteredAddresses,
               )
             },
+            chunks = request.chunks.map { it.encodeHex() },
+            parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
+            startOffset = request.startOffset,
+            opaquePrefixBytes = request.opaquePrefixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+            opaqueSuffixBytes = request.opaqueSuffixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+            boundaryPrevDataRollingHash = request.boundaryPrevDataRollingHash?.encodeHex(),
           ),
           metadata = MetaDataDto(
             startBlockNumber = request.startBlockNumber.toLong(),
@@ -71,9 +76,14 @@ internal class RestfulRollupProofRequestDtoMapper(
       guestProgramId = guestProgramId,
       proofRequest = RestfulRollupProofRequestParamsDto(
         chainId = chainId,
-        blobs = request.blobs.map { it.fromDomainObject() },
-        parentShnarf = request.parentShnarf.encodeHex(),
+        conflations = request.conflations.map { it.fromDomainObject() },
         l2ExecutionProofIndexes = request.l2Executions,
+        chunks = request.chunks.map { it.encodeHex() },
+        parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
+        startOffset = request.startOffset,
+        opaquePrefixBytes = request.opaquePrefixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+        opaqueSuffixBytes = request.opaqueSuffixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
+        boundaryPrevDataRollingHash = request.boundaryPrevDataRollingHash?.encodeHex(),
       ),
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
