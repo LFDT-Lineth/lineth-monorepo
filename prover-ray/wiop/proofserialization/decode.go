@@ -23,20 +23,39 @@ import (
 // one and the image does not — Zig's []const T is just {ptr, len} — so a decoded
 // proof is equal to the original up to that distinction, and re-encoding it
 // reproduces the same bytes.
-func Decode(image []byte, base uint64) (Proof, error) {
+func Decode(image []byte, base uint64) (VerifyInput, error) {
 	d := &decoder{buf: image, base: base}
-	if len(image) < SizeProof {
-		return Proof{}, fmt.Errorf("proofserialization: image is %d bytes, shorter than the "+
-			"%d-byte root", len(image), SizeProof)
+	if len(image) < SizeVerifyInput {
+		return VerifyInput{}, fmt.Errorf("proofserialization: image is %d bytes, shorter than the "+
+			"%d-byte root", len(image), SizeVerifyInput)
 	}
 	if base%8 != 0 {
-		return Proof{}, fmt.Errorf("proofserialization: base 0x%x is not 8-byte aligned", base)
+		return VerifyInput{}, fmt.Errorf("proofserialization: base 0x%x is not 8-byte aligned", base)
 	}
 	if base == 0 {
-		return Proof{}, fmt.Errorf("proofserialization: base 0 is not usable: an in-image " +
+		return VerifyInput{}, fmt.Errorf("proofserialization: base 0 is not usable: an in-image " +
 			"pointer would be indistinguishable from null")
 	}
-	return d.proof(0)
+
+	var in VerifyInput
+	var err error
+	if in.Proof, err = d.proof(OffVerifyInputProof); err != nil {
+		return VerifyInput{}, err
+	}
+
+	pisOff, n, err := d.slice(OffVerifyInputPublicInputs, SizeScalar, SizeElement, "VerifyInput.public_inputs")
+	if err != nil {
+		return VerifyInput{}, err
+	}
+	if n > 0 {
+		in.PublicInputs = make([]Scalar, n)
+		for i := range in.PublicInputs {
+			if in.PublicInputs[i], err = d.scalar(pisOff + i*SizeScalar); err != nil {
+				return VerifyInput{}, err
+			}
+		}
+	}
+	return in, nil
 }
 
 // Validate reports whether image is a well-formed proof image at base: every

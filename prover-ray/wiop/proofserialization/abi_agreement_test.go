@@ -55,6 +55,7 @@ func TestABIAgreement(t *testing.T) {
 		"pcs.OpeningProof":        ps.SizeOpeningProof,
 		"verifier.PcsOpening":     ps.SizePcsOpening,
 		"verifier.Proof":          ps.SizeProof,
+		"verifier.VerifyInput":    ps.SizeVerifyInput,
 		"value.Scalar":            ps.SizeScalar,
 		"?protocol.Commitment":    ps.SizeOptCommitment,
 		"?merkle.RowPair":         ps.SizeOptRowPair,
@@ -87,6 +88,9 @@ func TestABIAgreement(t *testing.T) {
 
 		{"verifier.PcsOpening", "entry_claims"}: ps.OffPcsOpeningEntryClaims,
 		{"verifier.PcsOpening", "proof"}:        ps.OffPcsOpeningProof,
+
+		{"verifier.VerifyInput", "proof"}:         ps.OffVerifyInputProof,
+		{"verifier.VerifyInput", "public_inputs"}: ps.OffVerifyInputPublicInputs,
 
 		{"verifier.Proof", "rounds"}:       ps.OffProofRounds,
 		{"verifier.Proof", "module_sizes"}: ps.OffProofModuleSizes,
@@ -176,8 +180,8 @@ const verifierRayImageBase = 0x400000000
 // Element values are raw u32s, not results of field arithmetic: the image stores
 // Montgomery limbs verbatim, so both sides compare the same raw numbers without
 // either having to do arithmetic.
-func verifierRayFixture() ps.Proof {
-	return ps.Proof{
+func verifierRayFixture() ps.VerifyInput {
+	return ps.VerifyInput{Proof: ps.Proof{
 		Rounds: []ps.RoundMessage{
 			{
 				// A committed round: its Merkle root, and one cell of each variant.
@@ -227,6 +231,12 @@ func verifierRayFixture() ps.Proof {
 					},
 				},
 			},
+		},
+	},
+		// The flat public-input statement, absorbed separately from round cells.
+		PublicInputs: []ps.Scalar{
+			{Value: ps.Ext{201, 202, 203, 204, 205, 206}},
+			{Value: ps.Ext{211, 212, 213, 214, 215, 216}, IsExt: true},
 		},
 	}
 }

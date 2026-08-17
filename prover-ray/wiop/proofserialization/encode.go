@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-// Encode lays proof out as the byte image verifier-ray casts directly to a
-// *const Proof, relocated for base.
+// Encode lays input out as the byte image verifier-ray casts directly to a
+// *const VerifyInput, relocated for base.
 //
 // Pointers are written as absolute addresses (base + offset in image), so the
 // guest dereferences them with no arithmetic and no fix-up pass — that is what
@@ -17,7 +17,7 @@ import (
 // structure referencing it, which keeps a structure and the data it points at
 // adjacent for the guest's cache. Encoding cost is not a design constraint here;
 // decoding cost is, and it is zero.
-func Encode(proof Proof, base uint64) ([]byte, error) {
+func Encode(input VerifyInput, base uint64) ([]byte, error) {
 	if base%8 != 0 {
 		return nil, fmt.Errorf("proofserialization: base 0x%x is not 8-byte aligned; "+
 			"every type in the image has alignment 8 or less, and the root cast requires it", base)
@@ -43,11 +43,16 @@ func Encode(proof Proof, base uint64) ([]byte, error) {
 	// anything, which would silently move the root. The observable property, that
 	// the root's fields land at their documented offsets, is covered by
 	// TestEncode_RootAtOffsetZero.
-	root := e.alloc(SizeProof, 8)
+	root := e.alloc(SizeVerifyInput, 8)
 	if root != 0 {
 		return nil, fmt.Errorf("proofserialization: root landed at %d, must be 0", root)
 	}
-	e.putProof(root, proof)
+	e.putProof(root+OffVerifyInputProof, input.Proof)
+
+	pis := e.putSlice(root+OffVerifyInputPublicInputs, len(input.PublicInputs), SizeScalar, SizeElement)
+	for i, pi := range input.PublicInputs {
+		e.putScalar(pis+i*SizeScalar, pi)
+	}
 
 	if err := checkImageSize(len(e.buf)); err != nil {
 		return nil, err

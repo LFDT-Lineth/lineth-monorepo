@@ -288,8 +288,14 @@ comptime {
     expectField(verifier.PcsOpening, "proof", 16);
 
     // ---- root ----------------------------------------------------------------
-    // Must stay at image offset 0: the loaders cast the input region's base
-    // address directly to *const Proof.
+    // VerifyInput, NOT Proof, is what the loaders cast the input region to, so it
+    // is what must sit at image offset 0. Pinning only Proof was not enough: when
+    // the root became VerifyInput, Proof stayed 112 bytes and unchanged, so every
+    // assertion here still passed while the encoder was targeting the wrong root.
+    expectSize(verifier.VerifyInput, 128, 8);
+    expectField(verifier.VerifyInput, "proof", 0);
+    expectField(verifier.VerifyInput, "public_inputs", 112);
+
     expectSize(verifier.Proof, 112, 8);
     expectField(verifier.Proof, "rounds", 0);
     expectField(verifier.Proof, "module_sizes", 16);

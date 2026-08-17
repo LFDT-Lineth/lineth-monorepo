@@ -11,12 +11,12 @@ import (
 
 const testBase = ps.GuestBase
 
-// richProof exercises every branch of the encoder: both Scalar variants, both
-// ColumnMessage variants, both Vector variants, present and null RowPairs, jagged
-// entry claims, and empty slices at several depths.
 func ptr[T any](v T) *T { return &v }
 
-func richProof() ps.Proof {
+// richProof exercises every branch of the encoder: both Scalar variants, a
+// present and an absent round commitment, present and null RowPairs, jagged
+// entry claims, a public-input statement, and empty slices at several depths.
+func richProof() ps.VerifyInput {
 	ext := func(n uint32) ps.Ext {
 		return ps.Ext{ps.Element(n), ps.Element(n + 1), ps.Element(n + 2),
 			ps.Element(n + 3), ps.Element(n + 4), ps.Element(n + 5)}
@@ -29,7 +29,7 @@ func richProof() ps.Proof {
 		return d
 	}
 
-	return ps.Proof{
+	return ps.VerifyInput{Proof: ps.Proof{
 		Rounds: []ps.RoundMessage{
 			{
 				// A committed round, with one cell of each variant.
@@ -89,6 +89,11 @@ func richProof() ps.Proof {
 				},
 			},
 		},
+	},
+		PublicInputs: []ps.Scalar{
+			{Value: ps.Ext{900, 901, 902, 903, 904, 905}},
+			{Value: ps.Ext{910, 911, 912, 913, 914, 915}, IsExt: true},
+		},
 	}
 }
 
@@ -120,8 +125,8 @@ func TestEncodeDecode_RoundTrip(t *testing.T) {
 // preserve the distinction would be inventing information the verifier cannot
 // read.
 func TestEncode_NilAndEmptySlicesAreIndistinguishable(t *testing.T) {
-	withNil := ps.Proof{Rounds: []ps.RoundMessage{{Cells: nil}}}
-	withEmpty := ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{}}}}
+	withNil := ps.VerifyInput{Proof: ps.Proof{Rounds: []ps.RoundMessage{{Cells: nil}}}}
+	withEmpty := ps.VerifyInput{Proof: ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{}}}}}
 
 	a, err := ps.Encode(withNil, testBase)
 	require.NoError(t, err)
@@ -131,7 +136,7 @@ func TestEncode_NilAndEmptySlicesAreIndistinguishable(t *testing.T) {
 
 	decoded, err := ps.Decode(b, testBase)
 	require.NoError(t, err)
-	require.Nil(t, decoded.Rounds[0].Cells, "a zero-length slice decodes back as nil")
+	require.Nil(t, decoded.Proof.Rounds[0].Cells, "a zero-length slice decodes back as nil")
 }
 
 func TestEncode_Deterministic(t *testing.T) {
@@ -150,7 +155,7 @@ func TestEncode_RootAtOffsetZero(t *testing.T) {
 	image, err := ps.Encode(richProof(), testBase)
 	require.NoError(t, err)
 
-	require.GreaterOrEqual(t, len(image), ps.SizeProof,
+	require.GreaterOrEqual(t, len(image), ps.SizeVerifyInput,
 		"the image must at least hold the root")
 
 	// verifier-ray's loaders cast the base address straight to *const Proof, so
@@ -167,7 +172,7 @@ func TestEncode_RootAtOffsetZero(t *testing.T) {
 func TestEncode_EmptySliceHasNonNullPointer(t *testing.T) {
 	// A []const T in Zig holds a non-optional pointer, so a null pointer is
 	// undefined behaviour even at length 0.
-	p := ps.Proof{}
+	p := ps.VerifyInput{}
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
 
@@ -190,10 +195,10 @@ func TestEncode_ScalarTagPolarity(t *testing.T) {
 	// Zig tags .base as 0; Go's field.Gen stores true for base. Getting this
 	// backwards would silently flip every cell's variant, which is why the
 	// conversion is not a memcpy.
-	p := ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{
+	p := ps.VerifyInput{Proof: ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{
 		{Value: ps.Ext{1}, IsExt: false},
 		{Value: ps.Ext{2}, IsExt: true},
-	}}}}
+	}}}}}
 
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
@@ -224,7 +229,7 @@ func TestScalarFrom_InvertsGoTag(t *testing.T) {
 func TestEncode_PaddingIsZeroed(t *testing.T) {
 	// Zig leaves padding undefined. Zeroing it is what makes the image
 	// reproducible; anything else would make it unhashable for no benefit.
-	p := ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{{Value: ps.Ext{1}}}}}}
+	p := ps.VerifyInput{Proof: ps.Proof{Rounds: []ps.RoundMessage{{Cells: []ps.Scalar{{Value: ps.Ext{1}}}}}}}
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
 
@@ -241,9 +246,9 @@ func TestEncode_OptRowPairFlagAndPadding(t *testing.T) {
 		{Base: []ps.Element{1}, Ext: nil},
 		{Base: []ps.Element{2}, Ext: nil},
 	}
-	p := ps.Proof{PcsOpening: ps.PcsOpening{Proof: ps.OpeningProof{
+	p := ps.VerifyInput{Proof: ps.Proof{PcsOpening: ps.PcsOpening{Proof: ps.OpeningProof{
 		InputQueries: [][]ps.InputTreeOpening{{{Leaves: []*ps.RowPair{nil, present}}}},
-	}}}
+	}}}}
 
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
@@ -268,7 +273,7 @@ func TestEncode_OptRowPairFlagAndPadding(t *testing.T) {
 }
 
 func TestEncode_RejectsMisalignedBase(t *testing.T) {
-	_, err := ps.Encode(ps.Proof{}, ps.GuestBase+1)
+	_, err := ps.Encode(ps.VerifyInput{}, ps.GuestBase+1)
 	require.ErrorContains(t, err, "not 8-byte aligned",
 		"every type in the image has alignment 8 or less, and the root cast requires it")
 }
@@ -351,10 +356,10 @@ func TestDecode_RejectsMalformedImages(t *testing.T) {
 }
 
 func TestDecode_RejectsUnknownDiscriminants(t *testing.T) {
-	p := ps.Proof{Rounds: []ps.RoundMessage{{
+	p := ps.VerifyInput{Proof: ps.Proof{Rounds: []ps.RoundMessage{{
 		Commitment: ptr(ps.Digest{1}),
 		Cells:      []ps.Scalar{{Value: ps.Ext{1}}},
-	}}}
+	}}}}
 	good, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
 
@@ -408,7 +413,7 @@ func TestEncode_RelocatesForBase(t *testing.T) {
 // TestEncode_RejectsZeroBase pins why base 0 is refused rather than silently
 // producing an image whose empty-slice pointers read as null.
 func TestEncode_RejectsZeroBase(t *testing.T) {
-	_, err := ps.Encode(ps.Proof{}, 0)
+	_, err := ps.Encode(ps.VerifyInput{}, 0)
 	require.ErrorContains(t, err, "base 0 is not usable",
 		"at base 0 an in-image pointer is indistinguishable from null")
 }

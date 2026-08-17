@@ -55,8 +55,12 @@ const (
 	SizeOpeningProof = 64
 	// SizePcsOpening is verifier.PcsOpening.
 	SizePcsOpening = 80
-	// SizeProof is verifier.Proof, the image root.
+	// SizeProof is verifier.Proof.
 	SizeProof = 112
+	// SizeVerifyInput is verifier.VerifyInput, the image ROOT: the proof plus the
+	// flat public-input statement. This is what the loaders cast the input region
+	// to, so it — not Proof — is what must sit at offset 0.
+	SizeVerifyInput = 128
 )
 
 // Field offsets, in bytes from the start of the containing type.
@@ -66,6 +70,9 @@ const (
 // declaration was reordered to match so the source no longer disagrees with the
 // layout.
 const (
+	OffVerifyInputProof        = 0
+	OffVerifyInputPublicInputs = 112
+
 	OffProofRounds      = 0
 	OffProofModuleSizes = 16
 	OffProofPcsOpening  = 32
