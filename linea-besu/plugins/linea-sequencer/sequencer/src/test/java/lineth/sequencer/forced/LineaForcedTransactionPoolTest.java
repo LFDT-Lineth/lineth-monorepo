@@ -45,9 +45,10 @@ class LineaForcedTransactionPoolTest {
   }
 
   @Test
-  void addForcedTransactions_addsToQueue() {
+  void addForcedTransactions_deduplicatesRetries() {
     final List<ForcedTransaction> ftxs = createForcedTransactions(3);
 
+    pool.addForcedTransactions(ftxs);
     pool.addForcedTransactions(ftxs);
 
     assertThat(pool.pendingCount()).isEqualTo(3);
@@ -93,7 +94,7 @@ class LineaForcedTransactionPoolTest {
   }
 
   @Test
-  void processForBlock_rejectsTransactionAtIndex0WithFinalStatus() {
+  void processForBlock_rejectsTransactionAtIndex0WithFinalStatusAndIgnoresRetry() {
     final ForcedTransaction ftx = createForcedTransaction();
     pool.addForcedTransactions(List.of(ftx));
 
@@ -109,6 +110,9 @@ class LineaForcedTransactionPoolTest {
     assertThat(pool.pendingCount()).isZero();
     assertInclusionStatus(
         ftx.forcedTransactionNumber(), 100L, ForcedTransactionInclusionResult.BadNonce);
+
+    pool.addForcedTransactions(List.of(ftx));
+    assertThat(pool.pendingCount()).isZero();
   }
 
   @Test

@@ -69,6 +69,7 @@ public class LineaForcedTransactionPool
       7_200;
 
   private final Deque<ForcedTransaction> pendingQueue = new ConcurrentLinkedDeque<>();
+  private final Set<Long> pendingTransactionNumbers = ConcurrentHashMap.newKeySet();
   private final Cache<Long, ForcedTransactionStatus> statusCache;
   private final Map<ForcedTransactionInclusionResult, AtomicLong> inclusionResultCounters =
       new EnumMap<>(ForcedTransactionInclusionResult.class);
@@ -154,6 +155,14 @@ public class LineaForcedTransactionPool
   @Override
   public void addForcedTransactions(final List<ForcedTransaction> transactions) {
     for (final ForcedTransaction tx : transactions) {
+      final long forcedTransactionNumber = tx.forcedTransactionNumber();
+      if (!pendingTransactionNumbers.add(forcedTransactionNumber)) {
+        continue;
+      }
+      if (statusCache.getIfPresent(forcedTransactionNumber) != null) {
+        pendingTransactionNumbers.remove(forcedTransactionNumber);
+        continue;
+      }
       pendingQueue.addLast(tx);
       log.atDebug()
           .setMessage("action=add_forced_tx forcedTxNumber={} txHash={} deadlineBlockNumber={}")
@@ -366,6 +375,7 @@ public class LineaForcedTransactionPool
             blockTimestamp,
             result);
     statusCache.put(ftx.forcedTransactionNumber(), status);
+    pendingTransactionNumbers.remove(ftx.forcedTransactionNumber());
     inclusionResultCounters.get(result).incrementAndGet();
   }
 
