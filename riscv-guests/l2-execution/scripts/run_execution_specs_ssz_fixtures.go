@@ -125,6 +125,7 @@ func main() {
 	printTableHeader()
 
 	passed := 0
+	wroteFailureOutputs := false
 	for _, input := range inputs {
 		success, userTime, stdout, stderr := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
@@ -136,15 +137,18 @@ func main() {
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
 		if !ok {
-			stdoutPath, stderrPath, err := writeFailureOutputs(input.file, stdout, stderr)
+			_, _, err := writeFailureOutputs(input.file, stdout, stderr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "save failure output for %s: %v\n", testName, err)
 			} else {
-				fmt.Fprintf(os.Stderr, "failure output for %s: stdout %s, stderr %s\n", testName, stdoutPath, stderrPath)
+				wroteFailureOutputs = true
 			}
 		}
 	}
 
+	if wroteFailureOutputs {
+		fmt.Printf("failure output files (.out, .err): %s\n", *sszDir)
+	}
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
 	if len(inputs) == 0 {
 		fmt.Fprintln(os.Stderr, "no tests ran")
