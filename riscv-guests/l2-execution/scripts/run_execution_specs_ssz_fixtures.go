@@ -7,6 +7,7 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -57,7 +58,7 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
+	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
@@ -125,7 +126,7 @@ func main() {
 
 	passed := 0
 	for _, input := range inputs {
-		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		success, userTime, stdout, stderr := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
 			passed++
@@ -134,6 +135,14 @@ func main() {
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
+		if !ok {
+			stdoutPath, stderrPath, err := writeFailureOutputs(input.file, stdout, stderr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "save failure output for %s: %v\n", testName, err)
+			} else {
+				fmt.Fprintf(os.Stderr, "failure output for %s: stdout %s, stderr %s\n", testName, stdoutPath, stderrPath)
+			}
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
@@ -342,19 +351,34 @@ func run(w io.Writer, name string, args ...string) error {
 }
 
 // Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
+func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, []byte, []byte) {
 	cmd := exec.Command(
 		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if cmd.ProcessState == nil {
-		return err == nil, 0
+		return err == nil, 0, stdout.Bytes(), stderr.Bytes()
 	}
-	return err == nil, cmd.ProcessState.UserTime()
+	return err == nil, cmd.ProcessState.UserTime(), stdout.Bytes(), stderr.Bytes()
+}
+
+// Writes the captured stdout and stderr for an unexpected fixture result.
+func writeFailureOutputs(input string, stdout, stderr []byte) (string, string, error) {
+	basePath := strings.TrimSuffix(input, filepath.Ext(input))
+	stdoutPath := basePath + ".out"
+	stderrPath := basePath + ".err"
+	if err := os.WriteFile(stdoutPath, stdout, 0o644); err != nil {
+		return stdoutPath, stderrPath, err
+	}
+	if err := os.WriteFile(stderrPath, stderr, 0o644); err != nil {
+		return stdoutPath, stderrPath, err
+	}
+	return stdoutPath, stderrPath, nil
 }
 
 // Escapes table cells.
