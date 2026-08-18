@@ -108,12 +108,17 @@ jobs:
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
         run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
-      # The stub guests decode their committed golden request and emit the echo/sentinel output;
-      # running them here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline end-to-end for
-      # each guest program, not just l2-execution.
+      # The stub guests decode a freshly-generated sample request and emit the echo/sentinel
+      # output; running them here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
+      # end-to-end for each guest program, not just l2-execution.
+      #
+      # -v (not just --fast, unlike l2-execution above): these two guests are new and unproven
+      # under the real interpreter — a trap here is currently a bare "machine panic" with no
+      # detail, so verbosity is worth the extra log noise until they have a clean run on record.
+      # Drop back to --fast-only once that happens.
       - name: Run rollup guest under zkc (gogen, fast)
-        run: make -C riscv-guests/rollup exec ZKC_EXEC_FLAGS="--fast"
+        run: make -C riscv-guests/rollup exec ZKC_EXEC_FLAGS="--fast -v"
 
       - name: Run rollup-aggregation guest under zkc (gogen, fast)
-        run: make -C riscv-guests/rollup-aggregation exec ZKC_EXEC_FLAGS="--fast"
+        run: make -C riscv-guests/rollup-aggregation exec ZKC_EXEC_FLAGS="--fast -v"
 
