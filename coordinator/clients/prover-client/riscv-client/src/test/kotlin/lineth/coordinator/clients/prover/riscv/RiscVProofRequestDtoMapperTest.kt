@@ -1,7 +1,7 @@
 package lineth.coordinator.clients.prover.riscv
 
-import linea.clients.BlobWitness
 import linea.clients.ChainConfig
+import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
@@ -22,12 +22,12 @@ import kotlin.time.Instant
 /**
  * Verifies that the RISC-V proof-request mappers encode every field of a domain request into its request DTO
  * (domain `ByteArray` -> DTO `String` (hex), domain `ULong` -> DTO `Long`) and assemble the request envelope
- * (`guestProgramId`, `metadata` block range, params) correctly. Covers the transport-free mappers; the file-based
+ * (`programVk`, `metadata` block range, params) correctly. Covers the transport-free mappers; the file-based
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
 class RiscVProofRequestDtoMapperTest {
 
-  private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
+  private val programVk = RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
   private val chainId = 59144L
   private val forkName = "Amsterdam"
   private val l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
@@ -39,14 +39,14 @@ class RiscVProofRequestDtoMapperTest {
     val execution = request.executions.first()
 
     val dto = L2ExecutionProofRequestDtoMapper(
-      guestProgramId,
+      programVk,
       l2MessageServiceAddress,
       coinbase,
     ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
       L2ExecutionProofRequestDto(
-        guestProgramId = guestProgramId,
+        programVk = programVk,
         proofRequest = L2ExecutionProofRequestParamsDto(
           parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
           parentFtxNumber = request.parentFtxNumber.toLong(),
@@ -95,7 +95,7 @@ class RiscVProofRequestDtoMapperTest {
 
     assertThatThrownBy {
       L2ExecutionProofRequestDtoMapper(
-        guestProgramId,
+        programVk,
         l2MessageServiceAddress,
         coinbase,
       ).invoke(badRequest)
@@ -107,38 +107,34 @@ class RiscVProofRequestDtoMapperTest {
   @Test
   fun `RestfulRollupProofRequestDtoMapper encodes every field`() {
     val l2Executions = listOf(blockIntervalProofIndex(1000501UL, 1000510UL))
-    val blob = BlobWitness(
-      startBlockNumber = 1000501UL,
-      endBlockNumber = 1000510UL,
-      blobHash = ByteArray(32) { 0x1a },
-      blobKzgProof = ByteArray(48) { 0x1b },
+    val conflation = ConflationWitness(
       blockRlps = listOf(byteArrayOf(0x0c), byteArrayOf(0x0d)),
     )
+    val chunks = listOf(ByteArray(32) { 0x1e })
     val request = RollupProofRequestV1(
-      blobs = listOf(blob),
-      parentShnarf = ByteArray(32) { 0x1c },
-      endShnarf = ByteArray(32) { 0x1d },
+      conflations = listOf(conflation),
       l2Executions = l2Executions,
+      chunks = chunks,
+      parentDataRollingHash = ByteArray(32) { 0x1c },
+      startOffset = 0,
     )
 
-    val dto = RestfulRollupProofRequestDtoMapper(guestProgramId, chainId).invoke(request).get()
+    val dto = RestfulRollupProofRequestDtoMapper(programVk, chainId).invoke(request).get()
 
     assertThat(dto).isEqualTo(
       RestfulRollupProofRequestDto(
-        guestProgramId = guestProgramId,
+        programVk = programVk,
         proofRequest = RestfulRollupProofRequestParamsDto(
           chainId = chainId,
-          blobs = listOf(
-            BlobWitnessDto(
-              startBlockNumber = 1000501,
-              endBlockNumber = 1000510,
-              blobHash = blob.blobHash.encodeHex(),
-              blobKzgProof = blob.blobKzgProof.encodeHex(),
-              blockRlps = blob.blockRlps.map { it.encodeHex() },
+          conflations = listOf(
+            ConflationWitnessDto(
+              blockRlps = conflation.blockRlps.map { it.encodeHex() },
             ),
           ),
-          parentShnarf = request.parentShnarf.encodeHex(),
           l2ExecutionProofIndexes = l2Executions,
+          chunks = chunks.map { it.encodeHex() },
+          parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
+          startOffset = 0,
         ),
         metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000510),
       ),
@@ -150,11 +146,11 @@ class RiscVProofRequestDtoMapperTest {
     val rollupProofs = listOf(blockIntervalProofIndex(1000501UL, 1000520UL))
     val request = RollupAggregationProofRequestV1(rollupProofs = rollupProofs)
 
-    val dto = RestfulRollupAggregationProofRequestDtoMapper(guestProgramId).invoke(request).get()
+    val dto = RestfulRollupAggregationProofRequestDtoMapper(programVk).invoke(request).get()
 
     assertThat(dto).isEqualTo(
       RestfulRollupAggregationProofRequestDto(
-        guestProgramId = guestProgramId,
+        programVk = programVk,
         proofRequest = RestfulRollupAggregationProofRequestParamsDto(rollupProofIndexes = rollupProofs),
         metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
       ),
@@ -167,39 +163,32 @@ class RiscVProofRequestDtoMapperTest {
       blockIntervalProofIndex(1000501UL, 1000510UL),
       blockIntervalProofIndex(1000511UL, 1000520UL),
     )
-    val blob = BlobWitness(
-      startBlockNumber = 1000501UL,
-      endBlockNumber = 1000520UL,
-      blobHash = ByteArray(32) { 0x1a },
-      blobKzgProof = ByteArray(48) { 0x1b },
+    val conflation = ConflationWitness(
       blockRlps = listOf(byteArrayOf(0x0c), byteArrayOf(0x0d)),
     )
+    val chunks = listOf(ByteArray(32) { 0x1e })
     val request = RollupProofRequestV1(
-      blobs = listOf(blob),
-      parentShnarf = ByteArray(32) { 0x1c },
-      endShnarf = ByteArray(32) { 0x1d },
+      conflations = listOf(conflation),
       l2Executions = l2Executions,
+      chunks = chunks,
+      parentDataRollingHash = ByteArray(32) { 0x1c },
+      startOffset = 0,
     )
     val l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
 
-    val dto = FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, l2ExecutionProofTransport)
+    val dto = FileBasedRollupProofRequestDtoMapper(programVk, chainId, l2ExecutionProofTransport)
       .invoke(request).get()
 
     assertThat(dto).isEqualTo(
       FileBasedRollupProofRequestDto(
-        guestProgramId = guestProgramId,
+        programVk = programVk,
         proofRequest = FileBasedRollupProofRequestParamsDto(
           chainId = chainId,
-          blobs = listOf(
-            BlobWitnessDto(
-              startBlockNumber = 1000501,
-              endBlockNumber = 1000520,
-              blobHash = blob.blobHash.encodeHex(),
-              blobKzgProof = blob.blobKzgProof.encodeHex(),
-              blockRlps = blob.blockRlps.map { it.encodeHex() },
+          conflations = listOf(
+            ConflationWitnessDto(
+              blockRlps = conflation.blockRlps.map { it.encodeHex() },
             ),
           ),
-          parentShnarf = request.parentShnarf.encodeHex(),
           l2ExecutionProofs = l2Executions.map { proofIndex ->
             val resolved = l2ExecutionProofTransport.findResponse(proofIndex).get()!!
             L2ExecutionProofDto(
@@ -211,6 +200,9 @@ class RiscVProofRequestDtoMapperTest {
               filteredAddresses = resolved.filteredAddresses,
             )
           },
+          chunks = chunks.map { it.encodeHex() },
+          parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
+          startOffset = 0,
         ),
         metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
       ),
@@ -221,23 +213,16 @@ class RiscVProofRequestDtoMapperTest {
   fun `FileBasedRollupProofRequestDtoMapper reports a missing l2-execution proof`() {
     val proofIndex = blockIntervalProofIndex(1000501UL, 1000510UL)
     val request = RollupProofRequestV1(
-      blobs = listOf(
-        BlobWitness(
-          startBlockNumber = 1000501UL,
-          endBlockNumber = 1000510UL,
-          blobHash = ByteArray(32),
-          blobKzgProof = ByteArray(48),
-          blockRlps = emptyList(),
-        ),
-      ),
-      parentShnarf = ByteArray(32),
-      endShnarf = ByteArray(32),
+      conflations = listOf(ConflationWitness(blockRlps = emptyList())),
       l2Executions = listOf(proofIndex),
+      chunks = listOf(ByteArray(32)),
+      parentDataRollingHash = ByteArray(32),
+      startOffset = 0,
     )
     val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
-      FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, transport).invoke(request).get()
+      FileBasedRollupProofRequestDtoMapper(programVk, chainId, transport).invoke(request).get()
     }
       .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
       .hasRootCauseMessage("L2 execution proof response was not found for proofIndex=$proofIndex")
@@ -252,12 +237,12 @@ class RiscVProofRequestDtoMapperTest {
     val request = RollupAggregationProofRequestV1(rollupProofs = rollupProofs)
     val rollupProofTransport = FakeRollupProofTransport()
 
-    val dto = FileBasedRollupAggregationProofRequestDtoMapper(guestProgramId, rollupProofTransport)
+    val dto = FileBasedRollupAggregationProofRequestDtoMapper(programVk, rollupProofTransport)
       .invoke(request).get()
 
     assertThat(dto).isEqualTo(
       FileBasedRollupAggregationProofRequestDto(
-        guestProgramId = guestProgramId,
+        programVk = programVk,
         proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
           rollupProofs = rollupProofs.map { proofIndex ->
             val resolved = rollupProofTransport.findResponse(proofIndex).get()!!
@@ -282,7 +267,7 @@ class RiscVProofRequestDtoMapperTest {
     val transport = FakeRollupProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
-      FileBasedRollupAggregationProofRequestDtoMapper(guestProgramId, transport).invoke(request).get()
+      FileBasedRollupAggregationProofRequestDtoMapper(programVk, transport).invoke(request).get()
     }
       .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
       .hasRootCauseMessage("Rollup proof response was not found for proofIndex=$proofIndex")

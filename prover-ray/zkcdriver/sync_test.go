@@ -97,14 +97,24 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				l := lineNr
 				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
 					t.Parallel()
-					zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
-					if err != nil {
-						fatalIfNotKnown(t, failures, baseName, l, failReasonParse, "failed to parse test case: %v", err)
+					// The reason we early-abort on parsing errors is that they
+					// may result from tests that are skipped in short testing
+					// mode. Early aborting allow us to ensure, the case does
+					// not break down the road at a later stage.
+					if isKnownError(failures, baseName, l, failReasonParse) {
 						return
+					}
+					zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF, !testing.Short())
+					if err != nil {
+						logrus.Panicf("failed to parse test case: %v", err)
 					}
 					for outputName, expectedOutput := range zkcOutputs {
 						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
-							fatalIfNotKnown(t, failures, baseName, l, failReasonOutputMismatch, "output mismatch for %s: expected %x, got %x", outputName, expectedOutput, zkcInput.Inputs[outputName])
+							fatalIfNotKnown(
+								t, failures, baseName, l, failReasonOutputMismatch,
+								"output mismatch for %s: expected %x, got %x",
+								outputName, expectedOutput, zkcInput.Inputs[outputName],
+							)
 							return
 						}
 					}
@@ -146,6 +156,20 @@ func fatalIfNotKnown(t *testing.T, knownFailures knownFailures, unitName string,
 	//
 	// the negative case number indicate input file reading and compiling. We're still not in subtest cases
 	t.Fatalf(msg, args...)
+}
+
+func isKnownError(knownFailure knownFailures, unitName string, caseNr int, reason zkcFailReason) bool {
+	failuresMapMutex.RLock()
+	if unitFailures, ok := knownFailure[unitName]; ok {
+		if knownReason, ok := unitFailures[caseNr]; ok {
+			if knownReason == reason {
+				failuresMapMutex.RUnlock()
+				return true
+			}
+		}
+	}
+	failuresMapMutex.RUnlock()
+	return false
 }
 
 type zkcFailReason string

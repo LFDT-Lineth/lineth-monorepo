@@ -46,8 +46,8 @@ finalization.
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
 few request fields are metadata the entry-function input dataclass does not
-carry: each request is a `{guestProgramId, proofRequest}` envelope, where
-`guestProgramId` is routing metadata (the block range is implied by the
+carry: each request is a `{programVk, proofRequest}` envelope, where
+`programVk` is routing metadata (the block range is implied by the
 payloads/blobs), plus `chainId` on the rollup request (used for DA sender
 recovery). Derivable duplication is deliberately kept off the wire: no top-level
 `endBlockNumber` (it is in `publicInputs`), no `endShnarf` echo on the rollup

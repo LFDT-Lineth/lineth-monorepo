@@ -127,9 +127,14 @@ def test_rollup_output_round_trips_through_ssz_and_back_to_json() -> None:
     recovered_output = decode_rollup_output_ssz(encode_rollup_output(original_output))
     assert recovered_output == original_output
 
-    # The guest never emits `proof`; round-tripping through the JSON encoder
-    # reproduces the original response with `proof` reset to the placeholder.
-    rebuilt_response = encode_rollup_response(recovered_output, prover_version=_PROVER_VERSION)
+    # The guest never emits `proof`/`programVk` (both host-attached metadata); round-tripping
+    # through the JSON encoder reproduces the original response with `proof` reset to the
+    # placeholder and the fixture's own `programVk` passed back in.
+    rebuilt_response = encode_rollup_response(
+        recovered_output,
+        prover_version=_PROVER_VERSION,
+        program_vk=_hexbytes(response["programVk"]),
+    )
     assert rebuilt_response == {**response, "proof": "0x"}
 
 

@@ -25,6 +25,10 @@
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 - *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
 - *(maru)* Support custom validator signers (#3700)
+- *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
+- *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
+- *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
+- *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
 
 ### 🐛 Bug Fixes
 
@@ -140,3 +144,4 @@
 - *(linea-besu)* Logging consistency and noise reduction (#3788)
 - *(misc)* Docker image build streamlining (#3790)
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
+- *(misc)* Enrich R5 request/response samples (#3806)

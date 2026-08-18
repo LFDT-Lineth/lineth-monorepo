@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// guestProgramID is the routing id in the request fixtures.
-const guestProgramID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+// programVk is the routing id in the request fixtures.
+const programVk = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
 
 const invalidNumber = "not-a-number"
 
@@ -37,9 +37,9 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 	assert.Equal(t, uint64(59144), req.ChainID)
 	assert.Equal(t, "Amsterdam", req.ForkName)
 
-	wantID, err := hex.DecodeString(strings.TrimPrefix(guestProgramID, "0x"))
+	wantID, err := hex.DecodeString(strings.TrimPrefix(programVk, "0x"))
 	require.NoError(t, err)
-	assert.Equal(t, wantID, req.GuestProgramID)
+	assert.Equal(t, wantID, req.ProgramVk)
 
 	require.Len(t, req.Payloads, 1)
 	assert.Equal(t, uint64(1000501), req.Payloads[0].BlockNumber)
@@ -122,9 +122,9 @@ func TestDecodeL2ExecutionRequest_InvalidRequestShape(t *testing.T) {
 		mutate  func(o map[string]any)
 		wantErr string
 	}{
-		{"MissingGuestProgramID",
-			func(o map[string]any) { delete(o, guestProgramIDKey) },
-			guestProgramIDKey},
+		{"MissingProgramVk",
+			func(o map[string]any) { delete(o, programVkKey) },
+			programVkKey},
 		{"MissingProofRequest",
 			func(o map[string]any) { delete(o, proofRequestKey) },
 			proofRequestKey},
@@ -263,18 +263,18 @@ func TestDecodeL2ExecutionRequest_InvalidRequestShape(t *testing.T) {
 		{"ExecutionRequestsNull",
 			func(o map[string]any) { npr(o)[executionRequestsKey] = nil },
 			executionRequestsKey},
-		{"GuestProgramIDNotString",
-			func(o map[string]any) { o[guestProgramIDKey] = 123 },
-			guestProgramIDKey},
-		{"GuestProgramIDNoPrefix",
-			func(o map[string]any) { o[guestProgramIDKey] = strings.TrimPrefix(guestProgramID, "0x") },
-			guestProgramIDKey},
-		{"GuestProgramIDBadHex",
-			func(o map[string]any) { o[guestProgramIDKey] = "0xzz" },
-			guestProgramIDKey},
-		{"GuestProgramIDWrongLength",
-			func(o map[string]any) { o[guestProgramIDKey] = "0x1234" },
-			guestProgramIDKey},
+		{"ProgramVkNotString",
+			func(o map[string]any) { o[programVkKey] = 123 },
+			programVkKey},
+		{"ProgramVkNoPrefix",
+			func(o map[string]any) { o[programVkKey] = strings.TrimPrefix(programVk, "0x") },
+			programVkKey},
+		{"ProgramVkBadHex",
+			func(o map[string]any) { o[programVkKey] = "0xzz" },
+			programVkKey},
+		{"ProgramVkWrongLength",
+			func(o map[string]any) { o[programVkKey] = "0x1234" },
+			programVkKey},
 		{"ChainIDNotParseable",
 			func(o map[string]any) { chainConfig(o)[chainIDKey] = invalidNumber },
 			chainIDKey},
