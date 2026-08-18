@@ -216,6 +216,7 @@ object RiscVProverClientTestFixtures {
     l2L1Messages = listOf("0xaa"),
     txFroms = listOf("0xbb"),
     filteredAddresses = emptyList(),
+    programVk = L2_EXECUTION_PROGRAM_VK,
   )
 
   fun rollupProofPublicInputsDto(
@@ -253,6 +254,7 @@ object RiscVProverClientTestFixtures {
     publicInputs = rollupProofPublicInputsDto(endBlockNumber),
     l2L1Roots = listOf("0xaa"),
     filteredAddresses = emptyList(),
+    programVk = ROLLUP_PROGRAM_VK,
   )
 
   fun rollupAggregationProofResponseDto(
