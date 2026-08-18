@@ -7,6 +7,7 @@
   "additionalProperties": false,
   "required": [
     "proverVersion",
+    "programVk",
     "proof",
     "startBlockNumber",
     "publicInputs",
@@ -15,6 +16,7 @@
   ],
   "properties": {
     "proverVersion": { "type": "string" },
+    "programVk": { "$ref": "#/$defs/hash32" },
     "proof": { "$ref": "#/$defs/hex" },
     "startBlockNumber": { "$ref": "#/$defs/uint" },
     "publicInputs": {
