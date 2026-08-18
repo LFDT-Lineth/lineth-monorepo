@@ -84,6 +84,7 @@ internal object L2ExecutionProofResponseDtoMapper : (
       l2L1Messages = responseDto.l2L1Messages.map { it.decodeHex() },
       txFroms = responseDto.txFroms.map { it.decodeHex() },
       filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
+      programVk = responseDto.programVk.decodeHex(),
     )
   }
 }

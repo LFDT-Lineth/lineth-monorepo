@@ -39,6 +39,7 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
                 publicInputs = proofResponse.publicInputs,
                 l2L1Roots = proofResponse.l2L1Roots,
                 filteredAddresses = proofResponse.filteredAddresses,
+                programVk = proofResponse.programVk,
               )
             },
           ),
