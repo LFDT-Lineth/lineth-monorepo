@@ -86,8 +86,7 @@ func TestABIAgreement(t *testing.T) {
 		{"pcs.OpeningProof", "input_queries"}: ps.OffOpeningProofInputQueries,
 		{"pcs.OpeningProof", "fri_proof"}:     ps.OffOpeningProofFriProof,
 
-		{"verifier.PcsOpening", "entry_claims"}: ps.OffPcsOpeningEntryClaims,
-		{"verifier.PcsOpening", "proof"}:        ps.OffPcsOpeningProof,
+		{"verifier.PcsOpening", "proof"}: ps.OffPcsOpeningProof,
 
 		{"verifier.VerifyInput", "proof"}:         ps.OffVerifyInputProof,
 		{"verifier.VerifyInput", "public_inputs"}: ps.OffVerifyInputPublicInputs,
@@ -199,10 +198,6 @@ func verifierRayFixture() ps.VerifyInput {
 		},
 		ModuleSizes: []uint64{8, 16},
 		PcsOpening: ps.PcsOpening{
-			EntryClaims: [][]ps.Ext{
-				{{50, 51, 52, 53, 54, 55}, {60, 61, 62, 63, 64, 65}},
-				nil, // a zero-length inner slice
-			},
 			Proof: ps.OpeningProof{
 				InputQueries: [][]ps.InputTreeOpening{
 					{

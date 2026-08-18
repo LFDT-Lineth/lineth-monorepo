@@ -199,11 +199,6 @@ func (e *encoder) putScalar(off int, s Scalar) {
 
 func (e *encoder) putPcsOpening(off int, p PcsOpening) {
 	e.putOpeningProof(off+OffPcsOpeningProof, p.Proof)
-
-	claims := e.putSlice(off+OffPcsOpeningEntryClaims, len(p.EntryClaims), SizeSlice, 8)
-	for i, c := range p.EntryClaims {
-		e.putExts(claims+i*SizeSlice, c)
-	}
 }
 
 func (e *encoder) putOpeningProof(off int, p OpeningProof) {

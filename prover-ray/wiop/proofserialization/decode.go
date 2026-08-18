@@ -255,19 +255,6 @@ func (d *decoder) pcsOpening(off int) (PcsOpening, error) {
 	var p PcsOpening
 	var err error
 
-	claimsOff, n, err := d.slice(off+OffPcsOpeningEntryClaims, SizeSlice, 8, "PcsOpening.entry_claims")
-	if err != nil {
-		return p, err
-	}
-	if n > 0 {
-		p.EntryClaims = make([][]Ext, n)
-		for i := range p.EntryClaims {
-			if p.EntryClaims[i], err = d.exts(claimsOff+i*SizeSlice, "PcsOpening.entry_claims[i]"); err != nil {
-				return p, err
-			}
-		}
-	}
-
 	p.Proof, err = d.openingProof(off + OffPcsOpeningProof)
 	return p, err
 }

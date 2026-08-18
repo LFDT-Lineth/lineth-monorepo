@@ -94,11 +94,15 @@ type OpeningProof struct {
 }
 
 // PcsOpening is the prover-supplied half of a PCS opening. Mirrors Zig's
-// verifier.PcsOpening. EntryClaims is jagged: one inner slice per opened entry,
-// holding that entry's claim per shift.
+// verifier.PcsOpening.
+//
+// The claimed evaluations are not carried here: they are ordinary
+// `LagrangeEval.EvaluationClaims` cells, already present in
+// `Proof.Rounds[*].Cells`. The verifier reconstructs them at verify time by
+// reading the compiled system's per-column claim-cell table against the
+// rounds it already has.
 type PcsOpening struct {
-	EntryClaims [][]Ext
-	Proof       OpeningProof
+	Proof OpeningProof
 }
 
 // Proof mirrors Zig's verifier.Proof: the verifier-visible transcript.
