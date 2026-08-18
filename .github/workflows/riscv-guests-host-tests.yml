@@ -9,11 +9,13 @@ name: riscv-guests host tests
 
 on:
   pull_request:
-    branches:
-      - main
+    # No branches: filter — this must also run on PRs targeting stacked, non-main
+    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
+    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
     paths:
       - 'riscv-guests/**'
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-host-tests.yml'
   push:
     branches:
@@ -21,6 +23,7 @@ on:
     paths:
       - 'riscv-guests/**'
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-host-tests.yml'
   workflow_dispatch:
 
