@@ -5,7 +5,7 @@ include "../common/type.zkc"
 // as two separate programs (riscv/main.zkc and predecoding/main.zkc)
 // but consume the same input JSON, so both must agree on this surface
 // exactly.
-include "../common/pub_inputs.zkc"
+include "../common/inputs.zkc"
 
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program memory space and will contain, amongst other things,
