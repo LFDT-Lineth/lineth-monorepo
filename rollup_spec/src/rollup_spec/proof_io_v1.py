@@ -38,7 +38,7 @@ Design notes:
     (schema-checked by the schemas' conformance test, round-trip-checked by
     `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
-    (on responses) and `guestProgramId` (on requests) are routing metadata.
+    (on responses) and `programVk` (on requests) are routing metadata.
 
 Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
@@ -221,7 +221,7 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
     input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by the payloads. The single
     `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
@@ -419,7 +419,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by `conflations` (paired
     1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
     touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
@@ -638,7 +638,7 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the aggregation guest input is just the flat list of
     rollup proofs. There is no `chainId` (unlike the rollup request): the
     aggregation guest does no sender recovery and inherits chain-config integrity

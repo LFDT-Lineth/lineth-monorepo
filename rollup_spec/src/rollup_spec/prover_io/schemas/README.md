@@ -22,10 +22,10 @@ dataclass; a response maps to its output dataclass.
 | `getZkRollupAggregationProofV1.request.schema.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `getZkRollupAggregationProofV1.response.schema.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-Each request is a `{guestProgramId, proofRequest}` envelope. The JSON field names
+Each request is a `{programVk, proofRequest}` envelope. The JSON field names
 are not always a 1:1 camel↔snake mapping of the dataclass fields: the codec owns
 the renames and type coercion, and a few fields are metadata the guest input
-dataclass does not carry (`guestProgramId` on requests, `proverVersion` on
+dataclass does not carry (`programVk` on requests, `proverVersion` on
 responses, the rollup request's `chainId`). For l2-execution, the request's
 `statelessInput` object is SSZ-encoded into the guest's input bytes by the codec
 (see `../README.md` and `stateless_input.py`).
