@@ -86,11 +86,11 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 # RISC-V prover config
 
 [riscv-prover]
-fork-name = "cancun"
 [riscv-prover.execution]
 fs-requests-directory = "/data/prover/riscv/execution/requests"
 fs-responses-directory = "/data/prover/riscv/execution/responses"
 guest-program-id = "0x..."
+fork-name = "cancun"
 [riscv-prover.rollup]
 fs-requests-directory = "/data/prover/riscv/rollup/requests"
 fs-responses-directory = "/data/prover/riscv/rollup/responses"

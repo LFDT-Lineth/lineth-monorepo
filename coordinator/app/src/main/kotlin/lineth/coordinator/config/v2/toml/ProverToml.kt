@@ -62,12 +62,6 @@ data class ProverToml(
     default = "false",
   )
   val enableRequestFilesCleanup: Boolean = false,
-  @param:ConfigDoc(
-    description = "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). " +
-      "Required for the RISC-V prover; omit for the standard prover.",
-    example = "cancun",
-  )
-  val forkName: String? = null,
 ) {
   init {
     require(blobCompression != null || rollup != null) {
@@ -95,17 +89,24 @@ data class ProverToml(
       example = "0xabcdef1234567890",
     )
     val guestProgramId: String? = null,
+    @param:ConfigDoc(
+      description = "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). " +
+        "Required for the RISC-V execution prover; omit for other prover types.",
+      example = "cancun",
+    )
+    val forkName: String? = null,
   )
 
-  private fun toFileBasedProverConfig(dirs: ProverConfigToml): FileBasedProverConfig =
+  private fun toFileBasedProverConfig(proverConfigToml: ProverConfigToml): FileBasedProverConfig =
     FileBasedProverConfig(
-      requestsDirectory = Path.of(dirs.fsRequestsDirectory),
-      responsesDirectory = Path.of(dirs.fsResponsesDirectory),
+      requestsDirectory = Path.of(proverConfigToml.fsRequestsDirectory),
+      responsesDirectory = Path.of(proverConfigToml.fsResponsesDirectory),
       inprogressProvingSuffixPattern = fsInprogressProvingSuffixPattern,
       inprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix,
       pollingInterval = fsPollingInterval,
       pollingTimeout = fsPollingTimeout,
-      guestProgramId = dirs.guestProgramId,
+      guestProgramId = proverConfigToml.guestProgramId,
+      forkName = proverConfigToml.forkName,
     )
 
   private fun toProverConfig(t: ProverToml): ProverConfig =
@@ -115,7 +116,6 @@ data class ProverToml(
       rollup = t.rollup?.let { t.toFileBasedProverConfig(it) },
       invalidity = t.invalidity?.let { t.toFileBasedProverConfig(it) },
       proofAggregation = t.toFileBasedProverConfig(t.proofAggregation),
-      forkName = t.forkName,
     )
 
   fun reified(): ProversConfig {

@@ -12,11 +12,11 @@ class RiscVProverParsingTest {
       """
       [riscv-prover]
       fs-polling-interval = "PT1S"
-      fork-name = "cancun"
       [riscv-prover.execution]
       fs-requests-directory = "/data/prover/riscv/execution/requests"
       fs-responses-directory = "/data/prover/riscv/execution/responses"
       guest-program-id = "0xdeadbeef"
+      fork-name = "cancun"
       [riscv-prover.rollup]
       fs-requests-directory = "/data/prover/riscv/rollup/requests"
       fs-responses-directory = "/data/prover/riscv/rollup/responses"
@@ -30,12 +30,12 @@ class RiscVProverParsingTest {
     val config =
       ProverToml(
         fsPollingInterval = 1.seconds,
-        forkName = "cancun",
         execution =
         ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/riscv/execution/requests",
           fsResponsesDirectory = "/data/prover/riscv/execution/responses",
           guestProgramId = "0xdeadbeef",
+          forkName = "cancun",
         ),
         rollup =
         ProverToml.ProverConfigToml(

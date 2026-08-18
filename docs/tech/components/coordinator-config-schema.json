@@ -3282,6 +3282,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.blob-compression.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.blob-compression.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3332,6 +3342,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.execution.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3359,16 +3379,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V prover; omit for the standard prover.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3422,6 +3432,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.invalidity.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3469,6 +3489,16 @@
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.blob-compression.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3522,6 +3552,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.execution.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3549,16 +3589,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V prover; omit for the standard prover.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3612,6 +3642,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.invalidity.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3662,6 +3702,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.proof-aggregation.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3699,6 +3749,16 @@
         "default": null,
         "description": "Rollup prover config.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3762,6 +3822,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.proof-aggregation.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3799,6 +3869,16 @@
         "default": null,
         "description": "Rollup prover config.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3872,6 +3952,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.blob-compression.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.blob-compression.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3922,6 +4012,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.execution.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3949,16 +4049,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V prover; omit for the standard prover.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -4012,6 +4102,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.invalidity.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -4059,6 +4159,16 @@
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "riscv-prover.new.blob-compression.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -4112,6 +4222,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.new.execution.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.new.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -4139,16 +4259,6 @@
         "default": null,
         "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V prover; omit for the standard prover.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -4202,6 +4312,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.new.invalidity.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.new.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -4252,6 +4372,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.new.proof-aggregation.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.new.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -4289,6 +4419,16 @@
         "default": null,
         "description": "Rollup prover config.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "riscv-prover.new.rollup.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -4352,6 +4492,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "riscv-prover.proof-aggregation.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
+        "deprecated": false,
+        "replacement": null
+      },
       "riscv-prover.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -4389,6 +4539,16 @@
         "default": null,
         "description": "Rollup prover config.",
         "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "riscv-prover.rollup.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
+        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
