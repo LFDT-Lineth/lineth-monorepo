@@ -68,7 +68,7 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     while pc != MAX_UINT_64 {
         // Execution must stay inside the span justified by predecoding, at 4-byte
         // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
-        if pc < base || pc >= exec_end || ((pc - base) % 4) != 0 {
+        if pc<base || pc >= exec_end || ((pc - base) % 4) != 0 {
             printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
             fail
         }
