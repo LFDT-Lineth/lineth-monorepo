@@ -41,7 +41,7 @@ func TestEntryClaims_AreDerivedFromTheProof(t *testing.T) {
 			for _, r := range sc.Sys.Rounds {
 				committed += len(r.Columns)
 			}
-			require.Equal(t, committed, len(claims),
+			require.Len(t, claims, committed,
 				"one entry per committed column, since every committed column is opened")
 
 			// Every claim value must be a value the proof already carries as a
