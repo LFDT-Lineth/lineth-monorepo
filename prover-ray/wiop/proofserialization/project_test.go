@@ -33,7 +33,7 @@ func TestProjectEncodeDecode_EndToEnd(t *testing.T) {
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "the projected proof must be a valid one")
 
-			projected, err := ps.Project(sc.Sys, proof, pub, nil)
+			projected, err := ps.Project(sc.Sys, proof, pub)
 			require.NoError(t, err)
 
 			image, err := ps.Encode(projected, ps.GuestBase)
@@ -63,7 +63,7 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	proof, pub := sc.Sys.Prove(sc.AssignHonest)
 	require.NoError(t, sc.Sys.Verify(proof, pub))
 
-	projected, err := ps.Project(sc.Sys, proof, pub, nil)
+	projected, err := ps.Project(sc.Sys, proof, pub)
 	require.NoError(t, err)
 
 	require.Len(t, projected.Proof.Rounds, len(sc.Sys.Rounds), "one round message per round")
@@ -121,7 +121,7 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 	proof, pub := sc.Sys.Prove(sc.AssignHonest)
 
 	t.Run("nil system", func(t *testing.T) {
-		_, err := ps.Project(nil, proof, pub, nil)
+		_, err := ps.Project(nil, proof, pub)
 		require.ErrorContains(t, err, "nil system")
 	})
 
@@ -130,7 +130,7 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 		// append of an empty slice would leave the length unchanged and quietly
 		// assert nothing.
 		tooMany := append(append(wiop.PublicInput{}, pub...), field.ElemFromBase(field.NewElement(1)))
-		_, err := ps.Project(sc.Sys, proof, tooMany, nil)
+		_, err := ps.Project(sc.Sys, proof, tooMany)
 		require.ErrorContains(t, err, "public inputs")
 	})
 
@@ -150,7 +150,7 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 			DynamicSizes:    proof.DynamicSizes,
 			Commitments:     proof.Commitments,
 			PCSOpeningProof: proof.PCSOpeningProof,
-		}, pub, nil)
+		}, pub)
 		require.ErrorContains(t, err, "absent from the proof",
 			"a dropped cell must be named, not encoded as a zero")
 	})
@@ -173,7 +173,7 @@ func TestProject_RejectsIncompleteInput(t *testing.T) {
 			DynamicSizes:    sizes,
 			Commitments:     proof.Commitments,
 			PCSOpeningProof: proof.PCSOpeningProof,
-		}, pub, nil)
+		}, pub)
 		require.ErrorContains(t, err, "no size in the proof")
 	})
 }
@@ -193,7 +193,7 @@ func TestMeasureAgreesWithEncode(t *testing.T) {
 
 			stats := ps.Measure(sc.Sys, proof, pub)
 
-			projected, err := ps.Project(sc.Sys, proof, pub, nil)
+			projected, err := ps.Project(sc.Sys, proof, pub)
 			require.NoError(t, err)
 			image, err := ps.Encode(projected, ps.GuestBase)
 			require.NoError(t, err)
