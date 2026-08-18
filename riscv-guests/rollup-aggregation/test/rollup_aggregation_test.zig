@@ -88,11 +88,17 @@ test "run: sentinel fields equal their pinned constants exactly" {
     try std.testing.expectEqual(@as(usize, 1), out.l2_messaging_blocks_offsets.len);
     try std.testing.expectEqual(rollup_aggregation.L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT, out.l2_messaging_blocks_offsets[0]);
 
-    // Exact pinned hex, transcribed from the task spec, not just "equals the exported constant".
+    // Exact pinned hex, transcribed independently of `rollup_aggregation.zig`'s own constants —
+    // catches a wrong constant definition, not just a copy/paste of the same bug into both the
+    // constant and this assertion.
     try std.testing.expectEqualSlices(u8, &[_]u8{
         0x09, 0x18, 0x83, 0x61, 0x98, 0x23, 0x9a, 0x5e, 0xdf, 0x09, 0x36, 0xdb, 0x3e, 0x28, 0xa6, 0x4d,
         0x5c, 0x4e, 0x19, 0x5f, 0xd7, 0x28, 0xe6, 0xdd, 0xfc, 0x35, 0x44, 0xfc, 0x95, 0x00, 0x8a, 0xb3,
     }, &pi.l2_l1_bridge_transaction_tree);
+    try std.testing.expectEqualSlices(u8, &[_]u8{
+        0x63, 0xd4, 0x0d, 0x3e, 0xa3, 0x87, 0x06, 0x50, 0x27, 0xb3, 0x69, 0xa2, 0x5c, 0xc4, 0x41, 0xdd,
+        0x76, 0x85, 0xe2, 0xa9, 0xa9, 0xe0, 0xe5, 0x65, 0x56, 0xec, 0x2e, 0x82, 0xbb, 0xe2, 0x27, 0x3c,
+    }, &pi.filtered_addresses_hash);
     try std.testing.expectEqual(@as(u64, 0xd18d873fe2a9f192), out.l2_messaging_blocks_offsets[0]);
 }
 
