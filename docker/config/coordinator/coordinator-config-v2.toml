@@ -83,6 +83,23 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-requests-directory = "/data/prover/v3/aggregation/requests"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
+# RISC-V prover config
+
+[riscv-prover]
+[riscv-prover.execution]
+fs-requests-directory = "/data/prover/riscv/execution/requests"
+fs-responses-directory = "/data/prover/riscv/execution/responses"
+program-vk = "0x..."
+fork-name = "cancun"
+[riscv-prover.rollup]
+fs-requests-directory = "/data/prover/riscv/rollup/requests"
+fs-responses-directory = "/data/prover/riscv/rollup/responses"
+program-vk = "0x..."
+[riscv-prover.proof-aggregation]
+fs-requests-directory = "/data/prover/riscv/aggregation/requests"
+fs-responses-directory = "/data/prover/riscv/aggregation/responses"
+program-vk = "0x..."
+
 [traces]
 [traces.counters]
 endpoints = ["http://l2-node-besu:8545/"]

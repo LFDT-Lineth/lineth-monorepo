@@ -35,8 +35,8 @@ cd prover && go test ./... -tags nocorset,fuzzlight -timeout 30m
 cd prover && gofmt -l .
 cd prover && golangci-lint run
 
-# Build Docker image
-docker build -f prover/Dockerfile -t consensys/linea-prover:local .
+# Build Docker image (from the repository root; see scripts/docker/README.md)
+make docker-build-prover
 ```
 
 ## Go-Specific Conventions

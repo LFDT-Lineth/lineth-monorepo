@@ -223,15 +223,15 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
 
     log.atTrace()
         .setMessage(
-            "{}: block[{}] tx {} , baseFee {}, effectiveGasPrice {}, ratio (effectivePayingPriorityFee {} / calculatedProfitablePriorityFee {}) {}")
+            "{}: block={}, tx={}, baseFee={}, effectiveGasPrice={}, ratio={} (effectivePayingPriorityFee={}/calculatedProfitablePriorityFee={})")
         .addArgument(label.name())
         .addArgument(evaluationContext.getPendingBlockHeader().getNumber())
         .addArgument(tx.getHash())
         .addArgument(baseFee::toHumanReadableString)
         .addArgument(evaluationContext.getTransactionGasPrice()::toHumanReadableString)
+        .addArgument(ratio)
         .addArgument(effectivePriorityFee::toHumanReadableString)
         .addArgument(profitablePriorityFeePerGas::toHumanReadableString)
-        .addArgument(ratio)
         .log();
   }
 

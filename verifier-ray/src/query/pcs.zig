@@ -395,7 +395,7 @@ pub fn deriveChallenges(
     transcript.updateExt(fri_proof.final_poly);
 
     const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
-    transcript.randomManyIntegersRuntime(challenges.query_positions[0..params.num_queries], codeword_size);
+    transcript.randomManyIntegers(challenges.query_positions[0..params.num_queries], codeword_size);
     return challenges;
 }
 

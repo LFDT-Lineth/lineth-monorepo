@@ -21,7 +21,7 @@ func newSingleFractionLDS(t *testing.T) (*wiop.System, *wiop.Column) {
 	r0 := sys.NewRound()
 	sys.NewRound() // result round, following the column round
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	sys.NewLogDerivativeSum(sys.Context.Childf("ld"), []wiop.Fraction{
 		{Numerator: col.View(), Denominator: one},
@@ -87,8 +87,8 @@ func TestBuildLogDerivSystemMarksLookupResultZero(t *testing.T) {
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},

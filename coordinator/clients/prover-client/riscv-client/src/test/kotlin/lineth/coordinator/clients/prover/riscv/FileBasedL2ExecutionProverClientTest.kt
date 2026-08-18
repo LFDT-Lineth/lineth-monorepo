@@ -5,7 +5,7 @@ import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.COINBASE
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
@@ -49,7 +49,7 @@ class FileBasedL2ExecutionProverClientTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      guestProgramId = L2_EXECUTION_GUEST_PROGRAM_ID,
+      programVk = L2_EXECUTION_PROGRAM_VK,
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
       coinbase = COINBASE,
     )
@@ -66,7 +66,7 @@ class FileBasedL2ExecutionProverClientTest {
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(
-      L2_EXECUTION_GUEST_PROGRAM_ID,
+      L2_EXECUTION_PROGRAM_VK,
       L2_MESSAGE_SERVICE_ADDRESS,
       COINBASE,
     ).invoke(request).get()

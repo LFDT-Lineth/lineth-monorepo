@@ -22,10 +22,10 @@ dataclass; a response maps to its output dataclass.
 | `getZkRollupAggregationProofV1.request.schema.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `getZkRollupAggregationProofV1.response.schema.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-Each request is a `{guestProgramId, proofRequest}` envelope. The JSON field names
+Each request is a `{programVk, proofRequest}` envelope. The JSON field names
 are not always a 1:1 camel↔snake mapping of the dataclass fields: the codec owns
 the renames and type coercion, and a few fields are metadata the guest input
-dataclass does not carry (`guestProgramId` on requests, `proverVersion` on
+dataclass does not carry (`programVk` on requests, `proverVersion` on
 responses, the rollup request's `chainId`). For l2-execution, the request's
 `statelessInput` object is SSZ-encoded into the guest's input bytes by the codec
 (see `../README.md` and `stateless_input.py`).
@@ -33,10 +33,11 @@ responses, the rollup request's `chainId`). For l2-execution, the request's
 ## Running the conformance test locally
 
 `tests/test_fixture_schema_conformance.py` checks that every golden-vector
-fixture under `testdata/` validates against its matching `<name>.schema.json`,
-and that each schema is itself a valid Draft 2020-12 schema. Fixtures are
-discovered automatically, so new fixture/schema pairs are covered without
-editing the test.
+fixture under `testdata/` validates against its matching `<name>.schema.json`
+(ignoring the fixture's `<startBlockNumber>-<endBlockNumber>-` filename prefix,
+if present), and that each schema is itself a valid Draft 2020-12 schema.
+Fixtures are discovered automatically, so new fixture/schema pairs are covered
+without editing the test.
 
 It is part of the project test suite — run it (and everything else) from the
 `rollup_spec/` directory:
