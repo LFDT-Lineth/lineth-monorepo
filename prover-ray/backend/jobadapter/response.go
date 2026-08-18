@@ -33,7 +33,7 @@ type executionPublicInputs struct {
 	EndL1L2BridgeRollingHashMessageNumber    uint64 `json:"endL1L2BridgeRollingHashMessageNumber"`
 	DynamicChainConfigHash                   string `json:"dynamicChainConfigHash"`
 	ParentFtxRollingHash                     string `json:"parentFtxRollingHash"`
-	ParentProcessedFtxNumber                 uint64 `json:"parentProcessedFtxNumber"`
+	ParentFtxNumber                          uint64 `json:"parentFtxNumber"`
 	EndFtxRollingHash                        string `json:"endFtxRollingHash"`
 	EndProcessedFtxNumber                    uint64 `json:"endProcessedFtxNumber"`
 	FilteredAddressesHash                    string `json:"filteredAddressesHash"`
@@ -75,7 +75,7 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		EndL1L2BridgeRollingHashMessageNumber:    pi.EndL1L2BridgeRollingHashMessageNumber,
 		DynamicChainConfigHash:                   hexHash(pi.DynamicChainConfigHash),
 		ParentFtxRollingHash:                     hexHash(pi.ParentFtxRollingHash),
-		ParentProcessedFtxNumber:                 pi.ParentProcessedFtxNumber,
+		ParentFtxNumber:                          pi.ParentFtxNumber,
 		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
 		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
 		FilteredAddressesHash:                    hexHash(pi.FilteredAddressesHash),
