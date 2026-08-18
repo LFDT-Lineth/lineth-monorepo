@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	guestProgramIDKey = "guestProgramId"
-	chainIDKey        = "chainId"
-	forkNameKey       = "forkName"
-	payloadsKey       = "payloads"
+	programVkKey = "programVk"
+	chainIDKey   = "chainId"
+	forkNameKey  = "forkName"
+	payloadsKey  = "payloads"
 
 	proofRequestKey            = "proofRequest"
 	chainConfigKey             = "chainConfig"
@@ -33,7 +33,7 @@ const (
 	deadlineKey                = "deadline"
 	signedTxRlpKey             = "signedTxRlp"
 	acceptanceKey              = "acceptance"
-	guestProgramIDByteSize     = 32
+	programVkByteSize          = 32
 	hashByteSize               = 32
 	addressByteSize            = 20
 
@@ -66,13 +66,13 @@ type L2ExecutionPayload struct {
 // block. The block range is implied by the payloads (their
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
-	// GuestProgramID is routing metadata; this decoder validates its shape but
+	// ProgramVk is routing metadata; this decoder validates its shape but
 	// does not verify it against the configured guest ELF (open question #6 in
 	// wiki backend-overview.md).
-	GuestProgramID []byte
-	ChainID        uint64
-	ForkName       string
-	Payloads       []L2ExecutionPayload
+	ProgramVk []byte
+	ChainID   uint64
+	ForkName  string
+	Payloads  []L2ExecutionPayload
 }
 
 // DecodeL2ExecutionRequest parses a getZkL2ExecutionProofV1 request body and
@@ -88,20 +88,20 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		return nil, fmt.Errorf("DecodeL2ExecutionRequest: parsing JSON: %w", err)
 	}
 
-	gpidRaw, err := requireField(env, guestProgramIDKey, "")
+	programVkRaw, err := requireField(env, programVkKey, "")
 	if err != nil {
 		return nil, err
 	}
-	guestProgramID, err := hexString(gpidRaw, guestProgramIDKey)
+	programVk, err := hexString(programVkRaw, programVkKey)
 	if err != nil {
 		return nil, err
 	}
-	if len(guestProgramID) != guestProgramIDByteSize {
+	if len(programVk) != programVkByteSize {
 		return nil, fmt.Errorf(
 			"DecodeL2ExecutionRequest: %s must be %d bytes, got %d",
-			guestProgramIDKey,
-			guestProgramIDByteSize,
-			len(guestProgramID),
+			programVkKey,
+			programVkByteSize,
+			len(programVk),
 		)
 	}
 
@@ -163,10 +163,10 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 	}
 
 	return &L2ExecutionRequest{
-		GuestProgramID: guestProgramID,
-		ChainID:        chainConfig.chainID,
-		ForkName:       chainConfig.forkName,
-		Payloads:       payloads,
+		ProgramVk: programVk,
+		ChainID:   chainConfig.chainID,
+		ForkName:  chainConfig.forkName,
+		Payloads:  payloads,
 	}, nil
 }
 
