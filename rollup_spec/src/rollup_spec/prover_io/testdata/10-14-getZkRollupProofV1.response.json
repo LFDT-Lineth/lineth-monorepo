@@ -1,5 +1,6 @@
 {
   "proverVersion": "4.0.0-riscv",
+  "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "proof": "0xdeadbeef",
   "startBlockNumber": 1000501,
   "publicInputs": {
