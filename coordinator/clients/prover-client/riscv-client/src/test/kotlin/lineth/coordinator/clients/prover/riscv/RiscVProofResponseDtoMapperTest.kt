@@ -106,6 +106,7 @@ class RiscVProofResponseDtoMapperTest {
 
   @Test
   fun `L2ExecutionProofResponseDtoMapper decodes every field`() {
+    val programVkHex = "0x" + "dd".repeat(32)
     val dto = L2ExecutionProofResponseDto(
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
@@ -114,6 +115,7 @@ class RiscVProofResponseDtoMapperTest {
       l2L1Messages = listOf("0xaa"),
       txFroms = listOf("0xbb"),
       filteredAddresses = listOf("0xcc"),
+      programVk = programVkHex,
     )
 
     assertThat(
@@ -127,12 +129,14 @@ class RiscVProofResponseDtoMapperTest {
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = listOf("0xcc".decodeHex()),
+        programVk = programVkHex.decodeHex(),
       ),
     )
   }
 
   @Test
   fun `RollupProofResponseDtoMapper decodes every field`() {
+    val programVkHex = "0x" + "bb".repeat(32)
     val dto = RollupProofResponseDto(
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
@@ -140,6 +144,7 @@ class RiscVProofResponseDtoMapperTest {
       publicInputs = rollupPublicInputsDto,
       l2L1Roots = listOf("0xaa"),
       filteredAddresses = listOf("0xbb"),
+      programVk = programVkHex,
     )
 
     assertThat(
@@ -152,6 +157,7 @@ class RiscVProofResponseDtoMapperTest {
         publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = listOf("0xbb".decodeHex()),
+        programVk = programVkHex.decodeHex(),
       ),
     )
   }
@@ -210,7 +216,8 @@ class RiscVProofResponseDtoMapperTest {
         },
         "l2L1Messages": ["0xaa"],
         "txFroms": ["0xbb"],
-        "filteredAddresses": []
+        "filteredAddresses": [],
+        "programVk": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
       }
     """.trimIndent()
 
@@ -227,6 +234,7 @@ class RiscVProofResponseDtoMapperTest {
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = emptyList(),
+        programVk = ByteArray(32) { 0xdd.toByte() },
       ),
     )
   }
@@ -261,7 +269,8 @@ class RiscVProofResponseDtoMapperTest {
           "programVks": []
         },
         "l2L1Roots": ["0xaa"],
-        "filteredAddresses": []
+        "filteredAddresses": [],
+        "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     """.trimIndent()
 
@@ -276,6 +285,7 @@ class RiscVProofResponseDtoMapperTest {
         publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = emptyList(),
+        programVk = ByteArray(32) { 0xbb.toByte() },
       ),
     )
   }

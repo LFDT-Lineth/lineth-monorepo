@@ -181,6 +181,7 @@ data class L2ExecutionProofResponseDto(
   val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -199,6 +200,7 @@ data class L2ExecutionProofDto(
   val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 data class FileBasedRollupProofRequestParamsDto(
@@ -244,6 +246,7 @@ data class RollupProofResponseDto(
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -257,6 +260,7 @@ data class RollupProofDto(
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 data class FileBasedRollupAggregationProofRequestParamsDto(
@@ -465,6 +469,7 @@ internal fun L2ExecutionProofResponseV1.fromDomainObject(): L2ExecutionProofDto 
     l2L1Messages = l2L1Messages.map { it.encodeHex() },
     txFroms = txFroms.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },
+    programVk = programVk.encodeHex(),
   )
 }
 
@@ -475,5 +480,6 @@ internal fun RollupProofResponseV1.fromDomainObject(): RollupProofDto {
     publicInputs = publicInputs.fromDomainObject(),
     l2L1Roots = l2L1Roots.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },
+    programVk = programVk.encodeHex(),
   )
 }

@@ -44,6 +44,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
                 l2L1Messages = proofResponse.l2L1Messages,
                 txFroms = proofResponse.txFroms,
                 filteredAddresses = proofResponse.filteredAddresses,
+                programVk = proofResponse.programVk,
               )
             },
             chunks = request.chunks.map { it.encodeHex() },
@@ -113,6 +114,7 @@ internal object RollupProofResponseDtoMapper : (
       publicInputs = responseDto.publicInputs.toDomainObject(),
       l2L1Roots = responseDto.l2L1Roots.map { it.decodeHex() },
       filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
+      programVk = responseDto.programVk.decodeHex(),
     )
   }
 }

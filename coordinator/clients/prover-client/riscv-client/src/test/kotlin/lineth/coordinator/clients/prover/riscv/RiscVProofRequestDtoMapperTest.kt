@@ -198,6 +198,7 @@ class RiscVProofRequestDtoMapperTest {
               l2L1Messages = resolved.l2L1Messages,
               txFroms = resolved.txFroms,
               filteredAddresses = resolved.filteredAddresses,
+              programVk = resolved.programVk,
             )
           },
           chunks = chunks.map { it.encodeHex() },
@@ -252,6 +253,7 @@ class RiscVProofRequestDtoMapperTest {
               publicInputs = resolved.publicInputs,
               l2L1Roots = resolved.l2L1Roots,
               filteredAddresses = resolved.filteredAddresses,
+              programVk = resolved.programVk,
             )
           },
         ),
