@@ -143,3 +143,4 @@
 - *(linea-besu)* Logging consistency and noise reduction (#3788)
 - *(misc)* Docker image build streamlining (#3790)
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
+- *(misc)* Enrich R5 request/response samples (#3806)
