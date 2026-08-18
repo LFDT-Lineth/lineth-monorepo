@@ -27,6 +27,8 @@
 - *(maru)* Support custom validator signers (#3700)
 - *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
 - *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
+- *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
+- *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
 
 ### 🐛 Bug Fixes
 
