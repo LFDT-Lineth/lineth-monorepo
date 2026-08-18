@@ -38,9 +38,17 @@ from rollup_spec.stateless_input import decode_stateless_input_ssz
 _TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "testdata"
 
 
+def _fixture(name: str) -> Path:
+    """Resolve `<name>.json`, allowing an optional `<startBlock>-<endBlock>-` prefix."""
+    matches = sorted(_TESTDATA_DIR.glob(f"*{name}"))
+    assert matches, f"no fixture matching *{name} in {_TESTDATA_DIR}"
+    assert len(matches) == 1, f"multiple fixtures matching *{name}: {matches}"
+    return matches[0]
+
+
 def _golden_vanilla_stateless_input_ssz() -> bytes:
     """A real, valid vanilla stateless-input SSZ slice, from the golden JSON request."""
-    request = (_TESTDATA_DIR / "10-11-getZkL2ExecutionProofV1.request.json").read_text()
+    request = _fixture("getZkL2ExecutionProofV1.request.json").read_text()
     return decode_request_json(request).payloads[0].stateless_input_ssz
 
 
@@ -67,7 +75,9 @@ def _zero_bridge_input(vanilla: bytes) -> L2ExecutionProofPrivateInput:
 # ── read_l1l2_bridge_state: zero-address short-circuit ──────────────────────────
 
 
-def test_read_l1l2_bridge_state_zero_address_returns_zeros_without_state_access() -> None:
+def test_read_l1l2_bridge_state_zero_address_returns_zeros_without_state_access() -> (
+    None
+):
     # A state whose .storage would raise if touched: proves the zero-address guard
     # short-circuits before any MPT read.
     class _ExplodingState:
@@ -91,7 +101,9 @@ def test_read_l1l2_bridge_state_nonzero_address_still_reads_state() -> None:
 # ── run_l2_execution_guest: full zero-address suppression ───────────────────────
 
 
-def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monkeypatch) -> None:
+def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(
+    monkeypatch,
+) -> None:
     vanilla = _golden_vanilla_stateless_input_ssz()
     ext = _zero_bridge_input(vanilla)
 
@@ -119,7 +131,9 @@ def test_run_l2_execution_guest_zero_address_suppresses_bridge_and_messages(monk
     # Boundary + crypto stubs: mock the delegated engine and skip payload-tx sender
     # recovery (empty tx list) so the test needs no real EVM or secp256k1.
     monkeypatch.setattr(l2_execution, "execute_stateless_input", _fake_execute)
-    monkeypatch.setattr(l2_execution, "parse_payload_transaction_rlps", lambda payload: [])
+    monkeypatch.setattr(
+        l2_execution, "parse_payload_transaction_rlps", lambda payload: []
+    )
 
     proof = run_l2_execution_guest(ext)
     pi = proof.public_inputs

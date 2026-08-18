@@ -47,13 +47,13 @@ install-native-crypto-deps:
 	if [ "$$uname_s" = "Darwin" ]; then \
 		command -v brew >/dev/null 2>&1 || { echo "Homebrew not found: https://brew.sh"; exit 1; }; \
 		brew install secp256k1 openssl || true; \
-		prefix=/opt/homebrew; \
+		prefix=$$(brew --prefix); \
 		sudo=""; \
 	else \
-		sudo apt-get update -qq; \
-		sudo apt-get install -y --no-install-recommends libsecp256k1-dev libssl-dev build-essential git; \
+		sudo=$$(command -v sudo >/dev/null 2>&1 && echo sudo || echo ""); \
+		$$sudo apt-get update -qq; \
+		$$sudo apt-get install -y --no-install-recommends libsecp256k1-dev libssl-dev build-essential git; \
 		prefix=/usr/local; \
-		sudo="sudo"; \
 	fi; \
 	if [ -f "$$prefix/lib/libblst.a" ]; then \
 		echo "blst already installed at $$prefix/lib/libblst.a"; \
