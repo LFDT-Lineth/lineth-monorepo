@@ -30,7 +30,7 @@ BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # `zig build gen-fixture` (this package's own encodeInput over its own test sample) — never checked
 # into git, so it can't silently drift from what the current wire format produces. Pass your own
 # INPUT=path/to/file to use something else instead.
-GENERATED_INPUT := $(BUILD_CACHE_DIR)/sample.request.ssz.hex
+GENERATED_INPUT := $(BUILD_CACHE_DIR)/sample.request.ssz
 INPUT ?= $(GENERATED_INPUT)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
