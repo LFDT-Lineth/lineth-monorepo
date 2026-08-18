@@ -2,15 +2,15 @@
 Independently verifies the rollup / rollup-aggregation stub guests' sentinel constants
 (`riscv-guests/rollup/src/rollup.zig`, `riscv-guests/rollup-aggregation/src/rollup_aggregation.zig`).
 
-Each sentinel is `keccak256(tag)` for a documented tag string; Zig has no keccak available at
-comptime or in a native test (the guest's own keccak is a runtime accelerator opcode), so the hex
-is pinned in the Zig source rather than derived there. This test recomputes keccak256 of each tag
-with a library implementation and asserts it against the same hex, so a wrong or stale sentinel
-fails a test instead of relying on a one-off computation nobody re-checks.
+Each sentinel is `keccak256(tag)` for a documented tag string, computed live at Zig comptime via
+`std.crypto.hash.sha3.Keccak256` — nothing is pinned on that side. This test recomputes the same
+hash with an independent library and asserts the two agree, guarding specifically against the
+legacy-Keccak/NIST-SHA3 mixup (Zig's `Keccak256` uses the 0x01 delimiter; `Sha3_256` uses 0x06 and
+produces a different digest for the same input) going unnoticed on the Zig side, since both are
+valid-looking 32-byte hashes and neither language would raise a compile or type error for it.
 
-If a sentinel changes on the Zig side, update the matching entry here — this is a deliberate
-cross-check, not a discoverability pointer: the two sides are independent computations of the same
-value, not one file describing another.
+If a sentinel's tag string changes, update the matching entry here — this is a deliberate
+cross-check between two independent implementations, not a discoverability pointer.
 
 Run from the rollup_spec/ directory:  python -m pytest tests/test_stub_sentinels.py
 """

@@ -1,38 +1,35 @@
 //! Rollup-aggregation guest business logic: `RollupAggregationProofPrivateInput ->
 //! RollupAggregationOutput`, entirely by echo or sentinel. Every output field is either copied
-//! from a defined place in the input, or set to a fixed, precomputed sentinel constant — nothing
-//! is computed (no hashing, no accumulator folding, no proof verification). This guest exercises
-//! the wire format and its own decode/encode bounds, not the rollup-aggregation's real
-//! recursive-proof logic.
+//! from a defined place in the input, or set to a fixed sentinel constant — nothing is derived
+//! from the input itself (no hashing or accumulator folding of request data, no proof
+//! verification). This guest exercises the wire format and its own decode/encode bounds, not the
+//! rollup-aggregation's real recursive-proof logic.
 
 const std = @import("std");
 const rollup_aggregation_ssz = @import("rollup_aggregation_ssz");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
-// Each value is keccak256 of the tag string next to it, as a single hex string rather than a byte
-// array — pasteable into any external keccak calculator to re-derive and check. u64 sentinels take
-// the first 8 bytes, big-endian. Zig has no comptime keccak here (the accelerator's keccak is a
-// runtime opcode), so the hex is precomputed; `test_stub_sentinels.py` in rollup_spec independently
-// recomputes keccak256 of each tag string and asserts it matches the hex below.
+// Each value is keccak256 of its own tag string, computed at comptime — `std.crypto.hash.sha3.
+// Keccak256` is pure Zig (the legacy 0x01-delimiter variant, i.e. Ethereum's keccak256, not NIST
+// SHA3's 0x06 delimiter), so there is nothing precomputed or pinned to fall out of sync with its
+// source string. u64 sentinels take the hash's first 8 bytes, big-endian.
 
-fn hexToArray32(comptime hex: *const [64]u8) [32]u8 {
+const Keccak256 = std.crypto.hash.sha3.Keccak256;
+
+fn sentinelHash(comptime tag: []const u8) [32]u8 {
+    @setEvalBranchQuota(10_000); // one Keccak-f[1600] permutation (24 rounds) exceeds the default 1000
     var out: [32]u8 = undefined;
-    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
+    Keccak256.hash(tag, &out, .{});
     return out;
 }
 
-fn hexToU64(comptime hex: *const [16]u8) u64 {
-    var out: [8]u8 = undefined;
-    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
-    return std.mem.readInt(u64, &out, .big);
+fn sentinelU64(comptime tag: []const u8) u64 {
+    return std.mem.readInt(u64, sentinelHash(tag)[0..8], .big);
 }
 
-// tag: "lineth.stub.rollup-aggregation.l2L1BridgeTransactionTree"
-pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = hexToArray32("0918836198239a5edf0936db3e28a64d5c4e195fd728e6ddfc3544fc95008ab3");
-// tag: "lineth.stub.rollup-aggregation.filteredAddressesHash"
-pub const FILTERED_ADDRESSES_HASH: [32]u8 = hexToArray32("63d40d3ea387065027b369a25cc441dd7685e2a9a9e0e56556ec2e82bbe2273c");
-// tag: "lineth.stub.rollup-aggregation.l2MessagingBlocksOffsets" (first 8 bytes)
-pub const L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT: u64 = hexToU64("d18d873fe2a9f192");
+pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = sentinelHash("lineth.stub.rollup-aggregation.l2L1BridgeTransactionTree");
+pub const FILTERED_ADDRESSES_HASH: [32]u8 = sentinelHash("lineth.stub.rollup-aggregation.filteredAddressesHash");
+pub const L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT: u64 = sentinelU64("lineth.stub.rollup-aggregation.l2MessagingBlocksOffsets");
 
 /// Runs the rollup-aggregation guest's echo/sentinel mapping over a decoded input. Requires at
 /// least one `rollup_proofs` element — "first"/"last" source every per-proof field.
