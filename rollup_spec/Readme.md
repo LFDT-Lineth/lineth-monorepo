@@ -386,7 +386,7 @@ Classification:
 ### 2.6 Guest Program Anchoring (ProgramVK)
 
 Every recursively-verified guest proof (l2-execution, rollup) is identified by a 32-byte `programVk` — a
-commitment to the guest's verifying key, consistent with the existing `guestProgramId` routing field. A guest
+commitment to the guest's verifying key, consistent with the existing `programVk` routing field. A guest
 cannot soundly attest its *own* VK (that would be circular), so `programVk` is a runtime input to the guest one
 level up that *recursively verifies* that proof, and it is that verifying guest which emits it in its own public
 output. Both levels emit a **single combined `programVks` set**: the rollup guest fills it with the exec VKs it
