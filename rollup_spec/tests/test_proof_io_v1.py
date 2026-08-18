@@ -218,12 +218,12 @@ def test_encode_response_matches_fixture_exactly() -> None:
     # The testdata request/response pair is mutually consistent: _sample_proof()
     # is the L2ExecutionProof a guest run over the request fixture would yield,
     # so its encoding must equal the response fixture (dict equality).
-    out = encode_response(_sample_proof(), prover_version=_PROVER_VERSION)
+    out = encode_response(_sample_proof(), prover_version=_PROVER_VERSION, program_vk=_EXEC_VK)
     assert out == _expected_response()
 
 
 def test_encode_response_shape_and_values() -> None:
-    out = encode_response(_sample_proof(), prover_version="4.0.0-riscv")
+    out = encode_response(_sample_proof(), prover_version="4.0.0-riscv", program_vk=_EXEC_VK)
 
     assert out["proverVersion"] == "4.0.0-riscv"
     assert out["proof"] == "0xdeadbeef"
@@ -252,12 +252,19 @@ def test_encode_response_shape_and_values() -> None:
     assert out["l2L1Messages"] == ["0x" + ("08" * 32)]
     assert out["txFroms"] == ["0x" + ("01" * 20), "0x" + ("02" * 20)]
     assert out["filteredAddresses"] == ["0x" + ("09" * 20)]
+    # §ProgramVK anchoring: the exec guest's own VK, carried on the proof
+    # (host-attached, not part of publicInputs — a guest cannot attest its own VK).
+    assert out["programVk"] == "0x" + ("aa" * 32)
+    assert set(out.keys()) == {
+        "proverVersion", "proof", "startBlockNumber", "publicInputs",
+        "l2L1Messages", "txFroms", "filteredAddresses", "programVk",
+    }
 
 
 def test_empty_proof_bytes_encode_as_0x() -> None:
     proof = _sample_proof()
     proof.proof = b""
-    out = encode_response(proof, prover_version="v")
+    out = encode_response(proof, prover_version="v", program_vk=_EXEC_VK)
     assert out["proof"] == "0x"
 
 
