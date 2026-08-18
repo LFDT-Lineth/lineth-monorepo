@@ -1,5 +1,6 @@
 {
   "proverVersion": "4.0.0-riscv",
+  "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "proof": "0xdeadbeef",
   "startBlockNumber": 1000501,
   "publicInputs": {
@@ -12,15 +13,18 @@
     "endL1L2BridgeRollingHashMessageNumber": 7,
     "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
     "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
-    "parentProcessedFtxNumber": 7,
+    "parentFtxNumber": 7,
     "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
     "endProcessedFtxNumber": 9,
     "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
-    "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
-    "endShnarf": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
+    "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
+    "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
+    "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+    "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "startOffset": 4,
+    "endOffset": 131072,
     "programVks": [
-      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     ]
   },
   "l2L1Roots": [
@@ -28,7 +32,7 @@
     "0x8888888888888888888888888888888888888888888888888888888888888888"
   ],
   "filteredAddresses": [
-    "0x0101010101010101010101010101010101010101"
-  ],
-  "l2MessagingBlocksOffsets": []
+    "0x0303030303030303030303030303030303030303",
+    "0x0404040404040404040404040404040404040404"
+  ]
 }

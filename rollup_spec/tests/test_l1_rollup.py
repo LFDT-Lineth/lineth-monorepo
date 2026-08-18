@@ -18,7 +18,7 @@ Run from the rollup_spec/ directory:  python -m pytest
 
 import pytest
 
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
 from rollup_spec.l1_rollup import (
@@ -37,12 +37,20 @@ _EXEC_VK_A = Hash32(bytes([0xAA]) * 32)
 _EXEC_VK_B = Hash32(bytes([0xA1]) * 32)
 _ROLLUP_VK = Hash32(bytes([0xBB]) * 32)
 
-_PARENT_SHNARF = Hash32(bytes([0x47]) * 32)
-_END_SHNARF = Hash32(bytes([0x8D]) * 32)
-_END_LAST_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
+_PARENT_DATA_ROLLING_HASH = Hash32(bytes([0x47]) * 32)
+_END_DATA_ROLLING_HASH = Hash32(bytes([0x8D]) * 32)
+_END_OFFSET = 500
+_PARENT_BLOCK_HASH = Hash32(bytes([0x46]) * 32)
+_END_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
 _L1L2_ROLLING_HASH = Hash32(bytes([0x22]) * 32)
 _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
+
+
+def _position_commitment(data_rolling_hash: Hash32, offset: int) -> Hash32:
+    """The `current_finalized_position_commitment` value sealing a given
+    (dataRollingHash, offset) end position (§3.6)."""
+    return keccak256(data_rolling_hash + offset.to_bytes(32, "big"))
 
 
 def _base_state(approved_vks) -> LinethRollupState:
@@ -52,8 +60,8 @@ def _base_state(approved_vks) -> LinethRollupState:
     only knob the tests vary.
     """
     return LinethRollupState(
-        current_finalized_shnarf=_PARENT_SHNARF,
-        current_finalized_last_block_hash=Hash32(bytes([0x46]) * 32),
+        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, 0),
+        current_finalized_last_block_hash=_PARENT_BLOCK_HASH,
         current_l2_block_number=U64(1000500),
         current_l2_block_timestamp=U64(1763000000),
         current_finalized_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
@@ -61,7 +69,7 @@ def _base_state(approved_vks) -> LinethRollupState:
         current_finalized_ftx_rolling_hash=_FTX_ROLLING_HASH,
         current_finalized_processed_ftx_number=U64(7),
         verifier=PlonkVerifier(chain_configuration_hash=_CHAIN_CONFIG_HASH),
-        submitted_shnarf_last_block_hashes={_END_SHNARF: _END_LAST_BLOCK_HASH},
+        anchored_data_rolling_hashes={_END_DATA_ROLLING_HASH},
         approved_vks=set(approved_vks),
     )
 
@@ -73,7 +81,8 @@ def _base_submission(program_vks) -> FinalizationSubmission:
     `filtered_addresses` keep the preimage-hash checks trivial (their keccak of
     empty input is the PI hash), and the FTX/rolling-hash boundary values are
     held constant across parent/end so continuity passes without any FTX deadline
-    machinery.
+    machinery. `start_offset=0` is the fresh-start case, which `finalize_rollup`
+    accepts regardless of the previously-finalized offset.
     """
     pi = RollupPublicInput(
         end_block_number=U64(1000520),
@@ -85,12 +94,16 @@ def _base_submission(program_vks) -> FinalizationSubmission:
         end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=_CHAIN_CONFIG_HASH,
         parent_ftx_rolling_hash=_FTX_ROLLING_HASH,
-        parent_processed_ftx_number=U64(7),
+        parent_ftx_number=U64(7),
         end_ftx_rolling_hash=_FTX_ROLLING_HASH,
         end_processed_ftx_number=U64(7),
         filtered_addresses_hash=hash_address_list([]),
-        parent_shnarf=_PARENT_SHNARF,
-        end_shnarf=_END_SHNARF,
+        parent_data_rolling_hash=_PARENT_DATA_ROLLING_HASH,
+        end_data_rolling_hash=_END_DATA_ROLLING_HASH,
+        parent_block_hash=_PARENT_BLOCK_HASH,
+        end_block_hash=_END_BLOCK_HASH,
+        start_offset=0,
+        end_offset=_END_OFFSET,
         program_vks=list(program_vks),
     )
     return FinalizationSubmission(
@@ -102,16 +115,23 @@ def _base_submission(program_vks) -> FinalizationSubmission:
     )
 
 
+def _finalize(state: LinethRollupState, submission: FinalizationSubmission) -> None:
+    """`finalize_rollup`, supplying the (dataRollingHash, offset) pair that opens
+    `_base_state()`'s position commitment."""
+    finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, 0)
+
+
 def test_finalize_rollup_rejects_unapproved_vk() -> None:
     # One committed VK (0xbb, rollup-origin) is NOT on the approved list — the
     # "operator swapped in an unapproved guest" case. L1 does not distinguish
     # exec vs rollup, so the single generic check rejects it.
     state = _base_state(approved_vks={_EXEC_VK_A})
+    initial_commitment = state.current_finalized_position_commitment
     submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
     with pytest.raises(Exception, match="program VK is not approved"):
-        finalize_rollup(state, submission)
+        _finalize(state, submission)
     # Finalization reverted: state is unchanged.
-    assert state.current_finalized_shnarf == _PARENT_SHNARF
+    assert state.current_finalized_position_commitment == initial_commitment
 
 
 def test_finalize_rollup_accepts_two_approved_exec_vks() -> None:
@@ -122,11 +142,12 @@ def test_finalize_rollup_accepts_two_approved_exec_vks() -> None:
     # by byte value: 0xA1 (_EXEC_VK_B) < 0xAA (_EXEC_VK_A) < 0xBB (_ROLLUP_VK).
     state = _base_state(approved_vks={_EXEC_VK_A, _EXEC_VK_B, _ROLLUP_VK})
     submission = _base_submission(program_vks=[_EXEC_VK_B, _EXEC_VK_A, _ROLLUP_VK])
-    finalize_rollup(state, submission)  # must not raise
-    # Finalization applied: shnarf and block number advanced.
-    assert state.current_finalized_shnarf == _END_SHNARF
-    assert state.current_finalized_last_block_hash == _END_LAST_BLOCK_HASH
+    _finalize(state, submission)  # must not raise
+    # Finalization applied: block hash, block number, and position commitment
+    # all advanced to the submission's end-of-range values.
+    assert state.current_finalized_last_block_hash == _END_BLOCK_HASH
     assert int(state.current_l2_block_number) == 1000520
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _END_OFFSET)
 
 
 def test_finalize_rollup_succeeds_when_all_vks_approved() -> None:
@@ -134,6 +155,6 @@ def test_finalize_rollup_succeeds_when_all_vks_approved() -> None:
     # finalizes when every committed VK is approved.
     state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
     submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
-    finalize_rollup(state, submission)  # must not raise
-    assert state.current_finalized_shnarf == _END_SHNARF
+    _finalize(state, submission)  # must not raise
+    assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _END_OFFSET)
     assert int(state.current_l2_block_number) == 1000520

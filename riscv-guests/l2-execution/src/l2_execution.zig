@@ -486,7 +486,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
 // ─── Exposed for unit tests only ───────────────────────────────────────────────────────────────
 
-pub const test_api = struct {
+pub const test_api = if (@import("builtin").is_test) struct {
     pub const u64ToSlot32Fn = u64ToSlot32;
     pub const mappingSlotFn = mappingSlot;
     pub const chainConfigHashFn = chainConfigHash;
@@ -509,4 +509,5 @@ pub const test_api = struct {
     /// rather than verify a claim against it. See `execution.computeStatelessInputWithLogs`.
     pub const computeStatelessInputWithLogsFn = execution.computeStatelessInputWithLogs;
     pub const ComputedBlock = execution.ComputedBlock;
-};
+} else struct {};
+

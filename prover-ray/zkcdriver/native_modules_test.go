@@ -41,7 +41,7 @@ func runZkcCase(t *testing.T, zkcPath string) {
 		ZkcFilePath: zkcInputPath,
 		InputStr:    string(inputBytes),
 	}
-	inputs, _, err := parseTestCase(tc, binf)
+	inputs, _, err := parseTestCase(tc, binf, !testing.Short())
 	if err != nil {
 		t.Fatalf("failed to parse test case: %v", err)
 	}

@@ -44,7 +44,7 @@ func (m *mockProver) Prove(_ context.Context, job backend.Job) backend.Result {
 	return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xde, 0xad}}
 }
 
-const referenceL2ExecutionResponse = "../../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.response.json"
+const referenceL2ExecutionResponse = "../../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
 
 func newAdapter(t *testing.T, prover jobadapter.Prover) (*Adapter, string) {
 	t.Helper()
