@@ -1,22 +1,6 @@
 const std = @import("std");
 const rollup_aggregation_ssz = @import("rollup_aggregation_ssz");
 
-/// The checked-in golden aggregation-input vector, as 0x-prefixed hex text (reviewable in a diff,
-/// unlike a raw binary blob) — the same format `make exec`'s ELF->JSON tooling accepts natively
-/// for a non-`.ssz`-suffixed `@path` input. Expected values in the tests below are transcribed
-/// once from the fixture and are not re-derived at test time; rollup_spec's own golden-byte test
-/// is what proves these bytes are still what the canonical encoder produces.
-const golden_input_hex = @embedFile("testdata/10-18-getZkRollupAggregationProofV1.request.ssz.hex");
-
-fn hexToOwnedBytes(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
-    const stripped = if (hex.len >= 2 and hex[0] == '0' and (hex[1] == 'x' or hex[1] == 'X')) hex[2..] else hex;
-    const trimmed = std.mem.trimEnd(u8, stripped, "\r\n");
-    if (trimmed.len % 2 != 0) return error.OddHexLength;
-    const out = try allocator.alloc(u8, trimmed.len / 2);
-    _ = try std.fmt.hexToBytes(out, trimmed);
-    return out;
-}
-
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
 }
@@ -25,15 +9,75 @@ fn repeat20(byte: u8) [20]u8 {
     return @splat(byte);
 }
 
-// ── Golden decode ─────────────────────────────────────────────────────────────────────────────
+/// A readable, self-contained `RollupAggregationProofPrivateInput`: two rollup proofs whose
+/// `parent_ftx_number` differs (15 vs 18), so the first/last split rollup.zig's own tests exercise
+/// is independently observable. No external fixture — every field value is visible right here.
+fn sampleInput(alloc: std.mem.Allocator) !rollup_aggregation_ssz.RollupAggregationProofPrivateInput {
+    const pi0: rollup_aggregation_ssz.RollupPublicInput = .{
+        .end_block_number = 11,
+        .end_block_timestamp = 1763000457,
+        .l2_l1_bridge_transaction_tree = repeat32(0x11),
+        .parent_l1_l2_bridge_rolling_hash = repeat32(0x22),
+        .parent_l1_l2_bridge_rolling_hash_message_number = 0,
+        .end_l1_l2_bridge_rolling_hash = repeat32(0x33),
+        .end_l1_l2_bridge_rolling_hash_message_number = 7,
+        .dynamic_chain_config_hash = repeat32(0xc0),
+        .parent_ftx_rolling_hash = repeat32(0x44),
+        .parent_ftx_number = 15,
+        .end_ftx_rolling_hash = repeat32(0x55),
+        .end_processed_ftx_number = 18,
+        .filtered_addresses_hash = repeat32(0x66),
+        .parent_data_rolling_hash = repeat32(0x47),
+        .end_data_rolling_hash = repeat32(0x8d),
+        .parent_block_hash = repeat32(0x0a),
+        .end_block_hash = repeat32(0x0b),
+        .start_offset = 0,
+        .end_offset = 131072,
+        .program_vks = try alloc.dupe([32]u8, &[_][32]u8{repeat32(0xaa)}),
+    };
+    const proof0: rollup_aggregation_ssz.VerifiableRollupProof = .{
+        .program_vk = repeat32(0xbb),
+        .proof = .{
+            .public_inputs = pi0,
+            .start_block_number = 10,
+            .proof = &[_]u8{ 0xab, 0xcd, 0xef },
+            .l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{ repeat32(0x77), repeat32(0x88) }),
+            .filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{repeat20(0x01)}),
+        },
+    };
 
-test "decodeInput: golden vector decodes to its transcribed field values" {
+    var pi1 = pi0;
+    pi1.end_block_number = 18;
+    pi1.end_block_timestamp = 1763000557;
+    pi1.parent_ftx_number = 18;
+    const proof1: rollup_aggregation_ssz.VerifiableRollupProof = .{
+        .program_vk = repeat32(0xbb),
+        .proof = .{
+            .public_inputs = pi1,
+            .start_block_number = 15,
+            .proof = &[_]u8{ 0xab, 0xcd, 0xff },
+            .l2_l1_roots = &.{},
+            .filtered_addresses = &.{},
+        },
+    };
+
+    return .{
+        .rollup_proofs = try alloc.dupe(rollup_aggregation_ssz.VerifiableRollupProof, &[_]rollup_aggregation_ssz.VerifiableRollupProof{ proof0, proof1 }),
+    };
+}
+
+// ── Round-trip: readable struct -> encodeInput -> decodeInput -> same fields ─────────────────────
+
+test "encodeInput/decodeInput: round-trips every field of a readable sample input" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
-    const v = try rollup_aggregation_ssz.decodeInput(alloc, golden_input);
+    const original = try sampleInput(alloc);
+    const encoded = try rollup_aggregation_ssz.encodeInput(alloc, original);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x02 }, encoded[0..2]);
+
+    const v = try rollup_aggregation_ssz.decodeInput(alloc, encoded);
     try std.testing.expectEqual(@as(usize, 2), v.rollup_proofs.len);
 
     const p0 = v.rollup_proofs[0];
@@ -142,14 +186,17 @@ test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1802 
 }
 
 // ── Malformed input ───────────────────────────────────────────────────────────────────────────
+// Every case below corrupts bytes `rollup_aggregation_ssz.encodeInput` itself produced from
+// `sampleInput` — no external fixture. Byte positions into the fixed head are content-independent
+// (this codec's own offset-table layout, not data), so they hold regardless of what `sampleInput`
+// contains.
 
 test "decodeInput: rejects the wrong schema id" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
-    var corrupted = try alloc.dupe(u8, golden_input);
+    var corrupted = try rollup_aggregation_ssz.encodeInput(alloc, try sampleInput(alloc));
     corrupted[0] = 0x18;
     corrupted[1] = 0x02; // the output schema id, on input bytes
     try std.testing.expectError(error.MalformedFrame, rollup_aggregation_ssz.decodeInput(alloc, corrupted));
@@ -160,8 +207,8 @@ test "decodeInput: rejects a frame truncated below the 2-byte schema id" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
-    try std.testing.expectError(error.MalformedFrame, rollup_aggregation_ssz.decodeInput(alloc, golden_input[0..1]));
+    const encoded = try rollup_aggregation_ssz.encodeInput(alloc, try sampleInput(alloc));
+    try std.testing.expectError(error.MalformedFrame, rollup_aggregation_ssz.decodeInput(alloc, encoded[0..1]));
 }
 
 test "decodeInput: rejects a body shorter than the fixed head" {
@@ -169,8 +216,8 @@ test "decodeInput: rejects a body shorter than the fixed head" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
-    try std.testing.expectError(error.InvalidSsz, rollup_aggregation_ssz.decodeInput(alloc, golden_input[0..2]));
+    const encoded = try rollup_aggregation_ssz.encodeInput(alloc, try sampleInput(alloc));
+    try std.testing.expectError(error.InvalidSsz, rollup_aggregation_ssz.decodeInput(alloc, encoded[0..2]));
 }
 
 test "decodeInput: rejects a misaligned first offset (rollup_proofs)" {
@@ -178,8 +225,7 @@ test "decodeInput: rejects a misaligned first offset (rollup_proofs)" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
-    var corrupted = try alloc.dupe(u8, golden_input);
+    var corrupted = try rollup_aggregation_ssz.encodeInput(alloc, try sampleInput(alloc));
     // The rollup_proofs offset sits at absolute byte 2 (schema); the canonical value is 4 (the
     // container's own fixed head size — the only field, so this container is entirely variable).
     std.mem.writeInt(u32, corrupted[2..6], 5, .little);

@@ -1,10 +1,11 @@
-//! Manual SSZ codec for the rollup guest wire format (the Python reference codec's
-//! `rollup_ssz.py`: `SszRollupProofPrivateInput`/`SszRollupOutput`, schema ids 0x1001/0x1801).
+//! SSZ codec for the rollup guest wire format: `SszRollupProofPrivateInput`/`SszRollupOutput`,
+//! schema ids 0x1001/0x1801.
 //!
-//! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). Container
-//! field orders, list bounds, and byte layouts mirror the Python reference codec exactly — this
-//! guest's tests decode the checked-in golden vectors and assert known field values, and round-trip
-//! the output container byte-for-byte.
+//! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
+//! guest's own tests round-trip both the input and output containers byte-for-byte using this
+//! module's own `encodeInput`/`decodeInput` and `encodeOutput`/`decodeOutput` — there is no
+//! external fixture to match; `rollup_spec/src/rollup_spec/rollup_ssz.py` is an illustrative
+//! reference implementation of the same schema, not an authority this codec is checked against.
 //!
 //! Every `List` field's wire encoding follows plain SSZ: a list of VARIABLE-size elements
 //! (`conflations`, `l2_execution_proofs`) is an offset table over its region — the generic
@@ -355,6 +356,139 @@ pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !RollupProofPriva
     };
 }
 
+fn encodeExecPublicInput(alloc: std.mem.Allocator, v: L2ExecutionProofPublicInput) ![]u8 {
+    const out = try alloc.alloc(u8, EXEC_PI_FIXED_SIZE);
+    var pos: usize = 0;
+    putHash(out, &pos, v.parent_block_hash);
+    putHash(out, &pos, v.end_block_hash);
+    putU64(out, &pos, v.end_block_number);
+    putU64(out, &pos, v.end_block_timestamp);
+    putHash(out, &pos, v.l2_l1_messages_hash);
+    putHash(out, &pos, v.parent_l1_l2_bridge_rolling_hash);
+    putU64(out, &pos, v.parent_l1_l2_bridge_rolling_hash_message_number);
+    putHash(out, &pos, v.end_l1_l2_bridge_rolling_hash);
+    putU64(out, &pos, v.end_l1_l2_bridge_rolling_hash_message_number);
+    putHash(out, &pos, v.dynamic_chain_config_hash);
+    putHash(out, &pos, v.parent_ftx_rolling_hash);
+    putU64(out, &pos, v.parent_ftx_number);
+    putHash(out, &pos, v.end_ftx_rolling_hash);
+    putU64(out, &pos, v.end_processed_ftx_number);
+    putHash(out, &pos, v.filtered_addresses_hash);
+    putHash(out, &pos, v.tx_froms_hash);
+    std.debug.assert(pos == EXEC_PI_FIXED_SIZE);
+    return out;
+}
+
+fn encodeL2ExecutionProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ![]u8 {
+    const pi_bytes = try encodeExecPublicInput(alloc, v.public_inputs);
+    const messages_bytes = try encodeBytes32List(alloc, v.l2_l1_messages);
+    const tx_froms_bytes = try encodeAddressList(alloc, v.tx_froms);
+    const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
+
+    const off_proof = EXEC_PROOF_FIXED_SIZE;
+    const off_messages = off_proof + v.proof.len;
+    const off_tx_froms = off_messages + messages_bytes.len;
+    const off_filtered = off_tx_froms + tx_froms_bytes.len;
+
+    const out = try alloc.alloc(u8, off_filtered + filtered_bytes.len);
+    @memcpy(out[0..EXEC_PI_FIXED_SIZE], pi_bytes);
+    var pos: usize = EXEC_PI_FIXED_SIZE;
+    putU64(out, &pos, v.start_block_number);
+    writeU32(out, pos, @intCast(off_proof));
+    pos += 4;
+    writeU32(out, pos, @intCast(off_messages));
+    pos += 4;
+    writeU32(out, pos, @intCast(off_tx_froms));
+    pos += 4;
+    writeU32(out, pos, @intCast(off_filtered));
+    pos += 4;
+    std.debug.assert(pos == EXEC_PROOF_FIXED_SIZE);
+    @memcpy(out[off_proof..][0..v.proof.len], v.proof);
+    @memcpy(out[off_messages..][0..messages_bytes.len], messages_bytes);
+    @memcpy(out[off_tx_froms..][0..tx_froms_bytes.len], tx_froms_bytes);
+    @memcpy(out[off_filtered..], filtered_bytes);
+    return out;
+}
+
+fn encodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionProof) ![]u8 {
+    const proof_bytes = try encodeL2ExecutionProof(alloc, v.proof);
+    const out = try alloc.alloc(u8, VERIFIABLE_EXEC_PROOF_FIXED_SIZE + proof_bytes.len);
+    writeU32(out, 0, @intCast(VERIFIABLE_EXEC_PROOF_FIXED_SIZE));
+    @memcpy(out[4..36], &v.program_vk);
+    @memcpy(out[36..], proof_bytes);
+    return out;
+}
+
+fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8 {
+    const list_bytes = try guest_common.ssz.encodeVariableList(alloc, v.block_rlps);
+    const out = try alloc.alloc(u8, CONFLATION_WITNESS_FIXED_SIZE + list_bytes.len);
+    writeU32(out, 0, @intCast(CONFLATION_WITNESS_FIXED_SIZE));
+    @memcpy(out[CONFLATION_WITNESS_FIXED_SIZE..], list_bytes);
+    return out;
+}
+
+/// Encode the rollup guest input: the 0x1001 schema id followed by the SSZ
+/// `SszRollupProofPrivateInput`. Not used by the guest itself at runtime (it only ever decodes) —
+/// kept so the input codec's byte-exact round-trip can be asserted against `decodeInput` in this
+/// guest's own tests, from literal readable Zig values rather than an externally-produced fixture.
+pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
+    const conflation_blobs = try alloc.alloc([]const u8, v.conflations.len);
+    for (v.conflations, 0..) |c, i| conflation_blobs[i] = try encodeConflationWitness(alloc, c);
+    const conflations_bytes = try guest_common.ssz.encodeVariableList(alloc, conflation_blobs);
+
+    const chunks_bytes = try encodeBytes32List(alloc, v.chunks);
+
+    const proof_blobs = try alloc.alloc([]const u8, v.l2_execution_proofs.len);
+    for (v.l2_execution_proofs, 0..) |p, i| proof_blobs[i] = try encodeVerifiableL2ExecutionProof(alloc, p);
+    const proofs_bytes = try guest_common.ssz.encodeVariableList(alloc, proof_blobs);
+
+    var boundary_buf: [1][32]u8 = undefined;
+    const boundary_slice: []const [32]u8 = if (v.boundary_prev_data_rolling_hash) |h| blk: {
+        boundary_buf[0] = h;
+        break :blk boundary_buf[0..1];
+    } else &.{};
+    const boundary_bytes = try encodeBytes32List(alloc, boundary_slice);
+
+    const off_conflations = INPUT_FIXED_SIZE;
+    const off_chunks = off_conflations + conflations_bytes.len;
+    const off_proofs = off_chunks + chunks_bytes.len;
+    const off_prefix = off_proofs + proofs_bytes.len;
+    const off_suffix = off_prefix + v.opaque_prefix_bytes.len;
+    const off_boundary = off_suffix + v.opaque_suffix_bytes.len;
+    const body_len = off_boundary + boundary_bytes.len;
+
+    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + body_len);
+    std.mem.writeInt(u16, out[0..2], INPUT_SCHEMA_ID, .big);
+    const body = out[SCHEMA_ID_SIZE..];
+
+    var pos: usize = 0;
+    putHash(body, &pos, v.parent_data_rolling_hash);
+    putU64(body, &pos, v.start_offset);
+    putU64(body, &pos, v.chain_id);
+    writeU32(body, pos, @intCast(off_conflations));
+    pos += 4;
+    writeU32(body, pos, @intCast(off_chunks));
+    pos += 4;
+    writeU32(body, pos, @intCast(off_proofs));
+    pos += 4;
+    writeU32(body, pos, @intCast(off_prefix));
+    pos += 4;
+    writeU32(body, pos, @intCast(off_suffix));
+    pos += 4;
+    writeU32(body, pos, @intCast(off_boundary));
+    pos += 4;
+    std.debug.assert(pos == INPUT_FIXED_SIZE);
+
+    @memcpy(body[off_conflations..][0..conflations_bytes.len], conflations_bytes);
+    @memcpy(body[off_chunks..][0..chunks_bytes.len], chunks_bytes);
+    @memcpy(body[off_proofs..][0..proofs_bytes.len], proofs_bytes);
+    @memcpy(body[off_prefix..][0..v.opaque_prefix_bytes.len], v.opaque_prefix_bytes);
+    @memcpy(body[off_suffix..][0..v.opaque_suffix_bytes.len], v.opaque_suffix_bytes);
+    @memcpy(body[off_boundary..], boundary_bytes);
+
+    return out;
+}
+
 // ── RollupPublicInput (20 fields; only `program_vks` is variable) ────────────────────────────────
 // Fixed head: 19 fixed fields (11 hashes * 32 + 8 u64s * 8 = 416) + program_vks offset(4) = 420.
 const ROLLUP_PI_FIXED_SIZE: usize = 420;
@@ -453,7 +587,7 @@ pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
 
 /// Decode a rollup guest output frame. Not used by the guest itself at runtime (it only ever
 /// encodes) — kept so the output codec's byte-exact round-trip can be asserted against
-/// `encodeOutput` in this guest's own tests, the same gate the Python reference codec is held to.
+/// `encodeOutput` in this guest's own tests.
 pub fn decodeOutput(alloc: std.mem.Allocator, data: []const u8) !RollupOutput {
     if (data.len < SCHEMA_ID_SIZE) return error.MalformedFrame;
     if (std.mem.readInt(u16, data[0..2], .big) != OUTPUT_SCHEMA_ID) return error.MalformedFrame;

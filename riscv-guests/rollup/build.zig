@@ -85,4 +85,20 @@ pub fn build(b: *std.Build) void {
     rollup_tests.root_module.addImport("rollup", rollup_native_mod);
     rollup_tests.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
     test_step.dependOn(&b.addRunArtifact(rollup_tests).step);
+
+    // ── Fixture generation ─────────────────────────────────────────────────────────────────────
+    // Prints a framed sample input as hex on stdout — `make exec`'s guest input is this package's
+    // own encoder output, not an externally-produced fixture. `zig build gen-fixture > path`
+    // regenerates it after a wire-format change.
+    const gen_fixture = b.addExecutable(.{
+        .name = "gen_fixture",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tools/gen_fixture.zig"),
+            .target = native_target,
+            .optimize = .Debug,
+        }),
+    });
+    gen_fixture.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
+    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed hex on stdout");
+    gen_fixture_step.dependOn(&b.addRunArtifact(gen_fixture).step);
 }

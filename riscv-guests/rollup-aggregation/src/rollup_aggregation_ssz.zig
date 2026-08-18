@@ -1,11 +1,11 @@
-//! Manual SSZ codec for the rollup-aggregation guest wire format (the Python reference codec's
-//! `rollup_ssz.py`: `SszRollupAggregationProofPrivateInput`/`SszRollupAggregationOutput`, schema
-//! ids 0x1002/0x1802).
+//! SSZ codec for the rollup-aggregation guest wire format:
+//! `SszRollupAggregationProofPrivateInput`/`SszRollupAggregationOutput`, schema ids 0x1002/0x1802.
 //!
-//! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). Container
-//! field orders, list bounds, and byte layouts mirror the Python reference codec exactly — this
-//! guest's tests decode the checked-in golden vector and assert known field values, and round-trip
-//! the output container byte-for-byte.
+//! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
+//! guest's own tests round-trip both the input and output containers byte-for-byte using this
+//! module's own `encodeInput`/`decodeInput` and `encodeOutput`/`decodeOutput` — there is no
+//! external fixture to match; `rollup_spec/src/rollup_spec/rollup_ssz.py` is an illustrative
+//! reference implementation of the same schema, not an authority this codec is checked against.
 //!
 //! `RollupPublicInput`'s container (the 20-field rollup/rollup-aggregation public-input tuple) is
 //! decoded here independently of the `rollup` guest's own copy — both guests need it (the rollup
@@ -288,6 +288,58 @@ fn decodeVerifiableRollupProof(alloc: std.mem.Allocator, bytes: []const u8) !Ver
     return .{ .proof = proof, .program_vk = program_vk };
 }
 
+fn encodeRollupProof(alloc: std.mem.Allocator, v: RollupProof) ![]u8 {
+    const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);
+    const roots_bytes = try encodeBytes32List(alloc, v.l2_l1_roots);
+    const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
+
+    const off_pi = ROLLUP_PROOF_FIXED_SIZE;
+    const off_proof = off_pi + pi_bytes.len;
+    const off_roots = off_proof + v.proof.len;
+    const off_filtered = off_roots + roots_bytes.len;
+
+    const out = try alloc.alloc(u8, off_filtered + filtered_bytes.len);
+    writeU32(out, 0, @intCast(off_pi));
+    writeU64(out, 4, v.start_block_number);
+    writeU32(out, 12, @intCast(off_proof));
+    writeU32(out, 16, @intCast(off_roots));
+    writeU32(out, 20, @intCast(off_filtered));
+
+    @memcpy(out[off_pi..][0..pi_bytes.len], pi_bytes);
+    @memcpy(out[off_proof..][0..v.proof.len], v.proof);
+    @memcpy(out[off_roots..][0..roots_bytes.len], roots_bytes);
+    @memcpy(out[off_filtered..], filtered_bytes);
+    return out;
+}
+
+fn encodeVerifiableRollupProof(alloc: std.mem.Allocator, v: VerifiableRollupProof) ![]u8 {
+    const proof_bytes = try encodeRollupProof(alloc, v.proof);
+    const out = try alloc.alloc(u8, VERIFIABLE_ROLLUP_PROOF_FIXED_SIZE + proof_bytes.len);
+    writeU32(out, 0, @intCast(VERIFIABLE_ROLLUP_PROOF_FIXED_SIZE));
+    @memcpy(out[4..36], &v.program_vk);
+    @memcpy(out[36..], proof_bytes);
+    return out;
+}
+
+/// Encode the rollup-aggregation guest input: the 0x1002 schema id followed by the SSZ
+/// `SszRollupAggregationProofPrivateInput`. Not used by the guest itself at runtime (it only ever
+/// decodes) — kept so the input codec's byte-exact round-trip can be asserted against `decodeInput`
+/// in this guest's own tests, from literal readable Zig values rather than an externally-produced
+/// fixture.
+pub fn encodeInput(alloc: std.mem.Allocator, v: RollupAggregationProofPrivateInput) ![]u8 {
+    const proof_blobs = try alloc.alloc([]const u8, v.rollup_proofs.len);
+    for (v.rollup_proofs, 0..) |p, i| proof_blobs[i] = try encodeVerifiableRollupProof(alloc, p);
+    const proofs_bytes = try guest_common.ssz.encodeVariableList(alloc, proof_blobs);
+
+    const off_proofs = INPUT_FIXED_SIZE;
+    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + off_proofs + proofs_bytes.len);
+    std.mem.writeInt(u16, out[0..2], INPUT_SCHEMA_ID, .big);
+    const body = out[SCHEMA_ID_SIZE..];
+    writeU32(body, 0, @intCast(off_proofs));
+    @memcpy(body[off_proofs..], proofs_bytes);
+    return out;
+}
+
 // ── RollupAggregationProofPrivateInput (the rollup-aggregation guest INPUT) ──────────────────────
 // Fixed head: rollup_proofs offset(4) = 4 — the only field, so this container is entirely variable.
 const INPUT_FIXED_SIZE: usize = 4;
@@ -347,7 +399,7 @@ pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupAggregationOutput) ![]u8 
 
 /// Decode a rollup-aggregation guest output frame. Not used by the guest itself at runtime (it
 /// only ever encodes) — kept so the output codec's byte-exact round-trip can be asserted against
-/// `encodeOutput` in this guest's own tests, the same gate the Python reference codec is held to.
+/// `encodeOutput` in this guest's own tests.
 pub fn decodeOutput(alloc: std.mem.Allocator, data: []const u8) !RollupAggregationOutput {
     if (data.len < SCHEMA_ID_SIZE) return error.MalformedFrame;
     if (std.mem.readInt(u16, data[0..2], .big) != OUTPUT_SCHEMA_ID) return error.MalformedFrame;
