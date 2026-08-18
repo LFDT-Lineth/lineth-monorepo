@@ -1457,6 +1457,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         }
         default: {
             new_output_write_address = output_write_address
+            new_pc = (pc + 4) as Address
             printf "[ERROR] Unsupported compute_op %d\n", compute_op
             fail
         }
