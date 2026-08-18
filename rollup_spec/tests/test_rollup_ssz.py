@@ -1,16 +1,19 @@
 """
 Tests for the rollup / rollup-aggregation SSZ wire format (`rollup_ssz.py`).
 
-These cover the three properties the guest decoders and a future Go encoder
-rely on:
+These cover the two properties this codec is responsible for:
   - round-trip fidelity: the SSZ codec preserves every field of the logical
     request/output dataclasses, and (for outputs) the JSON the coordinator
     would see back out;
-  - golden stability: encoding the fixtures reproduces the checked-in `.ssz.hex`
-    bytes byte-for-byte, so an implementation in another language can assert
-    its own encoder against the same vectors;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
     all rejected rather than silently accepted or truncated.
+
+There is no golden-vector byte-stability check here: nothing outside this
+package's own encoder consumes its exact byte output (the riscv-guests Zig
+guests define and test their own wire format independently — see
+`riscv-guests/rollup{,-aggregation}/test/support.zig`), so pinning this
+encoder's bytes against a checked-in fixture would only be checking it
+against itself.
 
 Run from the rollup_spec/ directory:  python -m pytest
 """
@@ -35,10 +38,6 @@ from rollup_spec.proof_io_v1 import (
     encode_rollup_response,
 )
 from rollup_spec.rollup_ssz import (
-    ROLLUP_AGGREGATION_INPUT_SCHEMA_ID,
-    ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
-    ROLLUP_INPUT_SCHEMA_ID,
-    ROLLUP_OUTPUT_SCHEMA_ID,
     InvalidSsz,
     decode_aggregation_input_ssz,
     decode_aggregation_output_ssz,
@@ -64,12 +63,6 @@ def _fixture(name: str) -> Path:
 
 def _load_json(name: str) -> dict:
     return json.loads(_fixture(name).read_text())
-
-
-def _load_golden_ssz(name: str) -> bytes:
-    """`name` is the `.ssz.hex` fixture's filename; the checked-in file is 0x-prefixed hex text,
-    reviewable in a diff, rather than a raw binary blob."""
-    return _hexbytes(_fixture(name).read_text().strip())
 
 
 def _hexbytes(value: str) -> bytes:
@@ -154,108 +147,71 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Golden stability: encoding the fixtures reproduces the checked-in bytes
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-def test_rollup_input_matches_golden_vector() -> None:
-    original = decode_rollup_request(_load_json("getZkRollupProofV1.request.json"))
-    assert encode_rollup_input(original) == _load_golden_ssz("getZkRollupProofV1.request.ssz.hex")
-
-
-def test_aggregation_input_matches_golden_vector() -> None:
-    original = decode_aggregation_request(
-        _load_json("getZkRollupAggregationProofV1.request.json")
-    )
-    assert encode_aggregation_input(original) == _load_golden_ssz(
-        "getZkRollupAggregationProofV1.request.ssz.hex"
-    )
-
-
-def test_rollup_output_matches_golden_vector() -> None:
-    original_output = _rollup_output_from_response(
-        _load_json("getZkRollupProofV1.response.json")
-    )
-    assert encode_rollup_output(original_output) == _load_golden_ssz(
-        "getZkRollupProofV1.response.ssz.hex"
-    )
-
-
-def test_aggregation_output_matches_golden_vector() -> None:
-    original_output = _aggregation_output_from_response(
-        _load_json("getZkRollupAggregationProofV1.response.json")
-    )
-    assert encode_aggregation_output(original_output) == _load_golden_ssz(
-        "getZkRollupAggregationProofV1.response.ssz.hex"
-    )
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # Strict decode rejections
 # ══════════════════════════════════════════════════════════════════════════════
 #
-# Exercised once per decode function, against that function's own golden
-# vector, so each case is a real framed message rather than synthetic bytes.
+# Exercised once per decode function, corrupting bytes this module's own encoder just produced
+# from the JSON fixtures — no checked-in SSZ fixture needed.
+
+def _rollup_input_bytes() -> bytes:
+    return encode_rollup_input(decode_rollup_request(_load_json("getZkRollupProofV1.request.json")))
+
+
+def _aggregation_input_bytes() -> bytes:
+    return encode_aggregation_input(
+        decode_aggregation_request(_load_json("getZkRollupAggregationProofV1.request.json"))
+    )
+
+
+def _rollup_output_bytes() -> bytes:
+    return encode_rollup_output(_rollup_output_from_response(_load_json("getZkRollupProofV1.response.json")))
+
+
+def _aggregation_output_bytes() -> bytes:
+    return encode_aggregation_output(
+        _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
+    )
+
 
 _DECODE_CASES = [
-    pytest.param(
-        decode_rollup_input_ssz,
-        "getZkRollupProofV1.request.ssz.hex",
-        ROLLUP_INPUT_SCHEMA_ID,
-        id="rollup_input",
-    ),
-    pytest.param(
-        decode_aggregation_input_ssz,
-        "getZkRollupAggregationProofV1.request.ssz.hex",
-        ROLLUP_AGGREGATION_INPUT_SCHEMA_ID,
-        id="aggregation_input",
-    ),
-    pytest.param(
-        decode_rollup_output_ssz,
-        "getZkRollupProofV1.response.ssz.hex",
-        ROLLUP_OUTPUT_SCHEMA_ID,
-        id="rollup_output",
-    ),
-    pytest.param(
-        decode_aggregation_output_ssz,
-        "getZkRollupAggregationProofV1.response.ssz.hex",
-        ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
-        id="aggregation_output",
-    ),
+    pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x1001, id="rollup_input"),
+    pytest.param(decode_aggregation_input_ssz, _aggregation_input_bytes, 0x1002, id="aggregation_input"),
+    pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x1801, id="rollup_output"),
+    pytest.param(decode_aggregation_output_ssz, _aggregation_output_bytes, 0x1802, id="aggregation_output"),
 ]
 
 
-@pytest.mark.parametrize("decode_fn, golden_name, schema_id", _DECODE_CASES)
-def test_decode_rejects_wrong_schema_id(decode_fn, golden_name, schema_id) -> None:
-    golden = bytearray(_load_golden_ssz(golden_name))
+@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
+def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> None:
+    encoded = bytearray(encode_bytes())
     # Flip the schema id to a value that is neither the expected id nor any of
     # the other three schema ids in this module.
     wrong_id = (schema_id ^ 0xFFFF).to_bytes(2, "big")
-    golden[0:2] = wrong_id
+    encoded[0:2] = wrong_id
     with pytest.raises(InvalidSsz, match="schema id"):
-        decode_fn(bytes(golden))
+        decode_fn(bytes(encoded))
 
 
-@pytest.mark.parametrize("decode_fn, golden_name, schema_id", _DECODE_CASES)
-def test_decode_rejects_truncated_bytes(decode_fn, golden_name, schema_id) -> None:
-    golden = _load_golden_ssz(golden_name)
+@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
+def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> None:
+    encoded = encode_bytes()
     with pytest.raises(InvalidSsz):
-        decode_fn(golden[: len(golden) - 1])
+        decode_fn(encoded[: len(encoded) - 1])
 
 
-@pytest.mark.parametrize("decode_fn, golden_name, schema_id", _DECODE_CASES)
-def test_decode_rejects_missing_schema_id(decode_fn, golden_name, schema_id) -> None:
-    golden = _load_golden_ssz(golden_name)
+@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
+def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) -> None:
+    encoded = encode_bytes()
     with pytest.raises(InvalidSsz, match="schema id"):
-        decode_fn(golden[:1])
+        decode_fn(encoded[:1])
 
 
-@pytest.mark.parametrize("decode_fn, golden_name, schema_id", _DECODE_CASES)
-def test_decode_rejects_trailing_garbage(decode_fn, golden_name, schema_id) -> None:
+@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
+def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> None:
     # A trailing byte either breaks the outer container's own offset/length
     # bookkeeping (remerkleable raises directly) or decodes as if absorbed and
     # is then caught by the canonical-encoding re-check — either way it must
     # surface as InvalidSsz, not succeed silently.
-    golden = _load_golden_ssz(golden_name)
+    encoded = encode_bytes()
     with pytest.raises(InvalidSsz):
-        decode_fn(golden + b"\x00")
+        decode_fn(encoded + b"\x00")
