@@ -54,6 +54,17 @@ recovery). Derivable duplication is deliberately kept off the wire: no top-level
 request (only `parentShnarf` is sent; the guest recomputes `endShnarf` and
 returns it in the response PI), and no `chainId` on the aggregation request.
 
+## SSZ golden vectors
+
+`10-14-getZkRollupProofV1.*.ssz` and `10-18-getZkRollupAggregationProofV1.*.ssz` are the framed SSZ
+encoding of the same-named JSON fixture (`rollup_ssz.py`'s wire format), used by
+`tests/test_rollup_ssz.py` for byte-stability and by the Zig guest tests in
+`riscv-guests/rollup{,-aggregation}/test/`. Regenerate them after a `rollup_ssz.py` change with:
+
+```bash
+python scripts/generate_rollup_ssz_golden_vectors.py
+```
+
 ## Running the tests locally
 
 `tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the

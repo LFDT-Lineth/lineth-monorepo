@@ -4,8 +4,7 @@ const builtin = @import("builtin");
 const rollup_ssz = @import("rollup_ssz");
 const rollup = @import("rollup.zig");
 
-/// Exit-code taxonomy for guest failures (README.md's exit-code table); `pub` for this guest's own
-/// test suite.
+/// Exit-code taxonomy for guest failures; `pub` for this guest's own test suite.
 pub const guest_errors = @import("guest_errors.zig");
 
 // Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start`
@@ -15,9 +14,9 @@ extern var _heap_start: u8;
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
 // This is the rollup zkVM guest stub: it decodes `RollupProofPrivateInput`, maps it to
-// `RollupOutput` entirely by echo/sentinel (`rollup.run` — see README.md's field-provenance
-// table), and emits the SSZ output. No proof verification and no chunk/conflation folding happen
-// here; those are the real rollup guest's concern.
+// `RollupOutput` entirely by echo/sentinel (`rollup.run`), and emits the SSZ output. No proof
+// verification and no chunk/conflation folding happen here; those are the real rollup guest's
+// concern.
 
 /// zkVM guest entry. Reads the framed input via `read_input`, runs `runRollupGuest`, and emits the
 /// SSZ output via `write_output`. Exits 0 on success; on failure, exits with

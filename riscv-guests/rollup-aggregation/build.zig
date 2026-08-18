@@ -14,9 +14,8 @@ pub fn build(b: *std.Build) void {
     const gp_name = "rollup_aggregation_guest";
 
     // ── Guest: statically-linked rv64im ELF ───────────────────────────────────────────────────
-    // No zesu dependency and no accelerators beyond the zkVM io-interface (`lineth_accelerators`'s
-    // write_output custom opcode) — this guest runs no EVM and verifies no proof, so it needs
-    // neither Zesu's executor nor its precompile backends.
+    // Two path dependencies: guest_common for the SSZ codec primitives, lineth_accelerators for
+    // the zkVM io-interface (read_input/write_output).
     const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 

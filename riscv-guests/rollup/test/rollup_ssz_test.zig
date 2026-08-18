@@ -1,9 +1,9 @@
 const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
 
-/// The checked-in golden rollup-input vector: `rollup_spec/src/rollup_spec/prover_io/testdata/
-/// 10-14-getZkRollupProofV1.request.ssz` — field values below are read from that fixture's JSON
-/// sibling (`10-14-getZkRollupProofV1.request.json`).
+/// The checked-in golden rollup-input vector. Expected values below are transcribed once from the
+/// fixture and are not re-derived at test time; rollup_spec's own golden-byte test is what proves
+/// these bytes are still what the canonical encoder produces.
 const golden_input = @embedFile("testdata/10-14-getZkRollupProofV1.request.ssz");
 
 fn repeat32(byte: u8) [32]u8 {
@@ -16,7 +16,7 @@ fn repeat20(byte: u8) [20]u8 {
 
 // ── Golden decode ─────────────────────────────────────────────────────────────────────────────
 
-test "decodeInput: golden vector decodes to the fixture's known field values" {
+test "decodeInput: golden vector decodes to its transcribed field values" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();

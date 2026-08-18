@@ -1,24 +1,26 @@
 //! Rollup-aggregation guest business logic: `RollupAggregationProofPrivateInput ->
-//! RollupAggregationOutput`, entirely by echo or sentinel (Readme.md's per-field provenance
-//! table). Every output field is either copied from a defined place in the input, or set to a
-//! fixed, precomputed sentinel constant — nothing is computed (no hashing, no accumulator
-//! folding, no proof verification). This guest exercises the wire format and its own
-//! decode/encode bounds, not the rollup-aggregation's real recursive-proof logic.
+//! RollupAggregationOutput`, entirely by echo or sentinel. Every output field is either copied
+//! from a defined place in the input, or set to a fixed, precomputed sentinel constant — nothing
+//! is computed (no hashing, no accumulator folding, no proof verification). This guest exercises
+//! the wire format and its own decode/encode bounds, not the rollup-aggregation's real
+//! recursive-proof logic.
 
 const std = @import("std");
 const rollup_aggregation_ssz = @import("rollup_aggregation_ssz");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
-// Each is `keccak256("lineth.stub.rollup-aggregation.<fieldCamelCaseName>")`, precomputed;
-// `L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT` (a `u64`) takes the first 8 bytes of its 32-byte hash,
-// big-endian.
+// Each byte array is keccak256 of the tag string on the line above it (u64 sentinels take the
+// first 8 bytes, big-endian). Zig has no comptime keccak available here — the accelerator's
+// keccak is a runtime opcode — so the bytes are precomputed and pinned by test.
+// "lineth.stub.rollup-aggregation.l2L1BridgeTransactionTree"
 pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = .{ 0x09, 0x18, 0x83, 0x61, 0x98, 0x23, 0x9a, 0x5e, 0xdf, 0x09, 0x36, 0xdb, 0x3e, 0x28, 0xa6, 0x4d, 0x5c, 0x4e, 0x19, 0x5f, 0xd7, 0x28, 0xe6, 0xdd, 0xfc, 0x35, 0x44, 0xfc, 0x95, 0x00, 0x8a, 0xb3 };
+// "lineth.stub.rollup-aggregation.filteredAddressesHash"
 pub const FILTERED_ADDRESSES_HASH: [32]u8 = .{ 0x63, 0xd4, 0x0d, 0x3e, 0xa3, 0x87, 0x06, 0x50, 0x27, 0xb3, 0x69, 0xa2, 0x5c, 0xc4, 0x41, 0xdd, 0x76, 0x85, 0xe2, 0xa9, 0xa9, 0xe0, 0xe5, 0x65, 0x56, 0xec, 0x2e, 0x82, 0xbb, 0xe2, 0x27, 0x3c };
+// "lineth.stub.rollup-aggregation.l2MessagingBlocksOffsets" (first 8 bytes)
 pub const L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT: u64 = 0xd18d873fe2a9f192;
 
-/// Runs the rollup-aggregation guest's echo/sentinel mapping over a decoded input (Readme.md's
-/// field-provenance table). Requires at least one `rollup_proofs` element — "first"/"last" source
-/// every per-proof field.
+/// Runs the rollup-aggregation guest's echo/sentinel mapping over a decoded input. Requires at
+/// least one `rollup_proofs` element — "first"/"last" source every per-proof field.
 pub fn run(alloc: std.mem.Allocator, input: rollup_aggregation_ssz.RollupAggregationProofPrivateInput) !rollup_aggregation_ssz.RollupAggregationOutput {
     if (input.rollup_proofs.len == 0) return error.EmptyProofs;
     const first = input.rollup_proofs[0];

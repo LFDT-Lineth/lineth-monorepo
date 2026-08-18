@@ -1,9 +1,5 @@
-//! guest-common — small, generic Zig utilities shared by riscv-guests programs, packaged as a
-//! reusable Zig module (mirrors lineth-accelerators' own build.zig).
-//!
-//! Exposes the `guest_common` module: generic SSZ decode/encode primitives (see src/root.zig's doc
-//! comment). Not itself a guest — no ELF is linked here, so the default `zig build` has nothing to
-//! install; `zig build test` runs this package's own unit tests for the moved primitives.
+//! Builds the `guest_common` module. Not itself a guest — no ELF is linked here, so the default
+//! `zig build` has nothing to install; `zig build test` runs this package's own unit tests.
 
 const std = @import("std");
 const common = @import("build_common");

@@ -1,9 +1,7 @@
-# guest-common — shared Zig utilities package's own lifecycle.
-#
 # Not itself a guest program (no ELF to link) — a plain Zig package the riscv-guests/ guests
-# consume as a path dependency, the same way they consume lineth-accelerators. Still gets its own
-# Makefile with the common compile/test/fetch/clean targets so the top-level Makefile's fan-out
-# (GUESTS) can run its unit tests alongside every guest's own.
+# consume as a path dependency. Still gets its own Makefile with the common
+# compile/test/fetch/clean targets so the top-level Makefile's fan-out (GUESTS) can run its unit
+# tests alongside every guest's own.
 
 .PHONY: fetch test compile clean
 
