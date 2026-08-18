@@ -126,9 +126,9 @@ func main() {
 	printTableHeader()
 
 	passed := 0
-	wroteFailureOutputs := false
+	wroteFailureErrors := false
 	for _, input := range inputs {
-		exitCode, userTime, stdout, stderr := runGuest(guestDir, input.file, *zkcFlags)
+		exitCode, userTime, stderr := runGuest(guestDir, input.file, *zkcFlags)
 		ok := (exitCode == 0) == input.expectedValid
 		if ok {
 			passed++
@@ -138,17 +138,17 @@ func main() {
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, input.expectedValid, exitCode)
 		if !ok {
-			_, _, err := writeFailureOutputs(input.file, stdout, stderr)
+			_, err := writeFailureError(input.file, stderr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "save failure output for %s: %v\n", testName, err)
 			} else {
-				wroteFailureOutputs = true
+				wroteFailureErrors = true
 			}
 		}
 	}
 
-	if wroteFailureOutputs {
-		fmt.Printf("failure output files (.out, .err): %s\n", *sszDir)
+	if wroteFailureErrors {
+		fmt.Printf("failure error files (.err): %s\n", *sszDir)
 	}
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
 	if len(inputs) == 0 {
@@ -367,34 +367,30 @@ func run(w io.Writer, name string, args ...string) error {
 }
 
 // Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (int, time.Duration, []byte, []byte) {
+func runGuest(guestDir, input, zkcFlags string) (int, time.Duration, []byte) {
 	cmd := exec.Command(
 		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
+	var stderr bytes.Buffer
+	cmd.Stdout = io.Discard
 	cmd.Stderr = &stderr
 	cmd.Run()
 	if cmd.ProcessState == nil {
-		return -1, 0, stdout.Bytes(), stderr.Bytes()
+		return -1, 0, stderr.Bytes()
 	}
-	return cmd.ProcessState.ExitCode(), cmd.ProcessState.UserTime(), stdout.Bytes(), stderr.Bytes()
+	return cmd.ProcessState.ExitCode(), cmd.ProcessState.UserTime(), stderr.Bytes()
 }
 
-// Writes the captured stdout and stderr for an unexpected fixture result.
-func writeFailureOutputs(input string, stdout, stderr []byte) (string, string, error) {
+// Writes the captured stderr for an unexpected fixture result.
+func writeFailureError(input string, stderr []byte) (string, error) {
 	basePath := strings.TrimSuffix(input, filepath.Ext(input))
-	stdoutPath := basePath + ".out"
 	stderrPath := basePath + ".err"
-	if err := os.WriteFile(stdoutPath, stdout, 0o644); err != nil {
-		return stdoutPath, stderrPath, err
-	}
 	if err := os.WriteFile(stderrPath, stderr, 0o644); err != nil {
-		return stdoutPath, stderrPath, err
+		return stderrPath, err
 	}
-	return stdoutPath, stderrPath, nil
+	return stderrPath, nil
 }
 
 // Escapes table cells.
