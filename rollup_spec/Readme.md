@@ -137,7 +137,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `endL1L2BridgeRollingHashMessageNumber` | Message number corresponding to `endL1L2BridgeRollingHash` |
 | `dynamicChainConfigHash` | `keccak256(uint256_be(chainID) ‖ coinBase ‖ L2MessageServiceContract ‖ uint256_be(baseFee))`, where integer fields are 32-byte big-endian values and addresses are canonical 20-byte values. `baseFee` is part of the dynamic chain configuration; a base-fee update is therefore a configuration update and a proof-range boundary. |
 | `parentFtxRollingHash` | Forced-transaction rolling hash at the start of this range |
-| `parentProcessedFtxNumber` | Sequence number of the last forced transaction handled before this range; enables L1 continuity verification at finalization (§6.7) |
+| `parentFtxNumber` | Sequence number of the last forced transaction handled before this range; enables L1 continuity verification at finalization (§6.7) |
 | `endFtxRollingHash` | Forced-transaction rolling hash at the end of this range |
 | `endProcessedFtxNumber` | Sequence number of the last forced transaction handled in this range |
 | `filteredAddressesHash` | keccak256 of the ordered list of addresses whose forced transactions were refused in this range; each entry is either the recovered sender (`fromAddress = recover_sender(signedTxRlp, chainID)`) if refused due to a sanctioned sender, or the recipient (`toAddress`) if refused due to a sanctioned recipient; `keccak256([])` if none |
@@ -192,7 +192,7 @@ The **l2-execution proof's 16-field PI** (§2.1) is *input* to this guest (priva
 | `endL1L2BridgeRollingHashMessageNumber` | From `PI_Eₙ` |
 | `dynamicChainConfigHash` | Shared value; step 7 asserts equality across all N |
 | `parentFtxRollingHash` | From `PI_E₁` |
-| `parentProcessedFtxNumber` | From `PI_E₁` |
+| `parentFtxNumber` | From `PI_E₁` |
 | `endFtxRollingHash` | From `PI_Eₙ` |
 | `endProcessedFtxNumber` | From `PI_Eₙ` |
 | `filteredAddressesHash` | `keccak256(addrs_E₁ ‖ … ‖ addrs_Eₙ)` (step 8) |
@@ -275,11 +275,11 @@ For each conflation `c ∈ [1, N]` in order, perform the per-conflation compress
    assert_eq!(PI_Eᵢ.endL1L2BridgeRollingHashMessageNumber,     PI_Eᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
    assert_eq!(PI_Eᵢ.dynamicChainConfigHash,                    PI_Eᵢ₊₁.dynamicChainConfigHash)
    assert_eq!(PI_Eᵢ.endFtxRollingHash,                         PI_Eᵢ₊₁.parentFtxRollingHash)
-   assert_eq!(PI_Eᵢ.endProcessedFtxNumber,                     PI_Eᵢ₊₁.parentProcessedFtxNumber)
+   assert_eq!(PI_Eᵢ.endProcessedFtxNumber,                     PI_Eᵢ₊₁.parentFtxNumber)
    ```
    These checks are agnostic to chunk boundaries — they apply uniformly whether or not a conflation pair happens to share a chunk.
 
-8. **Collect forced-transaction outputs and emit PI.** For each `e ∈ [1, N]`, receive `addrs_e` as a private witness and assert `keccak256(addrs_e) == PI_E_e.filteredAddressesHash`. Concatenate all N lists in order and output `filteredAddressesHash = keccak256(addrs_1 ‖ … ‖ addrs_N)`. Take `parentFtxRollingHash` and `parentProcessedFtxNumber` from `PI_E₁` and `endFtxRollingHash` / `endProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the 20-field public-input tuple covering the entire `N`-conflation, `T`-chunk range (field 20, `programVks`, is assembled in step 9).
+8. **Collect forced-transaction outputs and emit PI.** For each `e ∈ [1, N]`, receive `addrs_e` as a private witness and assert `keccak256(addrs_e) == PI_E_e.filteredAddressesHash`. Concatenate all N lists in order and output `filteredAddressesHash = keccak256(addrs_1 ‖ … ‖ addrs_N)`. Take `parentFtxRollingHash` and `parentFtxNumber` from `PI_E₁` and `endFtxRollingHash` / `endProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the 20-field public-input tuple covering the entire `N`-conflation, `T`-chunk range (field 20, `programVks`, is assembled in step 9).
 
 9. **Emit `programVks`.** Canonicalize the recursively-verified `programVk_e` for `e ∈ [1, N]` (step 4) into field 20, `programVks`: deduplicate and sort ascending by byte value. The verifying guest emits these because a guest cannot attest its own VK (§2.1); the set is consumed by L1's approved-VK check (§2.6, §5).
 
@@ -314,7 +314,7 @@ The same 20-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
    assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHashMessageNumber,  PI_Bᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
    assert_eq!(PI_Bᵢ.dynamicChainConfigHash,                 PI_Bᵢ₊₁.dynamicChainConfigHash)
    assert_eq!(PI_Bᵢ.endFtxRollingHash,                      PI_Bᵢ₊₁.parentFtxRollingHash)
-   assert_eq!(PI_Bᵢ.endProcessedFtxNumber,                  PI_Bᵢ₊₁.parentProcessedFtxNumber)
+   assert_eq!(PI_Bᵢ.endProcessedFtxNumber,                  PI_Bᵢ₊₁.parentFtxNumber)
    ```
    The dataRollingHash and offset are checked as a pair (§3.1) — this excludes both byte gaps and overlaps at the seam, neither of which KZG or block-hash continuity alone can detect. Execution continuity (`endBlockHash`/`parentBlockHash`) is now explicit rather than folded into the DA accumulator, since a shared chunk's dataRollingHash fold no longer determines "the last block completing here" on its own.
 
@@ -328,7 +328,7 @@ The same 20-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 5. **Merge `programVks`.** Take the set union of each `PI_Bᵢ.programVks` (§2.2) with each rollup proof's own `programVk_i` across `i ∈ [1, M]`, and canonicalize (deduplicate, sort ascending by byte value) into field 16, `programVks`. The verifying guest emits the `programVk_i` because a guest cannot attest its own VK; the merged set is consumed by L1's approved-VK check (§2.6, §5).
 
-6. **Output** the combined public inputs covering the full range: take `parentDataRollingHash`, `startOffset`, `parentBlockHash`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentProcessedFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `endDataRollingHash`, `endOffset`, and `endBlockHash` from `PI_Bₘ`; use the merged Merkle commitment from step 3, merged filtered-address hash from step 4, and `programVks` from step 5. The first proof's start position (`parentDataRollingHash`/`startOffset`) and the last proof's end position (`endDataRollingHash`/`endOffset`/`endBlockHash`) are exposed here without any internal check — only step 2's `assert_eq!` block checks continuity between *adjacent* rollup proofs; these two boundary values of the whole aggregated range are simply forwarded, and L1 checks them against its own committed state at finalization (§5). Alongside the PI tuple the guest returns the merged L2→L1 root list (step 3) and filtered-address list (step 4) as revealed preimages; with the prover-attached `proof` these form the L1 `FinalizationSubmission` (§5).
+6. **Output** the combined public inputs covering the full range: take `parentDataRollingHash`, `startOffset`, `parentBlockHash`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `endDataRollingHash`, `endOffset`, and `endBlockHash` from `PI_Bₘ`; use the merged Merkle commitment from step 3, merged filtered-address hash from step 4, and `programVks` from step 5. The first proof's start position (`parentDataRollingHash`/`startOffset`) and the last proof's end position (`endDataRollingHash`/`endOffset`/`endBlockHash`) are exposed here without any internal check — only step 2's `assert_eq!` block checks continuity between *adjacent* rollup proofs; these two boundary values of the whole aggregated range are simply forwarded, and L1 checks them against its own committed state at finalization (§5). Alongside the PI tuple the guest returns the merged L2→L1 root list (step 3) and filtered-address list (step 4) as revealed preimages; with the prover-attached `proof` these form the L1 `FinalizationSubmission` (§5).
 
 The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable: it is the `FinalizationSubmission` — the 20-field PI, the prover-attached `proof`, and the revealed `l2L1Roots` / `filteredAddresses` (and `l2MessagingBlocksOffsets`) the L1 contract consumes as calldata (§5). No separate emulation request file or prover invocation exists.
 
@@ -349,7 +349,7 @@ The rollup-aggregation proof's root exposes twenty values to the L1 contract:
 | 7 | `endL1L2BridgeRollingHashMessageNumber` |
 | 8 | `dynamicChainConfigHash` |
 | 9 | `parentFtxRollingHash` |
-| 10 | `parentProcessedFtxNumber` |
+| 10 | `parentFtxNumber` |
 | 11 | `endFtxRollingHash` |
 | 12 | `endProcessedFtxNumber` |
 | 13 | `filteredAddressesHash` |
@@ -540,7 +540,7 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert `parentBlockHash == currentFinalizedLastBlockHash` (execution rooting — explicit now that block-hash continuity no longer folds into the DA accumulator; see §3.1)
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
    - Assert `endL1L2BridgeRollingHash == l1RollingHash[endL1L2BridgeRollingHashMessageNumber]` (deposit bridge authenticity — the proof's claimed end-of-range rolling hash must match L1's authoritative chain)
-   - Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentProcessedFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — these two values together describe the forced-transaction state at the start of this finalization range and must match what was stored at the end of the previous one; this is the FTX analogue of the `_computeLastFinalizedState` check that covers rolling hash, message number, and timestamp)
+   - Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — these two values together describe the forced-transaction state at the start of this finalization range and must match what was stored at the end of the previous one; this is the FTX analogue of the `_computeLastFinalizedState` check that covers rolling hash, message number, and timestamp)
    - Assert the proof's `dynamicChainConfigHash` matches what the verifier was deployed with: `pi.dynamicChainConfigHash == IPlonkVerifier(verifier).getChainConfiguration()`. The verifier holds this digest as an immutable `bytes32` (`CHAIN_CONFIGURATION`); its preimage — the four named `ChainConfigurationParameter` entries `chainId`, `baseFee`, `coinbase`, `l2MessageServiceAddress` — is bound at verifier deploy time and emitted in the `ChainConfigurationSet` event, so the values are auditable on-chain via the deploy log + the verifier's verified constructor args. Changing any of the four values means deploying a new verifier and re-pointing the rollup at it via `setVerifierAddress`; there is no separate L1 storage slot for the chain-config preimage that could fall out of sync.
    - Assert every VK in the proof's combined `programVks` set is a member of `approvedVks` (guest-program anchoring — an order-independent set-membership test that rejects any finalization built from an unapproved exec or rollup guest binary; the two are not distinguished on-chain); revert otherwise. See §2.6 *Guest Program Anchoring (ProgramVK)* for the mechanism and list-management policy.
    - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
@@ -743,12 +743,12 @@ Five FTX fields are part of the l2-execution proof public input tuple (see §2.1
 | Field | Description |
 |---|---|
 | `parentFtxRollingHash` | FTX rolling hash at the start of this range |
-| `parentProcessedFtxNumber` | Sequence number of the last FTX handled before this range |
+| `parentFtxNumber` | Sequence number of the last FTX handled before this range |
 | `endFtxRollingHash` | FTX rolling hash after all FTXs handled in this range |
 | `endProcessedFtxNumber` | Sequence number of the last FTX handled in this range |
 | `filteredAddressesHash` | keccak256 of the ordered list of addresses whose FTX was refused in this range; each entry is the recovered sender (`fromAddress`) for refused-from or the decoded recipient (`toAddress`) for refused-to |
 
-These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` and `endProcessedFtxNumber == parentProcessedFtxNumber` across consecutive l2-execution proofs (and implicitly across blob boundaries within a multi-blob rollup proof); the rollup-aggregation proof adds the same assertions across consecutive rollup proofs; the final public inputs expose all five (fields 9–13 in §2.4).
+These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` and `endProcessedFtxNumber == parentFtxNumber` across consecutive l2-execution proofs (and implicitly across blob boundaries within a multi-blob rollup proof); the rollup-aggregation proof adds the same assertions across consecutive rollup proofs; the final public inputs expose all five (fields 9–13 in §2.4).
 
 ### 6.5 l2-execution Statement
 
@@ -782,16 +782,16 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 
 ### 6.6 Propagation Through the Proof Tree
 
-- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` and `PI_Eᵢ.endProcessedFtxNumber == PI_Eᵢ₊₁.parentProcessedFtxNumber` across consecutive l2-execution proofs (§2.2 step 7); collects and concatenates filtered address lists into a single `filteredAddressesHash` (§2.2 step 8).
-- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` and `assert_eq!(PI_Bᵢ.endProcessedFtxNumber, PI_Bᵢ₊₁.parentProcessedFtxNumber)` to the continuity block (§2.3 step 2); merges filtered address lists across all `M` rollup proofs by concatenation and rehashing (§2.3 step 4).
-- **Final public inputs:** exposes `parentFtxRollingHash`, `parentProcessedFtxNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `filteredAddressesHash` as fields 9–13 (§2.4).
+- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` and `PI_Eᵢ.endProcessedFtxNumber == PI_Eᵢ₊₁.parentFtxNumber` across consecutive l2-execution proofs (§2.2 step 7); collects and concatenates filtered address lists into a single `filteredAddressesHash` (§2.2 step 8).
+- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` and `assert_eq!(PI_Bᵢ.endProcessedFtxNumber, PI_Bᵢ₊₁.parentFtxNumber)` to the continuity block (§2.3 step 2); merges filtered address lists across all `M` rollup proofs by concatenation and rehashing (§2.3 step 4).
+- **Final public inputs:** exposes `parentFtxRollingHash`, `parentFtxNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `filteredAddressesHash` as fields 9–13 (§2.4).
 
 ### 6.7 L1 Contract Changes
 
 **New storage slots:** `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`.
 
 **On finalization, add:**
-- Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentProcessedFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — verifies that this proof continues exactly from the forced-transaction state last stored on L1, analogous to `_computeLastFinalizedState` which commits rolling hash, message number, and timestamp into a single hash for the equivalent check on the L1→L2 bridge).
+- Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — verifies that this proof continues exactly from the forced-transaction state last stored on L1, analogous to `_computeLastFinalizedState` which commits rolling hash, message number, and timestamp into a single hash for the equivalent check on the L1→L2 bridge).
 - Assert `endFtxRollingHash == ftxRollingHash[endProcessedFtxNumber]` (authenticity against L1-stored per-FTX hash).
 - Verify `keccak256(submittedFilteredAddresses) == filteredAddressesHash`; for each entry, assert the address is on the sanction list — revert if any is absent — then emit `ForcedTransactionRefused(address)` per entry.
 - Deadline check: revert if any FTX K with `ftxDeadline[K] <= endBlockNumber` has K > `endProcessedFtxNumber`.

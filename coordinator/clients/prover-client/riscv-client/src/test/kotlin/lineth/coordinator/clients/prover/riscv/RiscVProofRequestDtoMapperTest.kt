@@ -49,7 +49,7 @@ class RiscVProofRequestDtoMapperTest {
         guestProgramId = guestProgramId,
         proofRequest = L2ExecutionProofRequestParamsDto(
           parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-          parentLastProcessedFtxNumber = request.parentFtxNumber.toLong(),
+          parentFtxNumber = request.parentFtxNumber.toLong(),
           payloads = listOf(
             PayloadInputDto(
               statelessInput = StatelessInputDto(

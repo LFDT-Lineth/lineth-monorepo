@@ -45,7 +45,7 @@ internal class L2ExecutionProofRequestDtoMapper(
       guestProgramId = guestProgramId,
       proofRequest = L2ExecutionProofRequestParamsDto(
         parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-        parentLastProcessedFtxNumber = request.parentFtxNumber.toLong(),
+        parentFtxNumber = request.parentFtxNumber.toLong(),
         chainConfig = ChainConfigDto(
           l2MessageServiceAddress = l2MessageServiceAddress,
           coinbase = coinbase,
