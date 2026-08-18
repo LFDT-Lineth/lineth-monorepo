@@ -50,7 +50,7 @@ func TestRunZKCExamples(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to compile binary constraints: %v", err)
 			}
-			inputs, _, err := parseTestCase(tc, binF)
+			inputs, _, err := parseTestCase(tc, binF, !testing.Short())
 			if err != nil {
 				t.Fatalf("failed to parse test case: %v", err)
 			}
