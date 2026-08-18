@@ -2,7 +2,16 @@ const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
 const rollup = @import("rollup");
 
-const golden_input = @embedFile("testdata/10-14-getZkRollupProofV1.request.ssz");
+const golden_input_hex = @embedFile("testdata/10-14-getZkRollupProofV1.request.ssz.hex");
+
+fn hexToOwnedBytes(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
+    const stripped = if (hex.len >= 2 and hex[0] == '0' and (hex[1] == 'x' or hex[1] == 'X')) hex[2..] else hex;
+    const trimmed = std.mem.trimEnd(u8, stripped, "\r\n");
+    if (trimmed.len % 2 != 0) return error.OddHexLength;
+    const out = try allocator.alloc(u8, trimmed.len / 2);
+    _ = try std.fmt.hexToBytes(out, trimmed);
+    return out;
+}
 
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
@@ -22,6 +31,7 @@ test "run: copied fields echo the mapped source (first/last l2_execution_proofs,
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     const input = try rollup_ssz.decodeInput(alloc, golden_input);
     const out = try rollup.run(alloc, input);
     const pi = out.public_inputs;
@@ -65,6 +75,7 @@ test "run: sentinel fields equal their pinned constants exactly" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     const input = try rollup_ssz.decodeInput(alloc, golden_input);
     const out = try rollup.run(alloc, input);
     const pi = out.public_inputs;

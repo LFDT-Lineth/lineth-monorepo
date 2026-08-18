@@ -56,10 +56,13 @@ returns it in the response PI), and no `chainId` on the aggregation request.
 
 ## SSZ golden vectors
 
-`10-14-getZkRollupProofV1.*.ssz` and `10-18-getZkRollupAggregationProofV1.*.ssz` are the framed SSZ
-encoding of the same-named JSON fixture (`rollup_ssz.py`'s wire format), used by
-`tests/test_rollup_ssz.py` for byte-stability and by the Zig guest tests in
-`riscv-guests/rollup{,-aggregation}/test/`. Regenerate them after a `rollup_ssz.py` change with:
+`10-14-getZkRollupProofV1.*.ssz.hex` and `10-18-getZkRollupAggregationProofV1.*.ssz.hex` are the
+framed SSZ encoding of the same-named JSON fixture (`rollup_ssz.py`'s wire format), stored as
+0x-prefixed hex text rather than raw bytes so a format change shows as a reviewable diff instead of
+"binary files differ". Used by `tests/test_rollup_ssz.py` for byte-stability and by the Zig guest
+tests in `riscv-guests/rollup{,-aggregation}/test/` (the request vectors are also `make exec`'s
+default guest input there — `elf_to_json_gen` reads any non-`.ssz`-suffixed `@path` file as hex
+directly). Regenerate them after a `rollup_ssz.py` change with:
 
 ```bash
 python scripts/generate_rollup_ssz_golden_vectors.py

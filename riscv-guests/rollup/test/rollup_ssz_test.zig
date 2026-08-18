@@ -1,10 +1,21 @@
 const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
 
-/// The checked-in golden rollup-input vector. Expected values below are transcribed once from the
-/// fixture and are not re-derived at test time; rollup_spec's own golden-byte test is what proves
-/// these bytes are still what the canonical encoder produces.
-const golden_input = @embedFile("testdata/10-14-getZkRollupProofV1.request.ssz");
+/// The checked-in golden rollup-input vector, as 0x-prefixed hex text (reviewable in a diff,
+/// unlike a raw binary blob) — the same format `make exec`'s ELF->JSON tooling accepts natively
+/// for a non-`.ssz`-suffixed `@path` input. Expected values in the tests below are transcribed
+/// once from the fixture and are not re-derived at test time; rollup_spec's own golden-byte test
+/// is what proves these bytes are still what the canonical encoder produces.
+const golden_input_hex = @embedFile("testdata/10-14-getZkRollupProofV1.request.ssz.hex");
+
+fn hexToOwnedBytes(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
+    const stripped = if (hex.len >= 2 and hex[0] == '0' and (hex[1] == 'x' or hex[1] == 'X')) hex[2..] else hex;
+    const trimmed = std.mem.trimEnd(u8, stripped, "\r\n");
+    if (trimmed.len % 2 != 0) return error.OddHexLength;
+    const out = try allocator.alloc(u8, trimmed.len / 2);
+    _ = try std.fmt.hexToBytes(out, trimmed);
+    return out;
+}
 
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
@@ -21,6 +32,7 @@ test "decodeInput: golden vector decodes to its transcribed field values" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     const v = try rollup_ssz.decodeInput(alloc, golden_input);
 
     try std.testing.expectEqualSlices(u8, &repeat32(0x47), &v.parent_data_rolling_hash);
@@ -150,6 +162,7 @@ test "decodeInput: rejects the wrong schema id" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     corrupted[0] = 0x18;
     corrupted[1] = 0x01; // the output schema id, on input bytes
@@ -161,6 +174,7 @@ test "decodeInput: rejects a frame truncated below the 2-byte schema id" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     try std.testing.expectError(error.MalformedFrame, rollup_ssz.decodeInput(alloc, golden_input[0..1]));
 }
 
@@ -169,6 +183,7 @@ test "decodeInput: rejects a body shorter than the fixed head" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeInput(alloc, golden_input[0 .. 2 + 10]));
 }
 
@@ -177,6 +192,7 @@ test "decodeInput: rejects a misaligned first offset (conflations)" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     // The conflations offset sits at absolute byte 2 (schema) + 48 (parent_data_rolling_hash(32) +
     // start_offset(8) + chain_id(8)) = 50; the canonical value is the 72-byte fixed head size.
@@ -189,6 +205,7 @@ test "decodeInput: rejects an out-of-order offset pair (l2_execution_proofs regi
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     // Force off_prefix (absolute byte 2 + 60) below off_proofs (absolute byte 2 + 56), an
     // out-of-order pair the fixed-head monotonicity guard must reject.
@@ -202,6 +219,7 @@ test "decodeInput: accepts an emptied l2_execution_proofs region (decode succeed
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     // Collapse the l2_execution_proofs region to empty by setting the next field's offset
     // (opaque_prefix_bytes, absolute byte 2 + 60) equal to its own start offset (absolute byte

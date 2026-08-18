@@ -6,7 +6,7 @@ rely on:
   - round-trip fidelity: the SSZ codec preserves every field of the logical
     request/output dataclasses, and (for outputs) the JSON the coordinator
     would see back out;
-  - golden stability: encoding the fixtures reproduces the checked-in `.ssz`
+  - golden stability: encoding the fixtures reproduces the checked-in `.ssz.hex`
     bytes byte-for-byte, so an implementation in another language can assert
     its own encoder against the same vectors;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
@@ -67,7 +67,9 @@ def _load_json(name: str) -> dict:
 
 
 def _load_golden_ssz(name: str) -> bytes:
-    return _fixture(name).read_bytes()
+    """`name` is the `.ssz.hex` fixture's filename; the checked-in file is 0x-prefixed hex text,
+    reviewable in a diff, rather than a raw binary blob."""
+    return _hexbytes(_fixture(name).read_text().strip())
 
 
 def _hexbytes(value: str) -> bytes:
@@ -153,7 +155,7 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
 
 def test_rollup_input_matches_golden_vector() -> None:
     original = decode_rollup_request(_load_json("getZkRollupProofV1.request.json"))
-    assert encode_rollup_input(original) == _load_golden_ssz("getZkRollupProofV1.request.ssz")
+    assert encode_rollup_input(original) == _load_golden_ssz("getZkRollupProofV1.request.ssz.hex")
 
 
 def test_aggregation_input_matches_golden_vector() -> None:
@@ -161,7 +163,7 @@ def test_aggregation_input_matches_golden_vector() -> None:
         _load_json("getZkRollupAggregationProofV1.request.json")
     )
     assert encode_aggregation_input(original) == _load_golden_ssz(
-        "getZkRollupAggregationProofV1.request.ssz"
+        "getZkRollupAggregationProofV1.request.ssz.hex"
     )
 
 
@@ -170,7 +172,7 @@ def test_rollup_output_matches_golden_vector() -> None:
         _load_json("getZkRollupProofV1.response.json")
     )
     assert encode_rollup_output(original_output) == _load_golden_ssz(
-        "getZkRollupProofV1.response.ssz"
+        "getZkRollupProofV1.response.ssz.hex"
     )
 
 
@@ -179,7 +181,7 @@ def test_aggregation_output_matches_golden_vector() -> None:
         _load_json("getZkRollupAggregationProofV1.response.json")
     )
     assert encode_aggregation_output(original_output) == _load_golden_ssz(
-        "getZkRollupAggregationProofV1.response.ssz"
+        "getZkRollupAggregationProofV1.response.ssz.hex"
     )
 
 
@@ -193,25 +195,25 @@ def test_aggregation_output_matches_golden_vector() -> None:
 _DECODE_CASES = [
     pytest.param(
         decode_rollup_input_ssz,
-        "getZkRollupProofV1.request.ssz",
+        "getZkRollupProofV1.request.ssz.hex",
         ROLLUP_INPUT_SCHEMA_ID,
         id="rollup_input",
     ),
     pytest.param(
         decode_aggregation_input_ssz,
-        "getZkRollupAggregationProofV1.request.ssz",
+        "getZkRollupAggregationProofV1.request.ssz.hex",
         ROLLUP_AGGREGATION_INPUT_SCHEMA_ID,
         id="aggregation_input",
     ),
     pytest.param(
         decode_rollup_output_ssz,
-        "getZkRollupProofV1.response.ssz",
+        "getZkRollupProofV1.response.ssz.hex",
         ROLLUP_OUTPUT_SCHEMA_ID,
         id="rollup_output",
     ),
     pytest.param(
         decode_aggregation_output_ssz,
-        "getZkRollupAggregationProofV1.response.ssz",
+        "getZkRollupAggregationProofV1.response.ssz.hex",
         ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
         id="aggregation_output",
     ),

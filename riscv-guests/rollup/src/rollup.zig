@@ -8,19 +8,34 @@ const std = @import("std");
 const rollup_ssz = @import("rollup_ssz");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
-// Each byte array is keccak256 of the tag string on the line above it (u64 sentinels take the
-// first 8 bytes, big-endian). Zig has no comptime keccak available here — the accelerator's
-// keccak is a runtime opcode — so the bytes are precomputed and pinned by test.
-// "lineth.stub.rollup.l2L1BridgeTransactionTree"
-pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = .{ 0xbc, 0x43, 0x6f, 0xcf, 0xbb, 0x17, 0x58, 0x35, 0xd1, 0x2e, 0x0a, 0x12, 0xf4, 0x53, 0x4f, 0x60, 0xcd, 0x92, 0xdb, 0xd4, 0xba, 0xbf, 0x87, 0xdb, 0x23, 0x39, 0x27, 0x7a, 0x72, 0xec, 0xd2, 0x2a };
-// "lineth.stub.rollup.endDataRollingHash"
-pub const END_DATA_ROLLING_HASH: [32]u8 = .{ 0x1f, 0xe6, 0x17, 0xc1, 0x0b, 0x3b, 0xfc, 0x97, 0xfd, 0x6d, 0x00, 0x90, 0xc6, 0x08, 0xdf, 0x47, 0xde, 0x54, 0x4a, 0x4b, 0x7d, 0x4f, 0x63, 0x79, 0x30, 0x0b, 0xd9, 0x61, 0x67, 0xda, 0x2a, 0xda };
-// "lineth.stub.rollup.filteredAddressesHash"
-pub const FILTERED_ADDRESSES_HASH: [32]u8 = .{ 0x8f, 0xa4, 0xb0, 0x0e, 0x95, 0xcd, 0x07, 0x84, 0xa4, 0x9f, 0x00, 0xef, 0xe0, 0xd1, 0x2f, 0x67, 0x71, 0x5a, 0x99, 0xa6, 0xcf, 0x54, 0xac, 0x4c, 0xa5, 0x60, 0x6e, 0xbc, 0x4d, 0x0a, 0x42, 0xba };
-// "lineth.stub.rollup.endOffset" (first 8 bytes)
-pub const END_OFFSET: u64 = 0x1ab5956f53caf2ea;
-// "lineth.stub.rollup.l2L1Roots"
-pub const L2_L1_ROOTS_ELEMENT: [32]u8 = .{ 0x45, 0xc2, 0x57, 0x58, 0x65, 0x97, 0x87, 0xf9, 0x68, 0x43, 0xb2, 0x17, 0x1d, 0xd2, 0x09, 0x1c, 0x96, 0x4e, 0xe7, 0xfe, 0x11, 0x51, 0x8f, 0xab, 0xf1, 0xa4, 0xc9, 0x44, 0xb4, 0xf7, 0x5e, 0x0e };
+// Each value is keccak256 of the tag string next to it, as a single hex string rather than a byte
+// array — pasteable into any external keccak calculator to re-derive and check. u64 sentinels take
+// the first 8 bytes, big-endian. Zig has no comptime keccak here (the accelerator's keccak is a
+// runtime opcode), so the hex is precomputed; `test_stub_sentinels.py` in rollup_spec independently
+// recomputes keccak256 of each tag string and asserts it matches the hex below.
+
+fn hexToArray32(comptime hex: *const [64]u8) [32]u8 {
+    var out: [32]u8 = undefined;
+    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
+    return out;
+}
+
+fn hexToU64(comptime hex: *const [16]u8) u64 {
+    var out: [8]u8 = undefined;
+    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
+    return std.mem.readInt(u64, &out, .big);
+}
+
+// tag: "lineth.stub.rollup.l2L1BridgeTransactionTree"
+pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = hexToArray32("bc436fcfbb175835d12e0a12f4534f60cd92dbd4babf87db2339277a72ecd22a");
+// tag: "lineth.stub.rollup.endDataRollingHash"
+pub const END_DATA_ROLLING_HASH: [32]u8 = hexToArray32("1fe617c10b3bfc97fd6d0090c608df47de544a4b7d4f6379300bd96167da2ada");
+// tag: "lineth.stub.rollup.filteredAddressesHash"
+pub const FILTERED_ADDRESSES_HASH: [32]u8 = hexToArray32("8fa4b00e95cd0784a49f00efe0d12f67715a99a6cf54ac4ca5606ebc4d0a42ba");
+// tag: "lineth.stub.rollup.endOffset" (first 8 bytes)
+pub const END_OFFSET: u64 = hexToU64("1ab5956f53caf2ea");
+// tag: "lineth.stub.rollup.l2L1Roots"
+pub const L2_L1_ROOTS_ELEMENT: [32]u8 = hexToArray32("45c25758659787f96843b2171dd2091c964ee7fe11518fabf1a4c944b4f75e0e");
 
 /// Runs the rollup guest's echo/sentinel mapping over a decoded input. Requires at least one
 /// `l2_execution_proofs` element — "first"/"last" source every per-proof field.

@@ -9,15 +9,30 @@ const std = @import("std");
 const rollup_aggregation_ssz = @import("rollup_aggregation_ssz");
 
 // ── Sentinels ─────────────────────────────────────────────────────────────────────────────────
-// Each byte array is keccak256 of the tag string on the line above it (u64 sentinels take the
-// first 8 bytes, big-endian). Zig has no comptime keccak available here — the accelerator's
-// keccak is a runtime opcode — so the bytes are precomputed and pinned by test.
-// "lineth.stub.rollup-aggregation.l2L1BridgeTransactionTree"
-pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = .{ 0x09, 0x18, 0x83, 0x61, 0x98, 0x23, 0x9a, 0x5e, 0xdf, 0x09, 0x36, 0xdb, 0x3e, 0x28, 0xa6, 0x4d, 0x5c, 0x4e, 0x19, 0x5f, 0xd7, 0x28, 0xe6, 0xdd, 0xfc, 0x35, 0x44, 0xfc, 0x95, 0x00, 0x8a, 0xb3 };
-// "lineth.stub.rollup-aggregation.filteredAddressesHash"
-pub const FILTERED_ADDRESSES_HASH: [32]u8 = .{ 0x63, 0xd4, 0x0d, 0x3e, 0xa3, 0x87, 0x06, 0x50, 0x27, 0xb3, 0x69, 0xa2, 0x5c, 0xc4, 0x41, 0xdd, 0x76, 0x85, 0xe2, 0xa9, 0xa9, 0xe0, 0xe5, 0x65, 0x56, 0xec, 0x2e, 0x82, 0xbb, 0xe2, 0x27, 0x3c };
-// "lineth.stub.rollup-aggregation.l2MessagingBlocksOffsets" (first 8 bytes)
-pub const L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT: u64 = 0xd18d873fe2a9f192;
+// Each value is keccak256 of the tag string next to it, as a single hex string rather than a byte
+// array — pasteable into any external keccak calculator to re-derive and check. u64 sentinels take
+// the first 8 bytes, big-endian. Zig has no comptime keccak here (the accelerator's keccak is a
+// runtime opcode), so the hex is precomputed; `test_stub_sentinels.py` in rollup_spec independently
+// recomputes keccak256 of each tag string and asserts it matches the hex below.
+
+fn hexToArray32(comptime hex: *const [64]u8) [32]u8 {
+    var out: [32]u8 = undefined;
+    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
+    return out;
+}
+
+fn hexToU64(comptime hex: *const [16]u8) u64 {
+    var out: [8]u8 = undefined;
+    _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
+    return std.mem.readInt(u64, &out, .big);
+}
+
+// tag: "lineth.stub.rollup-aggregation.l2L1BridgeTransactionTree"
+pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = hexToArray32("0918836198239a5edf0936db3e28a64d5c4e195fd728e6ddfc3544fc95008ab3");
+// tag: "lineth.stub.rollup-aggregation.filteredAddressesHash"
+pub const FILTERED_ADDRESSES_HASH: [32]u8 = hexToArray32("63d40d3ea387065027b369a25cc441dd7685e2a9a9e0e56556ec2e82bbe2273c");
+// tag: "lineth.stub.rollup-aggregation.l2MessagingBlocksOffsets" (first 8 bytes)
+pub const L2_MESSAGING_BLOCKS_OFFSETS_ELEMENT: u64 = hexToU64("d18d873fe2a9f192");
 
 /// Runs the rollup-aggregation guest's echo/sentinel mapping over a decoded input. Requires at
 /// least one `rollup_proofs` element — "first"/"last" source every per-proof field.

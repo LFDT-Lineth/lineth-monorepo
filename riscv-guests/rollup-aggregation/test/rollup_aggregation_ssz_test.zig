@@ -1,10 +1,21 @@
 const std = @import("std");
 const rollup_aggregation_ssz = @import("rollup_aggregation_ssz");
 
-/// The checked-in golden aggregation-input vector. Expected values below are transcribed once
-/// from the fixture and are not re-derived at test time; rollup_spec's own golden-byte test is
-/// what proves these bytes are still what the canonical encoder produces.
-const golden_input = @embedFile("testdata/10-18-getZkRollupAggregationProofV1.request.ssz");
+/// The checked-in golden aggregation-input vector, as 0x-prefixed hex text (reviewable in a diff,
+/// unlike a raw binary blob) — the same format `make exec`'s ELF->JSON tooling accepts natively
+/// for a non-`.ssz`-suffixed `@path` input. Expected values in the tests below are transcribed
+/// once from the fixture and are not re-derived at test time; rollup_spec's own golden-byte test
+/// is what proves these bytes are still what the canonical encoder produces.
+const golden_input_hex = @embedFile("testdata/10-18-getZkRollupAggregationProofV1.request.ssz.hex");
+
+fn hexToOwnedBytes(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
+    const stripped = if (hex.len >= 2 and hex[0] == '0' and (hex[1] == 'x' or hex[1] == 'X')) hex[2..] else hex;
+    const trimmed = std.mem.trimEnd(u8, stripped, "\r\n");
+    if (trimmed.len % 2 != 0) return error.OddHexLength;
+    const out = try allocator.alloc(u8, trimmed.len / 2);
+    _ = try std.fmt.hexToBytes(out, trimmed);
+    return out;
+}
 
 fn repeat32(byte: u8) [32]u8 {
     return @splat(byte);
@@ -21,6 +32,7 @@ test "decodeInput: golden vector decodes to its transcribed field values" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     const v = try rollup_aggregation_ssz.decodeInput(alloc, golden_input);
     try std.testing.expectEqual(@as(usize, 2), v.rollup_proofs.len);
 
@@ -136,6 +148,7 @@ test "decodeInput: rejects the wrong schema id" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     corrupted[0] = 0x18;
     corrupted[1] = 0x02; // the output schema id, on input bytes
@@ -147,6 +160,7 @@ test "decodeInput: rejects a frame truncated below the 2-byte schema id" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     try std.testing.expectError(error.MalformedFrame, rollup_aggregation_ssz.decodeInput(alloc, golden_input[0..1]));
 }
 
@@ -155,6 +169,7 @@ test "decodeInput: rejects a body shorter than the fixed head" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     try std.testing.expectError(error.InvalidSsz, rollup_aggregation_ssz.decodeInput(alloc, golden_input[0..2]));
 }
 
@@ -163,6 +178,7 @@ test "decodeInput: rejects a misaligned first offset (rollup_proofs)" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
+    const golden_input = try hexToOwnedBytes(alloc, golden_input_hex);
     var corrupted = try alloc.dupe(u8, golden_input);
     // The rollup_proofs offset sits at absolute byte 2 (schema); the canonical value is 4 (the
     // container's own fixed head size — the only field, so this container is entirely variable).

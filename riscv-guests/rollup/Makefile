@@ -27,7 +27,7 @@ NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug — the checked-in golden rollup-input vector.
-INPUT ?= $(MAKEFILE_DIR)test/testdata/10-14-getZkRollupProofV1.request.ssz
+INPUT ?= $(MAKEFILE_DIR)test/testdata/10-14-getZkRollupProofV1.request.ssz.hex
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.

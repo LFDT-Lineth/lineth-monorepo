@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate the checked-in `.ssz` golden vectors for the rollup and
+Generate the checked-in `.ssz.hex` golden vectors for the rollup and
 rollup-aggregation guest programs, one per JSON fixture under
 `prover_io/testdata/`.
 
@@ -12,8 +12,16 @@ wire (a guest cannot attest its own proof), so this script drops
 `proverVersion`/`proof` and encodes the remaining fields with
 `encode_rollup_output` / `encode_aggregation_output`.
 
+Output is 0x-prefixed hex text, not raw bytes: a byte-for-byte diff of the
+wire format is reviewable in a PR the same way the JSON fixtures already are,
+where a raw binary file would only show "binary files differ". It is also the
+exact format `arithmetization/src/test/scripts/elf_to_json_gen`'s `@path`
+input mode expects for any file not suffixed `.ssz`, so the riscv-guests
+copies of these vectors work directly with `make exec` with no conversion
+step.
+
 Each output file is the sibling of its JSON fixture, same basename with a
-`.ssz` extension, so `test_rollup_ssz.py` can pair them up by glob.
+`.ssz.hex` extension, so `test_rollup_ssz.py` can pair them up by glob.
 
 Run from the `rollup_spec/` directory:  .venv/bin/python scripts/generate_rollup_ssz_golden_vectors.py
 """
@@ -51,9 +59,9 @@ def _load(path: Path) -> dict:
 
 
 def _write_ssz(json_path: Path, data: bytes) -> None:
-    ssz_path = json_path.with_suffix(".ssz")
-    ssz_path.write_bytes(data)
-    print(f"wrote {ssz_path.relative_to(_TESTDATA_DIR.parent.parent)} ({len(data)} bytes)")
+    hex_path = json_path.with_suffix(".ssz.hex")
+    hex_path.write_text("0x" + data.hex() + "\n")
+    print(f"wrote {hex_path.relative_to(_TESTDATA_DIR.parent.parent)} ({len(data)} bytes)")
 
 
 def _rollup_output_from_response(resp: dict) -> RollupProof:
