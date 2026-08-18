@@ -19,6 +19,7 @@ type executionResponse struct {
 	L2L1Messages      []string              `json:"l2L1Messages"`
 	TxFroms           []string              `json:"txFroms"`
 	FilteredAddresses []string              `json:"filteredAddresses"`
+	ProgramVk         string                `json:"programVk"`
 }
 
 type executionPublicInputs struct {
@@ -50,7 +51,9 @@ type failureResponseBody struct {
 	Error       string      `json:"error,omitempty"`
 }
 
-func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) executionResponse {
+func newExecutionResponse(
+	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
+) executionResponse {
 	return executionResponse{
 		ProverVersion:     proverVersion,
 		ProofHex:          hexBytes(result.ProofBytes),
@@ -59,6 +62,7 @@ func newExecutionResponse(result backend.Result, startBlockNumber uint64, prover
 		L2L1Messages:      []string{},
 		TxFroms:           []string{},
 		FilteredAddresses: []string{},
+		ProgramVk:         hexBytes(programVk),
 	}
 }
 
