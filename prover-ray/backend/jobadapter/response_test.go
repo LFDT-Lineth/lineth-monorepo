@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const referenceL2ExecutionResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.response.json"
+const referenceL2ExecutionResponse = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
 
 func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	result := backend.Result{
@@ -28,7 +28,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 			EndL1L2BridgeRollingHashMessageNumber:    12,
 			DynamicChainConfigHash:                   filledHash(0x06),
 			ParentFtxRollingHash:                     filledHash(0x07),
-			ParentProcessedFtxNumber:                 13,
+			ParentFtxNumber:                          13,
 			EndFtxRollingHash:                        filledHash(0x08),
 			EndProcessedFtxNumber:                    14,
 			FilteredAddressesHash:                    filledHash(0x09),
@@ -57,7 +57,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, uint64(12), pi.EndL1L2BridgeRollingHashMessageNumber)
 	assert.Equal(t, repeatHex(0x06), pi.DynamicChainConfigHash)
 	assert.Equal(t, repeatHex(0x07), pi.ParentFtxRollingHash)
-	assert.Equal(t, uint64(13), pi.ParentProcessedFtxNumber)
+	assert.Equal(t, uint64(13), pi.ParentFtxNumber)
 	assert.Equal(t, repeatHex(0x08), pi.EndFtxRollingHash)
 	assert.Equal(t, uint64(14), pi.EndProcessedFtxNumber)
 	assert.Equal(t, repeatHex(0x09), pi.FilteredAddressesHash)
