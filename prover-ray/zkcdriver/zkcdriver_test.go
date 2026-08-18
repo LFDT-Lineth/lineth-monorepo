@@ -62,7 +62,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticDepth(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
 	return binfile, nil
 }
 
