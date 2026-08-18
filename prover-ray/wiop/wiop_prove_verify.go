@@ -377,8 +377,16 @@ func (sys *System) checkUnreducedQueries(rt *Runtime) error {
 			return err
 		}
 	}
+	// The table relations share one B-side set cache for the whole pass. On
+	// lookup-heavy systems this is the difference between rebuilding a
+	// range-check target once and rebuilding it once per query that ranges over
+	// it, which is otherwise the bulk of this function's cost.
+	inclCache := newInclusionSetCache()
 	for _, q := range sys.TableRelations {
-		if err := check(q); err != nil {
+		if q.IsReduced() {
+			continue
+		}
+		if err := q.checkWith(rt, inclCache); err != nil {
 			return err
 		}
 	}
