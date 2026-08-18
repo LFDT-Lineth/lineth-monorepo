@@ -15,16 +15,16 @@ class RiscVProverParsingTest {
       [riscv-prover.execution]
       fs-requests-directory = "/data/prover/riscv/execution/requests"
       fs-responses-directory = "/data/prover/riscv/execution/responses"
-      guest-program-id = "0xdeadbeef"
+      program-vk = "0xdeadbeef"
       fork-name = "cancun"
       [riscv-prover.rollup]
       fs-requests-directory = "/data/prover/riscv/rollup/requests"
       fs-responses-directory = "/data/prover/riscv/rollup/responses"
-      guest-program-id = "0xdeadbeef"
+      program-vk = "0xdeadbeef"
       [riscv-prover.proof-aggregation]
       fs-requests-directory = "/data/prover/riscv/aggregation/requests"
       fs-responses-directory = "/data/prover/riscv/aggregation/responses"
-      guest-program-id = "0xdeadbeef"
+      program-vk = "0xdeadbeef"
       """.trimIndent()
 
     val config =
@@ -34,20 +34,20 @@ class RiscVProverParsingTest {
         ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/riscv/execution/requests",
           fsResponsesDirectory = "/data/prover/riscv/execution/responses",
-          guestProgramId = "0xdeadbeef",
+          programVk = "0xdeadbeef",
           forkName = "cancun",
         ),
         rollup =
         ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/riscv/rollup/requests",
           fsResponsesDirectory = "/data/prover/riscv/rollup/responses",
-          guestProgramId = "0xdeadbeef",
+          programVk = "0xdeadbeef",
         ),
         proofAggregation =
         ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/riscv/aggregation/requests",
           fsResponsesDirectory = "/data/prover/riscv/aggregation/responses",
-          guestProgramId = "0xdeadbeef",
+          programVk = "0xdeadbeef",
         ),
       )
 
@@ -104,10 +104,10 @@ class RiscVProverParsingTest {
   }
 
   @Test
-  fun `should default guestProgramId to null when not specified`() {
+  fun `should default programVk to null when not specified`() {
     val parsed = parseConfig<WrapperConfig>(tomlMinimal).riscvProver
-    assertThat(parsed.execution.guestProgramId).isNull()
-    assertThat(parsed.rollup?.guestProgramId).isNull()
-    assertThat(parsed.proofAggregation.guestProgramId).isNull()
+    assertThat(parsed.execution.programVk).isNull()
+    assertThat(parsed.rollup?.programVk).isNull()
+    assertThat(parsed.proofAggregation.programVk).isNull()
   }
 }

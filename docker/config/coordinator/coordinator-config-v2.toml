@@ -89,16 +89,16 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 [riscv-prover.execution]
 fs-requests-directory = "/data/prover/riscv/execution/requests"
 fs-responses-directory = "/data/prover/riscv/execution/responses"
-guest-program-id = "0x..."
+program-vk = "0x..."
 fork-name = "cancun"
 [riscv-prover.rollup]
 fs-requests-directory = "/data/prover/riscv/rollup/requests"
 fs-responses-directory = "/data/prover/riscv/rollup/responses"
-guest-program-id = "0x..."
+program-vk = "0x..."
 [riscv-prover.proof-aggregation]
 fs-requests-directory = "/data/prover/riscv/aggregation/requests"
 fs-responses-directory = "/data/prover/riscv/aggregation/responses"
-guest-program-id = "0x..."
+program-vk = "0x..."
 
 [traces]
 [traces.counters]

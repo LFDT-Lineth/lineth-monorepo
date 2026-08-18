@@ -27,6 +27,6 @@ data class FileBasedProverConfig(
   val inprogressRequestWritingSuffix: String,
   val pollingInterval: Duration,
   val pollingTimeout: Duration,
-  val guestProgramId: String? = null,
+  val programVk: String? = null,
   val forkName: String? = null,
 )
