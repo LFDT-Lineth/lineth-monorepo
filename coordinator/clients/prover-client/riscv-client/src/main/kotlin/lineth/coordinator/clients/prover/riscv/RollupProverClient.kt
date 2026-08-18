@@ -18,7 +18,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
  */
 internal class FileBasedRollupProofRequestDtoMapper(
-  private val guestProgramId: String,
+  private val programVk: String,
   private val chainId: Long,
   private val l2ExecutionProofTransport: L2ExecutionProofTransport,
 ) : (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> {
@@ -29,7 +29,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
     return SafeFuture.collectAll(l2ExecutionProofFutures.stream())
       .thenApply { l2ExecutionProofResponseDtos ->
         FileBasedRollupProofRequestDto(
-          guestProgramId = guestProgramId,
+          programVk = programVk,
           proofRequest = FileBasedRollupProofRequestParamsDto(
             chainId = chainId,
             conflations = request.conflations.map { it.fromDomainObject() },
@@ -68,12 +68,12 @@ internal class FileBasedRollupProofRequestDtoMapper(
  * each l2-execution proof response.
  */
 internal class RestfulRollupProofRequestDtoMapper(
-  private val guestProgramId: String,
+  private val programVk: String,
   private val chainId: Long,
 ) : (RollupProofRequestV1) -> SafeFuture<RestfulRollupProofRequestDto> {
   override fun invoke(request: RollupProofRequestV1): SafeFuture<RestfulRollupProofRequestDto> {
     val dto = RestfulRollupProofRequestDto(
-      guestProgramId = guestProgramId,
+      programVk = programVk,
       proofRequest = RestfulRollupProofRequestParamsDto(
         chainId = chainId,
         conflations = request.conflations.map { it.fromDomainObject() },
@@ -130,10 +130,10 @@ private typealias RestfulRollupProofTransport =
 class FileBasedRollupProverClient(
   transport: FileBasedRollupProofTransport,
   l2ExecutionProofTransport: L2ExecutionProofTransport,
-  guestProgramId: String,
+  programVk: String,
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> =
-    FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, l2ExecutionProofTransport),
+    FileBasedRollupProofRequestDtoMapper(programVk, chainId, l2ExecutionProofTransport),
   proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
     RollupProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
@@ -165,10 +165,10 @@ class FileBasedRollupProverClient(
  */
 class RestfulRollupProverClient(
   transport: RestfulRollupProofTransport,
-  guestProgramId: String,
+  programVk: String,
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<RestfulRollupProofRequestDto> =
-    RestfulRollupProofRequestDtoMapper(guestProgramId, chainId),
+    RestfulRollupProofRequestDtoMapper(programVk, chainId),
   proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
     RollupProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

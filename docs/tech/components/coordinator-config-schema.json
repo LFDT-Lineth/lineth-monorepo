@@ -3312,12 +3312,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.blob-compression.guest-program-id": {
+      "prover.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3372,12 +3372,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.execution.guest-program-id": {
+      "prover.execution.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3462,12 +3462,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.invalidity.guest-program-id": {
+      "prover.invalidity.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3522,12 +3522,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.blob-compression.guest-program-id": {
+      "prover.new.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3582,12 +3582,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.execution.guest-program-id": {
+      "prover.new.execution.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3672,12 +3672,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.invalidity.guest-program-id": {
+      "prover.new.invalidity.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3732,12 +3732,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.proof-aggregation.guest-program-id": {
+      "prover.new.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3782,12 +3782,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup.guest-program-id": {
+      "prover.new.rollup.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3852,12 +3852,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.proof-aggregation.guest-program-id": {
+      "prover.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3902,12 +3902,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup.guest-program-id": {
+      "prover.rollup.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3982,12 +3982,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.blob-compression.guest-program-id": {
+      "riscv-prover.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4042,12 +4042,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.execution.guest-program-id": {
+      "riscv-prover.execution.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4132,12 +4132,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.invalidity.guest-program-id": {
+      "riscv-prover.invalidity.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4192,12 +4192,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.new.blob-compression.guest-program-id": {
+      "riscv-prover.new.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4252,12 +4252,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.new.execution.guest-program-id": {
+      "riscv-prover.new.execution.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4342,12 +4342,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.new.invalidity.guest-program-id": {
+      "riscv-prover.new.invalidity.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4402,12 +4402,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.new.proof-aggregation.guest-program-id": {
+      "riscv-prover.new.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4452,12 +4452,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.new.rollup.guest-program-id": {
+      "riscv-prover.new.rollup.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4522,12 +4522,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.proof-aggregation.guest-program-id": {
+      "riscv-prover.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -4572,12 +4572,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover.rollup.guest-program-id": {
+      "riscv-prover.rollup.program-vk": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
