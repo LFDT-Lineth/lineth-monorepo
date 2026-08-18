@@ -526,13 +526,18 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
     }
 
 
-def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
+def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata the coordinator
+    supplies from the request envelope and the prover echoes on the response —
+    mirroring the L2-execution response pattern.
     """
     return {
         "proverVersion": prover_version,
+        "programVk": _hx(program_vk),
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
         "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
@@ -542,19 +547,19 @@ def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
 
 
 def encode_rollup_response_json(
-    proof: RollupProof, prover_version: str, *, indent: int | None = None
+    proof: RollupProof, prover_version: str, *, program_vk: Hash32, indent: int | None = None
 ) -> str:
-    return json.dumps(encode_rollup_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_rollup_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── rollup prover entrypoint ──────────────────────────────────────────────────
 
 
-def run_rollup_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_rollup_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse rollup request JSON, run the guest, return response JSON dict."""
     rollup_input = decode_rollup_request_json(text)
     proof = run_rollup_guest(rollup_input)
-    return encode_rollup_response(proof, prover_version)
+    return encode_rollup_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
