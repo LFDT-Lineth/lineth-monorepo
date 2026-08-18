@@ -78,6 +78,8 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
       }
   }
 
+  override fun getProofIndex(proofRequest: Request): TProofIndex = proofIndexProvider(proofRequest)
+
   override fun createProofRequest(proofRequest: Request): SafeFuture<TProofIndex> {
     val proofIndex = proofIndexProvider(proofRequest)
     log.debug(

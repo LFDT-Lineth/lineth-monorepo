@@ -13,8 +13,8 @@ import (
 const (
 	MessageBusPI                   wiop.PublicInputTag = messagebus.PublicInputTag
 	ProgramVKPI                    wiop.PublicInputTag = "ProgramVerificationKey"
-	SharedRandomnessPI             wiop.PublicInputTag = "SharedRandomness"
-	SharedRandomnessContributionPI wiop.PublicInputTag = "SharedRandomnessContribution"
+	SharedRandomnessPI                                 = messagebus.SharedRandomnessSeedPI
+	SharedRandomnessContributionPI                     = messagebus.SharedRandomnessSeedContributionPI
 	GuestPublicOutputsPI           wiop.PublicInputTag = "GuestPublicOutputs"
 
 	// IsLastShardPI tags the single cell whose runtime value is one for the last
@@ -27,12 +27,12 @@ const (
 
 	// NumSharedRandomness is the number of shared randomness cells. 8 because
 	// this is the state of a poseidon2 hasher.
-	NumSharedRandomness = 8
+	NumSharedRandomness = messagebus.NumSharedRandomness
 
 	// NumSharedRandomnessContributions is not decided yet and is to be taken from
 	// another place. The negative value is an unset sentinel: it is deliberately
 	// unusable as a count or loop bound until it is given its real value.
-	NumSharedRandomnessContributions = -1
+	NumSharedRandomnessContributions = messagebus.NumSharedRandomnessContribution
 )
 
 // RegisterPublicInputs registers the public inputs of the RISCV-ZKC proof

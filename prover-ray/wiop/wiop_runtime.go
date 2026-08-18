@@ -105,8 +105,7 @@ func (run *Runtime) dynamicModuleSize(m *Module) int {
 	return size
 }
 
-// CurrentRound returns the round currently being processed, or nil if the
-// system has no interactive rounds.
+// CurrentRound returns the round whose actions are currently running.
 func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 
 // AdvanceRound closes the current round and opens the next one:

@@ -94,3 +94,15 @@ func DynamicModuleIndex(sys *wiop.System) map[*wiop.Module]int {
 	}
 	return idx
 }
+
+// DynamicModuleSizes returns the runtime size of every dynamic module in sys,
+// in DynamicModuleOrder — the same order PcsColumnDesc.DynamicIndex and the
+// proof's `module_sizes` slice both reference.
+func DynamicModuleSizes(sys *wiop.System, rt *wiop.Runtime) []int {
+	order := DynamicModuleOrder(sys)
+	sizes := make([]int, len(order))
+	for i, m := range order {
+		sizes[i] = m.RuntimeSize(rt)
+	}
+	return sizes
+}

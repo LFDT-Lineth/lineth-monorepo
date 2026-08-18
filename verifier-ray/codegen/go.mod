@@ -2,13 +2,13 @@ module github.com/consensys/linea-monorepo/verifier-ray/codegen
 
 go 1.25.7
 
-require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260805140308-d7137fe881bf
+require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260811123635-a88dfd54fad0
 
 require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
-	github.com/consensys/gnark-crypto v0.20.2-0.20260729182318-24876de866b5 // indirect
+	github.com/consensys/gnark-crypto v0.20.2-0.20260806172022-e2a02f711389 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect

@@ -248,7 +248,7 @@ class L2ExecutionProofPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
-    parent_processed_ftx_number: U64
+    parent_ftx_number: U64
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
@@ -467,7 +467,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=execution_input.chain_config.hash(base_fee),
         parent_ftx_rolling_hash=execution_input.parent_ftx_rolling_hash,
-        parent_processed_ftx_number=execution_input.parent_last_processed_ftx_number,
+        parent_ftx_number=execution_input.parent_last_processed_ftx_number,
         end_ftx_rolling_hash=current_ftx_rolling_hash,
         end_processed_ftx_number=current_last_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(filtered_addresses),

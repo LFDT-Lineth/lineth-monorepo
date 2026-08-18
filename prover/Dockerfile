@@ -53,3 +53,18 @@ ENV CONFIG_FILE="/opt/linea/prover/config/config.toml"
 ENV PATH="${PATH}:/opt/linea/prover/"
 
 CMD ["sh", "-c", "/opt/linea/prover/controller --config $CONFIG_FILE --local-id $WORKER_ID"]
+
+# Build-time metadata as defined at http://label-schema.org
+# Values are injected by scripts/docker/build-image.sh.
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.label-schema.build-date=$BUILD_DATE \
+	org.label-schema.name="prover" \
+	org.label-schema.description="Lineth prover" \
+	org.label-schema.url="https://consensys.io/" \
+	org.label-schema.vcs-ref=$VCS_REF \
+	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \
+	org.label-schema.vendor="ConsenSys" \
+	org.label-schema.version=$VERSION \
+	org.label-schema.schema-version="1.0"

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	zkcr5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
@@ -163,6 +164,7 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 			rt,
 			fixture.expandedTrace,
 			fixture.binFile.AirConstraints(),
+			koalafield.Octuplet{},
 		)
 	}
 	reportR5Work(b, fixture)
@@ -179,7 +181,7 @@ func BenchmarkR5TraceAndAssign(b *testing.B) {
 
 	for b.Loop() {
 		rt := wiop.NewRuntime(fixture.system)
-		fixture.driver.AssignWithPreRead(rt, inputs)
+		fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
 	}
 	reportR5Work(b, fixture)
 }
@@ -221,7 +223,7 @@ func BenchmarkR5Prove(b *testing.B) {
 
 	for b.Loop() {
 		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignWithPreRead(rt, inputs)
+			fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
 		})
 		r5ProofSink, r5PubSink = proof, pub
 	}
@@ -235,7 +237,7 @@ func BenchmarkR5Verify(b *testing.B) {
 	fixture.ensureSystem(b)
 	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
 	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignWithPreRead(rt, inputs)
+		fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
 	})
 	if err := fixture.system.Verify(proof, pub); err != nil {
 		b.Fatalf("verifying setup proof: %v", err)
@@ -270,7 +272,7 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 		}
 		system, driver := compileR5BenchmarkSystem(b, serialized)
 		proof, pub := system.Prove(func(rt *wiop.Runtime) {
-			driver.AssignWithPreRead(rt, &zkcdriver.PreReadInputs{Inputs: fixture.inputs})
+			driver.AssignWithPreRead(rt, &zkcdriver.PreReadInputs{Inputs: fixture.inputs}, koalafield.Octuplet{})
 		})
 		if err := system.Verify(proof, pub); err != nil {
 			b.Fatalf("verifying R5 proof: %v", err)
