@@ -1,6 +1,6 @@
 package lineth.coordinator.clients.prover.riscv
 
-import linea.clients.BlobWitness
+import linea.clients.ConflationWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponseV1
@@ -45,7 +45,7 @@ data class L2ExecutionProofPublicInputsDto(
   val txFromsHash: String,
 )
 
-/** The 15-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4). */
+/** The 20-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4). */
 data class RollupProofPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
@@ -60,8 +60,13 @@ data class RollupProofPublicInputsDto(
   val endFtxRollingHash: String,
   val endProcessedFtxNumber: Long,
   val filteredAddressesHash: String,
-  val parentShnarf: String,
-  val endShnarf: String,
+  val parentDataRollingHash: String,
+  val endDataRollingHash: String,
+  val parentBlockHash: String,
+  val endBlockHash: String,
+  val startOffset: Int,
+  val endOffset: Int,
+  val programVks: List<String>,
 )
 
 data class MetaDataDto(
@@ -182,11 +187,7 @@ data class L2ExecutionProofResponseDto(
 // getZkRollupProof.request.json (§2.2)
 // ---------------------------------------------------------------------------------------------------------------------
 
-data class BlobWitnessDto(
-  val startBlockNumber: Long,
-  val endBlockNumber: Long,
-  val blobHash: String,
-  val blobKzgProof: String,
+data class ConflationWitnessDto(
   val blockRlps: List<String>,
 )
 
@@ -202,16 +203,26 @@ data class L2ExecutionProofDto(
 
 data class FileBasedRollupProofRequestParamsDto(
   val chainId: Long,
-  val blobs: List<BlobWitnessDto>,
-  val parentShnarf: String,
+  val conflations: List<ConflationWitnessDto>,
   val l2ExecutionProofs: List<L2ExecutionProofDto>,
+  val chunks: List<String>,
+  val parentDataRollingHash: String,
+  val startOffset: Int,
+  val opaquePrefixBytes: String? = null,
+  val opaqueSuffixBytes: String? = null,
+  val boundaryPrevDataRollingHash: String? = null,
 )
 
 data class RestfulRollupProofRequestParamsDto(
   val chainId: Long,
-  val blobs: List<BlobWitnessDto>,
-  val parentShnarf: String,
+  val conflations: List<ConflationWitnessDto>,
   val l2ExecutionProofIndexes: List<BlockIntervalProofIndex>,
+  val chunks: List<String>,
+  val parentDataRollingHash: String,
+  val startOffset: Int,
+  val opaquePrefixBytes: String? = null,
+  val opaqueSuffixBytes: String? = null,
+  val boundaryPrevDataRollingHash: String? = null,
 )
 
 data class FileBasedRollupProofRequestDto(
@@ -268,7 +279,7 @@ data class RestfulRollupAggregationProofRequestDto(
   val metadata: MetaDataDto,
 )
 
-/** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 14-field PI tuple (§2.4). */
+/** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 20-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
   val proverVersion: String? = null,
   val startBlockNumber: Long,
@@ -386,7 +397,7 @@ internal fun ForcedTransaction.fromDomainObject(): ForcedTransactionDto {
 }
 
 /**
- * Maps the RISC-V 15-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
+ * Maps the RISC-V 20-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
  * mappers since both emit the same tuple (rollup_spec §2.4). Field names and types are identical, so it is a straight
  * field copy.
  */
@@ -405,8 +416,13 @@ internal fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInput
     endFtxRollingHash = endFtxRollingHash.decodeHex(),
     endFtxNumber = endProcessedFtxNumber.toULong(),
     filteredAddressesHash = filteredAddressesHash.decodeHex(),
-    parentShnarf = parentShnarf.decodeHex(),
-    endShnarf = endShnarf.decodeHex(),
+    parentDataRollingHash = parentDataRollingHash.decodeHex(),
+    endDataRollingHash = endDataRollingHash.decodeHex(),
+    parentBlockHash = parentBlockHash.decodeHex(),
+    endBlockHash = endBlockHash.decodeHex(),
+    startOffset = startOffset,
+    endOffset = endOffset,
+    programVks = programVks.map { it.decodeHex() },
   )
 }
 
@@ -425,20 +441,19 @@ internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputs
     endFtxRollingHash = endFtxRollingHash.encodeHex(),
     endProcessedFtxNumber = endFtxNumber.toLong(),
     filteredAddressesHash = filteredAddressesHash.encodeHex(),
-    parentShnarf = parentShnarf.encodeHex(),
-    endShnarf = endShnarf.encodeHex(),
+    parentDataRollingHash = parentDataRollingHash.encodeHex(),
+    endDataRollingHash = endDataRollingHash.encodeHex(),
+    parentBlockHash = parentBlockHash.encodeHex(),
+    endBlockHash = endBlockHash.encodeHex(),
+    startOffset = startOffset,
+    endOffset = endOffset,
+    programVks = programVks.map { it.encodeHex() },
   )
 }
 
-internal fun BlobWitness.fromDomainObject(): BlobWitnessDto {
-  return BlobWitnessDto(
-    startBlockNumber = startBlockNumber.toLong(),
-    endBlockNumber = endBlockNumber.toLong(),
-    blobHash = blobHash.encodeHex(),
-    blobKzgProof = blobKzgProof.encodeHex(),
-    blockRlps = blockRlps.map { blockRlp ->
-      blockRlp.encodeHex()
-    },
+internal fun ConflationWitness.fromDomainObject(): ConflationWitnessDto {
+  return ConflationWitnessDto(
+    blockRlps = blockRlps.map { it.encodeHex() },
   )
 }
 
