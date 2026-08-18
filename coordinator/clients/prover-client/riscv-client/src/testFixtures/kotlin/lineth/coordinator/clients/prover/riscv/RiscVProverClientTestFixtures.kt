@@ -6,8 +6,8 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
-import linea.clients.BlobWitness
 import linea.clients.ChainConfig
+import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
@@ -159,27 +159,24 @@ object RiscVProverClientTestFixtures {
     parentFtxNumber = parentFtxNumber,
   )
 
-  fun blobWitness(
-    startBlockNumber: ULong,
-    endBlockNumber: ULong,
-  ): BlobWitness = BlobWitness(
-    startBlockNumber = startBlockNumber,
-    endBlockNumber = endBlockNumber,
-    blobHash = ByteArray(32) { 0x3a },
-    blobKzgProof = ByteArray(48) { 0x3b },
-    blockRlps = listOf(byteArrayOf(0x3c)),
+  fun conflationWitness(
+    blockCount: Int = 1,
+  ): ConflationWitness = ConflationWitness(
+    blockRlps = List(blockCount) { byteArrayOf(0x3c) },
   )
 
   fun rollupProofRequestV1(
-    blobs: List<BlobWitness> = emptyList(),
-    parentShnarf: ByteArray = ByteArray(32) { 0x19 },
-    endShnarf: ByteArray = ByteArray(32) { 0x20 },
+    conflations: List<ConflationWitness> = emptyList(),
+    parentDataRollingHash: ByteArray = ByteArray(32) { 0x19 },
+    chunks: List<ByteArray> = listOf(ByteArray(32) { 0x20 }),
+    startOffset: Int = 0,
     l2Executions: List<BlockIntervalProofIndex> = listOf(blockIntervalProofIndex(1000501UL, 1000520UL)),
   ): RollupProofRequestV1 = RollupProofRequestV1(
-    blobs = blobs,
-    parentShnarf = parentShnarf,
-    endShnarf = endShnarf,
+    conflations = conflations,
     l2Executions = l2Executions,
+    chunks = chunks,
+    parentDataRollingHash = parentDataRollingHash,
+    startOffset = startOffset,
   )
 
   fun rollupAggregationProofRequestV1(
@@ -237,8 +234,13 @@ object RiscVProverClientTestFixtures {
     endFtxRollingHash = "0x16",
     endProcessedFtxNumber = 17,
     filteredAddressesHash = "0x18",
-    parentShnarf = "0x19",
-    endShnarf = "0x1a",
+    parentDataRollingHash = "0x19",
+    endDataRollingHash = "0x1a",
+    parentBlockHash = "0x1b",
+    endBlockHash = "0x1c",
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   fun rollupProofResponseDto(
