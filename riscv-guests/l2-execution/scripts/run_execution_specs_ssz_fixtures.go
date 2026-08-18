@@ -24,6 +24,7 @@ import (
 const (
 	fixturePathColumnWidth = 40
 	testColumnWidth        = 108
+	resultColumnWidth      = 36
 )
 
 type fixtureCase struct {
@@ -127,15 +128,15 @@ func main() {
 	passed := 0
 	wroteFailureOutputs := false
 	for _, input := range inputs {
-		success, userTime, stdout, stderr := runGuest(guestDir, input.file, *zkcFlags)
-		ok := success == input.expectedValid
+		exitCode, userTime, stdout, stderr := runGuest(guestDir, input.file, *zkcFlags)
+		ok := (exitCode == 0) == input.expectedValid
 		if ok {
 			passed++
 		} else {
 			hadError = true
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
-		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
+		printTableRow(input.fixturePath, testName, input.size, userTime, input.expectedValid, exitCode)
 		if !ok {
 			_, _, err := writeFailureOutputs(input.file, stdout, stderr)
 			if err != nil {
@@ -161,30 +162,41 @@ func main() {
 
 // Prints the table header.
 func printTableHeader() {
-	fmt.Printf("| %-*s | %-*s | %8s | %8s | %-6s |\n",
+	fmt.Printf("| %-*s | %-*s | %8s | %8s | %-*s |\n",
 		fixturePathColumnWidth, "fixture path",
 		testColumnWidth, "test",
-		"size (B)", "time (s)", "result")
-	fmt.Printf("| %s | %s | -------- | -------- | ------ |\n",
+		"size (B)", "time (s)", resultColumnWidth, "result (actual, expected)")
+	fmt.Printf("| %s | %s | -------- | -------- | %s |\n",
 		strings.Repeat("-", fixturePathColumnWidth),
-		strings.Repeat("-", testColumnWidth))
+		strings.Repeat("-", testColumnWidth),
+		strings.Repeat("-", resultColumnWidth))
 }
 
 // Prints one table row.
-func printTableRow(fixturePath, testName string, size int, userTime time.Duration, ok bool) {
-	result := "fail"
-	if ok {
-		result = "pass"
-	}
-	fmt.Printf("| %-*s | %-*s | %8d | %8.3f | %-6s |\n",
+func printTableRow(fixturePath, testName string, size int, userTime time.Duration, expectedValid bool, exitCode int) {
+	fmt.Printf("| %-*s | %-*s | %8d | %8.3f | %-*s |\n",
 		fixturePathColumnWidth,
 		escapeCell(fixturePath),
 		testColumnWidth,
 		omitMiddle(escapeCell(testName), testColumnWidth),
 		size,
 		userTime.Seconds(),
-		result,
+		resultColumnWidth,
+		resultText(expectedValid, exitCode),
 	)
+}
+
+// Formats the fixture expectation and the zkc process exit code.
+func resultText(expectedValid bool, exitCode int) string {
+	result := "fail"
+	if (exitCode == 0) == expectedValid {
+		result = "pass"
+	}
+	expected := "!0"
+	if expectedValid {
+		expected = "0"
+	}
+	return fmt.Sprintf("%s (%d, %s)", result, exitCode, expected)
 }
 
 // Finds the repo root.
@@ -355,7 +367,7 @@ func run(w io.Writer, name string, args ...string) error {
 }
 
 // Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, []byte, []byte) {
+func runGuest(guestDir, input, zkcFlags string) (int, time.Duration, []byte, []byte) {
 	cmd := exec.Command(
 		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
@@ -364,11 +376,11 @@ func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, []byte, []
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	cmd.Run()
 	if cmd.ProcessState == nil {
-		return err == nil, 0, stdout.Bytes(), stderr.Bytes()
+		return -1, 0, stdout.Bytes(), stderr.Bytes()
 	}
-	return err == nil, cmd.ProcessState.UserTime(), stdout.Bytes(), stderr.Bytes()
+	return cmd.ProcessState.ExitCode(), cmd.ProcessState.UserTime(), stdout.Bytes(), stderr.Bytes()
 }
 
 // Writes the captured stdout and stderr for an unexpected fixture result.
