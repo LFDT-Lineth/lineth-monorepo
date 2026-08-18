@@ -282,14 +282,14 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	for i, branch := range inputQuery[:2] {
 		root, err := branch.RecoverRoot(positions[0])
 		require.NoError(t, err)
-		assert.Equal(t, fx.roots[i], root)
+		assert.Equal(t, fx.roots[i], bindRoot(root, fx.shapes[i]))
 	}
 
 	base := positions[0] >> utils.Log2Ceil(8/2) // p.LogPlainTextSize - extraLevelLog2 = 3-1
 	for i, branch := range inputQuery[2:] {
 		root, err := branch.RecoverRoot(base)
 		require.NoError(t, err)
-		assert.Equal(t, fx.roots[2+i], root)
+		assert.Equal(t, fx.roots[2+i], bindRoot(root, fx.shapes[2+i]))
 	}
 
 	branch := proof.InputQueries[0][1]

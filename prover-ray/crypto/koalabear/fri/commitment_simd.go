@@ -23,7 +23,6 @@ type leafLayout struct {
 	baseWidth int
 	extWidth  int
 	paired    bool // leaf digests two adjacent rows (non-bottom levels), else one
-	header    [3]field.Element
 
 	frontLen int // elements before the (left-padded) final block: streamLen - streamLen%8
 	pad      int // leading zeros inside the final block: (8 - streamLen%8) % 8
@@ -36,16 +35,13 @@ func newLeafLayout(t SizedTable, paired bool) leafLayout {
 		extWidth:  len(t.Ext),
 		paired:    paired,
 	}
-	l.header[0].SetUint64(leafDomainTag)
-	l.header[1].SetUint64(uint64(l.baseWidth))
-	l.header[2].SetUint64(uint64(l.extWidth))
 
 	rows := 1
 	if paired {
 		rows = 2
 	}
 	rowElems := l.baseWidth + 6*l.extWidth
-	streamLen := len(l.header) + rows*rowElems
+	streamLen := rows * rowElems
 	l.pad = (poseidon2.BlockSize - streamLen%poseidon2.BlockSize) % poseidon2.BlockSize
 	l.frontLen = streamLen - streamLen%poseidon2.BlockSize
 	l.colSize = streamLen + l.pad
@@ -69,24 +65,15 @@ func (l leafLayout) dpos(p int) int {
 // single bulk copy of 16 consecutive leaf values (no per-element scatter), and
 // the kernel loads each rate coordinate instead of gathering.
 func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, g int) {
-	// Header: identical for every lane.
-	for i := range l.header {
-		base := l.dpos(i) * simdLanes
-		h := l.header[i]
-		for lane := range simdLanes {
-			matrix[base+lane] = h
-		}
-	}
-
 	// row(lane) = base + stride*lane. Non-bottom (paired) leaves digest two
 	// adjacent rows, so their 16 leaves are stride-2; the bottom level is
 	// stride-1 (contiguous), which enables the bulk-copy fast path.
 	if l.paired {
-		l.fillColumns(matrix, t, len(l.header), 2*g, 2)
-		off := len(l.header) + l.baseWidth + 6*l.extWidth
+		l.fillColumns(matrix, t, 0, 2*g, 2)
+		off := l.baseWidth + 6*l.extWidth
 		l.fillColumns(matrix, t, off, 2*g+1, 2)
 	} else {
-		l.fillColumns(matrix, t, len(l.header), g, 1)
+		l.fillColumns(matrix, t, 0, g, 1)
 	}
 }
 
@@ -134,7 +121,6 @@ func (l leafLayout) fillColumns(matrix []field.Element, t SizedTable, off, base,
 // <16-leaf tail and as the reference fallback.
 func (l leafLayout) hashLeafScalar(hasher *poseidon2.MDHasher, t SizedTable, j int) field.Octuplet {
 	hasher.Reset()
-	absorbLeafHeader(hasher, l.baseWidth, l.extWidth)
 	if l.paired {
 		writeRowElements(hasher, t, 2*j)
 		writeRowElements(hasher, t, 2*j+1)

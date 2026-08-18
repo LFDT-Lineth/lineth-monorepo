@@ -189,13 +189,14 @@ func TestCommit(t *testing.T) {
 			}
 
 			root := cs.Tree.Root()
+			shape := witness.Shape()
 			for idx := 0; idx < cs.Tree.NumLeaves(); idx++ {
 				branch := cs.Tree.OpenBranch(idx)
 				got, err := branch.RecoverRoot(idx)
 				if err != nil {
 					t.Fatalf("idx %d: RecoverRoot: %v", idx, err)
 				}
-				if got != root {
+				if bindRoot(got, shape) != root {
 					t.Fatalf("idx %d: recovered root != tree root", idx)
 				}
 			}
@@ -205,7 +206,9 @@ func TestCommit(t *testing.T) {
 
 // TestMerkleize_Regression_SizeOneAuxiliaryTable checks that a non-bottom
 // size-one table contributes no auxiliary leaves and therefore does not alter
-// the tree built from the bottom table.
+// the tree built from the bottom table. The two tables' bound roots
+// (Tree.Root()) differ regardless, since they declare different shapes; only
+// the tree structure below the root — Nodes and Aux — is expected to match.
 func TestMerkleize_Regression_SizeOneAuxiliaryTable(t *testing.T) {
 	var ctr uint64
 	aux := tableOfSize(1, &ctr)
@@ -214,7 +217,22 @@ func TestMerkleize_Regression_SizeOneAuxiliaryTable(t *testing.T) {
 	withAux := MultiSizeTable{aux, bottom}.Merkleize()
 	withoutAux := MultiSizeTable{bottom}.Merkleize()
 
-	if got, want := withAux.Root(), withoutAux.Root(); got != want {
-		t.Fatalf("size-one auxiliary table changed root: got %v, want %v", got, want)
+	if len(withAux.Nodes) != len(withoutAux.Nodes) {
+		t.Fatalf("size-one auxiliary table changed the tree size: got %d nodes, want %d",
+			len(withAux.Nodes), len(withoutAux.Nodes))
+	}
+	for i := 1; i < len(withAux.Nodes); i++ {
+		if withAux.Nodes[i] != withoutAux.Nodes[i] {
+			t.Fatalf("size-one auxiliary table changed node %d", i)
+		}
+	}
+	for i := range withAux.Aux {
+		gotNil, wantNil := withAux.Aux[i] == nil, withoutAux.Aux[i] == nil
+		if gotNil != wantNil {
+			t.Fatalf("size-one auxiliary table changed aux presence at node %d", i)
+		}
+		if !gotNil && *withAux.Aux[i] != *withoutAux.Aux[i] {
+			t.Fatalf("size-one auxiliary table changed aux value at node %d", i)
+		}
 	}
 }

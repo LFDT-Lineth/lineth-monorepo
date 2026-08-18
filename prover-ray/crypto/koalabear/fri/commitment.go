@@ -1,6 +1,8 @@
 package fri
 
 import (
+	"fmt"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -8,23 +10,73 @@ import (
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
-// leafDomainTag domain-separates Merkle leaves so a table with the same row
-// values but a different (BaseWidth, ExtWidth) shape hashes to a different
-// digest. Without this, e.g. an all-zero base row and an all-zero ext row
-// collide, letting two structurally distinct commitments share a Merkle root
-// and get deduplicated inside inputOpeningRoots.
-const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
+// Bit widths of the three fields packed into one shapeDigest element per
+// level: size_log2, then ExtWidth, then BaseWidth. 6+12+12 = 30 bits, safely
+// under KoalaBear's 31-bit modulus (2^31 - 2^24 + 1) with no wraparound risk.
+// 6 bits comfortably covers size_log2 (bounded by the supported root-of-unity
+// order, 24); 12 bits covers real committed batch widths (observed up to
+// ~2700 columns in native zkVM modules) with headroom.
+const (
+	shapeSizeLog2Bits = 6
+	shapeWidthBits    = 12
+	shapeSizeLog2Max  = 1<<shapeSizeLog2Bits - 1
+	shapeWidthMax     = 1<<shapeWidthBits - 1
+)
 
-// absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
-// before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
-// ([hashRowOpening]) MUST call this identically or roots will not
-// reconstruct.
-func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
-	var tag, b, e field.Element
-	tag.SetUint64(leafDomainTag)
-	b.SetUint64(uint64(baseWidth))
-	e.SetUint64(uint64(extWidth))
-	h.WriteElements(tag, b, e)
+// shapeDigest hashes shape into a single digest: the count of non-empty size
+// levels, then one packed element per non-empty level in descending size
+// order. Levels with BaseWidth == ExtWidth == 0 are skipped entirely
+// (matching the canonical layout's own convention), so the digest depends
+// only on the levels that actually contribute leaves.
+//
+// Packing three counts as one element each keeps the descriptor to count+1
+// elements — 1 Poseidon2 permutation for any batch with up to 7 levels,
+// since MDHasher's block size is 8. The count makes the level list
+// self-delimiting: every distinct shape absorbs a distinct (count, entries)
+// sequence, so a prepended empty level cannot slide the descriptor into
+// MDHasher's zero-left-padding of the final block and produce the same
+// digest as omitting it.
+//
+// This binds a committed batch's declared shape into its Merkle root (see
+// [MultiSizeTable.Merkleize]) so that a root is unambiguous on its own,
+// without relying on a transcript or a verifier-supplied schedule to fix
+// where its levels sit.
+func shapeDigest(shape Shape) field.Octuplet {
+	hasher := poseidon2.NewMDHasher()
+
+	count := 0
+	for _, s := range shape {
+		if s.BaseWidth != 0 || s.ExtWidth != 0 {
+			count++
+		}
+	}
+	var countElem field.Element
+	countElem.SetUint64(uint64(count))
+	hasher.WriteElements(countElem)
+
+	for sizeLog2 := len(shape) - 1; sizeLog2 >= 0; sizeLog2-- {
+		s := shape[sizeLog2]
+		if s.BaseWidth == 0 && s.ExtWidth == 0 {
+			continue
+		}
+		if sizeLog2 > shapeSizeLog2Max || s.BaseWidth > shapeWidthMax || s.ExtWidth > shapeWidthMax {
+			panic(fmt.Sprintf("fri: shapeDigest: size_log2=%d BaseWidth=%d ExtWidth=%d exceed the packed field widths", sizeLog2, s.BaseWidth, s.ExtWidth))
+		}
+		packed := uint64(sizeLog2)<<(2*shapeWidthBits) | uint64(s.ExtWidth)<<shapeWidthBits | uint64(s.BaseWidth)
+		var e field.Element
+		e.SetUint64(packed)
+		hasher.WriteElements(e)
+	}
+
+	return hasher.SumDigest()
+}
+
+// bindRoot compresses a raw Merkle root with shape's digest, so the returned
+// value is unambiguous about which (size, BaseWidth, ExtWidth) levels the
+// tree it summarizes actually holds. Used both to publish a batch's root
+// (Merkleize) and to check one against a recovered root (authenticateInputQuery).
+func bindRoot(root field.Octuplet, shape Shape) field.Octuplet {
+	return poseidon2.Compress(root, shapeDigest(shape))
 }
 
 // CommitterState collects the data that are built during the commitment phase
@@ -160,6 +212,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	}
 
 	tree.buildLevels(upperLeaves)
+	tree.Nodes[0] = bindRoot(tree.Nodes[0], table.Shape())
 	return tree
 }
 

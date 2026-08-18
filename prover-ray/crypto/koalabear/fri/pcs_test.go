@@ -148,7 +148,7 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 
 		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
-		assert.Equal(t, tree.Root(), root, name)
+		assert.Equal(t, tree.Root(), bindRoot(root, encoded.Shape()), name)
 
 		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)

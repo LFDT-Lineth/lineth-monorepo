@@ -1063,17 +1063,14 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 
 func hashRowOpening(row RowOpening) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
-	absorbLeafHeader(hasher, len(row.Base), len(row.Ext))
 	writeRowOpeningElements(hasher, row)
 	return hasher.SumDigest()
 }
 
 // hashAuxPair must match Merkleize's even-before-odd hash order regardless of
-// which one is Self, hence selfIsEven. The domain-separation header is written
-// once per leaf (both rows share the same shape).
+// which one is Self, hence selfIsEven.
 func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
-	absorbLeafHeader(hasher, len(pair[0].Base), len(pair[0].Ext))
 	if selfIsEven {
 		writeRowOpeningElements(hasher, pair[0])
 		writeRowOpeningElements(hasher, pair[1])
@@ -1300,7 +1297,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	inputRoots, inputShapes, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots, in.Shapes)
 	if err = checkOpeningProofShape(pcs.Params, proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
 		return err
 	}
@@ -1343,6 +1340,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		layout:            layout,
 		proof:             proof,
 		inputRoots:        inputRoots,
+		inputShapes:       inputShapes,
 		runningRoots:      runningRoots,
 		layoutClaims:      layoutClaims,
 		inputIndexByBatch: inputIndexByBatch,
@@ -1379,6 +1377,7 @@ type verifyQueryCtx struct {
 	layout            layout
 	proof             OpeningProof
 	inputRoots        QueryLayerRoots
+	inputShapes       []Shape
 	runningRoots      []QueryLayerRoots
 	layoutClaims      [][][]quotientClaim
 	inputIndexByBatch []int
@@ -1404,7 +1403,7 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	}
 
 	inputOpening := vq.proof.InputQueries[queryIdx]
-	if err := authenticateInputQuery(pcs.Params, inputOpening, vq.inputRoots, queryPosition); err != nil {
+	if err := authenticateInputQuery(pcs.Params, inputOpening, vq.inputRoots, vq.inputShapes, queryPosition); err != nil {
 		return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 	}
 
@@ -1508,13 +1507,18 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
-func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
+// inputOpeningRoots also returns inputShapes, the declared Shape of the
+// distinct batch at each inputRoots index: authenticateInputQuery needs it to
+// rebind each RecoverRoot-recovered root to the shape the verifier expects
+// before comparing to the (already shape-bound) trusted root.
+func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet, shapes []Shape) (QueryLayerRoots, []Shape, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
 	indexByRoot := make(map[field.Octuplet]int)
 	inputRoots := make(QueryLayerRoots, 0)
+	var inputShapes []Shape
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
 			root := roots[batchIdx]
@@ -1525,12 +1529,17 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 			indexByBatch[batchIdx] = len(inputRoots)
 			indexByRoot[root] = len(inputRoots)
 			inputRoots = append(inputRoots, root)
+			inputShapes = append(inputShapes, shapes[batchIdx])
 		}
 	}
-	return inputRoots, indexByBatch
+	return inputRoots, inputShapes, indexByBatch
 }
 
-func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots, queryPosition int) error {
+// authenticateInputQuery rebinds each branch's RecoverRoot-recovered root to
+// shapes[i] (the verifier's own trusted declaration, never the proof) before
+// comparing to roots[i], since roots[i] is itself shape-bound (see
+// [MultiSizeTable.Merkleize]).
+func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots, shapes []Shape, queryPosition int) error {
 	if len(opening) != len(roots) {
 		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
 	}
@@ -1547,7 +1556,7 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 		if err != nil {
 			return fmt.Errorf("input tree %d: recover root: %w", i, err)
 		}
-		if root != roots[i] {
+		if bindRoot(root, shapes[i]) != roots[i] {
 			return fmt.Errorf("input tree %d: Merkle proof invalid", i)
 		}
 	}
