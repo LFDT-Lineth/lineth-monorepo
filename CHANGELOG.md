@@ -25,6 +25,7 @@
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 - *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
 - *(maru)* Support custom validator signers (#3700)
+- *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
 
 ### 🐛 Bug Fixes
 
