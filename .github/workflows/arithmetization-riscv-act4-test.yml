@@ -2,8 +2,9 @@ name: Tracer riscv ACT4 test
 
 on:
   pull_request:
-    branches:
-      - main
+    # No branches: filter — this must also run on PRs targeting stacked, non-main
+    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
+    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
     paths:
       - 'arithmetization/**'
       - 'riscv-guests/build_common/**'
