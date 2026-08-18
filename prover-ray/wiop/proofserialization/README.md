@@ -57,7 +57,7 @@ structurally different:
 | cells | `map[ObjectID]field.Gen`, keyed globally | `rounds[r].cells []Scalar`, round-major, dense |
 | columns | not carried | `rounds[r].commitment ?Commitment` (Merkle root only) |
 | module sizes | `map[int]int` | `module_sizes []usize`, canonical dynamic-module order |
-| PCS claims | inside `Cells` | `pcs_opening.entry_claims [][]Ext`, canonical entry order |
+| PCS claims | inside `Cells` | not carried separately — the verifier reconstructs them from `rounds[*].cells` at verify time, via the compiled system's per-column claim-cell table |
 | FRI proof | `*fri.OpeningProof` | `pcs_opening.proof` |
 
 So the pipeline is: **project** `wiop.Proof` onto `verifier.Proof`'s shape, then
@@ -164,8 +164,8 @@ Recommend (1), keeping the `base` parameter so (2) stays available for tests.
 | `merkle.InputTreeOpening` | 32 | 8 | `siblings` @0, `leaves` @16 |
 | `fri.Proof` | 48 | 8 | `round_roots` @0, `final_poly` @16, `running_queries` @32 |
 | `pcs.OpeningProof` | 64 | 8 | `input_queries` @0, `fri_proof` @16 |
-| `verifier.PcsOpening` | 80 | 8 | `entry_claims` @0, `proof` @16 |
-| `verifier.Proof` | 112 | 8 | `rounds` @0, `module_sizes` @16, `pcs_opening` @32 |
+| `verifier.PcsOpening` | 64 | 8 | `proof` @0 (its only field — no `entry_claims`; the verifier reconstructs those from `rounds[*].cells` instead) |
+| `verifier.Proof` | 96 | 8 | `rounds` @0, `module_sizes` @16, `pcs_opening` @32 |
 
 Unions and optionals. Zig gives **no ABI guarantee** for these — the offsets are
 measured facts about one compiler version, not language guarantees. Per §2 we
@@ -177,7 +177,7 @@ serialize them as they are; §7 covers keeping the numbers honest.
 | `?protocol.Commitment` | 36 | 4 | @0, 32B | `u8` @32, 3B pad | `0` = absent, `1` = present |
 | `?merkle.RowPair` | 72 | 8 | @0, 64B | `u8` @64, 7B pad | `0` = null, `1` = present |
 
-The root `verifier.Proof` occupies image offsets `[0, 112)`, because the loader
+The root `verifier.Proof` occupies image offsets `[0, 96)`, because the loader
 casts the base address itself.
 
 ## 7. Field ordering is pinned and machine-checked
@@ -466,9 +466,17 @@ explicitly rather than assumed, since the projection silently discards the field
 
 ### 11.3 Still not counted
 
-`entry_claims` and public columns are absent from `wiop.Proof` — they come out of
-the PCS codegen and the projection, so they are Phase 1 numbers. Both are small
-relative to row data, but the total above is a lower bound until they are added.
+Public columns are absent from `wiop.Proof`, so their size is a Phase 1 number.
+It is small relative to row data, but the total above is a lower bound until it
+is added.
+
+(`entry_claims` used to be listed here too, when it was still a proposed
+separate field the projection would derive. It never shipped as a serialized
+field: the claimed evaluations are ordinary `LagrangeEval.EvaluationClaims`
+cells, already counted once as part of `cells` above, and the verifier
+reconstructs its canonical-entry-order view of them from those same round
+cells at verify time instead of trusting a second, separately-serialized
+copy.)
 
 ### 11.3a Why 43 MiB, and why that is a prover question
 
@@ -502,9 +510,11 @@ serialization. **If ~1 MB is the target, the lever is the FRI rate and query
 count, and how much is committed — not this format.** Worth a separate
 conversation; flagged here only because measuring the image is what surfaced it.
 
-Two caveats on the 43 MiB itself: it is `secp256k1`/`modexp` rather than the real
-zkEVM circuit, and it excludes `entry_claims` (§11.3). Treat it as the right order
-of magnitude for these circuits, not as a zkEVM proof size.
+One caveat on the 43 MiB itself: it is `secp256k1`/`modexp` rather than the real
+zkEVM circuit. Treat it as the right order of magnitude for these circuits, not
+as a zkEVM proof size. (An earlier draft of this caveat also excluded
+`entry_claims` from the count; that field never shipped, so there is nothing
+excluded on that account any more — see §11.3.)
 
 ### 11.4 Why no R5 number, and why it does not matter
 
@@ -638,7 +648,7 @@ verifier-ray/wiop design questions, not serialization ones:
   discriminant against `layout.go`, reporting which constant disagrees and what it
   would corrupt. Verified to fire by perturbing a pin.
 
-- **Done — the projection.** `project.go`: `Project(sys, proof, pub, entryClaims)`
+- **Done — the projection.** `project.go`: `Project(sys, proof, pub)`
   turns a `wiop.Proof` into the verifier's shape. The Go maps disappear here,
   which is why they were never an obstacle to the dump. Cells go out round-major
   in declaration order *including public inputs*, since the verifier absorbs them
@@ -647,12 +657,17 @@ verifier-ray/wiop design questions, not serialization ones:
   `TestProjectEncodeDecode_EndToEnd` closes the loop on real proofs:
   prove → project → encode → decode → re-encode, over all 29 scenarios.
 
-  **`entry_claims` is still a parameter, not derived.** Its canonical ordering is
-  defined by verifier-ray's PCS codegen, in a separate Go module; reproducing it
-  here would mean two orderings that must agree. `Project` takes it from the
-  caller and the round trip passes nil. That seam has to close before a projected
-  proof can actually verify — the vanishing checks are re-sliced from those
-  claims — so it is the next piece of work, not an optional extra.
+  **`entry_claims` is gone, not merely derived.** An earlier draft of this
+  section described it as "still a parameter, not derived" and called closing
+  that seam the next piece of work. It turned out the right resolution was not
+  to derive and serialize a second copy of those claims at all: they are
+  ordinary `LagrangeEval.EvaluationClaims` cells, already carried once in the
+  projected round messages, and verifier-ray's verifier reconstructs its own
+  canonical-entry-order view of them directly from those round cells at verify
+  time (via a codegen-emitted per-column claim-cell table). So `PcsOpening` no
+  longer has an `EntryClaims` field, `Project` takes no `entryClaims` parameter,
+  and there is no second ordering left to keep in agreement with
+  verifier-ray's PCS codegen.
 - **Done — the cross-language check.** Earlier drafts called this blocked on
   §5.2's `MAP_FIXED` decision. That was wrong: a *test* only needs an address the
   test process can map, not the production one. Measured on arm64 macOS,
@@ -660,13 +675,15 @@ verifier-ray/wiop design questions, not serialization ones:
   at `0x400000000`, so the fixture image is relocated there.
 
   `wiop/proofserialization/abi_agreement_test.go` writes
-  `verifier-ray/testdata/proof_image.bin` (936 B) and fails if it goes stale;
+  `verifier-ray/testdata/proof_image.bin` (856 B) and fails if it goes stale;
   `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
   `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
   every variant: both `Scalar` discriminants, both `Vector` discriminants, both
-  a present and an absent round commitment, a null and a present `?RowPair`, a jagged
-  `entry_claims` with an empty inner slice, an empty round, and `merkle.Branch`'s
-  reordered fields.
+  a present and an absent round commitment, a null and a present `?RowPair`, an
+  empty round, and `merkle.Branch`'s reordered fields. (It used to also assert a
+  jagged `entry_claims` with an empty inner slice; that field is gone, and the
+  values it exercised are exercised instead by the ordinary round-cell
+  assertions the same test already makes.)
 
   This is the only place a byte written by Go is interpreted by the actual Zig
   type. Everything else is indirect: the pins assert Zig's layout, prover-ray

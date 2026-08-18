@@ -276,7 +276,6 @@ func (s Stats) String() string {
 	}
 
 	fmt.Fprintf(&b, "\nnot counted (needs the projection):\n")
-	fmt.Fprintf(&b, "  - entry_claims: derived by the PCS codegen, absent from wiop.Proof\n")
 	fmt.Fprintf(&b, "  - public columns: whether this system exposes any, and their sizes\n")
 
 	return b.String()

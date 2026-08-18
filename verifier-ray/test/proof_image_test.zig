@@ -128,15 +128,13 @@ test "a Go-encoded image reads as a verifier.VerifyInput" {
     try std.testing.expectEqual(@as(usize, 8), proof.module_sizes[0]);
     try std.testing.expectEqual(@as(usize, 16), proof.module_sizes[1]);
 
-    // ---- entry claims (jagged, including an empty inner slice) ---------------
-    const claims = proof.pcs_opening.entry_claims;
-    try std.testing.expectEqual(@as(usize, 2), claims.len);
-    try std.testing.expectEqual(@as(usize, 2), claims[0].len);
-    try expectExt(claims[0][0], 50);
-    try expectExt(claims[0][1], 60);
-    try std.testing.expectEqual(@as(usize, 0), claims[1].len);
-
     // ---- PCS input-tree openings --------------------------------------------
+    // No entry_claims to read here any more: PcsOpening no longer carries them
+    // as a separate serialized field, so the fixture no longer has a standalone
+    // 50/60-valued jagged array to assert on. The verifier reconstructs the
+    // claimed evaluations itself at verify time by reading ordinary round cells
+    // (see verifier.zig's `verify`) — already covered by this test's own
+    // round-cell assertions above.
     const queries = proof.pcs_opening.proof.input_queries;
     try std.testing.expectEqual(@as(usize, 1), queries.len);
     try std.testing.expectEqual(@as(usize, 1), queries[0].len);

@@ -14,10 +14,10 @@ import (
 // The maps disappear here, which is why they were never an obstacle to a
 // zero-decode dump. See README.md section 3.
 //
-// The PCS entry claims are derived here rather than supplied: they are the
-// proof's own LagrangeEval cells, reordered into the verifier's canonical entry
-// order. See [deriveEntryClaims], which documents why that ordering is a third
-// copy of a rule owned elsewhere, and where the cross-check for it belongs.
+// PCS entry claims are not part of the projected shape: they are ordinary
+// LagrangeEval cells, already present in the round messages [projectRounds]
+// builds, and the verifier derives its canonical-entry-order view of them from
+// those cells at verify time.
 func Project(
 	sys *wiop.System,
 	proof wiop.Proof,
@@ -31,11 +31,7 @@ func Project(
 			len(pub), len(sys.PublicInputs))
 	}
 
-	entryClaims, err := deriveEntryClaims(sys, proof)
-	if err != nil {
-		return VerifyInput{}, err
-	}
-	out := VerifyInput{Proof: Proof{PcsOpening: PcsOpening{EntryClaims: entryClaims}}}
+	out := VerifyInput{Proof: Proof{}}
 
 	// The flat public-input statement, in registration order. These are absorbed
 	// separately from the round messages, so the round cells below must not

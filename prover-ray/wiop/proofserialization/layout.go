@@ -53,14 +53,17 @@ const (
 	SizeFriProof = 48
 	// SizeOpeningProof is pcs.OpeningProof.
 	SizeOpeningProof = 64
-	// SizePcsOpening is verifier.PcsOpening.
-	SizePcsOpening = 80
+	// SizePcsOpening is verifier.PcsOpening. It carries only the FRI opening
+	// proof now -- no entry_claims field, since the verifier reconstructs those
+	// claimed evaluations itself from rounds[*].cells rather than trusting a
+	// second, separately-serialized copy.
+	SizePcsOpening = 64
 	// SizeProof is verifier.Proof.
-	SizeProof = 112
+	SizeProof = 96
 	// SizeVerifyInput is verifier.VerifyInput, the image ROOT: the proof plus the
 	// flat public-input statement. This is what the loaders cast the input region
 	// to, so it — not Proof — is what must sit at offset 0.
-	SizeVerifyInput = 128
+	SizeVerifyInput = 112
 )
 
 // Field offsets, in bytes from the start of the containing type.
@@ -71,14 +74,14 @@ const (
 // layout.
 const (
 	OffVerifyInputProof        = 0
-	OffVerifyInputPublicInputs = 112
+	OffVerifyInputPublicInputs = 96
 
 	OffProofRounds      = 0
 	OffProofModuleSizes = 16
 	OffProofPcsOpening  = 32
 
-	OffPcsOpeningEntryClaims = 0
-	OffPcsOpeningProof       = 16
+	// PcsOpening now has a single field, so it sits at the struct's own offset 0.
+	OffPcsOpeningProof = 0
 
 	OffOpeningProofInputQueries = 0
 	OffOpeningProofFriProof     = 16

@@ -14,8 +14,8 @@ const testBase = ps.GuestBase
 func ptr[T any](v T) *T { return &v }
 
 // richProof exercises every branch of the encoder: both Scalar variants, a
-// present and an absent round commitment, present and null RowPairs, jagged
-// entry claims, a public-input statement, and empty slices at several depths.
+// present and an absent round commitment, present and null RowPairs, a
+// public-input statement, and empty slices at several depths.
 func richProof() ps.VerifyInput {
 	ext := func(n uint32) ps.Ext {
 		return ps.Ext{ps.Element(n), ps.Element(n + 1), ps.Element(n + 2),
@@ -47,12 +47,6 @@ func richProof() ps.VerifyInput {
 		},
 		ModuleSizes: []uint64{8, 16, 1 << 20},
 		PcsOpening: ps.PcsOpening{
-			// Jagged, including an empty inner slice.
-			EntryClaims: [][]ps.Ext{
-				{ext(500), ext(510)},
-				nil, // zero-length inner slice
-				{ext(520)},
-			},
 			Proof: ps.OpeningProof{
 				InputQueries: [][]ps.InputTreeOpening{
 					{
@@ -253,8 +247,8 @@ func TestEncode_OptRowPairFlagAndPadding(t *testing.T) {
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)
 
-	// Proof.pcs_opening @32 -> .proof @16 -> .input_queries @0
-	qOuter := int(binary.LittleEndian.Uint64(image[32+16+0:]) - testBase)
+	// Proof.pcs_opening @OffProofPcsOpening -> .proof @OffPcsOpeningProof -> .input_queries @OffOpeningProofInputQueries
+	qOuter := int(binary.LittleEndian.Uint64(image[ps.OffProofPcsOpening+ps.OffPcsOpeningProof+ps.OffOpeningProofInputQueries:]) - testBase)
 	qInner := int(binary.LittleEndian.Uint64(image[qOuter:]) - testBase)
 	leaves := int(binary.LittleEndian.Uint64(image[qInner+16:]) - testBase)
 
