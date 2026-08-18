@@ -486,7 +486,7 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
 // ─── Exposed for unit tests only ───────────────────────────────────────────────────────────────
 
-pub const test_api = struct {
+pub const test_api = if (@import("builtin").is_test) struct {
     pub const u64ToSlot32Fn = u64ToSlot32;
     pub const mappingSlotFn = mappingSlot;
     pub const chainConfigHashFn = chainConfigHash;
@@ -504,4 +504,4 @@ pub const test_api = struct {
     /// same inputs a stub engine receives — this module's own import of it is the only reachable
     /// path without a build-graph module double-claim.
     pub const executeStatelessInputWithLogsFn = execution.executeStatelessInputWithLogs;
-};
+} else struct {};

@@ -60,11 +60,39 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
+// CompileOptions are options for [Compile].
+type CompileOptions struct {
+	// SharedRandomness makes the shard derive α and β from a γ handed to it from
+	// outside the proof instead of from its own Fiat-Shamir transcript, which is
+	// what lets several shards agree on those challenges. It declares γ and the
+	// shard's contribution to it as public inputs and wires the pre-sampling hook
+	// that seeds the transcript; see [registerSharedRandomness].
+	//
+	// Off by default: an unsharded protocol has no one to agree with and derives
+	// α and β from its own transcript. Turning it on obliges the prover to supply
+	// γ through [AssignSharedRandomnessSeed] — there is deliberately no default
+	// value, since a γ known in advance would hand the prover α and β before it
+	// commits to its bus columns.
+	//
+	// Setting it on a system with no message-bus entry does nothing: there is no
+	// coin round to seed. Nothing is registered, so [HasSharedRandomness] stays
+	// false and the prover has no γ to supply. A pipeline can therefore turn it on
+	// ahead of the entries it expects and have it engage the moment they arrive.
+	SharedRandomness bool
+}
+
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
 // collection of [wiop.GrandProduct] queries (one per handle) plus one
 // [wiop.VerifierAction] per handle that asserts the shard's product equals
 // the expected value (one in the unsharded case). See the package
 // documentation for the full reduction.
+//
+// Set [CompileOptions.SharedRandomness] to make α and β derive from a
+// cross-shard γ rather than from this shard's transcript. Compile owns that
+// wiring because it is the same call that fixes the coin round: registering the
+// pre-sampling hook separately would leave the hook and the coins free to land
+// on different rounds, which silently desynchronizes the shards rather than
+// failing.
 //
 // The pass appends up to two fresh interactive rounds to sys.Rounds: a
 // coin round where the shared α and β are declared, and a result round
@@ -87,7 +115,12 @@ const PublicInputTag wiop.PublicInputTag = "MessageBus"
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
 // mixing shards in one call is a misuse — or if it is called a second time with
 // new entries.
-func Compile(sys *wiop.System) {
+func Compile(sys *wiop.System, opts ...CompileOptions) {
+	opt := CompileOptions{}
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
 	// handle. Sort the handles for deterministic round/coin/cell ordering
 	// across runs.
@@ -112,9 +145,16 @@ func Compile(sys *wiop.System) {
 		}
 		byHandle[mb.Handle] = append(byHandle[mb.Handle], mb)
 	}
+
 	if len(byHandle) == 0 {
 		// Nothing left to reduce. A repeat call with no new entries is a
 		// harmless no-op, whether or not a previous call already ran.
+		//
+		// This includes a call that asked for shared randomness: with no entry
+		// there is no coin round, hence no α or β to seed and no cross-shard
+		// check to keep consistent, so the request is vacuous rather than a
+		// misuse. A pipeline may therefore set the option before the bus entries
+		// it anticipates exist, and have it take effect once they do.
 		return
 	}
 
@@ -149,18 +189,25 @@ func Compile(sys *wiop.System) {
 	// ensureRoundAfter reuses any tail round already at this position
 	// rather than appending a duplicate.
 
-	// Find the highest-ID round any participant column touches.
-	maxParticipantRound := latestParticipantRound(byHandle)
-	// Pick the slot directly after the participants — allocate a fresh round
-	// if empty, reuse any round already sitting there. The reuse path is what
-	// lands α/β on the *same* round a sharded caller pre-allocated for a
+	// Pick the slot directly after the participants — allocate a fresh round if
+	// empty, reuse any round already sitting there. The reuse path is what lands
+	// α/β on the *same* round a sharded caller pre-allocated for a
 	// PreSamplingHook, so the hook's SetFSState fires immediately before this
-	// round's coin sampling.
-	coinRound := ensureRoundAfter(sys, maxParticipantRound)
+	// round's coin sampling. Going through ensureCoinRound rather than
+	// open-coding the lookup is what guarantees the caller's pre-allocation and
+	// this one agree: both are the same call.
+	coinRound := ensureCoinRound(sys)
 	// Declare α on that round — sampled by AdvanceRound, after any pre-sampling hook fires.
 	alpha := coinRound.NewCoinField(compCtx.Childf("alpha"))
 	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
 	beta := coinRound.NewCoinField(compCtx.Childf("beta"))
+
+	// Seed that Fiat-Shamir state from a cross-shard γ, if asked. This has to
+	// happen here rather than in a separate call by the caller: the hook must land
+	// on the round that carries α and β, and this is where that round is decided.
+	if opt.SharedRandomness {
+		registerSharedRandomness(sys, coinRound)
+	}
 
 	// The result round (where GrandProduct cells and the verifier action live)
 	// sits strictly after the coin round so the GrandProduct prover action sees
@@ -225,24 +272,6 @@ func Compile(sys *wiop.System) {
 			mb.MarkAsReduced()
 		}
 	}
-}
-
-// latestParticipantRound returns the [wiop.Round] with the highest ID among
-// the participant columns of every unreduced MessageBus entry, or nil if no
-// entry references a round-bearing leaf.
-func latestParticipantRound(byHandle map[string][]*wiop.MessageBus) *wiop.Round {
-	var best *wiop.Round
-	update := func(r *wiop.Round) {
-		if r != nil && (best == nil || r.ID > best.ID) {
-			best = r
-		}
-	}
-	for _, entries := range byHandle {
-		for _, mb := range entries {
-			update(mb.Round())
-		}
-	}
-	return best
 }
 
 // ensureRoundAfter returns a round with ID > after.ID, reusing the existing

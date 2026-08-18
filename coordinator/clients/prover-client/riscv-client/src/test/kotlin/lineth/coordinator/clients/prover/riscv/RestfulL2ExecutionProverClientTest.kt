@@ -8,7 +8,7 @@ import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.COINBASE
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofRequestV1
@@ -58,7 +58,7 @@ class RestfulL2ExecutionProverClientTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      guestProgramId = L2_EXECUTION_GUEST_PROGRAM_ID,
+      programVk = L2_EXECUTION_PROGRAM_VK,
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
       coinbase = COINBASE,
     )
@@ -84,7 +84,7 @@ class RestfulL2ExecutionProverClientTest {
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
     val postedDto = jsonMapper.treeToValue(body.get("proof_request"), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(
-      L2_EXECUTION_GUEST_PROGRAM_ID,
+      L2_EXECUTION_PROGRAM_VK,
       L2_MESSAGE_SERVICE_ADDRESS,
       COINBASE,
     ).invoke(request).get()

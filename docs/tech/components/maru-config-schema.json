@@ -932,6 +932,26 @@
         "deprecated": false,
         "replacement": null
       },
+      "qbft.signer-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Logical signer name passed to the external signer factory when signer-type is 'custom'.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.signer-type": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "local",
+        "description": "Validator signing backend. Use 'local' for the node private key or 'custom' for an external signer.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "syncing": {
         "type": "SyncingConfig",
         "section": true,

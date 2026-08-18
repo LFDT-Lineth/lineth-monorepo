@@ -17,17 +17,18 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
-    branches:
-      - main
+    # No branches: filter — this must also run on PRs targeting stacked, non-main
+    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
+    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
     paths:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
       - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
-      - 'arithmetization/src/main/wrappers/**'    # linea_zkvm_accel — imported by the guest build (l2-execution/build.zig)
       - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
       - 'arithmetization/src/test/scripts/**'     # elf_to_json_gen
       - 'arithmetization/Makefile'                # install-zkc / ZKC_REF
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   push:
     branches:
@@ -36,11 +37,11 @@ on:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'
       - 'arithmetization/src/main/lib/**'
-      - 'arithmetization/src/main/wrappers/**'
       - 'arithmetization/src/test/Makefile'
       - 'arithmetization/src/test/scripts/**'
       - 'arithmetization/Makefile'
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   workflow_dispatch:
     inputs:

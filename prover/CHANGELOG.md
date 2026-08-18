@@ -4,6 +4,7 @@
 
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
 - *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
+- *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 
 ### 🚜 Refactor
 
@@ -12,6 +13,8 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(deps)* Bump golang.org/x/net (#3500)
+- *(prover)* Rename Linea to Lineth in prover (#3709)
+- *(misc)* Docker image build streamlining (#3790)
 ## [1.0.5] - 2026-06-30
 
 ### 🐛 Bug Fixes

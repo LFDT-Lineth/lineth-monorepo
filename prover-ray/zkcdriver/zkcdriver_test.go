@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
@@ -61,13 +62,17 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticDepth(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
 	return binfile, nil
 }
 
 // parseTestCase creates a system and the corresponding zkc-driver running the
 // given zkcTestCase. The function also sanity-checks the inputs of the testcase.
-func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.Element]) (
+func parseTestCase(
+	scenario zkcTestCase,
+	binF *constraints.BinaryFile[koalabear.Element],
+	withTraceCheck bool,
+) (
 	inputs *zkcdriver.PreReadInputs,
 	outputs map[string][]byte,
 	err error,
@@ -85,7 +90,7 @@ func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.
 	filteredInputs := vm.FilterInputs(binF.Program(), inputs.Inputs)
 
 	// This sanity-checks the corset inputs of the test-case
-	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs)
+	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
 	if err != nil {
 		return nil, nil, fmt.Errorf("constraint check failed: %w", err)
 	}
@@ -97,6 +102,7 @@ func traceZkc(
 	binFile *constraints.BinaryFile[koalabear.Element],
 	tracingCfg constraints.TraceConfig,
 	input map[string][]byte,
+	withCheck bool,
 ) (outputs map[string][]byte, err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
@@ -111,14 +117,17 @@ func traceZkc(
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
 
-	// check the traces work
-	if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
-		errs := make([]error, len(errsSchema))
-		for i, e := range errsSchema {
-			errs[i] = errors.New(e.Message())
+	if withCheck {
+		// check the traces work
+		if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
+			errs := make([]error, len(errsSchema))
+			for i, e := range errsSchema {
+				errs[i] = errors.New(e.Message())
+			}
+			return nil, fmt.Errorf("constraint check failed: %w", errors.Join(errs...))
 		}
-		return nil, fmt.Errorf("constraint check failed: %w", errors.Join(errs...))
 	}
+
 	return outputs, nil
 }
 
@@ -126,7 +135,12 @@ func proverCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys)
+	// Shared randomness is requested even though the zkc driver declares no
+	// message-bus entry yet, so today this registers nothing. It is left on
+	// deliberately: once the arithmetization emits bus entries, the seeded path
+	// engages here on its own and any gap in the γ wiring surfaces as a failing
+	// test rather than staying hidden behind a flag nobody remembers to flip.
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
@@ -169,7 +183,7 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 
 	// Run the ZkC driver to produce a proof and public inputs
 	proof, pub := sys.Prove(
-		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs) },
+		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{}) },
 		wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	// Verify the proof and public inputs

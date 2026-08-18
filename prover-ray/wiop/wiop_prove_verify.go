@@ -314,8 +314,11 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		}
 	}
 
-	// This runs all the verifier actions.
+	// This runs all the verifier actions. The current round follows the round
+	// being checked, so that a verifier action reads the same [Runtime.CurrentRound]
+	// as the prover action it mirrors.
 	for _, r := range sys.Rounds {
+		rt.currentRound = r
 		for _, va := range r.VerifierActions {
 			if err := va.Check(rt); err != nil {
 				return err
@@ -362,8 +365,16 @@ func (sys *System) checkUnreducedQueries(rt *Runtime) error {
 			return err
 		}
 	}
+	// The table relations share one B-side set cache for the whole pass. On
+	// lookup-heavy systems this is the difference between rebuilding a
+	// range-check target once and rebuilding it once per query that ranges over
+	// it, which is otherwise the bulk of this function's cost.
+	inclCache := newInclusionSetCache()
 	for _, q := range sys.TableRelations {
-		if err := check(q); err != nil {
+		if q.IsReduced() {
+			continue
+		}
+		if err := q.checkWith(rt, inclCache); err != nil {
 			return err
 		}
 	}

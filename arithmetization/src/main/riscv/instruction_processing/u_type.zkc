@@ -36,6 +36,7 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
     // var opcode : Opcode
 
     var tmp:DoubleWord
+    var res:DoubleWord
 
     imm20::rd = instruction_parameters
     tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
@@ -44,11 +45,12 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
         case AUIPC: {
             printf "AUIPC "
             print_u_operands(rd, imm20)
-            tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
+            res = signed_sum_of_double_word(tmp, pc)
         }
         case LUI: {
             printf "LUI "
             print_u_operands(rd, imm20)
+            res = tmp
         }
         default: {
             printf "[ERROR] Unsupported instruction of U-Type\n"
@@ -56,7 +58,5 @@ fn process_U_type_instruction<registers>(opcode:Opcode, instruction_parameters:u
             fail
         }
     }
-
-    // Note: the definition of tmp already works for the LUI opcode
-    registers[rd] = tmp as DoubleWord
+    registers[rd] = res
 }
