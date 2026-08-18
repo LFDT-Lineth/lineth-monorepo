@@ -5,13 +5,10 @@ import linea.clients.BlobCompressionProverClientV2
 import linea.clients.ExecutionProverClientV2
 import linea.clients.InvalidityProverClientV1
 import linea.clients.ProofAggregationProverClientV2
-import linea.clients.ProverClient
-import linea.domain.ProofIndex
 import lineth.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.Logger
-import kotlin.time.Instant
 
 class ProverClientFactory(
   private val vertx: Vertx,
@@ -52,7 +49,7 @@ class ProverClientFactory(
   }
 
   fun executionProverClient(log: Logger = FileBasedExecutionProverClientV2.LOG): ExecutionProverClientV2 {
-    return createClient(
+    return ABProverClientRouter.create(
       proverAConfig = config.proverA.execution,
       proverBConfig = config.proverB?.execution,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
@@ -69,7 +66,7 @@ class ProverClientFactory(
   fun blobCompressionProverClient(
     log: Logger = FileBasedBlobCompressionProverClientV2.LOG,
   ): BlobCompressionProverClientV2 {
-    return createClient(
+    return ABProverClientRouter.create(
       proverAConfig = requireNotNull(config.proverA.blobCompression) {
         "proverA.blobCompression must be configured to use blobCompressionProverClient"
       },
@@ -89,7 +86,7 @@ class ProverClientFactory(
   fun proofAggregationProverClient(
     log: Logger = FileBasedProofAggregationClientV2.LOG,
   ): ProofAggregationProverClientV2 {
-    return createClient(
+    return ABProverClientRouter.create(
       proverAConfig = config.proverA,
       proverBConfig = config.proverB,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
@@ -110,7 +107,7 @@ class ProverClientFactory(
       throw IllegalStateException("Invalidity prover config is not configured")
     }
 
-    return createClient(
+    return ABProverClientRouter.create(
       proverAConfig = config.proverA,
       proverBConfig = config.proverB,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
@@ -121,41 +118,6 @@ class ProverClientFactory(
         vertx = vertx,
       )
         .also { invalidityWaitingResponsesMetric.addReporter(it) }
-    }
-  }
-
-  private fun <TProverConfig, ProofRequest, ProofResponse, TProofIndex> createClient(
-    proverAConfig: TProverConfig,
-    proverBConfig: TProverConfig?,
-    switchBlockNumberInclusive: ULong?,
-    switchBlockTimestamp: Instant?,
-    clientBuilder: (TProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
-  ): ProverClient<ProofRequest, ProofResponse, TProofIndex>
-    where ProofRequest : Any, TProofIndex : ProofIndex {
-    return when {
-      switchBlockNumberInclusive != null -> {
-        require(proverBConfig != null) {
-          "proverBConfig must be provided when switchBlockNumberInclusive is set"
-        }
-        val switchPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)
-        ABProverClientRouter(
-          proverA = clientBuilder(proverAConfig),
-          proverB = clientBuilder(proverBConfig),
-          switchToProverBPredicate = switchPredicate::invoke,
-        )
-      }
-      switchBlockTimestamp != null -> {
-        require(proverBConfig != null) {
-          "proverBConfig must be provided when switchBlockTimestamp is set"
-        }
-        val switchPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)
-        ABProverClientRouter(
-          proverA = clientBuilder(proverAConfig),
-          proverB = clientBuilder(proverBConfig),
-          switchToProverBPredicate = switchPredicate::invoke,
-        )
-      }
-      else -> clientBuilder(proverAConfig)
     }
   }
 }
