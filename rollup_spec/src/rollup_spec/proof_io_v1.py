@@ -263,11 +263,18 @@ def decode_request_json(text: str | bytes) -> L2ExecutionProofPrivateInput:
 # ── response: guest dataclass -> JSON dict ────────────────────────────────────
 
 
-def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
+def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `L2ExecutionProof` into a
     `getZkL2ExecutionProofV1.response.json` object the coordinator's Jackson
     mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata (like `proof`
+    and `prover_version`) — the guest cannot attest its own VK, so it is not
+    part of `L2ExecutionProof`/`public_inputs`, but the prover knows which
+    guest binary it ran and carries the VK on the wire response so the
+    coordinator can echo it, unchanged, into the rollup request's embedded
+    l2-execution proof (see `_decode_l2_execution_proof`).
     """
     pi = proof.public_inputs
     return {
@@ -299,23 +306,28 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
         "txFroms": [_hx(a) for a in proof.tx_froms],
         "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
+        "programVk": _hx(program_vk),
     }
 
 
 def encode_response_json(
-    proof: L2ExecutionProof, prover_version: str, *, indent: int | None = None
+    proof: L2ExecutionProof,
+    prover_version: str,
+    *,
+    program_vk: Hash32,
+    indent: int | None = None,
 ) -> str:
-    return json.dumps(encode_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── prover entrypoint ─────────────────────────────────────────────────────────
 
 
-def run_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse request JSON, run the guest, return response JSON dict."""
     execution_input = decode_request_json(text)
     proof = run_l2_execution_guest(execution_input)
-    return encode_response(proof, prover_version)
+    return encode_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
