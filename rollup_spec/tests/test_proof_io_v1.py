@@ -415,12 +415,12 @@ def test_decode_rollup_request_json_round_trips() -> None:
 
 
 def test_encode_rollup_response_matches_fixture_exactly() -> None:
-    out = encode_rollup_response(_sample_rollup_proof(), prover_version=_PROVER_VERSION)
+    out = encode_rollup_response(_sample_rollup_proof(), prover_version=_PROVER_VERSION, program_vk=_ROLLUP_VK)
     assert out == _expected_rollup_response()
 
 
 def test_encode_rollup_response_shape_and_values() -> None:
-    out = encode_rollup_response(_sample_rollup_proof(), prover_version="4.0.0-riscv")
+    out = encode_rollup_response(_sample_rollup_proof(), prover_version="4.0.0-riscv", program_vk=_ROLLUP_VK)
 
     assert out["proverVersion"] == "4.0.0-riscv"
     assert out["proof"] == "0xdeadbeef"
@@ -453,6 +453,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "startOffset", "endOffset", "programVks",
     }
 
+    assert out["programVk"] == "0x" + ("bb" * 32)
     assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
     assert out["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
 
