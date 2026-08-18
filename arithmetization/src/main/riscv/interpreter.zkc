@@ -203,19 +203,19 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
     var rs1_plus_imm:u64
     var mem_address:Address
 
-    new_output_write_address = output_write_address
-
     switch compute_op {
         // =========
         // MISC_MEM 
         // =========
         case COMPUTE_MISC_MEM: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
         }
         // ==============
         // I-type — LOAD 
         // ==============
         case READ8_SGN: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_SGN "
@@ -223,6 +223,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u8_u64(read_8(rs1_plus_imm))
         }
         case READ8_SGN_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_SGN "
@@ -230,6 +231,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_imm))
         }
         case READ16_SGN: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ16_SGN "
@@ -237,6 +239,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u16_u64(read_16(rs1_plus_imm))
         }
         case READ16_SGN_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ16_SGN "
@@ -244,6 +247,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_imm))
         }
         case READ32_SGN: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ32_SGN "
@@ -251,6 +255,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(read_32(rs1_plus_imm))
         }
         case READ32_SGN_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ32_SGN "
@@ -258,6 +263,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_imm))
         }
         case READ64: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ64 "
@@ -265,6 +271,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = read_64(rs1_plus_imm) as DoubleWord
         }
         case READ64_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ64 "
@@ -272,6 +279,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = read_64(rs1_plus_imm) as DoubleWord
         }
         case READ8_ZEXT: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_ZEXT "
@@ -279,6 +287,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = read_8(rs1_plus_imm) as DoubleWord
         }
         case READ8_ZEXT_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_ZEXT "
@@ -286,6 +295,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = read_8(rs1_plus_imm) as DoubleWord
         }
         case READ16_ZEXT: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ16_ZEXT "
@@ -293,6 +303,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = read_16(rs1_plus_imm) as DoubleWord
         }
         case READ16_ZEXT_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ16_ZEXT "
@@ -300,6 +311,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = read_16(rs1_plus_imm) as DoubleWord
         }
         case READ32_ZEXT: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ32_ZEXT "
@@ -307,6 +319,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = read_32(rs1_plus_imm) as DoubleWord
         }
         case READ32_ZEXT_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ32_ZEXT "
@@ -317,6 +330,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // I-type — OP-IMM 
         // ================
         case OP_ADDI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDI "
@@ -324,6 +338,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = rs1_plus_imm
         }
         case OP_ADDI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDI "
@@ -331,6 +346,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = rs1_plus_imm
         }
         case OP_SLLI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -339,6 +355,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1] << uimm6
         }
         case OP_SLLI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -347,6 +364,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = registers[rs1] << uimm6
         }
         case OP_SLTI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_SLTI "
@@ -354,6 +372,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = signed_LT(registers[rs1], imm) as DoubleWord
         }
         case OP_SLTI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_SLTI "
@@ -361,6 +380,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = signed_LT(registers[rs1], imm) as DoubleWord
         }
         case OP_SLTIU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_SLTIU "
@@ -369,6 +389,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1]<imm ? 1:0
         }
         case OP_SLTIU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_SLTIU "
@@ -377,6 +398,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = registers[rs1]<imm ? 1:0
         }
         case OP_XORI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_XORI "
@@ -384,6 +406,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1] ^ imm
         }
         case OP_XORI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_XORI "
@@ -391,6 +414,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = registers[rs1] ^ imm
         }
         case OP_SRLI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -399,6 +423,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1] >> uimm6
         }
         case OP_SRLI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -407,6 +432,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = registers[rs1] >> uimm6
         }
         case OP_SRAI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -415,6 +441,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = _ashr_u64(registers[rs1], uimm6)
         }
         case OP_SRAI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm6:UImm6 = imm as UImm6
@@ -423,6 +450,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = _ashr_u64(registers[rs1], uimm6)
         }
         case OP_ORI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ORI "
@@ -430,6 +458,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1] | imm
         }
         case OP_ORI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ORI "
@@ -437,6 +466,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = registers[rs1] | imm
         }
         case OP_ANDI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ANDI "
@@ -444,6 +474,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = registers[rs1] & imm
         }
         case OP_ANDI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ANDI "
@@ -454,6 +485,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // I-type — OP-IMM-32 (former I_TYPE)
         // ==========================
         case OP_ADDIW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDIW "
@@ -461,6 +493,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64((rs1_plus_imm & MAX_UINT_32_AS_U64) as Word)
         }
         case OP_ADDIW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDIW "
@@ -468,6 +501,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64((rs1_plus_imm & MAX_UINT_32_AS_U64) as Word)
         }
         case OP_SLLIW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -476,6 +510,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
         }
         case OP_SLLIW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -484,6 +519,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
         }
         case OP_SRLIW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -492,6 +528,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
         }
         case OP_SRLIW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -500,6 +537,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
         }
         case OP_SRAIW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -508,6 +546,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
         case OP_SRAIW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             var uimm5:UImm5 = imm as UImm5
@@ -519,6 +558,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // I-type — JALR / SYSTEM
         // =======================
         case ITYPE_JALR: {
+            new_output_write_address = output_write_address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "ITYPE_JALR "
             print_i_memory_operands(rd, rs1, imm)
@@ -526,6 +566,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             new_pc = rs1_plus_imm & MASK_64_ERASE_LAST_BIT
         }
         case ITYPE_JALR_WB: {
+            new_output_write_address = output_write_address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "ITYPE_JALR "
             print_i_memory_operands(rd, rs1, imm)
@@ -533,10 +574,12 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = (pc + 4) as DoubleWord
         }
         case ITYPE_ECALL: {
+            new_output_write_address = output_write_address
             printf "ITYPE_ECALL\n"
             new_pc = process_syscall(pc)
         }
         case ITYPE_EBREAK: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "[ERROR] ITYPE_EBREAK instruction triggered\n"
@@ -546,6 +589,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // R-type — base ops (former R_TYPE)
         // ==========================
         case RTYPE_ADD: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -554,6 +598,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             overflow::result = (v1 as u65) + (v2 as u65)
         }
         case RTYPE_SUB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -562,6 +607,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             overflow::result = ((1 as u1)::(v1 as u64)) - (v2 as u65)
         }
         case RTYPE_SLL: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -571,6 +617,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 << shift_amount_6
         }
         case RTYPE_SLT: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -579,6 +626,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = signed_LT(v1, v2) as DoubleWord
         }
         case RTYPE_SLTU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -587,6 +635,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1<v2 ? 1:0
         }
         case RTYPE_XOR: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -595,6 +644,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 ^ v2
         }
         case RTYPE_SRL: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -604,6 +654,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 >> shift_amount_6
         }
         case RTYPE_SRA: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -613,6 +664,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = _ashr_u64(v1, shift_amount_6)
         }
         case RTYPE_OR: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -621,6 +673,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 | v2
         }
         case RTYPE_AND: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -629,6 +682,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 & v2
         }
         case RTYPE_MUL: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -637,6 +691,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
         }
         case RTYPE_MULH: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -649,6 +704,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHSU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -661,6 +717,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -669,6 +726,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = (((v1 as u128) * (v2 as u128)) >> 64) as u64
         }
         case RTYPE_DIV: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -681,6 +739,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_DIVU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -693,6 +752,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REM: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -710,6 +770,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REMU: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -722,6 +783,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_ADDW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -733,6 +795,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SUBW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -744,6 +807,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SLLW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -755,6 +819,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(v1_lower << shift_amount_5)
         }
         case RTYPE_SRLW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -766,6 +831,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
         }
         case RTYPE_SRAW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -781,6 +847,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_MULW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -796,6 +863,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_DIVW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -813,6 +881,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_DIVUW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -827,6 +896,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REMW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -845,6 +915,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REMUW: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -859,15 +930,16 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_KECCAK: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
             printf "RTYPE_KECCAK "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-            new_output_write_address = output_write_address
             // fall through
         }
         case RTYPE_POSEIDON2: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             printf "RTYPE_POSEIDON2 "
@@ -875,7 +947,6 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             // poseidon2(input_addr, output_addr) applies the permutation to the
             // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
             poseidon2(v1 as Address, registers[rd] as Address)
-            new_output_write_address = output_write_address
             // fall through
         }
         case RTYPE_WRITE_OUTPUT: {
@@ -890,6 +961,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // R-type — writeback variants 
         // ============================
         case RTYPE_ADD_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -899,6 +971,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = result
         }
         case RTYPE_SUB_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -908,6 +981,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = result
         }
         case RTYPE_SLL_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -917,6 +991,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1 << shift_amount_6
         }
         case RTYPE_SLT_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -925,6 +1000,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = signed_LT(v1, v2) as DoubleWord
         }
         case RTYPE_SLTU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -933,6 +1009,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1<v2 ? 1:0
         }
         case RTYPE_XOR_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -941,6 +1018,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1 ^ v2
         }
         case RTYPE_SRL_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -950,6 +1028,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1 >> shift_amount_6
         }
         case RTYPE_SRA_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -959,6 +1038,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = _ashr_u64(v1, shift_amount_6)
         }
         case RTYPE_OR_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -967,6 +1047,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1 | v2
         }
         case RTYPE_AND_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -975,6 +1056,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = v1 & v2
         }
         case RTYPE_MUL_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -983,6 +1065,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
         }
         case RTYPE_MULH_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -995,6 +1078,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHSU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1007,6 +1091,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1015,6 +1100,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = (((v1 as u128) * (v2 as u128)) >> 64) as u64
         }
         case RTYPE_DIV_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1028,6 +1114,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = result
         }
         case RTYPE_DIVU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1040,6 +1127,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REM_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1058,6 +1146,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = result
         }
         case RTYPE_REMU_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1070,6 +1159,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_ADDW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1081,6 +1171,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SUBW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1092,6 +1183,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SLLW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1103,6 +1195,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
         }
         case RTYPE_SRLW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1114,6 +1207,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             registers[rd] = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
         }
         case RTYPE_SRAW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1129,6 +1223,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_MULW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1144,6 +1239,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_DIVW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1161,6 +1257,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_DIVUW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1175,6 +1272,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REMW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1193,6 +1291,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case RTYPE_REMUW_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1210,6 +1309,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // S-type 
         // =======
         case STYPE_STORE8: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE8 "
@@ -1217,6 +1317,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case STYPE_STORE16: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE16 "
@@ -1224,6 +1325,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case STYPE_STORE32: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE32 "
@@ -1231,6 +1333,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case STYPE_STORE64: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE64 "
@@ -1241,6 +1344,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // B-type 
         // =======
         case BRANCH_BEQ: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BEQ "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
@@ -1251,6 +1355,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case BRANCH_BNE: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BNE "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] != registers[rs2] {
@@ -1261,6 +1366,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case BRANCH_BLT: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BLT "
             print_b_operands(rs1, rs2, imm)
             if signed_LT(registers[rs1], registers[rs2]) == 1 {
@@ -1271,6 +1377,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case BRANCH_BGE: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BGE "
             print_b_operands(rs1, rs2, imm)
             if signed_LT(registers[rs1], registers[rs2]) == 0 {
@@ -1281,6 +1388,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case BRANCH_BLTU: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BLTU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
@@ -1291,6 +1399,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             }
         }
         case BRANCH_BGEU: {
+            new_output_write_address = output_write_address
             printf "BRANCH_BGEU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] >= registers[rs2] {
@@ -1304,11 +1413,13 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // J-type 
         // =======
         case JTYPE_JAL: {
+            new_output_write_address = output_write_address
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
             new_pc = signed_sum_of_double_word(pc, imm) as Address
         }
         case JTYPE_JAL_WB: {
+            new_output_write_address = output_write_address
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
             new_pc = signed_sum_of_double_word(pc, imm) as Address
@@ -1318,29 +1429,34 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         // U-type 
         // =======
         case UTYPE_LUI: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             printf "UTYPE_LUI "
             print_u_operands(rd, (imm >> 12) as Imm20)
         }
         case UTYPE_LUI_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             printf "UTYPE_LUI "
             print_u_operands(rd, (imm >> 12) as Imm20)
             registers[rd] = imm
         }
         case UTYPE_AUIPC: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             printf "UTYPE_AUIPC "
             print_u_operands(rd, (imm >> 12) as Imm20)
             result = signed_sum_of_double_word(imm, pc) as DoubleWord
         }
         case UTYPE_AUIPC_WB: {
+            new_output_write_address = output_write_address
             new_pc = (pc + 4) as Address
             printf "UTYPE_AUIPC "
             print_u_operands(rd, (imm >> 12) as Imm20)
             registers[rd] = signed_sum_of_double_word(imm, pc) as DoubleWord
         }
         default: {
+            new_output_write_address = output_write_address
             printf "[ERROR] Unsupported compute_op %d\n", compute_op
             fail
         }
