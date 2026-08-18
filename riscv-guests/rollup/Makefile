@@ -26,8 +26,12 @@ ZIG_FETCH_FLAGS ?=
 NAME := rollup_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-# Sample fixture input used by exec/debug — the checked-in golden rollup-input vector.
-INPUT ?= $(MAKEFILE_DIR)test/testdata/sample.request.ssz.hex
+# Sample fixture input used by exec/debug. The default is generated fresh by `require-input` via
+# `zig build gen-fixture` (this package's own encodeInput over its own test sample) — never checked
+# into git, so it can't silently drift from what the current wire format produces. Pass your own
+# INPUT=path/to/file to use something else instead.
+GENERATED_INPUT := $(BUILD_CACHE_DIR)/sample.request.ssz.hex
+INPUT ?= $(GENERATED_INPUT)
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity.
@@ -57,8 +61,14 @@ compile:
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
-# Fail early on a missing/empty INPUT instead of building then erroring in the converter.
+# Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
+# override), then fails early on a still-missing/empty INPUT instead of building then erroring in
+# the converter.
 require-input:
+	@if [ "$(INPUT)" = "$(GENERATED_INPUT)" ]; then \
+		mkdir -p $(dir $(GENERATED_INPUT)); \
+		$(ZIG) build gen-fixture $(ZIG_BUILD_FLAGS) > $(GENERATED_INPUT); \
+	fi
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 
 exec: require-input compile

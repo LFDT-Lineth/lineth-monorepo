@@ -64,6 +64,15 @@ pub fn build(b: *std.Build) void {
     });
     rollup_aggregation_native_mod.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
 
+    // Shared test-only sample data (`sampleInput`/`repeat32`/`repeat20`), used by both native test
+    // binaries below and by `tools/gen_fixture.zig` — one definition of a valid sample input.
+    const support_mod = b.createModule(.{
+        .root_source_file = b.path("test/support.zig"),
+        .target = native_target,
+        .optimize = .Debug,
+    });
+    support_mod.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
+
     const test_step = b.step("test", "Run native Zig unit tests for the rollup-aggregation guest");
 
     const rollup_aggregation_ssz_tests = b.addTest(.{
@@ -74,6 +83,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     rollup_aggregation_ssz_tests.root_module.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
+    rollup_aggregation_ssz_tests.root_module.addImport("support.zig", support_mod);
     test_step.dependOn(&b.addRunArtifact(rollup_aggregation_ssz_tests).step);
 
     const rollup_aggregation_tests = b.addTest(.{
@@ -85,12 +95,15 @@ pub fn build(b: *std.Build) void {
     });
     rollup_aggregation_tests.root_module.addImport("rollup_aggregation", rollup_aggregation_native_mod);
     rollup_aggregation_tests.root_module.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
+    rollup_aggregation_tests.root_module.addImport("support.zig", support_mod);
     test_step.dependOn(&b.addRunArtifact(rollup_aggregation_tests).step);
 
     // ── Fixture generation ─────────────────────────────────────────────────────────────────────
-    // Prints a framed sample input as hex on stdout — `make exec`'s guest input is this package's
-    // own encoder output, not an externally-produced fixture. `zig build gen-fixture > path`
-    // regenerates it after a wire-format change.
+    // Prints a framed sample input as hex on stdout, from the same `sampleInput` the tests use —
+    // `make exec`'s guest input is this package's own encoder output, not an externally-produced
+    // or separately-checked-in fixture. `require-input` in this guest's Makefile invokes this step
+    // to (re)generate the default INPUT on every `make exec`/`debug`, so nothing here is checked
+    // into git and it can never silently drift from what the current wire format produces.
     const gen_fixture = b.addExecutable(.{
         .name = "gen_fixture",
         .root_module = b.createModule(.{
@@ -100,6 +113,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     gen_fixture.root_module.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
+    gen_fixture.root_module.addImport("support.zig", support_mod);
     const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupAggregationProofPrivateInput as framed hex on stdout");
     gen_fixture_step.dependOn(&b.addRunArtifact(gen_fixture).step);
 }
