@@ -7,7 +7,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.proverJobResponseBody
@@ -57,7 +57,7 @@ class RestfulRollupProverClientTest {
     )
     client = RestfulRollupProverClient(
       transport = transport,
-      guestProgramId = ROLLUP_GUEST_PROGRAM_ID,
+      programVk = ROLLUP_PROGRAM_VK,
       chainId = CHAIN_ID,
     )
   }
@@ -85,7 +85,7 @@ class RestfulRollupProverClientTest {
 
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
     val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RestfulRollupProofRequestDto::class.java)
-    val expectedDto = RestfulRollupProofRequestDtoMapper(ROLLUP_GUEST_PROGRAM_ID, CHAIN_ID).invoke(request).get()
+    val expectedDto = RestfulRollupProofRequestDtoMapper(ROLLUP_PROGRAM_VK, CHAIN_ID).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }
 
