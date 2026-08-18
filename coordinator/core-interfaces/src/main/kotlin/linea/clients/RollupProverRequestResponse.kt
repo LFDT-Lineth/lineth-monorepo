@@ -181,6 +181,7 @@ data class RollupProofResponseV1(
   val publicInputs: RollupProofPublicInputs,
   val l2L1Roots: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
+  val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -194,6 +195,7 @@ data class RollupProofResponseV1(
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (!programVk.contentEquals(other.programVk)) return false
 
     return true
   }
@@ -205,6 +207,7 @@ data class RollupProofResponseV1(
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Roots.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + programVk.contentHashCode()
     return result
   }
 }
