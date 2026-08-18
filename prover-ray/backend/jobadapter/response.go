@@ -51,7 +51,9 @@ type failureResponseBody struct {
 	Error       string      `json:"error,omitempty"`
 }
 
-func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte) executionResponse {
+func newExecutionResponse(
+	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
+) executionResponse {
 	return executionResponse{
 		ProverVersion:     proverVersion,
 		ProofHex:          hexBytes(result.ProofBytes),
