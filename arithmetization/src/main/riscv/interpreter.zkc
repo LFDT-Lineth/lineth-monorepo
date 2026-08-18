@@ -198,6 +198,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
     var v2_lower:Word
     var product_upper:Word
     var product_lower:Word
+    var product_hi:DoubleWord
+    var product_lo:DoubleWord
     var word_wip:Word
     var result:DoubleWord
     var rs1_plus_imm:u64
@@ -697,11 +699,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULH "
             print_r_operands(rd, rs1, rs2)
-            var v1_times_v2_as_u128:u128 = (absolute_value_double_word(v1) as u128) * (absolute_value_double_word(v2) as u128)
-            if (sign_bit_of_double_word(v1) ^ sign_bit_of_double_word(v2)) == 1 && v1_times_v2_as_u128 != 0 {
-                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-            }
-            result = (v1_times_v2_as_u128 >> 64) as u64
+            product_hi, product_lo = mul64_ss(v1, v2)
+            result = product_hi
         }
         case RTYPE_MULHSU: {
             new_output_write_address = output_write_address
@@ -710,11 +709,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULHSU "
             print_r_operands(rd, rs1, rs2)
-            var v1_times_v2_as_u128:u128 = (absolute_value_double_word(v1) as u128) * (v2 as u128)
-            if sign_bit_of_double_word(v1) == 1 && v1_times_v2_as_u128 != 0 {
-                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-            }
-            result = (v1_times_v2_as_u128 >> 64) as u64
+            product_hi, product_lo = mul64_su(v1, v2)
+            result = product_hi
         }
         case RTYPE_MULHU: {
             new_output_write_address = output_write_address
@@ -723,7 +719,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULHU "
             print_r_operands(rd, rs1, rs2)
-            result = (((v1 as u128) * (v2 as u128)) >> 64) as u64
+            product_hi, product_lo = mul64_uu(v1, v2)
+            result = product_hi
         }
         case RTYPE_DIV: {
             new_output_write_address = output_write_address
@@ -1071,11 +1068,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULH "
             print_r_operands(rd, rs1, rs2)
-            var v1_times_v2_as_u128:u128 = (absolute_value_double_word(v1) as u128) * (absolute_value_double_word(v2) as u128)
-            if (sign_bit_of_double_word(v1) ^ sign_bit_of_double_word(v2)) == 1 && v1_times_v2_as_u128 != 0 {
-                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-            }
-            registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
+            product_hi, product_lo = mul64_ss(v1, v2)
+            registers[rd] = product_hi
         }
         case RTYPE_MULHSU_WB: {
             new_output_write_address = output_write_address
@@ -1084,11 +1078,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULHSU "
             print_r_operands(rd, rs1, rs2)
-            var v1_times_v2_as_u128:u128 = (absolute_value_double_word(v1) as u128) * (v2 as u128)
-            if sign_bit_of_double_word(v1) == 1 && v1_times_v2_as_u128 != 0 {
-                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-            }
-            registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
+            product_hi, product_lo = mul64_su(v1, v2)
+            registers[rd] = product_hi
         }
         case RTYPE_MULHU_WB: {
             new_output_write_address = output_write_address
@@ -1097,7 +1088,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MULHU "
             print_r_operands(rd, rs1, rs2)
-            registers[rd] = (((v1 as u128) * (v2 as u128)) >> 64) as u64
+            product_hi, product_lo = mul64_uu(v1, v2)
+            registers[rd] = product_hi
         }
         case RTYPE_DIV_WB: {
             new_output_write_address = output_write_address
