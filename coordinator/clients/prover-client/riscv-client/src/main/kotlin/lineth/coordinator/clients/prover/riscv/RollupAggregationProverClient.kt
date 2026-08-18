@@ -17,7 +17,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  */
 internal class FileBasedRollupAggregationProofRequestDtoMapper(
-  private val guestProgramId: String,
+  private val programVk: String,
   private val rollupProofTransport: FileBasedRollupProofTransport,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<FileBasedRollupAggregationProofRequestDto> {
@@ -27,7 +27,7 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
     return SafeFuture.collectAll(rollupProofFutures.stream())
       .thenApply { rollupResponseDtos ->
         FileBasedRollupAggregationProofRequestDto(
-          guestProgramId = guestProgramId,
+          programVk = programVk,
           proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
             rollupProofs = rollupResponseDtos.mapIndexed { index, response ->
               val proofResponse = requireNotNull(response) {
@@ -57,11 +57,11 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
  * each rollup proof response.
  */
 internal class RestfulRollupAggregationProofRequestDtoMapper(
-  private val guestProgramId: String,
+  private val programVk: String,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RestfulRollupAggregationProofRequestDto> {
     val dto = RestfulRollupAggregationProofRequestDto(
-      guestProgramId = guestProgramId,
+      programVk = programVk,
       proofRequest = RestfulRollupAggregationProofRequestParamsDto(
         rollupProofIndexes = request.rollupProofs,
       ),
@@ -119,10 +119,10 @@ private typealias RestfulRollupAggregationProofTransport =
 class FileBasedRollupAggregationProverClient(
   transport: FileBasedRollupAggregationProofTransport,
   rollupProofTransport: FileBasedRollupProofTransport,
-  guestProgramId: String,
+  programVk: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = FileBasedRollupAggregationProofRequestDtoMapper(
-    guestProgramId,
+    programVk,
     rollupProofTransport,
   ),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
@@ -156,9 +156,9 @@ class FileBasedRollupAggregationProverClient(
  */
 class RestfulRollupAggregationProverClient(
   transport: RestfulRollupAggregationProofTransport,
-  guestProgramId: String,
+  programVk: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> =
-    RestfulRollupAggregationProofRequestDtoMapper(guestProgramId),
+    RestfulRollupAggregationProofRequestDtoMapper(programVk),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

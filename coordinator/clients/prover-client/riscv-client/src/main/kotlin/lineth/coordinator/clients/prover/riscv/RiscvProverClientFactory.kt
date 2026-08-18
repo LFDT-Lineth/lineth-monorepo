@@ -62,8 +62,8 @@ class RiscvProverClientFactory(
     )
     return L2ExecutionProverClient(
       transport = transport,
-      guestProgramId = requireNotNull(proverConfig.guestProgramId) {
-        "guestProgramId must be configured for the RISC-V execution prover"
+      programVk = requireNotNull(proverConfig.programVk) {
+        "programVk must be configured for the RISC-V execution prover"
       },
       l2MessageServiceAddress = l2MessageServiceAddress,
       coinbase = coinbase,

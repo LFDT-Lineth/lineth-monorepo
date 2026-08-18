@@ -84,11 +84,11 @@ data class ProverToml(
     )
     val fsResponsesDirectory: String,
     @param:ConfigDoc(
-      description = "Guest program identifier for the RISC-V prover. Required when this config is used " +
+      description = "Guest program verifying key for the RISC-V prover. Required when this config is used " +
         "as the riscvProver; omit for the standard (EVM) prover.",
       example = "0xabcdef1234567890",
     )
-    val guestProgramId: String? = null,
+    val programVk: String? = null,
     @param:ConfigDoc(
       description = "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). " +
         "Required for the RISC-V execution prover; omit for other prover types.",
@@ -105,7 +105,7 @@ data class ProverToml(
       inprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix,
       pollingInterval = fsPollingInterval,
       pollingTimeout = fsPollingTimeout,
-      guestProgramId = proverConfigToml.guestProgramId,
+      programVk = proverConfigToml.programVk,
       forkName = proverConfigToml.forkName,
     )
 

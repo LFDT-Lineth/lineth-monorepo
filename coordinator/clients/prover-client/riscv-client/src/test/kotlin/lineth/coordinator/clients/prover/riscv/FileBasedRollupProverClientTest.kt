@@ -5,7 +5,7 @@ import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.conflationWitness
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
@@ -53,7 +53,7 @@ class FileBasedRollupProverClientTest {
     client = FileBasedRollupProverClient(
       transport = transport,
       l2ExecutionProofTransport = l2ExecutionProofTransport,
-      guestProgramId = ROLLUP_GUEST_PROGRAM_ID,
+      programVk = ROLLUP_PROGRAM_VK,
       chainId = CHAIN_ID,
     )
   }
@@ -72,7 +72,7 @@ class FileBasedRollupProverClientTest {
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupProofRequestDto::class.java)
     val expectedDto = FileBasedRollupProofRequestDtoMapper(
-      ROLLUP_GUEST_PROGRAM_ID,
+      ROLLUP_PROGRAM_VK,
       CHAIN_ID,
       l2ExecutionProofTransport,
     ).invoke(request).get()
