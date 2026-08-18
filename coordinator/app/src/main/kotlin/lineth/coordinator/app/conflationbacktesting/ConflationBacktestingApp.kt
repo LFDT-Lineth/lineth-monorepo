@@ -440,7 +440,7 @@ class ConflationBacktestingApp(
             .resolve("execution")
             .resolve("responses"),
         ),
-        blobCompression = proverConfig.blobCompression.copy(
+        blobCompression = proverConfig.blobCompression?.copy(
           requestsDirectory = jobDirectory
             .resolve("compression")
             .resolve("requests"),

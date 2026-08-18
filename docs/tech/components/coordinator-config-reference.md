@@ -346,36 +346,121 @@ File-based prover request/response directories and switch-over settings.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
+| `prover.blob-compression.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.blob-compression.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
+| `prover.execution.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.execution.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
 | `prover.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
 | `prover.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
 | `prover.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
+| `prover.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.invalidity.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `prover.new.blob-compression.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.new.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.new.blob-compression.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.new.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
+| `prover.new.execution.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.new.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.new.execution.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.new.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
 | `prover.new.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
 | `prover.new.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
 | `prover.new.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
+| `prover.new.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.new.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.new.invalidity.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `prover.new.proof-aggregation.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.new.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.new.proof-aggregation.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `prover.new.rollup.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `prover.new.rollup.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `prover.new.rollup.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.new.rollup.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.new.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
 | `prover.new.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
+| `prover.proof-aggregation.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.proof-aggregation.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `prover.rollup.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `prover.rollup.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `prover.rollup.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `prover.rollup.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
 | `prover.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
 | `prover.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
+
+### `riscv-prover`
+
+RISC-V prover request/response directories for execution, rollup, and aggregation proofs.
+
+| Key | Type | Required | Default | Status | Description |
+| --- | --- | --- | --- | --- | --- |
+| `riscv-prover.blob-compression.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.blob-compression.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
+| `riscv-prover.execution.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.execution.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
+| `riscv-prover.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
+| `riscv-prover.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
+| `riscv-prover.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
+| `riscv-prover.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.invalidity.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.blob-compression.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.new.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.new.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.new.blob-compression.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
+| `riscv-prover.new.execution.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.new.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.new.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.new.execution.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
+| `riscv-prover.new.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
+| `riscv-prover.new.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
+| `riscv-prover.new.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
+| `riscv-prover.new.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.new.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.new.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.new.invalidity.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.proof-aggregation.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.new.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.new.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.new.proof-aggregation.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.rollup.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.new.rollup.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.new.rollup.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.new.rollup.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.new.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
+| `riscv-prover.new.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
+| `riscv-prover.proof-aggregation.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.proof-aggregation.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.rollup.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
+| `riscv-prover.rollup.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
+| `riscv-prover.rollup.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
+| `riscv-prover.rollup.guest-program-id` | `String?` | no | - | active | Guest program identifier for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
+| `riscv-prover.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
+| `riscv-prover.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
 
 ### `state-manager`
 
