@@ -6,14 +6,18 @@ on:
       - main
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
     inputs:
