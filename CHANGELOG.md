@@ -29,6 +29,7 @@
 - *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
 - *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
 - *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
+- *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 
 ### 🐛 Bug Fixes
 
