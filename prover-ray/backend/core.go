@@ -10,6 +10,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
 )
 
 // ErrNotImplemented is returned by stubs that are not yet wired up.
@@ -55,6 +56,13 @@ func New(cfg Config) (*Core, error) {
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, binFile)
+
+	// Must happen after the arithmetization is defined, so the guest_output
+	// columns exist, and before the compiler passes, which discharge the local
+	// openings it registers.
+	if cfg.GuestOutputBytes > 0 {
+		risc5.RegisterGuestPublicOutputs(sys, cfg.GuestOutputBytes)
+	}
 
 	// Compiler passes go here once the real RISC-V .bin is fully supported:
 	//   compilers.RangeCheck(sys)

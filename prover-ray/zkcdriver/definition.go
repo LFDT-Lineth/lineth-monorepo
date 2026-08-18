@@ -19,7 +19,38 @@ const (
 	// corsetColumnMap is an annotation to help seeking column from their corset
 	// name.
 	corsetColumnMapAnnotationKey = "corset-column-map"
+	// publicOutputsAnnotationKey is an annotation holding the [PublicOutput] of
+	// every public output memory of the arithmetization.
+	publicOutputsAnnotationKey = "corset-public-outputs"
 )
+
+// PublicOutput locates the columns of one public output memory of the
+// arithmetization — a memory the arithmetization declares with `pub output`,
+// which the schema flags via IsPublicOutput. Such a memory holds one output
+// element per row at consecutive addresses starting at zero, and its access bit
+// is one exactly on the rows that carry an element.
+// Only memories addressed by a single column and holding a single element per
+// address are described; see [schemaScanner.collectPublicOutputs].
+type PublicOutput struct {
+	// Name is the corset name of the memory. It is empty when the
+	// arithmetization exposes no public output of the described shape.
+	Name string
+	// Address is the memory's address column. The memory's own constraints make
+	// it vanish on padding rows, be zero on the first row carrying an element and
+	// increment from there, so the address on the last row is one less than the
+	// number of elements the memory holds.
+	Address wiop.ObjectID
+	// Data is the memory's data column, holding one element per row.
+	Data wiop.ObjectID
+}
+
+// PublicOutputs returns the public output memories [Define] found in the
+// arithmetization, sorted by name. It returns nil for a system that declares
+// none, and omits a memory whose columns were all dropped as unreferenced.
+func PublicOutputs(sys *wiop.System) PublicOutput {
+	outputs, _ := sys.Annotations[publicOutputsAnnotationKey].(PublicOutput)
+	return outputs
+}
 
 // schemaScanner is a transient scanner structure whose goal is to port the
 // content of an [air.Schema] inside of a pre-initialized [wiop.System]
@@ -56,6 +87,76 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 	scanner.scanConstraints()
 
 	sys.Annotations[corsetColumnMapAnnotationKey] = scanner.ColumnIDs
+	sys.Annotations[publicOutputsAnnotationKey] = scanner.collectPublicOutputs()
+}
+
+// collectPublicOutputs resolves the data and access-bit columns of every public
+// output memory of the schema. It runs after scanColumns so that it can map the
+// declared registers onto the wiop columns that were actually created; a memory
+// whose columns were all dropped as unreferenced is skipped, as there is nothing
+// left to point at.
+//
+// A memory's address lines are exactly its input registers and its data lines
+// exactly its output registers, so the two are told apart by register kind rather
+// than by name; everything else a memory carries (the access bit, the address
+// selectors) is computed and of no use here.
+func (s *schemaScanner) collectPublicOutputs() PublicOutput {
+
+	var output PublicOutput
+
+	for _, modDecl := range s.Modules {
+
+		if !modDecl.IsPublicOutput() {
+			continue
+		}
+
+		moduleName := modDecl.Name().String()
+
+		// A non-empty name means an earlier module already claimed the slot. Only
+		// one public output is supported, so refuse rather than pick one.
+		if output.Name != "" {
+			utils.Panic(
+				"zkcdriver: collectPublicOutputs: expected a single public output, found %q and %q",
+				output.Name, moduleName,
+			)
+		}
+
+		var address, data []wiop.ObjectID
+
+		for _, reg := range modDecl.Registers() {
+
+			id, ok := s.ColumnIDs[qualifiedCorsetName(moduleName, reg.Name())]
+			if !ok {
+				continue
+			}
+
+			// A memory's address lines are exactly its input registers and its data
+			// lines exactly its output registers.
+			switch {
+			case reg.IsInput():
+				address = append(address, id)
+			case reg.IsOutput():
+				data = append(data, id)
+			}
+		}
+
+		// A memory addressed by several limbs, or holding several elements per
+		// address, would need its length pinned across limbs and its elements read
+		// from several columns. Nothing does that, so such a memory is reported and
+		// skipped instead of being described in a way no caller can use.
+		if len(address) != 1 || len(data) != 1 {
+			logrus.Warnf(
+				"zkcdriver: collectPublicOutputs: skipping public output %q: "+
+					"has %d address and %d data columns, expected one of each",
+				moduleName, len(address), len(data),
+			)
+			continue
+		}
+
+		output = PublicOutput{Name: moduleName, Address: address[0], Data: data[0]}
+	}
+
+	return output
 }
 
 // scanColumns scans the column declaration of the corset [air.Schema] into the
