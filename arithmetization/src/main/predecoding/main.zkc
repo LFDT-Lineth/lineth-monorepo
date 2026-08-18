@@ -2,7 +2,7 @@ include "predecoding.zkc"
 include "read_instruction.zkc"
 include "executable_region.zkc"
 include "../common/type.zkc"
-include "inputs.zkc"
+include "../common/inputs.zkc"
 
 
 // Justify (in a one-time proof) that the raw RISC-V program in the input JSON

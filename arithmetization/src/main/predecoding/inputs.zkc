@@ -1,7 +1,0 @@
-pub input entry_point_and_blobs_count(i:u1) -> (entry_point:Address, blobs_count:u64)
-pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length)
-pub input blobs_executable(i:u64) -> (executable:u1)
-pub input blobs_data(i:Address) -> (byte:u8)
-pub input instruction_base(i:u1) -> (base:Address)
-pub input decoded(i:u64) -> (compute_op:ComputeOp, imm:DoubleWord, rs1:Register, rs2:Register, rd:Register)
-
