@@ -14,17 +14,14 @@ import (
 // The maps disappear here, which is why they were never an obstacle to a
 // zero-decode dump. See README.md section 3.
 //
-// entryClaims is supplied by the caller rather than derived. The canonical entry
-// ordering is defined by verifier-ray's PCS codegen (a separate Go module) and
-// reproducing it here would mean two orderings that must agree — the exact bug
-// factory this package was written to avoid. Pass nil while that seam is open;
-// Project will say so rather than silently emitting a proof whose vanishing
-// checks have nothing to re-slice from.
+// The PCS entry claims are derived here rather than supplied: they are the
+// proof's own LagrangeEval cells, reordered into the verifier's canonical entry
+// order. See [deriveEntryClaims], which documents why that ordering is a third
+// copy of a rule owned elsewhere, and where the cross-check for it belongs.
 func Project(
 	sys *wiop.System,
 	proof wiop.Proof,
 	pub wiop.PublicInput,
-	entryClaims [][]Ext,
 ) (VerifyInput, error) {
 	if sys == nil {
 		return VerifyInput{}, fmt.Errorf("proofserialization: Project: nil system")
@@ -34,6 +31,10 @@ func Project(
 			len(pub), len(sys.PublicInputs))
 	}
 
+	entryClaims, err := deriveEntryClaims(sys, proof)
+	if err != nil {
+		return VerifyInput{}, err
+	}
 	out := VerifyInput{Proof: Proof{PcsOpening: PcsOpening{EntryClaims: entryClaims}}}
 
 	// The flat public-input statement, in registration order. These are absorbed
