@@ -20,73 +20,95 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
     try std.testing.expectEqual(@as(usize, 2), v.rollup_proofs.len);
 
     const p0 = v.rollup_proofs[0];
-    try std.testing.expectEqualSlices(u8, &repeat32(0xbb), &p0.program_vk);
-    try std.testing.expectEqual(@as(u64, 10), p0.proof.start_block_number);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0xab, 0xcd, 0xef }, p0.proof.proof);
+    try std.testing.expectEqualSlices(u8, &support.SHARED_PROGRAM_VK, &p0.program_vk);
+    try std.testing.expectEqual(support.PROOF0_START_BLOCK_NUMBER, p0.proof.start_block_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PROOF_BYTES, p0.proof.proof);
     const pi0 = p0.proof.public_inputs;
-    try std.testing.expectEqual(@as(u64, 11), pi0.end_block_number);
-    try std.testing.expectEqual(@as(u64, 1763000457), pi0.end_block_timestamp);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x11), &pi0.l2_l1_bridge_transaction_tree);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x22), &pi0.parent_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi0.parent_l1_l2_bridge_rolling_hash_message_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x33), &pi0.end_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 7), pi0.end_l1_l2_bridge_rolling_hash_message_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0xc0), &pi0.dynamic_chain_config_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x44), &pi0.parent_ftx_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 15), pi0.parent_ftx_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x55), &pi0.end_ftx_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 18), pi0.end_processed_ftx_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x66), &pi0.filtered_addresses_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x47), &pi0.parent_data_rolling_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x8d), &pi0.end_data_rolling_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x0a), &pi0.parent_block_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x0b), &pi0.end_block_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi0.start_offset);
-    try std.testing.expectEqual(@as(u64, 131072), pi0.end_offset);
+    try std.testing.expectEqual(support.PROOF0_END_BLOCK_NUMBER, pi0.end_block_number);
+    try std.testing.expectEqual(support.PROOF0_END_BLOCK_TIMESTAMP, pi0.end_block_timestamp);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_L2_L1_BRIDGE_TRANSACTION_TREE, &pi0.l2_l1_bridge_transaction_tree);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH, &pi0.parent_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi0.parent_l1_l2_bridge_rolling_hash_message_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH, &pi0.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi0.end_l1_l2_bridge_rolling_hash_message_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_DYNAMIC_CHAIN_CONFIG_HASH, &pi0.dynamic_chain_config_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_FTX_ROLLING_HASH, &pi0.parent_ftx_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_PARENT_FTX_NUMBER, pi0.parent_ftx_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_FTX_ROLLING_HASH, &pi0.end_ftx_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_PROCESSED_FTX_NUMBER, pi0.end_processed_ftx_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_FILTERED_ADDRESSES_HASH, &pi0.filtered_addresses_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_DATA_ROLLING_HASH, &pi0.parent_data_rolling_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_DATA_ROLLING_HASH, &pi0.end_data_rolling_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_BLOCK_HASH, &pi0.parent_block_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_BLOCK_HASH, &pi0.end_block_hash);
+    try std.testing.expectEqual(support.PROOF0_START_OFFSET, pi0.start_offset);
+    try std.testing.expectEqual(support.PROOF0_END_OFFSET, pi0.end_offset);
     try std.testing.expectEqual(@as(usize, 1), pi0.program_vks.len);
-    try std.testing.expectEqualSlices(u8, &repeat32(0xaa), &pi0.program_vks[0]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PROGRAM_VKS_0, &pi0.program_vks[0]);
     try std.testing.expectEqual(@as(usize, 2), p0.proof.l2_l1_roots.len);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x77), &p0.proof.l2_l1_roots[0]);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x88), &p0.proof.l2_l1_roots[1]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_L2_L1_ROOT_0, &p0.proof.l2_l1_roots[0]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_L2_L1_ROOT_1, &p0.proof.l2_l1_roots[1]);
     try std.testing.expectEqual(@as(usize, 1), p0.proof.filtered_addresses.len);
-    try std.testing.expectEqualSlices(u8, &repeat20(0x01), &p0.proof.filtered_addresses[0]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_FILTERED_ADDRESS_0, &p0.proof.filtered_addresses[0]);
 
     const p1 = v.rollup_proofs[1];
-    try std.testing.expectEqualSlices(u8, &repeat32(0xbb), &p1.program_vk);
-    try std.testing.expectEqual(@as(u64, 15), p1.proof.start_block_number);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0xab, 0xcd, 0xff }, p1.proof.proof);
-    try std.testing.expectEqual(@as(u64, 18), p1.proof.public_inputs.end_block_number);
-    try std.testing.expectEqual(@as(u64, 1763000557), p1.proof.public_inputs.end_block_timestamp);
-    try std.testing.expectEqual(@as(u64, 18), p1.proof.public_inputs.parent_ftx_number);
+    try std.testing.expectEqualSlices(u8, &support.SHARED_PROGRAM_VK, &p1.program_vk);
+    try std.testing.expectEqual(support.PROOF1_START_BLOCK_NUMBER, p1.proof.start_block_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF1_PROOF_BYTES, p1.proof.proof);
+    try std.testing.expectEqual(support.PROOF1_END_BLOCK_NUMBER, p1.proof.public_inputs.end_block_number);
+    try std.testing.expectEqual(support.PROOF1_END_BLOCK_TIMESTAMP, p1.proof.public_inputs.end_block_timestamp);
+    try std.testing.expectEqual(support.PROOF1_PARENT_FTX_NUMBER, p1.proof.public_inputs.parent_ftx_number);
 }
 
 // ── Output frame: encode/decode round-trip ───────────────────────────────────────────────────────
+// Distinct constants from the input side above — this is a separate container
+// (`RollupAggregationOutput`) with its own field values, not required to match the input sample.
+
+const OUTPUT_PROGRAM_VK_0 = repeat32(0xaa);
+const OUTPUT_PROGRAM_VK_1 = repeat32(0xbb);
+const OUTPUT_L2_L1_ROOT_0 = repeat32(0x77);
+const OUTPUT_L2_L1_ROOT_1 = repeat32(0x88);
+const OUTPUT_FILTERED_ADDRESS_0 = repeat20(0x01);
+const OUTPUT_MESSAGING_OFFSET_0: u64 = 0xd18d873fe2a9f192;
+const OUTPUT_END_BLOCK_NUMBER: u64 = 18;
+const OUTPUT_END_BLOCK_TIMESTAMP: u64 = 1763000557;
+const OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE = repeat32(0x09);
+const OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x22);
+const OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x33);
+const OUTPUT_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
+const OUTPUT_PARENT_FTX_ROLLING_HASH = repeat32(0x44);
+const OUTPUT_END_FTX_ROLLING_HASH = repeat32(0x55);
+const OUTPUT_FILTERED_ADDRESSES_HASH = repeat32(0x63);
+const OUTPUT_PARENT_DATA_ROLLING_HASH = repeat32(0x47);
+const OUTPUT_END_DATA_ROLLING_HASH = repeat32(0x8d);
+const OUTPUT_PARENT_BLOCK_HASH = repeat32(0x0a);
+const OUTPUT_END_BLOCK_HASH = repeat32(0x0b);
 
 fn sampleOutput(alloc: std.mem.Allocator) !rollup_aggregation_ssz.RollupAggregationOutput {
-    const program_vks = try alloc.dupe([32]u8, &[_][32]u8{ repeat32(0xaa), repeat32(0xbb) });
-    const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{ repeat32(0x77), repeat32(0x88) });
-    const filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{repeat20(0x01)});
-    const l2_messaging_blocks_offsets = try alloc.dupe(u64, &[_]u64{0xd18d873fe2a9f192});
+    const program_vks = try alloc.dupe([32]u8, &[_][32]u8{ OUTPUT_PROGRAM_VK_0, OUTPUT_PROGRAM_VK_1 });
+    const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{ OUTPUT_L2_L1_ROOT_0, OUTPUT_L2_L1_ROOT_1 });
+    const filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{OUTPUT_FILTERED_ADDRESS_0});
+    const l2_messaging_blocks_offsets = try alloc.dupe(u64, &[_]u64{OUTPUT_MESSAGING_OFFSET_0});
 
     return .{
         .public_inputs = .{
-            .end_block_number = 18,
-            .end_block_timestamp = 1763000557,
-            .l2_l1_bridge_transaction_tree = repeat32(0x09),
-            .parent_l1_l2_bridge_rolling_hash = repeat32(0x22),
+            .end_block_number = OUTPUT_END_BLOCK_NUMBER,
+            .end_block_timestamp = OUTPUT_END_BLOCK_TIMESTAMP,
+            .l2_l1_bridge_transaction_tree = OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE,
+            .parent_l1_l2_bridge_rolling_hash = OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH,
             .parent_l1_l2_bridge_rolling_hash_message_number = 0,
-            .end_l1_l2_bridge_rolling_hash = repeat32(0x33),
+            .end_l1_l2_bridge_rolling_hash = OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH,
             .end_l1_l2_bridge_rolling_hash_message_number = 7,
-            .dynamic_chain_config_hash = repeat32(0xc0),
-            .parent_ftx_rolling_hash = repeat32(0x44),
+            .dynamic_chain_config_hash = OUTPUT_DYNAMIC_CHAIN_CONFIG_HASH,
+            .parent_ftx_rolling_hash = OUTPUT_PARENT_FTX_ROLLING_HASH,
             .parent_ftx_number = 15,
-            .end_ftx_rolling_hash = repeat32(0x55),
+            .end_ftx_rolling_hash = OUTPUT_END_FTX_ROLLING_HASH,
             .end_processed_ftx_number = 18,
-            .filtered_addresses_hash = repeat32(0x63),
-            .parent_data_rolling_hash = repeat32(0x47),
-            .end_data_rolling_hash = repeat32(0x8d),
-            .parent_block_hash = repeat32(0x0a),
-            .end_block_hash = repeat32(0x0b),
+            .filtered_addresses_hash = OUTPUT_FILTERED_ADDRESSES_HASH,
+            .parent_data_rolling_hash = OUTPUT_PARENT_DATA_ROLLING_HASH,
+            .end_data_rolling_hash = OUTPUT_END_DATA_ROLLING_HASH,
+            .parent_block_hash = OUTPUT_PARENT_BLOCK_HASH,
+            .end_block_hash = OUTPUT_END_BLOCK_HASH,
             .start_offset = 0,
             .end_offset = 131072,
             .program_vks = program_vks,

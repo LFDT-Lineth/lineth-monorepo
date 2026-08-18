@@ -19,42 +19,42 @@ test "run: copied fields echo the mapped source (first/last rollup_proofs, PIs)"
     const out = try rollup_aggregation.run(alloc, input);
     const pi = out.public_inputs;
 
-    // last (rollup_proofs[1], end_block_number 18) sourced fields.
-    try std.testing.expectEqual(@as(u64, 18), pi.end_block_number);
-    try std.testing.expectEqual(@as(u64, 1763000557), pi.end_block_timestamp);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x33), &pi.end_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 7), pi.end_l1_l2_bridge_rolling_hash_message_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x55), &pi.end_ftx_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 18), pi.end_processed_ftx_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x0b), &pi.end_block_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x8d), &pi.end_data_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 131072), pi.end_offset);
+    // last (rollup_proofs[1]) sourced fields.
+    try std.testing.expectEqual(support.PROOF1_END_BLOCK_NUMBER, pi.end_block_number);
+    try std.testing.expectEqual(support.PROOF1_END_BLOCK_TIMESTAMP, pi.end_block_timestamp);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH, &pi.end_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.end_l1_l2_bridge_rolling_hash_message_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_FTX_ROLLING_HASH, &pi.end_ftx_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_PROCESSED_FTX_NUMBER, pi.end_processed_ftx_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_BLOCK_HASH, &pi.end_block_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_END_DATA_ROLLING_HASH, &pi.end_data_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_END_OFFSET, pi.end_offset);
 
-    // first (rollup_proofs[0], parent_ftx_number 15) sourced fields.
-    try std.testing.expectEqualSlices(u8, &repeat32(0x22), &pi.parent_l1_l2_bridge_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi.parent_l1_l2_bridge_rolling_hash_message_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x44), &pi.parent_ftx_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 15), pi.parent_ftx_number);
-    try std.testing.expectEqualSlices(u8, &repeat32(0xc0), &pi.dynamic_chain_config_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x0a), &pi.parent_block_hash);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x47), &pi.parent_data_rolling_hash);
-    try std.testing.expectEqual(@as(u64, 0), pi.start_offset);
+    // first (rollup_proofs[0]) sourced fields.
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH, &pi.parent_l1_l2_bridge_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_PARENT_L1L2_BRIDGE_ROLLING_HASH_MSG_NUMBER, pi.parent_l1_l2_bridge_rolling_hash_message_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_FTX_ROLLING_HASH, &pi.parent_ftx_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_PARENT_FTX_NUMBER, pi.parent_ftx_number);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_DYNAMIC_CHAIN_CONFIG_HASH, &pi.dynamic_chain_config_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_BLOCK_HASH, &pi.parent_block_hash);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PARENT_DATA_ROLLING_HASH, &pi.parent_data_rolling_hash);
+    try std.testing.expectEqual(support.PROOF0_START_OFFSET, pi.start_offset);
 
-    // program_vks: union of {0xbb (both proofs' own program_vk), 0xaa (both PIs' program_vks)},
-    // deduplicated and sorted ascending -> [0xaa, 0xbb].
+    // program_vks: union of {SHARED_PROGRAM_VK (both proofs' own program_vk), PROOF0_PROGRAM_VKS_0
+    // (both PIs' program_vks)}, deduplicated and sorted ascending -> [PROOF0_PROGRAM_VKS_0, SHARED_PROGRAM_VK].
     try std.testing.expectEqual(@as(usize, 2), pi.program_vks.len);
-    try std.testing.expectEqualSlices(u8, &repeat32(0xaa), &pi.program_vks[0]);
-    try std.testing.expectEqualSlices(u8, &repeat32(0xbb), &pi.program_vks[1]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_PROGRAM_VKS_0, &pi.program_vks[0]);
+    try std.testing.expectEqualSlices(u8, &support.SHARED_PROGRAM_VK, &pi.program_vks[1]);
 
     // l2_l1_roots/filtered_addresses: concatenation of every proof's own lists, input order.
     try std.testing.expectEqual(@as(usize, 4), out.l2_l1_roots.len);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x77), &out.l2_l1_roots[0]);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x88), &out.l2_l1_roots[1]);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x77), &out.l2_l1_roots[2]);
-    try std.testing.expectEqualSlices(u8, &repeat32(0x88), &out.l2_l1_roots[3]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_L2_L1_ROOT_0, &out.l2_l1_roots[0]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_L2_L1_ROOT_1, &out.l2_l1_roots[1]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF1_L2_L1_ROOT_0, &out.l2_l1_roots[2]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF1_L2_L1_ROOT_1, &out.l2_l1_roots[3]);
     try std.testing.expectEqual(@as(usize, 2), out.filtered_addresses.len);
-    try std.testing.expectEqualSlices(u8, &repeat20(0x01), &out.filtered_addresses[0]);
-    try std.testing.expectEqualSlices(u8, &repeat20(0x01), &out.filtered_addresses[1]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF0_FILTERED_ADDRESS_0, &out.filtered_addresses[0]);
+    try std.testing.expectEqualSlices(u8, &support.PROOF1_FILTERED_ADDRESS_0, &out.filtered_addresses[1]);
 }
 
 test "run: sentinel fields equal their pinned constants exactly" {
