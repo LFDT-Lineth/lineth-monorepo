@@ -12,7 +12,7 @@ import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import java.math.BigInteger
+import linea.kotlin.toHexString
 import kotlin.time.Instant
 
 /**
@@ -115,7 +115,7 @@ data class ExecutionPayloadDto(
   val gasUsed: Long,
   val timestamp: Long,
   val extraData: String,
-  val baseFeePerGas: BigInteger,
+  val baseFeePerGas: String,
   val blockHash: String,
   val transactions: List<String>,
   val withdrawals: List<WithdrawalDto>,
@@ -174,13 +174,14 @@ data class L2ExecutionProofRequestDto(
 )
 
 data class L2ExecutionProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
   val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -199,6 +200,7 @@ data class L2ExecutionProofDto(
   val l2L1Messages: List<String>,
   val txFroms: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 data class FileBasedRollupProofRequestParamsDto(
@@ -238,12 +240,13 @@ data class RestfulRollupProofRequestDto(
 )
 
 data class RollupProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -257,6 +260,7 @@ data class RollupProofDto(
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
+  val programVk: String,
 )
 
 data class FileBasedRollupAggregationProofRequestParamsDto(
@@ -281,7 +285,7 @@ data class RestfulRollupAggregationProofRequestDto(
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 20-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
@@ -349,7 +353,7 @@ internal fun ExecutionPayload.fromDomainObject(): ExecutionPayloadDto {
     gasUsed = gasUsed.toLong(),
     timestamp = timestamp.toLong(),
     extraData = extraData.encodeHex(),
-    baseFeePerGas = baseFeePerGas,
+    baseFeePerGas = baseFeePerGas.toHexString(),
     blockHash = blockHash.encodeHex(),
     transactions = transactions.map { it.encodeHex() },
     withdrawals = withdrawals.map {
@@ -465,6 +469,7 @@ internal fun L2ExecutionProofResponseV1.fromDomainObject(): L2ExecutionProofDto 
     l2L1Messages = l2L1Messages.map { it.encodeHex() },
     txFroms = txFroms.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },
+    programVk = programVk.encodeHex(),
   )
 }
 
@@ -475,5 +480,6 @@ internal fun RollupProofResponseV1.fromDomainObject(): RollupProofDto {
     publicInputs = publicInputs.fromDomainObject(),
     l2L1Roots = l2L1Roots.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },
+    programVk = programVk.encodeHex(),
   )
 }
