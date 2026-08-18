@@ -18,7 +18,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.request.schema.json`.
  */
 internal class L2ExecutionProofRequestDtoMapper(
-  private val guestProgramId: String,
+  private val programVk: String,
   private val l2MessageServiceAddress: String,
   private val coinbase: String,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
@@ -42,10 +42,10 @@ internal class L2ExecutionProofRequestDtoMapper(
     }
 
     val dto = L2ExecutionProofRequestDto(
-      guestProgramId = guestProgramId,
+      programVk = programVk,
       proofRequest = L2ExecutionProofRequestParamsDto(
         parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-        parentLastProcessedFtxNumber = request.parentFtxNumber.toLong(),
+        parentFtxNumber = request.parentFtxNumber.toLong(),
         chainConfig = ChainConfigDto(
           l2MessageServiceAddress = l2MessageServiceAddress,
           coinbase = coinbase,
@@ -84,6 +84,7 @@ internal object L2ExecutionProofResponseDtoMapper : (
       l2L1Messages = responseDto.l2L1Messages.map { it.decodeHex() },
       txFroms = responseDto.txFroms.map { it.decodeHex() },
       filteredAddresses = responseDto.filteredAddresses.map { it.decodeHex() },
+      programVk = responseDto.programVk.decodeHex(),
     )
   }
 }
@@ -97,11 +98,11 @@ typealias L2ExecutionProofTransport =
  */
 class L2ExecutionProverClient(
   private val transport: L2ExecutionProofTransport,
-  guestProgramId: String,
+  programVk: String,
   l2MessageServiceAddress: String,
   coinbase: String,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
-    L2ExecutionProofRequestDtoMapper(guestProgramId, l2MessageServiceAddress, coinbase),
+    L2ExecutionProofRequestDtoMapper(programVk, l2MessageServiceAddress, coinbase),
   proofResponseDtoMapper: (L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
     L2ExecutionProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

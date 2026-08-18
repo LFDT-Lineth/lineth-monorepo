@@ -75,7 +75,7 @@ type PublicInputs struct {
 	EndL1L2BridgeRollingHashMessageNumber    uint64
 	DynamicChainConfigHash                   [32]byte
 	ParentFtxRollingHash                     [32]byte
-	ParentProcessedFtxNumber                 uint64
+	ParentFtxNumber                          uint64
 	EndFtxRollingHash                        [32]byte
 	EndProcessedFtxNumber                    uint64
 	FilteredAddressesHash                    [32]byte

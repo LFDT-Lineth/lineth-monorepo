@@ -22,6 +22,14 @@
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 - *(linea-besu)* Support custom liveness signers (#3666)
 - *(maru)* Support Noise / Yamux (#3751)
+- *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
+- *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
+- *(maru)* Support custom validator signers (#3700)
+- *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
+- *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
+- *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
+- *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
+- *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 
 ### 🐛 Bug Fixes
 
@@ -68,6 +76,7 @@
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 
 ### 🚜 Refactor
 
@@ -133,3 +142,7 @@
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(linea-besu)* Package renaming to lineth.* (#3750)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
+- *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)
+- *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
+- *(misc)* Enrich R5 request/response samples (#3806)

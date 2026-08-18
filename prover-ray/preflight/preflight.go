@@ -1,22 +1,24 @@
-// Package preflight implements the pre-phase that establishes a shared
-// Fiat-Shamir seed across shards without a coordinator.
+// Package preflight implements the pre-phase that establishes γ, the shared
+// Fiat-Shamir seed the message bus binds every shard against.
 //
-// Each shard receives the full collection of cross-shard column sets S_1 …
-// S_n. It commits to each set with FRI (obtaining Merkle roots R_1 … R_n),
-// maps each root through an [AdditiveHasher] (landing in a commutative group),
-// accumulates the sum A = Σ AdditiveHash(R_i), and converts A to a
-// [field.Octuplet] via [AdditiveHasher.ToSeed]. Every shard that holds the
-// same S_i data produces the same octuplet regardless of processing order,
-// because the group operation is commutative.
+// [Run] takes the full collection of bus input sets S_1 … S_n — one per shard —
+// commits to each with FRI (obtaining Merkle roots R_1 … R_n), maps each root
+// into the multiset-hash group, sums them, and compresses the sum to a
+// [field.Octuplet]. Because the group operation is commutative, the result does
+// not depend on the order the sets are processed in, so no coordinator has to
+// impose one.
 //
-// The octuplet is used as the Fiat-Shamir seed: each shard's prover and
-// verifier call [wiop.Runtime.SetFSState] with it inside a
-// [wiop.Round.RegisterPreSamplingHook] so the shared challenges α and β are
-// derived from an identical state on every participating shard.
+// This runs in the orchestrator, once, before any shard proof is produced — not
+// inside a proof. It cannot run inside one: it consumes every shard's data,
+// while a shard's prover holds only its own, and a verifier holds none at all.
+// The resulting γ is handed to each shard as a public input; see
+// [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5.RegisterSharedRandomness]
+// for how it enters a shard proof, and why a shard leaves it unconstrained.
 package preflight
 
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -32,23 +34,21 @@ type BusInputSet struct {
 	Encoders []*fri.RSEncoder
 }
 
-// Run computes the shared Fiat-Shamir seed from a collection of cross-shard
-// column sets.
+// Run computes γ, the shared Fiat-Shamir seed, from the bus input sets of every
+// participating shard.
 //
 // For each set s it commits to s.Table using s.Encoders (obtaining a Merkle
-// root), maps the root through hasher.Hash, and accumulates the results with
-// hasher.Combine. The final accumulated value is converted to a [field.Octuplet]
-// via hasher.ToSeed.
+// root) and accumulates the root; the final accumulated value is compressed
+// into the returned octuplet.
 //
-// The result is deterministic and order-independent as long as hasher.Combine
-// is commutative and associative, ensuring every shard computes the same seed.
-func Run[P any](sets []BusInputSet, hasher AdditiveHasher[P]) field.Octuplet {
-	acc := hasher.Identity()
+// The result is deterministic and order-independent. Callers must pass the sets
+// of *all* shards: a γ computed from a subset binds only that subset, and the
+// shards left out would be proving against a seed unrelated to their own data.
+func Run(sets []BusInputSet) field.Octuplet {
+	acc := multisethashing.Identity()
 	for _, s := range sets {
 		cs := fri.Commit(s.Encoders, s.Table)
-		root := cs.Tree.Nodes[0]
-		a := hasher.Hash(root)
-		acc = hasher.Combine(acc, a)
+		acc = multisethashing.Combine(acc, multisethashing.Hash(cs.Tree.Root()))
 	}
-	return hasher.ToSeed(acc)
+	return multisethashing.ToSeed(acc)
 }

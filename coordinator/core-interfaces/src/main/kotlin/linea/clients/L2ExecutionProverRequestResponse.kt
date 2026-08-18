@@ -228,7 +228,7 @@ data class L2ExecutionProofResponseV1(
   val l2L1Messages: List<ByteArray>,
   val txFroms: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
-
+  val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -243,6 +243,7 @@ data class L2ExecutionProofResponseV1(
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
     if (!txFroms.byteArrayListEquals(other.txFroms)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (!programVk.contentEquals(other.programVk)) return false
 
     return true
   }
@@ -255,6 +256,7 @@ data class L2ExecutionProofResponseV1(
     result = 31 * result + l2L1Messages.byteArrayListHashCode()
     result = 31 * result + txFroms.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + programVk.contentHashCode()
     return result
   }
 }

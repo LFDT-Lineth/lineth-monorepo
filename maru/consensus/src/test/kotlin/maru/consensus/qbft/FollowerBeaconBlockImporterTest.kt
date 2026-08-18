@@ -20,6 +20,7 @@ import maru.executionlayer.manager.ForkChoiceUpdatedResult
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.manager.PayloadStatus
 import org.apache.tuweni.bytes.Bytes32
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -77,6 +78,30 @@ class FollowerBeaconBlockImporterTest {
     assertEquals(feeRecipient.contentToString(), call.feeRecipient.contentToString())
 
     assertTrue(executionLayerManagerDouble.setHeadCalls.isEmpty())
+  }
+
+  @Test
+  fun `prevRandao signing failure returns a failed future`() {
+    shouldBuildNextBlock = true
+    val signingError = IllegalStateException("signing unavailable")
+    beaconBlockImporter =
+      BlockBuildingBeaconBlockImporter(
+        executionLayerManager = executionLayerManagerDouble,
+        finalizationStateProvider = { finalizationState },
+        nextBlockTimestampProvider = { nextBlockTimestamp },
+        prevRandaoProvider = { _, _ -> throw signingError },
+        shouldBuildNextBlock = { _, _, _ -> true },
+        feeRecipient = feeRecipient,
+      )
+
+    val result =
+      beaconBlockImporter.importBlock(
+        DataGenerators.randomBeaconState(1uL),
+        DataGenerators.randomBeaconBlock(1uL),
+      )
+
+    assertThatThrownBy { result.get() }.hasRootCause(signingError)
+    assertTrue(executionLayerManagerDouble.setHeadAndStartBlockBuildingCalls.isEmpty())
   }
 
   @Test

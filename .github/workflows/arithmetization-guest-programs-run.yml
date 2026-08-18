@@ -2,14 +2,18 @@ name: Tracer guest programs run - l2-execution, Add in Zig and Blake in Rust
 
 on:
   pull_request:
-    branches:
-      - main
+    # No branches: filter — this must also run on PRs targeting stacked, non-main
+    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
+    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
     paths:
       - 'arithmetization/**'
       - 'riscv-guests/l2-execution/**'
       - 'riscv-guests/build_common/**'
+      - 'riscv-guests/guest-common/**'
       - 'riscv-guests/lineth-accelerators/**'
+      - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
@@ -18,8 +22,11 @@ on:
      - 'arithmetization/**'
      - 'riscv-guests/l2-execution/**'
      - 'riscv-guests/build_common/**'
+     - 'riscv-guests/guest-common/**'
      - 'riscv-guests/lineth-accelerators/**'
+     - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
     inputs:

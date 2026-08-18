@@ -90,25 +90,41 @@ class ExecutionProofGeneratingCoordinator(
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
     val blockIntervalString = conflation.conflationResult.intervalString()
+    log.info(
+      "new batch: batch={} trigger={}",
+      blockIntervalString,
+      conflation.conflationResult.conflationTrigger,
+    )
     return runCatching {
-      log.info(
-        "new batch: batch={} trigger={}",
-        blockIntervalString,
-        conflation.conflationResult.conflationTrigger,
-      )
       AsyncRetryer.retry(
         vertx = vertx,
         backoffDelay = config.conflationAndProofGenerationRetryBackoffDelay,
         exceptionConsumer = {
           log.warn(
-            "l2-execution proof creation flow failed batch={} will retry in backOff={} errorMessage={}",
+            "l2-execution request building failed batch={} will retry in backOff={} errorMessage={}",
             blockIntervalString,
             config.conflationAndProofGenerationRetryBackoffDelay,
             it.message,
           )
         },
       ) {
-        conflationToProofCreation(conflation)
+        l2ExecutionRequestBuilder.build(conflation)
+      }.thenCompose { proofRequest ->
+        val proofIndex = l2ExecutionProverClient.getProofIndex(proofRequest)
+        AsyncRetryer.retry(
+          vertx = vertx,
+          backoffDelay = config.conflationAndProofGenerationRetryBackoffDelay,
+          exceptionConsumer = {
+            log.warn(
+              "l2-execution proof creation flow failed batch={} will retry in backOff={} errorMessage={}",
+              blockIntervalString,
+              config.conflationAndProofGenerationRetryBackoffDelay,
+              it.message,
+            )
+          },
+        ) {
+          checkAndSubmitProof(proofIndex, proofRequest, blockIntervalString)
+        }
       }
     }.getOrElse { error -> SafeFuture.failedFuture<Unit>(error) }
       .whenException { th ->
@@ -121,47 +137,30 @@ class ExecutionProofGeneratingCoordinator(
       }
   }
 
-  private fun conflationToProofCreation(conflation: BlocksConflation): SafeFuture<*> {
-    val blockIntervalString = conflation.conflationResult.intervalString()
-    return l2ExecutionRequestBuilder.build(conflation)
-      .whenException { th ->
-        log.debug(
-          "l2-execution request building failed: batch={} errorMessage={}",
-          blockIntervalString,
-          th.message,
-          th,
-        )
-      }
-      .thenCompose { proofRequest ->
-        l2ExecutionProverClient.createProofRequest(proofRequest)
-          .thenCompose { proofIndex ->
-            l2ExecutionProverClient.findProofResponse(proofIndex)
-              .thenCompose<Unit> { existingResponse ->
-                if (existingResponse != null) {
-                  log.info(
-                    "batch={} already proven, skipping l2-execution proof response polling",
-                    blockIntervalString,
-                  )
-                  l2ExecutionProofHandler.acceptNewL2ExecutionProof(existingResponse).thenApply { }
-                } else {
-                  log.info(
-                    "l2-execution proof request generated: proofIndex={} batch={}",
-                    proofIndex,
-                    blockIntervalString,
-                  )
-                  proofRequestsInProgress.addLast(proofIndex)
-                  SafeFuture.completedFuture(Unit)
-                }
-              }
-          }
-          .whenException { th ->
-            log.debug(
-              "l2-execution proof failure: batch={} errorMessage={}",
-              blockIntervalString,
-              th.message,
-              th,
-            )
-          }
+  private fun checkAndSubmitProof(
+    proofIndex: BlockIntervalProofIndex,
+    proofRequest: L2ExecutionProofRequestV1,
+    blockIntervalString: String,
+  ): SafeFuture<Unit> {
+    return l2ExecutionProverClient.findProofResponse(proofIndex)
+      .thenCompose { existingResponse ->
+        if (existingResponse != null) {
+          log.info(
+            "batch={} already proven, skipping l2-execution proof response polling",
+            blockIntervalString,
+          )
+          l2ExecutionProofHandler.acceptNewL2ExecutionProof(existingResponse).thenApply { }
+        } else {
+          l2ExecutionProverClient.createProofRequest(proofRequest)
+            .thenApply {
+              log.info(
+                "l2-execution proof request generated: proofIndex={} batch={}",
+                proofIndex,
+                blockIntervalString,
+              )
+              proofRequestsInProgress.addLast(proofIndex)
+            }
+        }
       }
   }
 }
