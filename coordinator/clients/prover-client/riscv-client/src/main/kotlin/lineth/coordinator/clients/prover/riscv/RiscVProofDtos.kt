@@ -12,7 +12,7 @@ import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import java.math.BigInteger
+import linea.kotlin.toHexString
 import kotlin.time.Instant
 
 /**
@@ -115,7 +115,7 @@ data class ExecutionPayloadDto(
   val gasUsed: Long,
   val timestamp: Long,
   val extraData: String,
-  val baseFeePerGas: BigInteger,
+  val baseFeePerGas: String,
   val blockHash: String,
   val transactions: List<String>,
   val withdrawals: List<WithdrawalDto>,
@@ -174,7 +174,7 @@ data class L2ExecutionProofRequestDto(
 )
 
 data class L2ExecutionProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
@@ -240,7 +240,7 @@ data class RestfulRollupProofRequestDto(
 )
 
 data class RollupProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
@@ -285,7 +285,7 @@ data class RestfulRollupAggregationProofRequestDto(
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 20-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
-  val proverVersion: String? = null,
+  val proverVersion: String,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
@@ -353,7 +353,7 @@ internal fun ExecutionPayload.fromDomainObject(): ExecutionPayloadDto {
     gasUsed = gasUsed.toLong(),
     timestamp = timestamp.toLong(),
     extraData = extraData.encodeHex(),
-    baseFeePerGas = baseFeePerGas,
+    baseFeePerGas = baseFeePerGas.toHexString(),
     blockHash = blockHash.encodeHex(),
     transactions = transactions.map { it.encodeHex() },
     withdrawals = withdrawals.map {

@@ -13,6 +13,7 @@ import linea.domain.Withdrawal
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.encodeHex
+import linea.kotlin.toHexString
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -341,7 +342,7 @@ class RiscVProofRequestDtoMapperTest {
     gasUsed = payload.gasUsed.toLong(),
     timestamp = payload.timestamp.toLong(),
     extraData = payload.extraData.encodeHex(),
-    baseFeePerGas = payload.baseFeePerGas,
+    baseFeePerGas = payload.baseFeePerGas.toHexString(),
     blockHash = payload.blockHash.encodeHex(),
     transactions = payload.transactions.map { it.encodeHex() },
     withdrawals = payload.withdrawals.map {
