@@ -1,0 +1,83 @@
+{
+  "guestProgramId": "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1",
+  "metadata": {
+    "startBlockNumber": 10,
+    "endBlockNumber": 18
+  },
+  "proofRequest": {
+    "rollupProofs": [
+      {
+        "proof": "0xabcdef",
+        "startBlockNumber": 10,
+        "publicInputs": {
+          "endBlockNumber": 11,
+          "endBlockTimestamp": 1763000457,
+          "l2L1BridgeTransactionTree": "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "parentL1L2BridgeRollingHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "parentL1L2BridgeRollingHashMessageNumber": 0,
+          "endL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+          "endL1L2BridgeRollingHashMessageNumber": 7,
+          "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+          "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+          "parentFtxNumber": 15,
+          "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+          "endProcessedFtxNumber": 18,
+          "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+          "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
+          "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
+          "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+          "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+          "startOffset": 0,
+          "endOffset": 131072,
+          "programVks": [
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        },
+        "l2L1Roots": [
+          "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "0x8888888888888888888888888888888888888888888888888888888888888888"
+        ],
+        "filteredAddresses": [
+          "0x0101010101010101010101010101010101010101"
+        ],
+        "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "proof": "0xabcdff",
+        "startBlockNumber": 15,
+        "publicInputs": {
+          "endBlockNumber": 18,
+          "endBlockTimestamp": 1763000557,
+          "l2L1BridgeTransactionTree": "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "parentL1L2BridgeRollingHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+          "parentL1L2BridgeRollingHashMessageNumber": 0,
+          "endL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+          "endL1L2BridgeRollingHashMessageNumber": 7,
+          "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+          "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+          "parentFtxNumber": 18,
+          "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+          "endProcessedFtxNumber": 18,
+          "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+          "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
+          "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
+          "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+          "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+          "startOffset": 0,
+          "endOffset": 131072,
+          "programVks": [
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        },
+        "l2L1Roots": [
+          "0x7777777777777777777777777777777777777777777777777777777777777777",
+          "0x8888888888888888888888888888888888888888888888888888888888888888"
+        ],
+        "filteredAddresses": [
+          "0x0101010101010101010101010101010101010101"
+        ],
+        "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+}

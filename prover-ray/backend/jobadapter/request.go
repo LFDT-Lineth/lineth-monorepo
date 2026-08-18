@@ -16,26 +16,26 @@ const (
 	forkNameKey       = "forkName"
 	payloadsKey       = "payloads"
 
-	proofRequestKey                 = "proofRequest"
-	chainConfigKey                  = "chainConfig"
-	l2MessageServiceAddressKey      = "l2MessageServiceAddress"
-	coinbaseKey                     = "coinbase"
-	parentFtxRollingHashKey         = "parentFtxRollingHash"
-	parentLastProcessedFtxNumberKey = "parentLastProcessedFtxNumber"
-	statelessInputKey               = "statelessInput"
-	newPayloadRequestKey            = "newPayloadRequest"
-	executionPayloadKey             = "executionPayload"
-	executionRequestsKey            = "executionRequests"
-	rollupExtensionKey              = "rollupExtension"
-	forcedTransactionsKey           = "forcedTransactions"
-	blockNumberKey                  = "blockNumber"
-	numberKey                       = "number"
-	deadlineKey                     = "deadline"
-	signedTxRlpKey                  = "signedTxRlp"
-	acceptanceKey                   = "acceptance"
-	guestProgramIDByteSize          = 32
-	hashByteSize                    = 32
-	addressByteSize                 = 20
+	proofRequestKey            = "proofRequest"
+	chainConfigKey             = "chainConfig"
+	l2MessageServiceAddressKey = "l2MessageServiceAddress"
+	coinbaseKey                = "coinbase"
+	parentFtxRollingHashKey    = "parentFtxRollingHash"
+	parentFtxNumberKey         = "parentFtxNumber"
+	statelessInputKey          = "statelessInput"
+	newPayloadRequestKey       = "newPayloadRequest"
+	executionPayloadKey        = "executionPayload"
+	executionRequestsKey       = "executionRequests"
+	rollupExtensionKey         = "rollupExtension"
+	forcedTransactionsKey      = "forcedTransactions"
+	blockNumberKey             = "blockNumber"
+	numberKey                  = "number"
+	deadlineKey                = "deadline"
+	signedTxRlpKey             = "signedTxRlp"
+	acceptanceKey              = "acceptance"
+	guestProgramIDByteSize     = 32
+	hashByteSize               = 32
+	addressByteSize            = 20
 
 	forcedTxIncluded            = "INCLUDED"
 	forcedTxBadNonce            = "BAD_NONCE"
@@ -126,15 +126,15 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 	if err := validateFixedHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
 		return nil, err
 	}
-	parentLastProcessedFtxNumberRaw, err := requireField(
+	parentFtxNumberRaw, err := requireField(
 		proofRequest,
-		parentLastProcessedFtxNumberKey,
+		parentFtxNumberKey,
 		"proofRequest.",
 	)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := u64(parentLastProcessedFtxNumberRaw, "proofRequest."+parentLastProcessedFtxNumberKey); err != nil {
+	if _, err := u64(parentFtxNumberRaw, "proofRequest."+parentFtxNumberKey); err != nil {
 		return nil, err
 	}
 

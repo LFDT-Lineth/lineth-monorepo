@@ -33,10 +33,11 @@ responses, the rollup request's `chainId`). For l2-execution, the request's
 ## Running the conformance test locally
 
 `tests/test_fixture_schema_conformance.py` checks that every golden-vector
-fixture under `testdata/` validates against its matching `<name>.schema.json`,
-and that each schema is itself a valid Draft 2020-12 schema. Fixtures are
-discovered automatically, so new fixture/schema pairs are covered without
-editing the test.
+fixture under `testdata/` validates against its matching `<name>.schema.json`
+(ignoring the fixture's `<startBlockNumber>-<endBlockNumber>-` filename prefix,
+if present), and that each schema is itself a valid Draft 2020-12 schema.
+Fixtures are discovered automatically, so new fixture/schema pairs are covered
+without editing the test.
 
 It is part of the project test suite — run it (and everything else) from the
 `rollup_spec/` directory:
