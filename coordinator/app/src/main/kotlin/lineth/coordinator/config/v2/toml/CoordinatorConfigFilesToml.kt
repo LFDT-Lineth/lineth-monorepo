@@ -19,6 +19,8 @@ data class CoordinatorConfigFileToml(
   val conflation: ConflationToml = ConflationToml(),
   @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
   val prover: ProverToml,
+  @param:ConfigSection("RISC-V prover request/response directories for execution, rollup, and aggregation proofs.")
+  val riscvProver: ProverToml? = null,
   @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
   @param:ConfigSection("Shomei state manager client settings.")
@@ -90,6 +92,7 @@ data class CoordinatorConfigToml(
         tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
       proversConfig = this.configs.prover.reified(),
+      riscvProversConfig = this.configs.riscvProver?.reified(),
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),
