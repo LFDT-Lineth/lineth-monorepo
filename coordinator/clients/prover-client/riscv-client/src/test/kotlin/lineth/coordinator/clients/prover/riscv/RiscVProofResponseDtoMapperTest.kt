@@ -72,8 +72,13 @@ class RiscVProofResponseDtoMapperTest {
     endFtxRollingHash = "0x16",
     endProcessedFtxNumber = 17,
     filteredAddressesHash = "0x18",
-    parentShnarf = "0x19",
-    endShnarf = "0x1a",
+    parentDataRollingHash = "0x19",
+    endDataRollingHash = "0x1a",
+    parentBlockHash = "0x1b",
+    endBlockHash = "0x1c",
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   private val expectedRollupPublicInputs = RollupProofPublicInputs(
@@ -90,8 +95,13 @@ class RiscVProofResponseDtoMapperTest {
     endFtxRollingHash = "0x16".decodeHex(),
     endFtxNumber = 17UL,
     filteredAddressesHash = "0x18".decodeHex(),
-    parentShnarf = "0x19".decodeHex(),
-    endShnarf = "0x1a".decodeHex(),
+    parentDataRollingHash = "0x19".decodeHex(),
+    endDataRollingHash = "0x1a".decodeHex(),
+    parentBlockHash = "0x1b".decodeHex(),
+    endBlockHash = "0x1c".decodeHex(),
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   @Test
@@ -242,8 +252,13 @@ class RiscVProofResponseDtoMapperTest {
           "endFtxRollingHash": "0x16",
           "endProcessedFtxNumber": 17,
           "filteredAddressesHash": "0x18",
-          "parentShnarf": "0x19",
-          "endShnarf": "0x1a"
+          "parentDataRollingHash": "0x19",
+          "endDataRollingHash": "0x1a",
+          "parentBlockHash": "0x1b",
+          "endBlockHash": "0x1c",
+          "startOffset": 0,
+          "endOffset": 131072,
+          "programVks": []
         },
         "l2L1Roots": ["0xaa"],
         "filteredAddresses": []
