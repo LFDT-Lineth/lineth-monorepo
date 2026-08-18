@@ -38,7 +38,7 @@ Design notes:
     (schema-checked by the schemas' conformance test, round-trip-checked by
     `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
-    (on responses) and `guestProgramId` (on requests) are routing metadata.
+    (on responses) and `programVk` (on requests) are routing metadata.
 
 Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
@@ -221,7 +221,7 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
     input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by the payloads. The single
     `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
@@ -245,8 +245,8 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
             )
         ),
         parent_last_processed_ftx_number=_u64(
-            _require(proof_request, "parentLastProcessedFtxNumber", "proofRequest."),
-            "proofRequest.parentLastProcessedFtxNumber",
+            _require(proof_request, "parentFtxNumber", "proofRequest."),
+            "proofRequest.parentFtxNumber",
         ),
         chain_config=chain_config,
         payloads=[
@@ -263,11 +263,18 @@ def decode_request_json(text: str | bytes) -> L2ExecutionProofPrivateInput:
 # ── response: guest dataclass -> JSON dict ────────────────────────────────────
 
 
-def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
+def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `L2ExecutionProof` into a
     `getZkL2ExecutionProofV1.response.json` object the coordinator's Jackson
     mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata (like `proof`
+    and `prover_version`) — the guest cannot attest its own VK, so it is not
+    part of `L2ExecutionProof`/`public_inputs`, but the prover knows which
+    guest binary it ran and carries the VK on the wire response so the
+    coordinator can echo it, unchanged, into the rollup request's embedded
+    l2-execution proof (see `_decode_l2_execution_proof`).
     """
     pi = proof.public_inputs
     return {
@@ -290,7 +297,7 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
             ),
             "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
             "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-            "parentProcessedFtxNumber": int(pi.parent_processed_ftx_number),
+            "parentFtxNumber": int(pi.parent_ftx_number),
             "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
             "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
             "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
@@ -299,23 +306,28 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
         "txFroms": [_hx(a) for a in proof.tx_froms],
         "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
+        "programVk": _hx(program_vk),
     }
 
 
 def encode_response_json(
-    proof: L2ExecutionProof, prover_version: str, *, indent: int | None = None
+    proof: L2ExecutionProof,
+    prover_version: str,
+    *,
+    program_vk: Hash32,
+    indent: int | None = None,
 ) -> str:
-    return json.dumps(encode_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── prover entrypoint ─────────────────────────────────────────────────────────
 
 
-def run_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse request JSON, run the guest, return response JSON dict."""
     execution_input = decode_request_json(text)
     proof = run_l2_execution_guest(execution_input)
-    return encode_response(proof, prover_version)
+    return encode_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -350,7 +362,7 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
         parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_processed_ftx_number=n("parentProcessedFtxNumber"),
+        parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
@@ -407,7 +419,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by `conflations` (paired
     1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
     touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
@@ -497,7 +509,7 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         ),
         "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
         "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-        "parentProcessedFtxNumber": int(pi.parent_processed_ftx_number),
+        "parentFtxNumber": int(pi.parent_ftx_number),
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
@@ -514,13 +526,18 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
     }
 
 
-def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
+def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata the coordinator
+    supplies from the request envelope and the prover echoes on the response —
+    mirroring the L2-execution response pattern.
     """
     return {
         "proverVersion": prover_version,
+        "programVk": _hx(program_vk),
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
         "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
@@ -530,19 +547,19 @@ def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
 
 
 def encode_rollup_response_json(
-    proof: RollupProof, prover_version: str, *, indent: int | None = None
+    proof: RollupProof, prover_version: str, *, program_vk: Hash32, indent: int | None = None
 ) -> str:
-    return json.dumps(encode_rollup_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_rollup_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── rollup prover entrypoint ──────────────────────────────────────────────────
 
 
-def run_rollup_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_rollup_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse rollup request JSON, run the guest, return response JSON dict."""
     rollup_input = decode_rollup_request_json(text)
     proof = run_rollup_guest(rollup_input)
-    return encode_rollup_response(proof, prover_version)
+    return encode_rollup_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -576,7 +593,7 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
         parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_processed_ftx_number=n("parentProcessedFtxNumber"),
+        parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
@@ -626,7 +643,7 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the aggregation guest input is just the flat list of
     rollup proofs. There is no `chainId` (unlike the rollup request): the
     aggregation guest does no sender recovery and inherits chain-config integrity

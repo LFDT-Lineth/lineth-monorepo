@@ -94,7 +94,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
 	}
 
-	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticDepth(), ir)
+	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
 	binBytes, err := binF.MarshalBinary()
 	require.NoError(t, err)
 

@@ -67,22 +67,22 @@ class ProverParsingTest {
         fsPollingInterval = 1.seconds,
         fsPollingTimeout = 10.minutes,
         execution =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/execution/requests",
           fsResponsesDirectory = "/data/prover/v2/execution/responses",
         ),
         blobCompression =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/compression/requests",
           fsResponsesDirectory = "/data/prover/v2/compression/responses",
         ),
         invalidity =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/invalidity/requests",
           fsResponsesDirectory = "/data/prover/v2/invalidity/responses",
         ),
         proofAggregation =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/aggregation/requests",
           fsResponsesDirectory = "/data/prover/v2/aggregation/responses",
         ),
@@ -90,22 +90,22 @@ class ProverParsingTest {
         ProverToml(
           switchBlockNumberInclusive = 1_000u,
           execution =
-          ProverToml.ProverDirectoriesToml(
+          ProverToml.ProverConfigToml(
             fsRequestsDirectory = "/data/prover/v3/execution/requests",
             fsResponsesDirectory = "/data/prover/v3/execution/responses",
           ),
           blobCompression =
-          ProverToml.ProverDirectoriesToml(
+          ProverToml.ProverConfigToml(
             fsRequestsDirectory = "/data/prover/v3/compression/requests",
             fsResponsesDirectory = "/data/prover/v3/compression/responses",
           ),
           invalidity =
-          ProverToml.ProverDirectoriesToml(
+          ProverToml.ProverConfigToml(
             fsRequestsDirectory = "/data/prover/v3/invalidity/requests",
             fsResponsesDirectory = "/data/prover/v3/invalidity/responses",
           ),
           proofAggregation =
-          ProverToml.ProverDirectoriesToml(
+          ProverToml.ProverConfigToml(
             fsRequestsDirectory = "/data/prover/v3/aggregation/requests",
             fsResponsesDirectory = "/data/prover/v3/aggregation/responses",
           ),
@@ -131,18 +131,18 @@ class ProverParsingTest {
         fsInprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         execution =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/execution/requests",
           fsResponsesDirectory = "/data/prover/v2/execution/responses",
         ),
         blobCompression =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/compression/requests",
           fsResponsesDirectory = "/data/prover/v2/compression/responses",
         ),
         invalidity = null,
         proofAggregation =
-        ProverToml.ProverDirectoriesToml(
+        ProverToml.ProverConfigToml(
           fsRequestsDirectory = "/data/prover/v2/aggregation/requests",
           fsResponsesDirectory = "/data/prover/v2/aggregation/responses",
         ),

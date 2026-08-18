@@ -62,13 +62,17 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticDepth(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
 	return binfile, nil
 }
 
 // parseTestCase creates a system and the corresponding zkc-driver running the
 // given zkcTestCase. The function also sanity-checks the inputs of the testcase.
-func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.Element]) (
+func parseTestCase(
+	scenario zkcTestCase,
+	binF *constraints.BinaryFile[koalabear.Element],
+	withTraceCheck bool,
+) (
 	inputs *zkcdriver.PreReadInputs,
 	outputs map[string][]byte,
 	err error,
@@ -86,7 +90,7 @@ func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.
 	filteredInputs := vm.FilterInputs(binF.Program(), inputs.Inputs)
 
 	// This sanity-checks the corset inputs of the test-case
-	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs)
+	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
 	if err != nil {
 		return nil, nil, fmt.Errorf("constraint check failed: %w", err)
 	}
@@ -98,6 +102,7 @@ func traceZkc(
 	binFile *constraints.BinaryFile[koalabear.Element],
 	tracingCfg constraints.TraceConfig,
 	input map[string][]byte,
+	withCheck bool,
 ) (outputs map[string][]byte, err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
@@ -112,14 +117,17 @@ func traceZkc(
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
 
-	// check the traces work
-	if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
-		errs := make([]error, len(errsSchema))
-		for i, e := range errsSchema {
-			errs[i] = errors.New(e.Message())
+	if withCheck {
+		// check the traces work
+		if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
+			errs := make([]error, len(errsSchema))
+			for i, e := range errsSchema {
+				errs[i] = errors.New(e.Message())
+			}
+			return nil, fmt.Errorf("constraint check failed: %w", errors.Join(errs...))
 		}
-		return nil, fmt.Errorf("constraint check failed: %w", errors.Join(errs...))
 	}
+
 	return outputs, nil
 }
 

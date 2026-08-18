@@ -19,6 +19,7 @@ type executionResponse struct {
 	L2L1Messages      []string              `json:"l2L1Messages"`
 	TxFroms           []string              `json:"txFroms"`
 	FilteredAddresses []string              `json:"filteredAddresses"`
+	ProgramVk         string                `json:"programVk"`
 }
 
 type executionPublicInputs struct {
@@ -33,7 +34,7 @@ type executionPublicInputs struct {
 	EndL1L2BridgeRollingHashMessageNumber    uint64 `json:"endL1L2BridgeRollingHashMessageNumber"`
 	DynamicChainConfigHash                   string `json:"dynamicChainConfigHash"`
 	ParentFtxRollingHash                     string `json:"parentFtxRollingHash"`
-	ParentProcessedFtxNumber                 uint64 `json:"parentProcessedFtxNumber"`
+	ParentFtxNumber                          uint64 `json:"parentFtxNumber"`
 	EndFtxRollingHash                        string `json:"endFtxRollingHash"`
 	EndProcessedFtxNumber                    uint64 `json:"endProcessedFtxNumber"`
 	FilteredAddressesHash                    string `json:"filteredAddressesHash"`
@@ -50,7 +51,9 @@ type failureResponseBody struct {
 	Error       string      `json:"error,omitempty"`
 }
 
-func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) executionResponse {
+func newExecutionResponse(
+	result backend.Result, startBlockNumber uint64, proverVersion string, programVk []byte,
+) executionResponse {
 	return executionResponse{
 		ProverVersion:     proverVersion,
 		ProofHex:          hexBytes(result.ProofBytes),
@@ -59,6 +62,7 @@ func newExecutionResponse(result backend.Result, startBlockNumber uint64, prover
 		L2L1Messages:      []string{},
 		TxFroms:           []string{},
 		FilteredAddresses: []string{},
+		ProgramVk:         hexBytes(programVk),
 	}
 }
 
@@ -75,7 +79,7 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 		EndL1L2BridgeRollingHashMessageNumber:    pi.EndL1L2BridgeRollingHashMessageNumber,
 		DynamicChainConfigHash:                   hexHash(pi.DynamicChainConfigHash),
 		ParentFtxRollingHash:                     hexHash(pi.ParentFtxRollingHash),
-		ParentProcessedFtxNumber:                 pi.ParentProcessedFtxNumber,
+		ParentFtxNumber:                          pi.ParentFtxNumber,
 		EndFtxRollingHash:                        hexHash(pi.EndFtxRollingHash),
 		EndProcessedFtxNumber:                    pi.EndProcessedFtxNumber,
 		FilteredAddressesHash:                    hexHash(pi.FilteredAddressesHash),
