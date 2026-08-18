@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupProofV1.request.schema.json",
   "title": "getZkRollupProof V1 request",
-  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {guestProgramId, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
+  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {programVk, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "guestProgramId",
+    "programVk",
     "proofRequest"
   ],
   "properties": {
-    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "programVk": { "$ref": "#/$defs/hash32" },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
