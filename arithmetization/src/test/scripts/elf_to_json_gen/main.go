@@ -789,6 +789,11 @@ type inputBytes struct {
 	isSsz bool
 }
 
+type inputBytes struct {
+	data  []byte
+	isSsz bool
+}
+
 // The purpose of this program is simply to generate a suitable ZkC json input
 // file for a given RISC-V binary program.
 func main() {
