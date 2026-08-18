@@ -12,7 +12,8 @@
     "publicInputs",
     "l2L1Messages",
     "txFroms",
-    "filteredAddresses"
+    "filteredAddresses",
+    "programVk"
   ],
   "properties": {
     "proverVersion": { "type": "string" },
@@ -69,7 +70,8 @@
     "filteredAddresses": {
       "type": "array",
       "items": { "$ref": "#/$defs/address" }
-    }
+    },
+    "programVk": { "$ref": "#/$defs/hash32" }
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
