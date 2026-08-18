@@ -537,7 +537,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_SLTU "
             print_r_operands(rd, rs1, rs2)
-            tmpDWord1 = v1<v2 ? 1:0
+            result = v1<v2 ? 1:0
         }
         case RTYPE_XOR: {
             v1 = registers[rs1]
@@ -618,9 +618,9 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             printf "RTYPE_DIV "
             print_r_operands(rd, rs1, rs2)
             if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-                tmpDWord1 = OVERFLOW_DIVIDEND
+                result = OVERFLOW_DIVIDEND
             } else {
-                tmpDWord1 = v2 == 0 ? NEGATIVE_ONE_AS_I64:div64_ss(v1, v2)
+                result = v2 == 0 ? NEGATIVE_ONE_AS_I64:div64_ss(v1, v2)
             }
         }
         case RTYPE_DIVU: {
@@ -852,11 +852,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_SLTU "
             print_r_operands(rd, rs1, rs2)
-            if (v1<v2) {
-                registers[rd] = 1
-            } else {
-                registers[rd] = 0
-            }
+            registers[rd] = v1<v2 ? 1:0
         }
         case RTYPE_XOR_WB: {
             v1 = registers[rs1]
@@ -936,15 +932,10 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_DIV "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                result = NEGATIVE_ONE_AS_I64
-            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+            if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                 result = OVERFLOW_DIVIDEND
             } else {
-                result = absolute_value_double_word(v1) / absolute_value_double_word(v2)
-                if (sign_bit_of_double_word(v1) ^ sign_bit_of_double_word(v2)) == 1 {
-                    result = negative_of_double_word(result)
-                }
+                result = v2 == 0 ? NEGATIVE_ONE_AS_I64:div64_ss(v1, v2)
             }
             registers[rd] = result
         }
