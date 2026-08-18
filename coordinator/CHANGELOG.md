@@ -8,6 +8,7 @@
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 - *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
 - *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
+- *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
 
 ### 🐛 Bug Fixes
 
