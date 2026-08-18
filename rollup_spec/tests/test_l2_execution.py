@@ -38,9 +38,17 @@ from rollup_spec.stateless_input import decode_stateless_input_ssz
 _TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "testdata"
 
 
+def _fixture(name: str) -> Path:
+    """Resolve `<name>.json`, allowing an optional `<startBlock>-<endBlock>-` prefix."""
+    matches = sorted(_TESTDATA_DIR.glob(f"*{name}"))
+    assert matches, f"no fixture matching *{name} in {_TESTDATA_DIR}"
+    assert len(matches) == 1, f"multiple fixtures matching *{name}: {matches}"
+    return matches[0]
+
+
 def _golden_vanilla_stateless_input_ssz() -> bytes:
     """A real, valid vanilla stateless-input SSZ slice, from the golden JSON request."""
-    request = (_TESTDATA_DIR / "getZkL2ExecutionProofV1.request.json").read_text()
+    request = _fixture("getZkL2ExecutionProofV1.request.json").read_text()
     return decode_request_json(request).payloads[0].stateless_input_ssz
 
 
