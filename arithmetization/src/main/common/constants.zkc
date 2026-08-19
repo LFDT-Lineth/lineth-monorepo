@@ -192,39 +192,39 @@ const OPCODE_MISCMEM:Opcode = 0b0001111
 // funct3 values and funct7 values
 const FUNCT3_ADD:Funct3 = 0b000, FUNCT7_ADD:Funct7 = 0b0000000
 const FUNCT3_SUB:Funct3 = 0b000, FUNCT7_SUB:Funct7 = 0b0100000
-const FUNCT3_SLL:Funct3 = 0b001
-const FUNCT3_SLT:Funct3 = 0b010
-const FUNCT3_SLTU:Funct3 = 0b011
-const FUNCT3_XOR:Funct3 = 0b100
-const FUNCT3_SRL:Funct3 = 0b101
-const FUNCT3_SRA:Funct3 = 0b101
-const FUNCT3_OR:Funct3 = 0b110
-const FUNCT3_AND:Funct3 = 0b111
+const FUNCT3_SLL:Funct3 = 0b001, FUNCT7_SLL:Funct7 = 0b0000000
+const FUNCT3_SLT:Funct3 = 0b010, FUNCT7_SLT:Funct7 = 0b0000000
+const FUNCT3_SLTU:Funct3 = 0b011, FUNCT7_SLTU:Funct7 = 0b0000000
+const FUNCT3_XOR:Funct3 = 0b100, FUNCT7_XOR:Funct7 = 0b0000000
+const FUNCT3_SRL:Funct3 = 0b101, FUNCT7_SRL:Funct7 = 0b0000000
+const FUNCT3_SRA:Funct3 = 0b101, FUNCT7_SRA:Funct7 = 0b0100000
+const FUNCT3_OR:Funct3 = 0b110, FUNCT7_OR:Funct7 = 0b0000000
+const FUNCT3_AND:Funct3 = 0b111, FUNCT7_AND:Funct7 = 0b0000000
 
 // OP-32 (0111011) — R-type 32-bit register-register arithmetic (RV64I)
 const FUNCT3_ADDW:Funct3 = 0b000, FUNCT7_ADDW:Funct7 = 0b0000000
 const FUNCT3_SUBW:Funct3 = 0b000, FUNCT7_SUBW:Funct7 = 0b0100000
-const FUNCT3_SLLW:Funct3 = 0b001
-const FUNCT3_SRLW:Funct3 = 0b101
-const FUNCT3_SRAW:Funct3 = 0b101
+const FUNCT3_SLLW:Funct3 = 0b001, FUNCT7_SLLW:Funct7 = 0b0000000
+const FUNCT3_SRLW:Funct3 = 0b101, FUNCT7_SRLW:Funct7 = 0b0000000
+const FUNCT3_SRAW:Funct3 = 0b101, FUNCT7_SRAW:Funct7 = 0b0100000
 
 // M extension — Integer multiplication and division
 // OP (0110011) + funct7=0000001
 const FUNCT3_MUL:Funct3 = 0b000, FUNCT7_MUL:Funct7 = 0b0000001
-const FUNCT3_MULH:Funct3 = 0b001
-const FUNCT3_MULHSU:Funct3 = 0b010
-const FUNCT3_MULHU:Funct3 = 0b011
-const FUNCT3_DIV:Funct3 = 0b100
-const FUNCT3_DIVU:Funct3 = 0b101
-const FUNCT3_REM:Funct3 = 0b110
-const FUNCT3_REMU:Funct3 = 0b111
+const FUNCT3_MULH:Funct3 = 0b001, FUNCT7_MULH:Funct7 = 0b0000001
+const FUNCT3_MULHSU:Funct3 = 0b010, FUNCT7_MULHSU:Funct7 = 0b0000001
+const FUNCT3_MULHU:Funct3 = 0b011, FUNCT7_MULHU:Funct7 = 0b0000001
+const FUNCT3_DIV:Funct3 = 0b100, FUNCT7_DIV:Funct7 = 0b0000001
+const FUNCT3_DIVU:Funct3 = 0b101, FUNCT7_DIVU:Funct7 = 0b0000001
+const FUNCT3_REM:Funct3 = 0b110, FUNCT7_REM:Funct7 = 0b0000001
+const FUNCT3_REMU:Funct3 = 0b111, FUNCT7_REMU:Funct7 = 0b0000001
 
 // OP-32 (0111011) + funct7=0000001
 const FUNCT3_MULW:Funct3 = 0b000, FUNCT7_MULW:Funct7 = 0b0000001
-const FUNCT3_DIVW:Funct3 = 0b100
-const FUNCT3_DIVUW:Funct3 = 0b101
-const FUNCT3_REMW:Funct3 = 0b110
-const FUNCT3_REMUW:Funct3 = 0b111
+const FUNCT3_DIVW:Funct3 = 0b100, FUNCT7_DIVW:Funct7 = 0b0000001
+const FUNCT3_DIVUW:Funct3 = 0b101, FUNCT7_DIVUW:Funct7 = 0b0000001
+const FUNCT3_REMW:Funct3 = 0b110, FUNCT7_REMW:Funct7 = 0b0000001
+const FUNCT3_REMUW:Funct3 = 0b111, FUNCT7_REMUW:Funct7 = 0b0000001
 
 // ======================
 // I-type funct3 values
@@ -258,6 +258,29 @@ const FUNCT7_SRAIW:Funct7 = 0b0100000 // Shift Right Arithmetic Immediate Word
 // SYSTEM
 const FUNCT3_ECALL:Funct3 = 0b000, FUNCT12_ECALL:Funct12 = 0b000000000000 // ECALL
 const FUNCT12_EBREAK:Funct12 = 0b000000000001 // EBREAK
+const FUNCT3_JALR:Funct3 = 0b000 // RV64I JALR requires funct3 = 0
+
+// Flatten opcode::funct3 for single-switch I-type dispatch (see check_i_type.zkc).
+const I_LB:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LB as u10))
+const I_LH:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LH as u10))
+const I_LW:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LW as u10))
+const I_LBU:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LBU as u10))
+const I_LHU:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LHU as u10))
+const I_LWU:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LWU as u10))
+const I_LD:u10 = (((OPCODE_LOAD as u10) << 3) | (FUNCT3_LD as u10))
+const I_ADDI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_ADDI as u10))
+const I_SLLI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_SLLI as u10))
+const I_SLTI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_SLTI as u10))
+const I_SLTIU:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_SLTIU as u10))
+const I_XORI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_XORI as u10))
+const I_SRLI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_SRLI as u10))
+const I_ORI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_ORI as u10))
+const I_ANDI:u10 = (((OPCODE_OPIMM as u10) << 3) | (FUNCT3_ANDI as u10))
+const I_ADDIW:u10 = (((OPCODE_OPIMM32 as u10) << 3) | (FUNCT3_ADDIW as u10))
+const I_SLLIW:u10 = (((OPCODE_OPIMM32 as u10) << 3) | (FUNCT3_SLLIW as u10))
+const I_SRLIW:u10 = (((OPCODE_OPIMM32 as u10) << 3) | (FUNCT3_SRLIW as u10))
+const I_JALR:u10 = (((OPCODE_JALR as u10) << 3) | (FUNCT3_JALR as u10))
+const I_ECALL:u10 = (((OPCODE_SYSTEM as u10) << 3) | (FUNCT3_ECALL as u10))
 
 // ======================
 // S-type funct3 values
@@ -290,6 +313,39 @@ const FUNCT3_POSEIDON2:Funct3 = 0b001
 const FUNCT7_POSEIDON2:Funct7 = 0b0000000
 const FUNCT3_WRITE_OUTPUT:Funct3 = 0b010
 const FUNCT7_WRITE_OUTPUT:Funct7 = 0b0000000
+
+// Flatten opcode::funct3::funct7 for single-switch R-type dispatch (see check_r_type.zkc).
+const R_ADD:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_ADD as u17))
+const R_SUB:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_SUB as u17))
+const R_MUL:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_MUL as u17))
+const R_SLL:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLL as u17) << 7) | (FUNCT7_SLL as u17))
+const R_MULH:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLL as u17) << 7) | (FUNCT7_MULH as u17))
+const R_SLT:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLT as u17) << 7) | (FUNCT7_SLT as u17))
+const R_MULHSU:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLT as u17) << 7) | (FUNCT7_MULHSU as u17))
+const R_SLTU:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLTU as u17) << 7) | (FUNCT7_SLTU as u17))
+const R_MULHU:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SLTU as u17) << 7) | (FUNCT7_MULHU as u17))
+const R_XOR:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_XOR as u17) << 7) | (FUNCT7_XOR as u17))
+const R_DIV:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_XOR as u17) << 7) | (FUNCT7_DIV as u17))
+const R_SRL:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_SRL as u17))
+const R_SRA:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_SRA as u17))
+const R_DIVU:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_DIVU as u17))
+const R_OR:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_OR as u17) << 7) | (FUNCT7_OR as u17))
+const R_REM:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_OR as u17) << 7) | (FUNCT7_REM as u17))
+const R_AND:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_AND as u17) << 7) | (FUNCT7_AND as u17))
+const R_REMU:u17 = (((OPCODE_OP as u17) << 10) | ((FUNCT3_AND as u17) << 7) | (FUNCT7_REMU as u17))
+const R_ADDW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_ADDW as u17))
+const R_SUBW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_SUBW as u17))
+const R_MULW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_MULW as u17))
+const R_SLLW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_SLLW as u17) << 7) | (FUNCT7_SLLW as u17))
+const R_DIVW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_DIVW as u17) << 7) | (FUNCT7_DIVW as u17))
+const R_SRLW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_SRLW as u17))
+const R_SRAW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_SRAW as u17))
+const R_DIVUW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_DIVUW as u17))
+const R_REMW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMW as u17) << 7) | (FUNCT7_REMW as u17))
+const R_REMUW:u17 = (((OPCODE_OP32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUNCT7_REMUW as u17))
+const R_KECCAK:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17))
+const R_POSEIDON2:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17))
+const R_WRITE_OUTPUT:u17 = (((OPCODE_CUSTOM1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17))
 
 // ===============
 // decoding types
