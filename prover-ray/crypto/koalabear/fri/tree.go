@@ -312,7 +312,7 @@ func (t *Tree) OpenBranchToDepth(idx, depth int) Branch {
 // digests are deep-copied so later proof mutation cannot alter the tree.
 func (t *Tree) OpenCap(depth int) MerkleCap {
 	if depth < 0 || depth > t.NumLevel()-1 {
-		panic("fri: cap depth out of bounds")
+		panic("fri: treeCap depth out of bounds")
 	}
 	if depth == 0 {
 		return MerkleCap{}
@@ -320,7 +320,7 @@ func (t *Tree) OpenCap(depth int) MerkleCap {
 
 	frontierStart := 1<<depth - 1
 	frontierEnd := 2*frontierStart + 1
-	cap := MerkleCap{
+	treeCap := MerkleCap{
 		Nodes: append([]field.Octuplet(nil), t.Nodes[frontierStart:frontierEnd]...),
 		Aux:   make([]*field.Octuplet, frontierStart),
 	}
@@ -329,9 +329,9 @@ func (t *Tree) OpenCap(depth int) MerkleCap {
 			continue
 		}
 		auxCopy := *aux
-		cap.Aux[i] = &auxCopy
+		treeCap.Aux[i] = &auxCopy
 	}
-	return cap
+	return treeCap
 }
 
 // Validate checks that cap is the canonical representation for depth.
@@ -386,7 +386,7 @@ func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
 		return err
 	}
 	if recovered != root {
-		return errors.New("Merkle cap invalid")
+		return errors.New("invalid Merkle cap")
 	}
 	return nil
 }
@@ -454,7 +454,7 @@ func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) erro
 		currPos >>= 1
 	}
 	if ancestor != frontier[currPos] {
-		return errors.New("Merkle proof invalid")
+		return errors.New("invalid Merkle proof")
 	}
 	return nil
 }

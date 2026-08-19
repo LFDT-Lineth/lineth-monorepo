@@ -1082,19 +1082,19 @@ func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 }
 
 func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTable {
-	var revealed []InputCapTable
-	for _, sizeLog2 := range info.revealed {
+	res := make([]InputCapTable, len(info.revealed))
+	for i, sizeLog2 := range info.revealed {
 		sized := table[sizeLog2]
 		rows := make([]RowOpening, sized.Size())
 		for row := range rows {
 			rows[row] = openEncodedRow(sized, row)
 		}
-		revealed = append(revealed, InputCapTable{
+		res[i] = InputCapTable{
 			SizeLog2: uint8(sizeLog2),
 			Rows:     rows,
-		})
+		}
 	}
-	return revealed
+	return res
 }
 
 func (pcs *PCS) inputOpeningCommitments() []CommitterState {
@@ -1304,7 +1304,7 @@ func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octup
 		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], currPos)
 	}
 	if ancestor != frontier[currPos] {
-		return fmt.Errorf("Merkle proof invalid")
+		return fmt.Errorf("invalid Merkle proof")
 	}
 	return nil
 }
@@ -1521,15 +1521,15 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 		root := proof.FRIProof.RoundRoots[j-1]
 		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
-		cap := proof.FRIProof.RoundCaps[j-1]
+		treeCap := proof.FRIProof.RoundCaps[j-1]
 		if depth == 0 {
 			runningFrontiers[j] = []field.Octuplet{root}
 			continue
 		}
-		if err := cap.Authenticate(depth, root); err != nil {
+		if err := treeCap.Authenticate(depth, root); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
 		}
-		runningFrontiers[j] = cap.Nodes
+		runningFrontiers[j] = treeCap.Nodes
 	}
 
 	claimed := in.ClaimedValues
@@ -1838,24 +1838,26 @@ func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
 	return info, nil
 }
 
-func authenticateInputCap(info inputCapInfo, cap InputCap, shape Shape, root field.Octuplet) ([]field.Octuplet, error) {
+func authenticateInputCap(
+	info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
+) ([]field.Octuplet, error) {
 	depth := info.depth
 	if depth == 0 {
-		if len(cap.Nodes) != 0 || len(cap.Tables) != 0 {
+		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
 			return nil, fmt.Errorf("depth-zero input cap must be empty")
 		}
 		return []field.Octuplet{root}, nil
 	}
-	if len(cap.Nodes) != 1<<depth {
-		return nil, fmt.Errorf("input cap has %d nodes, want %d", len(cap.Nodes), 1<<depth)
+	if len(treeCap.Nodes) != 1<<depth {
+		return nil, fmt.Errorf("input cap has %d nodes, want %d", len(treeCap.Nodes), 1<<depth)
 	}
-	if len(cap.Tables) != len(info.revealed) {
-		return nil, fmt.Errorf("input cap has %d revealed tables, want %d", len(cap.Tables), len(info.revealed))
+	if len(treeCap.Tables) != len(info.revealed) {
+		return nil, fmt.Errorf("input cap has %d revealed tables, want %d", len(treeCap.Tables), len(info.revealed))
 	}
 
-	aux := make([]*field.Octuplet, len(cap.Nodes)-1)
+	aux := make([]*field.Octuplet, len(treeCap.Nodes)-1)
 	for i, sizeLog2 := range info.revealed {
-		table := cap.Tables[i]
+		table := treeCap.Tables[i]
 		if int(table.SizeLog2) != sizeLog2 {
 			return nil, fmt.Errorf("revealed table %d has size %d, want %d", i, table.SizeLog2, sizeLog2)
 		}
@@ -1877,11 +1879,11 @@ func authenticateInputCap(info inputCapInfo, cap InputCap, shape Shape, root fie
 			aux[levelStart+pairIdx] = &digest
 		}
 	}
-	merkleCap := MerkleCap{Nodes: cap.Nodes, Aux: aux}
+	merkleCap := MerkleCap{Nodes: treeCap.Nodes, Aux: aux}
 	if err := merkleCap.Authenticate(depth, root); err != nil {
 		return nil, err
 	}
-	return cap.Nodes, nil
+	return treeCap.Nodes, nil
 }
 
 // bindInputTreeOpenings validates that each batch's authenticated branch carries

@@ -102,13 +102,13 @@ func TestMerkleCapAuthenticatesBranches(t *testing.T) {
 	height := tree.NumLevel() - 1
 
 	for depth := 1; depth < height; depth++ {
-		cap := tree.OpenCap(depth)
-		if err := cap.Authenticate(depth, tree.Root()); err != nil {
+		treeCap := tree.OpenCap(depth)
+		if err := treeCap.Authenticate(depth, tree.Root()); err != nil {
 			t.Fatalf("depth %d: authenticate cap: %v", depth, err)
 		}
 		for idx := range leaves {
 			branch := tree.OpenBranchToDepth(idx, depth)
-			if err := branch.AuthenticateToCap(idx, cap.Nodes); err != nil {
+			if err := branch.AuthenticateToCap(idx, treeCap.Nodes); err != nil {
 				t.Fatalf("depth %d index %d: authenticate branch: %v", depth, idx, err)
 			}
 		}
@@ -122,21 +122,21 @@ func TestMerkleCapAuthenticatesAuxiliaryPrefix(t *testing.T) {
 		nil,
 		pseudoRandOctuplets(prng, 4),
 	})
-	cap := tree.OpenCap(2)
-	if err := cap.Authenticate(2, tree.Root()); err != nil {
+	treeCap := tree.OpenCap(2)
+	if err := treeCap.Authenticate(2, tree.Root()); err != nil {
 		t.Fatalf("authenticate cap: %v", err)
 	}
-	if cap.Aux[0] == nil {
+	if treeCap.Aux[0] == nil {
 		t.Fatal("cap omitted root auxiliary digest")
 	}
 
 	// Cap auxiliary values must not alias the committed tree.
 	original := tree.Root()
-	*cap.Aux[0] = field.PseudoRandOctuplet(prng)
+	*treeCap.Aux[0] = field.PseudoRandOctuplet(prng)
 	if tree.Root() != original {
 		t.Fatal("mutating cap auxiliary digest changed tree root")
 	}
-	if err := cap.Authenticate(2, tree.Root()); err == nil {
+	if err := treeCap.Authenticate(2, tree.Root()); err == nil {
 		t.Fatal("tampered cap authenticated")
 	}
 }
@@ -152,9 +152,9 @@ func pseudoRandOctuplets(prng *rand.Rand, n int) []field.Octuplet {
 func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(29))
 	tree := buildTreeExt(field.VecPseudoRandExt(prng, 8))
-	cap := tree.OpenCap(2)
+	treeCap := tree.OpenCap(2)
 
-	badLength := cap
+	badLength := treeCap
 	badLength.Nodes = badLength.Nodes[:len(badLength.Nodes)-1]
 	if err := badLength.Validate(2); err == nil {
 		t.Fatal("truncated cap accepted")
@@ -163,8 +163,8 @@ func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 		t.Fatal("nonempty depth-zero cap accepted")
 	}
 
-	badNode := cap
-	badNode.Nodes = append([]field.Octuplet(nil), cap.Nodes...)
+	badNode := treeCap
+	badNode.Nodes = append([]field.Octuplet(nil), treeCap.Nodes...)
 	badNode.Nodes[0] = field.PseudoRandOctuplet(prng)
 	if err := badNode.Authenticate(2, tree.Root()); err == nil {
 		t.Fatal("tampered cap node authenticated")
@@ -172,7 +172,7 @@ func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 
 	branch := tree.OpenBranchToDepth(3, 2)
 	branch.Siblings[0] = field.PseudoRandOctuplet(prng)
-	if err := branch.AuthenticateToCap(3, cap.Nodes); err == nil {
+	if err := branch.AuthenticateToCap(3, treeCap.Nodes); err == nil {
 		t.Fatal("tampered branch authenticated")
 	}
 }
