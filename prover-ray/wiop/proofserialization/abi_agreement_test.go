@@ -197,31 +197,29 @@ func verifierRayFixture() ps.VerifyInput {
 			{}, // an empty round: empty slices must still be readable
 		},
 		ModuleSizes: []uint64{8, 16},
-		PcsOpening: ps.PcsOpening{
-			Proof: ps.OpeningProof{
-				InputQueries: [][]ps.InputTreeOpening{
+		PcsOpening: ps.OpeningProof{
+			InputQueries: [][]ps.InputTreeOpening{
+				{
 					{
-						{
-							Siblings: []ps.Digest{{70, 71, 72, 73, 74, 75, 76, 77}},
-							Leaves: []*ps.RowPair{
-								nil, // a null level
-								{
-									{Base: []ps.Element{80, 81}, Ext: []ps.Ext{{90, 91, 92, 93, 94, 95}}},
-									{Base: []ps.Element{82, 83}, Ext: nil},
-								},
+						Siblings: []ps.Digest{{70, 71, 72, 73, 74, 75, 76, 77}},
+						Leaves: []*ps.RowPair{
+							nil, // a null level
+							{
+								{Base: []ps.Element{80, 81}, Ext: []ps.Ext{{90, 91, 92, 93, 94, 95}}},
+								{Base: []ps.Element{82, 83}, Ext: nil},
 							},
 						},
 					},
 				},
-				FriProof: ps.FriProof{
-					RoundRoots: []ps.Digest{{110, 111, 112, 113, 114, 115, 116, 117}},
-					FinalPoly:  []ps.Ext{{120, 121, 122, 123, 124, 125}},
-					RunningQueries: [][]ps.Branch{
+			},
+			FriProof: ps.FriProof{
+				RoundRoots: []ps.Digest{{110, 111, 112, 113, 114, 115, 116, 117}},
+				FinalPoly:  []ps.Ext{{120, 121, 122, 123, 124, 125}},
+				RunningQueries: [][]ps.Branch{
+					{
 						{
-							{
-								Siblings: []ps.Digest{{130, 131, 132, 133, 134, 135, 136, 137}},
-								Leaf:     ps.Digest{140, 141, 142, 143, 144, 145, 146, 147},
-							},
+							Siblings: []ps.Digest{{130, 131, 132, 133, 134, 135, 136, 137}},
+							Leaf:     ps.Digest{140, 141, 142, 143, 144, 145, 146, 147},
 						},
 					},
 				},

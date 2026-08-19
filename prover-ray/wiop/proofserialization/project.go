@@ -62,7 +62,7 @@ func Project(
 	}
 
 	if proof.PCSOpeningProof != nil {
-		out.Proof.PcsOpening.Proof = projectOpeningProof(*proof.PCSOpeningProof)
+		out.Proof.PcsOpening = projectOpeningProof(*proof.PCSOpeningProof)
 	}
 
 	return out, nil

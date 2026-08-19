@@ -46,40 +46,38 @@ func richProof() ps.VerifyInput {
 			{},
 		},
 		ModuleSizes: []uint64{8, 16, 1 << 20},
-		PcsOpening: ps.PcsOpening{
-			Proof: ps.OpeningProof{
-				InputQueries: [][]ps.InputTreeOpening{
+		PcsOpening: ps.OpeningProof{
+			InputQueries: [][]ps.InputTreeOpening{
+				{
 					{
-						{
-							Siblings: []ps.Digest{dig(600), dig(610)},
-							Leaves: []*ps.RowPair{
-								nil, // null level
-								{
-									{Base: []ps.Element{1, 2}, Ext: []ps.Ext{ext(700)}},
-									{Base: []ps.Element{3, 4}, Ext: []ps.Ext{ext(710)}},
-								},
-								{
-									// Empty base, non-empty ext: both slice
-									// headers still have to be well-formed.
-									{Base: nil, Ext: []ps.Ext{ext(720)}},
-									{Base: []ps.Element{5}, Ext: nil},
-								},
+						Siblings: []ps.Digest{dig(600), dig(610)},
+						Leaves: []*ps.RowPair{
+							nil, // null level
+							{
+								{Base: []ps.Element{1, 2}, Ext: []ps.Ext{ext(700)}},
+								{Base: []ps.Element{3, 4}, Ext: []ps.Ext{ext(710)}},
+							},
+							{
+								// Empty base, non-empty ext: both slice
+								// headers still have to be well-formed.
+								{Base: nil, Ext: []ps.Ext{ext(720)}},
+								{Base: []ps.Element{5}, Ext: nil},
 							},
 						},
-						{Siblings: nil, Leaves: nil},
 					},
-					nil, // a query with no input trees
+					{Siblings: nil, Leaves: nil},
 				},
-				FriProof: ps.FriProof{
-					RoundRoots: []ps.Digest{dig(800), dig(810)},
-					FinalPoly:  []ps.Ext{ext(900)},
-					RunningQueries: [][]ps.Branch{
-						{
-							{Siblings: []ps.Digest{dig(1000)}, Leaf: dig(1010)},
-							{Siblings: nil, Leaf: dig(1020)},
-						},
-						nil, // a query with no branches
+				nil, // a query with no input trees
+			},
+			FriProof: ps.FriProof{
+				RoundRoots: []ps.Digest{dig(800), dig(810)},
+				FinalPoly:  []ps.Ext{ext(900)},
+				RunningQueries: [][]ps.Branch{
+					{
+						{Siblings: []ps.Digest{dig(1000)}, Leaf: dig(1010)},
+						{Siblings: nil, Leaf: dig(1020)},
 					},
+					nil, // a query with no branches
 				},
 			},
 		},
@@ -240,9 +238,9 @@ func TestEncode_OptRowPairFlagAndPadding(t *testing.T) {
 		{Base: []ps.Element{1}, Ext: nil},
 		{Base: []ps.Element{2}, Ext: nil},
 	}
-	p := ps.VerifyInput{Proof: ps.Proof{PcsOpening: ps.PcsOpening{Proof: ps.OpeningProof{
+	p := ps.VerifyInput{Proof: ps.Proof{PcsOpening: ps.OpeningProof{
 		InputQueries: [][]ps.InputTreeOpening{{{Leaves: []*ps.RowPair{nil, present}}}},
-	}}}}
+	}}}
 
 	image, err := ps.Encode(p, testBase)
 	require.NoError(t, err)

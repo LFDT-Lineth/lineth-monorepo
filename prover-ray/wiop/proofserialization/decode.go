@@ -201,7 +201,7 @@ func (d *decoder) proof(off int) (Proof, error) {
 		}
 	}
 
-	if p.PcsOpening, err = d.pcsOpening(off + OffProofPcsOpening); err != nil {
+	if p.PcsOpening, err = d.openingProof(off + OffProofPcsOpening + OffPcsOpeningProof); err != nil {
 		return p, err
 	}
 	return p, nil
@@ -249,14 +249,6 @@ func (d *decoder) scalar(off int) (Scalar, error) {
 		return Scalar{}, fmt.Errorf("proofserialization: Scalar: discriminant %d is neither "+
 			"base (%d) nor ext (%d)", tag, TagScalarBase, TagScalarExt)
 	}
-}
-
-func (d *decoder) pcsOpening(off int) (PcsOpening, error) {
-	var p PcsOpening
-	var err error
-
-	p.Proof, err = d.openingProof(off + OffPcsOpeningProof)
-	return p, err
 }
 
 func (d *decoder) openingProof(off int) (OpeningProof, error) {
