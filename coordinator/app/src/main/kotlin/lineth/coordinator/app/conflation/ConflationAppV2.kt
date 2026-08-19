@@ -8,6 +8,8 @@ import linea.domain.BlockCounters
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
+import linea.kotlin.encodeHex
+import linea.timer.TimerSchedule
 import linea.web3j.ethapi.createEthApiClient
 import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
@@ -36,6 +38,7 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -73,6 +76,18 @@ class ConflationAppV2(
       latestL1FinalizedBlock = lastFinalizedBlock.toLong(),
       batchesRepository = batchesRepository,
     )
+
+  private val provenBlockNumberMonitor = object : VertxPeriodicPollingService(
+    vertx = vertx,
+    pollingIntervalMs = 1.seconds.inWholeMilliseconds,
+    log = log,
+    name = "ProvenBlockNumberMonitor",
+    timerSchedule = TimerSchedule.FIXED_DELAY,
+  ) {
+    override fun action(): SafeFuture<*> {
+      return lastProvenBlockNumberProvider.getLastProvenBlockNumber()
+    }
+  }
 
   private val targetCheckpointPauseController =
     object : TargetCheckpointPauseController {
@@ -247,7 +262,8 @@ class ConflationAppV2(
           )
         blockCreationMonitor = monitor
         val coordinatorStart = executionPipeline.executionProofCoordinator.start().toSafeFuture()
-        coordinatorStart
+        val provenMonitorStart = provenBlockNumberMonitor.start().toSafeFuture()
+        SafeFuture.allOf(coordinatorStart, provenMonitorStart)
           .thenCompose { monitor.start() }
           .thenPeek { log.info("ConflationAppV2 started with startingPoint={}", startingPoint) }
       }
@@ -258,7 +274,8 @@ class ConflationAppV2(
       ?.let { SafeFuture.allOf(it.stop()).thenApply { log.info("ConflationAppV2 stopped") } }
       ?: SafeFuture.completedFuture(Unit)
     val coordinatorStop = executionPipeline.executionProofCoordinator.stop().toSafeFuture()
-    return SafeFuture.allOf(monitorStop, coordinatorStop).thenApply { }
+    val provenMonitorStop = provenBlockNumberMonitor.stop().toSafeFuture()
+    return SafeFuture.allOf(monitorStop, coordinatorStop, provenMonitorStop).thenApply { }
   }
 
   private data class ExecutionPipeline(
