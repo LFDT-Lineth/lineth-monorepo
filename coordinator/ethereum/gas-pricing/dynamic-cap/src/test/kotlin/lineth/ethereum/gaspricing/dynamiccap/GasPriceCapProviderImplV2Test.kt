@@ -1,8 +1,4 @@
-<<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
 package lineth.ethereum.gaspricing.dynamiccap
-=======
-package net.consensys.linea.ethereum.gaspricing.dynamiccap
->>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
 
 import io.vertx.junit5.VertxExtension
 import linea.domain.gas.GasPriceCaps
@@ -172,7 +168,6 @@ class GasPriceCapProviderImplV2Test {
   }
 
   @Test
-<<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
   fun `gas price coefficient requires a base fee cap`() {
     val gasPriceCaps = GasPriceCaps(
       maxBaseFeePerGasCap = null,
@@ -192,8 +187,6 @@ class GasPriceCapProviderImplV2Test {
   }
 
   @Test
-=======
->>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
   fun `gas price caps should be null if disabled`() {
     val gasPriceCapProvider = createGasPriceCapProvider(
       enabled = false,

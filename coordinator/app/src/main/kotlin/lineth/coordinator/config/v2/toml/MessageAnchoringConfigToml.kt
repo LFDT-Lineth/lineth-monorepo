@@ -2,10 +2,6 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/MessageAnchoringConfigToml.kt
-=======
-import linea.coordinator.config.v2.MessageAnchoringConfig
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/MessageAnchoringConfigToml.kt
 import linea.domain.BlockParameter
 import lineth.coordinator.config.v2.MessageAnchoringConfig
 import java.net.URL
@@ -15,11 +11,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class MessageAnchoringConfigToml(
   @param:ConfigDoc(description = "Whether L1 to L2 message anchoring is disabled.", default = "false")
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/MessageAnchoringConfigToml.kt
   val disabled: Boolean = false,
-=======
-  var disabled: Boolean = false,
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/MessageAnchoringConfigToml.kt
   @param:ConfigDoc(description = "Interval between message anchoring ticks.", default = "PT10S")
   val anchoringTickInterval: Duration = 10.seconds,
   @param:ConfigDoc(description = "Maximum number of messages buffered awaiting anchoring.", default = "10000")

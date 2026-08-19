@@ -1,8 +1,4 @@
-<<<<<<< HEAD:coordinator/persistence/src/integrationTest/kotlin/lineth/persistence/conflation/BlobsPostgresDaoTestBase.kt
 package lineth.persistence.conflation
-=======
-package linea.persistence.conflation
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/integrationTest/kotlin/linea/persistence/conflation/BlobsPostgresDaoTestBase.kt
 
 import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.PreparedQuery

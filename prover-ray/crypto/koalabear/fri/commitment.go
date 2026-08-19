@@ -75,16 +75,6 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
 		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
 	}
-	parallel.Execute(len(work), func(start, end int) {
-		for w := start; w < end; w++ {
-			it := work[w]
-			if it.ext {
-				encoded[it.i].Ext[it.k] = encoders[it.i].EncodeExt(table[it.i].Ext[it.k], fft.WithNbTasks(1))
-			} else {
-				encoded[it.i].Base[it.k] = encoders[it.i].Encode(table[it.i].Base[it.k], fft.WithNbTasks(1))
-			}
-		}
-	})
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
 	// output slice, so flatten (size, base/ext, row) into work items and encode
@@ -183,21 +173,6 @@ func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
 		limbs := extLimbs(t.Ext[k][row])
 		hasher.WriteElements(limbs[:]...)
 	}
-}
-
-// Shape returns the per-size row counts of the batch, discarding the
-// polynomial values. It is the verifier-side view of a committed batch: a
-// caller that holds the committed table builds VerifyInputs.Shapes from it,
-// without needing the witness data.
-func (table MultiSizeTable) Shape() Shape {
-	shape := make(Shape, len(table))
-	for sizeLog2 := range table {
-		shape[sizeLog2] = SizedShape{
-			BaseWidth: len(table[sizeLog2].Base),
-			ExtWidth:  len(table[sizeLog2].Ext),
-		}
-	}
-	return shape
 }
 
 // Shape returns the per-size row counts of the batch, discarding the

@@ -2,10 +2,6 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
-=======
-import linea.coordinator.config.v2.ForcedTransactionsConfig
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
 import linea.domain.BlockParameter
 import lineth.coordinator.config.v2.ForcedTransactionsConfig
 import java.net.URL
@@ -16,11 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class ForcedTransactionsConfigToml(
   @param:ConfigDoc(description = "Whether forced transactions handling is disabled.", default = "false")
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
   val disabled: Boolean = false,
-=======
-  var disabled: Boolean = false,
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
   @param:ConfigDoc(
     description = "L1 endpoint used to read forced transactions. Falls back to defaults.l1-endpoint.",
     example = "http://l1-el-node:8545",

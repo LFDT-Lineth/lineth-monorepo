@@ -1,16 +1,8 @@
-<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 package lineth.persistence.conflation
-
-import io.vertx.sqlclient.Row
-import io.vertx.sqlclient.SqlClient
-<<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-=======
-package linea.persistence.conflation
 
 import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
 import io.vertx.sqlclient.Tuple
 import linea.domain.BlobStatus
 import linea.domain.BlockInterval
@@ -19,31 +11,14 @@ import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
-<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-========
-import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
-import linea.domain.BlobCompressionProof
-import linea.domain.BlobRecord
-import linea.domain.BlobStatus
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
-import org.apache.logging.log4j.LogManager
->>>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDao.kt
-import org.apache.logging.log4j.Logger
-=======
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 abstract class BlobsPostgresDaoG<T : BlockInterval>(
   private val maxBlobsToReturn: UInt,
   connection: SqlClient,
-<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-<<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-=======
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
   protected val log: Logger,
   protected val clock: Clock,
 ) : BlobsDaoG<T> {
@@ -82,42 +57,6 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
       limit $maxBlobsToReturn
     """
       .trimIndent()
-<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-========
-  log: Logger = LogManager.getLogger(BlobsPostgresDao::class.java),
-  clock: Clock = Clock.System,
-) : BlobsPostgresDaoG<BlobRecord>(config.maxBlobsToReturn, connection, log, clock), BlobsDao {
-
-  data class Config(val maxBlobsToReturn: UInt)
-
-  companion object {
-    fun parseRecord(record: Row): BlobRecord {
-      val blobCompressionProof = record.getJsonObject("blob_compression_proof")?.let { jsonObject ->
-        BlobCompressionProofJsonResponse.fromJsonString(jsonObject.encode()).toDomainObject()
-      }
-      return BlobRecord(
-        startBlockNumber = record.getLong("start_block_number").toULong(),
-        endBlockNumber = record.getLong("end_block_number").toULong(),
-        blobHash = record.getString("blob_hash").decodeHex(),
-        startBlockTime = Instant.fromEpochMilliseconds(record.getLong("start_block_timestamp")),
-        endBlockTime = Instant.fromEpochMilliseconds(record.getLong("end_block_timestamp")),
-        batchesCount = record.getInteger("batches_count").toUInt(),
-        expectedShnarf = record.getString("expected_shnarf").decodeHex(),
-        blobCompressionProof = blobCompressionProof,
-      )
-    }
-
-    private fun BlobCompressionProof?.toJsonString(): String? =
-      this?.let { BlobCompressionProofJsonResponse.fromDomainObject(it).toJsonString() }
-  }
-
-  override fun parseRecord(row: Row): BlobRecord = Companion.parseRecord(row)
->>>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDao.kt
-
-  override fun endBlockTime(record: BlobRecord): Instant = record.endBlockTime
-
-<<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-=======
 
   private val selectBlobByEndBlockNumberSql =
     """
@@ -128,7 +67,6 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
     """
       .trimIndent()
 
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
   private val selectBlobByStartBlockNumberSql =
     """
       select *
@@ -243,22 +181,4 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
       .map { rowSet -> rowSet.rowCount() }
       .toSafeFuture()
   }
-<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
-========
-  override fun buildInsertParams(blobRecord: BlobRecord): List<Any?> =
-    listOf(
-      clock.now().toEpochMilliseconds(),
-      blobRecord.startBlockNumber.toLong(),
-      blobRecord.endBlockNumber.toLong(),
-      blobRecord.blobHash.encodeHex(),
-      blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN),
-      blobRecord.startBlockTime.toEpochMilliseconds(),
-      blobRecord.endBlockTime.toEpochMilliseconds(),
-      blobRecord.batchesCount.toInt(),
-      blobRecord.expectedShnarf.encodeHex(),
-      blobRecord.blobCompressionProof.toJsonString(),
-    )
->>>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDao.kt
-=======
->>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
 }

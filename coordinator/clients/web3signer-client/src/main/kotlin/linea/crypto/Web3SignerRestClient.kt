@@ -19,12 +19,9 @@ class Web3SignerRestClient(
   override fun publicKey(): ByteArray = publicKey
 
   override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> {
-<<<<<<< HEAD
     require(bytes.size == DIGEST_SIZE_BYTES) {
       "Web3Signer requires a $DIGEST_SIZE_BYTES-byte digest, but received ${bytes.size} bytes"
     }
-=======
->>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
     val path = WEB3SIGNER_SIGN_ENDPOINT + publicKeyHex
     val requestJson =
       """
@@ -36,13 +33,10 @@ class Web3SignerRestClient(
       when (val body = response.map { (it as HttpResponseImpl<*>).body().toString() }) {
         is Ok -> {
           val signature = body.value.decodeHex()
-<<<<<<< HEAD
           require(signature.size == WEB3SIGNER_SIGNATURE_SIZE_BYTES) {
             "Web3Signer returned a ${signature.size}-byte signature; expected " +
               "$WEB3SIGNER_SIGNATURE_SIZE_BYTES bytes (r || s || v)"
           }
-=======
->>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
           Secp256k1Signature.fromRSBytes(signature.sliceArray(0 until Secp256k1Signature.SIZE_BYTES))
         }
 

@@ -2,11 +2,7 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/StateManagerToml.kt
 import lineth.coordinator.config.v2.StateManagerConfig
-=======
-import linea.coordinator.config.v2.StateManagerConfig
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/StateManagerToml.kt
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

@@ -19,24 +19,14 @@ dependencies {
 
 web3jContractWrappers {
   def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
-<<<<<<< HEAD
   def contractV6Abi = contractsDir.file("LinethRollupV6.0.abi").asFile.absolutePath
   def contractV8Abi = contractsDir.file("LinethRollupV8.0.abi").asFile.absolutePath
-=======
-  def contractV6Abi = contractsDir.file("LineaRollupV6.0.abi").asFile.absolutePath
-  def contractV8Abi = contractsDir.file("LineaRollupV8.0.abi").asFile.absolutePath
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
   def contractV9Abi = contractsDir.file("LinethRollupV9-rc.abi").asFile.absolutePath
 
   contractsPackage = "linea.contract"
   contracts = [
-<<<<<<< HEAD
     "$contractV6Abi": "LinethRollupV6",
     "$contractV8Abi": "LinethRollupV8",
-=======
-    "$contractV6Abi": "LineaRollupV6",
-    "$contractV8Abi": "LineaRollupV8",
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
     "$contractV9Abi": "LinethRollupV9",
   ]
 }

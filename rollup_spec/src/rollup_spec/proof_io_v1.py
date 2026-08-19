@@ -513,17 +513,12 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
-<<<<<<< HEAD
         "parentDataRollingHash": _hx(pi.parent_data_rolling_hash),
         "endDataRollingHash": _hx(pi.end_data_rolling_hash),
         "parentBlockHash": _hx(pi.parent_block_hash),
         "endBlockHash": _hx(pi.end_block_hash),
         "startOffset": int(pi.start_offset),
         "endOffset": int(pi.end_offset),
-=======
-        "parentShnarf": _hx(pi.parent_shnarf),
-        "endShnarf": _hx(pi.end_shnarf),
->>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
         # program VKs verified beneath this proof, checked against L1's single
         # combined approved-VK set (exec vs rollup not distinguished).
@@ -602,17 +597,12 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
-<<<<<<< HEAD
         parent_data_rolling_hash=h("parentDataRollingHash"),
         end_data_rolling_hash=h("endDataRollingHash"),
         parent_block_hash=h("parentBlockHash"),
         end_block_hash=h("endBlockHash"),
         start_offset=int(n("startOffset")),
         end_offset=int(n("endOffset")),
-=======
-        parent_shnarf=h("parentShnarf"),
-        end_shnarf=h("endShnarf"),
->>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=[
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
             for i, v in enumerate(program_vks)

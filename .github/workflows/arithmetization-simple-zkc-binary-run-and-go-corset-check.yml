@@ -54,19 +54,19 @@ jobs:
           ZKC_INPUT: src/test/zkc/simple_add.json
 
       - name: Run a single Keccak custom1 opcode program trace and check it
-        working-directory: arithmetization/src/test
         run: make zkc-exec
+        working-directory: arithmetization/src/test
+        timeout-minutes: 15
         env:
           ZKC_EXEC_FLAGS: "--check"
           JSON: rust/src/keccak/keccak_single.json
-        timeout-minutes: 15
 
       - name: Trace Keccak rust and check it
         run: make keccak-rust-exec
         working-directory: arithmetization/src/test
+        timeout-minutes: 15
         env:
           ZKC_REF: "" # Empty to avoid installing zkc again
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check"
-        timeout-minutes: 15

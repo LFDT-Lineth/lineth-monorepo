@@ -3,10 +3,6 @@ package lineth.coordinator.config.v2.toml
 import com.sksamuel.hoplite.Masked
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/SignerConfigToml.kt
-=======
-import linea.coordinator.config.v2.SignerConfig
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/SignerConfigToml.kt
 import linea.kotlin.decodeHex
 import lineth.coordinator.config.v2.SignerConfig
 import java.net.URL
@@ -14,11 +10,7 @@ import java.nio.file.Path
 
 data class SignerConfigToml(
   @param:ConfigDoc(
-<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/SignerConfigToml.kt
     description = "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
-=======
-    description = "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/SignerConfigToml.kt
     example = "web3signer",
   )
   val type: SignerType,

@@ -22,11 +22,7 @@ internal object Web3JLinethRollupFunctionBuilders {
       LinethRollupContractVersion.V8,
       -> buildSubmitBlobsFunctionV6(blobs)
 
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupFunctionBuilders.kt
       LinethRollupContractVersion.V9 ->
-=======
-      LineaRollupContractVersion.V9 ->
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupFunctionBuilders.kt
         throw UnsupportedOperationException("version=$version not supported, please use submitBlobsV9 instead")
     }
   }
@@ -95,11 +91,7 @@ internal object Web3JLinethRollupFunctionBuilders {
         parentL1RollingHashMessageNumber,
       )
 
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupFunctionBuilders.kt
       LinethRollupContractVersion.V9 ->
-=======
-      LineaRollupContractVersion.V9 ->
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupFunctionBuilders.kt
         throw UnsupportedOperationException("version=$version not supported, please use finalizeBlocksV9 instead")
     }
   }

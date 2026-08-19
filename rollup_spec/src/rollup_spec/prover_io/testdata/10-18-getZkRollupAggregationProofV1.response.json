@@ -16,17 +16,12 @@
     "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
     "endProcessedFtxNumber": 9,
     "filteredAddressesHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
-<<<<<<< HEAD:rollup_spec/src/rollup_spec/prover_io/testdata/10-18-getZkRollupAggregationProofV1.response.json
     "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
     "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
     "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
     "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
     "startOffset": 0,
     "endOffset": 131072,
-=======
-    "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
-    "endShnarf": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
->>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555)):rollup_spec/src/rollup_spec/prover_io/testdata/getZkRollupAggregationProofV1.response.json
     "programVks": [
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

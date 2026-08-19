@@ -169,12 +169,8 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.aggregation.l1-request-retries.max-retries` | `UInt?` | no | - | active | Maximum number of retry attempts. Omit for endless retries. Example: `3`. |
 | `l1-submission.aggregation.l1-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `l1-submission.aggregation.max-submissions-per-tick` | `UInt` | no | `1` | active | Maximum aggregation submissions sent per tick. |
-<<<<<<< HEAD
 | `l1-submission.aggregation.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
 | `l1-submission.aggregation.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
-=======
-| `l1-submission.aggregation.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `l1-submission.aggregation.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `l1-submission.aggregation.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `l1-submission.aggregation.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
@@ -201,12 +197,8 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.blob.l1-request-retries.max-retries` | `UInt?` | no | - | active | Maximum number of retry attempts. Omit for endless retries. Example: `3`. |
 | `l1-submission.blob.l1-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `l1-submission.blob.max-submission-transactions-per-tick` | `UInt` | no | `2` | active | Maximum blob submission transactions sent per tick. |
-<<<<<<< HEAD
 | `l1-submission.blob.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
 | `l1-submission.blob.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
-=======
-| `l1-submission.blob.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `l1-submission.blob.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `l1-submission.blob.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `l1-submission.blob.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
@@ -322,12 +314,8 @@ L1 to L2 message anchoring settings.
 | `message-anchoring.l2-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `message-anchoring.max-messages-to-anchor-per-l2-transaction` | `UInt` | no | `100` | active | Maximum number of messages anchored in a single L2 transaction. |
 | `message-anchoring.message-queue-capacity` | `UInt` | no | `10000` | active | Maximum number of messages buffered awaiting anchoring. |
-<<<<<<< HEAD
 | `message-anchoring.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
 | `message-anchoring.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
-=======
-| `message-anchoring.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `message-anchoring.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `message-anchoring.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `message-anchoring.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
@@ -340,7 +328,6 @@ L1 to L2 message anchoring settings.
 
 ### `protocol`
 
-<<<<<<< HEAD
 Lineth protocol contract addresses and genesis settings.
 
 | Key | Type | Required | Default | Status | Description |
@@ -351,18 +338,6 @@ Lineth protocol contract addresses and genesis settings.
 | `protocol.l1.contract-address` | `String` | yes | - | active | Address of the Lineth rollup contract on L1. Example: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`. |
 | `protocol.l1.contract-deployment-block-number` | `ULong?` | no | - | active | L1 block number at which the rollup contract was deployed. Omit if not applicable. Example: `3`. |
 | `protocol.l2.contract-address` | `String` | yes | - | active | Address of the Lineth contract on L2. Example: `0xe537D669CA013d86EBeF1D64e40fC74CADC91987`. |
-=======
-Linea protocol contract addresses and genesis settings.
-
-| Key | Type | Required | Default | Status | Description |
-| --- | --- | --- | --- | --- | --- |
-| `protocol.genesis.genesis-shnarf` | `ByteArray` | yes | - | active | Genesis shnarf (starting shnarf) of the Linea chain (hex). Example: `0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79`. |
-| `protocol.genesis.genesis-state-root-hash` | `ByteArray` | yes | - | active | Genesis state root hash of the Linea chain (hex). Example: `0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101`. |
-| `protocol.l1.block-time` | `Duration` | no | `PT12S` | active | Average L1 block time, used for timing estimates. |
-| `protocol.l1.contract-address` | `String` | yes | - | active | Address of the Linea rollup contract on L1. Example: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`. |
-| `protocol.l1.contract-deployment-block-number` | `ULong?` | no | - | active | L1 block number at which the rollup contract was deployed. Omit if not applicable. Example: `3`. |
-| `protocol.l2.contract-address` | `String` | yes | - | active | Address of the Linea contract on L2. Example: `0xe537D669CA013d86EBeF1D64e40fC74CADC91987`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `protocol.l2.contract-deployment-block-number` | `ULong?` | no | - | active | L2 block number at which the contract was deployed. Omit if not applicable. Example: `3`. |
 
 ### `prover`
@@ -371,7 +346,6 @@ File-based prover request/response directories and switch-over settings.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
-<<<<<<< HEAD
 | `prover.blob-compression.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
@@ -381,18 +355,10 @@ File-based prover request/response directories and switch-over settings.
 | `prover.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
 | `prover.execution.program-vk` | `String?` | no | - | active | Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
-=======
-| `prover.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
-| `prover.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `prover.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
 | `prover.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
 | `prover.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
 | `prover.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
-<<<<<<< HEAD
 | `prover.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
@@ -406,20 +372,10 @@ File-based prover request/response directories and switch-over settings.
 | `prover.new.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
 | `prover.new.execution.program-vk` | `String?` | no | - | active | Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover. Example: `0xabcdef1234567890`. |
-=======
-| `prover.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.new.blob-compression.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.new.blob-compression.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.new.enable-request-files-cleanup` | `Boolean` | no | `false` | active | Whether to delete request files after their responses are processed. |
-| `prover.new.execution.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.new.execution.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 | `prover.new.fs-inprogress-proving-suffix-pattern` | `String` | no | `\.inprogress\.prover.*` | active | Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. |
 | `prover.new.fs-inprogress-request-writing-suffix` | `String` | no | `.inprogress_coordinator_writing` | active | Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. |
 | `prover.new.fs-polling-interval` | `Duration` | no | `PT15S` | active | Interval between scans of the prover response directories for new responses. |
 | `prover.new.fs-polling-timeout` | `Duration` | no | `infinite` | active | Maximum time to wait for a prover response before timing out. Defaults to no timeout. |
-<<<<<<< HEAD
 | `prover.new.invalidity.fork-name` | `String?` | no | - | active | L2 EVM fork name included in RISC-V execution proof requests (e.g. "cancun"). Required for the RISC-V execution prover; omit for other prover types. Example: `cancun`. |
 | `prover.new.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
 | `prover.new.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
@@ -506,19 +462,6 @@ RISC-V prover request/response directories for execution, rollup, and aggregatio
 | `riscv-prover.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
 | `riscv-prover.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
 
-=======
-| `prover.new.invalidity.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.new.invalidity.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.new.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.new.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.new.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
-| `prover.new.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
-| `prover.proof-aggregation.fs-requests-directory` | `String` | yes | - | active | Directory the coordinator writes prover request files to. Example: `/data/prover/v3/execution/requests`. |
-| `prover.proof-aggregation.fs-responses-directory` | `String` | yes | - | active | Directory the coordinator reads prover response files from. Example: `/data/prover/v3/execution/responses`. |
-| `prover.switch-block-number-inclusive` | `ULong?` | no | - | active | Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp. Example: `1000000`. |
-| `prover.switch-block-timestamp` | `Instant?` | no | - | active | Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive. Example: `2024-01-01T00:00:00Z`. |
-
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 ### `state-manager`
 
 Shomei state manager client settings.
@@ -635,19 +578,11 @@ L1 dynamic gas price cap time-of-day multipliers.
 
 ## smart-contract-errors
 
-<<<<<<< HEAD
 Mapping of Lineth smart-contract revert error codes to messages.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
 | `smart-contract-errors` | `Map<String, String>` | yes | - | active | Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons. |
-=======
-Mapping of Linea smart-contract revert error codes to messages.
-
-| Key | Type | Required | Default | Status | Description |
-| --- | --- | --- | --- | --- | --- |
-| `smart-contract-errors` | `Map<String, String>` | yes | - | active | Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons. |
->>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
 
 ## Deprecated Keys
 

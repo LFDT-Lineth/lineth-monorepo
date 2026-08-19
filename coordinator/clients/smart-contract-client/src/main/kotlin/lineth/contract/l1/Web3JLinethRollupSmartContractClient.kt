@@ -1,7 +1,6 @@
 package lineth.contract.l1
 
 import linea.EthLogsSearcher
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
 import linea.contract.LinethRollupV6
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.BlockAndNonce
@@ -9,15 +8,6 @@ import linea.contract.l1.FinalizationDataV9
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
-=======
-import linea.contract.LineaRollupV6
-import linea.contract.l1.BlobsSubmissionV9
-import linea.contract.l1.BlockAndNonce
-import linea.contract.l1.FinalizationDataV9
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
@@ -212,13 +202,8 @@ class Web3JLinethRollupSmartContractClient internal constructor(
   }
 
   private fun ensureMinVersion(
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     minVersion: LinethRollupContractVersion,
   ): SafeFuture<LinethRollupContractVersion> {
-=======
-    minVersion: LineaRollupContractVersion,
-  ): SafeFuture<LineaRollupContractVersion> {
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
     return getVersion()
       .thenCompose { version ->
         if (version < minVersion) {
@@ -236,11 +221,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     return ensureMinVersion(LinethRollupContractVersion.V9)
-=======
-    return ensureMinVersion(LineaRollupContractVersion.V9)
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
       .thenApply {
         FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
       }
@@ -268,11 +249,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     return ensureMinVersion(LinethRollupContractVersion.V9)
-=======
-    return ensureMinVersion(LineaRollupContractVersion.V9)
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
       .thenApply {
         FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
       }

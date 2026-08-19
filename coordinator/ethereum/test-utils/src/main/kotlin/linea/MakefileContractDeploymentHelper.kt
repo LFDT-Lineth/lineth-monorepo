@@ -78,17 +78,10 @@ fun makeDeployLinethRollup(
   )
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
   val command = when (contractVersion) {
-<<<<<<< HEAD
     LinethRollupContractVersion.V6 -> "make deploy-lineth-rollup-v6"
     LinethRollupContractVersion.V7 -> "make deploy-lineth-rollup-v7"
     LinethRollupContractVersion.V8 -> "make deploy-lineth-rollup-v8"
     LinethRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
-=======
-    LineaRollupContractVersion.V6 -> "make deploy-linea-rollup-v6"
-    LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
-    LineaRollupContractVersion.V8 -> "make deploy-linea-rollup-v8"
-    LineaRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
->>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 
