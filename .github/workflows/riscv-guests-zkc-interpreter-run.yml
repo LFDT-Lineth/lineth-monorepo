@@ -64,7 +64,7 @@ jobs:
     name: l2-execution guest in ZKC interpreter (accel)
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -93,7 +93,7 @@ jobs:
       # so that dependency no-ops — zkc is built once, here. Install logic lives in arithmetization/Makefile.
       - name: Install zkc interpreter CLI
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
+          ZKC_REF: ${{ inputs.zkc-ref }}
 
         run: make -C arithmetization install-zkc
       # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast): a
@@ -102,8 +102,8 @@ jobs:
       # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
-      #
-      # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true
+        env:
+          ZKC_EXEC_FLAGS: "--fast --gogen"
 
