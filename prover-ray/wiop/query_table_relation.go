@@ -2,6 +2,7 @@ package wiop
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
@@ -309,10 +310,17 @@ func (tr *TableRelationQuery) Round() *Round {
 // Check implements [Query]. Dispatches to [checkPermutation] or
 // [checkInclusion] depending on [TableRelationQuery.Kind].
 func (tr *TableRelationQuery) Check(rt *Runtime) error {
+	return tr.checkWith(rt, newInclusionSetCache())
+}
+
+// checkWith is [TableRelationQuery.Check] with a caller-supplied B-side set
+// cache, so that a caller checking many queries in one pass can share the work
+// of building the target sets. See [inclusionSetCache].
+func (tr *TableRelationQuery) checkWith(rt *Runtime, cache *inclusionSetCache) error {
 	if tr.Kind == KindPermutation {
 		return tr.checkPermutation(rt)
 	}
-	return tr.checkInclusion(rt)
+	return tr.checkInclusion(rt, cache)
 }
 
 // checkPermutation verifies that A and B, treated as multisets of rows, are
@@ -369,11 +377,12 @@ func (tr *TableRelationQuery) checkPermutation(rt *Runtime) error {
 // checkInclusion verifies that every selected row of A appears in the union of
 // selected rows across all B fragments.
 //
-// This is a probabilistic check: a random extension-field scalar alpha is
-// sampled and used to hash rows via Horner's rule. A hash collision causes a
+// This is a probabilistic check: an extension-field scalar alpha drawn at
+// random is used to hash rows via Horner's rule. A hash collision causes a
 // false negative with probability at most (total rows) / |field|, which is
-// negligible for realistic table sizes. B's selected rows populate a set; each
-// selected A row is then probed against it.
+// negligible for realistic table sizes. B's selected rows populate a set (taken
+// from cache, which may serve one built for an earlier query over the same
+// target tables); each selected A row is then probed against it.
 //
 // When all column views and the selector in a table have zero shift and the
 // module has directional padding, all padding rows produce the same row hash
@@ -381,18 +390,106 @@ func (tr *TableRelationQuery) checkPermutation(rt *Runtime) error {
 // rows, the first padding row (the anchor) is probed once: if selected and
 // absent from B, the check fails immediately; if present, every other selected
 // padding row is also satisfied.
-func (tr *TableRelationQuery) checkInclusion(rt *Runtime) error {
-	alpha := field.RandomElemExt()
-	bSet := make(map[field.Ext]struct{})
-	for _, tab := range tr.B {
-		inclusionBuildSet(bSet, alpha, rt, tab)
-	}
+func (tr *TableRelationQuery) checkInclusion(rt *Runtime, cache *inclusionSetCache) error {
+	bSet := cache.setFor(rt, tr.B)
 	for _, tab := range tr.A {
-		if err := inclusionCheckSet(bSet, alpha, rt, tab, tr.context.Path()); err != nil {
+		if err := inclusionCheckSet(bSet, cache.alpha, rt, tab, tr.context.Path()); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// inclusionSetCache memoises the B-side row-hash sets of inclusion checks,
+// keyed by the identity of the target tables. Lookups routinely share a target
+// — a range-check column is the B side of every query that range-checks
+// something — and building that set is O(target size) while the A side probing
+// it is often a handful of rows. Rebuilding it per query is what makes
+// [System.checkUnreducedQueries] expensive on lookup-heavy systems.
+//
+// Every entry shares the one alpha drawn when the cache is created; that is
+// what makes the sets interchangeable between queries. It costs nothing in
+// detection power: a query still misses a bad witness only when alpha lands on
+// a hash collision, and a union bound over the queries sharing the cache is the
+// same bound as drawing alpha afresh each time.
+//
+// A cache is only valid while the assignments it read stay put, so it belongs
+// to a single check pass and must be discarded with it.
+type inclusionSetCache struct {
+	alpha field.Gen
+	sets  map[string]map[field.Ext]struct{}
+}
+
+// newInclusionSetCache returns an empty cache with a freshly drawn alpha.
+func newInclusionSetCache() *inclusionSetCache {
+	return &inclusionSetCache{
+		alpha: field.RandomElemExt(),
+		sets:  make(map[string]map[field.Ext]struct{}),
+	}
+}
+
+// setFor returns the set of row hashes of all selected rows across tables,
+// building it on first use. The returned map is shared with future callers and
+// must not be mutated.
+func (c *inclusionSetCache) setFor(rt *Runtime, tables []Table) map[field.Ext]struct{} {
+	key, keyable := inclusionSetKey(tables)
+	if keyable {
+		if set, ok := c.sets[key]; ok {
+			return set
+		}
+	}
+	set := make(map[field.Ext]struct{})
+	for _, tab := range tables {
+		inclusionBuildSet(set, c.alpha, rt, tab)
+	}
+	if keyable {
+		c.sets[key] = set
+	}
+	return set
+}
+
+// inclusionSetKey encodes the identity of a group of tables as the registered
+// ID and shift of every column view and selector they hold. Two groups with
+// equal keys yield the same set of row hashes under the same runtime, since the
+// IDs pin the assignments read and the modules whose size and padding drive the
+// iteration.
+//
+// It reports false if any column is unregistered (a zero [ObjectID]), which
+// leaves it without a stable identity to key on; the caller must then skip the
+// cache rather than risk conflating two distinct tables.
+func inclusionSetKey(tables []Table) (string, bool) {
+	var (
+		key []byte
+		ok  bool
+	)
+	for _, tab := range tables {
+		for _, cv := range tab.Columns {
+			if key, ok = appendColumnViewKey(key, cv); !ok {
+				return "", false
+			}
+		}
+		key = append(key, ';')
+		if tab.Selector != nil {
+			if key, ok = appendColumnViewKey(key, tab.Selector); !ok {
+				return "", false
+			}
+		}
+		key = append(key, '|')
+	}
+	return string(key), true
+}
+
+// appendColumnViewKey appends cv's identity to key, reporting false if cv's
+// column carries no registered ID.
+func appendColumnViewKey(key []byte, cv *ColumnView) ([]byte, bool) {
+	id := cv.Column.Context.ID
+	if id == 0 {
+		return nil, false
+	}
+	key = strconv.AppendUint(key, uint64(id), 36)
+	key = append(key, ':')
+	key = strconv.AppendInt(key, int64(cv.ShiftingOffset), 36)
+	return append(key, ','), true
 }
 
 // inclusionBuildSet adds the hashes of all selected rows of tab to bSet.

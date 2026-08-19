@@ -33,6 +33,9 @@ fun BigInteger.toKWei(): BigDecimal = this.toBigDecimal().toKWei()
 inline val BigInteger.kwei: BigInteger get() = this.multiply(OneKWei.toBigInteger())
 fun BigInteger.toULong(): ULong = this.toString().toULong()
 fun BigInteger.toUInt(): UInt = this.toString().toUInt()
+fun BigInteger.toHexString(hexPrefix: Boolean = true): String = toString(16).let {
+  if (hexPrefix) "0x$it" else it
+}
 
 // ULong extensions
 
