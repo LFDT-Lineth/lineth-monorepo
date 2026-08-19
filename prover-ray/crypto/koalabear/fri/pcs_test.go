@@ -165,6 +165,80 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
+func TestInputCapRevealsUpperAuxiliaryTable(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(20260819))
+	params, err := NewParams(4, 3, 2)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(4, 2))
+	require.NoError(t, err)
+	witness := MultiSizeTable{
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 1)}},
+		{},
+		{},
+		{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}},
+	}
+	committed := pcs.Commit(witness)
+	shape := committed.EncodedTable.Shape()
+	depth := merkleCapDepth(params.NumQueries, committed.Tree.NumLevel()-1)
+	require.Equal(t, 1, depth)
+	capNodes := committed.Tree.OpenCap(depth).Nodes
+	cap := InputCap{Nodes: capNodes, Tables: revealedInputTables(params, committed.EncodedTable, depth)}
+	frontier, err := authenticateInputCap(params, cap, shape, committed.Tree.Root())
+	require.NoError(t, err)
+
+	queryPosition := 5
+	branch := openInputTreeOpeningToDepth(params, committed, queryPosition, depth)
+	require.Nil(t, branch.Leaves[0], "cap-revealed pair must not be repeated in the query")
+	numLeaves := 1 << len(branch.Leaves)
+	leafIndex := queryPosition / ((1 << params.LogCodewordSize) / numLeaves)
+	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, depth))
+
+	source := inputQuerySource{
+		opening:           InputQuery{branch},
+		caps:              []InputCap{cap},
+		shapes:            []Shape{shape},
+		inputIndexByBatch: []int{0},
+		params:            params,
+		queryPosition:     queryPosition,
+	}
+	pair, err := source.pairAtLevel(0, 2)
+	require.NoError(t, err)
+	want := cap.Tables[0].Rows[leafIndex/(numLeaves/2)]
+	require.Equal(t, want, pair[0])
+	require.Equal(t, cap.Tables[0].Rows[leafIndex/(numLeaves/2)^1], pair[1])
+
+	shifts := BatchShifts{
+		{Base: [][]int{{0}}},
+		{},
+		{},
+		{Ext: [][]int{{0}}},
+	}
+	zeta := field.UintsToExt(3, 0, 0, 0, 0, 0)
+	foldAlphas := []field.Ext{
+		field.UintsToExt(7, 0, 0, 0, 0, 0),
+		field.UintsToExt(11, 0, 0, 0, 0, 0),
+		field.UintsToExt(13, 0, 0, 0, 0, 0),
+	}
+	proof, claims := openForTest(t, pcs, openInputs{
+		Witnesses: []Batch{witness},
+		Committed: []CommitterState{committed},
+		Shifts:    []BatchShifts{shifts},
+		Zeta:      zeta,
+		Challenges: Challenges{
+			FoldAlphas:     foldAlphas,
+			QueryPositions: []int{5, 9},
+		},
+	})
+	require.NoError(t, pcs.Verify(VerifyInputs{
+		Roots:         []field.Octuplet{committed.Tree.Root()},
+		Shapes:        []Shape{shape},
+		Shifts:        []BatchShifts{shifts},
+		ClaimedValues: claims,
+		Zeta:          zeta,
+		Challenges:    Challenges{FoldAlphas: foldAlphas, QueryPositions: []int{5, 9}},
+	}, proof))
+}
+
 type pcsOpenVerifyFixture struct {
 	pcs       *PCS
 	input     VerifyInputs

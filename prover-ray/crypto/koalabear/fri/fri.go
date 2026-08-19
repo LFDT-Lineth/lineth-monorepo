@@ -341,6 +341,7 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 type Proof struct {
 	// Running-polynomial FRI path
 	RoundRoots []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
+	RoundCaps  []MerkleCap      // Shared Merkle prefixes for T_1..T_{r-1}
 	// FinalPoly holds the folded polynomial's 2^logFinalPolySize coefficients.
 	FinalPoly      []field.Ext
 	RunningQueries []RunningQuery
@@ -433,6 +434,16 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	wantLayersPerRQuery := wantRoundRoots
 	if len(prf.RoundRoots) != int(wantRoundRoots) {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d round roots, want %d", len(prf.RoundRoots), wantRoundRoots)
+	}
+	if len(prf.RoundCaps) != int(wantRoundRoots) {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d round caps, want %d", len(prf.RoundCaps), wantRoundRoots)
+	}
+	for j := uint8(1); j < p.numRounds(); j++ {
+		height := int(p.LogCodewordSize - j)
+		depth := merkleCapDepth(p.NumQueries, height)
+		if err := prf.RoundCaps[j-1].Validate(depth); err != nil {
+			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
+		}
 	}
 	if len(prf.RunningQueries) != int(p.NumQueries) {
 		return fmt.Errorf(
@@ -529,32 +540,30 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 	return nil
 }
 
-func checkQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int, exactSiblings bool) error {
-	if len(opening) != len(roots) {
-		return fmt.Errorf("opening has %d branches, want %d", len(opening), len(roots))
+func checkQueryLayerShape(opening QueryLayer, frontier []field.Octuplet, numLeaves, capDepth int) error {
+	if len(opening) != 1 {
+		return fmt.Errorf("opening has %d branches, want 1", len(opening))
 	}
-	for i, branch := range opening {
-		if err := checkBranchShape(branch, numLeaves, exactSiblings); err != nil {
-			return fmt.Errorf("branch %d: %w", i, err)
-		}
+	if err := checkBranchShape(opening[0], numLeaves, capDepth); err != nil {
+		return err
+	}
+	if len(frontier) != 1<<capDepth {
+		return fmt.Errorf("frontier has %d nodes, want %d", len(frontier), 1<<capDepth)
 	}
 	return nil
 }
 
-func checkBranchShape(b Branch, numLeaves int, exactSiblings bool) error {
-	want := utils.Log2Ceil(numLeaves)
-	if exactSiblings && len(b.Siblings) != want {
+func checkBranchShape(b Branch, numLeaves, capDepth int) error {
+	height := utils.Log2Ceil(numLeaves)
+	if capDepth < 0 || capDepth > height {
+		return fmt.Errorf("cap depth %d outside [0,%d]", capDepth, height)
+	}
+	want := height - capDepth
+	if len(b.Siblings) != want {
 		return fmt.Errorf("branch has %d siblings, want %d", len(b.Siblings), want)
 	}
-	if !exactSiblings && len(b.Siblings) < want {
-		return fmt.Errorf("branch has %d siblings, want at least %d", len(b.Siblings), want)
-	}
-	wantAux := want
-	if !exactSiblings {
-		wantAux = len(b.Siblings)
-	}
-	if len(b.AuxSiblings) != wantAux {
-		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), wantAux)
+	if len(b.AuxSiblings) != want {
+		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), want)
 	}
 	return nil
 }
@@ -680,7 +689,7 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 
 // openRunningQueryExt builds the Merkle opening data for query index s across
 // running extension folding levels. Input-tree openings are carried separately.
-func (st *ProverState) openRunningQueryExt(s int) RunningQuery {
+func (st *ProverState) openRunningQueryExt(s int, capDepths []int) RunningQuery {
 	if st.p.numRounds() <= 1 {
 		return nil
 	}
@@ -689,7 +698,7 @@ func (st *ProverState) openRunningQueryExt(s int) RunningQuery {
 
 		var (
 			base = s >> j
-			path = st.trees[j].OpenBranch(base)
+			path = st.trees[j].OpenBranchToDepth(base, capDepths[j])
 		)
 
 		// Each fold halves the layer, so layer j has half the entries of layer
@@ -715,25 +724,16 @@ type inputPair struct {
 func authenticateQueryLayer(
 	roundIdx uint8,
 	opening QueryLayer,
-	roots QueryLayerRoots,
+	frontier []field.Octuplet,
 	base int,
 ) (Branch, error) {
 
-	if len(opening) != len(roots) {
-		return Branch{},
-			fmt.Errorf("round %d: has %d tree openings, want %d roots", roundIdx, len(opening), len(roots))
+	if len(opening) != 1 {
+		return Branch{}, fmt.Errorf("round %d: has %d tree openings, want 1", roundIdx, len(opening))
 	}
-	if len(opening) == 0 {
-		return Branch{}, fmt.Errorf("round %d: opening is empty", roundIdx)
+	branch := opening[0]
+	if err := branch.AuthenticateToCap(base, frontier); err != nil {
+		return Branch{}, fmt.Errorf("round %d: %w", roundIdx, err)
 	}
-	for i, branch := range opening {
-		root, err := branch.RecoverRoot(base)
-		if err != nil {
-			return Branch{}, fmt.Errorf("round %d tree %d: recover root: %w", roundIdx, i, err)
-		}
-		if root != roots[i] {
-			return Branch{}, fmt.Errorf("round %d tree %d: Merkle proof invalid", roundIdx, i)
-		}
-	}
-	return opening[0], nil
+	return branch, nil
 }
