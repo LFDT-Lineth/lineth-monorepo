@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupAggregationProofRequestV1
@@ -50,7 +50,7 @@ class FileBasedRollupAggregationProverClientTest {
     client = FileBasedRollupAggregationProverClient(
       transport = transport,
       rollupProofTransport = rollupProofTransport,
-      guestProgramId = ROLLUP_AGGREGATION_GUEST_PROGRAM_ID,
+      programVk = ROLLUP_AGGREGATION_PROGRAM_VK,
     )
   }
 
@@ -65,7 +65,7 @@ class FileBasedRollupAggregationProverClientTest {
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), FileBasedRollupAggregationProofRequestDto::class.java)
     val expectedDto = FileBasedRollupAggregationProofRequestDtoMapper(
-      ROLLUP_AGGREGATION_GUEST_PROGRAM_ID,
+      ROLLUP_AGGREGATION_PROGRAM_VK,
       rollupProofTransport,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)

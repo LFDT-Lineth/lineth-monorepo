@@ -31,7 +31,7 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 		b.Fatalf("failed to compile zkc source: %v", err)
 	}
 	b.Logf("tracing zkc")
-	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap)
+	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap, false)
 	if err != nil {
 		b.Fatalf("failed to parse test case: %v", err)
 	}

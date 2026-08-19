@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(maru)* Support Noise / Yamux (#3751)
+- *(maru)* Support custom validator signers (#3700)
 
 ### 🐛 Bug Fixes
 

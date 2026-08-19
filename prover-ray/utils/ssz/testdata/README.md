@@ -59,7 +59,7 @@ import json, sys
 sys.path.insert(0, 'src')
 from rollup_spec.stateless_input import encode_stateless_input_ssz
 
-with open('src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.request.json') as f:
+with open('src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.request.json') as f:
     req = json.load(f)
 
 for i, payload in enumerate(req['proofRequest']['payloads']):

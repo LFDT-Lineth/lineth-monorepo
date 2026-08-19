@@ -145,6 +145,8 @@ QBFT consensus settings. Omit on follower (non-validator) nodes.
 | `qbft.min-block-build-time` | `Duration` | no | `PT0.5S` | active | Minimum time spent building a block before proposing it. |
 | `qbft.round-expiry` | `Duration?` | no | - | active | Optional fixed expiry duration for a QBFT round. Omit to derive it from round-expiry-coefficient. |
 | `qbft.round-expiry-coefficient` | `Double` | no | `2.0` | active | Multiplier used to derive each subsequent round's expiry from the previous one. |
+| `qbft.signer-name` | `String?` | no | - | active | Logical signer name passed to the external signer factory when signer-type is 'custom'. |
+| `qbft.signer-type` | `String` | no | `local` | active | Validator signing backend. Use 'local' for the node private key or 'custom' for an external signer. |
 
 ### `syncing`
 
