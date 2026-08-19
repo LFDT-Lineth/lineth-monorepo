@@ -3,8 +3,7 @@
 name: Manual Linea Tracer Release Assets
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 on:
   workflow_dispatch:
@@ -26,15 +25,14 @@ jobs:
     steps:
       - name: Configure Tag
         id: config
-        # set tag to use in subsequent steps.
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          if [[ "$tag_name" != "linea-tracer-"* ]]; then
-            echo "Error: The given 'inputs.release_tag' does not start with 'linea-tracer-'"
+          if [[ ! "$RELEASE_TAG" =~ ^linea-tracer-[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "::error::release_tag must start with linea-tracer- and contain only letters, numbers, dots, underscores, and hyphens"
             exit 1
           fi
-          echo "VERSION_TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
-        env:
-          tag_name: ${{ inputs.release_tag }}
+          echo "VERSION_TAG=${RELEASE_TAG#linea-tracer-}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -65,7 +63,8 @@ jobs:
     with:
       zkevm_fork: OSAKA
       tests-with-ssh: false
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # ==================================================================
   # Fast Replay Tests
@@ -111,11 +110,15 @@ jobs:
           path: tracer/arithmetization/build/jacoco/fastReplayTests.exec
 
   # ==================================================================
-  # Publish release post tests
+  # Publish release after build
   # ==================================================================
   publish:
     needs: [ build ]
     if: github.event_name != 'pull_request'
+    environment: cloudsmith-publish
+    concurrency:
+      group: cloudsmith-tracer-${{ inputs.release_tag }}
+      cancel-in-progress: false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       architecture: "amd64"
@@ -129,8 +132,8 @@ jobs:
         uses: ./.github/actions/setup-tracer-environment
 
       - name: Publish Java artifacts
-        run: ./gradlew :tracer:publish -PreleaseVersion=${{needs.build.outputs.versionTag}}
+        run: ./gradlew :tracer:publish "-PreleaseVersion=$RELEASE_VERSION"
         env:
           CLOUDSMITH_USER: ${{ secrets.CLOUDSMITH_USER }}
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
-
+          RELEASE_VERSION: ${{ needs.build.outputs.versionTag }}

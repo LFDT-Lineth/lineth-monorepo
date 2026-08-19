@@ -289,14 +289,12 @@ jobs:
 
   publish-linea-besu-after-run-tests-success:
     needs: [run-e2e-tests]
-    # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
+    # Only run for same-repo PRs: do not checkout and run PR head from forks.
     if: ${{ always() && github.ref != 'refs/heads/main' && needs.run-e2e-tests.outputs.tests_outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
     permissions:
       contents: write
       actions: read
-      packages: write
     uses: ./.github/workflows/linea-besu-build-and-publish.yml
-    secrets: inherit
 
   cleanup-deployments:
     needs: [run-e2e-tests]
@@ -341,4 +339,3 @@ jobs:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
       anthropic_api_key: ${{ secrets.LITELLM_KEY_CI_FAILURE_ANALYSIS }}
-
