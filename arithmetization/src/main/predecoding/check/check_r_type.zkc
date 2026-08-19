@@ -6,6 +6,8 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var rd:Register
     funct7::rs2::rs1::funct3::rd = instruction_parameters
 
+    // Pack opcode::funct3::funct7 into one u17 key (see R_* in constants.zkc) so we
+    // can dispatch with a single switch instead of nested opcode/funct7/funct3 switches.
     var R_inst:u17 = opcode::funct3::funct7
 
     // Verify the raw (opcode, funct7, funct3) fields encode the claimed compute_op.

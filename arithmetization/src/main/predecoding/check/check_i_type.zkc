@@ -7,6 +7,8 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     imm12::rs1::funct3::rd = instruction_parameters
     var imm:DoubleWord = sgn_extension_u12_u64(imm12)
 
+    // Pack opcode::funct3 into one u10 key (see I_* in constants.zkc) so we can
+    // dispatch with a single switch instead of nested opcode/funct3 switches.
     var I_inst:u10 = opcode::funct3
 
     // Verify the raw (opcode, funct3) fields encode the claimed compute_op.
