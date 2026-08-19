@@ -2,6 +2,8 @@ package fri
 
 import (
 	"errors"
+	"fmt"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -69,6 +71,24 @@ type Branch struct {
 	// AuxSiblings are the auxiliary siblings. We have
 	// `len(Siblings) == len(AuxSiblings)``
 	AuxSiblings []*field.Octuplet
+}
+
+// MerkleCap authenticates the shared upper part of a Merkle tree. Nodes are
+// the frontier, from left to right; Aux is the heap-order prefix above it.
+// An empty cap represents depth zero and carries no copy of the known root.
+type MerkleCap struct {
+	Nodes []field.Octuplet
+	Aux   []*field.Octuplet
+}
+
+// merkleCapDepth selects the shared prefix for a plain binary tree. The
+// frontier has at most one node per query, and at least one branch step stays
+// per query for uniform value extraction.
+func merkleCapDepth(numQueries uint, height int) int {
+	if numQueries <= 1 || height <= 1 {
+		return 0
+	}
+	return min(bits.Len(numQueries-1), height-1)
 }
 
 // NewTree builds a new Tree from the given leaves. The leaves must be  provided
@@ -236,12 +256,22 @@ func (t *Tree) NumLeaves() int {
 	return (len(t.Nodes) + 1) / 2
 }
 
-// OpenProof returns the Merkle opening proof for the leaf at 0-based index idx.
+// OpenBranch returns the Merkle opening proof for the leaf at 0-based index idx.
 // The function panics if the requested position is not openable.
 func (t *Tree) OpenBranch(idx int) Branch {
+	return t.OpenBranchToDepth(idx, 0)
+}
+
+// OpenBranchToDepth opens idx only up to a depth-c cap frontier. The returned
+// branch retains the lower path, in the same shallowest-to-deepest order as
+// OpenBranch. The caller must authenticate that frontier separately.
+func (t *Tree) OpenBranchToDepth(idx, depth int) Branch {
 
 	if idx < 0 || idx >= t.NumLeaves() {
 		panic("out of bound opening")
+	}
+	if depth < 0 || depth > t.NumLevel()-1 {
+		panic("fri: cap depth out of bounds")
 	}
 
 	// The branch is computed from the bottom-up. current initially points to
@@ -255,13 +285,13 @@ func (t *Tree) OpenBranch(idx int) Branch {
 		idxRemBits  = idx
 		numSiblings = t.NumLevel() - 1
 		branch      = Branch{
-			Siblings:    make([]field.Octuplet, numSiblings),
-			AuxSiblings: make([]*field.Octuplet, numSiblings),
+			Siblings:    make([]field.Octuplet, numSiblings-depth),
+			AuxSiblings: make([]*field.Octuplet, numSiblings-depth),
 			Leaf:        t.Nodes[current],
 		}
 	)
 
-	for level := numSiblings - 1; level >= 0; level-- {
+	for level := numSiblings - 1; level >= depth; level-- {
 
 		var (
 			parent  = (current - 1) / 2
@@ -269,13 +299,92 @@ func (t *Tree) OpenBranch(idx int) Branch {
 			sibling = 2*parent + 2 - currBit
 		)
 
-		branch.AuxSiblings[level] = t.Aux[parent]
-		branch.Siblings[level] = t.Nodes[sibling]
+		branch.AuxSiblings[level-depth] = t.Aux[parent]
+		branch.Siblings[level-depth] = t.Nodes[sibling]
 		idxRemBits >>= 1
 		current = parent
 	}
 
 	return branch
+}
+
+// OpenCap copies the shared prefix above a depth-c frontier. Auxiliary
+// digests are deep-copied so later proof mutation cannot alter the tree.
+func (t *Tree) OpenCap(depth int) MerkleCap {
+	if depth < 0 || depth > t.NumLevel()-1 {
+		panic("fri: cap depth out of bounds")
+	}
+	if depth == 0 {
+		return MerkleCap{}
+	}
+
+	frontierStart := 1<<depth - 1
+	frontierEnd := 2*frontierStart + 1
+	cap := MerkleCap{
+		Nodes: append([]field.Octuplet(nil), t.Nodes[frontierStart:frontierEnd]...),
+		Aux:   make([]*field.Octuplet, frontierStart),
+	}
+	for i, aux := range t.Aux[:frontierStart] {
+		if aux == nil {
+			continue
+		}
+		auxCopy := *aux
+		cap.Aux[i] = &auxCopy
+	}
+	return cap
+}
+
+// Validate checks that cap is the canonical representation for depth.
+func (cap MerkleCap) Validate(depth int) error {
+	if depth < 0 {
+		return errors.New("negative cap depth")
+	}
+	if depth == 0 {
+		if len(cap.Nodes) != 0 || len(cap.Aux) != 0 {
+			return errors.New("depth-zero cap must be empty")
+		}
+		return nil
+	}
+	if depth >= bits.UintSize-1 {
+		return errors.New("cap depth too large")
+	}
+	wantNodes := 1 << depth
+	if len(cap.Nodes) != wantNodes {
+		return fmt.Errorf("cap has %d nodes, want %d", len(cap.Nodes), wantNodes)
+	}
+	if len(cap.Aux) != wantNodes-1 {
+		return fmt.Errorf("cap has %d auxiliary digests, want %d", len(cap.Aux), wantNodes-1)
+	}
+	return nil
+}
+
+// RecoverRoot rebuilds the root from a structurally valid nonempty cap.
+func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
+	if err := cap.Validate(depth); err != nil {
+		return field.Octuplet{}, err
+	}
+	if depth == 0 {
+		return field.Octuplet{}, errors.New("empty cap has no root")
+	}
+
+	work := make([]field.Octuplet, 2*len(cap.Nodes)-1)
+	copy(work[len(cap.Nodes)-1:], cap.Nodes)
+	for i := len(cap.Nodes) - 2; i >= 0; i-- {
+		work[i] = hashNode(work[2*i+1], work[2*i+2], cap.Aux[i])
+	}
+	return work[0], nil
+}
+
+// Authenticate checks a cap once against the caller's trusted root.
+func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
+	recovered, err := cap.RecoverRoot(depth)
+	if err != nil {
+		return err
+	}
+	if recovered != root {
+		return errors.New("Merkle cap invalid")
+	}
+	return nil
 }
 
 // RecoverRoot recovers the root of the tree from a branch and a position. The
@@ -310,6 +419,40 @@ func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 	}
 
 	return ancestor, nil
+}
+
+// AuthenticateToCap checks this lower branch against a previously
+// authenticated frontier.
+func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
+	if idx < 0 {
+		return errors.New("negative opening index")
+	}
+	if len(frontier) == 0 || len(frontier)&(len(frontier)-1) != 0 {
+		return errors.New("frontier size is not a power of two")
+	}
+	if len(branch.AuxSiblings) != len(branch.Siblings) {
+		return errors.New("malformed proof")
+	}
+	if len(branch.Siblings) >= bits.UintSize ||
+		len(frontier) > int(^uint(0)>>1)>>len(branch.Siblings) ||
+		idx >= len(frontier)<<len(branch.Siblings) {
+		return errors.New("opening index outside capped tree")
+	}
+
+	ancestor := branch.Leaf
+	currPos := idx
+	for i := len(branch.Siblings) - 1; i >= 0; i-- {
+		left, right := ancestor, branch.Siblings[i]
+		if currPos&1 > 0 {
+			left, right = right, left
+		}
+		ancestor = hashNode(left, right, branch.AuxSiblings[i])
+		currPos >>= 1
+	}
+	if ancestor != frontier[currPos] {
+		return errors.New("Merkle proof invalid")
+	}
+	return nil
 }
 
 // hashNode hashes two field.Octuplets and an optional field.Octuplet. It works

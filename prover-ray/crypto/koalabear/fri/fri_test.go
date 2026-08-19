@@ -10,7 +10,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -98,6 +97,7 @@ func TestCheckOpeningProofShapeRejectsWrongFinalPolyLength(t *testing.T) {
 
 	prf := Proof{
 		RoundRoots:     make([]field.Octuplet, p.numRounds()-1),
+		RoundCaps:      []MerkleCap{{}},
 		RunningQueries: make([]RunningQuery, p.NumQueries),
 		FinalPoly:      []field.Ext{{}, field.Lift(field.One())},
 	}
@@ -280,21 +280,62 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	require.Len(t, inputQuery, 4)
 
 	for i, branch := range inputQuery[:2] {
-		root, err := branch.RecoverRoot(positions[0])
-		require.NoError(t, err)
-		assert.Equal(t, fx.roots[i], root)
+		height := len(branch.Leaves)
+		depth := merkleCapDepth(fx.pcs.Params.NumQueries, height)
+		frontier := []field.Octuplet{fx.roots[i]}
+		if depth > 0 {
+			frontier = proof.InputCaps[i].Nodes
+		}
+		leafIndex := positions[0] / ((1 << fx.pcs.Params.LogCodewordSize) / (1 << height))
+		require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, depth))
 	}
 
-	base := positions[0] >> utils.Log2Ceil(8/2) // p.LogPlainTextSize - extraLevelLog2 = 3-1
 	for i, branch := range inputQuery[2:] {
-		root, err := branch.RecoverRoot(base)
-		require.NoError(t, err)
-		assert.Equal(t, fx.roots[2+i], root)
+		height := len(branch.Leaves)
+		depth := merkleCapDepth(fx.pcs.Params.NumQueries, height)
+		frontier := []field.Octuplet{fx.roots[2+i]}
+		if depth > 0 {
+			frontier = proof.InputCaps[2+i].Nodes
+		}
+		leafIndex := positions[0] / ((1 << fx.pcs.Params.LogCodewordSize) / (1 << height))
+		require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, depth))
 	}
 
 	branch := proof.InputQueries[0][1]
 	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
 	require.Error(t, fx.verify(foldAlphas, positions, proof))
+}
+
+func TestRunningMerkleCaps(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(20260819))
+	fx := newLDTFixture(t, 4, 3, 2)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := []int{3, 11}
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
+
+	require.Len(t, proof.FRIProof.RoundCaps, int(fx.pcs.Params.numRounds()-1))
+	for j := uint8(1); j < fx.pcs.Params.numRounds(); j++ {
+		depth := merkleCapDepth(fx.pcs.Params.NumQueries, int(fx.pcs.Params.LogCodewordSize-j))
+		cap := proof.FRIProof.RoundCaps[j-1]
+		require.NoError(t, cap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
+		for queryIdx, query := range proof.FRIProof.RunningQueries {
+			branch := query[j-1][0]
+			require.Len(t, branch.Siblings, int(fx.pcs.Params.LogCodewordSize-j)-depth)
+			require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, cap.Nodes))
+		}
+	}
+
+	bad := proof
+	bad.FRIProof.RoundCaps = append([]MerkleCap(nil), proof.FRIProof.RoundCaps...)
+	bad.FRIProof.RoundCaps[0].Nodes = append([]field.Octuplet(nil), proof.FRIProof.RoundCaps[0].Nodes...)
+	bad.FRIProof.RoundCaps[0].Nodes[0] = field.PseudoRandOctuplet(prng)
+	require.Error(t, fx.verify(foldAlphas, positions, bad))
 }
 
 func verifierInputsForLevels(levels []Level) []QueryLayerRoots {
