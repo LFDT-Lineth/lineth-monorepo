@@ -28,7 +28,6 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // Base address of the pre-decoded instruction tables (lowest executable
     // instruction address). Used to map pc -> instruction index.
     var base:Address = instruction_base[0]
-    var exec_end:Address = executable_region_end()
 
     // ==========================
     // Predecoding justification
@@ -37,6 +36,7 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // Note: static linear pass over the executable region;
     // Could be done once per guest upgrade.
     var pc_predecoding:Address = base
+    var exec_end:Address = executable_region_end()
     while pc_predecoding<exec_end {
         var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
         predecoding(pc_predecoding, instruction)
