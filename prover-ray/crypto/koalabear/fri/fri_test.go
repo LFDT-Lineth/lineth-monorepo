@@ -276,30 +276,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	proof := fx.open(t, foldAlphas, positions)
 	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
-	inputQuery := proof.InputQueries[0]
-	require.Len(t, inputQuery, 4)
-
-	for i, branch := range inputQuery[:2] {
-		height := len(branch.Leaves)
-		depth := merkleCapDepth(fx.pcs.Params.NumQueries, height)
-		frontier := []field.Octuplet{fx.roots[i]}
-		if depth > 0 {
-			frontier = proof.InputCaps[i].Nodes
-		}
-		leafIndex := positions[0] / ((1 << fx.pcs.Params.LogCodewordSize) / (1 << height))
-		require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, depth))
-	}
-
-	for i, branch := range inputQuery[2:] {
-		height := len(branch.Leaves)
-		depth := merkleCapDepth(fx.pcs.Params.NumQueries, height)
-		frontier := []field.Octuplet{fx.roots[2+i]}
-		if depth > 0 {
-			frontier = proof.InputCaps[2+i].Nodes
-		}
-		leafIndex := positions[0] / ((1 << fx.pcs.Params.LogCodewordSize) / (1 << height))
-		require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier, depth))
-	}
+	require.Len(t, proof.InputQueries[0], 4)
 
 	branch := proof.InputQueries[0][1]
 	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
@@ -325,7 +302,7 @@ func TestRunningMerkleCaps(t *testing.T) {
 		cap := proof.FRIProof.RoundCaps[j-1]
 		require.NoError(t, cap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
 		for queryIdx, query := range proof.FRIProof.RunningQueries {
-			branch := query[j-1][0]
+			branch := query[j-1]
 			require.Len(t, branch.Siblings, int(fx.pcs.Params.LogCodewordSize-j)-depth)
 			require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, cap.Nodes))
 		}

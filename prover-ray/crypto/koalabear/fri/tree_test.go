@@ -177,6 +177,13 @@ func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
 	}
 }
 
+func TestMerkleCapAuthenticatesDepthZero(t *testing.T) {
+	root := field.PseudoRandOctuplet(rand.New(utils.NewRandSource(31)))
+	if err := (MerkleCap{}).Authenticate(0, root); err != nil {
+		t.Fatalf("depth-zero cap should authenticate the trusted root: %v", err)
+	}
+}
+
 func TestMerkleCapDepth(t *testing.T) {
 	tests := []struct {
 		queries uint

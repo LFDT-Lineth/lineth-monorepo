@@ -375,8 +375,12 @@ func (cap MerkleCap) RecoverRoot(depth int) (field.Octuplet, error) {
 	return work[0], nil
 }
 
-// Authenticate checks a cap once against the caller's trusted root.
+// Authenticate checks a cap once against the caller's trusted root. A
+// depth-zero cap is empty and represents the trusted root directly.
 func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
+	if depth == 0 {
+		return cap.Validate(depth)
+	}
 	recovered, err := cap.RecoverRoot(depth)
 	if err != nil {
 		return err
