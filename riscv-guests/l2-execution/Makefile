@@ -31,14 +31,17 @@ NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
-INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+# INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+INPUT      ?= /Users/lorenzo/Desktop/0001.ssz
+# TODO: remove new default input before merging
 
 # Flags forwarded to `zkc exec` by exec. zkc is quiet by default. Override to pick the execution
 # backend — e.g. "--gogen --fast" runs the guest via zkc's generated-Go backend in fast mode, the
 # runnability path CI uses to stay cheap. Omitting
 # --fast traces; "--check" adds constraint checking. Both are measured weekly by
 # arithmetization-weekly-zkc-metrics.yml.
-ZKC_EXEC_FLAGS ?=
+ZKC_EXEC_FLAGS ?=--gogen --fast
+# TODO: remove default flags before merging
 
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
@@ -99,4 +102,4 @@ exec: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 debug: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
+	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

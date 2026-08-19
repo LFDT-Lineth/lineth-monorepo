@@ -82,7 +82,7 @@ OBJDUMP        ?= false
 # Default target (make)
 exec: compile install-zkc zkc-exec
 
-debug: compile zkc-debug
+debug: compile install-zkc zkc-debug
 
 compile: require-src
 # Print all variables for debugging purposes
@@ -133,11 +133,11 @@ compile: require-src
 
 # Convert and execute an already compiled external ELF
 elf-exec: elf-to-json install-zkc
-	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT)
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 # Convert and debug an already compiled external ELF
-elf-debug: elf-to-json
-	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)
+elf-debug: elf-to-json install-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-debug JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
@@ -146,13 +146,13 @@ install-zkc:
 zkc-exec: require-json
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
+zkc-debug: require-json
+	$(ZKC) debug $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+
 # Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
 # Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
 zkc-trace: require-json
 	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
-
-zkc-debug: require-json
-	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
 clean: require-test
 	rm -f $(BIN) $(JSON) $(BIN).objdump $(VECTOR_SUBSET_FILE)
