@@ -93,18 +93,6 @@ type OpeningProof struct {
 	FriProof     FriProof
 }
 
-// PcsOpening is the prover-supplied half of a PCS opening. Mirrors Zig's
-// verifier.PcsOpening.
-//
-// The claimed evaluations are not carried here: they are ordinary
-// `LagrangeEval.EvaluationClaims` cells, already present in
-// `Proof.Rounds[*].Cells`. The verifier reconstructs them at verify time by
-// reading the compiled system's per-column claim-cell table against the
-// rounds it already has.
-type PcsOpening struct {
-	Proof OpeningProof
-}
-
 // Proof mirrors Zig's verifier.Proof: the verifier-visible transcript.
 //
 // Note that Rounds[*].Cells OMITS public-input cells; those travel in
@@ -112,7 +100,12 @@ type PcsOpening struct {
 type Proof struct {
 	Rounds      []RoundMessage
 	ModuleSizes []uint64
-	PcsOpening  PcsOpening
+	// The claimed evaluations are not carried here: they are ordinary
+	// `LagrangeEval.EvaluationClaims` cells, already present in
+	// `Proof.Rounds[*].Cells`. The verifier reconstructs them at verify time by
+	// reading the compiled system's per-column claim-cell table against the
+	// rounds it already has.
+	PcsOpening OpeningProof
 }
 
 // VerifyInput is the root of the image. Mirrors Zig's verifier.VerifyInput.

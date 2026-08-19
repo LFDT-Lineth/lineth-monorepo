@@ -156,7 +156,7 @@ func (e *encoder) putDigests(hdr int, xs []Digest) {
 
 func (e *encoder) putProof(off int, p Proof) {
 	// Written before the payloads so the root's own bytes stay contiguous.
-	e.putPcsOpening(off+OffProofPcsOpening, p.PcsOpening)
+	e.putOpeningProof(off+OffProofPcsOpening+OffPcsOpeningProof, p.PcsOpening)
 
 	rounds := e.putSlice(off+OffProofRounds, len(p.Rounds), SizeRoundMessage, 8)
 	for i, r := range p.Rounds {
@@ -195,10 +195,6 @@ func (e *encoder) putScalar(off int, s Scalar) {
 		return
 	}
 	e.buf[off+OffScalarTag] = TagScalarBase
-}
-
-func (e *encoder) putPcsOpening(off int, p PcsOpening) {
-	e.putOpeningProof(off+OffPcsOpeningProof, p.Proof)
 }
 
 func (e *encoder) putOpeningProof(off int, p OpeningProof) {
