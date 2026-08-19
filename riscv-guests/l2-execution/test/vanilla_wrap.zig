@@ -2,11 +2,8 @@
 //! `L2ExecutionProofPrivateInput` (schema 0x0002) so the extended l2-execution guest can run on the
 //! same corpus the vanilla guest runs on (the EF execution-spec-tests zkevm fixtures).
 //!
-//! Real wiring, shared by both consumers that need to run the extended guest "as vanilla":
-//!   - `test/extended_vanilla_runner.zig` calls this in-process (host reference-test guard);
-//!   - the `l2-execution-wrap` CLI (`test/l2_execution_wrap.zig`) is a thin wrapper around it for
-//!     the ZkC arithmetization harness (`scripts/run_execution_specs_ssz_fixtures.go`), which can't
-//!     call Zig in-process.
+//! Real wiring: `test/extended_vanilla_runner.zig` calls this in-process (host reference-test
+//! guard).
 //!
 //! Dummy-fill choices (see `runL2Execution`'s conflation invariants in l2_execution.zig):
 //!   - `payloads`: a single payload whose `stateless_input_ssz` is the vanilla bytes VERBATIM

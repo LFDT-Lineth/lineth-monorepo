@@ -1,9 +1,8 @@
 //! `extended-vanilla-runner` — reference-test guard: the extended guest, run through the dummy-fill
 //! wrap (`vanilla_wrap.wrapVanillaAsExtended`), must agree with the EF fixture's OWN expected
 //! validity verdict (`successful_validation`, byte 32 of the vanilla `SszStatelessValidationResult`
-//! — see zesu's `ssz_output.zig`) over the real EF zkevm corpus. This is the property
-//! `run-execution-specs-ssz-fixtures` depends on, checked here cheaply on the host instead of via
-//! ZkC.
+//! — see zesu's `ssz_output.zig`) over the real EF zkevm corpus. This checks that same property
+//! cheaply on the host, instead of compiling to riscv64 and executing the real guest ELF via ZkC.
 //!
 //! Deliberately NOT a differential check against a second, independently-run implementation (e.g.
 //! re-running zesu's own `executor.executeStatelessInput` inline): a reference-test corpus's whole
