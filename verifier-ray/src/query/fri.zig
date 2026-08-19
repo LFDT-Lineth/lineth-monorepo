@@ -117,6 +117,9 @@ pub const Proof = struct {
     /// Merkle roots for the running polynomial's committed layers
     /// T_1..T_{num_rounds-1}; length `num_rounds - 1`.
     round_roots: []const poseidon2.Digest,
+    /// Authenticated frontiers for the committed running layers. The cap at
+    /// index j authenticates round_roots[j].
+    round_caps: []const merkle.MerkleCap = &.{},
     /// The final polynomial's revealed coefficients; length
     /// `1 << log_final_poly_size`.
     final_poly: []const ext.Ext,
@@ -143,12 +146,17 @@ pub fn checkOpeningProofShape(
     const num_rounds = params.numRoundsRuntime();
     const want_round_roots: u8 = if (num_rounds > 0) num_rounds - 1 else 0;
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
+    if (proof.round_caps.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
     if (proof.final_poly.len != (@as(usize, 1) << @intCast(params.log_final_poly_size))) return Error.InvalidFinalPolyLength;
     if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < params.num_queries) return Error.InsufficientPositions;
 
     const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
+    for (proof.round_caps, 0..) |cap, i| {
+        const height = params.log_codeword_size - @as(u8, @intCast(i + 1));
+        try cap.validate(merkle.capDepth(params.num_queries, height));
+    }
     for (proof.running_queries, positions[0..params.num_queries]) |query_branches, position| {
         if (query_branches.len != want_round_roots) return Error.InvalidRunningQueryCount;
         if (position >= codeword_size) return Error.PositionOutOfRange;
@@ -165,7 +173,7 @@ pub fn checkOpeningProofShape(
 /// output buffer `checkOpeningProofShape` never sees.
 pub fn resolveRunningLayers(
     params: Params,
-    round_roots: []const poseidon2.Digest,
+    round_frontiers: []const []const poseidon2.Digest,
     query_branches: []const merkle.Branch,
     position: usize,
     rounds: []Pair,
@@ -174,15 +182,16 @@ pub fn resolveRunningLayers(
     if (num_rounds == 0) return; // no running layers at all (D=1)
     if (rounds.len != num_rounds) return Error.InvalidRunningLayerShape;
     if (query_branches.len != num_rounds - 1) return Error.InvalidRunningLayerShape;
-    if (round_roots.len != num_rounds - 1) return Error.InvalidRunningLayerShape;
+    if (round_frontiers.len < num_rounds) return Error.InvalidRunningLayerShape;
 
     for (1..@as(usize, num_rounds)) |j| {
         const branch = query_branches[j - 1];
-        const want_siblings = params.log_codeword_size - j;
+        const height = params.log_codeword_size - j;
+        const depth = merkle.capDepth(params.num_queries, height);
+        const want_siblings = height - @as(u8, @intCast(depth));
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 
-        const recovered = try branch.recoverRoot(position >> @intCast(j));
-        if (!poseidon2.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
+        branch.authenticateToCap(position >> @intCast(j), round_frontiers[j]) catch return Error.MerkleProofInvalid;
 
         rounds[j] = .{
             .self = try octupletToExt(branch.leaf),

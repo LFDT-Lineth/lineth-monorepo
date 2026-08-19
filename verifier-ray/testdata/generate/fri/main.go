@@ -369,15 +369,16 @@ func buildPCSScenarioData(s pcsScenario) pcsCaseData {
 
 func extLift(v uint64) field.Ext { return field.Lift(elem(v)) }
 
-// buildNormalPCSScenario mirrors two sizes in one batch, multiple ext rows
-// and shifts, two folding rounds.
+// buildNormalPCSScenario covers cap-authenticated input tables, including the
+// encoded-size-two table, plus two folding rounds.
 func buildNormalPCSScenario() pcsCaseData {
-	params, err := fri.NewParams(3, 2, 1)
+	params, err := fri.NewParams(3, 2, 4)
 	if err != nil {
 		panic(err)
 	}
 
 	witness := make(fri.Batch, 3)
+	witness[0] = fri.SizedTable{Ext: [][]field.Ext{{extLift(99)}}}
 	witness[1] = fri.SizedTable{Ext: [][]field.Ext{{extLift(101), extLift(102)}}}
 	witness[2] = fri.SizedTable{Ext: [][]field.Ext{
 		{extLift(201), extLift(202), extLift(203), extLift(204)},
@@ -385,6 +386,7 @@ func buildNormalPCSScenario() pcsCaseData {
 	}}
 
 	shifts := make(fri.BatchShifts, 3)
+	shifts[0] = fri.SizedShifts{Ext: [][]int{{0}}}
 	shifts[1] = fri.SizedShifts{Ext: [][]int{{0}}}
 	shifts[2] = fri.SizedShifts{Ext: [][]int{{0}, {1}}}
 
@@ -399,7 +401,7 @@ func buildNormalPCSScenario() pcsCaseData {
 			field.UintsToExt(29, 1, 0, 0, 0, 0),
 			field.UintsToExt(31, 0, 1, 0, 0, 0),
 		},
-		Positions: []int{3},
+		Positions: []int{3, 2, 1, 0},
 	})
 }
 
@@ -571,6 +573,43 @@ func inputTreeOpeningLiteral(o fri.InputTreeOpening) string {
 	return b.String()
 }
 
+func inputCapLiteral(cap fri.InputCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "InputCapData{ .nodes = &%s, .tables = &.{ ", commitmentSlice(cap.Nodes))
+	for i, table := range cap.Tables {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(&b, "InputCapTableData{ .size_log2 = %d, .rows = &.{ ", table.SizeLog2)
+		for j, row := range table.Rows {
+			if j > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(rowOpeningLiteral(row))
+		}
+		b.WriteString(" } }")
+	}
+	b.WriteString(" } }")
+	return b.String()
+}
+
+func merkleCapLiteral(cap fri.MerkleCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "MerkleCapData{ .nodes = &%s, .aux = &.{ ", commitmentSlice(cap.Nodes))
+	for i, aux := range cap.Aux {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if aux == nil {
+			b.WriteString("null")
+		} else {
+			b.WriteString(oct8(*aux))
+		}
+	}
+	b.WriteString(" } }")
+	return b.String()
+}
+
 func pcsProofLiteral(proof fri.OpeningProof) string {
 	var b strings.Builder
 	b.WriteString("OpeningProofData{ .input_queries = &.{ ")
@@ -587,8 +626,23 @@ func pcsProofLiteral(proof fri.OpeningProof) string {
 		}
 		b.WriteString(" }")
 	}
+	b.WriteString(" }, .input_caps = &.{ ")
+	for i, cap := range proof.InputCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(inputCapLiteral(cap))
+	}
 	b.WriteString(" }, .fri_proof = FriProofData{ ")
 	fmt.Fprintf(&b, ".round_roots = &%s, ", commitmentSlice(proof.FRIProof.RoundRoots))
+	b.WriteString(".round_caps = &.{ ")
+	for i, cap := range proof.FRIProof.RoundCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(merkleCapLiteral(cap))
+	}
+	b.WriteString(" }, ")
 	fmt.Fprintf(&b, ".final_poly = &%s, ", extSlice(proof.FRIProof.FinalPoly))
 	b.WriteString(".running_queries = &.{ ")
 	for q, rq := range proof.FRIProof.RunningQueries {
@@ -600,7 +654,7 @@ func pcsProofLiteral(proof fri.OpeningProof) string {
 			if j > 0 {
 				b.WriteString(", ")
 			}
-			branch := layer[0]
+			branch := layer
 			fmt.Fprintf(&b, "BranchData{ .leaf = %s, .siblings = &%s }", oct8(branch.Leaf), commitmentSlice(branch.Siblings))
 		}
 		b.WriteString(" }")
@@ -636,9 +690,12 @@ func writePCSFixtures() error {
 	fmt.Fprintln(&out, "pub const RowOpeningData = struct { base: []const u32, ext: []const [6]u32 };")
 	fmt.Fprintln(&out, "pub const RowPairData = [2]RowOpeningData;")
 	fmt.Fprintln(&out, "pub const InputTreeOpeningData = struct { siblings: []const [8]u32, leaves: []const ?RowPairData };")
+	fmt.Fprintln(&out, "pub const InputCapTableData = struct { size_log2: u8, rows: []const RowOpeningData };")
+	fmt.Fprintln(&out, "pub const InputCapData = struct { nodes: []const [8]u32, tables: []const InputCapTableData };")
+	fmt.Fprintln(&out, "pub const MerkleCapData = struct { nodes: []const [8]u32, aux: []const ?[8]u32 };")
 	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
-	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
-	fmt.Fprintln(&out, "pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, fri_proof: FriProofData };")
+	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, round_caps: []const MerkleCapData, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
+	fmt.Fprintln(&out, "pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, input_caps: []const InputCapData, fri_proof: FriProofData };")
 	fmt.Fprintln(&out, "pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, entry_claims: []const []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = \"\" };")
 	fmt.Fprintln(&out)
 
