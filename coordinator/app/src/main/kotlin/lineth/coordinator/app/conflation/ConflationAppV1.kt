@@ -273,7 +273,7 @@ class ConflationAppV1(
       directories =
       listOfNotNull(
         configs.proversConfig.proverA.execution.requestsDirectory,
-        configs.proversConfig.proverA.blobCompression.requestsDirectory,
+        configs.proversConfig.proverA.blobCompression?.requestsDirectory,
         configs.proversConfig.proverA.proofAggregation.requestsDirectory,
         configs.proversConfig.proverB?.execution?.requestsDirectory,
         configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
@@ -283,7 +283,7 @@ class ConflationAppV1(
       DirectoryCleaner.getSuffixFileFilters(
         listOfNotNull(
           configs.proversConfig.proverA.execution.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverA.blobCompression.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverA.blobCompression?.inprogressRequestWritingSuffix,
           configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
           configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
           configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,

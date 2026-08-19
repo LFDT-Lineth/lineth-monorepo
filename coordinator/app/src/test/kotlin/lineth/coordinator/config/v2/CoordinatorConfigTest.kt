@@ -14,6 +14,7 @@ class CoordinatorConfigTest {
       ${ProtocolParsingTest.toml}
       ${ConflationParsingTest.toml}
       ${ProverParsingTest.toml}
+      ${RiscVProverParsingTest.toml}
       ${TracesParsingTest.toml}
       ${StateManagerParsingTest.toml}
       ${Type2StateProofProviderParsingTest.toml}
@@ -31,6 +32,7 @@ class CoordinatorConfigTest {
         protocol = ProtocolParsingTest.config,
         conflation = ConflationParsingTest.config,
         prover = ProverParsingTest.config,
+        riscvProver = RiscVProverParsingTest.config,
         traces = TracesParsingTest.config,
         stateManager = StateManagerParsingTest.config,
         type2StateProofProvider = Type2StateProofProviderParsingTest.config,

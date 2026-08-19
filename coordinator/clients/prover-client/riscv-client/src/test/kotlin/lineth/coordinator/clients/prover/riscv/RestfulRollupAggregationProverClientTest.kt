@@ -7,7 +7,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.proverJobResponseBody
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.restClient
@@ -56,7 +56,7 @@ class RestfulRollupAggregationProverClientTest {
     )
     client = RestfulRollupAggregationProverClient(
       transport = transport,
-      guestProgramId = ROLLUP_AGGREGATION_GUEST_PROGRAM_ID,
+      programVk = ROLLUP_AGGREGATION_PROGRAM_VK,
     )
   }
 
@@ -82,7 +82,7 @@ class RestfulRollupAggregationProverClientTest {
       RestfulRollupAggregationProofRequestDto::class.java,
     )
     val expectedDto = RestfulRollupAggregationProofRequestDtoMapper(
-      ROLLUP_AGGREGATION_GUEST_PROGRAM_ID,
+      ROLLUP_AGGREGATION_PROGRAM_VK,
     ).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }

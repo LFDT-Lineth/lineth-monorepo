@@ -7,6 +7,11 @@
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
 - *(coordinator)* Add StartingPoint sealed class to BlockCreationMonitor (#3769)
 - *(coordinator)* Check proof response before submitting request in ExecutionProofGeneratingCoordinator (#3772)
+- *(coordinator)* Add RISC-V prover and protocol config to coordinator config v2 (#3799)
+- *(coordinator)* Add RiscvProverClientFactory with execution proof support (#3800)
+- *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
+- *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
+- *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 
 ### 🐛 Bug Fixes
 
@@ -29,6 +34,7 @@
 - *(coordinator)* Apply review cleanups (#3717)
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
+- *(misc)* Enrich R5 request/response samples (#3806)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

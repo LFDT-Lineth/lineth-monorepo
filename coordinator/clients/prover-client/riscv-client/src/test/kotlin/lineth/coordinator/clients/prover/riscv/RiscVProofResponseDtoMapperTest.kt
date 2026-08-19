@@ -32,7 +32,7 @@ class RiscVProofResponseDtoMapperTest {
     endL1L2BridgeRollingHashMessageNumber = 5,
     dynamicChainConfigHash = "0xc0ffee",
     parentFtxRollingHash = "0x06",
-    parentProcessedFtxNumber = 7,
+    parentFtxNumber = 7,
     endFtxRollingHash = "0x07",
     endProcessedFtxNumber = 8,
     filteredAddressesHash = "0x09",
@@ -68,12 +68,17 @@ class RiscVProofResponseDtoMapperTest {
     endL1L2BridgeRollingHashMessageNumber = 14,
     dynamicChainConfigHash = "0xc0ffee",
     parentFtxRollingHash = "0x15",
-    parentProcessedFtxNumber = 16,
+    parentFtxNumber = 16,
     endFtxRollingHash = "0x16",
     endProcessedFtxNumber = 17,
     filteredAddressesHash = "0x18",
-    parentShnarf = "0x19",
-    endShnarf = "0x1a",
+    parentDataRollingHash = "0x19",
+    endDataRollingHash = "0x1a",
+    parentBlockHash = "0x1b",
+    endBlockHash = "0x1c",
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   private val expectedRollupPublicInputs = RollupProofPublicInputs(
@@ -90,12 +95,18 @@ class RiscVProofResponseDtoMapperTest {
     endFtxRollingHash = "0x16".decodeHex(),
     endFtxNumber = 17UL,
     filteredAddressesHash = "0x18".decodeHex(),
-    parentShnarf = "0x19".decodeHex(),
-    endShnarf = "0x1a".decodeHex(),
+    parentDataRollingHash = "0x19".decodeHex(),
+    endDataRollingHash = "0x1a".decodeHex(),
+    parentBlockHash = "0x1b".decodeHex(),
+    endBlockHash = "0x1c".decodeHex(),
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   @Test
   fun `L2ExecutionProofResponseDtoMapper decodes every field`() {
+    val programVkHex = "0x" + "dd".repeat(32)
     val dto = L2ExecutionProofResponseDto(
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
@@ -104,6 +115,7 @@ class RiscVProofResponseDtoMapperTest {
       l2L1Messages = listOf("0xaa"),
       txFroms = listOf("0xbb"),
       filteredAddresses = listOf("0xcc"),
+      programVk = programVkHex,
     )
 
     assertThat(
@@ -117,12 +129,14 @@ class RiscVProofResponseDtoMapperTest {
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = listOf("0xcc".decodeHex()),
+        programVk = programVkHex.decodeHex(),
       ),
     )
   }
 
   @Test
   fun `RollupProofResponseDtoMapper decodes every field`() {
+    val programVkHex = "0x" + "bb".repeat(32)
     val dto = RollupProofResponseDto(
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
@@ -130,6 +144,7 @@ class RiscVProofResponseDtoMapperTest {
       publicInputs = rollupPublicInputsDto,
       l2L1Roots = listOf("0xaa"),
       filteredAddresses = listOf("0xbb"),
+      programVk = programVkHex,
     )
 
     assertThat(
@@ -142,6 +157,7 @@ class RiscVProofResponseDtoMapperTest {
         publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = listOf("0xbb".decodeHex()),
+        programVk = programVkHex.decodeHex(),
       ),
     )
   }
@@ -192,7 +208,7 @@ class RiscVProofResponseDtoMapperTest {
           "endL1L2BridgeRollingHashMessageNumber": 5,
           "dynamicChainConfigHash": "0xc0ffee",
           "parentFtxRollingHash": "0x06",
-          "parentProcessedFtxNumber": 7,
+          "parentFtxNumber": 7,
           "endFtxRollingHash": "0x07",
           "endProcessedFtxNumber": 8,
           "filteredAddressesHash": "0x09",
@@ -200,7 +216,8 @@ class RiscVProofResponseDtoMapperTest {
         },
         "l2L1Messages": ["0xaa"],
         "txFroms": ["0xbb"],
-        "filteredAddresses": []
+        "filteredAddresses": [],
+        "programVk": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
       }
     """.trimIndent()
 
@@ -217,6 +234,7 @@ class RiscVProofResponseDtoMapperTest {
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = emptyList(),
+        programVk = ByteArray(32) { 0xdd.toByte() },
       ),
     )
   }
@@ -238,15 +256,21 @@ class RiscVProofResponseDtoMapperTest {
           "endL1L2BridgeRollingHashMessageNumber": 14,
           "dynamicChainConfigHash": "0xc0ffee",
           "parentFtxRollingHash": "0x15",
-          "parentProcessedFtxNumber": 16,
+          "parentFtxNumber": 16,
           "endFtxRollingHash": "0x16",
           "endProcessedFtxNumber": 17,
           "filteredAddressesHash": "0x18",
-          "parentShnarf": "0x19",
-          "endShnarf": "0x1a"
+          "parentDataRollingHash": "0x19",
+          "endDataRollingHash": "0x1a",
+          "parentBlockHash": "0x1b",
+          "endBlockHash": "0x1c",
+          "startOffset": 0,
+          "endOffset": 131072,
+          "programVks": []
         },
         "l2L1Roots": ["0xaa"],
-        "filteredAddresses": []
+        "filteredAddresses": [],
+        "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     """.trimIndent()
 
@@ -261,6 +285,7 @@ class RiscVProofResponseDtoMapperTest {
         publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = emptyList(),
+        programVk = ByteArray(32) { 0xbb.toByte() },
       ),
     )
   }
