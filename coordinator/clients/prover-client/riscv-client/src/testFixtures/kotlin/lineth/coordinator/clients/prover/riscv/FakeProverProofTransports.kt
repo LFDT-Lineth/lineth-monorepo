@@ -20,6 +20,7 @@ class FakeL2ExecutionProofTransport(
     l2L1Messages = listOf(ByteArray(32) { 0x4a }.encodeHex()),
     txFroms = listOf(ByteArray(20) { 0x4b }.encodeHex()),
     filteredAddresses = listOf(ByteArray(20) { 0x4c }.encodeHex()),
+    programVk = ByteArray(32) { 0xaa.toByte() }.encodeHex(),
   )
   override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =
     SafeFuture.completedFuture(true)
@@ -65,6 +66,7 @@ class FakeRollupProofTransport(
     publicInputs = RiscVProverClientTestFixtures.rollupProofPublicInputsDto(2L),
     l2L1Roots = listOf(ByteArray(32) { 0x5a }.encodeHex()),
     filteredAddresses = listOf(ByteArray(20) { 0x5b }.encodeHex()),
+    programVk = ByteArray(32) { 0xbb.toByte() }.encodeHex(),
   )
   override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =
     SafeFuture.completedFuture(true)

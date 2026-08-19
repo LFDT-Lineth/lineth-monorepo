@@ -6,8 +6,8 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
-import linea.clients.BlobWitness
 import linea.clients.ChainConfig
+import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
@@ -34,9 +34,9 @@ object RiscVProverClientTestFixtures {
   const val PROVER_VERSION = "4.0.0-riscv"
   const val CHAIN_ID = 59144L
   const val FORK_NAME = "Amsterdam"
-  const val L2_EXECUTION_GUEST_PROGRAM_ID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
-  const val ROLLUP_GUEST_PROGRAM_ID = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
-  const val ROLLUP_AGGREGATION_GUEST_PROGRAM_ID = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
+  const val L2_EXECUTION_PROGRAM_VK = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+  const val ROLLUP_PROGRAM_VK = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
+  const val ROLLUP_AGGREGATION_PROGRAM_VK = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
   const val L2_MESSAGE_SERVICE_ADDRESS = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
   const val COINBASE = "0x0000000000000000000000000000000000000000"
 
@@ -159,27 +159,24 @@ object RiscVProverClientTestFixtures {
     parentFtxNumber = parentFtxNumber,
   )
 
-  fun blobWitness(
-    startBlockNumber: ULong,
-    endBlockNumber: ULong,
-  ): BlobWitness = BlobWitness(
-    startBlockNumber = startBlockNumber,
-    endBlockNumber = endBlockNumber,
-    blobHash = ByteArray(32) { 0x3a },
-    blobKzgProof = ByteArray(48) { 0x3b },
-    blockRlps = listOf(byteArrayOf(0x3c)),
+  fun conflationWitness(
+    blockCount: Int = 1,
+  ): ConflationWitness = ConflationWitness(
+    blockRlps = List(blockCount) { byteArrayOf(0x3c) },
   )
 
   fun rollupProofRequestV1(
-    blobs: List<BlobWitness> = emptyList(),
-    parentShnarf: ByteArray = ByteArray(32) { 0x19 },
-    endShnarf: ByteArray = ByteArray(32) { 0x20 },
+    conflations: List<ConflationWitness> = emptyList(),
+    parentDataRollingHash: ByteArray = ByteArray(32) { 0x19 },
+    chunks: List<ByteArray> = listOf(ByteArray(32) { 0x20 }),
+    startOffset: Int = 0,
     l2Executions: List<BlockIntervalProofIndex> = listOf(blockIntervalProofIndex(1000501UL, 1000520UL)),
   ): RollupProofRequestV1 = RollupProofRequestV1(
-    blobs = blobs,
-    parentShnarf = parentShnarf,
-    endShnarf = endShnarf,
+    conflations = conflations,
     l2Executions = l2Executions,
+    chunks = chunks,
+    parentDataRollingHash = parentDataRollingHash,
+    startOffset = startOffset,
   )
 
   fun rollupAggregationProofRequestV1(
@@ -201,7 +198,7 @@ object RiscVProverClientTestFixtures {
       endL1L2BridgeRollingHashMessageNumber = 5,
       dynamicChainConfigHash = "0xc0ffee",
       parentFtxRollingHash = "0x06",
-      parentProcessedFtxNumber = 7,
+      parentFtxNumber = 7,
       endFtxRollingHash = "0x07",
       endProcessedFtxNumber = 8,
       filteredAddressesHash = "0x09",
@@ -219,6 +216,7 @@ object RiscVProverClientTestFixtures {
     l2L1Messages = listOf("0xaa"),
     txFroms = listOf("0xbb"),
     filteredAddresses = emptyList(),
+    programVk = L2_EXECUTION_PROGRAM_VK,
   )
 
   fun rollupProofPublicInputsDto(
@@ -233,12 +231,17 @@ object RiscVProverClientTestFixtures {
     endL1L2BridgeRollingHashMessageNumber = 14,
     dynamicChainConfigHash = "0xc0ffee",
     parentFtxRollingHash = "0x15",
-    parentProcessedFtxNumber = 16,
+    parentFtxNumber = 16,
     endFtxRollingHash = "0x16",
     endProcessedFtxNumber = 17,
     filteredAddressesHash = "0x18",
-    parentShnarf = "0x19",
-    endShnarf = "0x1a",
+    parentDataRollingHash = "0x19",
+    endDataRollingHash = "0x1a",
+    parentBlockHash = "0x1b",
+    endBlockHash = "0x1c",
+    startOffset = 0,
+    endOffset = 131072,
+    programVks = emptyList(),
   )
 
   fun rollupProofResponseDto(
@@ -251,6 +254,7 @@ object RiscVProverClientTestFixtures {
     publicInputs = rollupProofPublicInputsDto(endBlockNumber),
     l2L1Roots = listOf("0xaa"),
     filteredAddresses = emptyList(),
+    programVk = ROLLUP_PROGRAM_VK,
   )
 
   fun rollupAggregationProofResponseDto(

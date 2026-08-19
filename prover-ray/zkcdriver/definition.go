@@ -179,19 +179,19 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 		case air.LookupConstraint[koalabear.Element]:
 			lc := cs.Unwrap()
 			for _, frag := range lc.Sources {
-				for _, term := range frag.Terms {
-					s.addColRef(frag.Module, term.Register(), referenced)
+				for _, reg := range frag.Registers {
+					s.addColRef(frag.Module, reg, referenced)
 				}
 				if frag.HasSelector() {
-					s.addColRef(frag.Module, frag.Selector.Unwrap().Register(), referenced)
+					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
 				}
 			}
 			for _, frag := range lc.Targets {
-				for _, term := range frag.Terms {
-					s.addColRef(frag.Module, term.Register(), referenced)
+				for _, reg := range frag.Registers {
+					s.addColRef(frag.Module, reg, referenced)
 				}
 				if frag.HasSelector() {
-					s.addColRef(frag.Module, frag.Selector.Unwrap().Register(), referenced)
+					s.addColRef(frag.Module, frag.Selector.Unwrap(), referenced)
 				}
 			}
 
@@ -200,9 +200,6 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 			for i := range rc.Bitwidths {
 				s.addColRef(rc.Context, rc.Sources[i].Register(), referenced)
 			}
-
-		case air.Assertion[koalabear.Element]:
-			// Assertions are debug-only and not part of the proof; ignore.
 		}
 	}
 
@@ -324,14 +321,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		// this will panic over interleaved columns, we can debug that later
 		for i := range numCol {
-			wSources[i] = s.compColumnByCorsetColumnAccess(cSource.Module, cSource.Terms[i])
-			wTargets[i] = s.compColumnByCorsetColumnAccess(cTarget.Module, cTarget.Terms[i])
+			wSources[i] = s.compColumnByCorsetID(cSource.Module, cSource.Registers[i]).View()
+			wTargets[i] = s.compColumnByCorsetID(cTarget.Module, cTarget.Registers[i]).View()
 		}
 
 		if cSource.HasSelector() {
 			// source vector only has selector
 			selectorSourceRaw := cSource.Selector.Unwrap()
-			selectorSource := s.compColumnByCorsetColumnAccess(cSource.Module, selectorSourceRaw)
+			selectorSource := s.compColumnByCorsetID(cSource.Module, selectorSourceRaw).View()
 			tableSource = wiop.NewFilteredTable(selectorSource, wSources...)
 		} else {
 			tableSource = wiop.NewTable(wSources...)
@@ -340,7 +337,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		if cTarget.HasSelector() {
 			// Target vector only has selector
 			selectorTargetRaw := cTarget.Selector.Unwrap()
-			selectorTarget := s.compColumnByCorsetColumnAccess(cTarget.Module, selectorTargetRaw)
+			selectorTarget := s.compColumnByCorsetID(cTarget.Module, selectorTargetRaw).View()
 			tableTarget = wiop.NewFilteredTable(selectorTarget, wTargets...)
 		} else {
 			tableTarget = wiop.NewTable(wTargets...)
@@ -405,10 +402,6 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i].Register())
 			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
 		}
-
-	case air.Assertion[koalabear.Element]:
-		// Property assertions can be ignored, as they are a debugging tool and
-		// not part of the constraints proper.
 
 	default:
 		utils.Panic("unexpected constraint type: %s", cs.Lisp(s.Schema).String(false))

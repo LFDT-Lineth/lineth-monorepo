@@ -120,7 +120,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion),
+		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion, req.ProgramVk),
 		Status:       RunStatusSuccess,
 	}
 }

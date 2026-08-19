@@ -31,7 +31,7 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=U64(4),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x44]) * 32),
-        parent_processed_ftx_number=U64(10),
+        parent_ftx_number=U64(10),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
@@ -70,7 +70,7 @@ def _right_pi(**overrides) -> RollupPublicInput:
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(4),
         parent_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
-        parent_processed_ftx_number=U64(12),
+        parent_ftx_number=U64(12),
     )
     defaults.update(overrides)
     return _base_public_input(**defaults)
@@ -145,6 +145,6 @@ def test_ftx_rolling_hash_mismatch_is_rejected() -> None:
 
 
 def test_ftx_processed_number_mismatch_is_rejected() -> None:
-    right = _proof(_right_pi(parent_processed_ftx_number=U64(999)))
+    right = _proof(_right_pi(parent_ftx_number=U64(999)))
     with pytest.raises(Exception, match="processed-FTX-number continuity"):
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
