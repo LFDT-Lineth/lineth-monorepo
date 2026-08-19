@@ -28,13 +28,25 @@ func TestRunZKCExamples(t *testing.T) {
 		},
 		{
 
-			ZkcFilePath: "testdata/zkc_02.zkc",
-			InputStr:    `{"data": "0x0003_0008"}`,
+			ZkcFilePath: "testdata/r5_test.zkc",
+			InputStr: `{
+				"segments": "0x0002_0202",
+				"values": "0x0001_0002_0003_0004_0005_0006_0007_0008",
+				"expected": "0x0003_0007_000b_000f",
+				"segment_totals": "0x000a_001a",
+				"grand_total": "0x0024"
+			}`,
 		},
 		{
 
-			ZkcFilePath: "testdata/zkc_02.zkc",
-			InputStr:    `{"data": "0x000f_8000"}`,
+			ZkcFilePath: "testdata/r5_test.zkc",
+			InputStr: `{
+				"segments": "0x0001_0103",
+				"values": "0x0002_0003_0004_0005_0006_0007_0008_0009",
+				"expected": "0x0005_0009_000d_0011",
+				"segment_totals": "0x0005_0027",
+				"grand_total": "0x002c"
+			}`,
 		},
 		{
 			// A test case which doesn't use memory which would translate to lookup constraints

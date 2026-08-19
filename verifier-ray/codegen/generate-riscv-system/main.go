@@ -1,4 +1,4 @@
-// Command generate-riscv-system compiles the small zkc_02.zkc toy program,
+// Command generate-riscv-system compiles the r5_test.zkc program,
 // proves an honest witness, and writes the resulting verifier-ray
 // CompiledSystem to testdata/generated/riscv_system.zig. It exercises the full
 // codegen path against a real proof rather than a synthetic fixture:
@@ -8,10 +8,9 @@
 // compileBinaryConstraints and runCompilePipeline below mirror
 // prover-ray/zkcdriver/zkcdriver_test.go's own private test helpers of the
 // same shape, with one difference: pcs.Compile actually runs here (that test
-// helper leaves it commented out — zkc doesn't emit lookup constraints yet,
-// see https://github.com/LFDT-Lineth/zkc/issues/2013 — but zkc_02.zkc has no
-// lookups to trip the panic that comment warns about, so PCS compiles cleanly
-// for this toy program).
+// helper's comment still references an older ZKC lookup-constraint issue,
+// but r5_test.zkc compiles and proves successfully with PCS enabled even
+// though it uses pub-input memories).
 package main
 
 import (
@@ -42,7 +41,7 @@ import (
 	verifierraycodegen "github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
 
-const zkcSourcePath = "../../../prover-ray/zkcdriver/testdata/zkc_02.zkc"
+const zkcSourcePath = "../../../prover-ray/zkcdriver/testdata/r5_test.zkc"
 
 var (
 	zkcField = field.KOALABEAR_16
@@ -57,7 +56,7 @@ func main() {
 }
 
 func run() error {
-	// Step 1: compile zkc_02.zkc down to R5's binary constraint format.
+	// Step 1: compile r5_test.zkc down to R5's binary constraint format.
 	binF, err := compileBinaryConstraints(zkcSourcePath)
 	if err != nil {
 		return fmt.Errorf("compiling %s: %w", zkcSourcePath, err)
@@ -67,11 +66,34 @@ func run() error {
 		return fmt.Errorf("marshaling %s constraints: %w", zkcSourcePath, err)
 	}
 
-	// zkc_02.zkc reads two u16 values from its `data` pub input table: n and
-	// the expected result of computing v=1, doubled n times (v = 1<<n). Using
-	// n=3 here, so data = [n=3, expected=8].
+	// r5_test.zkc processes two segments of tuple-valued rows. It checks each
+	// row sum, each segment total, then the grand total across all segments.
 	inputs := &zkcdriver.PreReadInputs{Inputs: map[string][]byte{
-		"data": {0x00, 0x03, 0x00, 0x08},
+		// segments = [(offset=0, count=2), (offset=2, count=2)]
+		"segments": {0x00, 0x02, 0x02, 0x02},
+		// values = [(1,2), (3,4), (5,6), (7,8)]
+		"values": {
+			0x00, 0x01, 0x00, 0x02,
+			0x00, 0x03, 0x00, 0x04,
+			0x00, 0x05, 0x00, 0x06,
+			0x00, 0x07, 0x00, 0x08,
+		},
+		// expected row sums = [3, 7, 11, 15]
+		"expected": {
+			0x00, 0x03,
+			0x00, 0x07,
+			0x00, 0x0b,
+			0x00, 0x0f,
+		},
+		// segment totals = [10, 26]
+		"segment_totals": {
+			0x00, 0x0a,
+			0x00, 0x1a,
+		},
+		// grand total = [36]
+		"grand_total": {
+			0x00, 0x24,
+		},
 	}}
 
 	// Step 2: build the wiop.System driving the constraints through zkcdriver,
