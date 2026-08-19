@@ -149,17 +149,14 @@ func domainPointExt(domain domainLight, position int) field.Ext {
 	return field.Lift(domainPoint(domain, position))
 }
 
-// QueryLayer holds one Merkle branch per tree backing one folding level. The
-// running FRI layers use one branch; virtual PCS levels may use several.
-type QueryLayer []Branch
-
-// QueryLayerRoots holds the Merkle roots corresponding to a QueryLayer.
+// QueryLayerRoots holds the Merkle roots corresponding to one query layer's
+// backing trees.
 type QueryLayerRoots []field.Octuplet
 
-// RunningQuery holds the running-layer openings for one query.
-// RunningQuery[j-1] opens folding round j, so len(RunningQuery) =
-// numRounds-1.
-type RunningQuery []QueryLayer
+// RunningQuery holds the running-layer openings for one query. RunningQuery[j-1]
+// opens folding round j, so len(RunningQuery) = numRounds-1. Each running
+// layer is backed by exactly one tree.
+type RunningQuery []Branch
 
 // Level holds one polynomial introduced at the folding round where the running
 // polynomial's codeword length matches Columns[0].codewordLen(). Trees are the
@@ -540,11 +537,8 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 	return nil
 }
 
-func checkQueryLayerShape(opening QueryLayer, frontier []field.Octuplet, numLeaves, capDepth int) error {
-	if len(opening) != 1 {
-		return fmt.Errorf("opening has %d branches, want 1", len(opening))
-	}
-	if err := checkBranchShape(opening[0], numLeaves, capDepth); err != nil {
+func checkQueryLayerShape(opening Branch, frontier []field.Octuplet, numLeaves, capDepth int) error {
+	if err := checkBranchShape(opening, numLeaves, capDepth); err != nil {
 		return err
 	}
 	if len(frontier) != 1<<capDepth {
@@ -707,7 +701,7 @@ func (st *ProverState) openRunningQueryExt(s int, capDepths []int) RunningQuery 
 			panic("fri: openRunningQueryExt: layers must halve at each round")
 		}
 
-		q[j-1] = QueryLayer{path}
+		q[j-1] = path
 	}
 
 	return q
@@ -719,21 +713,4 @@ func (st *ProverState) openRunningQueryExt(s int, capDepths []int) RunningQuery 
 type inputPair struct {
 	Self    field.Ext
 	Sibling field.Ext
-}
-
-func authenticateQueryLayer(
-	roundIdx uint8,
-	opening QueryLayer,
-	frontier []field.Octuplet,
-	base int,
-) (Branch, error) {
-
-	if len(opening) != 1 {
-		return Branch{}, fmt.Errorf("round %d: has %d tree openings, want 1", roundIdx, len(opening))
-	}
-	branch := opening[0]
-	if err := branch.AuthenticateToCap(base, frontier); err != nil {
-		return Branch{}, fmt.Errorf("round %d: %w", roundIdx, err)
-	}
-	return branch, nil
 }

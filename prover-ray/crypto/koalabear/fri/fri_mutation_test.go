@@ -191,7 +191,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	}
 }
 
-// TestVerifyRejectsMissingBottomLevel targets authenticateInputQuery's
+// TestVerifyRejectsMissingBottomLevel targets inputQuerySource.authenticate's
 // invariant that every branch's bottom (deepest) level pair is mandatory.
 func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
