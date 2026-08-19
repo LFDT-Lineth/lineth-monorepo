@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
+.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata generate-large-pcs-benchmark verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
 # `make` with no target runs first goal. Set explicitly here to avoid include overriding the default goal.
 .DEFAULT_GOAL := ci
@@ -11,6 +11,7 @@ include ../riscv-guests/build_common/Makefile
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
+LARGE_PCS_BENCH_OUT ?= zig-out/bench/large-pcs.zig
 
 # Input is currently embedded into the binary at build time (we don't have input
 # serialization yet), selected via `-Dembedded-input=<valid|invalid>` and a fixture
@@ -55,6 +56,7 @@ help:
 		'  test-zig              Generate testdata and run Zig tests' \
 		'  test-codegen          Run Go codegen tests' \
 		'  generate-testdata     Generate testdata for Zig tests' \
+		'  generate-large-pcs-benchmark  Generate the ignored 2^19 PCS benchmark fixture' \
 		'  verify-testdata       Verify generated testdata is up to date with git (for CI)' \
 		'  zkc-build             Build the R5 ELF and generate the zkc JSON input' \
 		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter with embedded EMBEDDED_INPUT' \
@@ -128,6 +130,13 @@ test-codegen:
 generate-testdata:
 	cd testdata/generate && go run .
 	cd testdata/generate/fri && go run .
+
+# Opt-in only: the output is under zig-out/ and is not part of normal testdata
+# generation or CI. The generator self-checks the proof with prover-ray before
+# emitting the verifier-facing Zig literal.
+generate-large-pcs-benchmark:
+	mkdir -p $(dir $(LARGE_PCS_BENCH_OUT))
+	cd testdata/generate/fri && go run . -large-pcs-out "$(abspath $(LARGE_PCS_BENCH_OUT))"
 
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig
