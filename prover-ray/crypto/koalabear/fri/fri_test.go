@@ -299,12 +299,12 @@ func TestRunningMerkleCaps(t *testing.T) {
 	require.Len(t, proof.FRIProof.RoundCaps, int(fx.pcs.Params.numRounds()-1))
 	for j := uint8(1); j < fx.pcs.Params.numRounds(); j++ {
 		depth := merkleCapDepth(fx.pcs.Params.NumQueries, int(fx.pcs.Params.LogCodewordSize-j))
-		cap := proof.FRIProof.RoundCaps[j-1]
-		require.NoError(t, cap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
+		treeCap := proof.FRIProof.RoundCaps[j-1]
+		require.NoError(t, treeCap.Authenticate(depth, proof.FRIProof.RoundRoots[j-1]))
 		for queryIdx, query := range proof.FRIProof.RunningQueries {
 			branch := query[j-1]
 			require.Len(t, branch.Siblings, int(fx.pcs.Params.LogCodewordSize-j)-depth)
-			require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, cap.Nodes))
+			require.NoError(t, branch.AuthenticateToCap(positions[queryIdx]>>j, treeCap.Nodes))
 		}
 	}
 

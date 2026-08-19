@@ -183,9 +183,9 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, info.depth)
 	capNodes := committed.Tree.OpenCap(info.depth).Nodes
-	cap := InputCap{Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
-	require.Len(t, cap.Tables, 2)
-	frontier, err := authenticateInputCap(info, cap, shape, committed.Tree.Root())
+	treeCap := InputCap{Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
+	require.Len(t, treeCap.Tables, 2)
+	frontier, err := authenticateInputCap(info, treeCap, shape, committed.Tree.Root())
 	require.NoError(t, err)
 
 	queryPosition := 5
@@ -196,9 +196,9 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	numLeaves := 1 << len(branch.Leaves)
 	leafIndex := queryPosition / ((1 << params.LogCodewordSize) / numLeaves)
 	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier))
-	base := leafIndex / (numLeaves / len(cap.Tables[0].Rows))
-	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base), cap.Tables[0].Rows[base])
-	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base^1), cap.Tables[0].Rows[base^1])
+	base := leafIndex / (numLeaves / len(treeCap.Tables[0].Rows))
+	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base), treeCap.Tables[0].Rows[base])
+	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base^1), treeCap.Tables[0].Rows[base^1])
 
 	shifts := BatchShifts{
 		{Base: [][]int{{0}}},
