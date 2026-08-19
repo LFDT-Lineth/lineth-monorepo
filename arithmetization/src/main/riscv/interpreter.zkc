@@ -690,7 +690,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MUL "
             print_r_operands(rd, rs1, rs2)
-            result = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
+            product_hi, product_lo = mul64_uu(v1, v2)
+            result = product_lo
         }
         case RTYPE_MULH: {
             new_output_write_address = output_write_address
@@ -745,7 +746,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             if v2 == 0 {
                 result = NEGATIVE_ONE_AS_I64
             } else {
-                result = v1 / v2
+                result = div64_uu(v1, v2)
             }
         }
         case RTYPE_REM: {
@@ -755,16 +756,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_REM "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                result = v1
-            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-                result = 0
-            } else {
-                result = absolute_value_double_word(v1) % absolute_value_double_word(v2)
-                if sign_bit_of_double_word(v1) == 1 {
-                    result = negative_of_double_word(result)
-                }
-            }
+            result = rem64_ss(v1, v2)
         }
         case RTYPE_REMU: {
             new_output_write_address = output_write_address
@@ -773,11 +765,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_REMU "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                result = v1
-            } else {
-                result = v1 % v2
-            }
+            result = rem64_uu(v1, v2)
         }
         case RTYPE_ADDW: {
             new_output_write_address = output_write_address
@@ -852,12 +840,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
-            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-            if (sign_bit_of_word(product_lower) == 1) {
-                result = MAX_UINT_32::product_lower
-            } else {
-                result = product_lower as DoubleWord
-            }
+            product_upper, product_lower = mul32_uu(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(product_lower)
         }
         case RTYPE_DIVW: {
             new_output_write_address = output_write_address
@@ -867,14 +851,11 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
+            if v2_lower == 0 {
                 result = NEGATIVE_ONE_AS_I64
             } else {
-                if (sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower)) {
-                    result = sgn_extension_u32_u64((absolute_value_word(v1_lower) / absolute_value_word(v2_lower)))
-                } else {
-                    result = sgn_extension_u32_u64(negative_of_word((absolute_value_word(v1_lower) / absolute_value_word(v2_lower))))
-                }
+                word_wip = div32_ss(v1_lower, v2_lower)
+                result = sgn_extension_u32_u64(word_wip)
             }
         }
         case RTYPE_DIVUW: {
@@ -886,10 +867,11 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_DIVUW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
+            if v2_lower == 0 {
                 result = NEGATIVE_ONE_AS_I64
             } else {
-                result = sgn_extension_u32_u64(v1_lower / v2_lower)
+                word_wip = div32_uu(v1_lower, v2_lower)
+                result = sgn_extension_u32_u64(word_wip)
             }
         }
         case RTYPE_REMW: {
@@ -901,15 +883,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_REMW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
-                result = sgn_extension_u32_u64(v1_lower)
-            } else {
-                if (sign_bit_of_word(v1_lower) == 0) {
-                    result = sgn_extension_u32_u64(absolute_value_word(v1_lower) % absolute_value_word(v2_lower))
-                } else {
-                    result = sgn_extension_u32_u64(negative_of_word((absolute_value_word(v1_lower) % absolute_value_word(v2_lower))))
-                }
-            }
+            word_wip = rem32_ss(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_REMUW: {
             new_output_write_address = output_write_address
@@ -920,11 +895,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_REMUW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
-                result = sgn_extension_u32_u64(v1_lower)
-            } else {
-                result = sgn_extension_u32_u64(v1_lower % v2_lower)
-            }
+            word_wip = rem32_uu(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_KECCAK: {
             new_output_write_address = output_write_address
@@ -1059,7 +1031,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_MUL "
             print_r_operands(rd, rs1, rs2)
-            registers[rd] = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
+            product_hi, product_lo = mul64_uu(v1, v2)
+            registers[rd] = product_lo
         }
         case RTYPE_MULH_WB: {
             new_output_write_address = output_write_address
@@ -1115,7 +1088,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             if v2 == 0 {
                 registers[rd] = NEGATIVE_ONE_AS_I64
             } else {
-                registers[rd] = v1 / v2
+                registers[rd] = div64_uu(v1, v2)
             }
         }
         case RTYPE_REM_WB: {
@@ -1125,17 +1098,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_REM "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                result = v1
-            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-                result = 0
-            } else {
-                result = absolute_value_double_word(v1) % absolute_value_double_word(v2)
-                if sign_bit_of_double_word(v1) == 1 {
-                    result = negative_of_double_word(result)
-                }
-            }
-            registers[rd] = result
+            registers[rd] = rem64_ss(v1, v2)
         }
         case RTYPE_REMU_WB: {
             new_output_write_address = output_write_address
@@ -1144,11 +1107,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2 = registers[rs2]
             printf "RTYPE_REMU "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                registers[rd] = v1
-            } else {
-                registers[rd] = v1 % v2
-            }
+            registers[rd] = rem64_uu(v1, v2)
         }
         case RTYPE_ADDW_WB: {
             new_output_write_address = output_write_address
@@ -1223,12 +1182,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
-            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-            if (sign_bit_of_word(product_lower) == 1) {
-                registers[rd] = MAX_UINT_32::product_lower
-            } else {
-                registers[rd] = product_lower as DoubleWord
-            }
+            product_upper, product_lower = mul32_uu(v1_lower, v2_lower)
+            registers[rd] = sgn_extension_u32_u64(product_lower)
         }
         case RTYPE_DIVW_WB: {
             new_output_write_address = output_write_address
@@ -1238,14 +1193,11 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
+            if v2_lower == 0 {
                 registers[rd] = NEGATIVE_ONE_AS_I64
             } else {
-                if (sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower)) {
-                    registers[rd] = sgn_extension_u32_u64((absolute_value_word(v1_lower) / absolute_value_word(v2_lower)))
-                } else {
-                    registers[rd] = sgn_extension_u32_u64(negative_of_word((absolute_value_word(v1_lower) / absolute_value_word(v2_lower))))
-                }
+                word_wip = div32_ss(v1_lower, v2_lower)
+                registers[rd] = sgn_extension_u32_u64(word_wip)
             }
         }
         case RTYPE_DIVUW_WB: {
@@ -1257,10 +1209,11 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_DIVUW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
+            if v2_lower == 0 {
                 registers[rd] = NEGATIVE_ONE_AS_I64
             } else {
-                registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+                word_wip = div32_uu(v1_lower, v2_lower)
+                registers[rd] = sgn_extension_u32_u64(word_wip)
             }
         }
         case RTYPE_REMW_WB: {
@@ -1272,15 +1225,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_REMW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
-                registers[rd] = sgn_extension_u32_u64(v1_lower)
-            } else {
-                if (sign_bit_of_word(v1_lower) == 0) {
-                    registers[rd] = sgn_extension_u32_u64(absolute_value_word(v1_lower) % absolute_value_word(v2_lower))
-                } else {
-                    registers[rd] = sgn_extension_u32_u64(negative_of_word((absolute_value_word(v1_lower) % absolute_value_word(v2_lower))))
-                }
-            }
+            word_wip = rem32_ss(v1_lower, v2_lower)
+            registers[rd] = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_REMUW_WB: {
             new_output_write_address = output_write_address
@@ -1291,11 +1237,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             v2_upper::v2_lower = v2
             printf "RTYPE_REMUW "
             print_r_operands(rd, rs1, rs2)
-            if (v2_lower == 0) {
-                registers[rd] = sgn_extension_u32_u64(v1_lower)
-            } else {
-                registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
-            }
+            word_wip = rem32_uu(v1_lower, v2_lower)
+            registers[rd] = sgn_extension_u32_u64(word_wip)
         }
         // =======
         // S-type 
