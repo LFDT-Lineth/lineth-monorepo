@@ -60,9 +60,22 @@ func (m *Module) System() *System { return m.system }
 func (m *Module) IsDynamic() bool { return m.isDynamic }
 
 // Size returns the declared domain size of the module. Returns 0 if the module
-// has not yet been sized. For dynamic modules this always returns 0; use
-// [Module.RuntimeSize] to obtain the size for a specific Runtime.
-func (m *Module) Size() int { return m.size }
+// has not yet been sized.
+//
+// Panics if the module is dynamic: a dynamic module has no compile-time size,
+// and silently returning 0 turns size-driven loops into no-ops (which is how
+// [RangeCheck.Check] was made vacuous on dynamic modules). Use
+// [Module.RuntimeSize] to obtain the size for a specific Runtime, and guard
+// with [Module.IsDynamic] when a static size is genuinely optional.
+func (m *Module) Size() int {
+	if m.isDynamic {
+		panic(fmt.Sprintf(
+			"wiop: Size() called on dynamic module %q; its size is per-Runtime, use Module.RuntimeSize(rt)",
+			m.Context.Path(),
+		))
+	}
+	return m.size
+}
 
 // IsSized reports whether a domain size has been fixed for this module.
 // Dynamic modules always return false here; they are sized per-Runtime.

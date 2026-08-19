@@ -41,15 +41,16 @@ func TestDynamicModule_IsDynamic(t *testing.T) {
 	assert.True(t, dyn.IsDynamic())
 }
 
-// TestDynamicModule_StaticAPI confirms Size()==0 and IsSized()==false for a
-// dynamic module, consistent with the "permanently unsized" static view.
+// TestDynamicModule_StaticAPI confirms IsSized()==false and that Size() panics
+// for a dynamic module, consistent with the "permanently unsized" static view:
+// IsSized is the safe query, Size has no answer to give.
 func TestDynamicModule_StaticAPI(t *testing.T) {
 	sys := wiop.NewSystemf("test")
 	sys.NewRound()
 	dyn := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
 
 	assert.False(t, dyn.IsSized())
-	assert.Equal(t, 0, dyn.Size())
+	assert.Panics(t, func() { _ = dyn.Size() })
 }
 
 // TestDynamicModule_SetSizePanic confirms SetSize panics on a dynamic module.
@@ -109,6 +110,24 @@ func TestDynamicModule_MissingSizePanic(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() { dyn.RuntimeSize(rt) })
+}
+
+// TestDynamicModule_SizePanics verifies that the static Size() accessor refuses
+// to answer for a dynamic module rather than reporting a silent 0, which would
+// turn any size-driven loop (e.g. RangeCheck.Check) into a no-op. Static
+// modules are unaffected, and IsDynamic remains the safe guard to query first.
+func TestDynamicModule_SizePanics(t *testing.T) {
+	sys, r0, _, dyn := newDynamicTestSystem(t)
+	static := sys.NewSizedModule(sys.Context.Childf("staticmod"), 8, wiop.PaddingDirectionRight)
+	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
+
+	assert.Panics(t, func() { _ = dyn.Size() })
+	assert.NotPanics(t, func() { _ = static.Size() })
+
+	// RuntimeSize stays the supported route for dynamic modules.
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, makeVec(8, 1))
+	assert.Equal(t, 8, dyn.RuntimeSize(rt))
 }
 
 // TestDynamicModule_VanishingCheck verifies that a vanishing constraint on a
