@@ -359,12 +359,6 @@ const R_REMW_FOLD:u18 = ((R_REMW_INST as u18) << 1) | (1 as u18)
 const R_REMW:u18 = ((R_REMW_INST as u18) << 1)
 const R_REMUW_FOLD:u18 = ((R_REMUW_INST as u18) << 1) | (1 as u18)
 const R_REMUW:u18 = ((R_REMUW_INST as u18) << 1)
-const R_KECCAK_FOLD:u18 = ((R_KECCAK_INST as u18) << 1) | (1 as u18)
-const R_KECCAK:u18 = ((R_KECCAK_INST as u18) << 1)
-const R_POSEIDON2_FOLD:u18 = ((R_POSEIDON2_INST as u18) << 1) | (1 as u18)
-const R_POSEIDON2:u18 = ((R_POSEIDON2_INST as u18) << 1)
-const R_WRITE_OUTPUT_FOLD:u18 = ((R_WRITE_OUTPUT_INST as u18) << 1) | (1 as u18)
-const R_WRITE_OUTPUT:u18 = ((R_WRITE_OUTPUT_INST as u18) << 1)
 
 // ===============
 // decoding types

@@ -6,16 +6,56 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var rd:Register
     funct7::rs2::rs1::funct3::rd = instruction_parameters
 
-    var R_INST:u17 = opcode::funct3::funct7
-    var rd_is_zero:u1
-    if rd == 0 {
-        rd_is_zero = 1
-    } else {
-        rd_is_zero = 0
-    }
-    var R_KEY:u18 = R_INST::rd_is_zero
+    var R_inst:u17 = opcode::funct3::funct7
 
-    switch R_KEY {
+    switch R_inst {  
+        case R_KECCAK_INST: {
+            if compute_op != RTYPE_KECCAK {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case R_POSEIDON2_INST: {
+            if compute_op != RTYPE_POSEIDON2 {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case R_WRITE_OUTPUT_INST: {
+            if compute_op != RTYPE_WRITE_OUTPUT {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }   
+        default: {
+            check_r_type_with_fold(compute_op,opcode, instruction_parameters,funct3,funct7,rd, R_inst)
+        }
+    }
+
+    if compute_op == COMPUTE_MISC_MEM {
+        return
+    }
+
+    if rs1_decoded != rs1 {
+        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
+        fail
+    }
+    if rs2_decoded != rs2 {
+        printf "[ERROR] rs2 mismatch (compute_op=%x opcode=%x rs2_decoded=%d)\n", compute_op, opcode, rs2_decoded
+        fail
+    }
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
+        fail
+    }
+}
+
+fn check_r_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_parameters:u25, funct3:Funct3, funct7:Funct7, rd:Register, R_inst:u17) {
+    
+    var rd_is_zero:u1 = rd == 0 ? 1 : 0
+    var R_key:u18 = R_inst::rd_is_zero
+
+    switch R_key {
         case R_MUL_FOLD: {
             if compute_op != COMPUTE_MISC_MEM {
                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
@@ -352,42 +392,6 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
                 fail
             }
         }
-        case R_KECCAK: {
-            if compute_op != RTYPE_KECCAK {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case R_KECCAK_FOLD: {
-            if compute_op != RTYPE_KECCAK {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case R_POSEIDON2: {
-            if compute_op != RTYPE_POSEIDON2 {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case R_POSEIDON2_FOLD: {
-            if compute_op != RTYPE_POSEIDON2 {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case R_WRITE_OUTPUT: {
-            if compute_op != RTYPE_WRITE_OUTPUT {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case R_WRITE_OUTPUT_FOLD: {
-            if compute_op != RTYPE_WRITE_OUTPUT {
-                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
         default: {
             if compute_op != COMPUTE_INVALID {
                 printf "[ERROR] invalid R-type encoding requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
@@ -395,22 +399,5 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
             }
             return
         }
-    }
-
-    if compute_op == COMPUTE_MISC_MEM {
-        return
-    }
-
-    if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
-        fail
-    }
-    if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch (compute_op=%x opcode=%x rs2_decoded=%d)\n", compute_op, opcode, rs2_decoded
-        fail
-    }
-    if rd_decoded != rd {
-        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
-        fail
     }
 }
