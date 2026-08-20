@@ -94,3 +94,18 @@ fn write_64<ram>(address:Address, value:u64) -> () {
     write_32(address, lo)
     write_32(address + 4, hi)
 }
+
+// Write a 32-byte big-endian integer to memory (MSB at `address`).
+// EVM precompile calldata encodes field elements this way.
+fn write_u256_be<ram>(address:Address, value:u256) -> () {
+    var v:u256 = value
+    for i:u8 = 0; i<32; i = i + 1 {
+        // Extract the low byte via a split: a narrowing `as u8` on a u256 is a
+        // CHECKED cast that rejects the high bits (bit overflow), so `::` is the
+        // correct idiom. LSB goes to the highest address, MSB to `address`.
+        var rest:u248, lo:u8
+        rest::lo = v
+        write_8(address + (31 - (i as Address)), lo)
+        v = v >> 8
+    }
+}
