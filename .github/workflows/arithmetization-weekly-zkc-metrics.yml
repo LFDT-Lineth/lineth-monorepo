@@ -103,6 +103,7 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref || 'main' }}
+          cache-enabled: 'false'
 
       # install-zkc does `git fetch --depth=1 origin <ref>`, which cannot fetch an abbreviated SHA,
       # so expand short hashes through the API. Branches and tags pass through untouched.

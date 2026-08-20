@@ -15,6 +15,10 @@ inputs:
       bump doesn't invalidate another subproject's cache. Callers with an identical value share one
       cache entry.
     required: true
+  cache-lookup-only:
+    description: 'When true, the shared cache is restore-only and is never saved. Use for jobs that check out an untrusted ref.'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -32,3 +36,4 @@ runs:
         key: setup-zig-global-cache-${{ inputs.version }}-${{ hashFiles(inputs.dependency-hash-paths) }}
         restore-keys: |
           setup-zig-global-cache-${{ inputs.version }}-
+        lookup-only: ${{ inputs.cache-lookup-only }}
