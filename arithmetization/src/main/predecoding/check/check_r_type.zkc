@@ -28,7 +28,7 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
             }
         }   
         default: {
-            check_r_type_with_fold(compute_op,opcode, instruction_parameters,funct3,funct7,rd, R_inst)
+            check_r_type_with_fold(compute_op,opcode, instruction_parameters, funct3, funct7, rd, R_inst)
         }
     }
 
@@ -56,6 +56,7 @@ fn check_r_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
     var R_key:u18 = R_inst::rd_is_zero
 
     switch R_key {
+        // case when rd == 0, it's a no-op
         case R_MUL_FOLD: {
             if compute_op != COMPUTE_MISC_MEM {
                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7

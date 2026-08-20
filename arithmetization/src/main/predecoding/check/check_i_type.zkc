@@ -10,290 +10,7 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var I_inst:u10 = opcode::funct3
 
     switch I_inst {
-        case I_LB: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ8_SGN_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LH: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ16_SGN_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LW: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ32_SGN_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LD: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ64_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LBU: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ8_ZEXT_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LHU: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ16_ZEXT_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_LWU: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != READ32_ZEXT_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_ADDI: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_ADDI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SLTI: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_SLTI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SLTIU: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_SLTIU_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_XORI: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_XORI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_ORI: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_ORI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_ANDI: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_ANDI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SLLI: {
-            var funct6:Funct6
-            var shamt6:UImm6
-            funct6::shamt6 = imm12
-            if funct6 != FUNCT6_SLLI {
-                if compute_op != COMPUTE_INVALID {
-                    printf "[ERROR] invalid SLLI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                    fail
-                }
-                return
-            }
-            imm = shamt6 as DoubleWord
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_SLLI_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SRLI: {
-            var funct6:Funct6
-            var shamt6:UImm6
-            funct6::shamt6 = imm12
-            imm = shamt6 as DoubleWord
-            switch funct6 {
-                case FUNCT6_SRLI: {
-                    if rd == 0 {
-                        if compute_op != COMPUTE_MISC_MEM {
-                            printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                            fail
-                        }
-                    } else if compute_op != OP_SRLI_WB {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                        fail
-                    }
-                }
-                case FUNCT6_SRAI: {
-                    if rd == 0 {
-                        if compute_op != COMPUTE_MISC_MEM {
-                            printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                            fail
-                        }
-                    } else if compute_op != OP_SRAI_WB {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                        fail
-                    }
-                }
-                default: {
-                    if compute_op != COMPUTE_INVALID {
-                        printf "[ERROR] invalid SRLI/SRAI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                        fail
-                    }
-                    return
-                }
-            }
-        }
-        case I_ADDIW: {
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_ADDIW_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SLLIW: {
-            var funct7:Funct7
-            var shamt5:UImm5
-            funct7::shamt5 = imm12
-            if funct7 != FUNCT7_SLLIW {
-                if compute_op != COMPUTE_INVALID {
-                    printf "[ERROR] invalid SLLIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                    fail
-                }
-                return
-            }
-            imm = shamt5 as DoubleWord
-            if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                    fail
-                }
-            } else if compute_op != OP_SLLIW_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-        }
-        case I_SRLIW: {
-            var funct7:Funct7
-            var shamt5:UImm5
-            funct7::shamt5 = imm12
-            imm = shamt5 as DoubleWord
-            switch funct7 {
-                case FUNCT7_SRLIW: {
-                    if rd == 0 {
-                        if compute_op != COMPUTE_MISC_MEM {
-                            printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                            fail
-                        }
-                    } else if compute_op != OP_SRLIW_WB {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                        fail
-                    }
-                }
-                case FUNCT7_SRAIW: {
-                    if rd == 0 {
-                        if compute_op != COMPUTE_MISC_MEM {
-                            printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                            fail
-                        }
-                    } else if compute_op != OP_SRAIW_WB {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                        fail
-                    }
-                }
-                default: {
-                    if compute_op != COMPUTE_INVALID {
-                        printf "[ERROR] invalid SRLIW/SRAIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                        fail
-                    }
-                    return
-                }
-            }
-        }
-        case I_JALR: {
-            if rd == 0 {
-                if compute_op != ITYPE_JALR {
-                    printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                    fail
-                }
-            } else if compute_op != ITYPE_JALR_WB {
-                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                fail
-            }
-        }
-        case I_ECALL: {
+        case I_ECALL_INST: {
             switch imm12 {
                 case FUNCT12_ECALL: {
                     if compute_op != ITYPE_ECALL {
@@ -317,11 +34,7 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
             }
         }
         default: {
-            if compute_op != COMPUTE_INVALID {
-                printf "[ERROR] invalid I-type encoding requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
-                fail
-            }
-            return
+            imm = check_i_type_with_fold(compute_op, opcode, instruction_parameters, funct3, rd, I_inst, imm12, imm)
         }
     }
 
@@ -341,4 +54,377 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
         fail
     }
+}
+
+fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_parameters:u25, funct3:Funct3, rd:Register, I_inst:u10, imm12:Imm12, imm_in:DoubleWord) -> (imm:DoubleWord) {
+    imm = imm_in
+    var rd_is_zero:u1 = rd == 0 ? 1 : 0
+    var I_key:u11 = I_inst::rd_is_zero
+
+    switch I_key {
+        case I_LB_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LB: {
+            if compute_op != READ8_SGN_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LH_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LH: {
+            if compute_op != READ16_SGN_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LW_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LW: {
+            if compute_op != READ32_SGN_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LD_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LD: {
+            if compute_op != READ64_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LBU_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LBU: {
+            if compute_op != READ8_ZEXT_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LHU_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LHU: {
+            if compute_op != READ16_ZEXT_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LWU_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_LWU: {
+            if compute_op != READ32_ZEXT_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ADDI_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ADDI: {
+            if compute_op != OP_ADDI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLTI_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLTI: {
+            if compute_op != OP_SLTI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLTIU_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLTIU: {
+            if compute_op != OP_SLTIU_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_XORI_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_XORI: {
+            if compute_op != OP_XORI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ORI_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ORI: {
+            if compute_op != OP_ORI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ANDI_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ANDI: {
+            if compute_op != OP_ANDI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ADDIW_FOLD: {
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_ADDIW: {
+            if compute_op != OP_ADDIW_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_JALR_FOLD: {
+            if compute_op != ITYPE_JALR {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case I_JALR: {
+            if compute_op != ITYPE_JALR_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case I_SLLI_FOLD: {
+            var funct6:Funct6
+            var shamt6:UImm6
+            funct6::shamt6 = imm12
+            if funct6 != FUNCT6_SLLI {
+                if compute_op != COMPUTE_INVALID {
+                    printf "[ERROR] invalid SLLI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+                return
+            }
+            imm = shamt6 as DoubleWord
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLLI: {
+            var funct6:Funct6
+            var shamt6:UImm6
+            funct6::shamt6 = imm12
+            if funct6 != FUNCT6_SLLI {
+                if compute_op != COMPUTE_INVALID {
+                    printf "[ERROR] invalid SLLI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+                return
+            }
+            imm = shamt6 as DoubleWord
+            if compute_op != OP_SLLI_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLLIW_FOLD: {
+            var funct7:Funct7
+            var shamt5:UImm5
+            funct7::shamt5 = imm12
+            if funct7 != FUNCT7_SLLIW {
+                if compute_op != COMPUTE_INVALID {
+                    printf "[ERROR] invalid SLLIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+                return
+            }
+            imm = shamt5 as DoubleWord
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SLLIW: {
+            var funct7:Funct7
+            var shamt5:UImm5
+            funct7::shamt5 = imm12
+            if funct7 != FUNCT7_SLLIW {
+                if compute_op != COMPUTE_INVALID {
+                    printf "[ERROR] invalid SLLIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+                return
+            }
+            imm = shamt5 as DoubleWord
+            if compute_op != OP_SLLIW_WB {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+        }
+        case I_SRLI_FOLD: {
+            var funct6:Funct6
+            var shamt6:UImm6
+            funct6::shamt6 = imm12
+            imm = shamt6 as DoubleWord
+            switch funct6 {
+                case FUNCT6_SRLI: {
+                    if compute_op != COMPUTE_MISC_MEM {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                case FUNCT6_SRAI: {
+                    if compute_op != COMPUTE_MISC_MEM {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                default: {
+                    if compute_op != COMPUTE_INVALID {
+                        printf "[ERROR] invalid SRLI/SRAI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                    return
+                }
+            }
+        }
+        case I_SRLI: {
+            var funct6:Funct6
+            var shamt6:UImm6
+            funct6::shamt6 = imm12
+            imm = shamt6 as DoubleWord
+            switch funct6 {
+                case FUNCT6_SRLI: {
+                    if compute_op != OP_SRLI_WB {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                case FUNCT6_SRAI: {
+                    if compute_op != OP_SRAI_WB {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                default: {
+                    if compute_op != COMPUTE_INVALID {
+                        printf "[ERROR] invalid SRLI/SRAI funct6 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                    return
+                }
+            }
+        }
+        case I_SRLIW_FOLD: {
+            var funct7:Funct7
+            var shamt5:UImm5
+            funct7::shamt5 = imm12
+            imm = shamt5 as DoubleWord
+            switch funct7 {
+                case FUNCT7_SRLIW: {
+                    if compute_op != COMPUTE_MISC_MEM {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                case FUNCT7_SRAIW: {
+                    if compute_op != COMPUTE_MISC_MEM {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                default: {
+                    if compute_op != COMPUTE_INVALID {
+                        printf "[ERROR] invalid SRLIW/SRAIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                    return
+                }
+            }
+        }
+        case I_SRLIW: {
+            var funct7:Funct7
+            var shamt5:UImm5
+            funct7::shamt5 = imm12
+            imm = shamt5 as DoubleWord
+            switch funct7 {
+                case FUNCT7_SRLIW: {
+                    if compute_op != OP_SRLIW_WB {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                case FUNCT7_SRAIW: {
+                    if compute_op != OP_SRAIW_WB {
+                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                        fail
+                    }
+                }
+                default: {
+                    if compute_op != COMPUTE_INVALID {
+                        printf "[ERROR] invalid SRLIW/SRAIW funct7 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                    return
+                }
+            }
+        }
+        default: {
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] invalid I-type encoding requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
+                fail
+            }
+            return
+        }
+    }
+    return
 }
