@@ -74,9 +74,11 @@ func projectRounds(
 	proof wiop.Proof,
 	isPublicInput map[wiop.ObjectID]bool,
 ) ([]RoundMessage, error) {
-	rounds := make([]RoundMessage, len(sys.Rounds))
 
-	for _, r := range sys.Rounds {
+	replayedRoundCount := max(len(sys.Rounds)-1, 0)
+	rounds := make([]RoundMessage, replayedRoundCount)
+
+	for _, r := range sys.Rounds[:replayedRoundCount] {
 		msg := RoundMessage{}
 
 		// wiop does not transport columns: every column is committed, and a
