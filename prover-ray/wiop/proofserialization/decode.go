@@ -66,6 +66,11 @@ func Decode(image []byte, base uint64) (VerifyInput, error) {
 // allocates, since it decodes to walk; that is acceptable because it runs
 // host-side, never in the guest.
 func Validate(image []byte, base uint64) error {
+	if len(image) > MaxImageSize {
+		return fmt.Errorf("proofserialization: image is %d bytes, longer than the %d-byte region",
+			len(image), MaxImageSize)
+	}
+
 	_, err := Decode(image, base)
 	return err
 }
