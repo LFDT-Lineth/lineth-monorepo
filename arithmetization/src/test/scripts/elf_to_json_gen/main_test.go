@@ -59,83 +59,47 @@ func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12,
 	return
 }
 
-func TestIsRdZeroNoop(t *testing.T) {
+func TestShouldUseMiscMem(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		instr uint32
-		want bool
+		want  bool
 	}{
+		{name: "addi x0 x0 0", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: true},
+		{name: "addi x0 t0 5", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 5), want: true},
+		{name: "lui x0 0", instr: encodeUType(opcodeLUI, 0, 0), want: true},
+		{name: "auipc x0 0", instr: encodeUType(opcodeAUIPC, 0, 0), want: true},
+		{name: "add x0 x0 x0", instr: encodeRType(opcodeOP, 0, 0, 0, 0b000, 0), want: true},
+		{name: "add x0 t0 t1", instr: encodeRType(opcodeOP, 0, 6, 5, 0b000, 0), want: true},
+		{name: "sub x0 x0 x0", instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b000, 0), want: true},
 		{
-			name:  "addi x0 x0 0",
-			instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0),
-			want:  true,
-		},
-		{
-			name:  "addi x0 t0 5",
-			instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 5),
-			want:  false,
-		},
-		{
-			name:  "lui x0 0",
-			instr: encodeUType(opcodeLUI, 0, 0),
-			want:  true,
-		},
-		{
-			name:  "auipc x0 0",
-			instr: encodeUType(opcodeAUIPC, 0, 0),
-			want:  false,
-		},
-		{
-			name:  "add x0 x0 x0",
-			instr: encodeRType(opcodeOP, 0, 0, 0, 0b000, 0),
-			want:  true,
-		},
-		{
-			name:  "add x0 t0 t1",
-			instr: encodeRType(opcodeOP, 0, 6, 5, 0b000, 0),
-			want:  false,
-		},
-		{
-			name:  "sub x0 x0 x0",
-			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b000, 0),
-			want:  true,
-		},
-		{
-			// rd=rs1=rs2=x0 but (funct3, funct7) is not a supported OP encoding:
-			// must NOT fold to a no-op, otherwise an illegal encoding would
-			// execute silently instead of failing on COMPUTE_INVALID.
 			name:  "invalid op x0 x0 x0",
 			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b010, 0),
 			want:  false,
 		},
-		{
-			name:  "ld x0 0 t0",
-			instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0),
-			want:  false,
-		},
-		{
-			name:  "jalr x0 t0 0",
-			instr: encodeIType(opcodeJALR, 0, 0, 5, 0),
-			want:  false,
-		},
-		{
-			name:  "xori x0 x0 0xff",
-			instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff),
-			want:  true,
-		},
-		{
-			name:  "slli x0 x0 4",
-			instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4),
-			want:  true,
-		},
+		{name: "ld x0 0 t0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: true},
+		{name: "jalr x0 t0 0", instr: encodeIType(opcodeJALR, 0, 0, 5, 0), want: false},
+		{name: "xori x0 x0 0xff", instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff), want: true},
+		{name: "slli x0 x0 4", instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4), want: true},
+		{name: "keccak x0", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 0), want: false},
+		{name: "jal x0", instr: encodeJType(0, 8), want: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 := decodeFields(tt.instr)
-			got := isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7)
+			opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(tt.instr)
+			var localOp uint32 = itypeInvalid
+			switch instrType {
+			case iType:
+				localOp, _ = decodeITypeSemantic(opcode, funct3, imm12)
+			case rType:
+				localOp = decodeRTypeSemantic(opcode, funct3, funct7)
+			case uType:
+				localOp = decodeUTypeSemantic(opcode)
+			}
+			got := shouldUseMiscMem(instrType, rd, localOp, opcode)
 			if got != tt.want {
-				t.Fatalf("isRdZeroNoop(%#x) = %v, want %v", tt.instr, got, tt.want)
+				t.Fatalf("shouldUseMiscMem(%#x) = %v, want %v", tt.instr, got, tt.want)
 			}
 		})
 	}
@@ -258,22 +222,22 @@ func TestDecodeITypeSemantic(t *testing.T) {
 		wantOp    uint32
 		wantImm12 uint32
 	}{
-		{name: "lb", opcode: opcodeLOAD, funct3: 0b000, imm12: 8, wantOp: itypeRead8Sgn, wantImm12: 8},
-		{name: "lh", opcode: opcodeLOAD, funct3: 0b001, imm12: 4, wantOp: itypeRead16Sgn, wantImm12: 4},
-		{name: "lw", opcode: opcodeLOAD, funct3: 0b010, imm12: 0, wantOp: itypeRead32Sgn, wantImm12: 0},
-		{name: "ld", opcode: opcodeLOAD, funct3: 0b011, imm12: 0, wantOp: itypeRead64, wantImm12: 0},
-		{name: "lbu", opcode: opcodeLOAD, funct3: 0b100, imm12: 1, wantOp: itypeRead8Zext, wantImm12: 1},
-		{name: "lhu", opcode: opcodeLOAD, funct3: 0b101, imm12: 2, wantOp: itypeRead16Zext, wantImm12: 2},
-		{name: "lwu", opcode: opcodeLOAD, funct3: 0b110, imm12: 3, wantOp: itypeRead32Zext, wantImm12: 3},
-		{name: "addi", opcode: opcodeOPIMM, funct3: 0b000, imm12: 42, wantOp: itypeOpAddi, wantImm12: 42},
-		{name: "slli", opcode: opcodeOPIMM, funct3: 0b001, imm12: 4, wantOp: itypeOpSlli, wantImm12: 4},
-		{name: "srli", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrli, wantImm12: 3},
-		{name: "srai", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b010000000101, wantOp: itypeOpSrai, wantImm12: 5},
-		{name: "xori", opcode: opcodeOPIMM, funct3: 0b100, imm12: 0xff, wantOp: itypeOpXori, wantImm12: 0xff},
-		{name: "addiw", opcode: opcodeOPIMM32, funct3: 0b000, imm12: 7, wantOp: itypeOpAddiw, wantImm12: 7},
-		{name: "slliw", opcode: opcodeOPIMM32, funct3: 0b001, imm12: 2, wantOp: itypeOpSlliw, wantImm12: 2},
-		{name: "srliw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliw, wantImm12: 3},
-		{name: "sraiw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b010000000100, wantOp: itypeOpSraiw, wantImm12: 4},
+		{name: "lb", opcode: opcodeLOAD, funct3: 0b000, imm12: 8, wantOp: itypeRead8SgnWB, wantImm12: 8},
+		{name: "lh", opcode: opcodeLOAD, funct3: 0b001, imm12: 4, wantOp: itypeRead16SgnWB, wantImm12: 4},
+		{name: "lw", opcode: opcodeLOAD, funct3: 0b010, imm12: 0, wantOp: itypeRead32SgnWB, wantImm12: 0},
+		{name: "ld", opcode: opcodeLOAD, funct3: 0b011, imm12: 0, wantOp: itypeRead64WB, wantImm12: 0},
+		{name: "lbu", opcode: opcodeLOAD, funct3: 0b100, imm12: 1, wantOp: itypeRead8ZextWB, wantImm12: 1},
+		{name: "lhu", opcode: opcodeLOAD, funct3: 0b101, imm12: 2, wantOp: itypeRead16ZextWB, wantImm12: 2},
+		{name: "lwu", opcode: opcodeLOAD, funct3: 0b110, imm12: 3, wantOp: itypeRead32ZextWB, wantImm12: 3},
+		{name: "addi", opcode: opcodeOPIMM, funct3: 0b000, imm12: 42, wantOp: itypeOpAddiWB, wantImm12: 42},
+		{name: "slli", opcode: opcodeOPIMM, funct3: 0b001, imm12: 4, wantOp: itypeOpSlliWB, wantImm12: 4},
+		{name: "srli", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliWB, wantImm12: 3},
+		{name: "srai", opcode: opcodeOPIMM, funct3: 0b101, imm12: 0b010000000101, wantOp: itypeOpSraiWB, wantImm12: 5},
+		{name: "xori", opcode: opcodeOPIMM, funct3: 0b100, imm12: 0xff, wantOp: itypeOpXoriWB, wantImm12: 0xff},
+		{name: "addiw", opcode: opcodeOPIMM32, funct3: 0b000, imm12: 7, wantOp: itypeOpAddiwWB, wantImm12: 7},
+		{name: "slliw", opcode: opcodeOPIMM32, funct3: 0b001, imm12: 2, wantOp: itypeOpSlliwWB, wantImm12: 2},
+		{name: "srliw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliwWB, wantImm12: 3},
+		{name: "sraiw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b010000000100, wantOp: itypeOpSraiwWB, wantImm12: 4},
 		{name: "jalr", opcode: opcodeJALR, funct3: 0, imm12: 0, wantOp: itypeJalr, wantImm12: 0},
 		{name: "invalid jalr funct3", opcode: opcodeJALR, funct3: 0b001, imm12: 0, wantOp: itypeInvalid, wantImm12: 0},
 		{name: "ecall", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ecall, wantOp: itypeEcall, wantImm12: funct12Ecall},
@@ -294,11 +258,14 @@ func TestDecodeITypeSemantic(t *testing.T) {
 }
 
 func TestItypeOpForRd(t *testing.T) {
-	if got := itypeOpForRd(itypeOpAddi, 0); got != itypeOpAddi {
-		t.Fatalf("itypeOpForRd(addi, x0) = %d, want %d", got, itypeOpAddi)
+	if got := itypeOpForRd(itypeOpAddiWB, 0); got != itypeOpAddiWB {
+		t.Fatalf("itypeOpForRd(addi, x0) = %d, want %d", got, itypeOpAddiWB)
 	}
-	if got := itypeOpForRd(itypeOpAddi, 5); got != itypeOpAddiWB {
+	if got := itypeOpForRd(itypeOpAddiWB, 5); got != itypeOpAddiWB {
 		t.Fatalf("itypeOpForRd(addi, x5) = %d, want %d", got, itypeOpAddiWB)
+	}
+	if got := itypeOpForRd(itypeJalr, 5); got != itypeJalrWB {
+		t.Fatalf("itypeOpForRd(jalr, x5) = %d, want %d", got, itypeJalrWB)
 	}
 	if got := itypeOpForRd(itypeEcall, 5); got != itypeEcall {
 		t.Fatalf("itypeOpForRd(ecall, x5) = %d, want %d", got, itypeEcall)
@@ -316,26 +283,26 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		funct7 uint32
 		wantOp uint32
 	}{
-		{name: "add", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAdd},
-		{name: "sub", opcode: opcodeOP, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSub},
-		{name: "sll", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSll},
-		{name: "slt", opcode: opcodeOP, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpSlt},
-		{name: "sltu", opcode: opcodeOP, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSltu},
-		{name: "xor", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeOpXor},
-		{name: "srl", opcode: opcodeOP, funct3: 0b101, funct7: 0b0000000, wantOp: rtypeOpSrl},
-		{name: "sra", opcode: opcodeOP, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSra},
-		{name: "or", opcode: opcodeOP, funct3: 0b110, funct7: 0b0000000, wantOp: rtypeOpOr},
-		{name: "and", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000000, wantOp: rtypeOpAnd},
-		{name: "mul", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMul},
-		{name: "mulh", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeOpMulh},
-		{name: "div", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDiv},
-		{name: "remu", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000001, wantOp: rtypeOpRemu},
-		{name: "addw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddw},
-		{name: "subw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubw},
-		{name: "sllw", opcode: opcodeOP32, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllw},
-		{name: "sraw", opcode: opcodeOP32, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSraw},
-		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulw},
-		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivw},
+		{name: "add", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddWB},
+		{name: "sub", opcode: opcodeOP, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubWB},
+		{name: "sll", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllWB},
+		{name: "slt", opcode: opcodeOP, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpSltWB},
+		{name: "sltu", opcode: opcodeOP, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSltuWB},
+		{name: "xor", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeOpXorWB},
+		{name: "srl", opcode: opcodeOP, funct3: 0b101, funct7: 0b0000000, wantOp: rtypeOpSrlWB},
+		{name: "sra", opcode: opcodeOP, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSraWB},
+		{name: "or", opcode: opcodeOP, funct3: 0b110, funct7: 0b0000000, wantOp: rtypeOpOrWB},
+		{name: "and", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000000, wantOp: rtypeOpAndWB},
+		{name: "mul", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulWB},
+		{name: "mulh", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeOpMulhWB},
+		{name: "div", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivWB},
+		{name: "remu", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000001, wantOp: rtypeOpRemuWB},
+		{name: "addw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddwWB},
+		{name: "subw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubwWB},
+		{name: "sllw", opcode: opcodeOP32, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllwWB},
+		{name: "sraw", opcode: opcodeOP32, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSrawWB},
+		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulwWB},
+		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivwWB},
 		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
 		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
 		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
@@ -356,10 +323,10 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 }
 
 func TestRtypeOpForRd(t *testing.T) {
-	if got := rtypeOpForRd(rtypeOpAdd, 0); got != rtypeOpAdd {
-		t.Fatalf("rtypeOpForRd(add, x0) = %d, want %d", got, rtypeOpAdd)
+	if got := rtypeOpForRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
+		t.Fatalf("rtypeOpForRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
 	}
-	if got := rtypeOpForRd(rtypeOpAdd, 5); got != rtypeOpAddWB {
+	if got := rtypeOpForRd(rtypeOpAddWB, 5); got != rtypeOpAddWB {
 		t.Fatalf("rtypeOpForRd(add, x5) = %d, want %d", got, rtypeOpAddWB)
 	}
 	if got := rtypeOpForRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
@@ -523,8 +490,8 @@ func TestDecodeUTypeSemantic(t *testing.T) {
 		opcode uint32
 		wantOp uint32
 	}{
-		{name: "lui", opcode: opcodeLUI, wantOp: utypeLui},
-		{name: "auipc", opcode: opcodeAUIPC, wantOp: utypeAuipc},
+		{name: "lui", opcode: opcodeLUI, wantOp: utypeLuiWB},
+		{name: "auipc", opcode: opcodeAUIPC, wantOp: utypeAuipcWB},
 		{name: "invalid", opcode: 0, wantOp: utypeInvalid},
 	}
 	for _, tt := range tests {
@@ -538,10 +505,10 @@ func TestDecodeUTypeSemantic(t *testing.T) {
 }
 
 func TestUtypeOpForRd(t *testing.T) {
-	if got := utypeOpForRd(utypeAuipc, 0); got != utypeAuipc {
-		t.Fatalf("utypeOpForRd(auipc, x0) = %d, want %d", got, utypeAuipc)
+	if got := utypeOpForRd(utypeAuipcWB, 0); got != utypeAuipcWB {
+		t.Fatalf("utypeOpForRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
 	}
-	if got := utypeOpForRd(utypeAuipc, 5); got != utypeAuipcWB {
+	if got := utypeOpForRd(utypeAuipcWB, 5); got != utypeAuipcWB {
 		t.Fatalf("utypeOpForRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
 	}
 }
@@ -622,6 +589,9 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "undefined opcode", instr: 0, want: computeInvalid},
 		{name: "csr csrrw", instr: encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02), want: computeInvalid},
 		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeMiscMem},
+		{name: "addi x0 t0 1", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 1), want: computeMiscMem},
+		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeMiscMem},
+		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeMiscMem},
 		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeMiscMem},
 		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
 		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
@@ -658,9 +628,6 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		rs1 := (instr >> 15) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
 		instrType := instructionTypeFromOpcode(opcode)
-		if isRdZeroNoop(opcode, instrType, rd, rs1, 0, funct3, imm12, (instr>>25)&0x7f) {
-			instrType = miscMemType
-		}
 		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
 			normImm12 = imm12

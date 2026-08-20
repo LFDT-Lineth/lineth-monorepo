@@ -81,132 +81,83 @@ func instructionTypeFromOpcode(opcode uint32) uint32 {
 	}
 }
 
-// isRdZeroNoop reports whether an instruction only discards its result into x0
-// and has no other architecturally visible effects (no memory access, no
-// control-flow change, no non-x0 register reads). Such slots are rewritten to
-// MISC_MEM_TYPE at pre-decode time so the interpreter only advances PC by 4.
-func isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) bool {
+// shouldUseMiscMem reports whether a valid instruction with rd=x0 should emit
+// COMPUTE_MISC_MEM at ELF time. Control-flow, side-effect, and syscall
+// instructions keep their semantic compute_op even when rd is x0.
+func shouldUseMiscMem(instrType, rd, localOp, opcode uint32) bool {
 	if rd != 0 {
 		return false
 	}
 	switch instrType {
-	case rType:
-		// Custom-1 includes Keccak and Poseidon2 precompiles, which have memory side effects.
-		if opcode == opcodeCUSTOM1 {
-			return false
-		}
-		if rs1 != 0 || rs2 != 0 {
-			return false
-		}
-		// Only fold genuinely supported encodings; an unsupported (funct3, funct7)
-		// pair must stay COMPUTE_INVALID so the interpreter fails on it rather than
-		// silently executing it as a no-op.
-		return decodeRTypeSemantic(opcode, funct3, funct7) != rtypeInvalid
-	case uType:
-		return opcode == opcodeLUI
+	case miscMemType:
+		return true
 	case iType:
-		switch opcode {
-		case opcodeLOAD, opcodeJALR, opcodeSYSTEM:
-			return false
-		case opcodeOPIMM:
-			if rs1 != 0 {
-				return false
-			}
-			return opImmEncodingSupported(funct3, imm12)
-		case opcodeOPIMM32:
-			if rs1 != 0 {
-				return false
-			}
-			return opImm32EncodingSupported(funct3, imm12)
-		default:
+		if localOp == itypeInvalid {
 			return false
 		}
+		switch localOp {
+		case itypeJalr, itypeEcall, itypeEbreak:
+			return false
+		default:
+			return true
+		}
+	case rType:
+		if localOp == rtypeInvalid {
+			return false
+		}
+		switch localOp {
+		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
+			return false
+		default:
+			return true
+		}
+	case uType:
+		return localOp != utypeInvalid
+	case jType:
+		return false
 	default:
 		return false
 	}
 }
 
-// opImmEncodingSupported mirrors the OP-IMM funct3 arms implemented in i_type.zkc.
-func opImmEncodingSupported(funct3, imm12 uint32) bool {
-	funct6 := (imm12 >> 6) & 0x3f
-	switch funct3 {
-	case 0b000, 0b010, 0b011, 0b100, 0b110, 0b111: // ADDI, SLTI, SLTIU, XORI, ORI, ANDI
-		return true
-	case 0b001: // SLLI
-		return funct6 == 0b000000
-	case 0b101: // SRLI / SRAI
-		return funct6 == 0b000000 || funct6 == 0b010000
-	default:
-		return false
+func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
+	op := unifiedComputeOp(instrType, localOp)
+	if op == computeInvalid {
+		return computeInvalid
 	}
+	if shouldUseMiscMem(instrType, rd, localOp, opcode) {
+		return computeMiscMem
+	}
+	return op
 }
 
-// opImm32EncodingSupported mirrors the OP-IMM-32 arms implemented in i_type.zkc.
-func opImm32EncodingSupported(funct3, imm12 uint32) bool {
-	funct7FromImm := (imm12 >> 5) & 0x7f
-	switch funct3 {
-	case 0b000: // ADDIW
-		return true
-	case 0b001: // SLLIW
-		return funct7FromImm == 0b0000000
-	case 0b101: // SRLIW / SRAIW
-		return funct7FromImm == 0b0000000 || funct7FromImm == 0b0100000
-	default:
-		return false
-	}
-}
-
-// I-type semantic micro-op constants. These MUST match constants.zkc.
-// Each writeback-capable op has a pair: BASE (even) and BASE_WB (odd).
+// I-type semantic micro-op local indices. Unified value = computeITypeBase + index.
 const (
-	itypeRead8Sgn     = 0
-	itypeRead8SgnWB   = 1
-	itypeRead16Sgn    = 2
-	itypeRead16SgnWB  = 3
-	itypeRead32Sgn    = 4
-	itypeRead32SgnWB  = 5
-	itypeRead64       = 6
-	itypeRead64WB     = 7
-	itypeRead8Zext    = 8
-	itypeRead8ZextWB  = 9
-	itypeRead16Zext   = 10
-	itypeRead16ZextWB = 11
-	itypeRead32Zext   = 12
-	itypeRead32ZextWB = 13
-
-	itypeOpAddi    = 14
-	itypeOpAddiWB  = 15
-	itypeOpSlti    = 16
-	itypeOpSltiWB  = 17
-	itypeOpSltiu   = 18
-	itypeOpSltiuWB = 19
-	itypeOpXori    = 20
-	itypeOpXoriWB  = 21
-	itypeOpOri     = 22
-	itypeOpOriWB   = 23
-	itypeOpAndi    = 24
-	itypeOpAndiWB  = 25
-	itypeOpSlli    = 26
-	itypeOpSlliWB  = 27
-	itypeOpSrli    = 28
-	itypeOpSrliWB  = 29
-	itypeOpSrai    = 30
-	itypeOpSraiWB  = 31
-
-	itypeOpAddiw   = 32
-	itypeOpAddiwWB = 33
-	itypeOpSlliw   = 34
-	itypeOpSlliwWB = 35
-	itypeOpSrliw   = 36
-	itypeOpSrliwWB = 37
-	itypeOpSraiw   = 38
-	itypeOpSraiwWB = 39
-
-	itypeJalr    = 40
-	itypeJalrWB  = 41
-	itypeEcall   = 42
-	itypeEbreak  = 43
-	itypeInvalid = 63
+	itypeRead8SgnWB     = 0
+	itypeRead16SgnWB    = 1
+	itypeRead32SgnWB    = 2
+	itypeRead64WB       = 3
+	itypeRead8ZextWB     = 4
+	itypeRead16ZextWB    = 5
+	itypeRead32ZextWB    = 6
+	itypeOpAddiWB       = 7
+	itypeOpSltiWB       = 8
+	itypeOpSltiuWB      = 9
+	itypeOpXoriWB       = 10
+	itypeOpOriWB        = 11
+	itypeOpAndiWB       = 12
+	itypeOpSlliWB       = 13
+	itypeOpSrliWB       = 14
+	itypeOpSraiWB       = 15
+	itypeOpAddiwWB      = 16
+	itypeOpSlliwWB      = 17
+	itypeOpSrliwWB      = 18
+	itypeOpSraiwWB      = 19
+	itypeJalr           = 20
+	itypeJalrWB         = 21
+	itypeEcall          = 22
+	itypeEbreak         = 23
+	itypeInvalid        = 63
 
 	wbNone     = 0
 	wbStoreReg = 1
@@ -216,94 +167,55 @@ const (
 	wbMem64    = 5
 )
 
-// itypeOpForRd selects the *_WB variant when rd != x0 and the base op supports
-// register writeback. Base ops are always even; *_WB variants are odd.
-func itypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == itypeEcall || baseOp == itypeEbreak || baseOp == itypeInvalid {
-		return baseOp
+// itypeOpForRd selects ITYPE_JALR_WB when rd != x0; other ops already use *_WB indices.
+func itypeOpForRd(localOp, rd uint32) uint32 {
+	if rd == 0 || localOp == itypeEcall || localOp == itypeEbreak || localOp == itypeInvalid {
+		return localOp
 	}
-	if baseOp&1 == 0 && baseOp < itypeEcall {
-		return baseOp + 1
+	if localOp == itypeJalr {
+		return itypeJalrWB
 	}
-	return baseOp
+	return localOp
 }
 
-// R-type semantic micro-op constants. These MUST match constants.zkc.
+// R-type semantic micro-op local indices. Unified value = computeRTypeBase + index.
 const (
-	rtypeOpAdd    = 0
-	rtypeOpAddWB  = 1
-	rtypeOpSub    = 2
-	rtypeOpSubWB  = 3
-	rtypeOpSll    = 4
-	rtypeOpSllWB  = 5
-	rtypeOpSlt    = 6
-	rtypeOpSltWB  = 7
-	rtypeOpSltu   = 8
-	rtypeOpSltuWB = 9
-	rtypeOpXor    = 10
-	rtypeOpXorWB  = 11
-	rtypeOpSrl    = 12
-	rtypeOpSrlWB  = 13
-	rtypeOpSra    = 14
-	rtypeOpSraWB  = 15
-	rtypeOpOr     = 16
-	rtypeOpOrWB   = 17
-	rtypeOpAnd    = 18
-	rtypeOpAndWB  = 19
-
-	rtypeOpMul      = 20
-	rtypeOpMulWB    = 21
-	rtypeOpMulh     = 22
-	rtypeOpMulhWB   = 23
-	rtypeOpMulhsu   = 24
-	rtypeOpMulhsuWB = 25
-	rtypeOpMulhu    = 26
-	rtypeOpMulhuWB  = 27
-	rtypeOpDiv      = 28
-	rtypeOpDivWB    = 29
-	rtypeOpDivu     = 30
-	rtypeOpDivuWB   = 31
-	rtypeOpRem      = 32
-	rtypeOpRemWB    = 33
-	rtypeOpRemu     = 34
-	rtypeOpRemuWB   = 35
-
-	rtypeOpAddw   = 36
-	rtypeOpAddwWB = 37
-	rtypeOpSubw   = 38
-	rtypeOpSubwWB = 39
-	rtypeOpSllw   = 40
-	rtypeOpSllwWB = 41
-	rtypeOpSrlw   = 42
-	rtypeOpSrlwWB = 43
-	rtypeOpSraw   = 44
-	rtypeOpSrawWB = 45
-
-	rtypeOpMulw    = 46
-	rtypeOpMulwWB  = 47
-	rtypeOpDivw    = 48
-	rtypeOpDivwWB  = 49
-	rtypeOpDivuw   = 50
-	rtypeOpDivuwWB = 51
-	rtypeOpRemw    = 52
-	rtypeOpRemwWB  = 53
-	rtypeOpRemuw   = 54
-	rtypeOpRemuwWB = 55
-
-	rtypeOpKeccak      = 56
-	rtypeOpPoseidon2   = 57
-	rtypeOpWriteOutput = 58
+	rtypeOpAddWB       = 0
+	rtypeOpSubWB       = 1
+	rtypeOpSllWB       = 2
+	rtypeOpSltWB       = 3
+	rtypeOpSltuWB      = 4
+	rtypeOpXorWB       = 5
+	rtypeOpSrlWB       = 6
+	rtypeOpSraWB       = 7
+	rtypeOpOrWB        = 8
+	rtypeOpAndWB       = 9
+	rtypeOpMulWB       = 10
+	rtypeOpMulhWB      = 11
+	rtypeOpMulhsuWB    = 12
+	rtypeOpMulhuWB     = 13
+	rtypeOpDivWB       = 14
+	rtypeOpDivuWB      = 15
+	rtypeOpRemWB       = 16
+	rtypeOpRemuWB      = 17
+	rtypeOpAddwWB      = 18
+	rtypeOpSubwWB      = 19
+	rtypeOpSllwWB      = 20
+	rtypeOpSrlwWB      = 21
+	rtypeOpSrawWB      = 22
+	rtypeOpMulwWB      = 23
+	rtypeOpDivwWB      = 24
+	rtypeOpDivuwWB     = 25
+	rtypeOpRemwWB      = 26
+	rtypeOpRemuwWB     = 27
+	rtypeOpKeccak      = 28
+	rtypeOpPoseidon2   = 29
+	rtypeOpWriteOutput = 30
 	rtypeInvalid       = 63
 )
 
-func rtypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeOpPoseidon2 || baseOp == rtypeOpWriteOutput || baseOp == rtypeInvalid {
-		return baseOp
-	}
-	if baseOp&1 == 0 && baseOp < rtypeOpKeccak {
-		return baseOp + 1
-	}
-	return baseOp
+func rtypeOpForRd(localOp, rd uint32) uint32 {
+	return localOp
 }
 
 // S-type semantic micro-op constants. These MUST match constants.zkc.
@@ -338,23 +250,15 @@ func jtypeOpForRd(baseOp, rd uint32) uint32 {
 	return baseOp
 }
 
-// U-type semantic micro-op constants. These MUST match constants.zkc.
+// U-type semantic micro-op local indices. Unified value = computeUTypeBase + index.
 const (
-	utypeLui     = 0
-	utypeLuiWB   = 1
-	utypeAuipc   = 2
-	utypeAuipcWB = 3
-	utypeInvalid = 63
+	utypeLuiWB     = 0
+	utypeAuipcWB   = 1
+	utypeInvalid   = 63
 )
 
-func utypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == utypeInvalid {
-		return baseOp
-	}
-	if baseOp&1 == 0 && baseOp < utypeInvalid {
-		return baseOp + 1
-	}
-	return baseOp
+func utypeOpForRd(localOp, rd uint32) uint32 {
+	return localOp
 }
 
 const (
@@ -367,11 +271,11 @@ const (
 const (
 	computeMiscMem   = 0
 	computeITypeBase = 1
-	computeRTypeBase = 65
-	computeSTypeBase = 129
-	computeBTypeBase = 133
-	computeJTypeBase = 140
-	computeUTypeBase = 142
+	computeRTypeBase = 25
+	computeSTypeBase = 56
+	computeBTypeBase = 60
+	computeJTypeBase = 66
+	computeUTypeBase = 68
 	computeInvalid   = 255
 )
 
@@ -424,8 +328,7 @@ func unifiedComputeOp(instrType, localOp uint32) uint32 {
 	}
 }
 
-// decodeITypeSemantic maps a raw I-type encoding to a semantic base compute op
-// (even; *_WB is selected later by itypeOpForRd) and normalized immediate.
+// decodeITypeSemantic maps a raw I-type encoding to a local op index and normalized immediate.
 // Shift amounts are stripped to their low uimm6/uimm5 bits; funct6/funct7
 // validation happens here.
 func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm12 uint32) {
@@ -438,47 +341,47 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 	case opcodeLOAD:
 		switch funct3 {
 		case 0b000:
-			return itypeRead8Sgn, imm12
+			return itypeRead8SgnWB, imm12
 		case 0b001:
-			return itypeRead16Sgn, imm12
+			return itypeRead16SgnWB, imm12
 		case 0b010:
-			return itypeRead32Sgn, imm12
+			return itypeRead32SgnWB, imm12
 		case 0b011:
-			return itypeRead64, imm12
+			return itypeRead64WB, imm12
 		case 0b100:
-			return itypeRead8Zext, imm12
+			return itypeRead8ZextWB, imm12
 		case 0b101:
-			return itypeRead16Zext, imm12
+			return itypeRead16ZextWB, imm12
 		case 0b110:
-			return itypeRead32Zext, imm12
+			return itypeRead32ZextWB, imm12
 		default:
 			return itypeInvalid, imm12
 		}
 	case opcodeOPIMM:
 		switch funct3 {
 		case 0b000:
-			return itypeOpAddi, imm12
+			return itypeOpAddiWB, imm12
 		case 0b010:
-			return itypeOpSlti, imm12
+			return itypeOpSltiWB, imm12
 		case 0b011:
-			return itypeOpSltiu, imm12
+			return itypeOpSltiuWB, imm12
 		case 0b100:
-			return itypeOpXori, imm12
+			return itypeOpXoriWB, imm12
 		case 0b110:
-			return itypeOpOri, imm12
+			return itypeOpOriWB, imm12
 		case 0b111:
-			return itypeOpAndi, imm12
+			return itypeOpAndiWB, imm12
 		case 0b001:
 			if funct6 != 0b000000 {
 				return itypeInvalid, imm12
 			}
-			return itypeOpSlli, uimm6
+			return itypeOpSlliWB, uimm6
 		case 0b101:
 			switch funct6 {
 			case 0b000000:
-				return itypeOpSrli, uimm6
+				return itypeOpSrliWB, uimm6
 			case 0b010000:
-				return itypeOpSrai, uimm6
+				return itypeOpSraiWB, uimm6
 			default:
 				return itypeInvalid, imm12
 			}
@@ -488,18 +391,18 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 	case opcodeOPIMM32:
 		switch funct3 {
 		case 0b000:
-			return itypeOpAddiw, imm12
+			return itypeOpAddiwWB, imm12
 		case 0b001:
 			if funct7FromImm != 0b0000000 {
 				return itypeInvalid, imm12
 			}
-			return itypeOpSlliw, uimm5
+			return itypeOpSlliwWB, uimm5
 		case 0b101:
 			switch funct7FromImm {
 			case 0b0000000:
-				return itypeOpSrliw, uimm5
+				return itypeOpSrliwWB, uimm5
 			case 0b0100000:
-				return itypeOpSraiw, uimm5
+				return itypeOpSraiwWB, uimm5
 			default:
 				return itypeInvalid, imm12
 			}
@@ -530,55 +433,54 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 	}
 }
 
-// decodeRTypeSemantic maps a raw R-type encoding to a semantic base compute op
-// (even; *_WB is selected later by rtypeOpForRd). funct3/funct7 validation happens here.
+// decodeRTypeSemantic maps a raw R-type encoding to a local op index.
 func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeOP:
 		if funct7 == 0b0000001 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpMul
+				return rtypeOpMulWB
 			case 0b001:
-				return rtypeOpMulh
+				return rtypeOpMulhWB
 			case 0b010:
-				return rtypeOpMulhsu
+				return rtypeOpMulhsuWB
 			case 0b011:
-				return rtypeOpMulhu
+				return rtypeOpMulhuWB
 			case 0b100:
-				return rtypeOpDiv
+				return rtypeOpDivWB
 			case 0b101:
-				return rtypeOpDivu
+				return rtypeOpDivuWB
 			case 0b110:
-				return rtypeOpRem
+				return rtypeOpRemWB
 			case 0b111:
-				return rtypeOpRemu
+				return rtypeOpRemuWB
 			}
 		} else if funct7 == 0b0000000 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpAdd
+				return rtypeOpAddWB
 			case 0b001:
-				return rtypeOpSll
+				return rtypeOpSllWB
 			case 0b010:
-				return rtypeOpSlt
+				return rtypeOpSltWB
 			case 0b011:
-				return rtypeOpSltu
+				return rtypeOpSltuWB
 			case 0b100:
-				return rtypeOpXor
+				return rtypeOpXorWB
 			case 0b101:
-				return rtypeOpSrl
+				return rtypeOpSrlWB
 			case 0b110:
-				return rtypeOpOr
+				return rtypeOpOrWB
 			case 0b111:
-				return rtypeOpAnd
+				return rtypeOpAndWB
 			}
 		} else if funct7 == 0b0100000 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpSub
+				return rtypeOpSubWB
 			case 0b101:
-				return rtypeOpSra
+				return rtypeOpSraWB
 			}
 		}
 		return rtypeInvalid
@@ -586,31 +488,31 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		if funct7 == 0b0000001 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpMulw
+				return rtypeOpMulwWB
 			case 0b100:
-				return rtypeOpDivw
+				return rtypeOpDivwWB
 			case 0b101:
-				return rtypeOpDivuw
+				return rtypeOpDivuwWB
 			case 0b110:
-				return rtypeOpRemw
+				return rtypeOpRemwWB
 			case 0b111:
-				return rtypeOpRemuw
+				return rtypeOpRemuwWB
 			}
 		} else if funct7 == 0b0000000 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpAddw
+				return rtypeOpAddwWB
 			case 0b001:
-				return rtypeOpSllw
+				return rtypeOpSllwWB
 			case 0b101:
-				return rtypeOpSrlw
+				return rtypeOpSrlwWB
 			}
 		} else if funct7 == 0b0100000 {
 			switch funct3 {
 			case 0b000:
-				return rtypeOpSubw
+				return rtypeOpSubwWB
 			case 0b101:
-				return rtypeOpSraw
+				return rtypeOpSrawWB
 			}
 		}
 		return rtypeInvalid
@@ -721,13 +623,13 @@ func assembleITypeImm(normImm12 uint32) uint64 {
 	return assembleSTypeImm(normImm12)
 }
 
-// decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
+// decodeUTypeSemantic maps a raw U-type opcode to a local op index.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeLUI:
-		return utypeLui
+		return utypeLuiWB
 	case opcodeAUIPC:
-		return utypeAuipc
+		return utypeAuipcWB
 	default:
 		return utypeInvalid
 	}
@@ -990,15 +892,10 @@ func classifyInstruction(instr uint32) uint32 {
 	opcode := instr & 0x7f
 	rd := (instr >> 7) & 0x1f
 	funct3 := (instr >> 12) & 0x7
-	rs1 := (instr >> 15) & 0x1f
-	rs2 := (instr >> 20) & 0x1f
 	imm12 := (instr >> 20) & 0xfff
 	funct7 := (instr >> 25) & 0x7f
 
 	instrType := instructionTypeFromOpcode(opcode)
-	if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
-		instrType = miscMemType
-	}
 
 	itypeLocalOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
 	if instrType != iType {
@@ -1053,7 +950,7 @@ func classifyInstruction(instr uint32) uint32 {
 	default:
 		localOp = itypeInvalid
 	}
-	return unifiedComputeOp(instrType, localOp)
+	return finalizeComputeOp(instrType, localOp, rd, opcode)
 }
 
 // collectExecutableImage builds the dense zero-filled executable span used by
@@ -1122,12 +1019,8 @@ func buildDecodedProgram(blobs []memoryBlob) (base uint64, nRecords uint64, deco
 		rs1 := (instr >> 15) & 0x1f
 		rs2 := (instr >> 20) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
-		funct7 := (instr >> 25) & 0x7f
 
 		instrType := instructionTypeFromOpcode(opcode)
-		if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
-			instrType = miscMemType
-		}
 
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
 		// reassemble it into the 12-bit store immediate.

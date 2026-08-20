@@ -62,9 +62,9 @@ The interpreter does not branch on `(opcode, funct3, funct7)` at runtime — it
 
 | Kind                      | Role |
 | ------------------------- | ---- |
-| `OP_*` / `RTYPE_*`        | Compute when the result is discarded into `x0` |
-| `OP_*_WB` / `RTYPE_*_WB`  | Same operation plus writeback to `registers[rd]` |
-| `COMPUTE_MISC_MEM` (0)    | Folded no-ops and `FENCE` — advance `pc` only |
+| `OP_*_WB` / `RTYPE_*_WB` / `UTYPE_*_WB` | Compute plus writeback to `registers[rd]` when `rd != x0` |
+| `COMPUTE_MISC_MEM` (0)    | `FENCE` and all architecturally inert `rd=x0` paths — advance `pc` only |
+| `JTYPE_JAL`, `ITYPE_JALR`, branches, stores, syscalls, precompiles | Semantic ops preserved even when `rd=x0` |
 | `COMPUTE_INVALID` (255)   | Words the interpreter does not model (gaps, padding, unsupported opcodes). Execution **fails only if `pc` reaches that slot** (jump or fall-through into a gap). |
 
 Immediates are sign-extended and shift amounts normalized in Go; the interpreter

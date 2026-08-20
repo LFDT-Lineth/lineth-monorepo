@@ -48,25 +48,22 @@ bits at decode time, so the interpreter uses `imm` directly.
 For U-type the upper immediate (`imm[31:12]`, lower 12 bits zeroed) is
 sign-extended to 64 bits at decode time into `imm`.
 
-## I-type semantic micro-ops (compute + writeback folded)
+## I-type semantic micro-ops (writeback folded)
 
 For an I-type instruction, the `decoded` record does not replay raw `funct3` /
 opcode bits. Instead, `decodeITypeSemantic` in `main.go` maps each I-type
 encoding to:
 
-- **`compute_op`** — what to execute. Writeback-capable ops come in a pair:
-  `READ8_SGN` (compute only) and `READ8_SGN_WB` (compute + `registers[rd] = result`).
-  The even/odd pairing applies to the **local** op indices in `main.go`
-  (base even, `*_WB` = base + 1); after adding `computeITypeBase` (1) to form the
-  unified `ComputeOp` stored in the JSON, the parity flips — e.g.
-  `READ8_SGN = 1` and `READ8_SGN_WB = 2` in `constants.zkc`. Control/system ops
-  (`ITYPE_ECALL`, `ITYPE_EBREAK`, `ITYPE_INVALID`) have no `_WB` variant.
+- **`compute_op`** — what to execute. When `rd != x0`, writeback-capable ops
+  use the `*_WB` variant (e.g. `READ8_SGN_WB`, `OP_ADDI_WB`). When `rd == x0`,
+  architecturally inert instructions emit `COMPUTE_MISC_MEM` (0). Control/system
+  ops (`ITYPE_JALR`, `ITYPE_ECALL`, `ITYPE_EBREAK`) keep their semantic op even
+  when `rd == x0`.
 - **`imm`, `rs1`, `rd`** — operands (shift amounts are normalized at decode time;
   `imm` is the sign-extended 12-bit immediate)
 
-When `rd` is `x0`, `itypeOpForRd` in `main.go` keeps the base opcode; otherwise it
-selects the matching `*_WB` variant. This replaces the former separate `writeback`
-field and second runtime switch.
+When `rd != x0`, `itypeOpForRd` selects the matching `*_WB` variant via
+`finalizeComputeOp`. When `rd == x0`, inert paths map to `COMPUTE_MISC_MEM`.
 
 At runtime, the interpreter's flat `switch compute_op` handles these cases
 directly. Paired cases share compute logic; `*_WB` arms additionally write
@@ -101,21 +98,23 @@ sign-extended into `imm` at ELF time. At runtime, the interpreter's flat
 case additionally writes the link address to `registers[rd]`. Invalid opcodes
 (including `JTYPE_INVALID`) are handled by the `default` arm.
 
-## U-type semantic micro-ops (compute + writeback folded)
+## U-type semantic micro-ops (writeback folded)
 
-`decodeUTypeSemantic` maps LUI/AUIPC to base opcodes; `utypeOpForRd` selects the
-matching `*_WB` variant when `rd != x0`. The upper immediate is sign-extended
-into `imm` at ELF time. At runtime, the interpreter's flat `switch compute_op`
-has separate base and `_WB` cases. Invalid opcodes (including `UTYPE_INVALID`)
-are handled by the `default` arm.
+`decodeUTypeSemantic` maps LUI/AUIPC to local op indices; `finalizeComputeOp`
+selects `UTYPE_*_WB` when `rd != x0` or `COMPUTE_MISC_MEM` when `rd == x0`.
+The upper immediate is sign-extended into `imm` at ELF time. At runtime, the
+interpreter's flat `switch compute_op` handles `UTYPE_*_WB` cases. Invalid
+opcodes (including `UTYPE_INVALID`) are handled by the `default` arm.
 
-## R-type semantic micro-ops (compute + writeback folded)
+## R-type semantic micro-ops (writeback folded)
 
 For an R-type instruction, the `decoded` record does not replay raw `funct3` /
 `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
-to a base `compute_op`; `rtypeOpForRd` selects the matching `*_WB` variant when
-`rd != x0`. Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`) have no
-`_WB` variant and return early after the precompile side effects.
+to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
+`COMPUTE_MISC_MEM` when `rd == x0` (except Custom-1 precompiles, which always
+keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
+`RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
+precompile side effects.
 
 ### Custom-1 precompiles (`opcode` = `0b0101011`)
 
@@ -123,8 +122,8 @@ Both use `funct7 = 0b0000000`. `decodeRTypeSemantic` discriminates on `funct3`:
 
 | `funct3` | Local op (`main.go`) | Unified `compute_op` (`constants.zkc`) | Runtime handler |
 | -------- | -------------------- | --------------------------------------- | --------------- |
-| `0b000`  | `rtypeOpKeccak` (56) | `RTYPE_KECCAK` (121)                    | `keccak(...)` in `interpreter.zkc` |
-| `0b001`  | `rtypeOpPoseidon2` (57) | `RTYPE_POSEIDON2` (122)              | `poseidon2(...)` in `interpreter.zkc` |
+| `0b000`  | `rtypeOpKeccak` (28) | `RTYPE_KECCAK` (53)                     | `keccak(...)` in `interpreter.zkc` |
+| `0b001`  | `rtypeOpPoseidon2` (29) | `RTYPE_POSEIDON2` (54)              | `poseidon2(...)` in `interpreter.zkc` |
 
 Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
 (255) in the `decoded` table.
@@ -142,31 +141,28 @@ below); redundant per-instruction `FUNCT7_*` aliases that duplicated
 `FUNCT7_ADD` or `FUNCT7_MUL` have been removed from `constants.zkc`. See
 `main_test.go` for `decodeRTypeSemantic` and `rtypeOpForRd` coverage.
 
-## Static rd=x0 no-op folding
+## rd=x0 → COMPUTE_MISC_MEM
 
-Some encodings write their result to `x0`, which RISC-V discards. When an
-instruction has **no other visible effects** (no memory access, no control-flow
-change, no non-`x0` register reads), `buildDecodedProgram` emits
-`COMPUTE_MISC_MEM` (0) as the record's `compute_op`.
+When `rd == x0`, architecturally inert I/R/U instructions emit
+`COMPUTE_MISC_MEM` (0) as the record's `compute_op`. At runtime the interpreter
+only advances `pc` by 4 — the same path used for `FENCE` / `FENCE.I`.
 
-At runtime the interpreter then only advances `pc` by 4 — the same path used for
-`FENCE` / `FENCE.I`.
+Examples mapped to `COMPUTE_MISC_MEM`:
 
-Examples folded:
+- `addi x0, t0, 1`, `add x0, t0, t1` (result discarded into x0)
+- `ld x0, …` (load to x0 — no register writeback, no memory read at runtime)
+- `lui x0, imm`, `auipc x0, imm`
+- `addi x0, x0, 0`, `add x0, x0, x0` (strict no-ops)
 
-- `addi x0, x0, imm` (NOP / hint)
-- `lui x0, imm`
-- `add/xor/… x0, x0, x0` (R-type with `rs1 = rs2 = x0`)
+Not mapped to `COMPUTE_MISC_MEM` (keep semantic `compute_op`):
 
-Not folded (still have side effects):
+- `jal` / `jalr x0, …` — control flow
+- branches and stores — side effects
+- `ecall` / `ebreak` — syscalls
+- **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`) — memory side effects
 
-- `ld x0, …` — memory read
-- `jal/jalr x0, …` — control flow
-- `addi x0, t0, imm` — reads `t0`
-- `auipc x0, imm` — uses PC in the computation
-- **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`) — memory side effects
-
-The predicate lives in `isRdZeroNoop` in `main.go` (see `main_test.go`).
+The predicate lives in `shouldUseMiscMem` / `finalizeComputeOp` in `main.go`
+(see `main_test.go`).
 
 ## How the pre-decoding is done
 
