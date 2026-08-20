@@ -635,18 +635,6 @@ func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	}
 }
 
-// rs1PlusImmAddend returns the immediate addend stored in decoded.rs1_plus_imm.
-// At execution the interpreter forms the effective address or ADDI sum as
-// signed_sum_of_double_word(registers[rs1], rs1_plus_imm).
-func rs1PlusImmAddend(instrType uint32, opImm uint64) uint64 {
-	switch instrType {
-	case iType, sType:
-		return opImm
-	default:
-		return 0
-	}
-}
-
 // unifiedOperands packs pre-decoded operands into the decoded record layout:
 // record layout: imm, rs1, rs2, rd.
 func unifiedOperands(instrType uint32, normImm12, simm12 uint32, bImm, jImm, uImm uint64, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
@@ -1020,7 +1008,7 @@ func buildDecodedProgram(blobs []memoryBlob) (base uint64, nRecords uint64, deco
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded: compute_op:ComputeOp(u8), imm:DoubleWord(u64), rs1:Register(u5), rs2:Register(u5), rd:Register(u5), rs1_plus_imm:DoubleWord(u64)
+	//   decoded: compute_op:ComputeOp(u8), imm:DoubleWord(u64), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	var decodedBits bitWriter
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -1059,7 +1047,6 @@ func buildDecodedProgram(blobs []memoryBlob) (base uint64, nRecords uint64, deco
 		decodedBits.writeBits(opRs1, 5)
 		decodedBits.writeBits(opRs2, 5)
 		decodedBits.writeBits(opRd, 5)
-		decodedBits.writeBits(rs1PlusImmAddend(instrType, opImm), 64)
 	}
 
 	return base, nRecords, hex.EncodeToString(decodedBits.buf)

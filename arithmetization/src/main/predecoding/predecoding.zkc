@@ -21,8 +21,7 @@ fn predecoding(pc:Address, instruction:Instruction) {
     var rs1_decoded:Register
     var rs2_decoded:Register
     var rd_decoded:Register
-    var rs1_plus_imm_decoded:DoubleWord
-    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded, rs1_plus_imm_decoded = decoded[(pc - instruction_base[0]) / 4]
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[(pc - instruction_base[0]) / 4]
 
     var instruction_type:Type = instruction_type_from_opcode(opcode)
     switch instruction_type {
@@ -66,17 +65,6 @@ fn predecoding(pc:Address, instruction:Instruction) {
             printf "[ERROR] invalid instruction type (pc=%d opcode=%x params=%x)\n", pc, opcode, instruction_parameters
             fail
         }
-    }
-
-    // rs1_plus_imm is the sign-extended addend used with rs1 at execution time.
-    if instruction_type == I_TYPE || instruction_type == S_TYPE {
-        if rs1_plus_imm_decoded != imm_decoded {
-            printf "[ERROR] rs1_plus_imm mismatch (pc=%d compute_op=%x imm=%x rs1_plus_imm=%x)\n", pc, compute_op, imm_decoded, rs1_plus_imm_decoded
-            fail
-        }
-    } else if rs1_plus_imm_decoded != 0 {
-        printf "[ERROR] rs1_plus_imm must be zero (pc=%d compute_op=%x rs1_plus_imm=%x)\n", pc, compute_op, rs1_plus_imm_decoded
-        fail
     }
 
 }

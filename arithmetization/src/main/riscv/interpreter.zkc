@@ -18,7 +18,7 @@ include "../lib/io/write_output.zkc"
 // Execute one instruction slot and return the next program counter.
 //
 // The raw RISC-V instruction type semantics are pre-decoded at ELF time
-// into a compute op and operands : compute_op + imm + rs1 + rs2 + rd + rs1_plus_imm
+// into a compute op and operands : compute_op + imm + rs1 + rs2 + rd
 // (see decoded in memory.zkc).
 //
 // Runtime dispatch is on the pre-decoded semantic compute op (`compute_op`).
@@ -27,7 +27,7 @@ include "../lib/io/write_output.zkc"
 // Each slot is justified with the predecoding justification loop in `main.zkc`
 // (it will be done offline by `predecoding/main.zkc` in the future) :
 // raw blob words must match `decoded[index]` in memory.zkc
-// (compute_op + imm + rs1 + rs2 + rd + rs1_plus_imm).
+// (compute_op + imm + rs1 + rs2 + rd).
 //
 // The switch below is grouped by former format (I/J/U/B/S/R, MISC_MEM) for
 // readability only.
@@ -47,17 +47,10 @@ include "../lib/io/write_output.zkc"
 //
 //   imm12 :: rs1 :: funct3 :: rd
 //
-// Shift amounts are normalized at ELF time; the immediate is sign-extended into `imm`.
-// The addend paired with `rs1` is stored separately in `rs1_plus_imm` (equal to `imm`
-// for I-type; 0 for other formats that do not use rs1+imm):
+// Shift amounts are normalized at ELF time; the immediate is sign-extended into `imm`:
 //
 // var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
-// var imm:DoubleWord = signext_imm12_64
-// var rs1_plus_imm:DoubleWord = signext_imm12_64
-//
-// At execution:
-// var v1:DoubleWord = registers[rs1]
-// rs1_plus_imm = signed_sum_of_double_word(v1, rs1_plus_imm)
+// var imm:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
 //
 // ========
 // R-type
@@ -95,14 +88,9 @@ include "../lib/io/write_output.zkc"
 //   imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
 //
 // The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
-// sign-extended to 64 bits at ELF time into `imm` and `rs1_plus_imm`.
+// sign-extended to 64 bits at ELF time into `imm`.
 // 
 // var imm:DoubleWord = sgn_extension_u12_u64(imm12)
-// var rs1_plus_imm:DoubleWord = imm
-//
-// At execution:
-// var v1:DoubleWord = registers[rs1]
-// rs1_plus_imm = signed_sum_of_double_word(v1, rs1_plus_imm)
 //
 // Store variants selected by compute_op (from funct3 at ELF time):
 //   STYPE_STORE8  (funct3 = 0b000) — store byte       (8 bits)
@@ -111,7 +99,7 @@ include "../lib/io/write_output.zkc"
 //   STYPE_STORE64 (funct3 = 0b011) — store doubleword (64 bits)
 //
 // Effect:
-//   mem[signed_sum_of_double_word(registers[rs1], rs1_plus_imm)] ← lower N bits of rs2 
+//   mem[rs1 + imm] ← lower N bits of rs2 
 //
 // =======
 // B-type  
@@ -198,8 +186,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
     var rs1:Register
     var rs2:Register
     var rd:Register
-    var rs1_plus_imm_addend:DoubleWord
-    compute_op, imm, rs1, rs2, rd, rs1_plus_imm_addend = decoded[index]
+    compute_op, imm, rs1, rs2, rd = decoded[index]
 
     var v1:DoubleWord = registers[rs1]
     var v2:DoubleWord = registers[rs2]
@@ -209,12 +196,12 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
     var result:DoubleWord
     var rs1_plus_imm:u64
 
-    rs1_plus_imm = signed_sum_of_double_word(v1, rs1_plus_imm_addend)
+    rs1_plus_imm = signed_sum_of_double_word(v1, imm)
 
     switch compute_op {
-        // =======
-        // I-type 
-        // =======
+        // ==============
+        // I-type — LOAD 
+        // ==============
         case READ8_ZEXT_WB: {
             printf "READ8_ZEXT_WB(a) "
             print_i_memory_operands(rd, rs1, imm)
@@ -230,6 +217,9 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             print_i_memory_operands(rd, rs1, imm)
             result = read_64(rs1_plus_imm) as DoubleWord
         }
+        // ================
+        // I-type 
+        // ================
         case OP_ADDI_WB: {
             printf "OP_ADDI_WB(a) "
             print_i_operands(rd, rs1, imm)
@@ -257,9 +247,10 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             print_i_operands(rd, rs1, imm)
             result = v1 ^ imm
         }
-        // =======
+
+        // ============================
         // R-type 
-        // =======             
+        // ============================                
         case RTYPE_ADD_WB: {
             printf "RTYPE_ADD_WB(a) "
             print_r_operands(rd, rs1, rs2)
@@ -398,20 +389,19 @@ fn interpreter_b<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     var rs1:Register
     var rs2:Register
     var rd:Register
-    var rs1_plus_imm_addend:DoubleWord
-    compute_op, imm, rs1, rs2, rd, rs1_plus_imm_addend = decoded[index]
+    compute_op, imm, rs1, rs2, rd = decoded[index]
 
     var v1:DoubleWord = registers[rs1]
     var v2:DoubleWord = registers[rs2]
     var result:DoubleWord
     var rs1_plus_imm:u64
 
-    rs1_plus_imm = signed_sum_of_double_word(v1, rs1_plus_imm_addend)
+    rs1_plus_imm = signed_sum_of_double_word(v1, imm)
 
     switch compute_op {
-        // ========
+        // ==============
         // I-type
-        // ========
+        // ==============
         case READ8_SGN_WB: {
             printf "READ8_SGN_WB(b) "
             print_i_memory_operands(rd, rs1, imm)
@@ -606,8 +596,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     var rs1:Register
     var rs2:Register
     var rd:Register
-    var rs1_plus_imm_addend:DoubleWord
-    compute_op, imm, rs1, rs2, rd, rs1_plus_imm_addend = decoded[index]
+    compute_op, imm, rs1, rs2, rd = decoded[index]
 
     var v1:DoubleWord = registers[rs1]
     var v2:DoubleWord = registers[rs2]
@@ -629,9 +618,10 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     var mem_address:Address
 
     switch compute_op {
-        // =======
-        // R-type
-        // =======            
+
+        // ============================
+        // R-type — writeback variants 
+        // ============================                
         case RTYPE_SLT_WB: {
             printf "RTYPE_SLT_WB(c) "
             print_r_operands(rd, rs1, rs2)
@@ -792,7 +782,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
         // S-type 
         // =======        
         case STYPE_STORE16: {
-            mem_address = signed_sum_of_double_word(v1, rs1_plus_imm_addend) as Address
+            mem_address = signed_sum_of_double_word(v1, imm) as Address
             printf "STYPE_STORE16(c) "
             print_s_operands(rs2, rs1, imm)
             write_16(mem_address, (v2 & (0xFFFF as u64)) as u16)
@@ -804,7 +794,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             return
         }
         case STYPE_STORE32: {
-            mem_address = signed_sum_of_double_word(v1, rs1_plus_imm_addend) as Address
+            mem_address = signed_sum_of_double_word(v1, imm) as Address
             printf "STYPE_STORE32(c) "
             print_s_operands(rs2, rs1, imm)
             write_32(mem_address, (v2 & (0xFFFFFFFF as u64)) as u32)

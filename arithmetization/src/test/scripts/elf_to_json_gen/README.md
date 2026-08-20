@@ -25,7 +25,7 @@ and the field set and order of every record **must** match the corresponding
 | `blobs_executable`            | `executable:u1`                                      | `1` if blob `i` holds executable (`SHF_EXECINSTR`) bytes, else `0` |
 | `blobs_data`                  | `byte:u8`                                             | concatenated bytes of all blobs, in blob order                    |
 | `instruction_base`            | `base:Address`                                       | lowest executable address (4-aligned); maps `pc` → table index    |
-| `decoded`                     | `compute_op, imm, rs1, rs2, rd, rs1_plus_imm`        | unified pre-decoded instruction table (one record per 4-byte word)|
+| `decoded`                     | `compute_op, imm, rs1, rs2, rd`                      | unified pre-decoded instruction table (one record per 4-byte word)|
 
 The semantic operation, its writeback (`*_WB`) variant,
 and rd=`x0` no-op folding are all encoded directly in `compute_op`.
@@ -204,11 +204,10 @@ of its field widths:
 
 | Table     | Field widths (bits)                                    | Record size |
 | --------- | ----------------------------------------------------- | ----------- |
-| `decoded` | compute_op 8, imm 64, rs1 5, rs2 5, rd 5, rs1_plus_imm 64 | 151 bits    |
+| `decoded` | compute_op 8, imm 64, rs1 5, rs2 5, rd 5              | 87 bits     |
 
 Operand fields not used by a given instruction format are written as zero (e.g.
-`rs2 = 0` for I-type, `rd = 0` for S/B-type, `rs1_plus_imm = 0` for R/B/J/U);
-see `unifiedOperands` and `rs1PlusImmAddend` in `main.go`.
+`rs2 = 0` for I-type, `rd = 0` for S/B-type); see `unifiedOperands` in `main.go`.
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch

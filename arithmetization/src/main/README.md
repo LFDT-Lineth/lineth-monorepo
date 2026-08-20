@@ -54,15 +54,11 @@ At ELF time, `elf_to_json_gen` maps each raw word to a semantic dispatch tag
 `compute_op` plus normalized operands in a unified `decoded[]` record:
 
 ```
-compute_op, imm, rs1, rs2, rd, rs1_plus_imm = decoded[index]
+compute_op, imm, rs1, rs2, rd = decoded[index]
 ```
 
 The interpreter does not branch on `(opcode, funct3, funct7)` at runtime — it
-`switch`es on `compute_op` only (`interpreter.zkc`). For I-type and S-type
-loads, stores, ADDI, ADDIW, and JALR, the effective address or sum is
-`signed_sum_of_double_word(registers[rs1], rs1_plus_imm)` where `rs1_plus_imm`
-is the sign-extended immediate addend stored at ELF time (equal to `imm` for
-those formats).
+`switch`es on `compute_op` only (`interpreter.zkc`).
 
 | Kind                      | Role |
 | ------------------------- | ---- |
