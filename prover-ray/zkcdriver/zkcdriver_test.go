@@ -137,10 +137,15 @@ func proverCompilePipeline(sys *wiop.System) {
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	// PCS is kept enabled here because the current example programs, including
-	// r5_test.zkc, compile and prove successfully with it attached. The older
-	// ZKC lookup-constraint issue documented in zkc/issues/2013 is not triggered
-	// by these fixtures, even when they read from pub-input memories.
+	// XXX(ivokub): we have disabled pcs compiler for now as zkc compiler doesn't generate lookup constraints.
+	// in that case we would have columns which are not constrained at all and we would get a panic in the
+	// pcs compiler due to shifts not defined.
+	//
+	// replug when zkc start emitting lookup constraints, see https://github.com/LFDT-Lineth/zkc/issues/2013
+	//
+	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
+	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
+	// test case. We should also do it in the pipeline test then.
 	pcs.Compile(sys)
 }
 
