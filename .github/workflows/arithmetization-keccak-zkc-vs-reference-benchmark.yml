@@ -27,12 +27,14 @@ jobs:
         with:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
+          cache: 'false'
 
       - name: Install Zig
         uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
           dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
+          cache-lookup-only: 'true'
 
       - name: Install GNU time
         run: sudo apt-get update && sudo apt-get install -y time
