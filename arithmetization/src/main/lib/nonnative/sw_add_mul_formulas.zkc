@@ -50,9 +50,9 @@ fn sw_add_projective(X1:u256, Y1:u256, Z1:u256, X2:u256, Y2:u256, Z2:u256, p:u25
     var xx2:u256 = addmod_256(xx, xx, p)
     var xx3:u256 = addmod_256(xx2, xx, p)
 
-    // b3·(Z1Z2) and b3·(X1Z2+X2Z1) — runtime b3, so a general modular multiply instead of
-    add chain.
-    // (todo:arijit): add dedicated mul_small_mod (e.g b3 = 9 or 21) for optimization
+    // b3·(Z1Z2) and b3·(X1Z2+X2Z1) — runtime b3, so a general modular multiply instead of an
+    // add chain.
+    // (todo:arijit): add dedicated mul_small_mod (e.g. b3 = 9 or 21) for optimization
     var zz_b3:u256 = mulmod_256(zz, b3, p)
     var cxz_b3:u256 = mulmod_256(cxz, b3, p)
 
