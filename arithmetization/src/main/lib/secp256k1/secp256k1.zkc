@@ -1,5 +1,5 @@
 include "../nonnative/u256.zkc"
-include "../nonnative/addition_formulas.zkc"
+include "../nonnative/sw_add_mul_formulas.zkc"
 
 // ----- curve parameters ------
 
@@ -120,20 +120,20 @@ fn sqrt_secp256k1(a:u256) -> (y:u256, is_qr:u1) {
 // ------ projective ------
 
 // Complete projective addition for secp256k1 (a=0, b3=21). Thin wrapper over the
-// shared short-Weierstrass law in nonnative/addition_formulas.zkc.
+// shared short-Weierstrass law in nonnative/sw_add_mul_formulas.zkc.
 fn add_projective_secp256k1(X1:u256, Y1:u256, Z1:u256, X2:u256, Y2:u256, Z2:u256) -> (X3:u256, Y3:u256, Z3:u256) {
     X3, Y3, Z3 = sw_add_projective(X1, Y1, Z1, X2, Y2, Z2, p, b3)
 }
 
 // Dedicated projective doubling for secp256k1 (a=0). Thin wrapper over the shared
-// short-Weierstrass doubling in nonnative/addition_formulas.zkc.
+// short-Weierstrass doubling in nonnative/sw_add_mul_formulas.zkc.
 // Precondition: P != O (Z1 != 0, Y1 != 0 — guaranteed for valid secp256k1 subgroup points).
 fn double_projective_secp256k1(X1:u256, Y1:u256, Z1:u256) -> (X3:u256, Y3:u256, Z3:u256) {
     X3, Y3, Z3 = sw_double_projective(X1, Y1, Z1, p)
 }
 
 // Scalar multiplication over projective coords (double-and-add). Thin wrapper
-// over the shared short-Weierstrass ladder in nonnative/addition_formulas.zkc.
+// over the shared short-Weierstrass ladder in nonnative/sw_add_mul_formulas.zkc.
 fn scalar_mul_projective_secp256k1(k:u256, PX:u256, PY:u256, PZ:u256) -> (QX:u256, QY:u256, QZ:u256) {
     QX, QY, QZ = sw_scalar_mul_projective(k, PX, PY, PZ, p, b3)
 }

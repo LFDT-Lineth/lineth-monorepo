@@ -1,5 +1,5 @@
 include "../nonnative/u256.zkc"
-include "../nonnative/addition_formulas.zkc"
+include "../nonnative/sw_add_mul_formulas.zkc"
 
 // BN254 (a.k.a. alt_bn128 / bn128) G1 curve arithmetic over the base field Fp.
 //
@@ -7,7 +7,7 @@ include "../nonnative/addition_formulas.zkc"
 // This is the curve behind the EVM ECADD (0x06) and ECMUL (0x07) precompiles.
 //
 // The projective group law (complete addition, doubling, scalar mul) is shared
-// with secp256k1 via nonnative/addition_formulas.zkc; this file just supplies the
+// with secp256k1 via nonnative/sw_add_mul_formulas.zkc; this file just supplies the
 // BN254 constants (p, b3 = 9) and the affine/validity layer. Design notes:
 //   - b = 3, so the complete-addition constant is b3 = 3*b = 9 (secp256k1: 21).
 //   - No sqrt / point decompression: ECADD/ECMUL take full (x, y) coordinates.

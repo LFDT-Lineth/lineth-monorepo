@@ -7,6 +7,7 @@ include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/multiplication.zkc"
 include "../../lib/ecrecover/impl.zkc"
+include "../../lib/bn254/impl.zkc"
 include "../../lib/keccak/impl.zkc"
 include "../../lib/sha2/impl.zkc"
 include "../../lib/io/write_output.zkc"
@@ -333,6 +334,20 @@ output_write_address:OutputAddress) ->
         case R_EVM_SHA2: {
             printf "EVM SHA2-256 precompile "
             sha2(v1 as Address, v2 as u32, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
+        case R_EVM_ECADD: {
+            printf "EVM ECADD precompile "
+            // ABI: rs1 -> input ptr, rs2 -> output ptr, rd <- status (1 ok / 0 invalid).
+            // Invalid input is a provable precompile failure (status 0), not `fail`.
+            registers[rd] = bn254_ecadd(v1 as Address, v2 as Address) as DoubleWord
+            new_output_write_address = output_write_address
+            return
+        }
+        case R_EVM_ECMUL: {
+            printf "EVM ECMUL precompile "
+            registers[rd] = bn254_ecmul(v1 as Address, v2 as Address) as DoubleWord
             new_output_write_address = output_write_address
             return
         }
