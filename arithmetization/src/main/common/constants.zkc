@@ -236,6 +236,10 @@ const I_SRLIW_INST:u10 = (((OPCODE_OPIMM32 as u10) << 3) | (FUNCT3_SRLIW as u10)
 const I_JALR_INST:u10 = (((OPCODE_JALR as u10) << 3) | (FUNCT3_JALR as u10))
 const I_ECALL_INST:u10 = (((OPCODE_SYSTEM as u10) << 3) | (FUNCT3_ECALL as u10))
 
+// Flatten I_ECALL_INST::imm12 for single-switch SYSTEM dispatch (check_i_type.zkc).
+const I_ECALL_ECALL_INST:u22 = ((I_ECALL_INST as u22) << 12) | (FUNCT12_ECALL as u22)
+const I_ECALL_EBREAK_INST:u22 = ((I_ECALL_INST as u22) << 12) | (FUNCT12_EBREAK as u22)
+
 // Flatten I_INST::rd_is_zero for single-switch check_i_type dispatch.
 const I_LB_FOLD:u11 = ((I_LB_INST as u11) << 1) | (1 as u11)
 const I_LB:u11 = ((I_LB_INST as u11) << 1)
@@ -275,8 +279,6 @@ const I_SRLIW_FOLD:u11 = ((I_SRLIW_INST as u11) << 1) | (1 as u11)
 const I_SRLIW:u11 = ((I_SRLIW_INST as u11) << 1)
 const I_JALR_FOLD:u11 = ((I_JALR_INST as u11) << 1) | (1 as u11)
 const I_JALR:u11 = ((I_JALR_INST as u11) << 1)
-const I_ECALL_FOLD:u11 = ((I_ECALL_INST as u11) << 1) | (1 as u11)
-const I_ECALL:u11 = ((I_ECALL_INST as u11) << 1)
 
 // ======================
 // S-type funct3 values

@@ -8,32 +8,29 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var imm:DoubleWord = sgn_extension_u12_u64(imm12)
 
     var I_inst:u10 = opcode::funct3
+    var I_sys:u22 = I_inst::imm12
 
-    switch I_inst {
-        case I_ECALL_INST: {
-            switch imm12 {
-                case FUNCT12_ECALL: {
-                    if compute_op != ITYPE_ECALL {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                        fail
-                    }
-                }
-                case FUNCT12_EBREAK: {
-                    if compute_op != ITYPE_EBREAK {
-                        printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                        fail
-                    }
-                }
-                default: {
-                    if compute_op != COMPUTE_INVALID {
-                        printf "[ERROR] invalid SYSTEM imm12 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x imm12=%x)\n", compute_op, opcode, instruction_parameters, imm12
-                        fail
-                    }
-                    return
-                }
+    switch I_sys {
+        case I_ECALL_ECALL_INST: {
+            if compute_op != ITYPE_ECALL {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case I_ECALL_EBREAK_INST: {
+            if compute_op != ITYPE_EBREAK {
+                printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
             }
         }
         default: {
+            if I_inst == I_ECALL_INST {
+                if compute_op != COMPUTE_INVALID {
+                    printf "[ERROR] invalid SYSTEM imm12 requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x imm12=%x)\n", compute_op, opcode, instruction_parameters, imm12
+                    fail
+                }
+                return
+            }
             imm = check_i_type_with_fold(compute_op, opcode, instruction_parameters, funct3, rd, I_inst, imm12, imm)
         }
     }
@@ -55,7 +52,6 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         fail
     }
 }
-
 fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_parameters:u25, funct3:Funct3, rd:Register, I_inst:u10, imm12:Imm12, imm_in:DoubleWord) -> (imm:DoubleWord) {
     imm = imm_in
     var rd_is_zero:u1 = rd == 0 ? 1 : 0
