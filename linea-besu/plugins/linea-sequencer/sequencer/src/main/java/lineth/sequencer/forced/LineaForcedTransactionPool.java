@@ -24,7 +24,6 @@ import static org.hyperledger.besu.plugin.data.AddedBlockContext.EventType.HEAD_
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -32,7 +31,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import lineth.metrics.LineaMetricCategory;
@@ -68,8 +68,8 @@ public class LineaForcedTransactionPool
   public static final int DEFAULT_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE =
       7_200;
 
-  private final Deque<ForcedTransaction> pendingQueue = new ConcurrentLinkedDeque<>();
-  private final Set<Long> pendingTransactionNumbers = ConcurrentHashMap.newKeySet();
+  private final ConcurrentNavigableMap<Long, ForcedTransaction> pendingTransactions =
+      new ConcurrentSkipListMap<>();
   private final Cache<Long, ForcedTransactionStatus> statusCache;
   private final Map<ForcedTransactionInclusionResult, AtomicLong> inclusionResultCounters =
       new EnumMap<>(ForcedTransactionInclusionResult.class);
@@ -156,14 +156,13 @@ public class LineaForcedTransactionPool
   public void addForcedTransactions(final List<ForcedTransaction> transactions) {
     for (final ForcedTransaction tx : transactions) {
       final long forcedTransactionNumber = tx.forcedTransactionNumber();
-      if (!pendingTransactionNumbers.add(forcedTransactionNumber)) {
+      if (pendingTransactions.putIfAbsent(forcedTransactionNumber, tx) != null) {
         continue;
       }
       if (statusCache.getIfPresent(forcedTransactionNumber) != null) {
-        pendingTransactionNumbers.remove(forcedTransactionNumber);
+        pendingTransactions.remove(forcedTransactionNumber, tx);
         continue;
       }
-      pendingQueue.addLast(tx);
       log.atDebug()
           .setMessage("action=add_forced_tx forcedTxNumber={} txHash={} deadlineBlockNumber={}")
           .addArgument(tx::forcedTransactionNumber)
@@ -174,7 +173,7 @@ public class LineaForcedTransactionPool
     log.atInfo()
         .setMessage("action=add_forced_txs count={} pendingQueueSize={}")
         .addArgument(transactions::size)
-        .addArgument(pendingQueue::size)
+        .addArgument(pendingTransactions::size)
         .log();
   }
 
@@ -183,7 +182,7 @@ public class LineaForcedTransactionPool
       final long blockNumber,
       final BlockTransactionSelectionService blockTransactionSelectionService) {
 
-    if (pendingQueue.isEmpty()) {
+    if (pendingTransactions.isEmpty()) {
       return;
     }
 
@@ -199,12 +198,12 @@ public class LineaForcedTransactionPool
     log.atDebug()
         .setMessage("action=process_forced_txs_start blockNumber={} pendingCount={}")
         .addArgument(blockNumber)
-        .addArgument(pendingQueue::size)
+        .addArgument(pendingTransactions::size)
         .log();
 
     int index = 0;
 
-    for (final ForcedTransaction ftx : pendingQueue) {
+    for (final ForcedTransaction ftx : pendingTransactions.values()) {
       log.atTrace()
           .setMessage(
               "action=evaluate_forced_tx forcedTxNumber={} txHash={} index={} blockNumber={}")
@@ -273,7 +272,7 @@ public class LineaForcedTransactionPool
         .setMessage(
             "action=process_forced_txs_end blockNumber={} remainingPending={} rejections={}")
         .addArgument(blockNumber)
-        .addArgument(pendingQueue::size)
+        .addArgument(pendingTransactions::size)
         .addArgument(blockRejections::size)
         .log();
   }
@@ -301,12 +300,11 @@ public class LineaForcedTransactionPool
             .map(Transaction::getHash)
             .collect(Collectors.toSet());
 
-    final var iterator = pendingQueue.iterator();
+    final var iterator = pendingTransactions.values().iterator();
     while (iterator.hasNext()) {
       final ForcedTransaction ftx = iterator.next();
 
       if (blockTxHashes.contains(ftx.txHash())) {
-        iterator.remove();
         recordStatus(ftx, blockNumber, blockTimestamp, Included);
         log.atInfo()
             .setMessage("action=forced_tx_included forcedTxNumber={} txHash={} blockNumber={}")
@@ -319,7 +317,6 @@ public class LineaForcedTransactionPool
             blockRejections != null ? blockRejections.get(ftx.forcedTransactionNumber()) : null;
 
         if (rejection != null) {
-          iterator.remove();
           recordStatus(ftx, blockNumber, blockTimestamp, rejection.inclusionResult());
           log.atInfo()
               .setMessage(
@@ -344,17 +341,17 @@ public class LineaForcedTransactionPool
 
   @Override
   public int pendingCount() {
-    return pendingQueue.size();
+    return pendingTransactions.size();
   }
 
   @Override
   public boolean shallForceIncludeTransaction(final TransactionEvaluationContext txContext) {
-    if (pendingQueue.isEmpty()) {
+    if (pendingTransactions.isEmpty()) {
       return false;
     }
 
     var txHash = txContext.getPendingTransaction().getTransaction().getHash().getBytes();
-    return pendingQueue.stream()
+    return pendingTransactions.values().stream()
         .filter(ftx -> ftx.txHash().getBytes().equals(txHash))
         .findFirst()
         .map(ftx -> isCloseToDeadline(ftx, txContext.getPendingBlockHeader().getNumber()))
@@ -375,7 +372,7 @@ public class LineaForcedTransactionPool
             blockTimestamp,
             result);
     statusCache.put(ftx.forcedTransactionNumber(), status);
-    pendingTransactionNumbers.remove(ftx.forcedTransactionNumber());
+    pendingTransactions.remove(ftx.forcedTransactionNumber(), ftx);
     inclusionResultCounters.get(result).incrementAndGet();
   }
 
