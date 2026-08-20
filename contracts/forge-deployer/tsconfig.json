@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "dotenv": ["node_modules/dotenv"],
+      "ethers": ["node_modules/ethers"]
+    },
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "../common/helpers/deploymentRecord.ts", "../common/helpers/feeOverrides.ts"]
+}

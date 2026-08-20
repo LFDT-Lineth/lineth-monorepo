@@ -1,7 +1,5 @@
 import { ethers } from "ethers";
 
-import { get1559Fees } from "../../scripts/utils";
-
 // A transaction fee override that must describe exactly one fee model: either a
 // legacy `gasPrice`, or a complete EIP-1559 pair, never a mix of both.
 export type FeeOverrides = {
@@ -50,6 +48,13 @@ export const LOCAL_L2_DEPLOY_FEE_OVERRIDES: FeeOverrides = assertSingleFeeModel(
   maxPriorityFeePerGas: 7_000_000_000_000n,
 });
 
+// Keep the existing local-dev fee model unless an operator explicitly selects
+// a legacy gas price. Forge uses this override with `0` for gas-free L2s.
+export function resolveL2DeployFeeOverrides(): FeeOverrides {
+  const gasPrice = parseGasPriceWeiEnv("L2_DEPLOY_GAS_PRICE_WEI");
+  return gasPrice === undefined ? { ...LOCAL_L2_DEPLOY_FEE_OVERRIDES } : assertSingleFeeModel({ gasPrice });
+}
+
 // Effective per-gas price used to size a value+gas budget: the legacy gasPrice
 // when legacy fees are selected, otherwise the EIP-1559 ceiling maxFeePerGas.
 export function feeBudgetPricePerGas(fees: FeeOverrides): bigint {
@@ -78,16 +83,19 @@ export async function resolveOneModelFeeOverrides(
     }
   }
 
-  const { gasPrice, maxFeePerGas, maxPriorityFeePerGas } = await get1559Fees(provider);
-  if (maxFeePerGas !== undefined && maxPriorityFeePerGas !== undefined) {
+  const { gasPrice, maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
+  const hasMaxFee = maxFeePerGas !== null && maxFeePerGas !== undefined;
+  const hasPriorityFee = maxPriorityFeePerGas !== null && maxPriorityFeePerGas !== undefined;
+  const hasGasPrice = gasPrice !== null && gasPrice !== undefined;
+  if (hasMaxFee && hasPriorityFee) {
     return assertSingleFeeModel({ maxFeePerGas, maxPriorityFeePerGas });
   }
-  if (gasPrice !== undefined) {
+  if (hasGasPrice) {
     return assertSingleFeeModel({ gasPrice });
   }
 
   const hint = explicitGasPriceEnvName ? ` Set ${explicitGasPriceEnvName} explicitly.` : "";
-  if (maxFeePerGas !== undefined || maxPriorityFeePerGas !== undefined) {
+  if (hasMaxFee || hasPriorityFee) {
     throw new Error(`Provider returned incomplete EIP-1559 deploy fee data.${hint}`);
   }
   throw new Error(`Provider returned no usable deploy fee data.${hint}`);

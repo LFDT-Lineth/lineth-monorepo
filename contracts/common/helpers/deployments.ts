@@ -2,6 +2,7 @@ import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "e
 import fs from "fs";
 import path from "path";
 
+import { awaitParentCheckpoint, formatDeploymentRecord } from "./deploymentRecord";
 import { normalizeAddressArgs } from "./normalize-address-args";
 import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
 import {
@@ -185,9 +186,15 @@ export async function LogContractDeployment(contractName: string, contract: Base
 
   const contractAddress = await contract.getAddress();
   const chainId = (await deploymentTx.provider.getNetwork()).chainId;
-  console.log(
-    `contract=${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber} chainId=${chainId}`,
-  );
+  const record = {
+    contractName,
+    address: contractAddress,
+    transactionHash: txReceipt.hash,
+    blockNumber: txReceipt.blockNumber,
+    chainId: chainId.toString(),
+  };
+  await awaitParentCheckpoint(record);
+  console.log(formatDeploymentRecord(record));
 }
 
 /**
