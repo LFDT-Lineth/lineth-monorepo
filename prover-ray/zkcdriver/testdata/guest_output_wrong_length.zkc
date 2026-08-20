@@ -2,10 +2,10 @@ pub input data(address:u8) -> (byte:u8)
 pub output guest_output(address:u8) -> (byte:u8)
 
 // Same as guest_output.zkc, but one byte too long: it writes nine output bytes
-// where the binding expects [risc5.NumGuestPublicOutputs] = 8, so the address on
-// the last row of the memory is 8 instead of 7. This is the shape the length
-// constraint has to reject — without it a prover could grow the output memory and
-// pick which of its rows end up as the public inputs.
+// where the binding expects risc5.NumGuestPublicOutputs = 8, so the last address
+// of the memory is 8 instead of 7. This is the shape the length constraint has to
+// reject — without it a prover could grow the output memory and pick which of its
+// rows end up as the public inputs.
 fn main() {
     guest_output[0] = data[0]
     guest_output[1] = data[1]

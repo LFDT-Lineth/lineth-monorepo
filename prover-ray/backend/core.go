@@ -57,9 +57,9 @@ func New(cfg Config) (*Core, error) {
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, binFile)
 
-	// Must happen after the arithmetization is defined, so the guest_output
-	// columns exist, and before the compiler passes, which discharge the local
-	// openings it registers.
+	// Must run after the arithmetization is defined, so the guest_output columns
+	// exist, and before the compiler passes, which discharge the openings it
+	// registers.
 	risc5.RegisterGuestPublicOutputs(sys)
 
 	// Compiler passes go here once the real RISC-V .bin is fully supported:

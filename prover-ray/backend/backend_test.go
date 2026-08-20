@@ -63,7 +63,7 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 }
 
 // zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
-// compileZKCBin turns it into a bin that NewZkCDriver accepts. It has to declare a
+// compileZKCBin turns it into a bin that NewZkCDriver accepts. It declares a
 // public output memory of [risc5.NumGuestPublicOutputs] bytes, like every real
 // guest circuit does, because [New] binds that memory as public inputs
 // unconditionally.

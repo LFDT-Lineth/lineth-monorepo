@@ -19,18 +19,15 @@ const (
 	// corsetColumnMap is an annotation to help seeking column from their corset
 	// name.
 	corsetColumnMapAnnotationKey = "corset-column-map"
-	// publicOutputsAnnotationKey is an annotation holding the [PublicOutput] of
-	// every public output memory of the arithmetization.
+	// publicOutputsAnnotationKey is an annotation holding the arithmetization's
+	// [PublicOutput].
 	publicOutputsAnnotationKey = "corset-public-outputs"
 )
 
-// PublicOutput locates the columns of one public output memory of the
-// arithmetization — a memory the arithmetization declares with `pub output`,
-// which the schema flags via IsPublicOutput. Such a memory holds one output
-// element per row at consecutive addresses starting at zero, and its access bit
-// is one exactly on the rows that carry an element.
-// Only memories addressed by a single column and holding a single element per
-// address are described; see [schemaScanner.collectPublicOutputs].
+// PublicOutput locates the columns of the arithmetization's public output memory
+// — a memory declared with `pub output`, which the schema flags via
+// IsPublicOutput. Only a memory addressed by a single column and holding a single
+// element per address is described; see [schemaScanner.collectPublicOutputs].
 type PublicOutput struct {
 	// Name is the corset name of the memory. It is empty when the
 	// arithmetization exposes no public output of the described shape.
@@ -44,9 +41,9 @@ type PublicOutput struct {
 	Data wiop.ObjectID
 }
 
-// PublicOutputs returns the public output memories [Define] found in the
-// arithmetization, sorted by name. It returns nil for a system that declares
-// none, and omits a memory whose columns were all dropped as unreferenced.
+// PublicOutputs returns the public output memory [Define] found in the
+// arithmetization. Its Name is empty when there is none, or when the one found
+// had a shape [schemaScanner.collectPublicOutputs] cannot describe.
 func PublicOutputs(sys *wiop.System) PublicOutput {
 	outputs, _ := sys.Annotations[publicOutputsAnnotationKey].(PublicOutput)
 	return outputs
@@ -90,16 +87,11 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 	sys.Annotations[publicOutputsAnnotationKey] = scanner.collectPublicOutputs()
 }
 
-// collectPublicOutputs resolves the data and access-bit columns of every public
-// output memory of the schema. It runs after scanColumns so that it can map the
-// declared registers onto the wiop columns that were actually created; a memory
-// whose columns were all dropped as unreferenced is skipped, as there is nothing
-// left to point at.
-//
-// A memory's address lines are exactly its input registers and its data lines
-// exactly its output registers, so the two are told apart by register kind rather
-// than by name; everything else a memory carries (the access bit, the address
-// selectors) is computed and of no use here.
+// collectPublicOutputs resolves the address and data columns of the schema's
+// public output memory. It runs after scanColumns so that it can map the declared
+// registers onto the wiop columns that were actually created; a memory whose
+// columns were all dropped as unreferenced is skipped, as there is nothing left to
+// point at.
 func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 	var output PublicOutput
@@ -112,8 +104,8 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 
 		moduleName := modDecl.Name().String()
 
-		// A non-empty name means an earlier module already claimed the slot. Only
-		// one public output is supported, so refuse rather than pick one.
+		// Only one public output is supported, so a slot already claimed by an
+		// earlier module is refused rather than silently resolved.
 		if output.Name != "" {
 			utils.Panic(
 				"zkcdriver: collectPublicOutputs: expected a single public output, found %q and %q",
@@ -131,7 +123,9 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			}
 
 			// A memory's address lines are exactly its input registers and its data
-			// lines exactly its output registers.
+			// lines exactly its output registers, so the two are told apart by
+			// register kind rather than by name. Everything else the memory carries
+			// (the access bit, the address selectors) is computed and of no use here.
 			switch {
 			case reg.IsInput():
 				address = append(address, id)
@@ -141,9 +135,8 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 		}
 
 		// A memory addressed by several limbs, or holding several elements per
-		// address, would need its length pinned across limbs and its elements read
-		// from several columns. Nothing does that, so such a memory is reported and
-		// skipped instead of being described in a way no caller can use.
+		// address, is not describable by [PublicOutput], so it is reported and
+		// skipped rather than half-described.
 		if len(address) != 1 || len(data) != 1 {
 			logrus.Warnf(
 				"zkcdriver: collectPublicOutputs: skipping public output %q: "+

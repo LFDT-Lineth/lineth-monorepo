@@ -2,7 +2,7 @@ pub input data(address:u8) -> (byte:u8)
 pub output guest_output(address:u8) -> (byte:u8)
 
 // Copy eight input bytes into a public write-once output memory, at consecutive
-// addresses starting at zero. Eight is [risc5.NumGuestPublicOutputs], so this
+// addresses starting at zero. Eight is risc5.NumGuestPublicOutputs, so this
 // program has the output length the binding expects. The memory is named and
 // shaped like the RISC-V interpreter's guest_output, so the public-input binding
 // can be tested without compiling the whole interpreter.
