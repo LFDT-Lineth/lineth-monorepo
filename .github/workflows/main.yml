@@ -288,9 +288,14 @@ jobs:
     secrets: inherit
 
   publish-linea-besu-after-run-tests-success:
-    needs: [run-e2e-tests]
+    needs: [filter-commit-changes, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
-    if: ${{ always() && github.ref != 'refs/heads/main' && needs.run-e2e-tests.outputs.tests_outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+    if: >
+      always() && 
+      github.ref != 'refs/heads/main' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) &&
+      needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&
+      needs.run-e2e-tests.outputs.tests_outcome == 'success'
     permissions:
       contents: write
       actions: read
