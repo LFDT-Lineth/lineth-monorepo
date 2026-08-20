@@ -12,26 +12,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// guestOutputBytes is the number of bytes testdata/guest_output.zkc writes to its
-// public output memory.
-const guestOutputBytes = 4
+// guestOutputBytes is the output length the binding expects, and the number of
+// bytes testdata/guest_output.zkc writes to its public output memory. It is a
+// property of the guest program rather than a configuration knob, so a program
+// whose output length disagrees with it is a broken guest, not a mismatched
+// setting; testdata/guest_output_wrong_length.zkc is such a program.
+const guestOutputBytes = risc5.NumGuestPublicOutputs
 
-// newGuestOutputSystem compiles testdata/guest_output.zkc and builds a compiled
-// system whose guest output is bound to numBytes public inputs, together with the
+// newGuestOutputSystem compiles the zkc program at zkcPath — which must declare a
+// public output memory and be fed its input bytes as `data` — and builds a
+// compiled system whose guest output is bound as public inputs, together with the
 // inputs to prove it and the output bytes the tracer says the program wrote.
-func newGuestOutputSystem(t *testing.T, numBytes int) (
+func newGuestOutputSystem(t *testing.T, zkcPath, inputHex string) (
 	*wiop.System, *zkcdriver.ZkCDriver, *zkcdriver.PreReadInputs, []byte,
 ) {
 	t.Helper()
-
-	const zkcPath = "testdata/guest_output.zkc"
 
 	binF, err := compileBinaryConstraints(zkcPath)
 	require.NoError(t, err)
 
 	inputs, outputs, err := parseTestCase(
-		zkcTestCase{ZkcFilePath: zkcPath, InputStr: `{"data": "0x01020304"}`},
+		zkcTestCase{ZkcFilePath: zkcPath, InputStr: `{"data": "` + inputHex + `"}`},
 		binF,
+		!testing.Short(),
 	)
 	require.NoError(t, err)
 
@@ -42,7 +45,7 @@ func newGuestOutputSystem(t *testing.T, numBytes int) (
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiled))
 
-	risc5.RegisterGuestPublicOutputs(sys, numBytes)
+	risc5.RegisterGuestPublicOutputs(sys)
 	proverCompilePipeline(sys)
 
 	return sys, driver, inputs, outputs["guest_output"]
@@ -52,9 +55,10 @@ func newGuestOutputSystem(t *testing.T, numBytes int) (
 // output memory, and checks that the bytes recovered from the constrained columns
 // are the ones the program wrote, in order.
 func TestGuestPublicOutputs(t *testing.T) {
-	sys, driver, inputs, written := newGuestOutputSystem(t, guestOutputBytes)
+	sys, driver, inputs, written := newGuestOutputSystem(t,
+		"testdata/guest_output.zkc", "0x0102030405060708")
 
-	require.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, written,
+	require.Equal(t, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}, written,
 		"the tracer must agree on what the program wrote")
 	require.Len(t, sys.PublicInputs, guestOutputBytes)
 
@@ -68,37 +72,42 @@ func TestGuestPublicOutputs(t *testing.T) {
 	var got []byte
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
-		got = risc5.GetGuestPublicOutputs(rt, guestOutputBytes)
+		got = risc5.GetGuestPublicOutputs(rt)
 	}, wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	require.NoError(t, sys.Verify(proof, pub))
 	assert.Equal(t, written, got, "the public inputs must carry the bytes the program wrote")
 }
 
-// TestGuestPublicOutputsWrongLength covers the two ways a configured output size
-// that disagrees with the guest is caught. The first is the one that matters for
-// soundness: without the length constraints a prover could grow the memory and
-// choose which of its rows become public inputs.
+// TestGuestPublicOutputsWrongLength covers the two ways a guest whose output
+// length disagrees with [risc5.NumGuestPublicOutputs] is caught. The guest here
+// writes nine bytes instead of eight, so the address on the last row of the output
+// memory is one more than the length constraint pins it to. The first check is the
+// one that matters for soundness: without that constraint a prover could grow the
+// memory and choose which of its rows become public inputs.
 func TestGuestPublicOutputsWrongLength(t *testing.T) {
 
+	const (
+		zkcPath  = "testdata/guest_output_wrong_length.zkc"
+		inputHex = "0x010203040506070809"
+	)
+
 	t.Run("the length constraints reject the proof", func(t *testing.T) {
-		// Bind one byte fewer than the program writes, so the address on the last
-		// row is one more than the length constraint pins it to.
-		sys, driver, inputs, _ := newGuestOutputSystem(t, guestOutputBytes-1)
+		sys, driver, inputs, _ := newGuestOutputSystem(t, zkcPath, inputHex)
 
 		assert.False(t, provesAndVerifies(t, sys, driver, inputs),
 			"a guest output whose length disagrees with the memory must not verify")
 	})
 
 	t.Run("the prover reports the mismatch", func(t *testing.T) {
-		sys, driver, inputs, _ := newGuestOutputSystem(t, guestOutputBytes)
+		sys, driver, inputs, _ := newGuestOutputSystem(t, zkcPath, inputHex)
 
 		assert.PanicsWithValue(t,
-			"risc5: GetGuestPublicOutputs: the guest wrote 4 output bytes but the configured output size is 5",
+			"risc5: GetGuestPublicOutputs: the guest wrote 9 output bytes but the expected output size is 8",
 			func() {
 				sys.Prove(func(rt *wiop.Runtime) {
 					driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
-					risc5.GetGuestPublicOutputs(rt, guestOutputBytes+1)
+					risc5.GetGuestPublicOutputs(rt)
 				})
 			})
 	})

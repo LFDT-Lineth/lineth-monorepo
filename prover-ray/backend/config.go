@@ -12,14 +12,4 @@ type Config struct {
 	// Different proof types will eventually point to different ELFs; that
 	// dispatch is not yet implemented.
 	GuestELFPath string
-
-	// GuestOutputBytes is the number of bytes the guest ELF writes to its public
-	// output. [New] binds exactly that many bytes as public inputs, so the value
-	// belongs to the guest program and is pinned alongside the circuit: changing
-	// it changes the public-input vector, hence the constraint system and the
-	// verifier generated from it.
-	//
-	// Zero leaves the guest output unbound, which is what a circuit that declares
-	// no public output memory needs.
-	GuestOutputBytes int
 }

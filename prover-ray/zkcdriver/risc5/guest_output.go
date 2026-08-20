@@ -12,26 +12,24 @@ import (
 // [GuestPublicOutputsPI] public inputs of sys, in address order: public input k
 // is the byte the guest wrote to guest_output address k.
 //
-// numBytes is the output length of the configured guest program. It has to be
-// known here rather than at proving time because
-// [wiop.System.RegisterPublicInputs] fixes the public-input vector once, during
-// definition.
+// The output length is [NumGuestPublicOutputs], a constant of the guest program
+// rather than a setting: it has to be known here rather than at proving time
+// because [wiop.System.RegisterPublicInputs] fixes the public-input vector once,
+// during definition.
 //
 // The output memory's wiop module is dynamic and left-padded, so its rows have a
 // stable index only when counted from the end of the domain: the byte at address
-// k sits at row k-numBytes. That holds only once the memory is known to hold
-// exactly numBytes elements, which is what the length constraint below pins,
-// leaning on the constraints the arithmetization already emits for the address
-// column: it vanishes on padding rows, is zero on the first row carrying an
-// element and increments from there, so the address on the last row is one less
+// k sits at row k-NumGuestPublicOutputs. That holds only once the memory is known
+// to hold exactly that many elements, which is what the length constraint below
+// pins, leaning on the constraints the arithmetization already emits for the
+// address column: it vanishes on padding rows, is zero on the first row carrying
+// an element and increments from there, so the address on the last row is one less
 // than the number of elements.
-// Panics if numBytes is not positive, or if the arithmetization exposes no output
-// memory this package can bind.
-func RegisterGuestPublicOutputs(sys *wiop.System, numBytes int) {
+//
+// Panics if the arithmetization exposes no output memory this package can bind.
+func RegisterGuestPublicOutputs(sys *wiop.System) {
 
-	if numBytes <= 0 {
-		panic(fmt.Sprintf("risc5: RegisterGuestPublicOutputs: numBytes must be positive, got %d", numBytes))
-	}
+	numBytes := NumGuestPublicOutputs
 
 	var (
 		dataCol, addressCol = guestOutputColumns(sys)
@@ -60,14 +58,15 @@ func RegisterGuestPublicOutputs(sys *wiop.System, numBytes int) {
 // output map: these are the values the length and opening constraints pin down
 // and the verifier checks, so they cannot drift from what the proof attests.
 //
-// It first checks that the memory really holds numBytes bytes, so a guest that
-// wrote a different number than the configuration declares is reported here
-// instead of surfacing as an opaque constraint failure.
+// It first checks that the memory really holds [NumGuestPublicOutputs] bytes, so
+// a guest that wrote a different number than that is reported here instead of
+// surfacing as an opaque constraint failure.
 //
-// Panics if the output length disagrees with numBytes, if a public input is
-// missing, or if a value does not fit in a byte.
-func GetGuestPublicOutputs(rt *wiop.Runtime, numBytes int) []byte {
+// Panics if the output length disagrees with [NumGuestPublicOutputs], if a public
+// input is missing, or if a value does not fit in a byte.
+func GetGuestPublicOutputs(rt *wiop.Runtime) []byte {
 
+	numBytes := NumGuestPublicOutputs
 	_, addressCol := guestOutputColumns(rt.System)
 
 	// The address on the last row is one less than the number of elements the
@@ -76,7 +75,7 @@ func GetGuestPublicOutputs(rt *wiop.Runtime, numBytes int) []byte {
 	lastAddress := addressCol.At(-1).EvaluateSingle(rt).Value.AsBase()
 	if written := lastAddress.Uint64() + 1; written != uint64(numBytes) {
 		panic(fmt.Sprintf(
-			"risc5: GetGuestPublicOutputs: the guest wrote %d output bytes but the configured output size is %d",
+			"risc5: GetGuestPublicOutputs: the guest wrote %d output bytes but the expected output size is %d",
 			written, numBytes,
 		))
 	}

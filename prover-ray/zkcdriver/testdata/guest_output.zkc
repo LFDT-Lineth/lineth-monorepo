@@ -1,13 +1,18 @@
 pub input data(address:u8) -> (byte:u8)
 pub output guest_output(address:u8) -> (byte:u8)
 
-// Copy four input bytes into a public write-once output memory, at consecutive
-// addresses starting at zero. The memory is named and shaped like the RISC-V
-// interpreter's guest_output, so the public-input binding can be tested without
-// compiling the whole interpreter.
+// Copy eight input bytes into a public write-once output memory, at consecutive
+// addresses starting at zero. Eight is [risc5.NumGuestPublicOutputs], so this
+// program has the output length the binding expects. The memory is named and
+// shaped like the RISC-V interpreter's guest_output, so the public-input binding
+// can be tested without compiling the whole interpreter.
 fn main() {
     guest_output[0] = data[0]
     guest_output[1] = data[1]
     guest_output[2] = data[2]
     guest_output[3] = data[3]
+    guest_output[4] = data[4]
+    guest_output[5] = data[5]
+    guest_output[6] = data[6]
+    guest_output[7] = data[7]
 }

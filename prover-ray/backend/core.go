@@ -60,9 +60,7 @@ func New(cfg Config) (*Core, error) {
 	// Must happen after the arithmetization is defined, so the guest_output
 	// columns exist, and before the compiler passes, which discharge the local
 	// openings it registers.
-	if cfg.GuestOutputBytes > 0 {
-		risc5.RegisterGuestPublicOutputs(sys, cfg.GuestOutputBytes)
-	}
+	risc5.RegisterGuestPublicOutputs(sys)
 
 	// Compiler passes go here once the real RISC-V .bin is fully supported:
 	//   compilers.RangeCheck(sys)
