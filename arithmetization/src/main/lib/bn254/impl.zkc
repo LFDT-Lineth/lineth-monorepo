@@ -1,0 +1,64 @@
+include "bn254.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+
+// ============================================================================
+// BN254 (alt_bn128) G1 ECADD (0x06) and ECMUL (0x07) precompile accelerators.
+//
+// Custom-instruction ABI (matches the guest-side wrapper):
+//   rs1 -> input_address, rs2 -> output_address; the instruction returns a
+//   status in rd: 1 = success, 0 = invalid input. Coordinates and the scalar are
+//   32-byte big-endian integers laid out contiguously exactly as the EVM
+//   precompile calldata (the guest zero-pads short input before the call).
+//
+// EVM semantics: an invalid input (a coordinate >= p, or a finite point off the
+// curve) is NOT a proof abort — it is a normal precompile FAILURE that reverts
+// the calling frame. So these return status = 0 (and write no output) rather than
+// `fail`; the guest EVM turns status 0 into the revert. The point at infinity is
+// encoded (0,0) and accepted. Validity is decided by is_on_curve_affine_bn254.
+// ============================================================================
+
+// ECADD (0x06). input (128 bytes BE): x1 || y1 || x2 || y2. output (64 bytes): x3 || y3.
+fn bn254_ecadd<ram>(input_address:Address, output_address:Address) -> (status:u1) {
+    status = 0
+    var x1:u256 = read_u256_be(input_address)
+    var y1:u256 = read_u256_be(input_address + 32)
+    var x2:u256 = read_u256_be(input_address + 64)
+    var y2:u256 = read_u256_be(input_address + 96)
+
+    // Both operands must be valid: canonical coordinates on the curve, or (0,0)=O.
+    if is_on_curve_affine_bn254(x1, y1) == 0 {
+        return
+    }
+    if is_on_curve_affine_bn254(x2, y2) == 0 {
+        return
+    }
+
+    var x3:u256, y3:u256
+    x3, y3 = add_affine_bn254(x1, y1, x2, y2)
+
+    write_u256_be(output_address, x3)
+    write_u256_be(output_address + 32, y3)
+    status = 1
+}
+
+// ECMUL (0x07). input (96 bytes BE): x || y || scalar. output (64 bytes): x3 || y3.
+// The scalar is a full 256-bit value (not reduced mod the group order).
+fn bn254_ecmul<ram>(input_address:Address, output_address:Address) -> (status:u1) {
+    status = 0
+    var x:u256 = read_u256_be(input_address)
+    var y:u256 = read_u256_be(input_address + 32)
+    var s:u256 = read_u256_be(input_address + 64)
+
+    // The point must be valid; the scalar is unconstrained (any 256-bit value).
+    if is_on_curve_affine_bn254(x, y) == 0 {
+        return
+    }
+
+    var x3:u256, y3:u256
+    x3, y3 = scalar_mul_affine_bn254(s, x, y)
+
+    write_u256_be(output_address, x3)
+    write_u256_be(output_address + 32, y3)
+    status = 1
+}
