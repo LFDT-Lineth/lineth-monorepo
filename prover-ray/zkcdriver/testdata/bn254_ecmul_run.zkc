@@ -1,0 +1,51 @@
+// Batched BN254 (alt_bn128) G1 ECMUL driver for bn254_ecmul_run.json.
+// Run it directly with:  go tool zkc exec -c testdata/bn254_ecmul_run.json testdata/bn254_ecmul_run.zkc
+//
+// Exercises the RAM-wrapper accelerator bn254_ecmul<ram>(input, output) -> status.
+// Each case i lays x||y||scalar (96 bytes big-endian) into guest RAM, calls the
+// wrapper, and checks the returned status against in_status[i]; on success it also
+// checks the 64-byte output x3||y3 against the expected (in_ex, in_ey).
+//
+// The scalar is the full 256-bit value (NOT reduced mod the group order r): the
+// vectors include r*G = O and (r-1)*G = -G to pin down that s*P = (s mod r)*P
+// (BN254 G1 has cofactor 1, so r*P = O). Points use the EVM (0,0) = infinity
+// encoding; an invalid point (coord >= p or off-curve) yields status 0 and no
+// output (a provable precompile failure, never a proof abort).
+
+include "../../../arithmetization/src/main/lib/bn254/impl.zkc"
+
+type lane = u64
+type tAddr = u8
+
+pub input in_n(address:u1) -> (count:u8)
+pub input in_x(address:tAddr) -> (val:u256)
+pub input in_y(address:tAddr) -> (val:u256)
+pub input in_s(address:tAddr) -> (val:u256)
+pub input in_ex(address:tAddr) -> (val:u256)
+pub input in_ey(address:tAddr) -> (val:u256)
+pub input in_status(address:tAddr) -> (flag:u8)
+
+fn main<ram>() {
+    var input_address:Address = 0x100
+    var output_address:Address = 0
+
+    var n:u8 = in_n[0]
+    for i:tAddr = 0; i<n; i = i + 1 {
+        write_u256_be(input_address, in_x[i])
+        write_u256_be(input_address + 32, in_y[i])
+        write_u256_be(input_address + 64, in_s[i])
+
+        var status:u1 = bn254_ecmul(input_address, output_address)
+        if (status as u8) != in_status[i] {
+            fail
+        }
+        if status == 1 {
+            if read_u256_be(output_address) != in_ex[i] {
+                fail
+            }
+            if read_u256_be(output_address + 32) != in_ey[i] {
+                fail
+            }
+        }
+    }
+}
