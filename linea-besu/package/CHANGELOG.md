@@ -4,6 +4,10 @@
 
 - *(linea-besu)* Support custom liveness signers (#3666)
 
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Update Besu to 26.8.0 (#3830)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Logging consistency and noise reduction (#3788)
