@@ -562,6 +562,7 @@ func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
 		r.readBits(5)
 		r.readBits(5)
 		r.readBits(5)
+		r.readBits(64)
 	}
 	return ops
 }
@@ -626,17 +627,24 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		rd := (instr >> 7) & 0x1f
 		funct3 := (instr >> 12) & 0x7
 		rs1 := (instr >> 15) & 0x1f
+		rs2 := (instr >> 20) & 0x1f
 		imm12 := (instr >> 20) & 0xfff
+		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+		bImm := assembleBTypeImm(instr)
+		jImm := assembleJTypeImm(instr)
+		uImm := assembleUTypeImm(instr)
 		instrType := instructionTypeFromOpcode(opcode)
 		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
 			normImm12 = imm12
 		}
 		decodedBits.writeBits(uint64(classifyInstruction(instr)), 8)
-		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
-		decodedBits.writeBits(uint64(rs1), 5)
-		decodedBits.writeBits(0, 5)
-		decodedBits.writeBits(uint64(rd), 5)
+		opImm, opRs1, opRs2, opRd := unifiedOperands(instrType, normImm12, simm12, bImm, jImm, uImm, rs1, rs2, rd)
+		decodedBits.writeBits(opImm, 64)
+		decodedBits.writeBits(opRs1, 5)
+		decodedBits.writeBits(opRs2, 5)
+		decodedBits.writeBits(opRd, 5)
+		decodedBits.writeBits(rs1PlusImmAddend(instrType, opImm), 64)
 	}
 	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
 }
