@@ -3,14 +3,14 @@ This folder contains the zkvm library: zkc implementations of EVM precompiles an
 |---------------------|--------|----------|--------|-----------|
 | EVM precompiles     | status |    opc   | funct3 |   funct7  |
 |---------------------|:------:|:--------:|:------:|:---------:|
-| ECRECOVER           |   🔴   | custom-0 | 0b000  | 0b0000001 |
+| ECRECOVER           |   🟢   | custom-0 | 0b000  | 0b0000001 |
 | SHA2-256            |   🟢   | custom-0 | 0b000  | 0b0000010 |
 | RIPEMD              |   🔴   | custom-0 |  0b... | 0b.....11 |
 | IDENTITY            |   🔴   | custom-0 |  0b... | 0b....100 |
 | MODEXP_small        |   🔴   | custom-0 |  0b..0 | 0b....101 |
 | MODEXP_large        |   🔴   | custom-0 |  0b..1 | 0b....101 |
-| ECADD               |   🔴   | custom-0 |  0b... | 0b....110 |
-| ECMUL               |   🔴   | custom-0 |  0b... | 0b....111 |
+| ECADD               |   🟢   | custom-0 | 0b000  | 0b0000110 |
+| ECMUL               |   🟢   | custom-0 | 0b000  | 0b0000111 |
 | ECPAIRING           |   🔴   | custom-0 |  0b... | 0b...1000 |
 | BLAKE2f             |   🔴   | custom-0 |  0b... | 0b...1001 |
 | POINTEVALUATION     |   🔴   | custom-0 |  0b... | 0b...1010 |
@@ -30,7 +30,7 @@ Note. We use '.' to represent '0'.
 | Other 'precompiles' | status | opc      | funct3 | funct7    |
 |---------------------|:------:|----------|--------|-----------|
 | keccak              |   🟢   | custom-1 | 0b000  | 0b0000000 |
-| poseidon2           |   🟡🟢   | custom-1 | 0b001  | 0b0000000 |
+| poseidon2           |   🟢   | custom-1 | 0b001  | 0b0000000 |
 | write_output        |   🟡   | custom-1 | 0b010  | 0b0000000 |
 | ecrecover           |   🔴   | custom-1 | 0b000  | 0b0000001 |
 | poly_eval           |   🔴   | custom-1 |        |           |
