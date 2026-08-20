@@ -13,6 +13,18 @@ const (
 // ValidSectionData is a valid RISC-V auipc x5, 0 instruction encoding.
 var ValidSectionData = []byte{0x97, 0x02, 0x00, 0x00}
 
+// ExitZeroSectionData is a tiny valid RISC-V program that halts through the
+// Linux-style exit syscall path used by the RISC-V arithmetization:
+//
+//	addi a7, x0, 93
+//	addi a0, x0, 0
+//	ecall
+var ExitZeroSectionData = []byte{
+	0x93, 0x08, 0xd0, 0x05,
+	0x13, 0x05, 0x00, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+}
+
 // MinimalElfProgram is a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
 // sectionAddr with sectionData bytes, and an entry point of entryPoint.
@@ -28,6 +40,10 @@ var ValidSectionData = []byte{0x97, 0x02, 0x00, 0x00}
 //	X+64     64   .text section header
 //	X+128    64   .shstrtab section header
 var MinimalElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ValidSectionData)
+
+// ExitZeroElfProgram is a minimal valid ELF64 RISC-V binary that exits with
+// code 0 through the guest syscall interface.
+var ExitZeroElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ExitZeroSectionData)
 
 // Make builds a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at

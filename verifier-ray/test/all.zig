@@ -1,4 +1,5 @@
 comptime {
+    @setEvalBranchQuota(2_000_000);
     _ = @import("field_test.zig");
     _ = @import("golden_test.zig");
     _ = @import("public_input_test.zig");

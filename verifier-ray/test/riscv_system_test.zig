@@ -3,7 +3,7 @@ const riscv_system = @import("riscv_system");
 
 // Smoke test that the codegen output type-checks as a real verifier.Systems
 // value — the first point at which the generate-riscv-system pipeline
-// (CompileToZig against an honest r5_test.zkc proof) proves itself correct,
+// (main.zkc plus an honest halting guest ELF) proves itself correct,
 // independent of decoding a real proof or running through R5.
 test "riscv_system compiles as verifier.Systems" {
     const systems = riscv_system.system_0_systems;

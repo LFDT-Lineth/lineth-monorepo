@@ -11,6 +11,137 @@ import (
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
+func TestBuildPcsSystemHonestRiscvClaimMapsPointBackToOriginalCells(t *testing.T) {
+	honest, err := buildHonestRiscvProof()
+	if err != nil {
+		t.Fatalf("buildHonestRiscvProof() error = %v", err)
+	}
+	routing, err := BuildCoinRouting(honest.Sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcsSystem, err := BuildPcsSystem(honest.Sys, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+
+	var wantWitness []PcsCellRef
+	var wantQuotient []PcsCellRef
+	for _, verifier := range pcsGlobalVerifiers(honest.Sys) {
+		for _, cell := range verifier.WitnessClaims {
+			wantWitness = append(wantWitness, PcsCellRef{
+				Round: cell.Context.ID.Slot(),
+				Index: cell.Context.ID.Position(),
+			})
+		}
+		for _, bucket := range verifier.Buckets {
+			for _, cell := range bucket.QuotientClaims {
+				wantQuotient = append(wantQuotient, PcsCellRef{
+					Round: cell.Context.ID.Slot(),
+					Index: cell.Context.ID.Position(),
+				})
+			}
+		}
+	}
+
+	checkMap := func(name string, refs []PcsClaimRef, want []PcsCellRef) {
+		t.Helper()
+		if len(refs) != len(want) {
+			t.Fatalf("%s len = %d, want %d", name, len(refs), len(want))
+		}
+		for i, ref := range refs {
+			if ref.ColDeclIdx >= len(pcsSystem.Columns) {
+				t.Fatalf("%s[%d].ColDeclIdx = %d, columns len = %d", name, i, ref.ColDeclIdx, len(pcsSystem.Columns))
+			}
+			col := pcsSystem.Columns[ref.ColDeclIdx]
+			if ref.Shift >= len(col.ClaimCells) {
+				t.Fatalf("%s[%d].Shift = %d, claim cells len = %d", name, i, ref.Shift, len(col.ClaimCells))
+			}
+			got := col.ClaimCells[ref.Shift]
+			if got != want[i] {
+				t.Fatalf("%s[%d] routes to (%d,%d), want original claim cell (%d,%d)",
+					name, i, got.Round, got.Index, want[i].Round, want[i].Index)
+			}
+		}
+	}
+
+	checkMap("witness_map", pcsSystem.WitnessMap, wantWitness)
+	checkMap("quotient_map", pcsSystem.QuotientMap, wantQuotient)
+}
+
+func TestBuildPcsSystemHonestRiscvRoutesOriginalClaimValues(t *testing.T) {
+	honest, err := buildHonestRiscvProof()
+	if err != nil {
+		t.Fatalf("buildHonestRiscvProof() error = %v", err)
+	}
+	routing, err := BuildCoinRouting(honest.Sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcsSystem, err := BuildPcsSystem(honest.Sys, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+
+	checkMapValues := func(name string, refs []PcsClaimRef, wantCells []*wiop.Cell) {
+		t.Helper()
+		if len(refs) != len(wantCells) {
+			t.Fatalf("%s len = %d, want %d", name, len(refs), len(wantCells))
+		}
+		for i, ref := range refs {
+			col := pcsSystem.Columns[ref.ColDeclIdx]
+			gotRef := col.ClaimCells[ref.Shift]
+			gotCell := honest.Sys.Rounds[gotRef.Round].Cells[gotRef.Index]
+			got, ok := honest.Proof.Cells[gotCell.Context.ID]
+			if !ok {
+				found := false
+				for j, publicCell := range honest.Sys.PublicInputs {
+					if publicCell.Context.ID == gotCell.Context.ID {
+						got = honest.Pub[j]
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("%s[%d] routed to missing cell (%d,%d)", name, i, gotRef.Round, gotRef.Index)
+				}
+			}
+
+			wantCell := wantCells[i]
+			want, ok := honest.Proof.Cells[wantCell.Context.ID]
+			if !ok {
+				found := false
+				for j, publicCell := range honest.Sys.PublicInputs {
+					if publicCell.Context.ID == wantCell.Context.ID {
+						want = honest.Pub[j]
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("%s[%d] missing original claim cell %s", name, i, wantCell.Context.Path())
+				}
+			}
+
+			if got != want {
+				t.Fatalf("%s[%d] value mismatch via routed cell (%d,%d) vs original %s", name, i, gotRef.Round, gotRef.Index, wantCell.Context.Path())
+			}
+		}
+	}
+
+	var wantWitness []*wiop.Cell
+	var wantQuotient []*wiop.Cell
+	for _, verifier := range pcsGlobalVerifiers(honest.Sys) {
+		wantWitness = append(wantWitness, verifier.WitnessClaims...)
+		for _, bucket := range verifier.Buckets {
+			wantQuotient = append(wantQuotient, bucket.QuotientClaims...)
+		}
+	}
+
+	checkMapValues("witness_map", pcsSystem.WitnessMap, wantWitness)
+	checkMapValues("quotient_map", pcsSystem.QuotientMap, wantQuotient)
+}
+
 func TestWritePcsSystemZig(t *testing.T) {
 	system := PcsSystem{
 		LogCodewordSize:  23,

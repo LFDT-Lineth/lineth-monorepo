@@ -1,6 +1,7 @@
 const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const field = @import("../field/koalabear.zig");
+const poseidon2 = @import("../crypto/poseidon2.zig");
 pub const public_input = @import("public_input.zig");
 
 /// Error from the bounds-checked cell accessor `Context.cell`. Split out so
@@ -11,12 +12,26 @@ pub const Error = error{
     InvalidRoundCount,
     MissingDynamicModuleSize,
     DynamicModuleSizeTooLarge,
+    /// A `shared_randomness_gamma_refs` entry named a round/index the bound
+    /// rounds don't have, or γ was not exactly `poseidon2.Digest.len` limbs, or
+    /// a γ limb was an extension-field cell — codegen and the proof disagree
+    /// about the shared-randomness layout.
+    InvalidSharedRandomnessGamma,
 } || CellError;
 
 pub const Scalar = types.Scalar;
 pub const Coin = types.Coin;
 pub const Commitment = types.Commitment;
 pub const RoundMessage = types.RoundMessage;
+
+/// Locates one base-field limb of γ (the cross-shard shared-randomness seed,
+/// prover-ray's `messagebus.NumSharedRandomness`-limb octuplet) in the replayed
+/// transcript's `(round, index)` cell coordinates. Emitted in limb order by
+/// codegen's `CoinRouting.SharedRandomnessGammaRefs`.
+pub const SharedRandomnessGammaRef = struct {
+    round: usize,
+    index: usize,
+};
 
 /// Compile-time coin-routing specification shared across all sub-verifiers.
 /// Extracted from the compiled IOP system by the Go codegen and emitted as a
@@ -42,6 +57,19 @@ pub const Spec = struct {
     /// wiop.ColumnSizeMaxSupported). Any module_sizes entry above this is
     /// rejected before it reaches downstream arithmetic.
     column_size_max_supported: usize = 1 << 22,
+    /// Round whose coins must be derived from γ instead of this shard's own
+    /// transcript state (messagebus.CompileOptions.SharedRandomness), or null
+    /// for a protocol compiled without that option. Mirrors prover-ray's
+    /// Runtime.AdvanceRound, which runs every Round.PreSamplingHooks entry
+    /// (here, the shared-randomness seed hook) right before deriving the new
+    /// round's coins — `replayWithTranscript` overrides the transcript state at
+    /// the same point, using `shared_randomness_gamma_refs` to rebuild γ from
+    /// the already-bound round cells.
+    shared_randomness_coin_round: ?usize = null,
+    /// γ's NumSharedRandomness base-field limbs, in limb order. Must have
+    /// exactly 8 entries when `shared_randomness_coin_round != null` — γ is a
+    /// full Poseidon2 octuplet, prover-ray's `field.Octuplet`.
+    shared_randomness_gamma_refs: []const SharedRandomnessGammaRef = &.{},
 };
 
 /// All protocol-level data derived from a proof by the higher-level verifier.
@@ -131,12 +159,44 @@ pub fn replayWithTranscript(
         if (message.commitment) |c| transcript.updateElements(&c);
         for (message.cells) |cell| transcript.absorbScalar(cell);
 
+        // Mirror prover-ray's `Runtime.AdvanceRound` step 3: every
+        // `Round.PreSamplingHooks` entry on the new round runs after its
+        // commitment/cells are absorbed but before its coins are squeezed. The
+        // only hook any wiop compiler registers today is the shared-randomness
+        // seed override, so this replays that directly rather than
+        // representing hooks as a general mechanism.
+        if (comptime spec.shared_randomness_coin_round) |gamma_round| {
+            if (round_index == gamma_round) {
+                transcript.setState(try gammaDigest(spec, rounds));
+            }
+        }
+
         const offset = spec.round_coin_offsets[round_index];
         const count = spec.round_coin_counts[round_index];
         for (all_coins[offset..][0..count]) |*coin| coin.* = transcript.randomExt();
     }
 
     return all_coins;
+}
+
+/// Rebuilds γ as a Poseidon2 octuplet from the bound round cells named by
+/// `spec.shared_randomness_gamma_refs`, in limb order. Called once per replay,
+/// right before the shared-randomness coin round's coins are squeezed.
+fn gammaDigest(comptime spec: Spec, rounds: []const RoundMessage) Error!poseidon2.Digest {
+    if (spec.shared_randomness_gamma_refs.len != poseidon2.Digest.len)
+        return error.InvalidSharedRandomnessGamma;
+
+    var digest: poseidon2.Digest = undefined;
+    inline for (spec.shared_randomness_gamma_refs, 0..) |ref, i| {
+        if (ref.round >= rounds.len) return error.InvalidSharedRandomnessGamma;
+        const cells = rounds[ref.round].cells;
+        if (ref.index >= cells.len) return error.InvalidSharedRandomnessGamma;
+        digest[i] = switch (cells[ref.index]) {
+            .base => |limb| limb,
+            .ext => return error.InvalidSharedRandomnessGamma,
+        };
+    }
+    return digest;
 }
 
 fn validateSpec(comptime spec: Spec) void {
@@ -155,4 +215,13 @@ fn validateSpec(comptime spec: Spec) void {
     }
     if (spec.total_round_coins != expected_offset)
         @compileError("spec: total_round_coins must equal sum of round_coin_counts");
+
+    if (spec.shared_randomness_coin_round) |round| {
+        if (round == 0 or round >= spec.round_coin_counts.len)
+            @compileError("spec: shared_randomness_coin_round must be a replayed round after round 0");
+        if (spec.shared_randomness_gamma_refs.len != 8)
+            @compileError("spec: shared_randomness_gamma_refs must have exactly 8 entries (a Poseidon2 octuplet) when shared_randomness_coin_round is set");
+    } else if (spec.shared_randomness_gamma_refs.len != 0) {
+        @compileError("spec: shared_randomness_gamma_refs must be empty when shared_randomness_coin_round is null");
+    }
 }

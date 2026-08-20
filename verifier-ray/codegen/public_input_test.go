@@ -2,12 +2,14 @@ package codegen
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	ps "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 )
 
 func publicInputSystem(name string) *wiop.System {
@@ -71,4 +73,94 @@ func TestWritePublicInputSystemZig(t *testing.T) {
 			t.Fatalf("generated public-input spec missing %q\n--- got ---\n%s", want, out)
 		}
 	}
+}
+
+func TestBuildPublicInputSystemHonestRiscvRebindsOriginalRoundCells(t *testing.T) {
+	honest, err := buildHonestRiscvProof()
+	if err != nil {
+		t.Fatalf("buildHonestRiscvProof() error = %v", err)
+	}
+	publicInputSystem, err := BuildPublicInputSystem(honest.Sys)
+	if err != nil {
+		t.Fatalf("BuildPublicInputSystem() error = %v", err)
+	}
+	projected, err := ps.Project(honest.Sys, honest.Proof, honest.Pub)
+	if err != nil {
+		t.Fatalf("Project() error = %v", err)
+	}
+
+	bound, err := rebindProjectedRounds(publicInputSystem, projected.Proof.Rounds, projected.PublicInputs)
+	if err != nil {
+		t.Fatalf("rebindProjectedRounds() error = %v", err)
+	}
+
+	if len(bound) != len(honest.Sys.Rounds)-1 {
+		t.Fatalf("bound round count = %d, want %d", len(bound), len(honest.Sys.Rounds)-1)
+	}
+	for roundIndex, round := range honest.Sys.Rounds[:len(honest.Sys.Rounds)-1] {
+		if len(bound[roundIndex]) != len(round.Cells) {
+			t.Fatalf("bound round %d cell count = %d, want %d", roundIndex, len(bound[roundIndex]), len(round.Cells))
+		}
+		for cellIndex, cell := range round.Cells {
+			want, ok := originalRoundCellValue(honest.Sys, honest.Proof, honest.Pub, cell)
+			if !ok {
+				t.Fatalf("missing original value for round %d cell %d (%s)", roundIndex, cellIndex, cell.Context.Path())
+			}
+			if bound[roundIndex][cellIndex] != want {
+				t.Fatalf("bound round %d cell %d (%s) = %#v, want %#v",
+					roundIndex, cellIndex, cell.Context.Path(), bound[roundIndex][cellIndex], want)
+			}
+		}
+	}
+}
+
+func rebindProjectedRounds(spec PublicInputSystem, rounds []ps.RoundMessage, publicInputs []ps.Scalar) ([][]ps.Scalar, error) {
+	if len(rounds) != len(spec.RoundCellCounts) {
+		return nil, fmt.Errorf("round count = %d, want %d", len(rounds), len(spec.RoundCellCounts))
+	}
+	if len(publicInputs) != len(spec.Refs) {
+		return nil, fmt.Errorf("public input count = %d, want %d", len(publicInputs), len(spec.Refs))
+	}
+
+	bound := make([][]ps.Scalar, len(rounds))
+	publicInputCursor := 0
+	for roundIndex, round := range rounds {
+		totalCells := spec.RoundCellCounts[roundIndex]
+		bound[roundIndex] = make([]ps.Scalar, totalCells)
+
+		proofCellIndex := 0
+		for cellIndex := 0; cellIndex < totalCells; cellIndex++ {
+			if publicInputCursor < len(spec.Refs) &&
+				spec.Refs[publicInputCursor].Round == roundIndex &&
+				spec.Refs[publicInputCursor].Index == cellIndex {
+				ref := spec.Refs[publicInputCursor]
+				bound[roundIndex][cellIndex] = publicInputs[ref.StatementIndex]
+				publicInputCursor++
+				continue
+			}
+			if proofCellIndex >= len(round.Cells) {
+				return nil, fmt.Errorf("round %d ran out of proof cells at transcript cell %d", roundIndex, cellIndex)
+			}
+			bound[roundIndex][cellIndex] = round.Cells[proofCellIndex]
+			proofCellIndex++
+		}
+		if proofCellIndex != len(round.Cells) {
+			return nil, fmt.Errorf("round %d left %d unconsumed proof cells", roundIndex, len(round.Cells)-proofCellIndex)
+		}
+	}
+
+	return bound, nil
+}
+
+func originalRoundCellValue(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput, cell *wiop.Cell) (ps.Scalar, bool) {
+	for i, publicCell := range sys.PublicInputs {
+		if publicCell.Context.ID == cell.Context.ID {
+			return ps.ScalarFrom(pub[i]), true
+		}
+	}
+	value, ok := proof.Cells[cell.Context.ID]
+	if !ok {
+		return ps.Scalar{}, false
+	}
+	return ps.ScalarFrom(value), true
 }

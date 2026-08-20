@@ -45,6 +45,14 @@ verifier-ray/testdata/generated/vanishing.zig
 
 The generated file contains the extracted `vanishing.System` values and matching proof views side by side. This file is test fixture data for prover-ray scenarios; it is not part of the verifier library API.
 
+The repository also commits one generated production-style system:
+
+```text
+verifier-ray/testdata/generated/riscv_system.zig
+```
+
+That file is produced by `verifier-ray/codegen/generate-riscv-system`, which compiles the honest RISC-V arithmetization entrypoint `arithmetization/src/main/riscv/main.zkc`, proves a minimal real guest ELF that exits successfully, and renders the resulting verifier metadata as a `verifier.Systems` value. Unlike the broad scenario fixtures above, this path exists specifically to prove that verifier-ray can bootstrap a dedicated RISC-V verifier system from the real prover-side interpreter circuit rather than from a synthetic pub-input-only test program.
+
 ## Static And Dynamic Module Sizes
 
 Module size is part of the generated system whenever prover-ray knows it at compile time:

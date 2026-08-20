@@ -138,6 +138,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
             .{ .name = "embedded_data", .module = embedded_data_mod },
             .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
+            .{ .name = "riscv_system", .module = riscv_system_mod },
         },
     });
 

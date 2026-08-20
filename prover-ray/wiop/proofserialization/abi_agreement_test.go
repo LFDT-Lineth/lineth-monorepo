@@ -5,12 +5,36 @@
 package proofserialization_test
 
 import (
+	"bytes"
+	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"testing"
 
+	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	ps "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/util/source"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
+	zkccodegen "github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/stretchr/testify/require"
 )
 
@@ -163,77 +187,6 @@ func mustAtoi(t *testing.T, s string) int {
 // consumed by the actual verifier rather than by this package's own decoder.
 const verifierRayImagePath = "../../../verifier-ray/testdata/proof_image.bin"
 
-// verifierRayImageBase is the address the fixture image is relocated for, and
-// the address verifier-ray's Zig test maps it at with MAP_FIXED.
-//
-// Not GuestBase: macOS reserves the low address space, so mapping at 0x08800000
-// fails there (measured — 0x08800000, 0x30000000 and 0x100000000 all fail on
-// arm64 macOS, 0x400000000 succeeds). The production image still uses GuestBase;
-// this is a test-only address chosen to be mappable on both hosts.
-const verifierRayImageBase = 0x400000000
-
-// verifierRayFixture is the fixture both sides agree on. Deliberately small and with
-// hand-picked values, so the Zig assertions read as literals rather than as a
-// second implementation of the encoder.
-//
-// Element values are raw u32s, not results of field arithmetic: the image stores
-// Montgomery limbs verbatim, so both sides compare the same raw numbers without
-// either having to do arithmetic.
-func verifierRayFixture() ps.VerifyInput {
-	return ps.VerifyInput{Proof: ps.Proof{
-		Rounds: []ps.RoundMessage{
-			{
-				// A committed round: its Merkle root, and one cell of each variant.
-				Commitment: &ps.Digest{10, 11, 12, 13, 14, 15, 16, 17},
-				Cells: []ps.Scalar{
-					{Value: ps.Ext{100, 101, 102, 103, 104, 105}},              // base
-					{Value: ps.Ext{200, 201, 202, 203, 204, 205}, IsExt: true}, // ext
-				},
-			},
-			{
-				// A round that commits nothing: the presence flag must be clear.
-				Cells: []ps.Scalar{{Value: ps.Ext{31, 32, 33, 34, 35, 36}}},
-			},
-			{}, // an empty round: empty slices must still be readable
-		},
-		ModuleSizes: []uint64{8, 16},
-		PcsOpening: ps.OpeningProof{
-			InputQueries: [][]ps.InputTreeOpening{
-				{
-					{
-						Siblings: []ps.Digest{{70, 71, 72, 73, 74, 75, 76, 77}},
-						Leaves: []*ps.RowPair{
-							nil, // a null level
-							{
-								{Base: []ps.Element{80, 81}, Ext: []ps.Ext{{90, 91, 92, 93, 94, 95}}},
-								{Base: []ps.Element{82, 83}, Ext: nil},
-							},
-						},
-					},
-				},
-			},
-			FriProof: ps.FriProof{
-				RoundRoots: []ps.Digest{{110, 111, 112, 113, 114, 115, 116, 117}},
-				FinalPoly:  []ps.Ext{{120, 121, 122, 123, 124, 125}},
-				RunningQueries: [][]ps.Branch{
-					{
-						{
-							Siblings: []ps.Digest{{130, 131, 132, 133, 134, 135, 136, 137}},
-							Leaf:     ps.Digest{140, 141, 142, 143, 144, 145, 146, 147},
-						},
-					},
-				},
-			},
-		},
-	},
-		// The flat public-input statement, absorbed separately from round cells.
-		PublicInputs: []ps.Scalar{
-			{Value: ps.Ext{201, 202, 203, 204, 205, 206}},
-			{Value: ps.Ext{211, 212, 213, 214, 215, 216}, IsExt: true},
-		},
-	}
-}
-
 // TestVerifierRayImageIsUpToDate keeps the committed cross-language fixture in sync.
 //
 // The image is committed rather than generated at Zig test time so verifier-ray's
@@ -241,15 +194,15 @@ func verifierRayFixture() ps.VerifyInput {
 // file can go stale, which is what this test prevents. Regenerate with
 // UPDATE_VERIFIER_RAY_IMAGE=1.
 func TestVerifierRayImageIsUpToDate(t *testing.T) {
-	image, err := ps.Encode(verifierRayFixture(), verifierRayImageBase)
+	image, err := buildHonestRiscvImage()
 	require.NoError(t, err)
-	require.NoError(t, ps.Validate(image, verifierRayImageBase))
+	require.NoError(t, ps.Validate(image, ps.GuestBase))
 
 	// The fixture must survive our own round trip before it is worth asking Zig
 	// to read it.
-	decoded, err := ps.Decode(image, verifierRayImageBase)
+	decoded, err := ps.Decode(image, ps.GuestBase)
 	require.NoError(t, err)
-	reencoded, err := ps.Encode(decoded, verifierRayImageBase)
+	reencoded, err := ps.Encode(decoded, ps.GuestBase)
 	require.NoError(t, err)
 	require.Equal(t, image, reencoded)
 
@@ -270,4 +223,100 @@ func TestVerifierRayImageIsUpToDate(t *testing.T) {
 		"the image verifier-ray reads is stale. verifier-ray's proof_image_test.zig "+
 			"asserts against it, so regenerate with UPDATE_VERIFIER_RAY_IMAGE=1 and re-run "+
 			"`zig build test` in verifier-ray to confirm the Zig side still agrees")
+}
+
+var (
+	zkcField = field.KOALABEAR_16
+	zkcCfg   = zkccodegen.DEFAULT_CONFIG
+)
+
+func buildHonestRiscvImage() ([]byte, error) {
+	sourcePath, err := honestRiscvSourcePath()
+	if err != nil {
+		return nil, err
+	}
+	binF, err := compileBinaryConstraints(sourcePath)
+	if err != nil {
+		return nil, fmt.Errorf("compiling %s: %w", sourcePath, err)
+	}
+	compiledConstraints, err := binF.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("marshaling %s constraints: %w", sourcePath, err)
+	}
+	honestInputs, err := zkc_r5.PrepareInput(zkc_r5.ExitZeroGuestELF, nil)
+	if err != nil {
+		return nil, fmt.Errorf("PrepareInput(minimal exit guest): %w", err)
+	}
+	inputs := &zkcdriver.PreReadInputs{Inputs: honestInputs}
+
+	sys := wiop.NewSystemf("zkc-riscv-system")
+	sys.NewRound()
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiledConstraints))
+	runCompilePipeline(sys)
+
+	proof, pub := sys.Prove(
+		func(assignRt *wiop.Runtime) {
+			driver.AssignWithPreRead(assignRt, inputs, koalafield.Octuplet{})
+		},
+		wiop.ProveOptions{CheckUnreducedQueries: true},
+	)
+	if err := sys.Verify(proof, pub); err != nil {
+		return nil, fmt.Errorf("verifying %s proof: %w", sourcePath, err)
+	}
+
+	projected, err := ps.Project(sys, proof, pub)
+	if err != nil {
+		return nil, fmt.Errorf("proofserialization.Project: %w", err)
+	}
+	return ps.Encode(projected, ps.GuestBase)
+}
+
+func honestRiscvSourcePath() (string, error) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("resolving proofserialization test source path: runtime.Caller failed")
+	}
+	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "arithmetization", "src", "main", "riscv", "main.zkc"), nil
+}
+
+func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during zkc compilation: %v", r)
+		}
+	}()
+
+	srcZkc, err := os.ReadFile(srcPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
+	}
+	src := source.NewSourceFile(srcPath, srcZkc)
+	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	if len(errs) > 0 {
+		for i := range errs {
+			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
+		}
+		return nil, fmt.Errorf("failed to compile zkc source")
+	}
+	ir, errs := ast.Compile(macroProgram, zkcCfg)
+	if len(errs) > 0 {
+		for i := range errs {
+			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
+		}
+		return nil, fmt.Errorf("failed to compile zkc source")
+	}
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	return binfile, nil
+}
+
+func runCompilePipeline(sys *wiop.System) {
+	nonnative.Compile(sys)
+	rangecheck.Compile(sys)
+	lookuptologderivsum.Compile(sys)
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	grandproduct.Compile(sys)
+	logderivativesum.Compile(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+	pcs.Compile(sys)
 }

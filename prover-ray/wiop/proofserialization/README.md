@@ -106,11 +106,17 @@ byte-identical between `aarch64` and `riscv64`.** One image serves the R5 guest
 and the native mmap smoke-test path.
 
 - Endianness: little, all targets.
-- Field elements are `koalabear.Element` = one `u32` in **Montgomery form**. The
-  image stores the internal representation verbatim; both sides already compute
-  in Montgomery form, so no conversion happens anywhere. Worth stating because it
-  means the image is not a canonical-integer encoding and is not meant to be read
-  by anything that isn't koalabear-aware.
+- Field elements are `koalabear.Element` = one `u32` holding the **canonical
+  (non-Montgomery) representative**. The prover's internal `field.Element` is
+  Montgomery-encoded (gnark-crypto's koalabear package), while Zig's
+  `field.Element` stores and computes with the canonical representative
+  throughout (plain modular arithmetic, no REDC) — so every value MUST be
+  reduced via `field.Element.Bits()` (or `.Uint64()`) before it is written into
+  this image. Writing the internal Montgomery representation verbatim is a bug:
+  addition/subtraction happen to be representation-transparent so a Montgomery
+  mismatch is invisible there, but multiplication is not, so it silently
+  corrupts the very first Poseidon2 absorption of a nontrivial wire value (see
+  `elementFrom` in `types.go`).
 - Maximum alignment anywhere in the graph is 8.
 
 ### 5.1 Base address
@@ -154,7 +160,7 @@ Recommend (1), keeping the `base` parameter so (2) stays available for tests.
 | Type | Size | Align | Notes |
 |---|---|---|---|
 | `[]const T` (slice) | 16 | 8 | `ptr` @0 (8B), `len` @8 (element count) — **no capacity field** |
-| `base.Element` | 4 | 4 | one Montgomery `u32` |
+| `base.Element` | 4 | 4 | one canonical (non-Montgomery) `u32` |
 | `ext.Ext` (E6) | 24 | 4 | `B0` @0, `B1` @8, `B2` @16; each E2 = `a0,a1` |
 | `poseidon2.Digest` / `Commitment` | 32 | 4 | `[8]Element` |
 | `protocol.RoundMessage` | 56 | 8 | `cells` @0, `commitment` @16 |

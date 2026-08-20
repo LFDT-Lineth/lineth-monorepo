@@ -46,3 +46,33 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 		b.Fatalf("failed to run test case: %v", err)
 	}
 }
+
+func TestRunRisc5MainWithMinimalExitGuest(t *testing.T) {
+	const zkcPath = "../../arithmetization/src/main/riscv/main.zkc"
+
+	inputsMap, err := zkc_r5.PrepareInput(zkc_r5.ExitZeroGuestELF, nil)
+	if err != nil {
+		t.Fatalf("failed to prepare inputs: %v", err)
+	}
+
+	binf, err := compileBinaryConstraints(zkcPath)
+	if err != nil {
+		t.Fatalf("failed to compile zkc source: %v", err)
+	}
+
+	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap)
+	if err != nil {
+		t.Fatalf("failed to trace main.zkc with minimal exit guest: %v", err)
+	}
+	if len(outputs) > 1 {
+		t.Fatalf("expected no outputs, got: %v", outputs)
+	}
+	if guestOutput, ok := outputs["guest_output"]; ok && len(guestOutput) != 0 {
+		t.Fatalf("expected empty guest_output, got: %x", guestOutput)
+	}
+
+	driverInputs := &zkcdriver.PreReadInputs{Inputs: inputsMap}
+	if err := runProveVerify(driverInputs, binf, proverCompilePipeline); err != nil {
+		t.Fatalf("failed to prove/verify main.zkc with minimal exit guest: %v", err)
+	}
+}

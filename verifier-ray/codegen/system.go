@@ -76,6 +76,7 @@ type CompiledSystemZigOptions struct {
 	// (protocol, field, vanishing, logderivativesum, rowlimit). Set to false
 	// when writing multiple systems under a shared file header.
 	EmitHeader         bool
+	EvalBranchQuota    int
 	ProtocolImport     string
 	FieldImport        string
 	VanishingImport    string
@@ -99,6 +100,11 @@ type CompiledSystemZigOptions struct {
 // and WriteLogDerivSystemZigWithOptions that handles the EmitHeader/EmitImport
 // flags automatically from a single opts.EmitHeader flag.
 func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts CompiledSystemZigOptions) error {
+	if opts.EvalBranchQuota > 0 {
+		if _, err := fmt.Fprintf(w, "comptime { @setEvalBranchQuota(%d); }\n\n", opts.EvalBranchQuota); err != nil {
+			return err
+		}
+	}
 	if err := WriteSpecZigWithOptions(w, system.Routing, SpecZigOptions{
 		ProtocolImport: opts.ProtocolImport,
 		ConstName:      fmt.Sprintf("system_%d_spec", index),
