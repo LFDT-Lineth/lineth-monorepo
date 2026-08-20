@@ -6,10 +6,11 @@ type SignerUiBridgeWorkflowApi = {
 };
 
 let signerUiBridgeWorkflowApiPromise: Promise<SignerUiBridgeWorkflowApi | null> | undefined;
+const SIGNER_UI_BRIDGE_MODULE = "../../scripts/hardhat/signer-ui-bridge.js";
 
 async function loadSignerUiBridgeWorkflowApi(): Promise<SignerUiBridgeWorkflowApi | null> {
   if (!signerUiBridgeWorkflowApiPromise) {
-    signerUiBridgeWorkflowApiPromise = import("../../scripts/hardhat/signer-ui-bridge.js")
+    signerUiBridgeWorkflowApiPromise = import(SIGNER_UI_BRIDGE_MODULE)
       .then((mod) => ({
         setUiWorkflowStatus: mod.setUiWorkflowStatus,
         clearUiWorkflowStatus: mod.clearUiWorkflowStatus,
