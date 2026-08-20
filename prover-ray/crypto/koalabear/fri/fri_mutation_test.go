@@ -236,7 +236,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				self := &branch.Leaves[len(branch.Leaves)-1][0]
 				self.Ext[0].Add(&self.Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: "invalid Merkle proof",
 		},
 		{
 			name: "misaligned auxiliary row",
@@ -244,7 +244,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				pair := fx.proof.InputQueries[0][0].Leaves[1]
 				pair[0].Ext[0].Add(&pair[0].Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: "invalid Merkle proof",
 		},
 		{
 			name: "tampered top sibling row",
@@ -253,7 +253,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				conjugate := &branch.Leaves[len(branch.Leaves)-1][1]
 				conjugate.Ext[0].Add(&conjugate.Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: "invalid Merkle proof",
 		},
 		{
 			name: "domain point claim",
