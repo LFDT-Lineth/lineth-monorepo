@@ -1258,4 +1258,3 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
     }
 }
 
-

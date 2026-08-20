@@ -71,13 +71,13 @@ fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, bas
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
         var index:u62
-        var tmp:u2
-        //
-        index::tmp = pc - base
+        var rem:u2
+        // rem is the remainder of pc - base divided by 4
+        index::rem = pc - base
 
         // Execution must stay inside the span justified by predecoding, at 4-byte
         // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
-        if pc<base || pc >= exec_end || tmp != 0 {
+        if pc<base || pc >= exec_end || rem != 0 {
             printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
             fail
         }
@@ -90,5 +90,4 @@ fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, bas
         pc, output_write_address = interpreter(index as u64, pc, output_write_address)
     }
 }
-
 
