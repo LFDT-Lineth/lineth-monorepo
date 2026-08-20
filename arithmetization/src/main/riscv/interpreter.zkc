@@ -259,7 +259,6 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             printf "RTYPE_SUB_WB(a) "
             print_r_operands(rd, rs1, rs2)
             overflow::result = ((1 as u1)::(v1 as u64)) - (v2 as u65)
-            result = result
         }
         case RTYPE_XOR_WB: {
             printf "RTYPE_XOR_WB(a) "
@@ -301,7 +300,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             printf "BRANCH_BEQ(a) "
             print_b_operands(rs1, rs2, imm)
             if v1 == v2 {
-                new_pc = rs1_plus_imm
+                new_pc = signed_sum_of_double_word(pc, imm)
             }
             //
             return
@@ -310,7 +309,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             printf "BRANCH_BNE(a) "
             print_b_operands(rs1, rs2, imm)
             if v1 != v2 {
-                new_pc = rs1_plus_imm
+                new_pc = signed_sum_of_double_word(pc, imm)
             }
             //
             return
