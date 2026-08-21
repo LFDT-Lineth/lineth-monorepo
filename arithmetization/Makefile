@@ -11,7 +11,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 ZKC ?= $(REPO_ROOT)/zkc
 ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-ZKC_REF ?= v1.2.27
+ZKC_REF ?= v1.2.28
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
@@ -71,7 +71,7 @@ install-zkc-to:
 # Compile zkc program in a binary file
 zkc-compile: $(ZKC_FILES)
 	mkdir -p $(ZKC_BINDIR)
-	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --bci $(ZKC_MAIN)
+	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) $(ZKC_MAIN)
 
 # Check execution of the compiled zkc binary against an input JSON.
 # Only practical for small zkc programs: constraint checking, not tracing, is the expensive half.
