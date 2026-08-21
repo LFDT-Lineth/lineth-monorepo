@@ -69,7 +69,7 @@ pub input block_counts(address:u64) -> (count:u64)
 pub input blocks(address:u64) -> (b16:u64, b15:u64, b14:u64, b13:u64, b12:u64, b11:u64, b10:u64, b9:u64, b8:u64, b7:u64, b6:u64, b5:u64, b4:u64, b3:u64, b2:u64, b1:u64, b0:u64)
 // All keccak working vectors live in ONE memory, in 8-aligned regions
 // (5 slots used per region): state rows, pi buffer rows, theta's C and D.
-memory keccak_state(address:u7) -> (state:lane)
+memory keccak_state[u32](address:u7) -> (state:lane)
 const ROW0:u7 = 0
 const ROW1:u7 = 8
 const ROW2:u7 = 16
