@@ -152,6 +152,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'coordinator' &&
       (github.ref_name == 'main' || needs.run-test-coordinator.result == 'success')
     uses: ./.github/workflows/coordinator-build-and-publish.yml
@@ -166,6 +167,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'postman' &&
       (github.ref_name == 'main' || needs.run-test-postman.result == 'success')
     uses: ./.github/workflows/postman-build-and-publish.yml
@@ -180,6 +182,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'prover' &&
       (github.ref_name == 'main' || needs.run-test-prover.result == 'success')
     uses: ./.github/workflows/prover-build-and-publish.yml
@@ -194,6 +197,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'maru' &&
       (github.ref_name == 'main' || needs.run-test-maru.result == 'success')
     uses: ./.github/workflows/maru-build-and-publish.yml
@@ -208,6 +212,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'tx-exclusion-api' &&
       (github.ref_name == 'main' || needs.run-test-transaction-exclusion-api.result == 'success')
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
