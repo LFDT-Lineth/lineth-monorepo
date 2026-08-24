@@ -66,7 +66,7 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	projected, err := ps.Project(sc.Sys, proof, pub)
 	require.NoError(t, err)
 
-	require.Len(t, projected.Proof.Rounds, len(sc.Sys.Rounds), "one round message per round")
+	require.Len(t, projected.Proof.Rounds, max(len(sc.Sys.Rounds)-1, 0), "one round message per replayed round (last round excluded)")
 
 	// Cells are round-major and in declaration order, but OMIT public inputs:
 	// verifier.Proof documents that rounds[*].cells excludes them and the flat

@@ -73,13 +73,14 @@ type Stats struct {
 // AuxSiblings, since the Zig type has no such field. AuxNonNil records whether
 // dropping those would actually lose anything.
 func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
+	replayedRounds := max(len(sys.Rounds)-1, 0)
 	s := Stats{
-		Rounds:        len(sys.Rounds),
+		Rounds:        replayedRounds,
 		Cells:         len(proof.Cells),
 		PublicInputs:  len(pub),
 		Commitments:   len(proof.Commitments),
 		DynamicSizes:  len(proof.DynamicSizes),
-		RoundCells:    make([]int, len(sys.Rounds)),
+		RoundCells:    make([]int, replayedRounds),
 		OpeningDepths: map[int]int{},
 	}
 
@@ -95,7 +96,7 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 	for _, c := range sys.PublicInputs {
 		publicInput[c.Context.ID] = true
 	}
-	for _, r := range sys.Rounds {
+	for _, r := range sys.Rounds[:replayedRounds] {
 		for _, c := range r.Cells {
 			if !publicInput[c.Context.ID] {
 				s.RoundCells[r.ID]++
