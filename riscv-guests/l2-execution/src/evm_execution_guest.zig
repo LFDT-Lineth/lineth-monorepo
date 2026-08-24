@@ -52,24 +52,33 @@ const RunResult = struct {
 
 const GuestRunOutcome = union(enum) {
     result: RunResult,
-    decode_error: anyerror,
-    serialize_error: anyerror,
+    decode_error,
+    serialize_error,
 };
 
 /// Vanilla zesu stateless block execution. Fed an explicit byte slice so it runs identically on the
 /// native host (tests) and from the zkVM guest entry below.
 pub fn runStateless(allocator: std.mem.Allocator, ssz_input: []const u8) !Result {
-    return switch (runStatelessWithExitReason(allocator, ssz_input)) {
-        .result => |run_result| run_result.result,
-        .decode_error => |err| return err,
-        .serialize_error => |err| return err,
+    zesu_allocator.set(allocator);
+
+    const si = try ssz_decode.decode(allocator, ssz_input);
+    const ep = &si.new_payload_request.execution_payload;
+
+    const success = blk: {
+        const proof = executor.executeStatelessInput(allocator, si, si.chain_config.fork_name) catch break :blk false;
+        if (!std.mem.eql(u8, &proof.post_state_root, &ep.state_root)) break :blk false;
+        if (!std.mem.eql(u8, &proof.receipts_root, &ep.receipts_root)) break :blk false;
+        break :blk true;
     };
+
+    const out = try ssz_output.serialize(allocator, si.chain_config, si.new_payload_request, success);
+    return .{ .out = out, .success = success };
 }
 
 fn runStatelessWithExitReason(allocator: std.mem.Allocator, ssz_input: []const u8) GuestRunOutcome {
     zesu_allocator.set(allocator);
 
-    const si = ssz_decode.decode(allocator, ssz_input) catch |err| return .{ .decode_error = err };
+    const si = ssz_decode.decode(allocator, ssz_input) catch return .decode_error;
     const ep = &si.new_payload_request.execution_payload;
 
     const exit_reason: ExitReason = blk: {
@@ -82,7 +91,7 @@ fn runStatelessWithExitReason(allocator: std.mem.Allocator, ssz_input: []const u
         break :blk .receipts_root_mismatch;
     };
 
-    const out = ssz_output.serialize(allocator, si.new_payload_request, si.chain_config.chain_id, exit_reason == .valid) catch |err| return .{ .serialize_error = err };
+    const out = ssz_output.serialize(allocator, si.chain_config, si.new_payload_request, exit_reason == .valid) catch return .serialize_error;
     return .{ .result = .{ .result = .{ .out = out, .success = exit_reason == .valid }, .exit_reason = exit_reason } };
 }
 
