@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
@@ -146,13 +145,19 @@ type SharedRandomnessContributionAssigner struct{}
 // [SharedRandomnessContributionAssigner].
 type SharedRandomnessContributionChecker struct{}
 
-// sharedRandomnessContribution hashes every commitment preceding the round the
-// caller is running on into a multiset hash. The prover action and its verifier
-// analog both go through here, so neither can drift from the other's preimage:
-// [wiop.Runtime.CurrentRound] is the round the running action was registered on
-// on both sides.
+// sharedRandomnessContribution maps every commitment preceding the round the
+// caller is running on into the multiset-hash group and sums them. The prover
+// action and its verifier analog both go through here, so neither can drift from
+// the other's preimage: [wiop.Runtime.CurrentRound] is the round the running
+// action was registered on on both sides.
+//
+// The value returned here is exactly the
+// Hash(root) that [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/preflight.Run]
+// accumulates for that shard. Combining several rounds with
+// [multisethashing.Combine] keeps that correspondence while staying
+// order-independent, so no round ordering has to be agreed.
 func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
-	hasher := poseidon2.NewMDHasher()
+	acc := multisethashing.Identity()
 	for i := range rt.CurrentRound().ID {
 		if !rt.System.Rounds[i].HasCommitment {
 			logrus.Warnf(
@@ -161,11 +166,10 @@ func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 			continue
 		}
 
-		com := rt.Commitments[i]
-		hasher.WriteElements(com[:]...)
+		acc = multisethashing.Combine(acc, multisethashing.Hash(rt.Commitments[i]))
 	}
 
-	return multisethashing.Hash(hasher.SumDigest())
+	return acc
 }
 
 // contributionCell returns the public-input cell carrying limb i of the shared
