@@ -62,3 +62,12 @@ jobs:
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check"
+
+      - name: Trace l2-execution guest program and check it
+        run: make -C riscv-guests/l2-execution exec
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "" # Empty to avoid installing zkc again
+          INPUT: test/testdata/stateless_input.ssz
+          KECCAK_ACCEL: true
+          ZKC_EXEC_FLAGS: "--check -vv"
