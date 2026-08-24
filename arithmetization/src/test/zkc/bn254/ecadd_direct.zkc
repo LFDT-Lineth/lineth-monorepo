@@ -1,8 +1,8 @@
-// Batched BN254 (alt_bn128) G1 ECADD driver for bn254_ecadd_run.json.
-// Run it directly with:  go tool zkc exec -c testdata/bn254_ecadd_run.json testdata/bn254_ecadd_run.zkc
-//
-// This is a copy of arithmetization/src/test/zkc/bn254/ecadd_direct.zkc (only the
-// include path differs); it drives the local zkcdriver Go test (TestBn254Ecadd).
+// Batched BN254 (alt_bn128) G1 ECADD harness (direct — avoids the full RISC-V
+// interpreter, exercising just the precompile constraints).
+// Run it with:  make -C arithmetization/src/test ecadd-zkc-check
+// A copy drives the prover-ray Go zkcdriver test at
+// prover-ray/zkcdriver/testdata/bn254_ecadd_run.zkc (only the include path differs).
 //
 // Exercises the RAM-wrapper accelerator bn254_ecadd<ram>(input, output) -> status.
 // Each case i lays x1||y1||x2||y2 (128 bytes big-endian) into guest RAM, calls the
@@ -14,7 +14,7 @@
 // FAILURE: the wrapper returns status 0 and writes no output (it never `fail`s),
 // so those cases assert status 0 rather than a specific result.
 
-include "../../../arithmetization/src/main/lib/bn254/impl.zkc"
+include "../../../main/lib/bn254/impl.zkc"
 
 type lane = u64
 type tAddr = u8
