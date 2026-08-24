@@ -17,7 +17,7 @@ Before you start, make sure you have the following installed:
 
 ## Building the Coordinator Locally
 
-The coordinator is a Java-based service that orchestrates the Lineth protocol's operations. You can build it locally using the following steps:
+The coordinator is a JVM application, implemented in Kotlin and Vertx that orchestrates the Lineth protocol's operations. You can build it locally using the following steps:
 
 ### 1. Clone the Repository
 
@@ -41,7 +41,7 @@ make pnpm-install
 The coordinator can be built using Gradle:
 
 ```bash
-./gradlew :coordinator:app:build
+./gradlew :coordinator:app:buildNeeded
 ```
 
 This will generate the coordinator JAR file in the `coordinator/app/build/libs` directory.
