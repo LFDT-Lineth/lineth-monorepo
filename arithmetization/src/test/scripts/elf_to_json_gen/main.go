@@ -81,10 +81,10 @@ func instructionTypeFromOpcode(opcode uint32) uint32 {
 	}
 }
 
-// shouldUseMiscMem reports whether a valid instruction with rd=x0 should emit
-// COMPUTE_MISC_MEM at ELF time. Control-flow, side-effect, and syscall
+// shouldUseNoOp reports whether a valid instruction with rd=x0 should emit
+// NO_OP at ELF time. Control-flow, side-effect, and syscall
 // instructions keep their semantic compute_op even when rd is x0.
-func shouldUseMiscMem(instrType, rd, localOp, opcode uint32) bool {
+func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 	if rd != 0 {
 		return false
 	}
@@ -125,8 +125,8 @@ func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
 	if op == computeInvalid {
 		return computeInvalid
 	}
-	if shouldUseMiscMem(instrType, rd, localOp, opcode) {
-		return computeMiscMem
+	if shouldUseNoOp(instrType, rd, localOp, opcode) {
+		return computeNoOp
 	}
 	return op
 }
@@ -269,7 +269,7 @@ const (
 // Unified compute_op bases. These MUST match the ComputeOp constants in
 // arithmetization/src/main/common/constants.zkc.
 const (
-	computeMiscMem   = 0
+	computeNoOp   = 0
 	computeITypeBase = 1
 	computeRTypeBase = 25
 	computeSTypeBase = 56
@@ -291,7 +291,7 @@ var bTypeUnifiedIndex = map[uint32]uint32{
 func unifiedComputeOp(instrType, localOp uint32) uint32 {
 	switch instrType {
 	case miscMemType:
-		return computeMiscMem
+		return computeNoOp
 	case iType:
 		if localOp == itypeInvalid {
 			return computeInvalid

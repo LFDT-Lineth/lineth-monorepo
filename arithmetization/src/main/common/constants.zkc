@@ -18,10 +18,10 @@ const WRITE_SYSCALL:DoubleWord = 64
 // Predecoding operations
 // =======================
 //
-// ComputeOp values are dense: 0 = COMPUTE_MISC_MEM, 1..69 = semantic ops,
+// ComputeOp values are dense: 0 = NO_OP, 1..69 = semantic ops,
 // 255 = COMPUTE_INVALID. Ranges: I 1-24, R 25-55, S 56-59, B 60-65, J 66-67, U 68-69.
 
-// I-type ops (writeback variants only; rd=x0 inert paths use COMPUTE_MISC_MEM)
+// I-type ops (writeback variants only; rd=x0 inert paths use NO_OP)
 const READ8_SGN_WB:ComputeOp = 1
 const READ16_SGN_WB:ComputeOp = 2
 const READ32_SGN_WB:ComputeOp = 3
@@ -47,7 +47,7 @@ const ITYPE_JALR_WB:ComputeOp = 22
 const ITYPE_ECALL:ComputeOp = 23
 const ITYPE_EBREAK:ComputeOp = 24
 
-// R-type ops (writeback variants only; rd=x0 inert paths use COMPUTE_MISC_MEM)
+// R-type ops (writeback variants only; rd=x0 inert paths use NO_OP)
 const RTYPE_ADD_WB:ComputeOp = 25
 const RTYPE_SUB_WB:ComputeOp = 26
 const RTYPE_SLL_WB:ComputeOp = 27
@@ -98,13 +98,13 @@ const BRANCH_BGEU:ComputeOp = 65
 const JTYPE_JAL:ComputeOp = 66
 const JTYPE_JAL_WB:ComputeOp = 67
 
-// U-type ops (writeback variants only; rd=x0 inert paths use COMPUTE_MISC_MEM)
+// U-type ops (writeback variants only; rd=x0 inert paths use NO_OP)
 const UTYPE_LUI_WB:ComputeOp = 68
 const UTYPE_AUIPC_WB:ComputeOp = 69
 
 // Unified semantic compute ops stored in decoded.
 
-const COMPUTE_MISC_MEM:ComputeOp = 0
+const NO_OP:ComputeOp = 0
 
 // Marker emitted by elf_to_json_gen (computeInvalid) for words in the executable
 // span that are not instructions the interpreter models (e.g. CSR ops such as

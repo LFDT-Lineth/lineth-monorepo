@@ -33,7 +33,7 @@ include "../lib/io/write_output.zkc"
 // readability only.
 // Writeback-capable I/R/U ops use `*_WB` compute_op values when rd != x0.
 // When rd is x0, architecturally inert instructions (loads, arithmetic, LUI,
-// AUIPC, …) are encoded as COMPUTE_MISC_MEM at ELF time and only advance pc.
+// AUIPC, …) are encoded as NO_OP at ELF time and only advance pc.
 // Control-flow and side-effect instructions (JAL, JALR, branches, stores,
 // ECALL/EBREAK, Custom-1 precompiles) keep their semantic compute_op even
 // when rd is x0.
@@ -167,17 +167,27 @@ include "../lib/io/write_output.zkc"
 //   var imm:DoubleWord = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
 // 
 // ================
-// COMPUTE_MISC_MEM
+// NO_OP
 // ================
 //
-// Two sources at ELF time:
+// `NO_OP` is compute_op 0. There is no explicit `case NO_OP` in the switch
+// below: it is handled by the `default` arm of `interpreter_c` (after
+// `interpreter` / `interpreter_b` delegate unhandled semantic ops downward).
+//
+// At ELF time, two instruction classes collapse to `NO_OP`:
 //
 //   1. FENCE / FENCE.I (opcode MISCMEM) — architecturally a no-op on this VM.
-//   2. All architecturally inert rd=x0 instructions — loads to x0, OP-IMM/OP-IMM-32
-//      with rd=x0, R-type with rd=x0, LUI/AUIPC with rd=x0, etc.
+//   2. All architecturally inert rd=x0 instructions — loads to x0, OP-IMM /
+//      OP-IMM-32 with rd=x0, R-type with rd=x0, LUI/AUIPC with rd=x0, etc.
 //
 // Control-flow and side-effect instructions (JAL, JALR, branches, stores,
-// ECALL/EBREAK, Custom-1 precompiles) are never mapped to COMPUTE_MISC_MEM.
+// ECALL/EBREAK, Custom-1 precompiles) are never mapped to `NO_OP`.
+//
+// At runtime, `NO_OP` (and `COMPUTE_INVALID` padding slots) only advance
+// `pc` by 4: no register writeback, no RAM access, no syscall handling.
+// The tiers above list explicit semantic opcodes (`*_WB`, branches, stores,
+// precompiles, …); anything not matched there eventually reaches the
+// `interpreter_c` default and behaves as a no-op.
 //
 fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
 
@@ -838,7 +848,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
         }
 
         default: {
-            // COMPUTE_MISC_MEM, COMPUTE_INVALID, and unhandled ops advance PC only.
+            // NO_OP, COMPUTE_INVALID, and unhandled ops advance PC only.
             new_pc = (pc + 4) as Address
             new_output_write_address = output_write_address
             return

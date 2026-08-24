@@ -35,7 +35,7 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         }
     }
 
-    if compute_op == COMPUTE_MISC_MEM {
+    if compute_op == NO_OP {
         return
     }
 
@@ -59,7 +59,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
 
     switch I_key {
         case I_LB_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -71,7 +71,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LH_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -83,7 +83,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LW_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -95,7 +95,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LD_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -107,7 +107,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LBU_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -119,7 +119,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LHU_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -131,7 +131,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_LWU_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -143,7 +143,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_ADDI_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -155,7 +155,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_SLTI_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -167,7 +167,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_SLTIU_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -179,7 +179,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_XORI_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -191,7 +191,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_ORI_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -203,7 +203,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_ANDI_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -215,7 +215,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             }
         }
         case I_ADDIW_FOLD: {
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -250,7 +250,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
                 return
             }
             imm = shamt6 as DoubleWord
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -284,7 +284,7 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
                 return
             }
             imm = shamt5 as DoubleWord
-            if compute_op != COMPUTE_MISC_MEM {
+            if compute_op != NO_OP {
                 printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
@@ -313,13 +313,13 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             imm = shamt6 as DoubleWord
             switch funct6 {
                 case FUNCT6_SRLI: {
-                    if compute_op != COMPUTE_MISC_MEM {
+                    if compute_op != NO_OP {
                         printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                         fail
                     }
                 }
                 case FUNCT6_SRAI: {
-                    if compute_op != COMPUTE_MISC_MEM {
+                    if compute_op != NO_OP {
                         printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                         fail
                     }
@@ -367,13 +367,13 @@ fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
             imm = shamt5 as DoubleWord
             switch funct7 {
                 case FUNCT7_SRLIW: {
-                    if compute_op != COMPUTE_MISC_MEM {
+                    if compute_op != NO_OP {
                         printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                         fail
                     }
                 }
                 case FUNCT7_SRAIW: {
-                    if compute_op != COMPUTE_MISC_MEM {
+                    if compute_op != NO_OP {
                         printf "[ERROR] I-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                         fail
                     }

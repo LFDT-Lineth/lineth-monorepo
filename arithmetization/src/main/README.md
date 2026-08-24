@@ -63,7 +63,7 @@ The interpreter does not branch on `(opcode, funct3, funct7)` at runtime — it
 | Kind                      | Role |
 | ------------------------- | ---- |
 | `OP_*_WB` / `RTYPE_*_WB` / `UTYPE_*_WB` | Compute plus writeback to `registers[rd]` when `rd != x0` |
-| `COMPUTE_MISC_MEM` (0)    | `FENCE` and all architecturally inert `rd=x0` paths — advance `pc` only |
+| `NO_OP` (0)    | `FENCE` and all architecturally inert `rd=x0` paths — advance `pc` only |
 | `JTYPE_JAL`, `ITYPE_JALR`, branches, stores, syscalls, precompiles | Semantic ops preserved even when `rd=x0` |
 | `COMPUTE_INVALID` (255)   | Words the interpreter does not model (gaps, padding, unsupported opcodes). Execution **fails only if `pc` reaches that slot** (jump or fall-through into a gap). |
 
@@ -77,7 +77,7 @@ We must prove that the raw RISC-V program matches the predecoded table: for each
 address in the executable span, the raw blob word and `decoded[index]` describe
 the same instruction. A ZkC program re-reads each raw word and checks that
 `compute_op` and operands are consistent with `(opcode, funct3, funct7, …)`.
-`COMPUTE_MISC_MEM` and `COMPUTE_INVALID` need no operand checks once the
+`NO_OP` and `COMPUTE_INVALID` need no operand checks once the
 type / `compute_op` match.
 
 The justification pass runs in `predecoding/` (or as phase 1 of `riscv/main.zkc`).

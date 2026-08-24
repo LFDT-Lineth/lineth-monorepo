@@ -59,7 +59,7 @@ func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12,
 	return
 }
 
-func TestShouldUseMiscMem(t *testing.T) {
+func TestShouldUseNoOp(t *testing.T) {
 	tests := []struct {
 		name  string
 		instr uint32
@@ -97,9 +97,9 @@ func TestShouldUseMiscMem(t *testing.T) {
 			case uType:
 				localOp = decodeUTypeSemantic(opcode)
 			}
-			got := shouldUseMiscMem(instrType, rd, localOp, opcode)
+			got := shouldUseNoOp(instrType, rd, localOp, opcode)
 			if got != tt.want {
-				t.Fatalf("shouldUseMiscMem(%#x) = %v, want %v", tt.instr, got, tt.want)
+				t.Fatalf("shouldUseNoOp(%#x) = %v, want %v", tt.instr, got, tt.want)
 			}
 		})
 	}
@@ -107,7 +107,7 @@ func TestShouldUseMiscMem(t *testing.T) {
 
 func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
 	// A single `addi x0, x0, 0` (an rd-zero noop) in an executable blob at
-	// base 0x1000. buildDecodedProgram must rewrite it to a MISC_MEM record so
+	// base 0x1000. buildDecodedProgram must rewrite it to a NO_OP record so
 	// the interpreter only advances PC by 4.
 	const base uint64 = 0x1000
 	instr := encodeIType(opcodeOPIMM, 0b000, 0, 0, 0)
@@ -124,8 +124,8 @@ func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
 	}
 
 	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
-	if ops[0] != computeMiscMem {
-		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to MISC_MEM)", ops[0], computeMiscMem)
+	if ops[0] != computeNoOp {
+		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to NO_OP)", ops[0], computeNoOp)
 	}
 }
 
@@ -588,11 +588,11 @@ func TestClassifyInstructionExamples(t *testing.T) {
 	}{
 		{name: "undefined opcode", instr: 0, want: computeInvalid},
 		{name: "csr csrrw", instr: encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02), want: computeInvalid},
-		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeMiscMem},
-		{name: "addi x0 t0 1", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 1), want: computeMiscMem},
-		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeMiscMem},
-		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeMiscMem},
-		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeMiscMem},
+		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeNoOp},
+		{name: "addi x0 t0 1", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 1), want: computeNoOp},
+		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeNoOp},
+		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeNoOp},
+		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeNoOp},
 		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
 		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},

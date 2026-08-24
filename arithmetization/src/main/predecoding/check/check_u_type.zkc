@@ -6,7 +6,7 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     switch opcode {
         case OPCODE_LUI: {
             if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
+                if compute_op != NO_OP {
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
@@ -17,7 +17,7 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         }
         case OPCODE_AUIPC: {
             if rd == 0 {
-                if compute_op != COMPUTE_MISC_MEM {
+                if compute_op != NO_OP {
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
@@ -35,7 +35,7 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         }
     }
 
-    if compute_op == COMPUTE_MISC_MEM {
+    if compute_op == NO_OP {
         return
     }
 

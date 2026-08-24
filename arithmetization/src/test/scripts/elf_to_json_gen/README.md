@@ -56,14 +56,14 @@ encoding to:
 
 - **`compute_op`** — what to execute. When `rd != x0`, writeback-capable ops
   use the `*_WB` variant (e.g. `READ8_SGN_WB`, `OP_ADDI_WB`). When `rd == x0`,
-  architecturally inert instructions emit `COMPUTE_MISC_MEM` (0). Control/system
+  architecturally inert instructions emit `NO_OP` (0). Control/system
   ops (`ITYPE_JALR`, `ITYPE_ECALL`, `ITYPE_EBREAK`) keep their semantic op even
   when `rd == x0`.
 - **`imm`, `rs1`, `rd`** — operands (shift amounts are normalized at decode time;
   `imm` is the sign-extended 12-bit immediate)
 
 When `rd != x0`, `itypeOpForRd` selects the matching `*_WB` variant via
-`finalizeComputeOp`. When `rd == x0`, inert paths map to `COMPUTE_MISC_MEM`.
+`finalizeComputeOp`. When `rd == x0`, inert paths map to `NO_OP`.
 
 At runtime, the interpreter's flat `switch compute_op` handles these cases
 directly. Paired cases share compute logic; `*_WB` arms additionally write
@@ -101,7 +101,7 @@ case additionally writes the link address to `registers[rd]`. Invalid opcodes
 ## U-type semantic micro-ops (writeback folded)
 
 `decodeUTypeSemantic` maps LUI/AUIPC to local op indices; `finalizeComputeOp`
-selects `UTYPE_*_WB` when `rd != x0` or `COMPUTE_MISC_MEM` when `rd == x0`.
+selects `UTYPE_*_WB` when `rd != x0` or `NO_OP` when `rd == x0`.
 The upper immediate is sign-extended into `imm` at ELF time. At runtime, the
 interpreter's flat `switch compute_op` handles `UTYPE_*_WB` cases. Invalid
 opcodes (including `UTYPE_INVALID`) are handled by the `default` arm.
@@ -111,7 +111,7 @@ opcodes (including `UTYPE_INVALID`) are handled by the `default` arm.
 For an R-type instruction, the `decoded` record does not replay raw `funct3` /
 `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
 to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
-`COMPUTE_MISC_MEM` when `rd == x0` (except Custom-1 precompiles, which always
+`NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
 keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
 `RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
 precompile side effects.
@@ -141,27 +141,27 @@ below); redundant per-instruction `FUNCT7_*` aliases that duplicated
 `FUNCT7_ADD` or `FUNCT7_MUL` have been removed from `constants.zkc`. See
 `main_test.go` for `decodeRTypeSemantic` and `rtypeOpForRd` coverage.
 
-## rd=x0 → COMPUTE_MISC_MEM
+## rd=x0 → NO_OP
 
 When `rd == x0`, architecturally inert I/R/U instructions emit
-`COMPUTE_MISC_MEM` (0) as the record's `compute_op`. At runtime the interpreter
+`NO_OP` (0) as the record's `compute_op`. At runtime the interpreter
 only advances `pc` by 4 — the same path used for `FENCE` / `FENCE.I`.
 
-Examples mapped to `COMPUTE_MISC_MEM`:
+Examples mapped to `NO_OP`:
 
 - `addi x0, t0, 1`, `add x0, t0, t1` (result discarded into x0)
 - `ld x0, …` (load to x0 — no register writeback, no memory read at runtime)
 - `lui x0, imm`, `auipc x0, imm`
 - `addi x0, x0, 0`, `add x0, x0, x0` (strict no-ops)
 
-Not mapped to `COMPUTE_MISC_MEM` (keep semantic `compute_op`):
+Not mapped to `NO_OP` (keep semantic `compute_op`):
 
 - `jal` / `jalr x0, …` — control flow
 - branches and stores — side effects
 - `ecall` / `ebreak` — syscalls
 - **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`) — memory side effects
 
-The predicate lives in `shouldUseMiscMem` / `finalizeComputeOp` in `main.go`
+The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `main.go`
 (see `main_test.go`).
 
 ## How the pre-decoding is done
