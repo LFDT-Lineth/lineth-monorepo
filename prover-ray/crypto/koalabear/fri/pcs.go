@@ -515,10 +515,13 @@ type OpeningProof struct {
 	FRIProof Proof
 }
 
-// InputCap is the input-tree cap plus complete encoded tables whose auxiliary
-// leaves lie above the cap. Tables are ordered by SizeLog2 and are authenticated
-// by hashing adjacent rows into the cap reconstruction.
+// InputCap is the input-tree cap plus the shape-bound root and complete encoded
+// tables whose auxiliary leaves lie above the cap. Root is always present, even
+// for depth-zero caps, so the shape binding is authenticated once while the cap
+// is prepared rather than once per query. Tables are ordered by SizeLog2 and
+// are authenticated by hashing adjacent rows into the cap reconstruction.
 type InputCap struct {
+	Root   field.Octuplet
 	Nodes  []field.Octuplet
 	Tables []InputCapTable
 }
@@ -1070,7 +1073,9 @@ func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 		if info.height != committed.Tree.NumLevel()-1 {
 			panic("fri: openInputCaps: table shape and tree height differ")
 		}
+		caps[i].Root = committed.Tree.Root()
 		if info.depth == 0 {
+			caps[i].Nodes = []field.Octuplet{rawInputTreeRoot(committed.Tree)}
 			continue
 		}
 		frontierStart := (1 << info.depth) - 1
@@ -1079,6 +1084,16 @@ func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
 		caps[i].Tables = revealedInputTables(committed.EncodedTable, info)
 	}
 	return caps
+}
+
+// rawInputTreeRoot recovers the inner binary-tree root, before Merkleize
+// binds it to the table shape. InputCap carries the outer bound root, while
+// this value is used only for the depth-zero frontier.
+func rawInputTreeRoot(tree *Tree) field.Octuplet {
+	if tree.NumLevel() < 2 {
+		panic("fri: rawInputTreeRoot: tree has no inner root")
+	}
+	return hashNode(tree.Nodes[1], tree.Nodes[2], tree.Aux[0])
 }
 
 func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTable {
@@ -1217,17 +1232,14 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 
 func hashRowOpening(row RowOpening) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
-	absorbLeafHeader(hasher, len(row.Base), len(row.Ext))
 	writeRowOpeningElements(hasher, row)
 	return hasher.SumDigest()
 }
 
 // hashAuxPair must match Merkleize's even-before-odd hash order regardless of
-// which one is Self, hence selfIsEven. The domain-separation header is written
-// once per leaf (both rows share the same shape).
+// which one is Self, hence selfIsEven.
 func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
-	absorbLeafHeader(hasher, len(pair[0].Base), len(pair[0].Ext))
 	if selfIsEven {
 		writeRowOpeningElements(hasher, pair[0])
 		writeRowOpeningElements(hasher, pair[1])
@@ -1486,18 +1498,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	inputRoots, inputShapes, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots, in.Shapes)
 	if len(proof.InputCaps) != len(inputRoots) {
 		return fmt.Errorf("fri: pcs.Verify: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots))
-	}
-	inputShapes := make([]Shape, len(inputRoots))
-	for batchIdx, treeIdx := range inputIndexByBatch {
-		if treeIdx < 0 {
-			continue
-		}
-		if inputShapes[treeIdx] == nil {
-			inputShapes[treeIdx] = in.Shapes[batchIdx]
-		}
 	}
 	inputFrontiers := make([][]field.Octuplet, len(inputRoots))
 	inputCapInfos := make([]inputCapInfo, len(inputRoots))
@@ -1743,13 +1746,20 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	return rq, nil
 }
 
-func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
+// inputOpeningRoots also returns inputShapes, the declared Shape of the
+// distinct batch at each inputRoots index. authenticateInputCap uses it to
+// bind the cap's recovered raw root before the query branches authenticate to
+// the cap frontier.
+func inputOpeningRoots(
+	layout layout, orders [][]int, roots []field.Octuplet, shapes []Shape,
+) (QueryLayerRoots, []Shape, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
 	indexByRoot := make(map[field.Octuplet]int)
 	inputRoots := make(QueryLayerRoots, 0)
+	var inputShapes []Shape
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
 			root := roots[batchIdx]
@@ -1760,9 +1770,10 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 			indexByBatch[batchIdx] = len(inputRoots)
 			indexByRoot[root] = len(inputRoots)
 			inputRoots = append(inputRoots, root)
+			inputShapes = append(inputShapes, shapes[batchIdx])
 		}
 	}
-	return inputRoots, indexByBatch
+	return inputRoots, inputShapes, indexByBatch
 }
 
 type inputCapInfo struct {
@@ -1841,12 +1852,19 @@ func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
 func authenticateInputCap(
 	info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
 ) ([]field.Octuplet, error) {
+	if treeCap.Root != root {
+		return nil, fmt.Errorf("input cap has wrong shape-bound root")
+	}
 	depth := info.depth
 	if depth == 0 {
-		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
-			return nil, fmt.Errorf("depth-zero input cap must be empty")
+		if len(treeCap.Nodes) != 1 || len(treeCap.Tables) != 0 {
+			return nil, fmt.Errorf("depth-zero input cap has %d nodes and %d revealed tables, want 1 and 0",
+				len(treeCap.Nodes), len(treeCap.Tables))
 		}
-		return []field.Octuplet{root}, nil
+		if bindRoot(treeCap.Nodes[0], shape) != treeCap.Root {
+			return nil, fmt.Errorf("input cap has invalid shape-bound root")
+		}
+		return treeCap.Nodes, nil
 	}
 	if len(treeCap.Nodes) != 1<<depth {
 		return nil, fmt.Errorf("input cap has %d nodes, want %d", len(treeCap.Nodes), 1<<depth)
@@ -1880,8 +1898,12 @@ func authenticateInputCap(
 		}
 	}
 	merkleCap := MerkleCap{Nodes: treeCap.Nodes, Aux: aux}
-	if err := merkleCap.Authenticate(depth, root); err != nil {
+	rawRoot, err := merkleCap.RecoverRoot(depth)
+	if err != nil {
 		return nil, err
+	}
+	if bindRoot(rawRoot, shape) != treeCap.Root {
+		return nil, fmt.Errorf("input cap has invalid shape-bound root")
 	}
 	return treeCap.Nodes, nil
 }

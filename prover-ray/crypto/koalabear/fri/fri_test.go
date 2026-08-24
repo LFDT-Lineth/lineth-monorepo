@@ -276,7 +276,18 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	proof := fx.open(t, foldAlphas, positions)
 	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
-	require.Len(t, proof.InputQueries[0], 4)
+	inputQuery := proof.InputQueries[0]
+	require.Len(t, inputQuery, 4)
+	require.Len(t, proof.InputCaps, 4)
+	for i, branch := range inputQuery {
+		info, err := inputCapShapeInfo(fx.pcs.Params, fx.shapes[i])
+		require.NoError(t, err)
+		frontier, err := authenticateInputCap(info, proof.InputCaps[i], fx.shapes[i], fx.roots[i])
+		require.NoError(t, err)
+
+		leafIndex := positions[0] / ((1 << fx.pcs.Params.LogCodewordSize) / (1 << info.height))
+		require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier))
+	}
 
 	branch := proof.InputQueries[0][1]
 	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)

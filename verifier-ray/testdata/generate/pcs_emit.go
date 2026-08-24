@@ -82,7 +82,7 @@ func pcsOpeningProofZigLiteral(proof fri.OpeningProof) string {
 
 func inputCapZigLiteral(cap fri.InputCap) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "pcs.InputCap{ .nodes = &%s, .tables = &.{ ", commitmentSliceZig(cap.Nodes))
+	fmt.Fprintf(&b, "pcs.InputCap{ .root = %s, .nodes = &%s, .tables = &.{ ", commitmentValueLiteral(cap.Root), commitmentSliceZig(cap.Nodes))
 	for i, table := range cap.Tables {
 		if i > 0 {
 			b.WriteString(", ")

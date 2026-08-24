@@ -634,7 +634,7 @@ func inputTreeOpeningLiteral(o fri.InputTreeOpening) string {
 
 func inputCapLiteral(cap fri.InputCap) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "InputCapData{ .nodes = &%s, .tables = &.{ ", commitmentSlice(cap.Nodes))
+	fmt.Fprintf(&b, "InputCapData{ .root = %s, .nodes = &%s, .tables = &.{ ", oct8(cap.Root), commitmentSlice(cap.Nodes))
 	for i, table := range cap.Tables {
 		if i > 0 {
 			b.WriteString(", ")
@@ -754,7 +754,7 @@ func writePCSFixtures() error {
 	fmt.Fprintln(&out, "pub const RowPairData = [2]RowOpeningData;")
 	fmt.Fprintln(&out, "pub const InputTreeOpeningData = struct { siblings: []const [8]u32, leaves: []const ?RowPairData };")
 	fmt.Fprintln(&out, "pub const InputCapTableData = struct { size_log2: u8, rows: []const RowOpeningData };")
-	fmt.Fprintln(&out, "pub const InputCapData = struct { nodes: []const [8]u32, tables: []const InputCapTableData };")
+	fmt.Fprintln(&out, "pub const InputCapData = struct { root: [8]u32, nodes: []const [8]u32, tables: []const InputCapTableData };")
 	fmt.Fprintln(&out, "pub const MerkleCapData = struct { nodes: []const [8]u32, aux: []const ?[8]u32 };")
 	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
 	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, round_caps: []const MerkleCapData, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
@@ -796,7 +796,7 @@ func writeLargePCSFixture(path string) error {
 	fmt.Fprintln(&out, "pub const RowPairData = [2]RowOpeningData;")
 	fmt.Fprintln(&out, "pub const InputTreeOpeningData = struct { siblings: []const [8]u32, leaves: []const ?RowPairData };")
 	fmt.Fprintln(&out, "pub const InputCapTableData = struct { size_log2: u8, rows: []const RowOpeningData };")
-	fmt.Fprintln(&out, "pub const InputCapData = struct { nodes: []const [8]u32, tables: []const InputCapTableData };")
+	fmt.Fprintln(&out, "pub const InputCapData = struct { root: [8]u32, nodes: []const [8]u32, tables: []const InputCapTableData };")
 	fmt.Fprintln(&out, "pub const MerkleCapData = struct { nodes: []const [8]u32, aux: []const ?[8]u32 };")
 	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
 	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, round_caps: []const MerkleCapData, final_poly: []const [6]u32, running_queries: []const []const BranchData };")

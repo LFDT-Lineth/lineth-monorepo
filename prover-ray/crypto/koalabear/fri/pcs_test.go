@@ -148,7 +148,7 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 
 		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
-		assert.Equal(t, tree.Root(), root, name)
+		assert.Equal(t, tree.Root(), bindRoot(root, encoded.Shape()), name)
 
 		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
@@ -183,10 +183,16 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, info.depth)
 	capNodes := committed.Tree.OpenCap(info.depth).Nodes
-	treeCap := InputCap{Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
+	treeCap := InputCap{Root: committed.Tree.Root(), Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
 	require.Len(t, treeCap.Tables, 2)
 	frontier, err := authenticateInputCap(info, treeCap, shape, committed.Tree.Root())
 	require.NoError(t, err)
+	require.Equal(t, committed.Tree.Root(), treeCap.Root, "cap must include the shape-bound root")
+
+	wrongShape := append(Shape(nil), shape...)
+	wrongShape[len(wrongShape)-1].ExtWidth++
+	_, err = authenticateInputCap(info, treeCap, wrongShape, committed.Tree.Root())
+	require.ErrorContains(t, err, "shape-bound root")
 
 	queryPosition := 5
 	branch := openInputTreeOpeningToDepth(params, committed, queryPosition, info.depth)
@@ -232,6 +238,12 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	}
 	require.NoError(t, pcs.Verify(verifyInput, proof))
 	require.Len(t, proof.InputCaps[0].Tables, 2)
+	require.Equal(t, committed.Tree.Root(), proof.InputCaps[0].Root)
+
+	wrongRoot := proof
+	wrongRoot.InputCaps = append([]InputCap(nil), proof.InputCaps...)
+	wrongRoot.InputCaps[0].Root = field.PseudoRandOctuplet(prng)
+	require.ErrorContains(t, pcs.Verify(verifyInput, wrongRoot), "shape-bound root")
 
 	missingTable := proof
 	missingTable.InputCaps = append([]InputCap(nil), proof.InputCaps...)
@@ -252,6 +264,37 @@ func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
 	pair := RowPair{proof.InputCaps[0].Tables[0].Rows[0], proof.InputCaps[0].Tables[0].Rows[1]}
 	capPairOnPath.InputQueries[0][0].Leaves[0] = &pair
 	require.ErrorContains(t, pcs.Verify(verifyInput, capPairOnPath), "query supplied a revealed row pair")
+}
+
+func TestInputCap_Regression_ShapeBoundRootAtDepthZero(t *testing.T) {
+	params, err := NewParams(3, 2, 1)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(3, 2))
+	require.NoError(t, err)
+
+	prng := rand.New(utils.NewRandSource(20260824))
+	witness := MultiSizeTable{
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 1)}},
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 2)}},
+		{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}},
+	}
+	committed := pcs.Commit(witness)
+	shape := committed.EncodedTable.Shape()
+	info, err := inputCapShapeInfo(params, shape)
+	require.NoError(t, err)
+	require.Zero(t, info.depth)
+
+	inputCap := pcs.openInputCaps([]CommitterState{committed})[0]
+	require.Equal(t, committed.Tree.Root(), inputCap.Root)
+	require.Len(t, inputCap.Nodes, 1, "depth-zero cap must retain the raw-root frontier")
+	frontier, err := authenticateInputCap(info, inputCap, shape, committed.Tree.Root())
+	require.NoError(t, err)
+	require.Equal(t, inputCap.Nodes, frontier)
+
+	wrongShape := append(Shape(nil), shape...)
+	wrongShape[len(wrongShape)-1].ExtWidth++
+	_, err = authenticateInputCap(info, inputCap, wrongShape, committed.Tree.Root())
+	require.ErrorContains(t, err, "shape-bound root")
 }
 
 type pcsOpenVerifyFixture struct {
