@@ -168,6 +168,71 @@ test "poseidon2 compression and merkle-damgard match prover-ray golden cases" {
     }
 }
 
+fn fixedLengthReference(values: []const field.Element) poseidon2.Digest {
+    var state = poseidon2.zeroDigest();
+    var initialized = false;
+    var offset: usize = 0;
+    while (offset < values.len) {
+        const n = @min(poseidon2.block_size, values.len - offset);
+        var block = poseidon2.zeroDigest();
+        @memcpy(block[poseidon2.block_size - n ..], values[offset .. offset + n]);
+        if (initialized) {
+            state = poseidon2.compress(state, block);
+        } else {
+            state = block;
+            initialized = true;
+        }
+        offset += n;
+    }
+    return state;
+}
+
+test "poseidon2 fixed-length block boundaries" {
+    var values: [17]field.Element = undefined;
+    for (&values, 0..) |*value, i| value.* = field.Element.init(@intCast(i + 1));
+
+    const lengths = [_]usize{ 0, 1, 7, 8, 9, 15, 16, 17 };
+    for (lengths) |n| {
+        var hasher = poseidon2.FixedLengthHasher.init();
+        hasher.writeElements(values[0..n]);
+        try std.testing.expect(poseidon2.eql(hasher.sumDigest(), fixedLengthReference(values[0..n])));
+    }
+}
+
+test "poseidon2 fixed-length zero first block is initialized" {
+    var hasher = poseidon2.FixedLengthHasher.init();
+    var zeros = [_]field.Element{field.Element.zero()} ** poseidon2.block_size;
+    hasher.writeElements(&zeros);
+    hasher.writeElement(field.Element.init(9));
+
+    var right = poseidon2.zeroDigest();
+    right[poseidon2.block_size - 1] = field.Element.init(9);
+    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), poseidon2.compress(poseidon2.zeroDigest(), right)));
+}
+
+test "poseidon2 fixed-length reset and non-destructive sum" {
+    var values: [17]field.Element = undefined;
+    for (&values, 0..) |*value, i| value.* = field.Element.init(@intCast(i + 1));
+
+    var hasher = poseidon2.FixedLengthHasher.init();
+    hasher.writeElements(values[0..7]);
+    hasher.reset();
+    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), poseidon2.zeroDigest()));
+
+    hasher.writeElements(values[0..16]);
+    hasher.reset();
+    hasher.writeElements(values[0..9]);
+    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), fixedLengthReference(values[0..9])));
+
+    hasher.reset();
+    hasher.writeElements(values[0..7]);
+    const first = hasher.sumDigest();
+    try std.testing.expect(poseidon2.eql(first, fixedLengthReference(values[0..7])));
+    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), first));
+    hasher.writeElements(values[7..17]);
+    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), fixedLengthReference(values[0..17])));
+}
+
 test "poseidon2.eql matches digests limb-for-limb" {
     const a = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
     const b = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });

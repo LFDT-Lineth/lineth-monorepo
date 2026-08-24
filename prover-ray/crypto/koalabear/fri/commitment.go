@@ -216,9 +216,13 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	return tree
 }
 
+type fieldElementWriter interface {
+	WriteElements(...field.Element)
+}
+
 // writeRowElements absorbs one row into hasher without resetting or summing,
 // so a caller can digest several rows into one combined value.
-func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
+func writeRowElements(hasher fieldElementWriter, t SizedTable, row int) {
 	for k := range t.Base {
 		hasher.WriteElements(t.Base[k][row])
 	}

@@ -4,6 +4,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -609,4 +610,59 @@ func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiS
 
 func digestSizedRow(table SizedTable, row int) field.Octuplet {
 	return hashRowOpening(openEncodedRow(table, row))
+}
+
+func pcsTestElements(values ...uint64) []field.Element {
+	elements := make([]field.Element, len(values))
+	for i, value := range values {
+		elements[i].SetUint64(value)
+	}
+	return elements
+}
+
+func pcsFixedLeafReference(values []field.Element) field.Octuplet {
+	var state field.Octuplet
+	initialized := false
+	for len(values) != 0 {
+		n := min(len(values), poseidon2.BlockSize)
+		var block field.Octuplet
+		copy(block[poseidon2.BlockSize-n:], values[:n])
+		if initialized {
+			state = poseidon2.Compress(state, block)
+		} else {
+			state = block
+			initialized = true
+		}
+		values = values[n:]
+	}
+	return state
+}
+
+func TestHashRowOpeningFixedLength(t *testing.T) {
+	row := RowOpening{
+		Base: pcsTestElements(1, 2, 3),
+		Ext:  []field.Ext{field.UintsToExt(4, 5, 6, 7, 8, 9)},
+	}
+	want := pcsFixedLeafReference(pcsTestElements(1, 2, 3, 4, 5, 6, 7, 8, 9))
+	require.Equal(t, want, hashRowOpening(row))
+}
+
+func TestHashAuxPairFixedLengthAndParity(t *testing.T) {
+	even := RowOpening{
+		Base: pcsTestElements(1, 2),
+		Ext:  []field.Ext{field.UintsToExt(3, 4, 5, 6, 7, 8)},
+	}
+	odd := RowOpening{
+		Base: pcsTestElements(9, 10),
+		Ext:  []field.Ext{field.UintsToExt(11, 12, 13, 14, 15, 16)},
+	}
+	evenOdd := pcsTestElements(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
+	oddEven := pcsTestElements(9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8)
+	evenOddDigest := pcsFixedLeafReference(evenOdd)
+	oddEvenDigest := pcsFixedLeafReference(oddEven)
+
+	require.Equal(t, evenOddDigest, hashAuxPair(RowPair{even, odd}, true))
+	require.Equal(t, evenOddDigest, hashAuxPair(RowPair{odd, even}, false))
+	require.Equal(t, oddEvenDigest, hashAuxPair(RowPair{even, odd}, false))
+	require.NotEqual(t, evenOddDigest, oddEvenDigest)
 }

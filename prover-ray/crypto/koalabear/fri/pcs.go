@@ -1230,16 +1230,19 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 	return opening
 }
 
+// hashRowOpening is collision-resistant only because the caller fixes the
+// row's canonical element length from the committed shape before hashing.
 func hashRowOpening(row RowOpening) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
+	hasher := poseidon2.NewFixedLengthHasher()
 	writeRowOpeningElements(hasher, row)
 	return hasher.SumDigest()
 }
 
-// hashAuxPair must match Merkleize's even-before-odd hash order regardless of
-// which one is Self, hence selfIsEven.
+// hashAuxPair hashes two rows whose canonical lengths are fixed by the
+// committed shape. It must match Merkleize's even-before-odd hash order
+// regardless of which one is Self, hence selfIsEven.
 func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
+	hasher := poseidon2.NewFixedLengthHasher()
 	if selfIsEven {
 		writeRowOpeningElements(hasher, pair[0])
 		writeRowOpeningElements(hasher, pair[1])
@@ -1250,7 +1253,7 @@ func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	return hasher.SumDigest()
 }
 
-func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
+func writeRowOpeningElements(hasher fieldElementWriter, row RowOpening) {
 	for _, base := range row.Base {
 		hasher.WriteElements(base)
 	}

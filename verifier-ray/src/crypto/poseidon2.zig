@@ -147,6 +147,63 @@ pub const MDHasher = struct {
     }
 };
 
+/// An IV-elided Poseidon2 compression chain. Collision resistance requires the
+/// caller to fix the exact canonical input length before writing; lengths are
+/// not domain-separated. Empty input returns the zero digest and a one-block
+/// input is returned directly.
+pub const FixedLengthHasher = struct {
+    state: Digest,
+    buffer: Digest,
+    buffer_len: usize,
+    initialized: bool,
+
+    pub fn init() FixedLengthHasher {
+        return .{
+            .state = zeroDigest(),
+            .buffer = zeroDigest(),
+            .buffer_len = 0,
+            .initialized = false,
+        };
+    }
+
+    pub fn reset(self: *FixedLengthHasher) void {
+        self.* = init();
+    }
+
+    pub fn writeElement(self: *FixedLengthHasher, value: field.Element) void {
+        self.buffer[self.buffer_len] = value;
+        self.buffer_len += 1;
+        if (self.buffer_len == block_size) self.absorbBlock();
+    }
+
+    pub fn writeElements(self: *FixedLengthHasher, values: []const field.Element) void {
+        for (values) |value| self.writeElement(value);
+    }
+
+    pub fn sumDigest(self: *FixedLengthHasher) Digest {
+        var final = self.*;
+        if (final.buffer_len != 0) {
+            const pad = block_size - final.buffer_len;
+            var final_block = zeroDigest();
+            @memcpy(final_block[pad..], final.buffer[0..final.buffer_len]);
+            final.buffer = final_block;
+            final.absorbBlock();
+        }
+        return final.state;
+    }
+
+    fn absorbBlock(self: *FixedLengthHasher) void {
+        if (self.initialized) {
+            compressInPlace(&self.state, &self.buffer);
+        } else {
+            self.state = self.buffer;
+            self.initialized = true;
+        }
+        self.buffer = zeroDigest();
+        self.buffer_len = 0;
+    }
+};
+
 pub fn hashElements(values: []const field.Element) Digest {
     var h = MDHasher.init();
     h.writeElements(values);

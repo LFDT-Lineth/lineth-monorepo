@@ -152,27 +152,27 @@ pub const RowOpening = struct {
 /// prover-ray's `RowPair`.
 pub const RowPair = [2]RowOpening;
 
-fn writeRowOpeningElements(hasher: *poseidon2.MDHasher, row: RowOpening) void {
+fn writeRowOpeningElements(hasher: anytype, row: RowOpening) void {
     hasher.writeElements(row.base);
     for (row.ext) |e| {
         hasher.writeElements(&.{ e.B0.a0, e.B0.a1, e.B1.a0, e.B1.a1, e.B2.a0, e.B2.a1 });
     }
 }
 
-/// Hashes a single row preimage into a leaf digest: prover-ray's
-/// `hashRowOpening`, used for the bottom (largest) table's individual rows.
+/// Hashes a single row preimage whose canonical length is fixed by the
+/// committed shape: prover-ray's `hashRowOpening`, used for the bottom
+/// (largest) table's individual rows.
 pub fn hashRowOpening(row: RowOpening) poseidon2.Digest {
-    var hasher = poseidon2.MDHasher.init();
+    var hasher = poseidon2.FixedLengthHasher.init();
     writeRowOpeningElements(&hasher, row);
     return hasher.sumDigest();
 }
 
-/// Hashes an aux level's conjugate pair in the same even-before-odd order
-/// `MultiSizeTable.Merkleize` used, regardless of which row is `self`. The
-/// header is written once per pair (both rows share the same shape). Mirrors
-/// prover-ray's `hashAuxPair`.
+/// Hashes an aux level's conjugate pair, whose canonical length is fixed by the
+/// committed shape, in the same even-before-odd order `MultiSizeTable.Merkleize`
+/// used, regardless of which row is `self`. Mirrors prover-ray's `hashAuxPair`.
 pub fn hashRowPair(pair: RowPair, self_is_even: bool) poseidon2.Digest {
-    var hasher = poseidon2.MDHasher.init();
+    var hasher = poseidon2.FixedLengthHasher.init();
     if (self_is_even) {
         writeRowOpeningElements(&hasher, pair[0]);
         writeRowOpeningElements(&hasher, pair[1]);

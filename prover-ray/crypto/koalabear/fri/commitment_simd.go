@@ -4,29 +4,28 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
-	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
 )
 
 // simdLanes is the SIMD width of the AVX-512 batch Poseidon2 permutation: 16
-// independent Merkle-Damgard chains run per
-// vortex.CompressPoseidon2x16Columns call.
+// independent compression chains run per batch call.
 const simdLanes = 16
 
 // leafLayout describes how one Merkleize leaf's element stream is laid out in
 // the batch-permutation matrix: the stream is blocked into groups of 8 with the
 // final partial block LEFT-padded with zeros, so the kernel's front-to-back
-// chunking reproduces MDHasher's block sequence (the sponge starts from a zero
-// state and absorbs each block with feed-forward, so the result is bit-identical
-// to hashLeafScalar). All leaves of a size share this layout because they share
-// (baseWidth, extWidth) and pairing.
+// chunking reproduces the fixed-length hasher's block sequence. The first block
+// is the initial state and subsequent blocks are compressed with feed-forward,
+// so the result is bit-identical to hashLeafScalar. All leaves of a size share
+// this layout because they share (baseWidth, extWidth) and pairing.
 type leafLayout struct {
 	baseWidth int
 	extWidth  int
 	paired    bool // leaf digests two adjacent rows (non-bottom levels), else one
 
-	frontLen int // elements before the (left-padded) final block: streamLen - streamLen%8
-	pad      int // leading zeros inside the final block: (8 - streamLen%8) % 8
-	colSize  int // padded row length, a multiple of 8: streamLen + pad
+	frontLen  int // elements before the (left-padded) final block: streamLen - streamLen%8
+	pad       int // leading zeros inside the final block: (8 - streamLen%8) % 8
+	colSize   int // padded row length, a multiple of 8: streamLen + pad
+	streamLen int
 }
 
 func newLeafLayout(t SizedTable, paired bool) leafLayout {
@@ -45,6 +44,7 @@ func newLeafLayout(t SizedTable, paired bool) leafLayout {
 	l.pad = (poseidon2.BlockSize - streamLen%poseidon2.BlockSize) % poseidon2.BlockSize
 	l.frontLen = streamLen - streamLen%poseidon2.BlockSize
 	l.colSize = streamLen + l.pad
+	l.streamLen = streamLen
 	return l
 }
 
@@ -117,9 +117,9 @@ func (l leafLayout) fillColumns(matrix []field.Element, t SizedTable, off, base,
 	}
 }
 
-// hashLeafScalar reproduces the MDHasher path for a single leaf; used for the
-// <16-leaf tail and as the reference fallback.
-func (l leafLayout) hashLeafScalar(hasher *poseidon2.MDHasher, t SizedTable, j int) field.Octuplet {
+// hashLeafScalar hashes a leaf with the length fixed by the table shape; it is
+// used for the <16-leaf tail and as the scalar reference fallback.
+func (l leafLayout) hashLeafScalar(hasher *poseidon2.FixedLengthHasher, t SizedTable, j int) field.Octuplet {
 	hasher.Reset()
 	if l.paired {
 		writeRowElements(hasher, t, 2*j)
@@ -134,10 +134,15 @@ func (l leafLayout) hashLeafScalar(hasher *poseidon2.MDHasher, t SizedTable, j i
 // the AVX-512 batch permutation and parallelized across leaf ranges. When
 // paired, out has size/2 entries and leaf j digests rows 2j and 2j+1
 // (non-bottom levels); otherwise out has size entries and leaf j digests row j
-// (bottom level). Digests are bit-identical to the scalar MDHasher path.
+// (bottom level). Digests are bit-identical to the scalar FixedLengthHasher
+// path.
 func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 	l := newLeafLayout(t, paired)
 	nbLeaves := len(out)
+	if l.streamLen == 0 {
+		clear(out)
+		return
+	}
 
 	// Parallelize over SIMD groups, not individual leaves: parallel.Execute
 	// splits its range across GOMAXPROCS workers, so parallelizing over leaves
@@ -150,17 +155,23 @@ func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 	if nbGroups > 0 {
 		parallel.Execute(nbGroups, func(start, end int) {
 			matrix := make([]field.Element, simdLanes*l.colSize)
+			state := make([]field.Element, simdLanes*poseidon2.BlockSize)
 			for g := start; g < end; g++ {
 				j := g * simdLanes
 				l.fillGroup(matrix, t, j)
-				vortex.CompressPoseidon2x16Columns(matrix, l.colSize, out[j:j+simdLanes])
+				poseidon2.CompressFixedLengthx16Columns(
+					state,
+					matrix,
+					l.colSize,
+					out[j:j+simdLanes],
+				)
 			}
 		})
 	}
 
 	// Scalar tail: the final nbLeaves%16 leaves that do not fill a group.
 	if tail := nbGroups * simdLanes; tail < nbLeaves {
-		hasher := poseidon2.NewMDHasher()
+		hasher := poseidon2.NewFixedLengthHasher()
 		for j := tail; j < nbLeaves; j++ {
 			out[j] = l.hashLeafScalar(hasher, t, j)
 		}
