@@ -47,7 +47,7 @@ func TestMeasure(t *testing.T) {
 
 			s := proofserialization.Measure(sc.Sys, proof, pub)
 
-			require.Equal(t, len(sc.Sys.Rounds), s.Rounds, "round count must match the system")
+			require.Equal(t, max(len(sc.Sys.Rounds)-1, 0), s.Rounds, "round count must match replayed rounds (last excluded)")
 			require.Equal(t, len(proof.Cells), s.Cells, "cell count must match the proof")
 			require.Equal(t, len(proof.Cells), s.BaseCells+s.ExtCells,
 				"every cell must be classified as base or ext")
