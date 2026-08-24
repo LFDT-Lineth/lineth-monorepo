@@ -1,0 +1,162 @@
+include "constants.zkc"
+include "utils.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+include "../../riscv/utils/type.zkc"
+
+// Compute SHA-256 over msg_length bytes in guest RAM. The custom instruction
+// ABI supplies the input address through rs1, the byte length through rs2, and
+// the output address through the current value of rd. Like the Keccak
+// accelerator, the instruction does not modify the architectural value of rd.
+//
+// The accelerated ABI currently accepts lengths through the interpreter's u32
+// path, matching Keccak. SHA-256's encoded bit length is nevertheless formed in
+// u64 before shifting, so all supported byte lengths are encoded correctly.
+fn sha2<ram, sha2_state>(msg_address:Address, msg_length:u32, output_address:Address) {
+    sha2_initialize()
+
+    // todo(arijit): use divmod (/%) once zkc version is bumped in prover-ray
+    var full_blocks:u32 = msg_length / SHA2_BLOCK_BYTE_LENGTH
+    var remainder:u6 = (msg_length % SHA2_BLOCK_BYTE_LENGTH) as u6
+    var current_address:Address = msg_address
+
+    // Absorb every complete message block before writing any output. This is
+    // important when the caller's input and output ranges overlap.
+    for block:u32 = 0; block<full_blocks; block = block + 1 {
+        sha2_load_message_block(current_address)
+        sha2_compress()
+        current_address = current_address + (SHA2_BLOCK_BYTE_LENGTH as Address)
+    }
+
+    var bit_length:u64 = (msg_length as u64) << 3
+    var bit_length_high:u32
+    var bit_length_low:u32
+    bit_length_high::bit_length_low = bit_length
+
+    // The final message bytes and 0x80 always fit in one block. The 64-bit
+    // length fits there as well only when the remainder is at most 55 bytes.
+    sha2_load_padding_block(current_address, remainder)
+    if remainder<56 {
+        sha2_state[14] = bit_length_high
+        sha2_state[15] = bit_length_low
+        sha2_compress()
+    } else {
+        sha2_compress()
+        sha2_load_length_block(bit_length_high, bit_length_low)
+        sha2_compress()
+    }
+
+    sha2_write_digest(output_address)
+}
+
+fn sha2_initialize<sha2_state>() {
+    sha2_state[SHA2_H0] = SHA2_INITIAL_H0
+    sha2_state[SHA2_H1] = SHA2_INITIAL_H1
+    sha2_state[SHA2_H2] = SHA2_INITIAL_H2
+    sha2_state[SHA2_H3] = SHA2_INITIAL_H3
+    sha2_state[SHA2_H4] = SHA2_INITIAL_H4
+    sha2_state[SHA2_H5] = SHA2_INITIAL_H5
+    sha2_state[SHA2_H6] = SHA2_INITIAL_H6
+    sha2_state[SHA2_H7] = SHA2_INITIAL_H7
+}
+
+// Load one complete message block. Guest RAM stores bytes little-endian within
+// each RAM word, while SHA-256 interprets every schedule word as big-endian.
+fn sha2_load_message_block<ram, sha2_state>(address:Address) {
+    for i:u5 = 0; i<16; i = i + 1 {
+        var word_address:Address = address + (4 * (i as Address))
+        var b0:u8 = read_8(word_address)
+        var b1:u8 = read_8(word_address + 1)
+        var b2:u8 = read_8(word_address + 2)
+        var b3:u8 = read_8(word_address + 3)
+        sha2_state[i as u7] = b0::b1::b2::b3
+    }
+}
+
+// Load the first padding block: remaining message bytes, one 0x80 byte, then
+// zeroes. The caller replaces W[14..16] with the length when it fits.
+fn sha2_load_padding_block<ram, sha2_state>(address:Address, remainder:u6) {
+    for word_index:u5 = 0; word_index<16; word_index = word_index + 1 {
+        var byte_index:u6 = (word_index as u6) << 2
+        var b0:u8 = sha2_padding_byte(address, remainder, byte_index)
+        var b1:u8 = sha2_padding_byte(address, remainder, byte_index + 1)
+        var b2:u8 = sha2_padding_byte(address, remainder, byte_index + 2)
+        var b3:u8 = sha2_padding_byte(address, remainder, byte_index + 3)
+        sha2_state[word_index as u7] = b0::b1::b2::b3
+    }
+}
+
+fn sha2_padding_byte<ram>(address:Address, remainder:u6, index:u6) -> (value:u8) {
+    if index<remainder {
+        value = read_8(address + (index as Address))
+    } else if index == remainder {
+        value = SHA2_PADDING_START
+    } else {
+        value = 0
+    }
+}
+
+fn sha2_load_length_block<sha2_state>(bit_length_high:u32, bit_length_low:u32) {
+    for i:u5 = 0; i<14; i = i + 1 {
+        sha2_state[i as u7] = 0
+    }
+    sha2_state[14] = bit_length_high
+    sha2_state[15] = bit_length_low
+}
+
+fn sha2_extend_schedule<sha2_state>() {
+    for i:u7 = 16; i<64; i = i + 1 {
+        var sigma0:u32 = sha2_small_sigma0(sha2_state[i - 15])
+        var sigma1:u32 = sha2_small_sigma1(sha2_state[i - 2])
+        sha2_state[i] = sha2_add4(sha2_state[i - 16], sigma0, sha2_state[i - 7], sigma1)
+    }
+}
+
+fn sha2_compress<sha2_state>() {
+    sha2_extend_schedule()
+
+    var a:u32 = sha2_state[SHA2_H0]
+    var b:u32 = sha2_state[SHA2_H1]
+    var c:u32 = sha2_state[SHA2_H2]
+    var d:u32 = sha2_state[SHA2_H3]
+    var e:u32 = sha2_state[SHA2_H4]
+    var f:u32 = sha2_state[SHA2_H5]
+    var g:u32 = sha2_state[SHA2_H6]
+    var h:u32 = sha2_state[SHA2_H7]
+
+    for i:u7 = 0; i<64; i = i + 1 {
+        var t1:u32 = sha2_add5(h, sha2_big_sigma1(e), sha2_choose(e, f, g), SHA2_K[i as u6], sha2_state[i])
+        var t2:u32 = sha2_add2(sha2_big_sigma0(a), sha2_majority(a, b, c))
+
+        h = g
+        g = f
+        f = e
+        e = sha2_add2(d, t1)
+        d = c
+        c = b
+        b = a
+        a = sha2_add2(t1, t2)
+    }
+
+    sha2_state[SHA2_H0] = sha2_add2(sha2_state[SHA2_H0], a)
+    sha2_state[SHA2_H1] = sha2_add2(sha2_state[SHA2_H1], b)
+    sha2_state[SHA2_H2] = sha2_add2(sha2_state[SHA2_H2], c)
+    sha2_state[SHA2_H3] = sha2_add2(sha2_state[SHA2_H3], d)
+    sha2_state[SHA2_H4] = sha2_add2(sha2_state[SHA2_H4], e)
+    sha2_state[SHA2_H5] = sha2_add2(sha2_state[SHA2_H5], f)
+    sha2_state[SHA2_H6] = sha2_add2(sha2_state[SHA2_H6], g)
+    sha2_state[SHA2_H7] = sha2_add2(sha2_state[SHA2_H7], h)
+}
+
+fn sha2_write_digest<ram, sha2_state>(output_address:Address) {
+    for i:u4 = 0; i<8; i = i + 1 {
+        var b0:u8, b1:u8, b2:u8, b3:u8
+        b0::b1::b2::b3 = sha2_state[SHA2_H0 + (i as u7)]
+        var word_address:Address = output_address + (4 * (i as Address))
+        write_8(word_address, b0)
+        write_8(word_address + 1, b1)
+        write_8(word_address + 2, b2)
+        write_8(word_address + 3, b3)
+    }
+}

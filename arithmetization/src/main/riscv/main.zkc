@@ -13,7 +13,7 @@ include "utils/register_utils.zkc"
 include "memory.zkc"
 
 // TODO @Ghost
-fn main<registers, ram, keccak_state, poseidon2_state>() {
+fn main<registers, ram, keccak_state, sha2_state, poseidon2_state>() {
     var instruction:Instruction
     var clock_cycle:u32 = 0
     var entry_point:Address
@@ -48,4 +48,3 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
         pc, output_write_address = interpreter(instruction, pc, output_write_address)
     }
 }
-

@@ -17,6 +17,14 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    // SHA-256 provider: standard zig SHA-256 (zesu stdlibs_accel) by default; the
+    // arithmetization SHA-256 wrapper (prover-accelerated custom op) when opted in
+    // with -Dsha2-accel=true. Read by zkvm_provide.zig at comptime.
+    const sha2_accel = b.option(
+        bool,
+        "sha2-accel",
+        "Use the arithmetization SHA-256 wrapper instead of standard zig SHA-256 (default: standard)",
+    ) orelse false;
     // write_output provider: default stdout `write` ecall (zesu zkvm_io) unless the
     // Lineth write_output custom-op accelerator is opted in with -Dwrite-output-accel=true.
     // Read by zkvm_provide.zig at comptime.
@@ -24,6 +32,7 @@ pub fn build(b: *std.Build) void {
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
+    guest_options.addOption(bool, "sha2_accel", sha2_accel);
     guest_options.addOption(bool, "write_output_accel", write_output_accel);
 
     const gp_name = "evm_execution_guest";
@@ -39,7 +48,7 @@ pub fn build(b: *std.Build) void {
     //   • zesu executor + SSZ modules — the execution logic;
     //   • zesu_zkvm_accel — zesu-zkvm's stdlibs_accel: in-guest software precompiles that
     //     zkvm_provide.zig exports as the zkvm_* symbols zesu references;
-    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak today): zkvm_* the prover accelerates
+    //   • lineth_zkvm_accel — Lineth accelerator wrappers: zkvm_* the prover accelerates
     //     at execution rather than at link time, so the ELF stays fully resolved;
     //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
@@ -83,7 +92,7 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_zkvm_accel", zesu_accel_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
-    guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
+    guest_module.addOptions("build_options", guest_options); // accelerator flags, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
     common.installGuestElf(b, guest_module, gp_name);
 

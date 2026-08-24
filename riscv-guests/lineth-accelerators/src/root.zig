@@ -9,6 +9,7 @@ const zkvm_types = @import("zkvm_types.zig");
 const evm_ecrecover = @import("evm_ecrecover.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
+const sha2 = @import("sha2.zig");
 const io = @import("io.zig");
 const secp256k1_verify = @import("secp256k1_verify.zig");
 
@@ -32,6 +33,10 @@ pub const zkvm_secp256k1_pubkey = zkvm_types.zkvm_bytes_64;
 // ── Keccak accelerator (include/zkvm_accelerators.h) ────────────────────────
 pub const zkvm_keccak256_hash = keccak.zkvm_keccak256_hash;
 pub const zkvm_keccak256 = keccak.zkvm_keccak256;
+
+// ── SHA-256 accelerator (include/zkvm_accelerators.h) ───────────────────────
+pub const zkvm_sha256_hash = sha2.zkvm_sha256_hash;
+pub const zkvm_sha256 = sha2.zkvm_sha256;
 
 // ── io accelerator (zkvm-standards io-interface, include/zkvm_io.h) ──────────
 pub const write_output = io.write_output;

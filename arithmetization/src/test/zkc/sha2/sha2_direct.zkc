@@ -1,0 +1,36 @@
+type lane = u64
+
+include "../../../main/lib/sha2/impl.zkc"
+
+// A focused SHA-256 harness that avoids the unrelated full RISC-V interpreter
+// when checking the hash constraints. Messages are concatenated in
+// sha2_messages and expected digests are concatenated in sha2_expected.
+pub input sha2_vector_count(address:u1) -> (count:u8)
+pub input sha2_lengths(address:u8) -> (length:u32)
+pub input sha2_messages(address:u16) -> (byte:u8)
+pub input sha2_expected(address:u8) -> (byte:u8)
+
+fn main<ram, sha2_state>() {
+    var input_address:Address = 0x100
+    var output_address:Address = 0
+    var message_offset:u16 = 0
+
+    for vector:u8 = 0; vector<sha2_vector_count[0]; vector = vector + 1 {
+        var length:u32 = sha2_lengths[vector]
+
+        for i:u32 = 0; i<length; i = i + 1 {
+            write_8(input_address + (i as Address), sha2_messages[message_offset + (i as u16)])
+        }
+
+        sha2(input_address, length, output_address)
+
+        var expected_offset:u8 = vector * 32
+        for i:u6 = 0; i<32; i = i + 1 {
+            if read_8(output_address + (i as Address)) != sha2_expected[expected_offset + (i as u8)] {
+                fail
+            }
+        }
+
+        message_offset = message_offset + (length as u16)
+    }
+}

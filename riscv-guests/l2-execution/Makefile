@@ -54,6 +54,10 @@ OBJDUMP     ?= false
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
 
+# If true, build with the arithmetization SHA-256 wrapper (prover-accelerated
+# custom op) instead of the standard zig SHA-256.
+SHA2_ACCEL ?= false
+
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
 fetch:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
@@ -81,7 +85,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) $(if $(filter true,$(SHA2_ACCEL)),-Dsha2-accel=true)
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \

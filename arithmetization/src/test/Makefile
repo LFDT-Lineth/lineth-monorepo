@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec sha2-zkc-exec sha2-zkc-check sha2-zig-build sha2-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
 .DEFAULT_GOAL := exec
@@ -102,7 +102,7 @@ compile: require-src
 		riscv64-unknown-elf-gcc -march=rv64im -mabi=lp64 -nostdlib -T$(LINKER_SCRIPT) -o $(BIN) $(SRC); \
 	elif [ "$(EXT)" = ".zig" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
-		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true); \
+		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) $(if $(filter true,$(SHA2_ACCEL)),-Dsha2-accel=true); \
 	elif [ "$(EXT)" = ".rs" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
 		cargo +nightly rustc \
@@ -278,6 +278,7 @@ vector-exec: require-vector-json-mode install-zkc
 		if [ "$$fail" -ne 0 ]; then echo "error: $$fail vector(s) failed" >&2; exit 1; fi; \
 	fi
 
+
 #####################################################################
 # Keccak wrapper targets
 #####################################################################
@@ -325,6 +326,33 @@ keccak-zig-json: keccak-zig-build
 
 keccak-zig-exec: keccak-zig-json
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-exec VECTOR_JSON_MODE=batched VECTOR_JSON_FILE=$(KECCAK_JSON_FILE)
+
+#####################################################################
+# SHA-256 targets
+#####################################################################
+
+# Passthrough argument to l2-execution package import `sha2-accel` to enable/disable the zkc accelerated SHA-256 precompile.
+SHA2_ACCEL ?= false
+SHA2_ZKC_MAIN  := $(MAKEFILE_DIR)zkc/sha2/sha2_direct.zkc
+SHA2_ZKC_INPUT := $(MAKEFILE_DIR)zkc/sha2/sha2_direct.json
+
+sha2-zkc-exec:
+	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(SHA2_ZKC_INPUT) $(SHA2_ZKC_MAIN)
+
+sha2-zkc-check:
+	$(ZKC) exec --check $(SHA2_ZKC_INPUT) $(SHA2_ZKC_MAIN)
+
+sha2-zig-build:
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile \
+		SHA2_ACCEL=true \
+		TEST=sha2/sha2_provider.zig
+
+# The full interpreter's fast backend currently fails while compiling an
+# unchanged pre-existing instruction, so run this integration test in tracing mode.
+sha2-zig-exec: sha2-zig-build
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile zkc-exec \
+		ZKC_EXEC_FLAGS= \
+		TEST=sha2/sha2_provider.zig
 
 #####################################################################
 # Blake Rust wrapper targets
