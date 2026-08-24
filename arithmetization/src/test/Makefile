@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec sha2-zkc-exec sha2-zkc-check sha2-zig-build sha2-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec sha2-zkc-exec sha2-zkc-check ecadd-zkc-exec ecadd-zkc-check ecmul-zkc-exec ecmul-zkc-check bn254-zig-build bn254-zig-exec sha2-zig-build sha2-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
 .DEFAULT_GOAL := exec
@@ -353,6 +353,48 @@ sha2-zig-exec: sha2-zig-build
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile zkc-exec \
 		ZKC_EXEC_FLAGS= \
 		TEST=sha2/sha2_provider.zig
+
+#####################################################################
+# BN254 (alt_bn128) G1 ECADD / ECMUL targets
+#####################################################################
+
+# Direct precompile harnesses (no full RISC-V interpreter). Mirrors the SHA-256
+# targets above; a copy of each harness drives the prover-ray Go zkcdriver test.
+ECADD_ZKC_MAIN  := $(MAKEFILE_DIR)zkc/bn254/ecadd_direct.zkc
+ECADD_ZKC_INPUT := $(MAKEFILE_DIR)zkc/bn254/ecadd_direct.json
+ECMUL_ZKC_MAIN  := $(MAKEFILE_DIR)zkc/bn254/ecmul_direct.zkc
+ECMUL_ZKC_INPUT := $(MAKEFILE_DIR)zkc/bn254/ecmul_direct.json
+
+# These harnesses are u256 (5-limb). zkc's --fast backend does not support that
+# form yet (it panics with "unsupported instruction form (4 v 5 limbs)"), so the
+# exec targets run in tracing mode (no --fast), like sha2-zig-exec. The -check
+# targets additionally verify the trace against the constraints.
+ecadd-zkc-exec:
+	$(ZKC) exec $(ECADD_ZKC_INPUT) $(ECADD_ZKC_MAIN)
+
+ecadd-zkc-check:
+	$(ZKC) exec --check $(ECADD_ZKC_INPUT) $(ECADD_ZKC_MAIN)
+
+ecmul-zkc-exec:
+	$(ZKC) exec $(ECMUL_ZKC_INPUT) $(ECMUL_ZKC_MAIN)
+
+ecmul-zkc-check:
+	$(ZKC) exec --check $(ECMUL_ZKC_INPUT) $(ECMUL_ZKC_MAIN)
+
+# End-to-end integration test: builds the bn254 zig guest (which emits the ECADD/
+# ECMUL custom instructions via the lineth accelerator wrappers) and runs it
+# through the full RISC-V interpreter (main.zkc), so it covers the guest wrapper ->
+# instruction decode -> dispatch -> arithmetization round-trip that the direct
+# harnesses above do not. Like sha2-zig-exec it runs in tracing mode (ZKC_EXEC_FLAGS=):
+# the interpreter's fast backend does not support u256 (5-limb) programs.
+bn254-zig-build:
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile \
+		TEST=bn254/bn254_provider.zig
+
+bn254-zig-exec: bn254-zig-build
+	$(MAKE) -f $(MAKEFILE_DIR)Makefile zkc-exec \
+		ZKC_EXEC_FLAGS= \
+		TEST=bn254/bn254_provider.zig
 
 #####################################################################
 # Blake Rust wrapper targets

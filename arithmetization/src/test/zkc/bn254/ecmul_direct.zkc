@@ -1,8 +1,8 @@
-// Batched BN254 (alt_bn128) G1 ECMUL driver for bn254_ecmul_run.json.
-// Run it directly with:  go tool zkc exec -c testdata/bn254_ecmul_run.json testdata/bn254_ecmul_run.zkc
-//
-// This is a copy of arithmetization/src/test/zkc/bn254/ecmul_direct.zkc (only the
-// include path differs); it drives the local zkcdriver Go test (TestBn254Ecmul).
+// Batched BN254 (alt_bn128) G1 ECMUL harness (direct — avoids the full RISC-V
+// interpreter, exercising just the precompile constraints).
+// Run it with:  make -C arithmetization/src/test ecmul-zkc-check
+// A copy drives the prover-ray Go zkcdriver test at
+// prover-ray/zkcdriver/testdata/bn254_ecmul_run.zkc (only the include path differs).
 //
 // Exercises the RAM-wrapper accelerator bn254_ecmul<ram>(input, output) -> status.
 // Each case i lays x||y||scalar (96 bytes big-endian) into guest RAM, calls the
@@ -15,7 +15,7 @@
 // encoding; an invalid point (coord >= p or off-curve) yields status 0 and no
 // output (a provable precompile failure, never a proof abort).
 
-include "../../../arithmetization/src/main/lib/bn254/impl.zkc"
+include "../../../main/lib/bn254/impl.zkc"
 
 type lane = u64
 type tAddr = u8
