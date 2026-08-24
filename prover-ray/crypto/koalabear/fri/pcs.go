@@ -506,10 +506,27 @@ func denomBaseInverses(generator field.Element, n int, zeta field.Ext) ([]field.
 type OpeningProof struct {
 	// InputQueries[k] contains one row-carrying opening per input tree for query k.
 	InputQueries []InputQuery
+	// InputCaps contains one authenticated cap per distinct input tree, in the
+	// same canonical order as the tree openings inside InputQueries.
+	InputCaps []InputCap
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
 	// level values from ClaimedValues and InputQueries.
 	FRIProof Proof
+}
+
+// InputCap is the input-tree cap plus complete encoded tables whose auxiliary
+// leaves lie above the cap. Tables are ordered by SizeLog2 and are authenticated
+// by hashing adjacent rows into the cap reconstruction.
+type InputCap struct {
+	Nodes  []field.Octuplet
+	Tables []InputCapTable
+}
+
+// InputCapTable is one fully revealed encoded table above an input cap.
+type InputCapTable struct {
+	SizeLog2 uint8
+	Rows     []RowOpening
 }
 
 // InputQuery holds the PCS input-tree openings for one FRI query.
@@ -519,7 +536,92 @@ type InputQuery []InputTreeOpening
 // preimages.
 type InputTreeOpening struct {
 	Siblings []field.Octuplet
-	Leaves   []*RowPair // Leaves along the way, when they exist, starting from the root down
+	// Leaves is indexed by tree level, from the root down to the bottom. Slots
+	// below the authenticated cap are required to be nil; the bottom slot is
+	// always populated because its pair supplies the queried value and sibling.
+	Leaves []*RowPair
+}
+
+type inputQuerySource struct {
+	opening           InputQuery
+	caps              []InputCap
+	frontiers         [][]field.Octuplet
+	capInfos          []inputCapInfo
+	shapes            []Shape
+	inputIndexByBatch []int
+	params            Params
+	queryPosition     int
+}
+
+func (source inputQuerySource) pairAtLevel(batchIdx, levelSize int) (*RowPair, error) {
+	branchIdx := source.inputIndexByBatch[batchIdx]
+	if branchIdx < 0 || branchIdx >= len(source.opening) || branchIdx >= len(source.caps) {
+		return nil, fmt.Errorf("batch %d has no input tree opening", batchIdx)
+	}
+	branch := source.opening[branchIdx]
+	info := source.capInfos[branchIdx]
+	height := info.height
+	capDepth := info.depth
+	rateLog := info.rateLog
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	sizeLog2 := levelLog - rateLog
+	auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, height-rateLog)
+	if isAux && auxDepth < capDepth {
+		for _, table := range source.caps[branchIdx].Tables {
+			if int(table.SizeLog2) != sizeLog2 {
+				continue
+			}
+			numLeaves := 1 << height
+			codewordSize := 1 << source.params.LogCodewordSize
+			if levelSize > numLeaves || codewordSize%numLeaves != 0 || numLeaves%levelSize != 0 {
+				return nil, fmt.Errorf("level size %d is incompatible with input tree", levelSize)
+			}
+			leafIndex := source.queryPosition / (codewordSize / numLeaves)
+			base := leafIndex / (numLeaves / levelSize)
+			if base < 0 || base >= len(table.Rows) || base^1 >= len(table.Rows) {
+				return nil, fmt.Errorf("revealed table row %d is out of bounds", base)
+			}
+			pair := RowPair{table.Rows[base], table.Rows[base^1]}
+			return &pair, nil
+		}
+		return nil, fmt.Errorf("revealed table for size %d is absent", sizeLog2)
+	}
+	return branch.pairAtLevel(levelSize)
+}
+
+func (source inputQuerySource) authenticate() error {
+	if len(source.opening) != len(source.frontiers) || len(source.opening) != len(source.capInfos) {
+		return fmt.Errorf("input query has %d tree openings, want %d", len(source.opening), len(source.frontiers))
+	}
+	for i, branch := range source.opening {
+		info := source.capInfos[i]
+		if len(branch.Leaves) != info.height {
+			return fmt.Errorf("input tree %d: has %d row levels, want %d", i, len(branch.Leaves), info.height)
+		}
+		if branch.Leaves[info.height-1] == nil {
+			return fmt.Errorf("input tree %d: missing bottom level", i)
+		}
+		for level, pair := range branch.Leaves {
+			if level < info.depth {
+				if pair != nil {
+					return fmt.Errorf("input tree %d: query supplied a revealed row pair at level %d", i, level)
+				}
+				continue
+			}
+			if (pair != nil) != info.queryRows[level] {
+				return fmt.Errorf("input tree %d: unexpected row pair at level %d", i, level)
+			}
+		}
+		codewordSize := 1 << source.params.LogCodewordSize
+		if 1<<info.height > codewordSize || codewordSize%(1<<info.height) != 0 {
+			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, 1<<info.height, codewordSize)
+		}
+		leafIndex := source.queryPosition / (codewordSize / (1 << info.height))
+		if err := branch.AuthenticateToCap(leafIndex, source.frontiers[i]); err != nil {
+			return fmt.Errorf("input tree %d: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // RowPair holds one level's conjugate row pair (see MultiSizeTable.Merkleize):
@@ -933,25 +1035,63 @@ func (pcs *PCS) claimsForBatchEntry(
 
 // Open runs the PCS query phase for the already-folded FRI state.
 func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
-	return OpeningProof{
-		InputQueries: pcs.openInputQueries(queryPositions),
-		FRIProof:     state.Open(queryPositions),
-	}
-}
-
-func (pcs *PCS) openInputQueries(queryPositions []int) []InputQuery {
 	restricted, err := pcs.restrictToOpenings()
 	if err != nil {
 		panic(err)
 	}
-	pcs = restricted
+	inputs := restricted.inputOpeningCommitments()
+	return OpeningProof{
+		InputQueries: restricted.openInputQueries(inputs, queryPositions),
+		InputCaps:    restricted.openInputCaps(inputs),
+		FRIProof:     state.Open(queryPositions),
+	}
+}
 
-	inputs := pcs.inputOpeningCommitments()
+func (pcs *PCS) openInputQueries(inputs []CommitterState, queryPositions []int) []InputQuery {
 	res := make([]InputQuery, len(queryPositions))
 	for queryIdx, queryPosition := range queryPositions {
 		res[queryIdx] = make(InputQuery, len(inputs))
 		for inputIdx, committed := range inputs {
-			res[queryIdx][inputIdx] = openInputTreeOpening(pcs.Params, committed, queryPosition)
+			height := committed.Tree.NumLevel() - 1
+			depth := merkleCapDepth(pcs.Params.NumQueries, height)
+			res[queryIdx][inputIdx] = openInputTreeOpeningToDepth(pcs.Params, committed, queryPosition, depth)
+		}
+	}
+	return res
+}
+
+func (pcs *PCS) openInputCaps(inputs []CommitterState) []InputCap {
+	caps := make([]InputCap, len(inputs))
+	for i, committed := range inputs {
+		info, err := inputCapShapeInfo(pcs.Params, committed.EncodedTable.Shape())
+		if err != nil {
+			panic(err)
+		}
+		if info.height != committed.Tree.NumLevel()-1 {
+			panic("fri: openInputCaps: table shape and tree height differ")
+		}
+		if info.depth == 0 {
+			continue
+		}
+		frontierStart := (1 << info.depth) - 1
+		frontierEnd := 2*frontierStart + 1
+		caps[i].Nodes = append([]field.Octuplet(nil), committed.Tree.Nodes[frontierStart:frontierEnd]...)
+		caps[i].Tables = revealedInputTables(committed.EncodedTable, info)
+	}
+	return caps
+}
+
+func revealedInputTables(table MultiSizeTable, info inputCapInfo) []InputCapTable {
+	res := make([]InputCapTable, len(info.revealed))
+	for i, sizeLog2 := range info.revealed {
+		sized := table[sizeLog2]
+		rows := make([]RowOpening, sized.Size())
+		for row := range rows {
+			rows[row] = openEncodedRow(sized, row)
+		}
+		res[i] = InputCapTable{
+			SizeLog2: uint8(sizeLog2),
+			Rows:     rows,
 		}
 	}
 	return res
@@ -979,6 +1119,10 @@ func (pcs *PCS) inputOpeningCommitments() []CommitterState {
 }
 
 func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
+	return openInputTreeOpeningToDepth(p, committed, queryPosition, 0)
+}
+
+func openInputTreeOpeningToDepth(p Params, committed CommitterState, queryPosition, capDepth int) InputTreeOpening {
 	tree := committed.Tree
 	numLeaves := tree.NumLeaves()
 	codewordSize := 1 << p.LogCodewordSize
@@ -986,7 +1130,8 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 		panic("fri: openInputTreeOpening: tree size incompatible with domain size")
 	}
 	leafIndex := queryPosition / (codewordSize / numLeaves)
-	branch := tree.OpenBranch(leafIndex)
+	branch := tree.OpenBranchToDepth(leafIndex, capDepth)
+	treeHeight := tree.NumLevel() - 1
 	input := InputTreeOpening{
 		// The bottom level's own sibling digest is derived from its pair
 		// (below) rather than transmitted.
@@ -994,15 +1139,21 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 		// The last slot is otherwise always vacant (see Merkleize: nothing
 		// shifts to the depth just above the bottom level), so it is
 		// repurposed for the bottom level's own mandatory pair.
-		Leaves: make([]*RowPair, len(branch.AuxSiblings)),
+		Leaves: make([]*RowPair, treeHeight),
 	}
 	input.Leaves[len(input.Leaves)-1] = &RowPair{
 		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
 		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex^1),
 	}
+	rateLog := int(p.LogCodewordSize) - int(p.LogPlainTextSize)
+	bottomSizeLog2 := len(committed.EncodedTable) - 1
 	for sizeLog2 := range committed.EncodedTable {
 		table := committed.EncodedTable[sizeLog2]
-		if table.NumRows() == 0 || table.Size() == numLeaves {
+		if table.NumRows() == 0 {
+			continue
+		}
+		auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, bottomSizeLog2)
+		if !isAux {
 			continue
 		}
 		levelSize := table.Size()
@@ -1010,8 +1161,11 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 			panic("fri: openInputTreeOpening: level size incompatible with tree size")
 		}
 		levelLog := bits.TrailingZeros(uint(levelSize)) - 1 // one depth shallower than levelSize (see Merkleize)
-		if levelLog < 0 || levelLog >= len(input.Leaves)-1 {
+		if levelLog != auxDepth || levelLog >= len(input.Leaves)-1 {
 			panic("fri: openInputTreeOpening: level size absent from branch")
+		}
+		if levelLog < capDepth {
+			continue
 		}
 		base := leafIndex / (numLeaves / levelSize)
 		input.Leaves[levelLog] = &RowPair{
@@ -1094,10 +1248,9 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 	}
 }
 
-// RecoverRoot folds this branch's rows up to the tree root. The bottom
-// (deepest) level's own step combines its pair directly instead of reading a
-// transmitted sibling digest, so Siblings holds one fewer entry than
-// Leaves.
+// RecoverRoot folds a full-depth branch's rows up to the tree root. It is a
+// convenience for non-capped openings; capped openings contain nil holes above
+// the frontier and must use AuthenticateToCap instead.
 func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
 	numLevels := len(branch.Leaves)
 	if numLevels == 0 || branch.Leaves[numLevels-1] == nil {
@@ -1119,6 +1272,41 @@ func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
 		return field.Octuplet{}, fmt.Errorf("all bits of currPos should have been bitshifted beyond LSb")
 	}
 	return ancestor, nil
+}
+
+// AuthenticateToCap checks the bottom pair and the retained lower path
+// against an already authenticated input-tree frontier.
+func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octuplet) error {
+	if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
+		return fmt.Errorf("missing bottom level")
+	}
+	height := len(branch.Leaves)
+	depth, err := capDepthFromFrontier(frontier)
+	if err != nil {
+		return err
+	}
+	if depth > height-1 {
+		return fmt.Errorf("cap depth %d outside [0,%d)", depth, height)
+	}
+	if len(branch.Siblings) != height-1-depth {
+		return fmt.Errorf("branch has %d siblings, want %d", len(branch.Siblings), height-1-depth)
+	}
+	if idx < 0 || idx >= len(frontier)<<(height-depth) {
+		return fmt.Errorf("opening index outside capped tree")
+	}
+
+	bottom := branch.Leaves[height-1]
+	ancestor := hashRowOpening(bottom[0])
+	sibling := hashRowOpening(bottom[1])
+	ancestor, currPos := foldOneLevel(ancestor, sibling, nil, idx)
+	for level := height - 2; level >= depth; level-- {
+		siblingIdx := level - depth
+		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[siblingIdx], branch.Leaves[level], currPos)
+	}
+	if ancestor != frontier[currPos] {
+		return fmt.Errorf("invalid Merkle proof")
+	}
+	return nil
 }
 
 func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowPair, currPos int) (field.Octuplet, int) {
@@ -1188,8 +1376,7 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 func reconstructQueryValueAt(
 	bundle sizeBundle,
 	entryClaims [][]quotientClaim,
-	opening InputQuery,
-	inputIndexByBatch []int,
+	source inputQuerySource,
 	levelSize int,
 	alphaDeep field.Ext,
 	x field.Ext,
@@ -1200,8 +1387,7 @@ func reconstructQueryValueAt(
 	for i := len(bundle.Entries) - 1; i >= 0; i-- {
 		entry := bundle.Entries[i]
 		claims := entryClaims[i]
-		branch := opening[inputIndexByBatch[entry.BatchIdx]]
-		pair, err := branch.pairAtLevel(levelSize)
+		pair, err := source.pairAtLevel(entry.BatchIdx, levelSize)
 		if err != nil {
 			return field.Ext{}, err
 		}
@@ -1301,13 +1487,49 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	orders := batchOrders(layout)
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	if len(proof.InputCaps) != len(inputRoots) {
+		return fmt.Errorf("fri: pcs.Verify: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots))
+	}
+	inputShapes := make([]Shape, len(inputRoots))
+	for batchIdx, treeIdx := range inputIndexByBatch {
+		if treeIdx < 0 {
+			continue
+		}
+		if inputShapes[treeIdx] == nil {
+			inputShapes[treeIdx] = in.Shapes[batchIdx]
+		}
+	}
+	inputFrontiers := make([][]field.Octuplet, len(inputRoots))
+	inputCapInfos := make([]inputCapInfo, len(inputRoots))
+	for treeIdx := range inputRoots {
+		info, err := inputCapShapeInfo(pcs.Params, inputShapes[treeIdx])
+		if err != nil {
+			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
+		}
+		inputCapInfos[treeIdx] = info
+		frontier, err := authenticateInputCap(info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx])
+		if err != nil {
+			return fmt.Errorf("fri: pcs.Verify: input cap %d: %w", treeIdx, err)
+		}
+		inputFrontiers[treeIdx] = frontier
+	}
 	if err = checkOpeningProofShape(pcs.Params, proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
 		return err
 	}
 
-	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds())
+	runningFrontiers := make([][]field.Octuplet, pcs.Params.numRounds())
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
-		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
+		root := proof.FRIProof.RoundRoots[j-1]
+		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
+		treeCap := proof.FRIProof.RoundCaps[j-1]
+		if depth == 0 {
+			runningFrontiers[j] = []field.Octuplet{root}
+			continue
+		}
+		if err := treeCap.Authenticate(depth, root); err != nil {
+			return fmt.Errorf("fri: pcs.Verify: round %d cap: %w", j, err)
+		}
+		runningFrontiers[j] = treeCap.Nodes
 	}
 
 	claimed := in.ClaimedValues
@@ -1342,8 +1564,10 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		pcs:               pcs,
 		layout:            layout,
 		proof:             proof,
-		inputRoots:        inputRoots,
-		runningRoots:      runningRoots,
+		inputFrontiers:    inputFrontiers,
+		inputCaps:         proof.InputCaps,
+		inputCapInfos:     inputCapInfos,
+		runningFrontiers:  runningFrontiers,
 		layoutClaims:      layoutClaims,
 		inputIndexByBatch: inputIndexByBatch,
 		orders:            orders,
@@ -1378,8 +1602,10 @@ type verifyQueryCtx struct {
 	pcs               *PCS
 	layout            layout
 	proof             OpeningProof
-	inputRoots        QueryLayerRoots
-	runningRoots      []QueryLayerRoots
+	inputFrontiers    [][]field.Octuplet
+	inputCaps         []InputCap
+	inputCapInfos     []inputCapInfo
+	runningFrontiers  [][]field.Octuplet
 	layoutClaims      [][][]quotientClaim
 	inputIndexByBatch []int
 	orders            [][]int
@@ -1404,7 +1630,17 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	}
 
 	inputOpening := vq.proof.InputQueries[queryIdx]
-	if err := authenticateInputQuery(pcs.Params, inputOpening, vq.inputRoots, queryPosition); err != nil {
+	source := inputQuerySource{
+		opening:           inputOpening,
+		caps:              vq.inputCaps,
+		frontiers:         vq.inputFrontiers,
+		capInfos:          vq.inputCapInfos,
+		shapes:            vq.shapes,
+		inputIndexByBatch: vq.inputIndexByBatch,
+		params:            pcs.Params,
+		queryPosition:     queryPosition,
+	}
+	if err := source.authenticate(); err != nil {
 		return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 	}
 
@@ -1415,22 +1651,22 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 	// round 0 needs no special case).
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 		opening := vq.proof.FRIProof.RunningQueries[queryIdx][j-1]
+		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
 		if err := checkQueryLayerShape(
-			opening, vq.runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
+			opening, vq.runningFrontiers[j], 1<<(pcs.Params.LogCodewordSize-j), depth); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
-		branch, err := authenticateQueryLayer(j, opening, vq.runningRoots[j], queryPosition>>j)
-		if err != nil {
-			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+		if err := opening.AuthenticateToCap(queryPosition>>j, vq.runningFrontiers[j]); err != nil {
+			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 		}
-		if len(branch.Siblings) == 0 {
+		if len(opening.Siblings) == 0 {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
 		}
-		self, err := octupletToExt(branch.Leaf)
+		self, err := octupletToExt(opening.Leaf)
 		if err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
 		}
-		sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
+		sib, err := octupletToExt(opening.Siblings[len(opening.Siblings)-1])
 		if err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
 		}
@@ -1461,8 +1697,7 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 		if round == 0 {
 			label = "round 0"
 		}
-		if err = bindInputTreeOpenings(label, inputOpening, vq.inputIndexByBatch,
-			levelSize, vq.orders[levelIdx], bundle, vq.shapes); err != nil {
+		if err = bindInputTreeOpenings(label, source, levelSize, vq.orders[levelIdx], bundle); err != nil {
 			return resolvedQuery{}, fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
 		var alphaDeep field.Ext
@@ -1477,12 +1712,12 @@ func (vq verifyQueryCtx) resolve(queryIdx, queryPosition int) (resolvedQuery, er
 		}
 		levelPos := queryPosition >> round
 		entryClaims := vq.layoutClaims[levelIdx]
-		self, err := reconstructQueryValueAt(bundle, entryClaims, inputOpening, vq.inputIndexByBatch, levelSize,
+		self, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
 			alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
 		if err != nil {
 			return resolvedQuery{}, err
 		}
-		sib, err := reconstructQueryValueAt(bundle, entryClaims, inputOpening, vq.inputIndexByBatch, levelSize,
+		sib, err := reconstructQueryValueAt(bundle, entryClaims, source, levelSize,
 			alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
 		if err != nil {
 			return resolvedQuery{}, err
@@ -1530,28 +1765,125 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 	return inputRoots, indexByBatch
 }
 
-func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots, queryPosition int) error {
-	if len(opening) != len(roots) {
-		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
+type inputCapInfo struct {
+	height    int
+	depth     int
+	rateLog   int
+	revealed  []int
+	queryRows []bool
+}
+
+// inputAuxDepth maps a plaintext table size to the tree level carrying its
+// conjugate-row auxiliary leaves. It is shared by cap construction,
+// verification, and query opening so size-one and bottom tables are handled
+// identically everywhere.
+func inputAuxDepth(rateLog, sizeLog2, bottom int) (int, bool) {
+	if sizeLog2 >= bottom {
+		return 0, false
 	}
-	for i, branch := range opening {
-		if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
-			return fmt.Errorf("input tree %d: missing bottom level", i)
-		}
-		numLeaves := 1 << len(branch.Leaves)
-		codewordSize := 1 << p.LogCodewordSize
-		if numLeaves > codewordSize || codewordSize%numLeaves != 0 {
-			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, codewordSize)
-		}
-		root, err := branch.RecoverRoot(queryPosition / (codewordSize / numLeaves))
-		if err != nil {
-			return fmt.Errorf("input tree %d: recover root: %w", i, err)
-		}
-		if root != roots[i] {
-			return fmt.Errorf("input tree %d: Merkle proof invalid", i)
+	auxDepth := rateLog + sizeLog2 - 1
+	if auxDepth < 0 {
+		return 0, false
+	}
+	return auxDepth, true
+}
+
+func capDepthFromFrontier(frontier []field.Octuplet) (int, error) {
+	if len(frontier) == 0 || len(frontier)&(len(frontier)-1) != 0 {
+		return 0, fmt.Errorf("frontier size is not a power of two")
+	}
+	return bits.TrailingZeros(uint(len(frontier))), nil
+}
+
+func inputCapShapeInfo(p Params, shape Shape) (inputCapInfo, error) {
+	rateLog := int(p.LogCodewordSize) - int(p.LogPlainTextSize)
+	if rateLog < 0 {
+		return inputCapInfo{}, fmt.Errorf("negative inverse-rate log")
+	}
+	bottom := -1
+	for sizeLog2, sized := range shape {
+		if sized.BaseWidth+sized.ExtWidth != 0 {
+			bottom = sizeLog2
 		}
 	}
-	return nil
+	if bottom < 0 {
+		return inputCapInfo{}, fmt.Errorf("shape has no committed size")
+	}
+	height := rateLog + bottom
+	if height <= 0 {
+		return inputCapInfo{}, fmt.Errorf("shape has invalid tree height %d", height)
+	}
+	depth := merkleCapDepth(p.NumQueries, height)
+	info := inputCapInfo{
+		height:    height,
+		depth:     depth,
+		rateLog:   rateLog,
+		queryRows: make([]bool, height),
+	}
+	info.queryRows[height-1] = true
+	for sizeLog2, sized := range shape[:bottom] {
+		if sized.BaseWidth+sized.ExtWidth == 0 {
+			continue
+		}
+		auxDepth, isAux := inputAuxDepth(rateLog, sizeLog2, bottom)
+		if !isAux {
+			continue
+		}
+		if auxDepth < depth {
+			info.revealed = append(info.revealed, sizeLog2)
+			continue
+		}
+		info.queryRows[auxDepth] = true
+	}
+	return info, nil
+}
+
+func authenticateInputCap(
+	info inputCapInfo, treeCap InputCap, shape Shape, root field.Octuplet,
+) ([]field.Octuplet, error) {
+	depth := info.depth
+	if depth == 0 {
+		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
+			return nil, fmt.Errorf("depth-zero input cap must be empty")
+		}
+		return []field.Octuplet{root}, nil
+	}
+	if len(treeCap.Nodes) != 1<<depth {
+		return nil, fmt.Errorf("input cap has %d nodes, want %d", len(treeCap.Nodes), 1<<depth)
+	}
+	if len(treeCap.Tables) != len(info.revealed) {
+		return nil, fmt.Errorf("input cap has %d revealed tables, want %d", len(treeCap.Tables), len(info.revealed))
+	}
+
+	aux := make([]*field.Octuplet, len(treeCap.Nodes)-1)
+	for i, sizeLog2 := range info.revealed {
+		table := treeCap.Tables[i]
+		if int(table.SizeLog2) != sizeLog2 {
+			return nil, fmt.Errorf("revealed table %d has size %d, want %d", i, table.SizeLog2, sizeLog2)
+		}
+		encodedLog := info.rateLog + sizeLog2
+		if len(table.Rows) != 1<<encodedLog {
+			return nil, fmt.Errorf("revealed table %d has %d rows, want %d", i, len(table.Rows), 1<<encodedLog)
+		}
+		shapeAtSize := shape[sizeLog2]
+		for rowIdx, row := range table.Rows {
+			if !rowOpeningMatchesShape(row, shapeAtSize) {
+				return nil, fmt.Errorf("revealed table %d row %d has wrong shape", i, rowIdx)
+			}
+		}
+		auxDepth := encodedLog - 1
+		levelStart := (1 << auxDepth) - 1
+		for pairIdx := range len(table.Rows) / 2 {
+			pair := RowPair{table.Rows[2*pairIdx], table.Rows[2*pairIdx+1]}
+			digest := hashAuxPair(pair, true)
+			aux[levelStart+pairIdx] = &digest
+		}
+	}
+	merkleCap := MerkleCap{Nodes: treeCap.Nodes, Aux: aux}
+	if err := merkleCap.Authenticate(depth, root); err != nil {
+		return nil, err
+	}
+	return treeCap.Nodes, nil
 }
 
 // bindInputTreeOpenings validates that each batch's authenticated branch carries
@@ -1560,25 +1892,20 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 // just the on-path one: the conjugate is unread by the fold today but is still
 // transmitted, so an unvalidated conjugate would be a malleable proof.
 func bindInputTreeOpenings(
-	label string, opening InputQuery, inputIndexByBatch []int,
-	levelSize int, order []int, bundle sizeBundle, shapes []Shape,
+	label string, source inputQuerySource,
+	levelSize int, order []int, bundle sizeBundle,
 ) error {
 	for _, batchIdx := range order {
-		branchIdx := inputIndexByBatch[batchIdx]
-		if branchIdx < 0 || branchIdx >= len(opening) {
-			return fmt.Errorf("%s: batch %d has no input opening", label, batchIdx)
-		}
-		branch := opening[branchIdx]
-		pair, err := branch.pairAtLevel(levelSize)
+		pair, err := source.pairAtLevel(batchIdx, levelSize)
 		if err != nil {
-			return fmt.Errorf("%s: tree %d level row: %w", label, branchIdx, err)
+			return fmt.Errorf("%s: batch %d level row: %w", label, batchIdx, err)
 		}
-		shape := shapes[batchIdx][bundle.SizeLog2]
+		shape := source.shapes[batchIdx][bundle.SizeLog2]
 		if !rowOpeningMatchesShape(pair[0], shape) {
-			return fmt.Errorf("%s: tree %d row shape mismatch", label, branchIdx)
+			return fmt.Errorf("%s: batch %d row shape mismatch", label, batchIdx)
 		}
 		if !rowOpeningMatchesShape(pair[1], shape) {
-			return fmt.Errorf("%s: tree %d conjugate row shape mismatch", label, branchIdx)
+			return fmt.Errorf("%s: batch %d conjugate row shape mismatch", label, batchIdx)
 		}
 	}
 	return nil

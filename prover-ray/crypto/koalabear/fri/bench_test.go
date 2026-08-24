@@ -54,6 +54,13 @@ func (c benchConfig) name() string {
 // grouping (every column becomes its own group) and is kept to track the
 // worst case.
 var benchConfigs = []benchConfig{
+	// Headline large-opening case: one base polynomial with a long Merkle path
+	// and the production query count. Keep this separate from the broad,
+	// multi-column workloads below so cap savings are not diluted by row work.
+	{minLog2: 19, maxLog2: 19, basePolys: 1, extPolys: 0, rate: 4, numQueries: 229, sharedShifts: []int{0}, seed: 1},
+	// Include small codewords so Open and Verify also cover input caps that
+	// reveal complete auxiliary tables.
+	{minLog2: 0, maxLog2: 8, basePolys: 32, extPolys: 32, rate: 4, numQueries: 32, sharedShifts: []int{0, 1, 2}, seed: 1},
 	{minLog2: 8, maxLog2: 10, basePolys: 64, extPolys: 64, rate: 4, numQueries: 32, sharedShifts: []int{0, 1, 2}, seed: 1},
 	{minLog2: 8, maxLog2: 12, basePolys: 400, extPolys: 400, rate: 4, numQueries: 32, sharedShifts: []int{0, 1, 2}, seed: 1},
 	{minLog2: 8, maxLog2: 12, basePolys: 400, extPolys: 400, rate: 4, numQueries: 32, maxShifts: 3, seed: 1},
