@@ -24,7 +24,7 @@ include "./secp256k1.zkc"
 // (n-1)/2 — the low-s malleability bound (EIP-2); s must be <= n_half when strictRange = 1.
 const n_half:u256 = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
-fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX: u256, PKY:u256, isSuccess:u1) {
+fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX:u256, PKY:u256, isSuccess:u1) {
     // Default to the failure sentinel; only the success path overwrites it.
     PKX = 0
     PKY = 0
@@ -47,7 +47,7 @@ fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX: u2
         return
     }
     if strictRange == 1 {
-        if s > n_half {
+        if s>n_half {
             return
         }
     } else {
@@ -82,9 +82,9 @@ fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX: u2
     // ---- step 2: scalar coefficients (mod n) ----
     // Q = r^{-1}(s*R - z*G) = u2*R + u1*G, with u2 = r^{-1}*s, u1 = -r^{-1}*z.
     var rinv:u256 = invmod_256(r, n)
-    var u2:u256 = mulmod_256(rinv, s, n)          // r^{-1}*s  (always != 0 since s >= 1)
-    var rz:u256 = mulmod_256(rinv, msg, n)        // r^{-1}*z  (msg = z, reduced mod n by mulmod)
-    var u1:u256 = submod_256(0, rz, n)            // -r^{-1}*z  (may be 0 if z == 0 mod n)
+    var u2:u256 = mulmod_256(rinv, s, n) // r^{-1}*s  (always != 0 since s >= 1)
+    var rz:u256 = mulmod_256(rinv, msg, n) // r^{-1}*z  (msg = z, reduced mod n by mulmod)
+    var u1:u256 = submod_256(0, rz, n) // -r^{-1}*z  (may be 0 if z == 0 mod n)
 
     // ---- step 3: Q = u1*G + u2*R ----
     // scalar_mul_affine returns (0,0)=O for k=0, so u1=0 gives u1*G = O; the
@@ -93,10 +93,10 @@ fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX: u2
     Gx_, Gy_ = generator_secp256k1()
 
     var Ax:u256, Ay:u256
-    Ax, Ay = scalar_mul_affine_secp256k1(u1, Gx_, Gy_)   // u1*G  (O when u1 == 0)
+    Ax, Ay = scalar_mul_affine_secp256k1(u1, Gx_, Gy_) // u1*G  (O when u1 == 0)
 
     var Bx:u256, By:u256
-    Bx, By = scalar_mul_affine_secp256k1(u2, Rx, Ry)     // u2*R
+    Bx, By = scalar_mul_affine_secp256k1(u2, Rx, Ry) // u2*R
 
     var AX:u256, AY:u256, AZ:u256
     AX, AY, AZ = affine_to_projective_secp256k1(Ax, Ay)
