@@ -1,7 +1,6 @@
 package fri
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
@@ -20,23 +19,28 @@ func TestHashSizedLeavesMatchesScalarReference(t *testing.T) {
 	var ctr uint64
 	t2 := tableOfSize(rows, &ctr)
 
-	for _, paired := range []bool{false, true} {
-		nbLeaves := rows
-		if paired {
-			nbLeaves = rows / 2
-		}
+	requireHashSizedLeavesMatchesScalar(t, t2, false)
+	requireHashSizedLeavesMatchesScalar(t, t2, true)
+}
 
-		got := make([]field.Octuplet, nbLeaves)
-		hashSizedLeaves(t2, paired, got)
+func requireHashSizedLeavesMatchesScalar(t *testing.T, table SizedTable, paired bool) {
+	t.Helper()
+	nbLeaves := 0
+	if len(table.Base) != 0 {
+		nbLeaves = len(table.Base[0])
+	} else if len(table.Ext) != 0 {
+		nbLeaves = len(table.Ext[0])
+	}
+	if paired {
+		nbLeaves /= 2
+	}
+	got := make([]field.Octuplet, nbLeaves)
+	hashSizedLeaves(table, paired, got)
 
-		l := newLeafLayout(t2, paired)
-		hasher := poseidon2.NewFixedLengthHasher()
-		for j := 0; j < nbLeaves; j++ {
-			want := l.hashLeafScalar(hasher, t2, j)
-			if got[j] != want {
-				t.Fatalf("paired=%v leaf %d: batched digest %v != scalar reference %v", paired, j, got[j], want)
-			}
-		}
+	l := newLeafLayout(table, paired)
+	hasher := poseidon2.NewFixedLengthHasher()
+	for j, digest := range got {
+		require.Equal(t, l.hashLeafScalar(hasher, table, j), digest, "paired=%t leaf=%d", paired, j)
 	}
 }
 
@@ -64,55 +68,32 @@ func hashSizedLeavesTestTable(rows, baseWidth, extWidth int) SizedTable {
 func TestHashSizedLeavesFixedLengthBoundaries(t *testing.T) {
 	const rows = 40
 
-	for _, baseWidth := range []int{1, 7, 8, 9, 15, 16, 17} {
-		t.Run(fmt.Sprintf("unpaired/base=%d", baseWidth), func(t *testing.T) {
-			table := hashSizedLeavesTestTable(rows, baseWidth, 0)
-			got := make([]field.Octuplet, rows)
-			hashSizedLeaves(table, false, got)
-			l := newLeafLayout(table, false)
-			h := poseidon2.NewFixedLengthHasher()
-			for j, digest := range got {
-				require.Equal(t, l.hashLeafScalar(h, table, j), digest, "leaf=%d", j)
-			}
-		})
-	}
-
-	for _, baseWidth := range []int{1, 4, 5, 8, 9} {
-		t.Run(fmt.Sprintf("paired/base=%d", baseWidth), func(t *testing.T) {
-			table := hashSizedLeavesTestTable(rows, baseWidth, 0)
-			got := make([]field.Octuplet, rows/2)
-			hashSizedLeaves(table, true, got)
-			l := newLeafLayout(table, true)
-			h := poseidon2.NewFixedLengthHasher()
-			for j, digest := range got {
-				require.Equal(t, l.hashLeafScalar(h, table, j), digest, "leaf=%d", j)
-			}
-		})
-	}
-
 	for _, testCase := range []struct {
 		name                string
 		baseWidth, extWidth int
+		paired              bool
 	}{
-		{name: "base=0/ext=1", extWidth: 1},
-		{name: "base=3/ext=1", baseWidth: 3, extWidth: 1},
+		{name: "unpaired/base=1", baseWidth: 1},
+		{name: "unpaired/base=7", baseWidth: 7},
+		{name: "unpaired/base=8", baseWidth: 8},
+		{name: "unpaired/base=9", baseWidth: 9},
+		{name: "unpaired/base=15", baseWidth: 15},
+		{name: "unpaired/base=16", baseWidth: 16},
+		{name: "unpaired/base=17", baseWidth: 17},
+		{name: "paired/base=1", baseWidth: 1, paired: true},
+		{name: "paired/base=4", baseWidth: 4, paired: true},
+		{name: "paired/base=5", baseWidth: 5, paired: true},
+		{name: "paired/base=8", baseWidth: 8, paired: true},
+		{name: "paired/base=9", baseWidth: 9, paired: true},
+		{name: "unpaired/base=0/ext=1", extWidth: 1},
+		{name: "paired/base=0/ext=1", extWidth: 1, paired: true},
+		{name: "unpaired/base=3/ext=1", baseWidth: 3, extWidth: 1},
+		{name: "paired/base=3/ext=1", baseWidth: 3, extWidth: 1, paired: true},
 	} {
-		for _, paired := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/paired=%t", testCase.name, paired), func(t *testing.T) {
-				table := hashSizedLeavesTestTable(rows, testCase.baseWidth, testCase.extWidth)
-				nbLeaves := rows
-				if paired {
-					nbLeaves /= 2
-				}
-				got := make([]field.Octuplet, nbLeaves)
-				hashSizedLeaves(table, paired, got)
-				l := newLeafLayout(table, paired)
-				h := poseidon2.NewFixedLengthHasher()
-				for j, digest := range got {
-					require.Equal(t, l.hashLeafScalar(h, table, j), digest, "leaf=%d", j)
-				}
-			})
-		}
+		t.Run(testCase.name, func(t *testing.T) {
+			table := hashSizedLeavesTestTable(rows, testCase.baseWidth, testCase.extWidth)
+			requireHashSizedLeavesMatchesScalar(t, table, testCase.paired)
+		})
 	}
 }
 

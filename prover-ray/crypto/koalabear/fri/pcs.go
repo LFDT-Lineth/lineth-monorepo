@@ -1253,7 +1253,7 @@ func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	return hasher.SumDigest()
 }
 
-func writeRowOpeningElements(hasher fieldElementWriter, row RowOpening) {
+func writeRowOpeningElements(hasher *poseidon2.FixedLengthHasher, row RowOpening) {
 	for _, base := range row.Base {
 		hasher.WriteElements(base)
 	}

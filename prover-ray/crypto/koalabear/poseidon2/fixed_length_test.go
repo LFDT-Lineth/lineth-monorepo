@@ -81,15 +81,3 @@ func TestFixedLengthHasherReset(t *testing.T) {
 	h.WriteElements(values[:9]...)
 	require.Equal(t, fixedLengthReference(values[:9]), h.SumDigest())
 }
-
-func TestFixedLengthHasherSumIsNonDestructive(t *testing.T) {
-	values := fixedLengthElements(17)
-	h := NewFixedLengthHasher()
-	h.WriteElements(values[:7]...)
-	first := h.SumDigest()
-	require.Equal(t, fixedLengthReference(values[:7]), first)
-	require.Equal(t, first, h.SumDigest())
-
-	h.WriteElements(values[7:]...)
-	require.Equal(t, fixedLengthReference(values), h.SumDigest())
-}

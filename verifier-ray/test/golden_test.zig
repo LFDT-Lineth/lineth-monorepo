@@ -210,29 +210,6 @@ test "poseidon2 fixed-length zero first block is initialized" {
     try std.testing.expect(poseidon2.eql(hasher.sumDigest(), poseidon2.compress(poseidon2.zeroDigest(), right)));
 }
 
-test "poseidon2 fixed-length reset and non-destructive sum" {
-    var values: [17]field.Element = undefined;
-    for (&values, 0..) |*value, i| value.* = field.Element.init(@intCast(i + 1));
-
-    var hasher = poseidon2.FixedLengthHasher.init();
-    hasher.writeElements(values[0..7]);
-    hasher.reset();
-    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), poseidon2.zeroDigest()));
-
-    hasher.writeElements(values[0..16]);
-    hasher.reset();
-    hasher.writeElements(values[0..9]);
-    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), fixedLengthReference(values[0..9])));
-
-    hasher.reset();
-    hasher.writeElements(values[0..7]);
-    const first = hasher.sumDigest();
-    try std.testing.expect(poseidon2.eql(first, fixedLengthReference(values[0..7])));
-    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), first));
-    hasher.writeElements(values[7..17]);
-    try std.testing.expect(poseidon2.eql(hasher.sumDigest(), fixedLengthReference(values[0..17])));
-}
-
 test "poseidon2.eql matches digests limb-for-limb" {
     const a = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
     const b = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });

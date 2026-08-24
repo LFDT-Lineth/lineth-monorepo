@@ -22,10 +22,9 @@ type leafLayout struct {
 	extWidth  int
 	paired    bool // leaf digests two adjacent rows (non-bottom levels), else one
 
-	frontLen  int // elements before the (left-padded) final block: streamLen - streamLen%8
-	pad       int // leading zeros inside the final block: (8 - streamLen%8) % 8
-	colSize   int // padded row length, a multiple of 8: streamLen + pad
-	streamLen int
+	frontLen int // elements before the (left-padded) final block: streamLen - streamLen%8
+	pad      int // leading zeros inside the final block: (8 - streamLen%8) % 8
+	colSize  int // padded row length, a multiple of 8: streamLen + pad
 }
 
 func newLeafLayout(t SizedTable, paired bool) leafLayout {
@@ -44,7 +43,6 @@ func newLeafLayout(t SizedTable, paired bool) leafLayout {
 	l.pad = (poseidon2.BlockSize - streamLen%poseidon2.BlockSize) % poseidon2.BlockSize
 	l.frontLen = streamLen - streamLen%poseidon2.BlockSize
 	l.colSize = streamLen + l.pad
-	l.streamLen = streamLen
 	return l
 }
 
@@ -139,10 +137,6 @@ func (l leafLayout) hashLeafScalar(hasher *poseidon2.FixedLengthHasher, t SizedT
 func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 	l := newLeafLayout(t, paired)
 	nbLeaves := len(out)
-	if l.streamLen == 0 {
-		clear(out)
-		return
-	}
 
 	// Parallelize over SIMD groups, not individual leaves: parallel.Execute
 	// splits its range across GOMAXPROCS workers, so parallelizing over leaves
@@ -155,12 +149,10 @@ func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 	if nbGroups > 0 {
 		parallel.Execute(nbGroups, func(start, end int) {
 			matrix := make([]field.Element, simdLanes*l.colSize)
-			state := make([]field.Element, simdLanes*poseidon2.BlockSize)
 			for g := start; g < end; g++ {
 				j := g * simdLanes
 				l.fillGroup(matrix, t, j)
 				poseidon2.CompressFixedLengthx16Columns(
-					state,
 					matrix,
 					l.colSize,
 					out[j:j+simdLanes],

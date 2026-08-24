@@ -166,10 +166,6 @@ pub const FixedLengthHasher = struct {
         };
     }
 
-    pub fn reset(self: *FixedLengthHasher) void {
-        self.* = init();
-    }
-
     pub fn writeElement(self: *FixedLengthHasher, value: field.Element) void {
         self.buffer[self.buffer_len] = value;
         self.buffer_len += 1;
@@ -181,15 +177,14 @@ pub const FixedLengthHasher = struct {
     }
 
     pub fn sumDigest(self: *FixedLengthHasher) Digest {
-        var final = self.*;
-        if (final.buffer_len != 0) {
-            const pad = block_size - final.buffer_len;
+        if (self.buffer_len != 0) {
+            const pad = block_size - self.buffer_len;
             var final_block = zeroDigest();
-            @memcpy(final_block[pad..], final.buffer[0..final.buffer_len]);
-            final.buffer = final_block;
-            final.absorbBlock();
+            @memcpy(final_block[pad..], self.buffer[0..self.buffer_len]);
+            self.buffer = final_block;
+            self.absorbBlock();
         }
-        return final.state;
+        return self.state;
     }
 
     fn absorbBlock(self: *FixedLengthHasher) void {

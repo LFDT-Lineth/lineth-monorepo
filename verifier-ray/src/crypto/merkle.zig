@@ -152,7 +152,7 @@ pub const RowOpening = struct {
 /// prover-ray's `RowPair`.
 pub const RowPair = [2]RowOpening;
 
-fn writeRowOpeningElements(hasher: anytype, row: RowOpening) void {
+fn writeRowOpeningElements(hasher: *poseidon2.FixedLengthHasher, row: RowOpening) void {
     hasher.writeElements(row.base);
     for (row.ext) |e| {
         hasher.writeElements(&.{ e.B0.a0, e.B0.a1, e.B1.a0, e.B1.a1, e.B2.a0, e.B2.a1 });

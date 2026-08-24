@@ -18,18 +18,14 @@ type FixedLengthHasher struct {
 	initialized    bool
 }
 
-// NewFixedLengthHasher creates an IV-elided hasher. The caller fixes the
-// preimage length by choosing the canonical row/table shape before writing.
+// NewFixedLengthHasher creates an IV-elided hasher.
 func NewFixedLengthHasher() *FixedLengthHasher {
 	return &FixedLengthHasher{}
 }
 
 // Reset clears the state and buffered elements.
 func (h *FixedLengthHasher) Reset() {
-	h.state = field.Octuplet{}
-	h.buffer = field.Octuplet{}
-	h.bufferPosition = 0
-	h.initialized = false
+	*h = FixedLengthHasher{}
 }
 
 // WriteElements appends field elements to the compression chain.
@@ -56,26 +52,24 @@ func (h *FixedLengthHasher) absorbBlock() {
 	h.bufferPosition = 0
 }
 
-// SumDigest returns the digest without consuming buffered input.
+// SumDigest finalizes and returns the digest.
 func (h *FixedLengthHasher) SumDigest() field.Octuplet {
-	final := *h
-	if final.bufferPosition != 0 {
-		n := final.bufferPosition
-		copy(final.buffer[BlockSize-n:], final.buffer[:n])
-		clear(final.buffer[:BlockSize-n])
-		final.absorbBlock()
+	if h.bufferPosition != 0 {
+		n := h.bufferPosition
+		copy(h.buffer[BlockSize-n:], h.buffer[:n])
+		clear(h.buffer[:BlockSize-n])
+		h.absorbBlock()
 	}
-	return final.state
+	return h.state
 }
 
 // CompressFixedLengthx16Columns computes 16 independent IV-elided chains from
 // a column-major matrix. colSize is the fixed padded stream length in elements
-// per lane and must be a positive multiple of BlockSize. state is caller-owned
-// scratch space of length 16*BlockSize; it is reused to avoid an allocation per
-// SIMD group. The first block becomes each lane's initial state, so this saves
-// the permutation that an IV-based chain would spend absorbing that block.
+// per lane and must be a positive multiple of BlockSize. The first block
+// becomes each lane's initial state, so this saves the permutation that an
+// IV-based chain would spend absorbing that block.
 func CompressFixedLengthx16Columns(
-	state, matrix []field.Element,
+	matrix []field.Element,
 	colSize int,
 	result []field.Octuplet,
 ) {
@@ -90,9 +84,8 @@ func CompressFixedLengthx16Columns(
 	}
 
 	const firstBlockElements = lanes * BlockSize
-	copy(state, matrix[:firstBlockElements])
 	fixedLengthBatchPoseidon2.Compressx16ColumnsWithState(
-		state,
+		matrix[:firstBlockElements],
 		matrix[firstBlockElements:],
 		colSize-BlockSize,
 		result,
