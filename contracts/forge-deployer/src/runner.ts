@@ -5,6 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { buildAddressPlan, DeploymentStep, PlannedDeployment } from "./address-plan";
 import {
   assertCheckpointCompatible,
+  assertNoInFlightDeployments,
   CheckpointIdentity,
   createCheckpoint,
   DEPLOYMENT_PROFILE,
@@ -268,6 +269,7 @@ export async function runDeployment(config: DeployerConfig, store: CheckpointSto
     l2StartingNonce: checkpoint.startingNonces.l2,
   });
   assertPlanMatchesCheckpoint(checkpoint, plan);
+  assertNoInFlightDeployments(checkpoint);
 
   const fundingVerified = { l1: false, l2: false };
   for (const step of plan) {

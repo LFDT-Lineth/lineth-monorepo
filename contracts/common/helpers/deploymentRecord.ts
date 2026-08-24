@@ -20,9 +20,16 @@ interface DeploymentRecordAcknowledgement {
   error?: string;
 }
 
+interface DeploymentIntentAcknowledgement {
+  type: "lineth-deployment-intent-ack";
+  id: string;
+  error?: string;
+}
+
 const DEPLOYMENT_RECORD_PATTERN =
   /^contract=(\S+) deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\d+) chainId=(\d+) txHash=(0x[0-9a-fA-F]{64})$/;
 let recordSequence = 0;
+let intentSequence = 0;
 
 export function formatDeploymentRecord(record: DeploymentRecordInput): string {
   return (
@@ -48,6 +55,42 @@ function isAcknowledgement(message: unknown, id: string): message is DeploymentR
   if (typeof message !== "object" || message === null) return false;
   const candidate = message as Partial<DeploymentRecordAcknowledgement>;
   return candidate.type === "lineth-deployment-record-ack" && candidate.id === id;
+}
+
+function isIntentAcknowledgement(message: unknown, id: string): message is DeploymentIntentAcknowledgement {
+  if (typeof message !== "object" || message === null) return false;
+  const candidate = message as Partial<DeploymentIntentAcknowledgement>;
+  return candidate.type === "lineth-deployment-intent-ack" && candidate.id === id;
+}
+
+export async function awaitParentDeploymentIntent(contractName: string): Promise<void> {
+  if (!process.send || !process.connected) return;
+
+  const id = `${process.pid}-intent-${intentSequence++}`;
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      process.off("message", onMessage);
+      process.off("disconnect", onDisconnect);
+    };
+    const onMessage = (message: unknown) => {
+      if (!isIntentAcknowledgement(message, id)) return;
+      cleanup();
+      if (message.error) reject(new Error(message.error));
+      else resolve();
+    };
+    const onDisconnect = () => {
+      cleanup();
+      reject(new Error("checkpoint parent disconnected before authorizing deployment broadcast"));
+    };
+
+    process.on("message", onMessage);
+    process.once("disconnect", onDisconnect);
+    process.send?.({ type: "lineth-deployment-intent", id, contractName }, (error) => {
+      if (!error) return;
+      cleanup();
+      reject(error);
+    });
+  });
 }
 
 export async function awaitParentCheckpoint(record: ParsedDeploymentRecord): Promise<void> {

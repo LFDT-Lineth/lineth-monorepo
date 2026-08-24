@@ -146,6 +146,19 @@ export function assertCheckpointCompatible(checkpoint: DeploymentCheckpoint, ide
   assertEqual(checkpoint.configurationHash.toLowerCase(), expected.configurationHash, "deployment configuration");
 }
 
+export function assertNoInFlightDeployments(checkpoint: DeploymentCheckpoint): void {
+  const unresolved = Object.entries(checkpoint.inFlightDeployments).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )[0];
+  if (!unresolved) return;
+
+  const [key, deployment] = unresolved;
+  throw new Error(
+    `checkpoint contains unresolved in-flight deployment ${key} at nonce ${deployment.nonce}; ` +
+      "transaction broadcast is ambiguous and requires operator reconciliation",
+  );
+}
+
 export function parseCheckpoint(raw: string): DeploymentCheckpoint {
   const parsed: unknown = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object") throw new Error("checkpoint JSON must contain an object");

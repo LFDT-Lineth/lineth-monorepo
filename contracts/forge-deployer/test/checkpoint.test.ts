@@ -4,6 +4,7 @@ import test from "node:test";
 import { buildAddressPlan } from "../src/address-plan";
 import {
   assertCheckpointCompatible,
+  assertNoInFlightDeployments,
   createCheckpoint,
   DEPLOYMENT_PROFILE,
   deploymentConfigurationHash,
@@ -237,4 +238,20 @@ test("validates persisted in-flight deployments against the deterministic plan",
     mutate(value);
     assert.throws(() => parseCheckpoint(JSON.stringify(value)), /in-flight deployment/, label);
   }
+});
+
+test("fails closed when a deployment broadcast may be unresolved", () => {
+  const value = checkpoint();
+  assert.doesNotThrow(() => assertNoInFlightDeployments(value));
+
+  const key = "l1-rollup.verifier";
+  value.inFlightDeployments[key] = { ...value.expectedDeployments[key]! };
+
+  assert.throws(
+    () => assertNoInFlightDeployments(value),
+    new RegExp(
+      `checkpoint contains unresolved in-flight deployment ${key} at nonce ${value.expectedDeployments[key]!.nonce}; ` +
+        "transaction broadcast is ambiguous and requires operator reconciliation",
+    ),
+  );
 });

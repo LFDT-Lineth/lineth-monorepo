@@ -2,7 +2,7 @@ import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "e
 import fs from "fs";
 import path from "path";
 
-import { awaitParentCheckpoint, formatDeploymentRecord } from "./deploymentRecord";
+import { awaitParentCheckpoint, awaitParentDeploymentIntent, formatDeploymentRecord } from "./deploymentRecord";
 import { normalizeAddressArgs } from "./normalize-address-args";
 import { clearSignerUiWorkflowStatus, setSignerUiWorkflowStatus } from "./signerUiWorkflowStatus";
 import {
@@ -150,6 +150,7 @@ export async function deployContractFromArtifacts<A extends Array<unknown>>(
 
   const factory = new ethers.ContractFactory(abi, linkedBytecode, wallet);
   const normalizedArgs = await normalizeAddressArgs(factory, constructorArgs as unknown[]);
+  await awaitParentDeploymentIntent(contractName);
   const contract = await factory.deploy(...normalizedArgs);
 
   await LogContractDeployment(contractName, contract);

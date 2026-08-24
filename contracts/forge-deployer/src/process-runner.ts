@@ -23,6 +23,12 @@ interface DeploymentRecordMessage {
   record: ParsedDeploymentRecord;
 }
 
+interface DeploymentIntentMessage {
+  type: "lineth-deployment-intent";
+  id: string;
+  contractName: string;
+}
+
 const INHERITED_CHILD_ENVIRONMENT = [
   "HOME",
   "HTTP_PROXY",
@@ -54,6 +60,24 @@ function isDeploymentRecordMessage(message: unknown): message is DeploymentRecor
   return candidate.type === "lineth-deployment-record" && typeof candidate.id === "string" && !!candidate.record;
 }
 
+function isDeploymentIntentMessage(message: unknown): message is DeploymentIntentMessage {
+  if (typeof message !== "object" || message === null) return false;
+  const candidate = message as Partial<DeploymentIntentMessage>;
+  return (
+    candidate.type === "lineth-deployment-intent" &&
+    typeof candidate.id === "string" &&
+    typeof candidate.contractName === "string"
+  );
+}
+
+function expectedDeployment(input: RunStepScriptInput, contractName: string) {
+  const matches = input.step.deployments.filter((deployment) => deployment.contractName === contractName);
+  if (matches.length !== 1) {
+    throw new Error(`${input.step.id} emitted unexpected or ambiguous deployment ${contractName}`);
+  }
+  return matches[0]!;
+}
+
 export async function runStepScript(input: RunStepScriptInput): Promise<void> {
   const child = spawn(process.execPath, [input.scriptPath], {
     env: childEnvironment(input.environment),
@@ -73,17 +97,39 @@ export async function runStepScript(input: RunStepScriptInput): Promise<void> {
   })();
 
   const recordedKeys = new Set<string>();
-  let recordProcessing = Promise.resolve();
-  let recordProcessingError: unknown;
+  let messageProcessing = Promise.resolve();
+  let messageProcessingError: unknown;
   child.on("message", (message: unknown) => {
-    if (!isDeploymentRecordMessage(message)) return;
-    recordProcessing = recordProcessing
+    if (!isDeploymentIntentMessage(message) && !isDeploymentRecordMessage(message)) return;
+    messageProcessing = messageProcessing
       .then(async () => {
-        const { id, record } = message;
         try {
-          const expected = input.step.deployments.find((deployment) => deployment.contractName === record.contractName);
-          if (!expected) throw new Error(`${input.step.id} emitted unexpected deployment ${record.contractName}`);
-          if (recordedKeys.has(expected.key)) throw new Error(`${input.step.id} emitted ${record.contractName} twice`);
+          if (isDeploymentIntentMessage(message)) {
+            const { id, contractName } = message;
+            const expected = expectedDeployment(input, contractName);
+            if (input.checkpoint.deployments[expected.key] || input.checkpoint.inFlightDeployments[expected.key]) {
+              throw new Error(`${input.step.id} requested ${contractName} twice`);
+            }
+            input.checkpoint.inFlightDeployments[expected.key] = {
+              stepId: input.step.id,
+              chain: input.step.chain,
+              contractName: expected.contractName,
+              nonce: expected.nonce,
+              expectedAddress: getAddress(expected.expectedAddress),
+            };
+            await input.store.save(input.checkpoint);
+            child.send({ type: "lineth-deployment-intent-ack", id });
+            return;
+          }
+
+          const { id, record } = message;
+          const expected = expectedDeployment(input, record.contractName);
+          if (recordedKeys.has(expected.key) || input.checkpoint.deployments[expected.key]) {
+            throw new Error(`${input.step.id} emitted ${record.contractName} twice`);
+          }
+          if (!input.checkpoint.inFlightDeployments[expected.key]) {
+            throw new Error(`${input.step.id} emitted ${record.contractName} without a durable deployment intent`);
+          }
           if (getAddress(record.address) !== getAddress(expected.expectedAddress)) {
             throw new Error(
               `${input.step.id} deployed ${record.contractName} at ${record.address}; expected ${expected.expectedAddress}`,
@@ -103,20 +149,21 @@ export async function runStepScript(input: RunStepScriptInput): Promise<void> {
             chainId: record.chainId,
             recovered: false,
           };
+          delete input.checkpoint.inFlightDeployments[expected.key];
           await input.store.save(input.checkpoint);
           recordedKeys.add(expected.key);
           child.send({ type: "lineth-deployment-record-ack", id });
         } catch (error) {
           child.send({
-            type: "lineth-deployment-record-ack",
-            id,
+            type: isDeploymentIntentMessage(message) ? "lineth-deployment-intent-ack" : "lineth-deployment-record-ack",
+            id: message.id,
             error: "deployment checkpoint persistence failed",
           });
           throw error;
         }
       })
       .catch((error: unknown) => {
-        recordProcessingError ??= error;
+        messageProcessingError ??= error;
         child.kill("SIGTERM");
       });
   });
@@ -132,8 +179,8 @@ export async function runStepScript(input: RunStepScriptInput): Promise<void> {
   }
 
   const [exitCode] = await Promise.all([closePromise, stderrPromise]);
-  await recordProcessing;
-  if (recordProcessingError) throw recordProcessingError;
+  await messageProcessing;
+  if (messageProcessingError) throw messageProcessingError;
   if (exitCode !== 0) throw new Error(`${input.step.id} deploy script exited with code ${exitCode}`);
   if (recordedKeys.size !== input.step.deployments.length) {
     throw new Error(
