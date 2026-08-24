@@ -1,0 +1,55 @@
+// Batched BN254 (alt_bn128) G1 ECADD harness (direct — avoids the full RISC-V
+// interpreter, exercising just the precompile constraints).
+// Run it with:  make -C arithmetization/src/test ecadd-zkc-check
+// A copy drives the prover-ray Go zkcdriver test at
+// prover-ray/zkcdriver/testdata/bn254_ecadd_run.zkc (only the include path differs).
+//
+// Exercises the RAM-wrapper accelerator bn254_ecadd<ram>(input, output) -> status.
+// Each case i lays x1||y1||x2||y2 (128 bytes big-endian) into guest RAM, calls the
+// wrapper, and checks the returned status against in_status[i]; on success it also
+// checks the 64-byte output x3||y3 against the expected (in_ex, in_ey).
+//
+// Points use the EVM (0,0) = point-at-infinity encoding. An invalid input (a
+// coordinate >= p, or a finite point off y^2 = x^3 + 3) is a provable precompile
+// FAILURE: the wrapper returns status 0 and writes no output (it never `fail`s),
+// so those cases assert status 0 rather than a specific result.
+
+include "../../../main/lib/bn254/impl.zkc"
+
+type lane = u64
+type tAddr = u8
+
+pub input in_n(address:u1) -> (count:u8)
+pub input in_x1(address:tAddr) -> (val:u256)
+pub input in_y1(address:tAddr) -> (val:u256)
+pub input in_x2(address:tAddr) -> (val:u256)
+pub input in_y2(address:tAddr) -> (val:u256)
+pub input in_ex(address:tAddr) -> (val:u256)
+pub input in_ey(address:tAddr) -> (val:u256)
+pub input in_status(address:tAddr) -> (flag:u8)
+
+fn main<ram>() {
+    var input_address:Address = 0x100
+    var output_address:Address = 0
+
+    var n:u8 = in_n[0]
+    for i:tAddr = 0; i<n; i = i + 1 {
+        write_u256_be(input_address, in_x1[i])
+        write_u256_be(input_address + 32, in_y1[i])
+        write_u256_be(input_address + 64, in_x2[i])
+        write_u256_be(input_address + 96, in_y2[i])
+
+        var status:u1 = bn254_ecadd(input_address, output_address)
+        if (status as u8) != in_status[i] {
+            fail
+        }
+        if status == 1 {
+            if read_u256_be(output_address) != in_ex[i] {
+                fail
+            }
+            if read_u256_be(output_address + 32) != in_ey[i] {
+                fail
+            }
+        }
+    }
+}

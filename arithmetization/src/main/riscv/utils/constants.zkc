@@ -159,6 +159,10 @@ const FUNCT3_EVM_ECRECOVER:Funct3 = 0b000
 const FUNCT7_EVM_ECRECOVER:Funct7 = 0b0000001
 const FUNCT3_EVM_SHA2:Funct3 = 0b000
 const FUNCT7_EVM_SHA2:Funct7 = 0b0000010
+const FUNCT3_EVM_ECADD:Funct3 = 0b000
+const FUNCT7_EVM_ECADD:Funct7 = 0b0000110
+const FUNCT3_EVM_ECMUL:Funct3 = 0b000
+const FUNCT7_EVM_ECMUL:Funct7 = 0b0000111
 
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000
@@ -347,6 +351,8 @@ const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) <
 const R_WRITE_OUTPUT:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17)
 const R_EVM_ECRECOVER:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECRECOVER as u17) << 7) | (FUNCT7_EVM_ECRECOVER as u17)
 const R_EVM_SHA2:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_SHA2 as u17) << 7) | (FUNCT7_EVM_SHA2 as u17)
+const R_EVM_ECADD:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECADD as u17) << 7) | (FUNCT7_EVM_ECADD as u17)
+const R_EVM_ECMUL:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECMUL as u17) << 7) | (FUNCT7_EVM_ECMUL as u17)
 const R_ECRECOVER:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_ECRECOVER as u17) << 7) | (FUNCT7_ECRECOVER as u17)
 
 // Concatenate constant to flatten the I_switch table

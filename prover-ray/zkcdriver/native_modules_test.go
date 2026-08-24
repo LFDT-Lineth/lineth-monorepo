@@ -63,6 +63,43 @@ func TestSecp256k1ScalarMul(t *testing.T) {
 	runZkcCase(t, "testdata/secp256k1_scalarmul_u256")
 }
 
+// TestBn254Ecadd drives the BN254 (alt_bn128) G1 ECADD RAM-wrapper accelerator
+// against a batch of known-answer vectors (doubling, commutativity, P+(-P)=O,
+// P+O=P, O+O=O, plus off-curve / coordinate>=p cases that must return status 0).
+// Point addition is cheap, so the full prove/verify runs over the whole batch.
+func TestBn254Ecadd(t *testing.T) {
+	runZkcCase(t, "testdata/bn254_ecadd_run")
+}
+
+// TestBn254Ecmul drives the BN254 (alt_bn128) G1 ECMUL RAM-wrapper accelerator
+// against a batch of vectors (7*G, 2*G, 0*G=O, r*G=O, (r-1)*G=-G, 5*O=O, plus
+// off-curve / coordinate>=p cases returning status 0). Every case is traced and
+// constraint-checked (this is where a wrong answer surfaces, since the harness
+// `fail`s on mismatch); the full prove/verify — expensive because each valid case
+// runs a 256-iteration scalar-mul ladder — runs only when not under -short.
+func TestBn254Ecmul(t *testing.T) {
+	const program = "testdata/bn254_ecmul_run"
+	binf, err := compileBinaryConstraints(program + ".zkc")
+	if err != nil {
+		t.Fatalf("failed to compile zkc source: %v", err)
+	}
+	inputBytes, err := os.ReadFile(program + ".json")
+	if err != nil {
+		t.Fatalf("failed to read zkc input file: %v", err)
+	}
+	tc := zkcTestCase{ZkcFilePath: program + ".json", InputStr: string(inputBytes)}
+	inputs, _, err := parseTestCase(tc, binf)
+	if err != nil {
+		t.Fatalf("tracing/constraint-check failed (expected every case to match its status/result): %v", err)
+	}
+	if testing.Short() {
+		return
+	}
+	if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
+		t.Fatalf("prove/verify failed: %v", err)
+	}
+}
+
 // ecrCase is one line of an ecrecover .accepts/.rejects fixture: the JSON input
 // object and the `;;` comment that precedes it (used as the subtest name).
 type ecrCase struct {

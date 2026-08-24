@@ -1,0 +1,167 @@
+include "u256.zkc"
+
+// Shared elliptic-curve group law for short Weierstrass curves with a = 0
+// (y^2 = x^3 + b), parameterized on the base-field modulus `p` and the
+// complete-addition constant `b3 = 3*b`. secp256k1 (p, b3 = 21) and BN254
+// (p, b3 = 9) both instantiate these; per-curve wrappers just forward their
+// constants so the formulas live in exactly one place.
+//
+// Points are projective (X : Y : Z); the identity O is (0 : 1 : 0) (any Z = 0).
+// All arithmetic goes through the modulus-parameterized nonnative primitives.
+//
+// Note vs. the previous per-curve copies: the two `b3·t` terms in the complete
+// addition were specialized as addmod chains (e.g. 9 = 8+1) because b3 was a
+// compile-time literal. With b3 a runtime parameter they become general
+// mulmod_256(t, b3, p) calls — 2 extra modular multiplications per point
+// addition, traded for a single shared implementation.
+
+// Complete projective addition (RCB 2015, https://eprint.iacr.org/2015/1060.pdf,
+// Algorithm 7). Correct for ALL input pairs — P == Q (doubling), P == -Q (-> O),
+// and either operand = O — with no case analysis.
+fn sw_add_projective(X1:u256, Y1:u256, Z1:u256, X2:u256, Y2:u256, Z2:u256, p:u256, b3:u256) -> (X3:u256, Y3:u256, Z3:u256) {
+
+    // products of matching coordinates
+    var xx:u256 = mulmod_256(X1, X2, p)
+    var yy:u256 = mulmod_256(Y1, Y2, p)
+    var zz:u256 = mulmod_256(Z1, Z2, p)
+
+    // X1Y2+X2Y1 via Karatsuba
+    var sx1y1:u256 = addmod_256(X1, Y1, p)
+    var sx2y2:u256 = addmod_256(X2, Y2, p)
+    var pxy:u256 = mulmod_256(sx1y1, sx2y2, p)
+    var diag_xy:u256 = addmod_256(xx, yy, p)
+    var cxy:u256 = submod_256(pxy, diag_xy, p) // X1Y2 + X2Y1
+
+    // Y1Z2+Y2Z1 via Karatsuba
+    var sy1z1:u256 = addmod_256(Y1, Z1, p)
+    var sy2z2:u256 = addmod_256(Y2, Z2, p)
+    var pyz:u256 = mulmod_256(sy1z1, sy2z2, p)
+    var diag_yz:u256 = addmod_256(yy, zz, p)
+    var cyz:u256 = submod_256(pyz, diag_yz, p) // Y1Z2 + Y2Z1
+
+    // X1Z2+X2Z1 via Karatsuba
+    var sx1z1:u256 = addmod_256(X1, Z1, p)
+    var sx2z2:u256 = addmod_256(X2, Z2, p)
+    var pxz:u256 = mulmod_256(sx1z1, sx2z2, p)
+    var diag_xz:u256 = addmod_256(xx, zz, p)
+    var cxz:u256 = submod_256(pxz, diag_xz, p) // X1Z2 + X2Z1
+
+    // 3·(X1X2)
+    var xx2:u256 = addmod_256(xx, xx, p)
+    var xx3:u256 = addmod_256(xx2, xx, p)
+
+    // b3·(Z1Z2) and b3·(X1Z2+X2Z1) — runtime b3, so a general modular multiply instead of an
+    // add chain.
+    // (todo:arijit): add dedicated mul_small_mod (e.g. b3 = 9 or 21) for optimization
+    var zz_b3:u256 = mulmod_256(zz, b3, p)
+    var cxz_b3:u256 = mulmod_256(cxz, b3, p)
+
+    // paper steps 22-23
+    var pre_z3:u256 = addmod_256(yy, zz_b3, p) // Y1Y2 + b3·Z1Z2
+    var t1:u256 = submod_256(yy, zz_b3, p) // Y1Y2 - b3·Z1Z2
+
+    // X3 (paper steps 25-27)
+    var m_a:u256 = mulmod_256(cyz, cxz_b3, p)
+    var m_b:u256 = mulmod_256(cxy, t1, p)
+    X3 = submod_256(m_b, m_a, p)
+
+    // Y3 (paper steps 28-30)
+    var m_c:u256 = mulmod_256(cxz_b3, xx3, p)
+    var m_d:u256 = mulmod_256(t1, pre_z3, p)
+    Y3 = addmod_256(m_d, m_c, p)
+
+    // Z3 (paper steps 31-33)
+    var m_e:u256 = mulmod_256(xx3, cxy, p)
+    var m_f:u256 = mulmod_256(pre_z3, cyz, p)
+    Z3 = addmod_256(m_f, m_e, p)
+}
+
+// Dedicated projective doubling for a = 0 curves. Depends only on a = 0 (never
+// on b), so it needs the modulus alone.
+// ref: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo
+// Precondition: P != O (Z1 != 0, Y1 != 0 — holds for every non-identity point of
+// an odd prime-order group, which has no 2-torsion).
+fn sw_double_projective(X1:u256, Y1:u256, Z1:u256, p:u256) -> (X3:u256, Y3:u256, Z3:u256) {
+
+    // basic products
+    var x1sq:u256 = mulmod_256(X1, X1, p) // X1²
+    var y1sq:u256 = mulmod_256(Y1, Y1, p) // Y1²
+    var S:u256 = mulmod_256(Y1, Z1, p) // Y1·Z1
+
+    // W = 3·X1²  (tangent numerator, a=0)
+    var x1sq2:u256 = addmod_256(x1sq, x1sq, p)
+    var W:u256 = addmod_256(x1sq2, x1sq, p)
+
+    // B = X1·Y1·S
+    var x1y1:u256 = mulmod_256(X1, Y1, p)
+    var B:u256 = mulmod_256(x1y1, S, p)
+
+    // H = W² - 8B
+    var W2:u256 = mulmod_256(W, W, p)
+    var B2:u256 = addmod_256(B, B, p)
+    var B4:u256 = addmod_256(B2, B2, p)
+    var B8:u256 = addmod_256(B4, B4, p)
+    var H:u256 = submod_256(W2, B8, p)
+
+    // X3 = 2·H·S
+    var HS:u256 = mulmod_256(H, S, p)
+    X3 = addmod_256(HS, HS, p)
+
+    // Y3 = W·(4B - H) - 8·Y1²·S²
+    var S2:u256 = mulmod_256(S, S, p)
+    var y1sqS2:u256 = mulmod_256(y1sq, S2, p)
+    var B4mH:u256 = submod_256(B4, H, p)
+    var WB4mH:u256 = mulmod_256(W, B4mH, p)
+    var y1sqS2_2:u256 = addmod_256(y1sqS2, y1sqS2, p)
+    var y1sqS2_4:u256 = addmod_256(y1sqS2_2, y1sqS2_2, p)
+    var y1sqS2_8:u256 = addmod_256(y1sqS2_4, y1sqS2_4, p)
+    Y3 = submod_256(WB4mH, y1sqS2_8, p)
+
+    // Z3 = 8·S³
+    var S3:u256 = mulmod_256(S2, S, p)
+    var S3_2:u256 = addmod_256(S3, S3, p)
+    var S3_4:u256 = addmod_256(S3_2, S3_2, p)
+    Z3 = addmod_256(S3_4, S3_4, p)
+}
+
+// Recursive scalar multiplication over projective coords, LSB-peeled on the way
+// down and applied MSB-first on the way back up (double-and-add).
+//   k*P = 2*((k >> 1)*P) + (k & 1)*P,   base case 0*P = O = (0 : 1 : 0)
+// Handles the full 256-bit range of k (no group-order bound); O is explicit
+// (Z = 0), doubling O is guarded, and the complete addition absorbs O + P = P at
+// the top set bit.
+fn sw_scalar_mul_projective(k:u256, PX:u256, PY:u256, PZ:u256, p:u256, b3:u256) -> (QX:u256, QY:u256, QZ:u256) {
+    if k == 0 {
+        // O = (0 : 1 : 0)
+        QX = 0
+        QY = 1
+        QZ = 0
+        return
+    }
+    var half:u255
+    var bit:u1
+    half::bit = k as u256
+
+    var HX:u256, HY:u256, HZ:u256
+    HX, HY, HZ = sw_scalar_mul_projective(half as u256, PX, PY, PZ, p, b3)
+
+    // D = 2*H. The dedicated doubling requires H != O, so guard on Z:
+    // above k's top set bit H is still O, and 2*O = O.
+    var DX:u256, DY:u256, DZ:u256
+    if HZ == 0 {
+        DX = 0
+        DY = 1
+        DZ = 0
+    } else {
+        DX, DY, DZ = sw_double_projective(HX, HY, HZ, p)
+    }
+
+    if bit == 1 {
+        // complete addition: also correct when D = O (returns P)
+        QX, QY, QZ = sw_add_projective(DX, DY, DZ, PX, PY, PZ, p, b3)
+    } else {
+        QX = DX
+        QY = DY
+        QZ = DZ
+    }
+}

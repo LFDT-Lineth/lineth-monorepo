@@ -1,0 +1,154 @@
+include "../nonnative/u256.zkc"
+include "../nonnative/sw_add_mul_formulas.zkc"
+
+// BN254 (a.k.a. alt_bn128 / bn128) G1 curve arithmetic over the base field Fp.
+//
+// Curve: y^2 = x^3 + 3  (short Weierstrass with a = 0, b = 3).
+// This is the curve behind the EVM ECADD (0x06) and ECMUL (0x07) precompiles.
+//
+// The projective group law (complete addition, doubling, scalar mul) is shared
+// with secp256k1 via nonnative/sw_add_mul_formulas.zkc; this file just supplies the
+// BN254 constants (p, b3 = 9) and the affine/validity layer. Design notes:
+//   - b = 3, so the complete-addition constant is b3 = 3*b = 9 (secp256k1: 21).
+//   - No sqrt / point decompression: ECADD/ECMUL take full (x, y) coordinates.
+//   - scalar_mul imposes NO group-order bound on k. EVM ECMUL uses the full
+//     256-bit scalar, and s*P = (s mod r)*P because r*P = O and BN254 G1 has
+//     cofactor 1 (every on-curve point has order dividing the prime r).
+//   - On-curve validity is exposed as a boolean predicate (is_on_curve_affine_bn254)
+//     rather than a hard `fail`, so callers can implement the EVM
+//     "invalid point => precompile failure / frame revert" path as a soft failure
+//     (returning a status) instead of aborting the whole proof.
+//
+// Constants are BN254_-prefixed to avoid colliding with secp256k1's bare
+// `p`/`b`/`Gx`/`Gy`, since both libraries are linked into the same program.
+
+// ----- curve parameters ------
+
+// BN254 base field prime p (the modulus for all coordinate arithmetic).
+const BN254_P:u256 = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+
+// Curve constant b in y^2 = x^3 + b, and b3 = 3*b (the complete-addition
+// constant passed to the shared short-Weierstrass formulas).
+const BN254_B:u256 = 3
+const BN254_B3:u256 = 9
+
+// Base point (generator) G1 of the prime-order group.
+const BN254_GX:u256 = 1
+const BN254_GY:u256 = 2
+
+// Returns the curve generator G1 = (1, 2).
+fn generator_bn254() -> (x:u256, y:u256) {
+    x = BN254_GX
+    y = BN254_GY
+}
+
+// ----- validity / assertions ------
+
+// The point at infinity O is encoded as the affine pair (0, 0) (matching the
+// EVM ABI). Note (0,0) does NOT satisfy the curve equation; it is treated as
+// the identity by convention.
+fn is_infinity_affine_bn254(x:u256, y:u256) -> (res:u1) {
+    res = 0
+    if (x == 0) && (y == 0) {
+        res = 1
+    }
+}
+
+fn is_equal_affine_bn254(Px:u256, Py:u256, Qx:u256, Qy:u256) -> (res:u1) {
+    res = 0
+    if (Px == Qx) && (Py == Qy) {
+        res = 1
+    }
+}
+
+// Boolean validity test for an EVM-supplied affine point. Returns 1 if (x, y)
+// is a VALID input — the identity (0,0), or a canonical finite point on
+// y^2 = x^3 + 3 over Fp — and 0 otherwise. Never `fail`s.
+//
+// A coordinate >= p is a non-canonical (invalid) EVM input and yields 0, NOT a
+// hard fail: an attacker can submit such calldata, the EVM handles it by failing
+// the precompile CALL (which the caller frame can survive), so it is a normal
+// provable execution path — a `fail` here would make a legitimate block
+// unprovable. We also do NOT reduce mod p: the EVM treats >= p as invalid, not
+// as its residue. The range check is required for soundness because mulmod_256
+// silently reduces, so without it a non-canonical y (with y mod p on the curve)
+// would wrongly pass. Callers turn a 0 result into a precompile-failure status.
+fn is_on_curve_affine_bn254(x:u256, y:u256) -> (res:u1) {
+    res = 0
+    if x >= BN254_P || y >= BN254_P {
+        return
+    }
+    if is_infinity_affine_bn254(x, y) == 1 {
+        res = 1
+        return
+    }
+    var y2:u256 = mulmod_256(y, y, BN254_P)
+    var x2:u256 = mulmod_256(x, x, BN254_P)
+    var x3:u256 = mulmod_256(x2, x, BN254_P)
+    var rhs:u256 = addmod_256(x3, BN254_B, BN254_P)
+    if rhs == y2 {
+        res = 1
+    }
+}
+
+// ------ conversion methods -------
+
+fn affine_to_projective_bn254(x:u256, y:u256) -> (X:u256, Y:u256, Z:u256) {
+    if is_infinity_affine_bn254(x, y) == 1 {
+        X = 0
+        Y = 1
+        Z = 0
+    } else {
+        X = x
+        Y = y
+        Z = 1
+    }
+}
+
+fn projective_to_affine_bn254(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
+    if Z == 0 {
+        x = 0
+        y = 0
+    } else {
+        var z_inv:u256 = invmod_256(Z, BN254_P)
+        x = mulmod_256(X, z_inv, BN254_P)
+        y = mulmod_256(Y, z_inv, BN254_P)
+    }
+}
+
+// ------ affine -------
+
+// Affine point addition P3 = P1 + P2 via the shared complete projective formula,
+// so it is correct for every input pair including doubling (P1 == P2), inverses
+// (P1 == -P2 -> O), and identity operands. Inputs/outputs use the (0,0) = O
+// encoding.
+fn add_affine_bn254(x1:u256, y1:u256, x2:u256, y2:u256) -> (x3:u256, y3:u256) {
+    var X1:u256, Y1:u256, Z1:u256
+    X1, Y1, Z1 = affine_to_projective_bn254(x1, y1)
+    var X2:u256, Y2:u256, Z2:u256
+    X2, Y2, Z2 = affine_to_projective_bn254(x2, y2)
+
+    var X3:u256, Y3:u256, Z3:u256
+    X3, Y3, Z3 = sw_add_projective(X1, Y1, Z1, X2, Y2, Z2, BN254_P, BN254_B3)
+
+    x3, y3 = projective_to_affine_bn254(X3, Y3, Z3)
+}
+
+// Affine scalar multiplication Q = k*P. k is an arbitrary 256-bit scalar (NOT
+// reduced mod the group order — matches EVM ECMUL semantics). k == 0 or P == O
+// yields O = (0, 0).
+fn scalar_mul_affine_bn254(k:u256, Px:u256, Py:u256) -> (Qx:u256, Qy:u256) {
+    Qx = 0
+    Qy = 0
+    if k == 0 {
+        return
+    }
+
+    var PX:u256, PY:u256, PZ:u256
+    PX, PY, PZ = affine_to_projective_bn254(Px, Py)
+
+    var QX:u256, QY:u256, QZ:u256
+    QX, QY, QZ = sw_scalar_mul_projective(k, PX, PY, PZ, BN254_P, BN254_B3)
+
+    Qx, Qy = projective_to_affine_bn254(QX, QY, QZ)
+}
