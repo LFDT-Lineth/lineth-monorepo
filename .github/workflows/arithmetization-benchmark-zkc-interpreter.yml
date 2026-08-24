@@ -47,14 +47,14 @@ on:
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
-     - main
+      - main
     paths:
-     - 'arithmetization/**'
-     - 'riscv-guests/l2-execution/**'
-     - 'riscv-guests/build_common/**'
-     - 'riscv-guests/lineth-accelerators/**'
-     - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+      - 'arithmetization/**'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
       base_ref:
