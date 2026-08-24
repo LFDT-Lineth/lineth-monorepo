@@ -50,3 +50,10 @@ test("keeps the Forge deployer component and E2E build-input paths aligned", () 
     assert.match(e2e, quotedLiteral(requiredPath), `E2E gate: ${requiredPath}`);
   }
 });
+
+test("passes the full checked-out source SHA to the Forge deployer workflow", () => {
+  const deployer = namedYamlBlock(".github/workflows/build-and-publish.yml", "contract_deployer");
+
+  assert.match(deployer, /image_tag:\s*\$\{\{\s*github\.event\.pull_request\.head\.sha\s*\|\|\s*github\.sha\s*\}\}/);
+  assert.doesNotMatch(deployer, /image_tag:\s*\$\{\{\s*inputs\.commit_tag\s*\}\}/);
+});

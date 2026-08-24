@@ -64,7 +64,7 @@ jobs:
     uses: ./.github/workflows/contracts-forge-deployer-build-and-publish.yml
     if: ${{ inputs.contract_deployer_changed == 'true' }}
     with:
-      image_tag: ${{ inputs.commit_tag }}
+      image_tag: ${{ github.event.pull_request.head.sha || github.sha }}
       push_image: false
     secrets: inherit
 
