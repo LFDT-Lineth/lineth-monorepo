@@ -135,6 +135,10 @@ compile: require-src
 elf-exec: elf-to-json install-zkc
 	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
+# Convert and trace an already compiled external ELF
+elf-trace: elf-to-json install-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-trace JSON=$(JSON_EXT)
+
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json install-zkc
 	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-debug JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

@@ -77,7 +77,7 @@ zkc-compile: $(ZKC_FILES)
 # Only practical for small zkc programs: constraint checking, not tracing, is the expensive half.
 # Measured weekly for the l2-execution guest — see arithmetization/src/test/scripts/README-weekly-metrics.md.
 zkc-check:
-	zkc exec --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
+	zkc trace --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
 
 zkc-compile-and-check: install-zkc zkc-compile zkc-check
 
