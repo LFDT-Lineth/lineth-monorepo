@@ -111,10 +111,18 @@ pub const MerkleCap = struct {
         return hashNode(left, right, self.aux[heap_index]);
     }
 
-    pub fn authenticate(self: MerkleCap, depth: usize, root: poseidon2.Digest) Error!void {
+    pub fn recoverRoot(self: MerkleCap, depth: usize) Error!poseidon2.Digest {
         try self.validate(depth);
-        if (depth == 0) return;
-        if (!poseidon2.eql(try self.recoverNode(depth, 0, 0), root)) return Error.InvalidCap;
+        if (depth == 0) return Error.InvalidCap;
+        return self.recoverNode(depth, 0, 0);
+    }
+
+    pub fn authenticate(self: MerkleCap, depth: usize, root: poseidon2.Digest) Error!void {
+        if (depth == 0) {
+            try self.validate(depth);
+            return;
+        }
+        if (!poseidon2.eql(try self.recoverRoot(depth), root)) return Error.InvalidCap;
     }
 };
 
@@ -133,21 +141,6 @@ pub fn hashNode(left: poseidon2.Digest, right: poseidon2.Digest, aux: ?poseidon2
 // *preimages*, not bare digests: the PCS/DEEP layer needs the actual base and
 // extension values to reconstruct quotients, not just a leaf hash. Mirrors
 // prover-ray's `pcs.go` `InputTreeOpening` / `RowPair` / `RowOpening`.
-
-/// Domain-separates Merkle leaves so a table with the same row values but a
-/// different (base, ext) width shape hashes to a different digest. Without
-/// this, e.g. an all-zero base row and an all-zero ext row collide. Mirrors
-/// prover-ray's `leafDomainTag` / `absorbLeafHeader`; prover and verifier must
-/// call this identically or roots will not reconstruct.
-const leaf_domain_tag: u64 = 0x4c66_7269_5f6c_6631; // "Lfri_lf1"
-
-fn absorbLeafHeader(hasher: *poseidon2.MDHasher, base_width: usize, ext_width: usize) void {
-    hasher.writeElements(&.{
-        field.Element.init(leaf_domain_tag),
-        field.Element.init(@as(u64, base_width)),
-        field.Element.init(@as(u64, ext_width)),
-    });
-}
 
 /// One committed row's preimage: prover-ray's `RowOpening`.
 pub const RowOpening = struct {
@@ -170,7 +163,6 @@ fn writeRowOpeningElements(hasher: *poseidon2.MDHasher, row: RowOpening) void {
 /// `hashRowOpening`, used for the bottom (largest) table's individual rows.
 pub fn hashRowOpening(row: RowOpening) poseidon2.Digest {
     var hasher = poseidon2.MDHasher.init();
-    absorbLeafHeader(&hasher, row.base.len, row.ext.len);
     writeRowOpeningElements(&hasher, row);
     return hasher.sumDigest();
 }
@@ -181,7 +173,6 @@ pub fn hashRowOpening(row: RowOpening) poseidon2.Digest {
 /// prover-ray's `hashAuxPair`.
 pub fn hashRowPair(pair: RowPair, self_is_even: bool) poseidon2.Digest {
     var hasher = poseidon2.MDHasher.init();
-    absorbLeafHeader(&hasher, pair[0].base.len, pair[0].ext.len);
     if (self_is_even) {
         writeRowOpeningElements(&hasher, pair[0]);
         writeRowOpeningElements(&hasher, pair[1]);

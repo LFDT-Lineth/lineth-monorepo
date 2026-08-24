@@ -142,6 +142,9 @@ pub const OpeningProof = struct {
 /// An authenticated input-tree frontier and the complete row tables whose
 /// auxiliary leaves lie above it.
 pub const InputCap = struct {
+    /// The outer root that commits to both the raw Merkle root and the table
+    /// shape descriptor. It is authenticated once before query processing.
+    root: poseidon2.Digest,
     nodes: []const poseidon2.Digest,
     tables: []const InputCapTable,
 };
@@ -505,6 +508,42 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
     return widths;
 }
 
+fn inputShapeDigest(comptime system: System, recon: Reconstructed(system), info: InputCapInfo(system)) poseidon2.Digest {
+    var count: usize = 0;
+    var bottom: usize = 0;
+    var seen_sizes: [@as(usize, system.max_size_log2) + 1]bool = [_]bool{false} ** (@as(usize, system.max_size_log2) + 1);
+    for (0..recon.num_entries) |e| {
+        if (recon.entry_batch[e] != info.batch_idx) continue;
+        const size = recon.entry_size_log2[e];
+        const widths = inputSizeWidths(recon, info.batch_idx, size);
+        if (widths.base == 0 and widths.ext == 0) continue;
+        if (!seen_sizes[size]) {
+            seen_sizes[size] = true;
+            count += 1;
+        }
+        bottom = @max(bottom, @as(usize, size));
+    }
+
+    var hasher = poseidon2.MDHasher.init();
+    hasher.writeElements(&.{field.Element.init(count)});
+    var size: usize = bottom + 1;
+    while (size != 0) {
+        size -= 1;
+        const size_log2: u8 = @intCast(size);
+        const widths = inputSizeWidths(recon, info.batch_idx, size_log2);
+        if (widths.base == 0 and widths.ext == 0) continue;
+        const packed_value = (@as(u64, size_log2) << 24) |
+            (@as(u64, widths.ext) << 12) |
+            @as(u64, widths.base);
+        hasher.writeElements(&.{field.Element.init(packed_value)});
+    }
+    return hasher.sumDigest();
+}
+
+fn bindInputRoot(raw_root: poseidon2.Digest, shape_digest: poseidon2.Digest) poseidon2.Digest {
+    return poseidon2.compress(raw_root, shape_digest);
+}
+
 fn authenticateInputCap(
     comptime system: System,
     recon: Reconstructed(system),
@@ -514,9 +553,14 @@ fn authenticateInputCap(
     aux_storage: []?poseidon2.Digest,
 ) Error![]const poseidon2.Digest {
     const expected_nodes = @as(usize, 1) << @intCast(info.depth);
+    if (!poseidon2.eql(cap.root, root)) return Error.InvalidCap;
     if (info.depth == 0) {
-        if (cap.nodes.len != 0 or cap.tables.len != 0) return Error.InvalidCap;
-        return &[_]poseidon2.Digest{root};
+        if (cap.nodes.len != 1 or cap.tables.len != 0) return Error.InvalidCap;
+        const bound_root = bindInputRoot(cap.nodes[0], inputShapeDigest(system, recon, info));
+        if (!poseidon2.eql(bound_root, cap.root)) {
+            return Error.InvalidCap;
+        }
+        return cap.nodes;
     }
     if (cap.nodes.len != expected_nodes or cap.tables.len != info.revealed_count) return Error.InvalidCap;
     if (aux_storage.len < expected_nodes - 1) return Error.InvalidCap;
@@ -537,7 +581,11 @@ fn authenticateInputCap(
         }
     }
     const cap_merkle = merkle.MerkleCap{ .nodes = cap.nodes, .aux = aux_storage[0 .. expected_nodes - 1] };
-    cap_merkle.authenticate(info.depth, root) catch return Error.MerkleProofInvalid;
+    const raw_root = cap_merkle.recoverRoot(info.depth) catch return Error.MerkleProofInvalid;
+    const bound_root = bindInputRoot(raw_root, inputShapeDigest(system, recon, info));
+    if (!poseidon2.eql(bound_root, cap.root)) {
+        return Error.MerkleProofInvalid;
+    }
     return cap.nodes;
 }
 
@@ -646,25 +694,18 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const Info = InputCapInfo(system);
     var input_infos: [tree_cap]Info = undefined;
     var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
-    var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [@max(system.envelope_params.num_queries * 2, 2)]?poseidon2.Digest = undefined;
     for (0..routing.distinct_count) |tree_idx| {
         const info = try buildInputCapInfo(system, recon, routing, tree_idx);
         input_infos[tree_idx] = info;
-        if (info.depth == 0) {
-            if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
-            input_root_frontiers[tree_idx] = routing.roots[tree_idx];
-            input_frontiers[tree_idx] = input_root_frontiers[tree_idx .. tree_idx + 1];
-        } else {
-            input_frontiers[tree_idx] = try authenticateInputCap(
-                system,
-                recon,
-                info,
-                input.proof.input_caps[tree_idx],
-                routing.roots[tree_idx],
-                input_aux_storage[0..],
-            );
-        }
+        input_frontiers[tree_idx] = try authenticateInputCap(
+            system,
+            recon,
+            info,
+            input.proof.input_caps[tree_idx],
+            routing.roots[tree_idx],
+            input_aux_storage[0..],
+        );
     }
 
     const cap_rounds = comptime @as(usize, system.max_size_log2) + 1;

@@ -85,7 +85,7 @@ fn toInputCaps(allocator: std.mem.Allocator, caps: []const fixtures.InputCapData
             for (rows, table.rows) |*row_dst, row| row_dst.* = try toRowOpening(allocator, row);
             table_dst.* = .{ .size_log2 = table.size_log2, .rows = rows };
         }
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
+        dst.* = .{ .root = toDigest(cap.root), .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
     }
     return out;
 }
@@ -188,6 +188,19 @@ test "pcs rejects reordered input cap tables" {
     try std.testing.expectEqual(@as(usize, 2), tables.len);
     std.mem.swap(pcs.InputCapTable, &tables[0], &tables[1]);
     caps[0].tables = tables;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
+}
+
+test "pcs rejects a tampered shape-bound input cap root" {
+    const case = fixtures.pcs_cases[0];
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var input = try toPCSVerifyInput(arena.allocator(), case);
+    var caps = try arena.allocator().dupe(pcs.InputCap, input.proof.input_caps);
+    caps[0].root[0] = field.Element.init(@as(u64, caps[0].root[0].value) + 1);
     input.proof.input_caps = caps;
 
     try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
