@@ -34,6 +34,8 @@ Linea Mainnet contracts, and relevant dependencies.
 
 | Round | Component or change | Auditor | Report |
 | --- | --- | --- | --- |
+| Nineth | Yield Manager Revision August 20th 2026 | Consensys Diligence | [Report](https://diligence.security/audits/2025/12/linea-yield-manager/) |
+| Nineth | Yield Manager Revision August 20th 2026 | Cyfrin | [Report](https://github.com/Cyfrin/cyfrin-audit-reports/blob/9293d45a74271fa53213331ecaabda29bf966923/reports/2026-08-20-cyfrin-linea-yield-manager-v2.1.pdf) |
 | Eighth | Forced transactions | Consensys Diligence | [Report](https://diligence.security/audits/2026/02/linea-forced-transactions/) |
 | Eighth | Forced transactions | Cyfrin | [Report](https://github.com/Cyfrin/cyfrin-audit-reports/blob/9397aab67a15854b08eb302722cdebf5ddb3ac3f/reports/2026-06-18-cyfrin-linea-forced-txns-v2.0.pdf) |
 | Seventh | Modularization, pause cooldown, and dynamic chain configuration | Consensys Diligence | [Report](https://diligence.security/audits/2026/02/linea-rollup-update/) |

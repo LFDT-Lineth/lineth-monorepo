@@ -42,8 +42,23 @@ func pcsOpeningProofZigLiteral(proof fri.OpeningProof) string {
 		}
 		b.WriteString(" }")
 	}
+	b.WriteString(" }, .input_caps = &.{ ")
+	for i, cap := range proof.InputCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(inputCapZigLiteral(cap))
+	}
 	b.WriteString(" }, .fri_proof = fri.Proof{ ")
 	fmt.Fprintf(&b, ".round_roots = &%s, ", commitmentSliceZig(proof.FRIProof.RoundRoots))
+	b.WriteString(".round_caps = &.{ ")
+	for i, cap := range proof.FRIProof.RoundCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(merkleCapZigLiteral(cap))
+	}
+	b.WriteString(" }, ")
 	fmt.Fprintf(&b, ".final_poly = &%s, ", extArrayLiteral(proof.FRIProof.FinalPoly))
 	b.WriteString(".running_queries = &.{ ")
 	for q, rq := range proof.FRIProof.RunningQueries {
@@ -55,13 +70,50 @@ func pcsOpeningProofZigLiteral(proof fri.OpeningProof) string {
 			if j > 0 {
 				b.WriteString(", ")
 			}
-			branch := layer[0]
+			branch := layer
 			fmt.Fprintf(&b, "merkle.Branch{ .leaf = %s, .siblings = &%s }",
 				commitmentValueLiteral(branch.Leaf), commitmentSliceZig(branch.Siblings))
 		}
 		b.WriteString(" }")
 	}
 	b.WriteString(" } } }")
+	return b.String()
+}
+
+func inputCapZigLiteral(cap fri.InputCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "pcs.InputCap{ .nodes = &%s, .tables = &.{ ", commitmentSliceZig(cap.Nodes))
+	for i, table := range cap.Tables {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(&b, "pcs.InputCapTable{ .size_log2 = %d, .rows = &.{ ", table.SizeLog2)
+		for j, row := range table.Rows {
+			if j > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(rowOpeningZigLiteral(row))
+		}
+		b.WriteString(" } }")
+	}
+	b.WriteString(" } }")
+	return b.String()
+}
+
+func merkleCapZigLiteral(cap fri.MerkleCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "merkle.MerkleCap{ .nodes = &%s, .aux = &.{ ", commitmentSliceZig(cap.Nodes))
+	for i, aux := range cap.Aux {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if aux == nil {
+			b.WriteString("null")
+		} else {
+			b.WriteString(commitmentValueLiteral(*aux))
+		}
+	}
+	b.WriteString(" } }")
 	return b.String()
 }
 

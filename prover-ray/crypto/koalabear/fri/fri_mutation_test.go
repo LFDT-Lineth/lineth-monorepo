@@ -29,6 +29,8 @@ const (
 
 const pointerStep = -1
 
+const invalidMerkleProof = "invalid Merkle proof"
+
 // proofMutation describes a single mutation by the path (sequence of struct-field
 // / slice indices / pointer dereferences) to the target inside an OpeningProof
 // and the kind of change.
@@ -191,7 +193,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	}
 }
 
-// TestVerifyRejectsMissingBottomLevel targets authenticateInputQuery's
+// TestVerifyRejectsMissingBottomLevel targets inputQuerySource.authenticate's
 // invariant that every branch's bottom (deepest) level pair is mandatory.
 func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
@@ -236,7 +238,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				self := &branch.Leaves[len(branch.Leaves)-1][0]
 				self.Ext[0].Add(&self.Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: invalidMerkleProof,
 		},
 		{
 			name: "misaligned auxiliary row",
@@ -244,7 +246,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				pair := fx.proof.InputQueries[0][0].Leaves[1]
 				pair[0].Ext[0].Add(&pair[0].Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: invalidMerkleProof,
 		},
 		{
 			name: "tampered top sibling row",
@@ -253,7 +255,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				conjugate := &branch.Leaves[len(branch.Leaves)-1][1]
 				conjugate.Ext[0].Add(&conjugate.Ext[0], &oneExt)
 			},
-			wantErr: "Merkle proof invalid",
+			wantErr: invalidMerkleProof,
 		},
 		{
 			name: "domain point claim",
