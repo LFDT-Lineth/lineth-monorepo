@@ -22,3 +22,39 @@ var ArithmeticGuestELF = minimalelf.ArithmeticElfProgram
 // through the guest syscall interface. main.zkc's process_syscall must
 // reject this trace rather than accept it.
 var ExitOneGuestELF = minimalelf.ExitOneElfProgram
+
+// BranchesGuestELF is a tiny valid RISC-V ELF that exercises all six B-type
+// variants (BEQ, BNE, BLT, BGE, BLTU, BGEU), both taken and not-taken,
+// then exits with code 0 (or code 1 if any variant misbehaves).
+var BranchesGuestELF = minimalelf.BranchesElfProgram
+
+// LoadStoreWidthsGuestELF is a tiny valid RISC-V ELF that exercises the
+// SB/LB, SH/LH, and SD/LD memory widths (including sign extension), then
+// exits with code 0 (or code 1 if any round trip disagrees).
+var LoadStoreWidthsGuestELF = minimalelf.LoadStoreWidthsElfProgram
+
+// Poseidon2GuestELF is a tiny valid RISC-V ELF that invokes the
+// R_POSEIDON2 precompile over an all-zero input block, then exits with
+// code 0 (or code 1 if the output disagrees with the known-good vector).
+var Poseidon2GuestELF = minimalelf.Poseidon2ElfProgram
+
+// KeccakGuestELF is a tiny valid RISC-V ELF that invokes the R_KECCAK
+// precompile over an empty message, then exits with code 0 (or code 1 if
+// the digest disagrees with the well-known Keccak-256 empty-string digest).
+var KeccakGuestELF = minimalelf.KeccakElfProgram
+
+// WriteOutputGuestELF is a tiny valid RISC-V ELF that invokes the
+// R_WRITE_OUTPUT precompile to copy 3 known bytes into the public
+// guest_output buffer, then exits with code 0.
+var WriteOutputGuestELF = minimalelf.WriteOutputElfProgram
+
+// ImmediateALUGuestELF is a tiny valid RISC-V ELF that exercises SLTI,
+// SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI, ADDIW, SLLIW, SRLIW, and
+// SRAIW, then exits with code 0 (or code 1 if any result disagrees with
+// its independently-computed expected value).
+var ImmediateALUGuestELF = minimalelf.ImmediateALUElfProgram
+
+// WordWidthGuestELF is a tiny valid RISC-V ELF that exercises ADDW, SUBW,
+// SLLW, SRLW, and SRAW, then exits with code 0 (or code 1 if any result
+// disagrees with its independently-computed expected value).
+var WordWidthGuestELF = minimalelf.WordWidthElfProgram

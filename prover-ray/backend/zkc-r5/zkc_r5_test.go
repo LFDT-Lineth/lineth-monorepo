@@ -197,6 +197,13 @@ func TestElfBlobs_ToyGuestSectionsParseAndPrepareInput(t *testing.T) {
 		{"MemoryRoundTrip", minimalelf.MemoryRoundTripElfProgram, minimalelf.MemoryRoundTripSectionData},
 		{"Arithmetic", minimalelf.ArithmeticElfProgram, minimalelf.ArithmeticSectionData},
 		{"ExitOne", minimalelf.ExitOneElfProgram, minimalelf.ExitOneSectionData},
+		{"Branches", minimalelf.BranchesElfProgram, minimalelf.BranchesSectionData},
+		{"LoadStoreWidths", minimalelf.LoadStoreWidthsElfProgram, minimalelf.LoadStoreWidthsSectionData},
+		{"Poseidon2", minimalelf.Poseidon2ElfProgram, minimalelf.Poseidon2SectionData},
+		{"Keccak", minimalelf.KeccakElfProgram, minimalelf.KeccakSectionData},
+		{"WriteOutput", minimalelf.WriteOutputElfProgram, minimalelf.WriteOutputSectionData},
+		{"ImmediateALU", minimalelf.ImmediateALUElfProgram, minimalelf.ImmediateALUSectionData},
+		{"WordWidth", minimalelf.WordWidthElfProgram, minimalelf.WordWidthSectionData},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
