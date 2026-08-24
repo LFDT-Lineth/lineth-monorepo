@@ -1,4 +1,4 @@
-include "./lib/nonnative/u256.zkc"
+include "../../../arithmetization/src/main/lib/nonnative/u256.zkc"
 
 type tAddr = u8
 
