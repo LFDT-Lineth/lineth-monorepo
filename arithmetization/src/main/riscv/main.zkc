@@ -62,10 +62,15 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // ==========================
     // Execution of the program
     // ==========================
-    main_loop(entry_point, base, exec_end)
+
+    // main_loop(entry_point, base, exec_end)
+    // Version without predecoding justification
+    main_loop(entry_point, base)
 }
 
-fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64, exec_end:u64) {
+// fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64, exec_end:u64) {
+fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64) {
+
     var clock_cycle:u32 = 0
     var output_write_address:OutputAddress = 0
     var pc:Address = entry_point
