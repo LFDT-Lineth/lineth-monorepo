@@ -1,4 +1,4 @@
-name: Tracer simple zkc binary runs and checks
+name: Tracer guest programs execution - l2-execution, Add in Zig and Blake in Rust
 
 on:
   pull_request:
@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
@@ -13,6 +16,9 @@ on:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/l2-execution/**'
+     - 'riscv-guests/build_common/**'
+     - 'riscv-guests/lineth-accelerators/**'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
@@ -33,8 +39,10 @@ permissions:
   actions: read
 
 jobs:
-  binary-run-and-zkc-check:
+  sample-guest-programs-run:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    env:
+      ZKC_EXEC_FLAGS: "--fast"
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -46,28 +54,21 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
 
-      - name: Install zkc, compile risc binary for simple zkc test program and check it
-        run: make -C arithmetization zkc-compile-and-check
-        env:
-          ZKC_MAIN: src/test/zkc/simple_add.zkc
-          ZKC_FILES: src/test/zkc/simple_add.zkc
-          ZKC_INPUT: src/test/zkc/simple_add.json
-
-      - name: Trace Keccak rust and check it
-        run: make keccak-rust-exec
+      - name: Install zkc and run simple Zig guest program with zkc interpreter
+        # IN_BYTES values not used in the sum test program but is still written in memory
+        run: make TEST=test.zig IN_BYTES="0xAABB" IN_ORIGIN=0x08800000
         working-directory: arithmetization/src/test
-        timeout-minutes: 15
-        env:
-          ZKC_REF: "" # Empty to avoid installing zkc again
-          KECCAK_N_VECTORS: 1
-          KECCAK_JSON_FILE: common_inputs/keccak_check.json
-          ZKC_EXEC_FLAGS: "--check"
+        timeout-minutes: 6
 
-      - name: Trace l2-execution guest program and check it
+      - name: Run Blake rust against test vectors with zkc interpreter
+        run: make blake-rust-exec
+        working-directory: arithmetization/src/test
+        timeout-minutes: 30
+
+      - name: Run l2-execution guest program with zkc interpreter
         run: make -C riscv-guests/l2-execution exec
-        timeout-minutes: 45
+        timeout-minutes: 30
         env:
-          ZKC_REF: "" # Empty to avoid installing zkc again
           INPUT: test/testdata/stateless_input.ssz
           KECCAK_ACCEL: true
-          ZKC_EXEC_FLAGS: "--check -vv"
+
