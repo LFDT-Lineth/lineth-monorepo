@@ -39,8 +39,16 @@ comptime {
     @export(&secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
     @export(&ripemd160, .{ .name = "zkvm_ripemd160" });
     @export(&modexp, .{ .name = "zkvm_modexp" });
-    @export(&bn254_g1_add, .{ .name = "zkvm_bn254_g1_add" });
-    @export(&bn254_g1_mul, .{ .name = "zkvm_bn254_g1_mul" });
+    if (build_options.bn254_add_accel) {
+        @export(&lineth_accel.zkvm_bn254_g1_add, .{ .name = "zkvm_bn254_g1_add" });
+    } else {
+        @export(&bn254_g1_add, .{ .name = "zkvm_bn254_g1_add" });
+    }
+    if (build_options.bn254_mul_accel) {
+        @export(&lineth_accel.zkvm_bn254_g1_mul, .{ .name = "zkvm_bn254_g1_mul" });
+    } else {
+        @export(&bn254_g1_mul, .{ .name = "zkvm_bn254_g1_mul" });
+    }
     @export(&bn254_pairing, .{ .name = "zkvm_bn254_pairing" });
     @export(&blake2f, .{ .name = "zkvm_blake2f" });
     @export(&kzg_point_eval, .{ .name = "zkvm_kzg_point_eval" });

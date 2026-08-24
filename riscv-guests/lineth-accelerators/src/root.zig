@@ -7,6 +7,7 @@
 const lineth_std = @import("std.zig");
 const zkvm_types = @import("zkvm_types.zig");
 const evm_ecrecover = @import("evm_ecrecover.zig");
+const bn254 = @import("bn254.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
 const sha2 = @import("sha2.zig");
@@ -47,3 +48,9 @@ pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_pe
 // ── secp256k1 accelerators (include/zkvm_accelerators.h) ────────────────────
 pub const zkvm_secp256k1_ecrecover = evm_ecrecover.zkvm_secp256k1_ecrecover;
 pub const zkvm_secp256k1_verify = secp256k1_verify.zkvm_secp256k1_verify;
+
+// ── BN254 (alt_bn128) G1 accelerators (include/zkvm_accelerators.h) ──────────
+pub const zkvm_bn254_g1_point = bn254.zkvm_bn254_g1_point;
+pub const zkvm_bn254_scalar = bn254.zkvm_bn254_scalar;
+pub const zkvm_bn254_g1_add = bn254.zkvm_bn254_g1_add;
+pub const zkvm_bn254_g1_mul = bn254.zkvm_bn254_g1_mul;
