@@ -11,3 +11,14 @@ var ExitZeroGuestELF = minimalelf.ExitZeroElfProgram
 // path as ExitZeroGuestELF (or code 1 if the round-tripped value doesn't
 // match, which would indicate a bug in the S-type/I-type memory path).
 var MemoryRoundTripGuestELF = minimalelf.MemoryRoundTripElfProgram
+
+// ArithmeticGuestELF is a tiny valid RISC-V ELF that exercises LUI, JAL,
+// JALR, an R-type base op, and an M-extension op, then exits with code 0
+// through the same Linux-style syscall path as ExitZeroGuestELF (or code 1
+// if the two independently-computed results disagree).
+var ArithmeticGuestELF = minimalelf.ArithmeticElfProgram
+
+// ExitOneGuestELF is a tiny valid RISC-V ELF that exits with a nonzero code
+// through the guest syscall interface. main.zkc's process_syscall must
+// reject this trace rather than accept it.
+var ExitOneGuestELF = minimalelf.ExitOneElfProgram

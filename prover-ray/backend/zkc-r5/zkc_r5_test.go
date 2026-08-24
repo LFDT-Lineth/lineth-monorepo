@@ -188,21 +188,34 @@ func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
 	assert.Error(t, err, "malformed ELF must return an error")
 }
 
-func TestElfBlobs_MemoryRoundTripSectionParsesAndPreparesInput(t *testing.T) {
-	parsedELF, err := zkcr5.LoadGuestElf(bytes.NewReader(minimalelf.MemoryRoundTripElfProgram))
-	require.NoError(t, err)
-	require.Len(t, parsedELF.Sections, 1, "one loadable section must yield one memory blob")
-	assert.Equal(t, uint64(minimalelf.DefaultSectionAddr), parsedELF.Sections[0].Offset, "memory blob offset must match the section's virtual address")
-	assert.Equal(t, minimalelf.MemoryRoundTripSectionData, parsedELF.Sections[0].Data, "memory blob data must match the section bytes")
-	assert.Equal(t, uint64(minimalelf.DefaultEntryPoint), parsedELF.EntryPoint, "entry point must match ELF e_entry")
+func TestElfBlobs_ToyGuestSectionsParseAndPrepareInput(t *testing.T) {
+	tests := []struct {
+		name        string
+		elfProgram  []byte
+		sectionData []byte
+	}{
+		{"MemoryRoundTrip", minimalelf.MemoryRoundTripElfProgram, minimalelf.MemoryRoundTripSectionData},
+		{"Arithmetic", minimalelf.ArithmeticElfProgram, minimalelf.ArithmeticSectionData},
+		{"ExitOne", minimalelf.ExitOneElfProgram, minimalelf.ExitOneSectionData},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			parsedELF, err := zkcr5.LoadGuestElf(bytes.NewReader(test.elfProgram))
+			require.NoError(t, err)
+			require.Len(t, parsedELF.Sections, 1, "one loadable section must yield one memory blob")
+			assert.Equal(t, uint64(minimalelf.DefaultSectionAddr), parsedELF.Sections[0].Offset, "memory blob offset must match the section's virtual address")
+			assert.Equal(t, test.sectionData, parsedELF.Sections[0].Data, "memory blob data must match the section bytes")
+			assert.Equal(t, uint64(minimalelf.DefaultEntryPoint), parsedELF.EntryPoint, "entry point must match ELF e_entry")
 
-	// PrepareInput must succeed too, since this ELF is fed to zkc's public
-	// inputs the same way ExitZeroGuestELF is in riscv_bootstrap.go.
-	inputs, err := zkcr5.PrepareInput(minimalelf.MemoryRoundTripElfProgram, nil)
-	require.NoError(t, err)
-	assert.Contains(t, inputs, "entry_point_and_blobs_count")
-	assert.Contains(t, inputs, "blobs_offset_and_size")
-	assert.Contains(t, inputs, "blobs_data")
+			// PrepareInput must succeed too, since these ELFs are fed to zkc's
+			// public inputs the same way ExitZeroGuestELF is in riscv_bootstrap.go.
+			inputs, err := zkcr5.PrepareInput(test.elfProgram, nil)
+			require.NoError(t, err)
+			assert.Contains(t, inputs, "entry_point_and_blobs_count")
+			assert.Contains(t, inputs, "blobs_offset_and_size")
+			assert.Contains(t, inputs, "blobs_data")
+		})
+	}
 }
 
 func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {

@@ -57,6 +57,64 @@ var MemoryRoundTripSectionData = []byte{
 	0x73, 0x00, 0x00, 0x00,
 }
 
+// ArithmeticSectionData is a tiny valid RISC-V program that exercises
+// LUI, JAL, JALR, an R-type base op (ADD) and an M-extension op (MUL) before
+// halting through the same exit syscall path as ExitZeroSectionData. Main
+// flow calls a subroutine via JAL, which computes t3 = (t0+t1)*3 using ADD
+// and MUL, builds the same value independently via LUI+ADDI into t4, and
+// returns via JALR; main then branches to a failure exit if the two computed
+// values disagree. a7 (the syscall number) is set once, before the branch,
+// so both the success and failure paths can ecall with only a0 differing:
+//
+//	lui  t0, 1            // t0 = 0x1000
+//	addi t1, x0, 5         // t1 = 5
+//	addi a7, x0, 93
+//	jal  ra, add_mul       // ra = pc+4; jump to subroutine
+//	bne  t3, t4, fail
+//	addi a0, x0, 0
+//	ecall
+//
+// fail:
+//	addi a0, x0, 1
+//	ecall
+//
+// add_mul:
+//	add  t2, t0, t1        // t2 = t0 + t1 = 0x1005
+//	addi t3, x0, 3
+//	mul  t3, t2, t3        // t3 = t2 * 3 = 0x300f
+//	lui  t4, 3             // t4 = 0x3000
+//	addi t4, t4, 15        // t4 = 0x300f (expected == t3)
+//	jalr x0, ra, 0         // return to caller
+var ArithmeticSectionData = []byte{
+	0xb7, 0x12, 0x00, 0x00,
+	0x13, 0x03, 0x50, 0x00,
+	0x93, 0x08, 0xd0, 0x05,
+	0xef, 0x00, 0x80, 0x01,
+	0x63, 0x16, 0xde, 0x01,
+	0x13, 0x05, 0x00, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+	0x13, 0x05, 0x10, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+	0xb3, 0x83, 0x62, 0x00,
+	0x13, 0x0e, 0x30, 0x00,
+	0x33, 0x8e, 0xc3, 0x03,
+	0xb7, 0x3e, 0x00, 0x00,
+	0x93, 0x8e, 0xfe, 0x00,
+	0x67, 0x80, 0x00, 0x00,
+}
+
+// ExitOneSectionData is a tiny valid RISC-V program that halts through the
+// exit syscall path with a nonzero exit code, which main.zkc must reject:
+//
+//	addi a7, x0, 93
+//	addi a0, x0, 1
+//	ecall
+var ExitOneSectionData = []byte{
+	0x93, 0x08, 0xd0, 0x05,
+	0x13, 0x05, 0x10, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+}
+
 // MinimalElfProgram is a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
 // sectionAddr with sectionData bytes, and an entry point of entryPoint.
@@ -82,6 +140,16 @@ var ExitZeroElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ExitZeroSec
 // interface, exercising the S-type/I-type memory path that
 // ExitZeroElfProgram never touches.
 var MemoryRoundTripElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, MemoryRoundTripSectionData)
+
+// ArithmeticElfProgram is a minimal valid ELF64 RISC-V binary that exercises
+// LUI, JAL, JALR, an R-type base op, and an M-extension op before exiting
+// through the guest syscall interface.
+var ArithmeticElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ArithmeticSectionData)
+
+// ExitOneElfProgram is a minimal valid ELF64 RISC-V binary that exits with a
+// nonzero code through the guest syscall interface, which main.zkc's
+// process_syscall must reject rather than silently accept.
+var ExitOneElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ExitOneSectionData)
 
 // Make builds a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
