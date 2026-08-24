@@ -25,6 +25,38 @@ var ExitZeroSectionData = []byte{
 	0x73, 0x00, 0x00, 0x00,
 }
 
+// MemoryRoundTripSectionData is a tiny valid RISC-V program that exercises a
+// guest-issued store and load before halting through the same exit syscall
+// path as ExitZeroSectionData. It stores 42 to a scratch word 32 bytes past
+// its own entry point (computed via auipc, so the program is
+// position-independent), loads it back, and exits with code 0 if the values
+// match or code 1 otherwise:
+//
+//	auipc t0, 0
+//	addi  t1, x0, 42
+//	sw    t1, 32(t0)
+//	lw    t2, 32(t0)
+//	addi  a7, x0, 93
+//	bne   t1, t2, fail
+//	addi  a0, x0, 0
+//	ecall
+//
+// fail:
+//	addi  a0, x0, 1
+//	ecall
+var MemoryRoundTripSectionData = []byte{
+	0x97, 0x02, 0x00, 0x00,
+	0x13, 0x03, 0xa0, 0x02,
+	0x23, 0xa0, 0x62, 0x02,
+	0x83, 0xa3, 0x02, 0x02,
+	0x93, 0x08, 0xd0, 0x05,
+	0x63, 0x16, 0x73, 0x00,
+	0x13, 0x05, 0x00, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+	0x13, 0x05, 0x10, 0x00,
+	0x73, 0x00, 0x00, 0x00,
+}
+
 // MinimalElfProgram is a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
 // sectionAddr with sectionData bytes, and an entry point of entryPoint.
@@ -44,6 +76,12 @@ var MinimalElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ValidSection
 // ExitZeroElfProgram is a minimal valid ELF64 RISC-V binary that exits with
 // code 0 through the guest syscall interface.
 var ExitZeroElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, ExitZeroSectionData)
+
+// MemoryRoundTripElfProgram is a minimal valid ELF64 RISC-V binary that
+// stores and loads a scratch word before exiting through the guest syscall
+// interface, exercising the S-type/I-type memory path that
+// ExitZeroElfProgram never touches.
+var MemoryRoundTripElfProgram = Make(DefaultEntryPoint, DefaultSectionAddr, MemoryRoundTripSectionData)
 
 // Make builds a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
