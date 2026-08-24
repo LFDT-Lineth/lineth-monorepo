@@ -67,13 +67,17 @@ jobs:
 
       - name: Validate immutable image tag
         run: |
-          if [[ ! "${IMAGE_TAG}" =~ ^[0-9a-f]{7,40}$ ]]; then
-            echo "image_tag must be a 7-40 character lowercase Git commit SHA, got ${IMAGE_TAG}" >&2
+          if [[ ! "${IMAGE_TAG}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "image_tag must be a full 40-character lowercase Git commit SHA, got ${IMAGE_TAG}" >&2
             exit 1
           fi
           source_sha="$(git rev-parse HEAD)"
-          if [[ "${source_sha:0:${#IMAGE_TAG}}" != "${IMAGE_TAG}" ]]; then
+          if [[ "${source_sha}" != "${IMAGE_TAG}" ]]; then
             echo "image_tag ${IMAGE_TAG} does not identify checked-out commit ${source_sha}" >&2
+            exit 1
+          fi
+          if [[ "$PUSH_IMAGE" == "true" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "image publication is allowed only from refs/heads/main" >&2
             exit 1
           fi
 
@@ -132,4 +136,16 @@ jobs:
 
       - name: Publish tested and scanned image
         if: ${{ env.PUSH_IMAGE == 'true' }}
-        run: docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+        run: |
+          docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+          immutable_reference="$(docker image inspect --format '{{index .RepoDigests 0}}' "${IMAGE_NAME}:${IMAGE_TAG}")"
+          if [[ ! "${immutable_reference}" =~ ^${IMAGE_NAME}@sha256:[0-9a-f]{64}$ ]]; then
+            echo "published image did not resolve to an immutable repository digest" >&2
+            exit 1
+          fi
+          {
+            echo "### Forge contract deployer image"
+            echo "- Source commit: ${GITHUB_SHA}"
+            echo "- Published image: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "- Immutable reference: ${immutable_reference}"
+          } >> "$GITHUB_STEP_SUMMARY"

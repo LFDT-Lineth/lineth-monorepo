@@ -37,7 +37,22 @@ jobs:
               - 'postman/package.json'
               - 'prover/**/*.go'
               - 'prover/**/*.mod'
+              - 'contracts/forge-deployer/**'
+              - 'contracts/common/**'
               - 'contracts/local-deployments-artifacts/**'
+              - 'contracts/package.json'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.json'
+              - '.npmrc'
+              - 'patches/**'
+              - 'scripts/docker/**'
+              - '.github/actions/docker-build-publish/**'
+              - '.github/workflows/contracts-forge-deployer-*.yml'
+              - '.github/workflows/build-and-publish.yml'
+              - '.github/workflows/main.yml'
+              - '.nvmrc'
               - 'docker/**'
               - '**/Dockerfile'
               - 'e2e/src/**'
@@ -48,8 +63,6 @@ jobs:
               - 'ts-libs/**/src/**'
               - 'ts-libs/**/package.json'
               - '.github/workflows/reusable-run-e2e-tests.yml'
-              - '.nvmrc'
-              - 'package.json'
 
       - name: Evaluate excluding test/doc files
         id: evaluate
@@ -105,4 +118,3 @@ jobs:
 
           echo "Only excluded e2e paths, test files, or doc files changed"
           echo "result=false" >> $GITHUB_OUTPUT
-

@@ -107,8 +107,12 @@ jobs:
               - 'contracts/common/**'
               - 'contracts/local-deployments-artifacts/**'
               - 'contracts/package.json'
+              - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              - 'tsconfig.json'
+              - '.npmrc'
+              - 'patches/**'
               - 'scripts/docker/**'
               - '.github/actions/docker-build-publish/**'
               - '.github/workflows/contracts-forge-deployer-*.yml'
@@ -361,4 +365,3 @@ jobs:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
       anthropic_api_key: ${{ secrets.LITELLM_KEY_CI_FAILURE_ANALYSIS }}
-
