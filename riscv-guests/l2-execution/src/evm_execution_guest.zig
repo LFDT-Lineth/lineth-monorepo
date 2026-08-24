@@ -29,23 +29,53 @@ pub const Result = struct {
     success: bool,
 };
 
+const ExitReason = enum {
+    valid,
+    execution_error,
+    post_state_root_mismatch,
+    receipts_root_mismatch,
+    state_and_receipts_roots_mismatch,
+};
+
+const RunResult = struct {
+    result: Result,
+    exit_reason: ExitReason,
+};
+
+const GuestRunOutcome = union(enum) {
+    result: RunResult,
+    decode_error,
+    serialize_error,
+};
+
 /// Vanilla zesu stateless block execution. Fed an explicit byte slice so it runs identically on the
 /// native host (tests) and from the zkVM guest entry below.
 pub fn runStateless(allocator: std.mem.Allocator, ssz_input: []const u8) !Result {
+    return switch (runStatelessWithExitReason(allocator, ssz_input)) {
+        .result => |run_result| run_result.result,
+        .decode_error => error.DecodeError,
+        .serialize_error => error.SerializeError,
+    };
+}
+
+fn runStatelessWithExitReason(allocator: std.mem.Allocator, ssz_input: []const u8) GuestRunOutcome {
     zesu_allocator.set(allocator);
 
-    const si = try ssz_decode.decode(allocator, ssz_input);
+    const si = ssz_decode.decode(allocator, ssz_input) catch return .decode_error;
     const ep = &si.new_payload_request.execution_payload;
 
-    const success = blk: {
-        const proof = executor.executeStatelessInput(allocator, si, si.chain_config.fork_name) catch break :blk false;
-        if (!std.mem.eql(u8, &proof.post_state_root, &ep.state_root)) break :blk false;
-        if (!std.mem.eql(u8, &proof.receipts_root, &ep.receipts_root)) break :blk false;
-        break :blk true;
+    const exit_reason: ExitReason = blk: {
+        const proof = executor.executeStatelessInput(allocator, si, si.chain_config.fork_name) catch break :blk .execution_error;
+        const state_root_matches = std.mem.eql(u8, &proof.post_state_root, &ep.state_root);
+        const receipts_root_matches = std.mem.eql(u8, &proof.receipts_root, &ep.receipts_root);
+        if (state_root_matches and receipts_root_matches) break :blk .valid;
+        if (!state_root_matches and !receipts_root_matches) break :blk .state_and_receipts_roots_mismatch;
+        if (!state_root_matches) break :blk .post_state_root_mismatch;
+        break :blk .receipts_root_mismatch;
     };
 
-    const out = try ssz_output.serialize(allocator, si.new_payload_request, si.chain_config.chain_id, success);
-    return .{ .out = out, .success = success };
+    const out = ssz_output.serialize(allocator, si.new_payload_request, si.chain_config.chain_id, exit_reason == .valid) catch return .serialize_error;
+    return .{ .result = .{ .result = .{ .out = out, .success = exit_reason == .valid }, .exit_reason = exit_reason } };
 }
 
 /// zkVM guest entry. Reads the SSZ StatelessInput via the zkvm-standards `read_input` — the same ABI
@@ -65,8 +95,43 @@ fn guestMain() callconv(.c) noreturn {
     zkvm_io.read_input(&buf_ptr, &buf_size);
     const ssz_input = buf_ptr[0..buf_size];
 
-    const result = runStateless(allocator, ssz_input) catch exit(1);
-    exit(if (result.success) 0 else 1);
+    switch (runStatelessWithExitReason(allocator, ssz_input)) {
+        .decode_error => exitWithMarker("L2_EXEC_EXIT:SSZ_DECODE_ERROR\n", 1),
+        .serialize_error => exitWithMarker("L2_EXEC_EXIT:SSZ_SERIALIZE_ERROR\n", 1),
+        .result => |run_result| exitWithMarker(exitMarker(run_result.exit_reason), if (run_result.result.success) 0 else 1),
+    }
+}
+
+// Emits a stable marker through the Linux write syscall before every controlled guest exit.
+// Panics or traps before this function is reached cannot emit a marker.
+fn exitWithMarker(marker: []const u8, code: u64) noreturn {
+    writeExitMarker(marker);
+    exit(code);
+}
+
+// Writes a debug marker directly through Linux RISC-V write(1, marker, len): a7 = 64.
+// The arithmetization interpreter handles this in WRITE_SYSCALL and relays the bytes through
+// its printf channel.
+fn writeExitMarker(marker: []const u8) void {
+    if (builtin.cpu.arch == .riscv64) {
+        _ = asm volatile ("ecall"
+            : [ret] "={a0}" (-> usize),
+            : [fd] "{a0}" (@as(usize, 1)),
+              [buf] "{a1}" (@intFromPtr(marker.ptr)),
+              [count] "{a2}" (marker.len),
+              [syscall] "{a7}" (@as(usize, 64)),
+            : .{ .memory = true });
+    }
+}
+
+fn exitMarker(reason: ExitReason) []const u8 {
+    return switch (reason) {
+        .valid => "L2_EXEC_EXIT:VALID\n",
+        .execution_error => "L2_EXEC_EXIT:EXECUTOR_ERROR\n",
+        .post_state_root_mismatch => "L2_EXEC_EXIT:POST_STATE_ROOT_MISMATCH\n",
+        .receipts_root_mismatch => "L2_EXEC_EXIT:RECEIPTS_ROOT_MISMATCH\n",
+        .state_and_receipts_roots_mismatch => "L2_EXEC_EXIT:STATE_AND_RECEIPTS_ROOTS_MISMATCH\n",
+    };
 }
 
 comptime {
