@@ -31,14 +31,16 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // ==========================
 
     // Note: static linear pass over the executable region;
-    // Could be done once per guest upgrade.
-    var pc_predecoding:Address = base
-    var exec_end:Address = executable_region_end()
-    while pc_predecoding<exec_end {
-        var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
-        predecoding(pc_predecoding, instruction)
-        pc_predecoding = (pc_predecoding + 4) as Address
-    }
+    // This section is pending decision and is commented for now
+    // It can be done once per guest upgrade.
+
+    // var pc_predecoding:Address = base
+    // var exec_end:Address = executable_region_end()
+    // while pc_predecoding<exec_end {
+    //     var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
+    //     predecoding(pc_predecoding, instruction)
+    //     pc_predecoding = (pc_predecoding + 4) as Address
+    // }
 
     // =============================
     // Loading blobs data into RAM
@@ -75,12 +77,14 @@ fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, bas
         // rem is the remainder of pc - base divided by 4
         index::rem = pc - base
 
+        // NOTE: This section pertains to the predecoding justification
+        // It is pending decision and is commented for now.
         // Execution must stay inside the span justified by predecoding, at 4-byte
         // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
-        if pc<base || pc >= exec_end || rem != 0 {
-            printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
-            fail
-        }
+        // if pc<base || pc >= exec_end || rem != 0 {
+        //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
+        //     fail
+        // }
 
         // clock cycle starts at 1
         clock_cycle = clock_cycle + 1
