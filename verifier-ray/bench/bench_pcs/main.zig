@@ -82,7 +82,7 @@ fn toInputCaps(allocator: std.mem.Allocator, caps: []const fixture.InputCapData)
             for (rows, table.rows) |*row_dst, row| row_dst.* = try toRowOpening(allocator, row);
             table_dst.* = .{ .size_log2 = table.size_log2, .rows = rows };
         }
-        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
+        dst.* = .{ .root = toDigest(cap.root), .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
     }
     return out;
 }
