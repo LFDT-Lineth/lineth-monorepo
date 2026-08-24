@@ -29,11 +29,11 @@ const EXIT_SSZ_SERIALIZE_ERROR: u64 = 6;
 // C-backed crypto instead.
 
 /// Result of running one SSZ-encoded StatelessInput:
-///   `out`     — the 105-byte SSZ SszStatelessValidationResult
+///   `out`     — the 69-byte SSZ SszStatelessValidationResult
 ///   `success` — successful_validation: execution succeeded AND the computed post-state and
 ///               receipts roots match the values claimed in the payload.
 pub const Result = struct {
-    out: [105]u8,
+    out: [69]u8,
     success: bool,
 };
 
