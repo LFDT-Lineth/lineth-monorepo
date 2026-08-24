@@ -10,6 +10,7 @@ import linea.domain.toBlockParameter
 import linea.domain.toExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
+import linea.kotlin.encodeHex
 import linea.kotlin.minusCoercingUnderflow
 import lineth.coordination.FtxRollingInfoProvider
 import lineth.coordination.FtxRollingInfoProviderImpl
@@ -54,6 +55,7 @@ class L2ExecutionRequestBuilderImpl(
             )
           },
           chainConfig = chainConfig,
+          coinbase = conflation.blocks.first().miner.encodeHex(),
           parentFtxRollingHash = ftxState.ftxRollingHash,
           parentFtxNumber = ftxState.ftxNumber,
         )

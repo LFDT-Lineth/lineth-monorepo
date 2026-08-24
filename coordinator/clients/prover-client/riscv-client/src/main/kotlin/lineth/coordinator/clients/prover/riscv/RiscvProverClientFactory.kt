@@ -17,7 +17,6 @@ class RiscvProverClientFactory(
   private val vertx: Vertx,
   private val config: ProversConfig,
   private val l2MessageServiceAddress: String,
-  private val coinbase: String,
   metricsFacade: MetricsFacade,
 ) {
   private val executionWaitingResponsesMetric = GaugeAggregator()
@@ -66,7 +65,6 @@ class RiscvProverClientFactory(
         "programVk must be configured for the RISC-V execution prover"
       },
       l2MessageServiceAddress = l2MessageServiceAddress,
-      coinbase = coinbase,
     )
   }
 }

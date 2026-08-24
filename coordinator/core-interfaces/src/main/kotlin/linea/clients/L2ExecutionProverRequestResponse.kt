@@ -44,6 +44,7 @@ data class ExecutionInfo(
 data class L2ExecutionProofRequestV1(
   val executions: List<ExecutionInfo>,
   val chainConfig: ChainConfig,
+  val coinbase: String,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
@@ -73,6 +74,7 @@ data class L2ExecutionProofRequestV1(
 
     if (executions != other.executions) return false
     if (chainConfig != other.chainConfig) return false
+    if (coinbase != other.coinbase) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
 
@@ -82,6 +84,7 @@ data class L2ExecutionProofRequestV1(
   override fun hashCode(): Int {
     var result = executions.hashCode()
     result = 31 * result + chainConfig.hashCode()
+    result = 31 * result + coinbase.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
     return result

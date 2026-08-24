@@ -146,6 +146,7 @@ object RiscVProverClientTestFixtures {
 
   fun l2ExecutionProofRequestV1(
     executions: List<ExecutionInfo> = listOf(executionInfo(1000501UL), executionInfo(1000502UL)),
+    coinbase: String = COINBASE,
     parentFtxRollingHash: ByteArray = ByteArray(32) { 1 },
     parentFtxNumber: ULong = 100UL,
   ): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
@@ -153,8 +154,8 @@ object RiscVProverClientTestFixtures {
     chainConfig = ChainConfig(
       chainId = CHAIN_ID.toULong(),
       forkName = FORK_NAME,
-
     ),
+    coinbase = coinbase,
     parentFtxRollingHash = parentFtxRollingHash,
     parentFtxNumber = parentFtxNumber,
   )
