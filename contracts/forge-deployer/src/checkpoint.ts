@@ -2,16 +2,18 @@ import { getAddress, isAddress, keccak256, toUtf8Bytes } from "ethers";
 
 import { ChainName, DeploymentStep, StepId } from "./address-plan";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const DEPLOYMENT_PROFILE = "forge-dev-v1";
 
 export interface CheckpointIdentity {
   profile: string;
   schemaVersion: number;
+  artifactDigest: string;
   initialL2StateRootHash: string;
   l2GenesisTimestamp: number;
   chainIds: { l1: string; l2: string };
   signers: { l1: string; l2: string };
+  startingNonces: { l1: number; l2: number };
   configurationHash: string;
 }
 
@@ -42,17 +44,24 @@ export interface CompletedDeployment {
   recovered: boolean;
 }
 
+export interface InFlightDeployment {
+  stepId: StepId;
+  chain: ChainName;
+  contractName: string;
+  nonce: number;
+  expectedAddress: string;
+}
+
 export interface DeploymentCheckpoint extends CheckpointIdentity {
-  startingNonces: { l1: number; l2: number };
   expectedDeployments: Record<string, ExpectedDeployment>;
   deployments: Record<string, CompletedDeployment>;
+  inFlightDeployments: Record<string, InFlightDeployment>;
   completedSteps: StepId[];
   createdAt: string;
   updatedAt: string;
 }
 
 interface CreateCheckpointInput extends CheckpointIdentity {
-  startingNonces: { l1: number; l2: number };
   plan: DeploymentStep[];
 }
 
@@ -73,6 +82,7 @@ export function deploymentConfigurationHash(configuration: DeploymentConfigurati
 function normalizeIdentity(identity: CheckpointIdentity): CheckpointIdentity {
   return {
     ...identity,
+    artifactDigest: identity.artifactDigest.toLowerCase(),
     initialL2StateRootHash: identity.initialL2StateRootHash.toLowerCase(),
     configurationHash: identity.configurationHash.toLowerCase(),
     signers: {
@@ -105,6 +115,7 @@ export function createCheckpoint(input: CreateCheckpointInput): DeploymentCheckp
     startingNonces: input.startingNonces,
     expectedDeployments,
     deployments: {},
+    inFlightDeployments: {},
     completedSteps: [],
     createdAt: now,
     updatedAt: now,
@@ -119,6 +130,7 @@ export function assertCheckpointCompatible(checkpoint: DeploymentCheckpoint, ide
   const expected = normalizeIdentity(identity);
   assertEqual(checkpoint.schemaVersion, expected.schemaVersion, "schema version");
   assertEqual(checkpoint.profile, expected.profile, "deployment profile");
+  assertEqual(checkpoint.artifactDigest.toLowerCase(), expected.artifactDigest, "artifact digest");
   assertEqual(
     checkpoint.initialL2StateRootHash.toLowerCase(),
     expected.initialL2StateRootHash,
@@ -129,6 +141,8 @@ export function assertCheckpointCompatible(checkpoint: DeploymentCheckpoint, ide
   assertEqual(checkpoint.chainIds.l2, expected.chainIds.l2, "L2 chain ID");
   assertEqual(getAddress(checkpoint.signers.l1), expected.signers.l1, "L1 signer");
   assertEqual(getAddress(checkpoint.signers.l2), expected.signers.l2, "L2 signer");
+  assertEqual(checkpoint.startingNonces.l1, expected.startingNonces.l1, "L1 starting nonce");
+  assertEqual(checkpoint.startingNonces.l2, expected.startingNonces.l2, "L2 starting nonce");
   assertEqual(checkpoint.configurationHash.toLowerCase(), expected.configurationHash, "deployment configuration");
 }
 
@@ -139,17 +153,30 @@ export function parseCheckpoint(raw: string): DeploymentCheckpoint {
   if (
     typeof candidate.profile !== "string" ||
     typeof candidate.schemaVersion !== "number" ||
+    typeof candidate.artifactDigest !== "string" ||
     typeof candidate.initialL2StateRootHash !== "string" ||
     typeof candidate.configurationHash !== "string" ||
     typeof candidate.l2GenesisTimestamp !== "number" ||
     !candidate.chainIds ||
     !candidate.signers ||
-    !candidate.startingNonces ||
     !candidate.expectedDeployments ||
     !candidate.deployments ||
+    !candidate.inFlightDeployments ||
     !Array.isArray(candidate.completedSteps)
   ) {
     throw new Error("checkpoint JSON is missing required fields");
+  }
+  if (
+    !candidate.startingNonces ||
+    !Number.isSafeInteger(candidate.startingNonces.l1) ||
+    candidate.startingNonces.l1 < 0 ||
+    !Number.isSafeInteger(candidate.startingNonces.l2) ||
+    candidate.startingNonces.l2 < 0
+  ) {
+    throw new Error("checkpoint JSON has invalid or missing starting nonces");
+  }
+  if (!/^sha256:[0-9a-f]{64}$/.test(candidate.artifactDigest)) {
+    throw new Error("checkpoint JSON has an invalid artifact digest");
   }
   for (const [key, record] of Object.entries(candidate.deployments)) {
     if (
@@ -164,6 +191,26 @@ export function parseCheckpoint(raw: string): DeploymentCheckpoint {
       typeof record.recovered !== "boolean"
     ) {
       throw new Error(`checkpoint contains invalid deployment record ${key}`);
+    }
+  }
+  for (const [key, intent] of Object.entries(candidate.inFlightDeployments)) {
+    const expected = candidate.expectedDeployments[key];
+    if (
+      typeof intent !== "object" ||
+      intent === null ||
+      !expected ||
+      intent.stepId !== expected.stepId ||
+      intent.chain !== expected.chain ||
+      typeof intent.contractName !== "string" ||
+      intent.contractName.length === 0 ||
+      intent.contractName !== expected.contractName ||
+      !Number.isSafeInteger(intent.nonce) ||
+      intent.nonce < 0 ||
+      intent.nonce !== expected.nonce ||
+      !isAddress(intent.expectedAddress) ||
+      getAddress(intent.expectedAddress) !== getAddress(expected.expectedAddress)
+    ) {
+      throw new Error(`checkpoint contains invalid in-flight deployment ${key}`);
     }
   }
   return candidate as DeploymentCheckpoint;

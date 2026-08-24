@@ -6,6 +6,7 @@ import { createCheckpoint, DEPLOYMENT_PROFILE, SCHEMA_VERSION } from "../src/che
 import { decideStepAction } from "../src/decision";
 
 const STATE_ROOT = `0x${"ab".repeat(32)}`;
+const IMAGE_DIGEST = `sha256:${"ef".repeat(32)}`;
 const TX_HASH = `0x${"cd".repeat(32)}`;
 const L1_SIGNER = "0x1000000000000000000000000000000000000001";
 const L2_SIGNER = "0x2000000000000000000000000000000000000002";
@@ -20,6 +21,7 @@ function fixture() {
   const checkpoint = createCheckpoint({
     profile: DEPLOYMENT_PROFILE,
     schemaVersion: SCHEMA_VERSION,
+    artifactDigest: IMAGE_DIGEST,
     initialL2StateRootHash: STATE_ROOT,
     l2GenesisTimestamp: 1_700_000_000,
     chainIds: { l1: "1", l2: "1337" },

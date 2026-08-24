@@ -20,6 +20,7 @@ import {
 } from "../src/store";
 
 const STATE_ROOT = `0x${"ab".repeat(32)}`;
+const IMAGE_DIGEST = `sha256:${"cd".repeat(32)}`;
 const L1_SIGNER = "0x1000000000000000000000000000000000000001";
 const L2_SIGNER = "0x2000000000000000000000000000000000000002";
 
@@ -27,16 +28,18 @@ function identity() {
   return {
     profile: DEPLOYMENT_PROFILE,
     schemaVersion: SCHEMA_VERSION,
+    artifactDigest: IMAGE_DIGEST,
     initialL2StateRootHash: STATE_ROOT,
     l2GenesisTimestamp: 1_700_000_000,
     chainIds: { l1: "1", l2: "1337" },
     signers: { l1: L1_SIGNER, l2: L2_SIGNER },
     configurationHash: `0x${"12".repeat(32)}`,
+    startingNonces: { l1: 3, l2: 7 },
   };
 }
 
 function checkpoint() {
-  const startingNonces = { l1: 3, l2: 7 };
+  const startingNonces = identity().startingNonces;
   return createCheckpoint({
     ...identity(),
     startingNonces,
@@ -54,12 +57,15 @@ test("creates a versioned checkpoint with every expected address and no secrets"
   const serialized = JSON.stringify(value);
 
   assert.equal(value.profile, DEPLOYMENT_PROFILE);
-  assert.equal(value.schemaVersion, SCHEMA_VERSION);
+  assert.equal(SCHEMA_VERSION, 2);
+  assert.equal(value.schemaVersion, 2);
+  assert.equal(value.artifactDigest, IMAGE_DIGEST);
+  assert.deepEqual(value.inFlightDeployments, {});
   assert.equal(Object.keys(value.expectedDeployments).length, 18);
   assert.doesNotMatch(serialized, /private.?key|rpc.?url/i);
 });
 
-test("rejects incompatible chain, signer, state root, and profile", () => {
+test("rejects incompatible chain, signer, state root, profile, and artifact", () => {
   const value = checkpoint();
 
   assert.throws(
@@ -85,6 +91,18 @@ test("rejects incompatible chain, signer, state root, and profile", () => {
   assert.throws(
     () => assertCheckpointCompatible(value, { ...identity(), configurationHash: `0x${"34".repeat(32)}` }),
     /deployment configuration/,
+  );
+  assert.throws(
+    () => assertCheckpointCompatible(value, { ...identity(), startingNonces: { l1: 4, l2: 7 } }),
+    /L1 starting nonce/,
+  );
+  assert.throws(
+    () => assertCheckpointCompatible(value, { ...identity(), startingNonces: { l1: 3, l2: 8 } }),
+    /L2 starting nonce/,
+  );
+  assert.throws(
+    () => assertCheckpointCompatible(value, { ...identity(), artifactDigest: `sha256:${"ef".repeat(32)}` }),
+    /artifact digest/,
   );
 });
 
@@ -167,4 +185,56 @@ test("rejects incomplete or malformed persisted deployment records", () => {
   };
 
   assert.throws(() => parseCheckpoint(JSON.stringify(value)), /invalid deployment record/);
+});
+
+test("rejects missing or unsafe persisted starting nonces", () => {
+  const missing = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
+  delete missing.startingNonces;
+  assert.throws(() => parseCheckpoint(JSON.stringify(missing)), /starting nonces/);
+
+  const unsafe = checkpoint();
+  unsafe.startingNonces.l1 = Number.MAX_SAFE_INTEGER + 1;
+  assert.throws(() => parseCheckpoint(JSON.stringify(unsafe)), /starting nonces/);
+});
+
+test("rejects checkpoints missing artifact or in-flight state", () => {
+  const missingArtifact = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
+  delete missingArtifact.artifactDigest;
+  assert.throws(() => parseCheckpoint(JSON.stringify(missingArtifact)), /missing required fields/);
+
+  const missingInFlight = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
+  delete missingInFlight.inFlightDeployments;
+  assert.throws(() => parseCheckpoint(JSON.stringify(missingInFlight)), /missing required fields/);
+});
+
+test("rejects a malformed persisted artifact digest", () => {
+  const malformed = checkpoint();
+  malformed.artifactDigest = "sha256:1234";
+  assert.throws(() => parseCheckpoint(JSON.stringify(malformed)), /artifact digest/);
+
+  const uppercase = checkpoint();
+  uppercase.artifactDigest = `sha256:${"AB".repeat(32)}`;
+  assert.throws(() => parseCheckpoint(JSON.stringify(uppercase)), /artifact digest/);
+});
+
+test("validates persisted in-flight deployments against the deterministic plan", () => {
+  const key = "l1-rollup.verifier";
+  const valid = checkpoint();
+  valid.inFlightDeployments[key] = { ...valid.expectedDeployments[key]! };
+  assert.deepEqual(parseCheckpoint(JSON.stringify(valid)).inFlightDeployments, valid.inFlightDeployments);
+
+  const mutations: Array<[label: string, mutate: (value: ReturnType<typeof checkpoint>) => void]> = [
+    ["unknown key", (value) => (value.inFlightDeployments.unknown = { ...value.expectedDeployments[key]! })],
+    ["wrong chain", (value) => (value.inFlightDeployments[key]!.chain = "l2")],
+    ["unsafe nonce", (value) => (value.inFlightDeployments[key]!.nonce = Number.MAX_SAFE_INTEGER + 1)],
+    ["malformed address", (value) => (value.inFlightDeployments[key]!.expectedAddress = "0x1234")],
+    ["empty contract name", (value) => (value.inFlightDeployments[key]!.contractName = "")],
+  ];
+
+  for (const [label, mutate] of mutations) {
+    const value = checkpoint();
+    value.inFlightDeployments[key] = { ...value.expectedDeployments[key]! };
+    mutate(value);
+    assert.throws(() => parseCheckpoint(JSON.stringify(value)), /in-flight deployment/, label);
+  }
 });

@@ -24,6 +24,7 @@ trap cleanup EXIT
 if ! docker image inspect "$DEPLOYER_IMAGE" >/dev/null 2>&1; then
   make -C "$REPOSITORY_ROOT" docker-build-contract-deployer
 fi
+DEPLOYER_IMAGE_DIGEST="$(docker image inspect --format '{{.Id}}' "$DEPLOYER_IMAGE")"
 
 docker network create "$NETWORK" >/dev/null
 docker run -d --name "$L1_CONTAINER" --network "$NETWORK" --entrypoint anvil "$FOUNDRY_IMAGE" \
@@ -49,6 +50,16 @@ wait_for_rpc "$L2_CONTAINER"
 L1_ADDRESS="$(docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" wallet address "$L1_KEY")"
 L2_ADDRESS="$(docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" wallet address "$L2_KEY")"
 
+get_nonce() {
+  local container="$1"
+  local address="$2"
+  docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
+    nonce --rpc-url "http://${container}:8545" "$address"
+}
+
+INITIAL_L1_NONCE="$(get_nonce "$L1_CONTAINER" "$L1_ADDRESS")"
+INITIAL_L2_NONCE="$(get_nonce "$L2_CONTAINER" "$L2_ADDRESS")"
+
 chmod 0777 "$CHECKPOINT_DIR"
 run_deployer() {
   docker run --rm --network "$NETWORK" \
@@ -57,7 +68,10 @@ run_deployer() {
     -e "L2_RPC_URL=http://${L2_CONTAINER}:8545" \
     -e "L1_DEPLOYER_PRIVATE_KEY=$L1_KEY" \
     -e "L2_DEPLOYER_PRIVATE_KEY=$L2_KEY" \
+    -e "L1_STARTING_NONCE=$INITIAL_L1_NONCE" \
+    -e "L2_STARTING_NONCE=$INITIAL_L2_NONCE" \
     -e "INITIAL_L2_STATE_ROOT_HASH=$STATE_ROOT" \
+    -e "DEPLOYER_IMAGE_DIGEST=$DEPLOYER_IMAGE_DIGEST" \
     -e "L1_DEPLOY_GAS_PRICE_WEI=0" \
     -e "L2_DEPLOY_GAS_PRICE_WEI=0" \
     -e "CHECKPOINT_FILE=/checkpoint/checkpoint.json" \
@@ -65,17 +79,50 @@ run_deployer() {
 }
 
 run_deployer
-L1_NONCE_BEFORE="$(docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
-  nonce --rpc-url "http://${L1_CONTAINER}:8545" "$L1_ADDRESS")"
-L2_NONCE_BEFORE="$(docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
-  nonce --rpc-url "http://${L2_CONTAINER}:8545" "$L2_ADDRESS")"
+L1_NONCE_BEFORE="$(get_nonce "$L1_CONTAINER" "$L1_ADDRESS")"
+L2_NONCE_BEFORE="$(get_nonce "$L2_CONTAINER" "$L2_ADDRESS")"
+
+test "$L1_NONCE_BEFORE" -eq "$((INITIAL_L1_NONCE + 10))"
+test "$L2_NONCE_BEFORE" -eq "$((INITIAL_L2_NONCE + 8))"
+test "$(jq '.completedSteps | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 4
+test "$(jq '.deployments | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 18
+test "$(jq '.schemaVersion' "$CHECKPOINT_DIR/checkpoint.json")" -eq 2
+test "$(jq -r '.artifactDigest' "$CHECKPOINT_DIR/checkpoint.json")" = "$DEPLOYER_IMAGE_DIGEST"
+test "$(jq '.inFlightDeployments | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 0
+
+while IFS=$'\t' read -r chain address; do
+  if [[ "$chain" == "l1" ]]; then
+    container="$L1_CONTAINER"
+  else
+    container="$L2_CONTAINER"
+  fi
+  code="$(docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
+    code --rpc-url "http://${container}:8545" "$address")"
+  if [[ "$code" == "0x" ]]; then
+    echo "expected bytecode for ${chain} deployment at ${address}" >&2
+    exit 1
+  fi
+done < <(jq -r '.expectedDeployments[] | [.chain, .expectedAddress] | @tsv' "$CHECKPOINT_DIR/checkpoint.json")
+
+cp "$CHECKPOINT_DIR/checkpoint.json" "$CHECKPOINT_DIR/checkpoint.before-rerun.json"
 
 run_deployer
-L1_NONCE_AFTER="$(docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
-  nonce --rpc-url "http://${L1_CONTAINER}:8545" "$L1_ADDRESS")"
-L2_NONCE_AFTER="$(docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
-  nonce --rpc-url "http://${L2_CONTAINER}:8545" "$L2_ADDRESS")"
+L1_NONCE_AFTER="$(get_nonce "$L1_CONTAINER" "$L1_ADDRESS")"
+L2_NONCE_AFTER="$(get_nonce "$L2_CONTAINER" "$L2_ADDRESS")"
 
 test "$L1_NONCE_BEFORE" = "$L1_NONCE_AFTER"
 test "$L2_NONCE_BEFORE" = "$L2_NONCE_AFTER"
-echo "two-chain deployment and zero-transaction rerun verified"
+cmp "$CHECKPOINT_DIR/checkpoint.before-rerun.json" "$CHECKPOINT_DIR/checkpoint.json"
+
+mv "$CHECKPOINT_DIR/checkpoint.json" "$CHECKPOINT_DIR/checkpoint.saved.json"
+set +e
+CHECKPOINT_LOSS_OUTPUT="$(run_deployer 2>&1)"
+CHECKPOINT_LOSS_STATUS=$?
+set -e
+test "$CHECKPOINT_LOSS_STATUS" -ne 0
+[[ "$CHECKPOINT_LOSS_OUTPUT" == *"no checkpoint and L1 signer nonce"* ]]
+test "$(get_nonce "$L1_CONTAINER" "$L1_ADDRESS")" = "$L1_NONCE_AFTER"
+test "$(get_nonce "$L2_CONTAINER" "$L2_ADDRESS")" = "$L2_NONCE_AFTER"
+mv "$CHECKPOINT_DIR/checkpoint.saved.json" "$CHECKPOINT_DIR/checkpoint.json"
+
+echo "two-chain deployment, zero-transaction rerun, and checkpoint-loss refusal verified"

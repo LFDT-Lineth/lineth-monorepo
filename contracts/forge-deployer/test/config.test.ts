@@ -5,6 +5,7 @@ import { loadConfig, resolveRoleConfig, sanitizeText } from "../src/config";
 import { assertDistinctChainIds } from "../src/runner";
 
 const STATE_ROOT = `0x${"ab".repeat(32)}`;
+const IMAGE_DIGEST = `sha256:${"cd".repeat(32)}`;
 const L1_ADDRESS = "0x1000000000000000000000000000000000000001";
 const L2_ADDRESS = "0x2000000000000000000000000000000000000002";
 
@@ -14,6 +15,9 @@ function requiredEnvironment(): NodeJS.ProcessEnv {
     L2_RPC_URL: "http://l2.example:8545",
     L1_DEPLOYER_PRIVATE_KEY: "__test_l1_private_key__",
     L2_DEPLOYER_PRIVATE_KEY: "__test_l2_private_key__",
+    L1_STARTING_NONCE: "0",
+    L2_STARTING_NONCE: "0",
+    DEPLOYER_IMAGE_DIGEST: IMAGE_DIGEST,
     INITIAL_L2_STATE_ROOT_HASH: STATE_ROOT,
   };
 }
@@ -51,10 +55,42 @@ test("rejects identical L1 and L2 chain IDs", () => {
   assert.doesNotThrow(() => assertDistinctChainIds("1", "1337"));
 });
 
+test("requires pinned safe-integer starting nonces", () => {
+  const missing = requiredEnvironment();
+  delete missing.L1_STARTING_NONCE;
+  assert.throws(() => loadConfig(missing), /L1_STARTING_NONCE is required/);
+
+  const invalid = requiredEnvironment();
+  invalid.L2_STARTING_NONCE = "-1";
+  assert.throws(() => loadConfig(invalid), /L2_STARTING_NONCE must be a non-negative integer/);
+
+  const overflow = requiredEnvironment();
+  overflow.L1_STARTING_NONCE = (BigInt(Number.MAX_SAFE_INTEGER) + 1n).toString();
+  assert.throws(() => loadConfig(overflow), /L1_STARTING_NONCE must fit a safe integer/);
+});
+
+test("requires an immutable deployment image digest", () => {
+  const missing = requiredEnvironment();
+  delete missing.DEPLOYER_IMAGE_DIGEST;
+  assert.throws(() => loadConfig(missing), /DEPLOYER_IMAGE_DIGEST is required/);
+
+  const malformed = requiredEnvironment();
+  malformed.DEPLOYER_IMAGE_DIGEST = "sha256:1234";
+  assert.throws(() => loadConfig(malformed), /DEPLOYER_IMAGE_DIGEST must be a sha256 digest/);
+
+  const uppercase = requiredEnvironment();
+  uppercase.DEPLOYER_IMAGE_DIGEST = `sha256:${"AB".repeat(32)}`;
+  assert.throws(() => loadConfig(uppercase), /DEPLOYER_IMAGE_DIGEST must be a sha256 digest/);
+
+  assert.equal(loadConfig(requiredEnvironment()).artifactDigest, IMAGE_DIGEST);
+});
+
 test("uses documented defaults and derives dev roles from deployers", () => {
   const config = loadConfig(requiredEnvironment());
   const roles = resolveRoleConfig(config, L1_ADDRESS, L2_ADDRESS);
 
+  assert.equal(config.l1StartingNonce, 0);
+  assert.equal(config.l2StartingNonce, 0);
   assert.equal(config.rateLimitPeriod, "86400");
   assert.equal(config.rateLimitAmount, "1000000000000000000000");
   assert.equal(roles.l1SecurityCouncil, L1_ADDRESS);

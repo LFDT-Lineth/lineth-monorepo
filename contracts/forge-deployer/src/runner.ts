@@ -215,10 +215,15 @@ export async function runDeployment(config: DeployerConfig, store: CheckpointSto
   const identity: CheckpointIdentity = {
     profile: DEPLOYMENT_PROFILE,
     schemaVersion: SCHEMA_VERSION,
+    artifactDigest: config.artifactDigest,
     initialL2StateRootHash: config.initialL2StateRootHash,
     l2GenesisTimestamp,
     chainIds: context.chainIds,
     signers: context.signers,
+    startingNonces: {
+      l1: config.l1StartingNonce,
+      l2: config.l2StartingNonce,
+    },
     configurationHash: deploymentConfigurationHash({
       rateLimitPeriod: config.rateLimitPeriod,
       rateLimitAmount: config.rateLimitAmount,
@@ -230,19 +235,27 @@ export async function runDeployment(config: DeployerConfig, store: CheckpointSto
   if (checkpoint) {
     assertCheckpointCompatible(checkpoint, identity);
   } else {
-    const [l1StartingNonce, l2StartingNonce] = await Promise.all([
+    const [currentL1Nonce, currentL2Nonce] = await Promise.all([
       context.l1Provider.getTransactionCount(context.signers.l1, "pending"),
       context.l2Provider.getTransactionCount(context.signers.l2, "pending"),
     ]);
-    const startingNonces = { l1: l1StartingNonce, l2: l2StartingNonce };
+    if (currentL1Nonce !== config.l1StartingNonce) {
+      throw new Error(
+        `no checkpoint and L1 signer nonce is ${currentL1Nonce}, expected ${config.l1StartingNonce}; refusing deployment`,
+      );
+    }
+    if (currentL2Nonce !== config.l2StartingNonce) {
+      throw new Error(
+        `no checkpoint and L2 signer nonce is ${currentL2Nonce}, expected ${config.l2StartingNonce}; refusing deployment`,
+      );
+    }
     checkpoint = createCheckpoint({
       ...identity,
-      startingNonces,
       plan: buildAddressPlan({
         l1Signer: context.signers.l1,
         l2Signer: context.signers.l2,
-        l1StartingNonce,
-        l2StartingNonce,
+        l1StartingNonce: config.l1StartingNonce,
+        l2StartingNonce: config.l2StartingNonce,
       }),
     });
     await store.save(checkpoint);

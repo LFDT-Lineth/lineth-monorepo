@@ -7,6 +7,9 @@ export interface DeployerConfig {
   l2RpcUrl: string;
   l1PrivateKey: string;
   l2PrivateKey: string;
+  l1StartingNonce: number;
+  l2StartingNonce: number;
+  artifactDigest: string;
   initialL2StateRootHash: string;
   rateLimitPeriod: string;
   rateLimitAmount: string;
@@ -48,6 +51,19 @@ function assertUint256(value: string, name: string, allowZero = true): string {
   const parsed = BigInt(value);
   if (!allowZero && parsed === 0n) throw new Error(`${name} must be greater than zero`);
   if (parsed > UINT256_MAX) throw new Error(`${name} must fit uint256`);
+  return value;
+}
+
+function requireStartingNonce(env: NodeJS.ProcessEnv, name: string): number {
+  const value = assertUint256(requireValue(env, name), name);
+  const parsed = BigInt(value);
+  if (parsed > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`${name} must fit a safe integer`);
+  return Number(parsed);
+}
+
+function requireSha256Digest(env: NodeJS.ProcessEnv, name: string): string {
+  const value = requireValue(env, name);
+  if (!/^sha256:[0-9a-f]{64}$/.test(value)) throw new Error(`${name} must be a sha256 digest`);
   return value;
 }
 
@@ -99,6 +115,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DeployerConfig
   const l2RpcUrl = assertRpcUrl(requireValue(env, "L2_RPC_URL"), "L2_RPC_URL");
   const l1PrivateKey = requireValue(env, "L1_DEPLOYER_PRIVATE_KEY");
   const l2PrivateKey = requireValue(env, "L2_DEPLOYER_PRIVATE_KEY");
+  const l1StartingNonce = requireStartingNonce(env, "L1_STARTING_NONCE");
+  const l2StartingNonce = requireStartingNonce(env, "L2_STARTING_NONCE");
+  const artifactDigest = requireSha256Digest(env, "DEPLOYER_IMAGE_DIGEST");
   const rateLimitPeriod = assertUint256(
     optionalValue(env, "CONTRACT_RATE_LIMIT_PERIOD") ?? "86400",
     "CONTRACT_RATE_LIMIT_PERIOD",
@@ -115,6 +134,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DeployerConfig
     l2RpcUrl,
     l1PrivateKey,
     l2PrivateKey,
+    l1StartingNonce,
+    l2StartingNonce,
+    artifactDigest,
     initialL2StateRootHash,
     rateLimitPeriod,
     rateLimitAmount,
