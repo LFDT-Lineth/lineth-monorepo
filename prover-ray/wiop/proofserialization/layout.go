@@ -18,8 +18,7 @@ const (
 	// SizeSlice is a Zig []const T: {ptr, len}, with no capacity field. This is
 	// what lets a payload sit directly behind its header.
 	SizeSlice = 16
-	// SizeElement is one KoalaBear element: a u32 holding the canonical
-	// (non-Montgomery) representative.
+	// SizeElement is one KoalaBear element: a u32 in Montgomery form.
 	SizeElement = 4
 	// SizeExt is a degree-6 extension element.
 	SizeExt = 24
