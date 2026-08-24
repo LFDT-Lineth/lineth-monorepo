@@ -192,8 +192,9 @@ export function resolveRoleConfig(config: DeployerConfig, l1Deployer: string, l2
 }
 
 export function sanitizeText(text: string, sensitiveValues: readonly string[]): string {
-  return [...new Set(sensitiveValues)]
+  const redacted = [...new Set(sensitiveValues)]
     .filter(Boolean)
     .sort((left, right) => right.length - left.length)
     .reduce((sanitized, value) => sanitized.split(value).join("[REDACTED]"), text);
+  return redacted.replace(/[\r\n\u2028\u2029]+/g, " ");
 }

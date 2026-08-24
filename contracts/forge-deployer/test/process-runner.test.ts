@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -135,7 +135,7 @@ test("blocked intent persistence prevents the first broadcast", async () => {
       }),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    await assert.rejects(access(fixture.firstMarkerFile), /ENOENT/);
+    assert.deepEqual(await readdir(fixture.directory), []);
     assert.equal(control.durableSnapshots.length, 0);
 
     control.releaseBlockedSave();

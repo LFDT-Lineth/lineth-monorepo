@@ -105,3 +105,7 @@ test("redacts private keys and credential-bearing RPC URLs", () => {
 
   assert.equal(sanitizeText(text, config.sensitiveValues), "failed key=[REDACTED] endpoint=[REDACTED]");
 });
+
+test("removes line separators from sanitized log text", () => {
+  assert.equal(sanitizeText("failed\r\nforged\nentry\u2028tail\u2029end", []), "failed forged entry tail end");
+});
