@@ -14,8 +14,9 @@ import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 // encoder, though — never the field order of these Go structs, whose layout Go
 // chooses independently.
 
-// Element is one KoalaBear base field element: a single u32 in Montgomery form,
-// stored verbatim. Mirrors Zig's field.Element.
+// Element is one KoalaBear base field element: a single u32 in canonical form
+// (0 ≤ value < modulus). Mirrors Zig's field.Element, which stores canonical
+// representatives and uses plain modular arithmetic.
 type Element uint32
 
 // Ext is a degree-6 extension element, flattened in memory order:
@@ -131,20 +132,22 @@ type VerifyInput struct {
 // silently wrong the moment either side changes.
 // ---------------------------------------------------------------------------
 
-// ExtFrom converts a prover-side extension element, preserving Montgomery form.
+// ExtFrom converts a prover-side extension element to canonical form.
+// Go's field.Ext stores limbs in Montgomery form; Zig's ext.Ext stores canonical
+// representatives. Bits() performs the fromMont conversion.
 func ExtFrom(e field.Ext) Ext {
 	return Ext{
-		Element(e.B0.A0[0]), Element(e.B0.A1[0]),
-		Element(e.B1.A0[0]), Element(e.B1.A1[0]),
-		Element(e.B2.A0[0]), Element(e.B2.A1[0]),
+		Element(e.B0.A0.Bits()[0]), Element(e.B0.A1.Bits()[0]),
+		Element(e.B1.A0.Bits()[0]), Element(e.B1.A1.Bits()[0]),
+		Element(e.B2.A0.Bits()[0]), Element(e.B2.A1.Bits()[0]),
 	}
 }
 
-// DigestFrom converts a prover-side commitment.
+// DigestFrom converts a prover-side commitment to canonical form.
 func DigestFrom(o field.Octuplet) Digest {
 	var d Digest
 	for i := range o {
-		d[i] = Element(o[i][0])
+		d[i] = Element(o[i].Bits()[0])
 	}
 	return d
 }
@@ -167,7 +170,7 @@ func ElementsFrom(xs []field.Element) []Element {
 	}
 	out := make([]Element, len(xs))
 	for i := range xs {
-		out[i] = Element(xs[i][0])
+		out[i] = Element(xs[i].Bits()[0])
 	}
 	return out
 }

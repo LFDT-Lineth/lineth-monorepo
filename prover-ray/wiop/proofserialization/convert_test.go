@@ -64,12 +64,11 @@ func TestExtFrom(t *testing.T) {
 
 	got := ps.ExtFrom(e)
 
-	// Montgomery form is preserved verbatim, so the expectation is the raw limbs
-	// rather than the logical values.
+	// Canonical form: each coordinate is converted from Montgomery via Bits().
 	want := ps.Ext{
-		ps.Element(e.B0.A0[0]), ps.Element(e.B0.A1[0]),
-		ps.Element(e.B1.A0[0]), ps.Element(e.B1.A1[0]),
-		ps.Element(e.B2.A0[0]), ps.Element(e.B2.A1[0]),
+		ps.Element(e.B0.A0.Bits()[0]), ps.Element(e.B0.A1.Bits()[0]),
+		ps.Element(e.B1.A0.Bits()[0]), ps.Element(e.B1.A1.Bits()[0]),
+		ps.Element(e.B2.A0.Bits()[0]), ps.Element(e.B2.A1.Bits()[0]),
 	}
 	require.Equal(t, want, got, "every coordinate must survive, in memory order")
 
@@ -90,7 +89,7 @@ func TestDigestFrom(t *testing.T) {
 
 	got := ps.DigestFrom(o)
 	for i := range o {
-		require.Equal(t, ps.Element(o[i][0]), got[i], "digest limb %d must be carried across", i)
+		require.Equal(t, ps.Element(o[i].Bits()[0]), got[i], "digest limb %d must be carried across", i)
 	}
 }
 
@@ -100,7 +99,7 @@ func TestElementsFrom(t *testing.T) {
 	got := ps.ElementsFrom(in)
 	require.Len(t, got, len(in))
 	for i := range in {
-		require.Equal(t, ps.Element(in[i][0]), got[i], "element %d", i)
+		require.Equal(t, ps.Element(in[i].Bits()[0]), got[i], "element %d", i)
 	}
 
 	require.Nil(t, ps.ElementsFrom(nil), "nil in, nil out")
