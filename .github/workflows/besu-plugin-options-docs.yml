@@ -60,7 +60,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout monorepo
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
@@ -170,7 +170,7 @@ jobs:
             doc.linea
 
       - name: Checkout doc.linea
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Consensys/doc.linea
           token: ${{ steps.app-token.outputs.token }}

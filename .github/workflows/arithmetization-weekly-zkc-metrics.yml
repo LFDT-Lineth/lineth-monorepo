@@ -75,13 +75,13 @@ jobs:
       zkc_ref: ${{ steps.zkc.outputs.ref }}
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
       - name: Checkout the monorepo commit under measurement
         if: ${{ inputs.monorepo-ref != '' }}
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.monorepo-ref }}
           path: measured
@@ -230,7 +230,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -277,7 +277,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -342,7 +342,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
 
@@ -406,7 +406,7 @@ jobs:
     steps:
       # fetch-depth: 0 because the commit step rebases onto origin/<branch>; a shallow clone cannot.
       - name: Checkout tooling
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
           fetch-depth: 0
