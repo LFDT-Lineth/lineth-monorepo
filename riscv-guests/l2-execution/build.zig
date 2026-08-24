@@ -29,11 +29,18 @@ pub fn build(b: *std.Build) void {
     // Lineth write_output custom-op accelerator is opted in with -Dwrite-output-accel=true.
     // Read by zkvm_provide.zig at comptime.
     const write_output_accel = b.option(bool, "write-output-accel", "Use the Lineth write_output custom-opcode accelerator instead of the default stdout ecall (default: standard)") orelse false;
+    // BN254 G1 providers: standard zig bn254 (zesu stdlibs_accel) by default; the
+    // arithmetization ECADD/ECMUL wrappers (prover-accelerated custom ops) when opted
+    // in with -Dbn254-add-accel / -Dbn254-mul-accel. Read by zkvm_provide.zig at comptime.
+    const bn254_add_accel = b.option(bool, "bn254-add-accel", "Use the arithmetization BN254 G1 ECADD wrapper instead of standard zig bn254 add (default: standard)") orelse false;
+    const bn254_mul_accel = b.option(bool, "bn254-mul-accel", "Use the arithmetization BN254 G1 ECMUL wrapper instead of standard zig bn254 mul (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
     guest_options.addOption(bool, "sha2_accel", sha2_accel);
     guest_options.addOption(bool, "write_output_accel", write_output_accel);
+    guest_options.addOption(bool, "bn254_add_accel", bn254_add_accel);
+    guest_options.addOption(bool, "bn254_mul_accel", bn254_mul_accel);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
