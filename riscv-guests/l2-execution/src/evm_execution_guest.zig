@@ -11,6 +11,14 @@ extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
+const EXIT_VALID: u64 = 0;
+const EXIT_SSZ_DECODE_ERROR: u64 = 1;
+const EXIT_EXECUTOR_ERROR: u64 = 2;
+const EXIT_POST_STATE_ROOT_MISMATCH: u64 = 3;
+const EXIT_RECEIPTS_ROOT_MISMATCH: u64 = 4;
+const EXIT_STATE_AND_RECEIPTS_ROOTS_MISMATCH: u64 = 5;
+const EXIT_SSZ_SERIALIZE_ERROR: u64 = 6;
+
 // This guest is a thin wrapper over zesu's vanilla stateless execution: it decodes an SSZ-encoded
 // StatelessInput, executes the block, and serializes the SSZ validation result — the same pipeline
 // as zesu's `runner.runStateless` / `zkevm-blockchain-test-runner`.
@@ -96,41 +104,19 @@ fn guestMain() callconv(.c) noreturn {
     const ssz_input = buf_ptr[0..buf_size];
 
     switch (runStatelessWithExitReason(allocator, ssz_input)) {
-        .decode_error => exitWithMarker("L2_EXEC_EXIT:SSZ_DECODE_ERROR\n", 1),
-        .serialize_error => exitWithMarker("L2_EXEC_EXIT:SSZ_SERIALIZE_ERROR\n", 1),
-        .result => |run_result| exitWithMarker(exitMarker(run_result.exit_reason), if (run_result.result.success) 0 else 1),
+        .decode_error => exit(EXIT_SSZ_DECODE_ERROR),
+        .serialize_error => exit(EXIT_SSZ_SERIALIZE_ERROR),
+        .result => |run_result| exit(exitCode(run_result.exit_reason)),
     }
 }
 
-// Emits a stable marker through the Linux write syscall before every controlled guest exit.
-// Panics or traps before this function is reached cannot emit a marker.
-fn exitWithMarker(marker: []const u8, code: u64) noreturn {
-    writeExitMarker(marker);
-    exit(code);
-}
-
-// Writes a debug marker directly through Linux RISC-V write(1, marker, len): a7 = 64.
-// The arithmetization interpreter handles this in WRITE_SYSCALL and relays the bytes through
-// its printf channel.
-fn writeExitMarker(marker: []const u8) void {
-    if (builtin.cpu.arch == .riscv64) {
-        _ = asm volatile ("ecall"
-            : [ret] "={a0}" (-> usize),
-            : [fd] "{a0}" (@as(usize, 1)),
-              [buf] "{a1}" (@intFromPtr(marker.ptr)),
-              [count] "{a2}" (marker.len),
-              [syscall] "{a7}" (@as(usize, 64)),
-            : .{ .memory = true });
-    }
-}
-
-fn exitMarker(reason: ExitReason) []const u8 {
+fn exitCode(reason: ExitReason) u64 {
     return switch (reason) {
-        .valid => "L2_EXEC_EXIT:VALID\n",
-        .execution_error => "L2_EXEC_EXIT:EXECUTOR_ERROR\n",
-        .post_state_root_mismatch => "L2_EXEC_EXIT:POST_STATE_ROOT_MISMATCH\n",
-        .receipts_root_mismatch => "L2_EXEC_EXIT:RECEIPTS_ROOT_MISMATCH\n",
-        .state_and_receipts_roots_mismatch => "L2_EXEC_EXIT:STATE_AND_RECEIPTS_ROOTS_MISMATCH\n",
+        .valid => EXIT_VALID,
+        .execution_error => EXIT_EXECUTOR_ERROR,
+        .post_state_root_mismatch => EXIT_POST_STATE_ROOT_MISMATCH,
+        .receipts_root_mismatch => EXIT_RECEIPTS_ROOT_MISMATCH,
+        .state_and_receipts_roots_mismatch => EXIT_STATE_AND_RECEIPTS_ROOTS_MISMATCH,
     };
 }
 
