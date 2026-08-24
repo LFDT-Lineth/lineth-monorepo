@@ -20,6 +20,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 internal class L2ExecutionProofRequestDtoMapper(
   private val programVk: String,
   private val l2MessageServiceAddress: String,
+  private val forkName: String,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
     val payloads = request.executions.map { executionInfo ->
@@ -48,8 +49,8 @@ internal class L2ExecutionProofRequestDtoMapper(
         chainConfig = ChainConfigDto(
           l2MessageServiceAddress = l2MessageServiceAddress,
           coinbase = request.coinbase,
-          chainId = request.chainConfig.chainId.toLong(),
-          forkName = request.chainConfig.forkName,
+          chainId = request.chainId.toLong(),
+          forkName = forkName,
         ),
         payloads = payloads,
       ),
@@ -99,8 +100,9 @@ class L2ExecutionProverClient(
   private val transport: L2ExecutionProofTransport,
   programVk: String,
   l2MessageServiceAddress: String,
+  forkName: String,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
-    L2ExecutionProofRequestDtoMapper(programVk, l2MessageServiceAddress),
+    L2ExecutionProofRequestDtoMapper(programVk, l2MessageServiceAddress, forkName),
   proofResponseDtoMapper: (L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
     L2ExecutionProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

@@ -1,6 +1,5 @@
 package lineth.coordination.riscv.execution
 
-import linea.clients.ChainConfig
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
@@ -22,7 +21,7 @@ class L2ExecutionRequestBuilderImpl(
   private val executionWitnessClient: ExecutionWitnessClient,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val ftxRollingInfoProvider: FtxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
-  private val chainConfig: ChainConfig,
+  private val chainId: ULong,
 ) : L2ExecutionRequestBuilder {
 
   override fun build(conflation: BlocksConflation): SafeFuture<L2ExecutionProofRequestV1> {
@@ -54,7 +53,7 @@ class L2ExecutionRequestBuilderImpl(
               forcedTransactions = ftxsByBlock[block.number] ?: emptyList(),
             )
           },
-          chainConfig = chainConfig,
+          chainId = chainId,
           coinbase = conflation.blocks.first().miner.encodeHex(),
           parentFtxRollingHash = ftxState.ftxRollingHash,
           parentFtxNumber = ftxState.ftxNumber,

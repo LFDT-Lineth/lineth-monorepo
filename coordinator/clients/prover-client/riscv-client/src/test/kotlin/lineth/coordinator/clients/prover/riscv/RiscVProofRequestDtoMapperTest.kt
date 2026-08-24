@@ -1,6 +1,5 @@
 package lineth.coordinator.clients.prover.riscv
 
-import linea.clients.ChainConfig
 import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
@@ -42,6 +41,7 @@ class RiscVProofRequestDtoMapperTest {
     val dto = L2ExecutionProofRequestDtoMapper(
       programVk,
       l2MessageServiceAddress,
+      forkName,
     ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
@@ -97,6 +97,7 @@ class RiscVProofRequestDtoMapperTest {
       L2ExecutionProofRequestDtoMapper(
         programVk,
         l2MessageServiceAddress,
+        forkName,
       ).invoke(badRequest)
     }
       .isInstanceOf(IllegalArgumentException::class.java)
@@ -297,10 +298,7 @@ class RiscVProofRequestDtoMapperTest {
         ),
       ),
     ),
-    chainConfig = ChainConfig(
-      chainId = chainId.toULong(),
-      forkName = forkName,
-    ),
+    chainId = chainId.toULong(),
     coinbase = coinbase,
     parentFtxRollingHash = ByteArray(32) { 0x1a },
     parentFtxNumber = 8UL,

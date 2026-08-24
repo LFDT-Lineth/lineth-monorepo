@@ -6,7 +6,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
-import linea.clients.ChainConfig
 import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
@@ -151,10 +150,7 @@ object RiscVProverClientTestFixtures {
     parentFtxNumber: ULong = 100UL,
   ): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
     executions = executions,
-    chainConfig = ChainConfig(
-      chainId = CHAIN_ID.toULong(),
-      forkName = FORK_NAME,
-    ),
+    chainId = CHAIN_ID.toULong(),
     coinbase = coinbase,
     parentFtxRollingHash = parentFtxRollingHash,
     parentFtxNumber = parentFtxNumber,

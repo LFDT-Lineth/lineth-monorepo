@@ -65,6 +65,9 @@ class RiscvProverClientFactory(
         "programVk must be configured for the RISC-V execution prover"
       },
       l2MessageServiceAddress = l2MessageServiceAddress,
+      forkName = requireNotNull(proverConfig.forkName) {
+        "forkName must be configured for the RISC-V execution prover"
+      },
     )
   }
 }

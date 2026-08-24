@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.FORK_NAME
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
@@ -50,6 +51,7 @@ class FileBasedL2ExecutionProverClientTest {
       transport = transport,
       programVk = L2_EXECUTION_PROGRAM_VK,
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
+      forkName = FORK_NAME,
     )
   }
 
@@ -66,6 +68,7 @@ class FileBasedL2ExecutionProverClientTest {
     val expectedDto = L2ExecutionProofRequestDtoMapper(
       L2_EXECUTION_PROGRAM_VK,
       L2_MESSAGE_SERVICE_ADDRESS,
+      FORK_NAME,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
