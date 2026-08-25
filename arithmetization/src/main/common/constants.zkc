@@ -421,6 +421,7 @@ const J_TYPE:Type = 6
 // treat them as such — advance PC by 4, do nothing else.
 const MISC_MEM_TYPE:Type = 7
 
+// -- PREDECODING SECTION -- 
 // static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
 //     UNDEFINED_TYPE, // 0b0000000
 //     UNDEFINED_TYPE, // 0b0000001
@@ -551,3 +552,4 @@ const MISC_MEM_TYPE:Type = 7
 //     UNDEFINED_TYPE, // 0b1111110
 //     UNDEFINED_TYPE, // 0b1111111
 // }
+// -- PREDECODING SECTION END-- 

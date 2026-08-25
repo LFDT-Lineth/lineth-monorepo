@@ -34,6 +34,8 @@ fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
     }
 }
 
+
+// -- PREDECODING SECTION -- 
 //#[inline]
 // fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
 //     var sign:u1, tmp:u20
@@ -46,6 +48,7 @@ fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
 //         ext_value = (value as u64)
 //     }
 // }
+// -- PREDECODING SECTION END-- 
 
 //#[inline]
 fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
@@ -60,6 +63,8 @@ fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
     }
 }
 
+
+// -- PREDECODING SECTION -- 
 //#[inline]
 // fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
 //     var sign:u1, tmp:u11
@@ -72,6 +77,7 @@ fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
 //         ext_value = (value as u64)
 //     }
 // }
+// -- PREDECODING SECTION END-- 
 
 //#[inline]
 fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {

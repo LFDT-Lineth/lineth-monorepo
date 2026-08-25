@@ -11,10 +11,14 @@ include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
 include "memory.zkc"
+include "../lib/poseidon2/ram.zkc"
+
+// -- PREDECODING SECTION -- 
 // include "../predecoding/predecoding.zkc"
 // include "../predecoding/read_instruction.zkc"
 // include "../predecoding/executable_region.zkc"
-include "../lib/poseidon2/ram.zkc"
+// -- PREDECODING SECTION END-- 
+
 
 // TODO @Ghost
 fn main<registers, ram, keccak_state, poseidon2_state>() {
@@ -31,8 +35,13 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // ==========================
 
     // Note: static linear pass over the executable region;
-    // This section is pending decision and is commented for now
+    // This section is pending decision and is commented for now.
     // It can be done once per guest upgrade.
+    // To re-enable predecoding : 
+    // - uncomment all sections labeled from "PREDECODING SECTION"
+    //   to "PREDECODING SECTION END"
+    // - comment the section labeled from "NO PREDECODING"
+    //   to "NO PREDECODING END"
 
     // var pc_predecoding:Address = base
     // var exec_end:Address = executable_region_end()
@@ -63,14 +72,23 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // Execution of the program
     // ==========================
 
+    // -- PREDECODING SECTION -- 
     // main_loop(entry_point, base, exec_end)
-    // Version without predecoding justification
+    // -- PREDECODING SECTION END-- 
+
+    // -- NO PREDECODING -- 
     main_loop(entry_point, base)
+    // -- NO PREDECODING END-- 
 }
 
-// fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64, exec_end:u64) {
-fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64) {
 
+// -- PREDECODING SECTION -- 
+// fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64, exec_end:u64) {
+// -- PREDECODING SECTION END-- 
+
+// -- NO PREDECODING -- 
+fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64) {
+// -- NO PREDECODING END-- 
     var clock_cycle:u32 = 0
     var output_write_address:OutputAddress = 0
     var pc:Address = entry_point

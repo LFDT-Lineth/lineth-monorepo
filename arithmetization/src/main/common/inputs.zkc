@@ -11,8 +11,10 @@ pub input entry_point_and_blobs_count(i:u1) -> (entry_point:Address, blobs_count
 // RAM offset where each blob must be written and number of bytes in each blob
 pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length)
 
+// -- PREDECODING SECTION -- 
 // Whether blob i holds executable (SHF_EXECINSTR) section bytes (1) or data (0).
 // pub input blobs_executable(i:u64) -> (executable:u1)
+// -- PREDECODING SECTION END-- 
 
 // Concatenated bytes for all sparse memory blobs, in blob order
 pub input blobs_data(i:Address) -> (byte:u8)
