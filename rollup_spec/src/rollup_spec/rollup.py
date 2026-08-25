@@ -9,7 +9,6 @@ import zstandard
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import (
     KZGCommitment,
-    VERSIONED_HASH_VERSION_KZG,
     kzg_commitment_to_versioned_hash,
 )
 from .fork import (
@@ -102,34 +101,33 @@ class TruncatedEthereumBlock:
 @dataclass
 class ChunkWitness:
     """
-    One touched chunk's anchored hash plus, for a calldata chunk, its byte
-    length (§3.1).
+    One touched chunk's anchored hash plus its declared kind (§3.1).
 
-    The chunk kind is self-describing on `chunk_hash`'s leading byte — no
-    separate tag is witnessed:
+    - **Blob chunk** (`is_calldata=False`, the default): fixed
+      `BLOB_BYTES_LENGTH` bytes (EIP-4844 pads every blob to 128 KiB), bound by
+      its KZG commitment / versioned hash. A blob chunk may be *shared* with a
+      neighbouring proof across a range boundary (§3.1), reconstructed from
+      this proof's own slice plus witnessed opaque prefix/suffix bytes.
+    - **Calldata chunk** (`is_calldata=True`): one calldata submission, bound
+      by `keccak256(_compressedData)`. It packs a whole number of conflation
+      segments (complete, no partial tail) and is *range-aligned*: it shares no
+      bytes with a neighbouring proof, so its `start_offset` is 0 and it
+      carries no opaque bytes. The guest resolves its extent by matching the
+      anchored `chunk_hash` at segment boundaries — no length is witnessed.
 
-    - **Blob chunk** (`chunk_hash[0] == 0x01`, VERSIONED_HASH_VERSION_KZG):
-      fixed `BLOB_BYTES_LENGTH` bytes (EIP-4844 pads every blob to 128 KiB);
-      `length` is ignored. A blob chunk may be *shared* with a neighbouring
-      proof across a range boundary (§3.1), reconstructed from this proof's
-      own slice plus witnessed opaque prefix/suffix bytes.
-    - **Calldata chunk** (any other leading byte): `length` is the exact
-      `_compressedData` length submitted on L1, which the contract hashed as
-      `keccak256(_compressedData)` (variable, not padded). A calldata chunk is
-      *range-aligned*: its byte boundaries coincide with proof-range
-      boundaries, so it is wholly owned by exactly one proof — never shared,
-      never reconstructed from opaque bytes.
-
-    The calldata `length` is not trusted: the guest slices exactly `length`
-    bytes from its own recomputed stream and rejects unless their keccak256
-    equals the anchored `chunk_hash`, so a wrong length fails the check.
+    `is_calldata` is witness data: the anchored `chunk_hash` does not by itself
+    record which binding applies. It needs no independent L1 verification
+    because the guest confirms it — each arm recomputes the binding hash from
+    the reconstructed bytes and rejects unless it equals `chunk_hash`, so a
+    mismatched flag fails the check. The flag selects the check; the hash
+    carries the soundness.
     """
     chunk_hash: Hash32
-    length: int = BLOB_BYTES_LENGTH
+    is_calldata: bool = False
 
     @property
     def is_blob(self) -> bool:
-        return self.chunk_hash[0:1] == VERSIONED_HASH_VERSION_KZG
+        return not self.is_calldata
 
 
 @dataclass
@@ -229,35 +227,43 @@ def _verify_and_fold_chunks(
     opaque_suffix_bytes: bytes,
     parent_data_rolling_hash: Hash32,
     boundary_prev_data_rolling_hash: Optional[Hash32],
+    segment_end_offsets: Sequence[int],
 ) -> Tuple[Hash32, int]:
     """
     Slice `own_stream_bytes` (this proof's own concatenated conflation
     segments) across the chunks it touches, reconstruct each chunk's published
     bytes, recompute each chunk's binding hash and check it against its
     anchored hash (`chunks[k].chunk_hash`), and fold the dataRollingHash chain
-    across them (§3.1, §3.4). The per-chunk check dispatches on the chunk kind
-    read from `chunks[k].chunk_hash` itself (§3.1): a leading `0x01` byte marks
-    a blob chunk (verify its KZG commitment's versioned hash), any other
-    leading byte marks a calldata chunk (verify `keccak256` of its bytes).
+    across them (§3.1, §3.4). The per-chunk check dispatches on the declared
+    kind `chunks[k].is_calldata` (§3.1): a blob chunk verifies its KZG
+    commitment's versioned hash, a calldata chunk verifies `keccak256` of its
+    bytes. Both arms end in `recomputed == chunk_hash`, so the flag selects
+    which recomputation runs while the anchored hash carries the soundness.
 
-    **Chunk sizes are heterogeneous.** A blob chunk is fixed at
-    `BLOB_BYTES_LENGTH` (EIP-4844 pads every blob to 128 KiB); a calldata chunk
-    is variable (`chunks[k].length`, the exact `_compressedData` length the L1
-    contract hashed). `start_offset` / the returned `end_offset` are therefore
-    byte offsets *within the first / last touched chunk*, not within a uniform
-    `chunkSize`.
-
-    **Sharing is blob-only.** A blob chunk may be shared with a neighbouring
-    proof across a range boundary: `opaque_prefix_bytes` / `opaque_suffix_bytes`
-    are foreign bytes not owned by this proof, relevant only at the two ends of
-    the touched range, never per-chunk — `opaque_prefix_bytes` fills the start
-    of the FIRST touched chunk when `start_offset > 0`; `opaque_suffix_bytes`
-    fills the end of the LAST touched blob chunk when this proof's data doesn't
-    reach its end. Both default to empty. A calldata chunk is range-aligned
-    (wholly owned by this proof), so it never carries opaque bytes and never
-    sits at a non-zero `start_offset`. The guest witnesses opaque bytes purely
-    to reconstruct a boundary blob chunk's full published content for KZG
+    A **blob chunk** is fixed at `BLOB_BYTES_LENGTH` (EIP-4844 pads every blob
+    to 128 KiB) and may be shared with a neighbouring proof across a range
+    boundary: `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes
+    not owned by this proof, relevant only at the two ends of the touched
+    range, never per-chunk — `opaque_prefix_bytes` fills the start of the FIRST
+    touched chunk when `start_offset > 0`; `opaque_suffix_bytes` fills the end
+    of the LAST touched chunk when this proof's data doesn't reach that blob's
+    end. Both default to empty. The guest witnesses opaque bytes purely to
+    reconstruct a boundary blob chunk's full published content for KZG
     verification — their content is never interpreted (§2.2).
+
+    A **calldata chunk** packs a whole number of conflation segments (§3.1) —
+    complete segments, no partial tail — so its end falls only at a segment
+    boundary. The guest resolves each calldata chunk's extent by hashing the
+    stream from its start (`cursor`) to each candidate segment-end offset and
+    accepting the first whose keccak256 equals `chunk_hash`; the matching
+    partition is the proof of the chunk's extent, so no length is witnessed and
+    a run of consecutive calldata chunks self-delimits. A calldata chunk is
+    range-aligned: it never shares bytes with a neighbouring proof, so it
+    carries no opaque prefix/suffix bytes and sits only at `start_offset = 0`.
+
+    `segment_end_offsets` is the cumulative byte offset of each segment's end
+    within `own_stream_bytes` — the candidate calldata chunk boundaries. It is
+    derived in-guest from the recomputed segments, never witnessed.
 
     Mid-chunk starts (`start_offset > 0`, necessarily a blob chunk):
     `parent_data_rolling_hash` is already the dataRollingHash value *after*
@@ -272,24 +278,22 @@ def _verify_and_fold_chunks(
     chunk_count = len(chunks)
     if chunk_count == 0:
         raise Exception("rollup proof must touch at least one chunk")
-    if start_offset < 0:
-        raise Exception("startOffset must be non-negative")
-
-    # Opaque bytes are only meaningful on shared blob chunks: a non-zero
-    # start_offset opens the first chunk's prefix (so it must be a blob), and a
-    # suffix pads the last chunk's tail (so it must be a blob). A calldata
-    # chunk is range-aligned and never carries opaque bytes.
-    if start_offset > 0 and not chunks[0].is_blob:
-        raise Exception("mid-chunk start (startOffset > 0) requires the first chunk to be a blob")
+    if not (0 <= start_offset < BLOB_BYTES_LENGTH):
+        raise Exception("startOffset must be within [0, chunkSize)")
     if len(opaque_prefix_bytes) != start_offset:
         raise Exception("opaquePrefixBytes length does not match startOffset")
+
+    # Opaque bytes attach only to shared blob chunks: a non-zero start_offset
+    # opens the first chunk's prefix (so that chunk is a blob), and a suffix
+    # pads the last chunk's tail (so that chunk is a blob).
+    if start_offset > 0 and not chunks[0].is_blob:
+        raise Exception("mid-chunk start (startOffset > 0) requires the first chunk to be a blob")
     if len(opaque_suffix_bytes) > 0 and not chunks[-1].is_blob:
         raise Exception("opaqueSuffixBytes requires the last chunk to be a blob")
-    if start_offset > 0 and chunks[0].is_blob and start_offset >= BLOB_BYTES_LENGTH:
-        raise Exception("startOffset must be within [0, chunkSize) for a blob chunk")
 
     setup = _trusted_setup()
     cursor = 0
+    last_chunk_len = 0  # bytes consumed of the last-folded chunk, within that chunk
     data_rolling_hash = parent_data_rolling_hash
     for i, chunk in enumerate(chunks):
         is_first = i == 0
@@ -303,6 +307,7 @@ def _verify_and_fold_chunks(
             own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
             if own_slice_len < 0:
                 raise Exception(f"chunk {i} opaque bytes exceed the blob chunk size")
+            last_chunk_len = BLOB_BYTES_LENGTH - len(suffix)
             own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
             cursor += own_slice_len
             full_chunk_bytes = prefix + own_slice + suffix
@@ -328,19 +333,28 @@ def _verify_and_fold_chunks(
             if computed_chunk_hash != chunk.chunk_hash:
                 raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
         else:
-            # Variable-size calldata chunk: wholly owned by this proof, so no
-            # opaque bytes may be attached and the chunk is exactly `length`
-            # bytes of this proof's own stream.
+            # Range-aligned calldata chunk: it packs a whole number of
+            # segments, so it carries no opaque boundary bytes and its start
+            # sits at a fresh stream/segment boundary.
             if len(prefix) != 0 or len(suffix) != 0:
-                raise Exception(f"chunk {i} is a calldata chunk and must not carry opaque bytes")
-            if chunk.length <= 0:
-                raise Exception(f"chunk {i} calldata length must be positive")
-            full_chunk_bytes = own_stream_bytes[cursor:cursor + chunk.length]
-            cursor += chunk.length
-            if len(full_chunk_bytes) != chunk.length:
-                raise Exception(f"chunk {i} calldata bytes run past the end of the stream")
-            if keccak256(full_chunk_bytes) != chunk.chunk_hash:
-                raise Exception(f"chunk {i} keccak256 does not match calldata chunkHash")
+                raise Exception(f"chunk {i} is a calldata chunk and carries no opaque bytes")
+            if is_first and start_offset != 0:
+                raise Exception(f"chunk {i} is a calldata chunk and starts at offset 0")
+            # Resolve the chunk's extent by matching its anchored hash at each
+            # candidate segment-end boundary. The matching partition is the
+            # proof of the extent (keccak is binding), so no length is
+            # witnessed; a run of consecutive calldata chunks self-delimits.
+            matched_end: Optional[int] = None
+            for end in segment_end_offsets:
+                if end <= cursor:
+                    continue
+                if keccak256(own_stream_bytes[cursor:end]) == chunk.chunk_hash:
+                    matched_end = end
+                    break
+            if matched_end is None:
+                raise Exception(f"calldata chunk {i} does not match any whole-segment extent")
+            last_chunk_len = matched_end - cursor
+            cursor = matched_end
 
         if is_first and start_offset > 0:
             if boundary_prev_data_rolling_hash is None:
@@ -354,8 +368,10 @@ def _verify_and_fold_chunks(
     if cursor != len(own_stream_bytes):
         raise Exception("chunk witnesses do not cover the reconstructed segment length")
 
-    last = chunks[-1]
-    end_offset = last.length if not last.is_blob else BLOB_BYTES_LENGTH - len(opaque_suffix_bytes)
+    # end_offset is the position within the LAST chunk: for a blob, the bytes
+    # consumed of its fixed window (chunkSize less the opaque suffix); for a
+    # calldata chunk, its whole length (a calldata chunk is consumed whole).
+    end_offset = last_chunk_len
     return data_rolling_hash, end_offset
 
 
@@ -533,6 +549,15 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         segments.append(_compress_conflation_segment(conflation_truncated))
 
     own_stream_bytes = b"".join(segments)
+    # Cumulative byte offset of each segment's end within the stream. Calldata
+    # chunks pack a whole number of segments (§3.1), so their boundaries fall
+    # only at these offsets; the guest resolves each calldata chunk's extent by
+    # matching its anchored hash at these candidate ends (no length witnessed).
+    segment_end_offsets: List[int] = []
+    _running = 0
+    for _seg in segments:
+        _running += len(_seg)
+        segment_end_offsets.append(_running)
     end_data_rolling_hash, end_offset = _verify_and_fold_chunks(
         own_stream_bytes,
         rollup_input.start_offset,
@@ -541,6 +566,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_input.opaque_suffix_bytes,
         rollup_input.parent_data_rolling_hash,
         rollup_input.boundary_prev_data_rolling_hash,
+        segment_end_offsets,
     )
 
     rollup_start_block_number = int(rollup_input.l2_execution_proofs[0].proof.start_block_number)
