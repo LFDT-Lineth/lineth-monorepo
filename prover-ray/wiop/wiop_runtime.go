@@ -112,15 +112,21 @@ func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 //  1. Every cell value assigned in the current round is fed into the
 //     Fiat-Shamir state.
 //  2. The runtime advances to the next round.
-//  3. Every [Round.PreSamplingHooks] entry on the new round runs, in
-//     declaration order. Hooks may mutate the Fiat-Shamir state via
-//     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
-//     coin in this round is derived from the post-hook state.
+//  3. The new round's [Round.PreSamplingHook], if it has one, runs. It may
+//     mutate the Fiat-Shamir state via [Runtime.SetFSState] for
+//     shared-randomness seeding.
 //  4. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
-// Panics if there is no next round, or if any cell in the current round has
-// not been assigned.
+// In step 4, coins marked via [CoinField.MarkSeeded] are drawn first from the
+// post-hook state, then the pre-hook transcript is restored and the remaining
+// coins are drawn from that — so a hook's seed reaches only the coins that asked
+// for it, and steps 1-2 stay bound into every later challenge. With nothing
+// marked, the whole round is drawn post-hook and the seed persists.
+//
+// Panics if there is no next round, if any cell in the current round has not
+// been assigned, or if the new round carries a seeded coin but no hook to
+// install the seed.
 func (run *Runtime) AdvanceRound() {
 	if run.currentRound == nil {
 		panic("wiop: AdvanceRound: system has no interactive rounds")
@@ -175,17 +181,54 @@ func (run *Runtime) AdvanceRound() {
 
 	run.currentRound = next
 
-	// Pre-sampling hooks: run before any coin is derived so they can seed
-	// the FS state (typically via [Runtime.SetFSState]). The Runtime value
-	// is shared with the hooks; FS-state mutations performed by them affect
-	// the coin loop below.
-	for _, h := range run.currentRound.PreSamplingHooks {
+	// A coin marked via [CoinField.MarkSeeded] means the seed the hook installs
+	// has to be unwound once the marked coins are drawn, so the transcript needs
+	// snapshotting first.
+	var seeded *CoinField
+	for _, coin := range run.currentRound.Coins {
+		if coin.seeded {
+			seeded = coin
+			break
+		}
+	}
+	if seeded != nil && run.currentRound.PreSamplingHook == nil {
+		panic(fmt.Sprintf(
+			"wiop: AdvanceRound: coin %q is marked seeded but round %d has no "+
+				"PreSamplingHook to install a seed",
+			seeded.Context.Path(), run.currentRound.ID,
+		))
+	}
+
+	var saved field.Octuplet
+	if seeded != nil {
+		saved = run.fs.State()
+	}
+
+	// Pre-sampling hook: runs before any coin is derived so it can seed the FS
+	// state (typically via [Runtime.SetFSState]). The Runtime value is shared
+	// with the hook; FS-state mutations it performs affect the coin loops below.
+	if h := run.currentRound.PreSamplingHook; h != nil {
 		h.Run(run)
 	}
 
-	// Derive a coin for every CoinField declared in the new round.
+	// Seeded coins first, consecutively off the seeded state: the safeguard
+	// update each draw leaves behind keeps them distinct, so no per-coin
+	// domain-separation label is needed. A no-op when nothing is marked.
 	for _, coin := range run.currentRound.Coins {
-		run.coins[coin.Context.ID] = field.ElemFromExt(run.fs.RandomFext())
+		if coin.seeded {
+			run.coins[coin.Context.ID] = field.ElemFromExt(run.fs.RandomFext())
+		}
+	}
+	if seeded != nil {
+		run.fs.SetState(saved)
+	}
+
+	// Then every remaining coin, from the restored transcript. With nothing
+	// marked this is the whole round, drawn from the post-hook state as before.
+	for _, coin := range run.currentRound.Coins {
+		if !coin.seeded {
+			run.coins[coin.Context.ID] = field.ElemFromExt(run.fs.RandomFext())
+		}
 	}
 }
 
@@ -409,10 +452,19 @@ func (run *Runtime) GetFS() *fiatshamir.FiatShamir {
 }
 
 // SetFSState replaces the runtime's Fiat–Shamir state with s. It is
-// intended for [Round.PreSamplingHooks] entries that seed the FS state
+// intended for a [Round.PreSamplingHook] that seeds the FS state
 // from a precomputed shared randomness (e.g. cross-shard handoff). Calling
 // it outside a pre-sampling hook can desynchronize the prover and verifier
 // transcripts and is almost always a bug.
+//
+// How long the replacement lasts is decided by the coins, not by the hook: when
+// any coin of the round is marked via [CoinField.MarkSeeded],
+// [Runtime.AdvanceRound] restores the pre-hook state once the seeded coins have
+// been drawn; otherwise the replacement persists for the rest of the protocol.
+//
+// Note that it clears any buffered absorptions, so a State-then-SetFSState
+// round-trip forces a hash block boundary rather than being a byte-exact
+// identity. Nothing absorbed is dropped, so the transcript stays sound.
 //
 // fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
 // rest of the AdvanceRound pipeline this must not be called concurrently.

@@ -263,6 +263,50 @@ func TestSharedRandomness_DifferentGammaGivesDifferentCoins(t *testing.T) {
 		"β must change when γ changes, since γ is the state the coins are drawn from")
 }
 
+// TestSharedRandomness_SeedingIsScopedToAlphaBeta is the reason α and β are
+// marked with [wiop.CoinField.MarkSeeded] instead of the seed covering the whole
+// coin round: γ must reach the shared challenges without erasing the shard's own
+// transcript.
+//
+// The coin round is not this pass's private property — the lookup and permutation
+// passes anchor their coin rounds the way ensureCoinRound does and regularly land
+// on it, declaring their own coins there, which is what the foreign coin below
+// stands in for. The two shards are identical bar the round-0 local cell, so only
+// that cell can make them diverge. α and β must still agree, being drawn from γ
+// alone; the foreign coin and the Fiat-Shamir state must not, since the cell was
+// absorbed before the coin round and has to stay bound into every later
+// challenge. Under whole-round seeding both would have been drawn from γ too and
+// stayed identical, silently losing that binding.
+func TestSharedRandomness_SeedingIsScopedToAlphaBeta(t *testing.T) {
+	g := gamma(7)
+
+	// build compiles a seeded shard, then plants a foreign unmarked coin on the
+	// round messagebus chose for α and β.
+	build := func(name string, localV uint64) (*shard, *wiop.CoinField) {
+		s := buildShard(t, name, wiop.BusSend, []uint64{10, 20, 30, 40}, localV, true)
+		coinRound := s.sys.Rounds[1]
+		require.Len(t, coinRound.Coins, 2, "α and β must be the round's only coins so far")
+		return s, coinRound.NewCoinField(s.sys.Context.Childf("foreign"))
+	}
+
+	a, foreignA := build("shard-a", 111)
+	b, foreignB := build("shard-b", 222)
+
+	rtA, rtB := a.run(g), b.run(g)
+
+	alphaA, betaA := a.coins(rtA)
+	alphaB, betaB := b.coins(rtB)
+	require.True(t, equal(alphaA, alphaB), "α is seeded and must agree across shards")
+	require.True(t, equal(betaA, betaB), "β is seeded and must agree across shards")
+
+	require.False(t, equal(rtA.GetCoinValue(foreignA), rtB.GetCoinValue(foreignB)),
+		"an unmarked coin sharing the coin round must derive from its own shard's "+
+			"transcript, so it must differ when the shards' round-0 data differs")
+	require.NotEqual(t, rtA.GetFS().State(), rtB.GetFS().State(),
+		"the seeding must not erase the local transcript: the round-0 cell has to stay "+
+			"bound into every challenge drawn after the coin round")
+}
+
 // TestSharedRandomness_IsAPublicInput checks the property that lets the
 // aggregation layer close the binding loop: γ leaves the prover in the
 // public-input vector, at the positions carrying the SharedRandomnessSeed_i tags,

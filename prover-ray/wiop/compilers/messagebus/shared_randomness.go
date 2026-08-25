@@ -33,6 +33,13 @@ const (
 // through [AssignSharedRandomnessSeed], by the verifier from the public-input
 // vector — before the runtime ever advances into coinRound and the hook reads it.
 //
+// seededCoins are marked with [wiop.CoinField.MarkSeeded] so the seed reaches
+// them and nothing else, the transcript being restored once they are drawn.
+// coinRound is not this pass's private property — the lookup and permutation
+// passes anchor their coin rounds the way [ensureCoinRound] does and regularly
+// land on it — and a permanently replaced transcript would strip every later
+// challenge of its binding to the preceding rounds.
+//
 // The contribution gets [NumSharedRandomnessContribution] cells on coinRound,
 // under [SharedRandomnessSeedContributionPI], written by
 // [SharedRandomnessContributionAssigner] and checked by
@@ -40,7 +47,7 @@ const (
 //
 // Panics if coinRound is round 0, since there is then no earlier round to carry
 // γ. That happens when no message-bus entry references a round-bearing column.
-func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round) {
+func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round, seededCoins ...*wiop.CoinField) {
 	if coinRound.ID == 0 {
 		panic(
 			"wiop/compilers/messagebus: the message-bus coin round is round 0, " +
@@ -69,6 +76,11 @@ func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round) {
 	coinRound.RegisterPreSamplingHook(&SharedRandomnessSeedHook{})
 	coinRound.RegisterAction(&SharedRandomnessContributionAssigner{})
 	coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
+
+	// Confine the seed to the caller's own coins.
+	for _, coin := range seededCoins {
+		coin.MarkSeeded()
+	}
 }
 
 // GetSharedRandomnessSeed returns the god-given value of the shared randomness
