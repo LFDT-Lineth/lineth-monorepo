@@ -407,6 +407,21 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_decode_rollup_request_is_calldata_true_decodes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    out = decode_rollup_request(req)
+    assert out.chunks[0].is_calldata is True
+
+
+@pytest.mark.parametrize("bad", ["true", 1, 0, "false"])
+def test_decode_rollup_request_non_boolean_is_calldata_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = bad
+    with pytest.raises(ProofIoError, match="isCalldata"):
+        decode_rollup_request(req)
+
+
 def test_decode_rollup_request_json_round_trips() -> None:
     decoded = decode_rollup_request_json(json.dumps(_valid_rollup_request()))
     assert int(decoded.chain_id) == 59144

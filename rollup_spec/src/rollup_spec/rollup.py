@@ -308,6 +308,11 @@ def _verify_and_fold_chunks(
             if own_slice_len < 0:
                 raise Exception(f"chunk {i} opaque bytes exceed the blob chunk size")
             last_chunk_len = BLOB_BYTES_LENGTH - len(suffix)
+            # The final position must lie strictly inside the last chunk:
+            # end_offset == 0 is the fresh-start sentinel, so a trailing blob
+            # chunk that opaque suffix bytes fill entirely is rejected.
+            if is_last and last_chunk_len <= 0:
+                raise Exception(f"chunk {i} opaque suffix bytes fill the whole blob chunk")
             own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
             cursor += own_slice_len
             full_chunk_bytes = prefix + own_slice + suffix
@@ -340,10 +345,19 @@ def _verify_and_fold_chunks(
                 raise Exception(f"chunk {i} is a calldata chunk and carries no opaque bytes")
             if is_first and start_offset != 0:
                 raise Exception(f"chunk {i} is a calldata chunk and starts at offset 0")
+            # A calldata chunk must start at a segment boundary. `cursor` is
+            # derived in-guest (it advances only by whole blob windows or
+            # matched segment ends), so this is an assertion of the stream
+            # invariant rather than a check on witnessed input.
+            if cursor != 0 and cursor not in segment_end_offsets:
+                raise Exception(f"calldata chunk {i} does not start at a segment boundary")
             # Resolve the chunk's extent by matching its anchored hash at each
-            # candidate segment-end boundary. The matching partition is the
-            # proof of the extent (keccak is binding), so no length is
-            # witnessed; a run of consecutive calldata chunks self-delimits.
+            # candidate segment-end boundary strictly past the cursor (a
+            # zero-length chunk is rejected: end_offset 0 is the fresh-start
+            # sentinel, so keccak256(b"") at `end == cursor` is not a valid
+            # match). The matching partition is the proof of the extent
+            # (keccak is binding), so no length is witnessed; a run of
+            # consecutive calldata chunks self-delimits.
             matched_end: Optional[int] = None
             for end in segment_end_offsets:
                 if end <= cursor:
@@ -510,7 +524,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     this proof's own byte stream. Slices that stream across the chunks it
     touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, recomputes each chunk's binding hash
-    (dispatched per chunk on the anchored hash's leading byte, §3.1: KZG
+    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
     commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
     against the L1-anchored `chunkHash` — folding the dataRollingHash chain
     across the touched chunks as it goes (§3.4). Recursively verifies the N
