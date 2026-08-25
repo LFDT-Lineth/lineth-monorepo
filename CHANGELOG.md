@@ -77,6 +77,7 @@
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 - *(coordinator)* Make runtime invariants explicit (#3716)
 - *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
+- *(linea-besu)* Update Besu to 26.8.0 (#3830)
 
 ### 🚜 Refactor
 

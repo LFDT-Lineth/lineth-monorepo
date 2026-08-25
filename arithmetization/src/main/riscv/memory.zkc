@@ -5,11 +5,11 @@ include "utils/type.zkc"
 // the program executable itself and all data coming from loadable sections of the ELF
 // (e.g., .data, .rodata).
 #[paged]
-memory ram(address:Address) -> (word:u32)
+memory ram[u48](address:Address) -> (word:u32)
 
 // Represents the Register File to use when executing the guest program.  That
 // is, the value of all registers at the given moment.
-memory registers(id:Register) -> (value:DoubleWord)
+memory registers[u48](id:Register) -> (value:DoubleWord)
 
 // Entry point of the RISC-V executable binary and number of sparse memory blobs to copy into RAM before execution
 pub input entry_point_and_blobs_count(i:u1) -> (entry_point:Address, blobs_count:u64)
@@ -23,7 +23,7 @@ pub input blobs_data(i:Address) -> (byte:u8)
 // keccak related memory: all keccak working vectors live in ONE memory,
 // in 8-aligned regions (5 slots used per region): state rows, pi buffer
 // rows, theta's C and D, and the 17-lane padded input block at PIB.
-memory keccak_state(address:u7) -> (state:lane)
+memory keccak_state[u32](address:u7) -> (state:lane)
 const ROW0:u7 = 0
 const ROW1:u7 = 8
 const ROW2:u7 = 16

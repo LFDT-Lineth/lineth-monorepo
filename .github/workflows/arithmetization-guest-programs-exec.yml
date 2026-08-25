@@ -1,4 +1,4 @@
-name: Tracer guest programs run - l2-execution, Add in Zig and Blake in Rust
+name: Tracer guest programs execution - l2-execution, Add in Zig and Blake in Rust
 
 on:
   pull_request:
