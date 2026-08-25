@@ -168,13 +168,16 @@ zkvm_status zkvm_keccak256(const uint8_t* data, size_t len, zkvm_keccak256_hash*
 /**
  * secp256k1 signature verification
  *
- * Verifies an ECDSA signature on the secp256k1 curve.
+ * Verifies an Ethereum transaction ECDSA signature on the secp256k1 curve.
+ * The public key is the plain x || y encoding, not a Keccak-derived address.
+ * Signatures with s > (n-1)/2 are invalid. Cryptographic invalidity is
+ * reported as ZKVM_EOK with *verified set to false.
  *
  * @param msg Pointer to message hash
  * @param sig Pointer to signature (r || s)
  * @param pubkey Pointer to uncompressed public key (x || y)
  * @param[out] verified Pointer to bool indicating if signature is valid
- * @return ZKVM_EOK on success, ZKVM_EFAIL on failure
+ * @return ZKVM_EOK when verification completed, ZKVM_EFAIL on operational failure
  */
 zkvm_status zkvm_secp256k1_verify(const zkvm_secp256k1_hash* msg,
                                   const zkvm_secp256k1_signature* sig,
@@ -200,9 +203,9 @@ zkvm_status zkvm_secp256k1_verify(const zkvm_secp256k1_hash* msg,
  *
  * @param msg Pointer to message hash
  * @param sig Pointer to signature (r || s)
- * @param recid Recovery ID
+ * @param recid Recovery ID (0 or 1)
  * @param[out] output Pointer to output buffer (public key)
- * @return ZKVM_EOK on success, ZKVM_EFAIL on failure
+ * @return ZKVM_EOK on success, ZKVM_EFAIL on invalid recovery; output is untouched on failure
  */
 zkvm_status zkvm_secp256k1_ecrecover(const zkvm_secp256k1_hash* msg,
                                      const zkvm_secp256k1_signature* sig,
