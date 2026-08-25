@@ -61,12 +61,10 @@ func TestSecp256k1ScalarMul(t *testing.T) {
 }
 
 // TestSecp256k1Ecrecover drives ecrecover_run.zkc against the exhaustive
-// accept/reject vectors. ecrecover_generic is total (soft-fail sentinel,
-// never aborts), so EVERY case — valid recovery, soft-failure (QNR/infinity),
-// or invalid input — must trace and constraint-check cleanly: the driver checks
-// each case against its expected (pkx, pky, isSuccess) triple and only fails on
-// a mismatch. The two fixtures differ only in intent: `accepts` are recoveries
-// (isSuccess mostly 1), `rejects` are invalid inputs (isSuccess always 0). A
+// vectors. ecrecover_generic is total (soft-fail sentinel, never aborts), so
+// EVERY case — valid recovery, soft-failure (QNR/infinity), or invalid input —
+// must trace and constraint-check cleanly: the driver checks each case against
+// its expected (pkx, pky, isSuccess) triple and only fails on a mismatch. A
 // single representative case additionally runs the full prove/verify pipeline
 // (skipped under -short, since an ecrecover proof is expensive).
 func TestSecp256k1Ecrecover(t *testing.T) {
