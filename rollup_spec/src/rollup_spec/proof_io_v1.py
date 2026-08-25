@@ -67,6 +67,7 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
+    ChunkWitness,
     ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
@@ -414,6 +415,22 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     )
 
 
+def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
+    """
+    Decode one touched-chunk entry: `{chunkHash, length?}`.
+
+    `chunkHash` is the anchored binding hash (a `0x01`-leading versioned hash
+    for a blob chunk, a bare keccak256 for a calldata chunk — §3.1). `length`
+    is the calldata chunk's exact `_compressedData` length; it is optional and
+    ignored for a blob chunk, which is always `BLOB_BYTES_LENGTH`.
+    """
+    chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
+    length = obj.get("length")
+    if length is None:
+        return ChunkWitness(chunk_hash=chunk_hash)
+    return ChunkWitness(chunk_hash=chunk_hash, length=int(_u64(length, f"{ctx}length")))
+
+
 def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     """
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
@@ -467,7 +484,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             for i, c in enumerate(conflations)
         ],
         chunks=[
-            Hash32(_bytes_from_hex(c, f"proofRequest.chunks[{i}]")) for i, c in enumerate(chunks)
+            _decode_chunk_witness(c, f"proofRequest.chunks[{i}].") for i, c in enumerate(chunks)
         ],
         l2_execution_proofs=[
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")

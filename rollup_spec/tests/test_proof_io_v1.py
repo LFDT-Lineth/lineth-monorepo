@@ -334,7 +334,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
+    assert bytes(req.chunks[0].chunk_hash) == b"\x01" + bytes([0x1A]) * 31
     assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
