@@ -9,8 +9,7 @@
 //   - r == 0 or r >= n
 //   - v not in {27, 28}
 //   - s == 0
-//   - s > (n-1)/2 when strictRange = 1  (EIP-2 low-s, tx validation)
-//   - s >= n       when strictRange = 0  (precompile)
+//   - s >= n
 //   - r^3 + 7 is a quadratic non-residue (r is not a valid x-coordinate)
 //   - the recovered point is the point at infinity (zero pubkey)
 //
@@ -21,10 +20,10 @@
 // Returns the PUBLIC KEY (pu in B64), not the ecrecover-precompile address.
 include "./secp256k1.zkc"
 
-// (n-1)/2 — the low-s malleability bound (EIP-2); s must be <= n_half when strictRange = 1.
+// (n-1)/2 — the low-s malleability bound required for Ethereum transactions.
 const n_half:u256 = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
-fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX:u256, PKY:u256, isSuccess:u1) {
+fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5) -> (PKX:u256, PKY:u256, isSuccess:u1) {
     // Default to the failure sentinel; only the success path overwrites it.
     PKX = 0
     PKY = 0
@@ -40,20 +39,9 @@ fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX:u25
         return
     }
     var par:u1 = (v - 27) as u1
-    // 0 < s, with upper bound depending on strictRange:
-    //   strictRange = 1 (tx validation): s <= (n-1)/2   [EIP-2 low-s]
-    //   strictRange = 0 (precompile):    s <  n
-    if s == 0 {
+    // EVM ecrecover accepts both low-s and high-s canonical signatures.
+    if s == 0 || s >= n {
         return
-    }
-    if strictRange == 1 {
-        if s>n_half {
-            return
-        }
-    } else {
-        if s >= n {
-            return
-        }
     }
 
     // ---- step 1: recover R = (Rx, Ry) from r ----
@@ -117,4 +105,48 @@ fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX:u25
     PKX = qx
     PKY = qy
     isSuccess = 1
+}
+
+// Verifies an Ethereum transaction signature against a caller-supplied plain
+// public key (Qx,Qy). This function is total: every malformed key or signature
+// returns 0 rather than aborting the surrounding zkVM execution.
+fn secp256k1_verify_generic(msg:u256, r:u256, s:u256, Qx:u256, Qy:u256) -> (verified:u1) {
+    verified = 0
+
+    // Transaction signatures require canonical r and EIP-2 low-s.
+    if r == 0 || r >= n || s == 0 || s>n_half {
+        return
+    }
+    if is_on_curve_affine_secp256k1(Qx, Qy) == 0 {
+        return
+    }
+
+    // Standard ECDSA verification:
+    //   R = (z/s)G + (r/s)Q, valid iff R != O and R.x mod n == r.
+    var sinv:u256 = invmod_256(s, n)
+    var u1:u256 = mulmod_256(msg, sinv, n)
+    var u2:u256 = mulmod_256(r, sinv, n)
+
+    var Gx_:u256, Gy_:u256
+    Gx_, Gy_ = generator_secp256k1()
+    var Ax:u256, Ay:u256
+    Ax, Ay = scalar_mul_affine_secp256k1(u1, Gx_, Gy_)
+    var Bx:u256, By:u256
+    Bx, By = scalar_mul_affine_secp256k1(u2, Qx, Qy)
+
+    var AX:u256, AY:u256, AZ:u256
+    AX, AY, AZ = affine_to_projective_secp256k1(Ax, Ay)
+    var BX:u256, BY:u256, BZ:u256
+    BX, BY, BZ = affine_to_projective_secp256k1(Bx, By)
+    var RX:u256, RY:u256, RZ:u256
+    RX, RY, RZ = add_projective_secp256k1(AX, AY, AZ, BX, BY, BZ)
+
+    var rx:u256, ry:u256
+    rx, ry = projective_to_affine_secp256k1(RX, RY, RZ)
+    if is_infinity_affine_secp256k1(rx, ry) == 1 {
+        return
+    }
+    if reduce_256(rx, n) == r {
+        verified = 1
+    }
 }

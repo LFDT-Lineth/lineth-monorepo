@@ -6,21 +6,22 @@ include "../secp256k1/ecrecover.zkc"
 // ============================================================================
 // secp256k1 ecrecover accelerator
 //
-// Both entry points recover the public key from an ECDSA signature and write it
-// to guest memory; they differ only in the low-s policy (strictRange):
-//   - ecrecover_precompile  (strictRange = 0): EVM ecrecover precompile, allows high-s
-//   - ecrecover_transaction (strictRange = 1): EIP-2 low-s (s <= (n-1)/2), tx context
+// The two entry points expose distinct cryptographic operations:
+//   - ecrecover_precompile recovers a public key and allows canonical high-s.
+//   - secp256k1_verify verifies an Ethereum low-s transaction signature against
+//     the caller-supplied plain public key.
 //
 // Memory ABI (all integers are 32-byte big-endian, MSB at the lowest address):
 //   msg_address    : z          (32 bytes)  — the message hash
-//   sig_address    : r || s || recid         — r (32) ‖ s (32) ‖ recid (1 byte)
-//   output_address : Qx || Qy   (64 bytes)   — recovered public key
-// On failure (invalid input, QNR, or infinity) the output is 64 zero bytes.
-// Output is the PUBLIC KEY (not the EVM address); callers keccak it themselves.
+// Recovery:
+//   sig_address      : r || s || recid       — 65 bytes
+//   response_address : Qx || Qy || ok         — 65 bytes; ok is canonical 0/1
+// Verification:
+//   request_address  : r || s || Qx || Qy     — 128 bytes
+//   verified_address : verified               — one canonical 0/1 byte
 // ============================================================================
 
-// Shared body: read (z, r, s, recid), recover, write the pubkey (zeros on failure).
-fn ecrecover_core<ram>(msg_address:Address, sig_address:Address, output_address:Address, strictRange:u1) {
+fn ecrecover_precompile<ram>(msg_address:Address, sig_address:Address, response_address:Address) {
     var z:u256 = read_u256_be(msg_address)
     var r:u256 = read_u256_be(sig_address)
     var s:u256 = read_u256_be(sig_address + 32)
@@ -37,19 +38,21 @@ fn ecrecover_core<ram>(msg_address:Address, sig_address:Address, output_address:
     }
 
     var pkx:u256, pky:u256, ok:u1
-    pkx, pky, ok = ecrecover_generic(z, r, s, v, strictRange)
+    pkx, pky, ok = ecrecover_generic(z, r, s, v)
 
-    // ok == 0 => (pkx, pky) == (0, 0), so the output is the 64-byte zero sentinel.
-    write_u256_be(output_address, pkx)
-    write_u256_be(output_address + 32, pky)
+    // Always initialize the private response. The Zig wrapper copies Qx||Qy to
+    // the caller only when ok is one, preserving caller output on failure.
+    write_u256_be(response_address, pkx)
+    write_u256_be(response_address + 32, pky)
+    write_8(response_address + 64, ok as u8)
 }
 
-// EVM ecrecover precompile (strictRange = 0: high-s permitted).
-fn ecrecover_precompile<ram>(msg_address:Address, sig_address:Address, output_address:Address) {
-    ecrecover_core(msg_address, sig_address, output_address, 0)
-}
-
-// Transaction-context ecrecover (strictRange = 1: EIP-2 low-s enforced).
-fn ecrecover_transaction<ram>(msg_address:Address, sig_address:Address, output_address:Address) {
-    ecrecover_core(msg_address, sig_address, output_address, 1)
+fn secp256k1_verify<ram>(msg_address:Address, request_address:Address, verified_address:Address) {
+    var z:u256 = read_u256_be(msg_address)
+    var r:u256 = read_u256_be(request_address)
+    var s:u256 = read_u256_be(request_address + 32)
+    var qx:u256 = read_u256_be(request_address + 64)
+    var qy:u256 = read_u256_be(request_address + 96)
+    var verified:u1 = secp256k1_verify_generic(z, r, s, qx, qy)
+    write_8(verified_address, verified as u8)
 }

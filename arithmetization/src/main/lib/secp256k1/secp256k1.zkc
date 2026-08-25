@@ -43,6 +43,26 @@ fn assert_on_curve_affine_secp256k1(x:u256, y:u256) {
     }
 }
 
+// Returns one iff (x,y) is a canonical, finite secp256k1 affine point.
+// Unlike assert_on_curve_affine_secp256k1, this is total and is suitable for
+// validating an untrusted public key supplied to signature verification.
+fn is_on_curve_affine_secp256k1(x:u256, y:u256) -> (res:u1) {
+    res = 0
+    if x >= p || y >= p {
+        return
+    }
+    if is_infinity_affine_secp256k1(x, y) == 1 {
+        return
+    }
+    var y2:u256 = mulmod_256(y, y, p)
+    var x2:u256 = mulmod_256(x, x, p)
+    var x3:u256 = mulmod_256(x2, x, p)
+    var rhs:u256 = addmod_256(x3, b, p)
+    if rhs == y2 {
+        res = 1
+    }
+}
+
 fn is_infinity_affine_secp256k1(x:u256, y:u256) -> (res:u1) {
     res = 0
     if (x == 0) && (y == 0) {
