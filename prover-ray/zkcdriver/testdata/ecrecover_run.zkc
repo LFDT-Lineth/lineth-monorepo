@@ -1,29 +1,20 @@
-// Single-case driver for ecrecover.accepts / ecrecover.rejects.
-// Each line of those files is one JSON object with exactly these inputs;
-// run it with:  go tool zkc exec -c <case.json> ecrecover_run.zkc
-// The shell command would be:
+// Single-case driver for ecrecover.accepts.
 //
-// # ACCEPTS — every line must exit 0
-// i=0; grep '^{' ecrecover.accepts | while IFS= read -r line; do
-// printf '%s\n' "$line" > /tmp/case.json
-// if go tool zkc exec -c /tmp/case.json ecrecover_run.zkc >/dev/null 2>&1; then
-//   echo "accept[$i] ok" 
-// else 
-//   echo "accept[$i] FAIL"
-// fi
-// i=$((i+1))
-// done
-
-// # REJECTS — every line must exit NON-zero
-// i=0; grep '^{' ecrecover.rejects | while IFS= read -r line; do
-// printf '%s\n' "$line" > /tmp/case.json
-// if go tool zkc exec -c /tmp/case.json ecrecover_run.zkc >/dev/null 2>&1; then
-//   echo "reject[$i] FAIL (accepted)"
-// else
-//   echo "reject[$i] ok"
-// fi
-// i=$((i+1))
-// done
+// The test fixture inlines comments for every test case. To run the tests, run
+// the `TestSecp256k1Ecrecover` test in native_modules_test.go.
+//
+// Manually using zkc directly, run:
+//
+//   # ACCEPTS — every line must exit 0
+//   i=0; grep '^{' ecrecover.accepts | while IFS= read -r line; do
+//   printf '%s\n' "$line" > /tmp/case.json
+//   if go tool zkc exec -c /tmp/case.json ecrecover_run.zkc >/dev/null 2>&1; then
+//     echo "accept[$i] ok"
+//   else
+//     echo "accept[$i] FAIL"
+//   fi
+//   i=$((i+1))
+//   done
 
 include "../../../arithmetization/src/main/lib/secp256k1/ecrecover.zkc"
 
