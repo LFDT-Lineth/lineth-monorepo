@@ -9,7 +9,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/util/file"
 )
 
-func TestNative(t *testing.T) {
+func TestModExp(t *testing.T) {
 	const (
 		zkcPath = "testdata/modexp_"
 	)
