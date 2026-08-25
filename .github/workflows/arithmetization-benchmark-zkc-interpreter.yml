@@ -10,12 +10,6 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # single runner: one untimed warmup per branch, then N alternating (opt, base)
 # timed iterations with a per-iteration cache reset + brief cool-down to keep
 # the machine state similar across runs.
-#
-# On pull_request events only the optim branch is exercised: a zkc upgrade on
-# the PR may require new arithmetization syntax that main (the usual base ref)
-# cannot compile, so base-vs-optim pairing is reserved for workflow_dispatch and
-# push to main.
-
 # Benchmark data :
 # -- For L2 Guest
 # Runs the l2-execution guest program with the stateless_input.ssz test vector in
@@ -89,9 +83,6 @@ jobs:
   bench:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
-    env:
-      # PRs may bump zkc / arithmetization syntax in ways that no longer compile on main.
-      OPTIM_ONLY: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -106,11 +97,7 @@ jobs:
         run: |
           set -eux
           default_ref="${ZKC_REF}"
-          variants=(base opt)
-          if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then
-            variants=(opt)
-          fi
-          for variant in "${variants[@]}"; do
+          for variant in base opt; do
             case "$variant" in
               base) ref="${{ inputs.zkc_ref_base }}" ;;
               opt)  ref="${{ inputs.zkc_ref_optim }}" ;;
@@ -129,14 +116,12 @@ jobs:
       - name: Add worktrees for benchmark branches
         run: |
           set -eux
-          BASE_REF="${{ inputs.base_ref || 'main' }}"
-          OPTIM_REF="${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}"
+          BASE_REF="${{ inputs.base_ref }}"
+          OPTIM_REF="${{ inputs.optim_ref }}"
           git fetch origin "${OPTIM_REF}":refs/bench/opt
           git worktree add /tmp/wt-opt refs/bench/opt
-          if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-            git fetch origin "${BASE_REF}":refs/bench/base
-            git worktree add /tmp/wt-base refs/bench/base
-          fi
+          git fetch origin "${BASE_REF}":refs/bench/base
+          git worktree add /tmp/wt-base refs/bench/base
 
       - name: Build ELFs, helpers, and per-variant JSON inputs
         env:
@@ -157,11 +142,7 @@ jobs:
           go build -o /tmp/bench/render_bench_summary "$TEST_DIR/scripts/render_bench_summary/main.go"
           # Build guest JSON on each worktree so elf_to_json_gen output matches that
           # branch's main.zkc inputs (e.g. pre-decoded instruction tables on optim only).
-          variants=(base opt)
-          if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then
-            variants=(opt)
-          fi
-          for variant in "${variants[@]}"; do
+          for variant in base opt; do
             wt="/tmp/wt-${variant}"
             wt_test="${wt}/arithmetization/src/test"
             # l2-execution guest: build the rv64im ELF from this worktree, then convert
@@ -290,32 +271,24 @@ jobs:
 
           ## Run stats separately while tracing is not possible
           reset_state; log "stats run: opt  (untimed)"; run_zkc_compile opt  warmup
-          if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-            reset_state; log "stats run: base (untimed)"; run_zkc_compile base warmup
-          fi
+          reset_state; log "stats run: base (untimed)"; run_zkc_compile base warmup
           ## Loop on workloads
           for wl in l2_guest keccak blake; do
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
             reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
-            if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
-            fi
+            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
               if [[ "$FAST_MODE" == "true" ]]; then
                reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
-               if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-                 reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
-               fi
+               reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
               else
                 # RESTORE to tracing (without --fast) when gogen is supporting native fields
                 reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
-                if [[ "${OPTIM_ONLY:-false}" != "true" ]]; then
-                  reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
-                fi
+                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
               fi
             done
           done
@@ -340,14 +313,6 @@ jobs:
           # Resolve the zkc refs at runtime
           zkc_ref_base="${ZKC_REF_BASE_INPUT:-$ZKC_REF}"
           zkc_ref_optim="${ZKC_REF_OPTIM_INPUT:-$ZKC_REF}"
-          if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then
-            {
-              echo "### PR benchmark mode"
-              echo
-              echo "- optim only (base skipped: zkc / arithmetization on the PR may not compile on \`main\`)"
-              echo
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
@@ -355,8 +320,8 @@ jobs:
             -blake-n 1 \
             "${fast_mode_arg[@]}" \
             -l2-guest-keccak-accel "$l2_keccak_accel" \
-            -base-ref "${{ inputs.base_ref || 'main' }}" \
-            -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
+            -base-ref "${{ inputs.base_ref }}" \
+            -optim-ref "${{ inputs.optim_ref }}" \
             -zkc-ref-base "$zkc_ref_base" \
             -zkc-ref-optim "$zkc_ref_optim" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
@@ -364,11 +329,7 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
           ## Print stats for warmup at the end of the benchmark
-          variants=(opt base)
-          if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then
-            variants=(opt)
-          fi
-          for variant in "${variants[@]}"; do
+          for variant in opt base; do
             log="/tmp/bench/logs/compile_${variant}_warmup.log"
             if [[ -f "$log" ]]; then
               printf '### Interpreter %s constraints stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
