@@ -44,8 +44,10 @@ jobs:
 
   code-analysis:
     needs: [authorise-dispatch]
+    # !cancelled() (not always()): tolerate the skipped dispatch gate without
+    # letting a cancelled run still start CodeQL.
     if: |
-      always() &&
+      !cancelled() &&
       (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/codeql.yml
@@ -53,7 +55,7 @@ jobs:
   lint-latest-commit-messages:
     needs: [authorise-dispatch]
     if: |
-      always() &&
+      !cancelled() &&
       (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/lint-commit-messages.yml
@@ -63,12 +65,14 @@ jobs:
     secrets: inherit
 
   component-changelog-upload:
-    if: github.ref == 'refs/heads/main'
+    # Push-only: never run on manual dispatch, which could otherwise push
+    # changelog commits to main via the release bot.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint-latest-commit-messages]
     uses: ./.github/workflows/component-changelog-upload.yml
 
   component-changelog-commit:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [component-changelog-upload]
     permissions:
       contents: write
@@ -106,7 +110,9 @@ jobs:
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
-          base: ${{ github.ref }}
+          # On manual dispatch, diff against main so a stacked branch's full
+          # change set is detected (github.ref would diff the branch vs itself).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
           filters: |
             coordinator:
@@ -226,7 +232,8 @@ jobs:
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: exclusion-filter
         with:
-          base: ${{ github.ref }}
+          # On manual dispatch, diff against main (see Filter commit changes).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
           filters: |
             has-changes-requiring-build:
