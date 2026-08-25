@@ -12,11 +12,11 @@ include "../common/inputs.zkc"
 // the program executable itself and all data coming from loadable sections of the ELF
 // (e.g., .data, .rodata).
 #[paged]
-memory ram(address:Address) -> (word:u32)
+memory ram[u48](address:Address) -> (word:u32)
 
 // Represents the Register File to use when executing the guest program.  That
 // is, the value of all registers at the given moment.
-memory registers(id:Register) -> (value:DoubleWord)
+memory registers[u48](id:Register) -> (value:DoubleWord)
 
 // guest program output
 pub output guest_output(address:OutputAddress) -> (byte:u8)
@@ -24,7 +24,7 @@ pub output guest_output(address:OutputAddress) -> (byte:u8)
 // keccak related memory: all keccak working vectors live in ONE memory,
 // in 8-aligned regions (5 slots used per region): state rows, pi buffer
 // rows, theta's C and D, and the 17-lane padded input block at PIB.
-memory keccak_state(address:u7) -> (state:lane)
+memory keccak_state[u32](address:u7) -> (state:lane)
 const ROW0:u7 = 0
 const ROW1:u7 = 8
 const ROW2:u7 = 16
