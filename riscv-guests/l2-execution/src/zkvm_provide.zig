@@ -58,8 +58,8 @@ comptime {
     }
 }
 
-const OK: i32 = 0;
-const ERR: i32 = 1;
+const OK: i32 = @intFromEnum(lineth_accel.zkvm_status.ZKVM_EOK);
+const ERR: i32 = @intFromEnum(lineth_accel.zkvm_status.ZKVM_EFAIL);
 
 // ── io — zkvm-standards io-interface ──────────────────────────────────────────
 // Default (non-accelerated) write_output: forward the C-ABI (ptr+len) to zesu's
