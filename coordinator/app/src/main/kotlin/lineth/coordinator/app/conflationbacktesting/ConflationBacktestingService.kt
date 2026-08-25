@@ -31,38 +31,90 @@ class ConflationBacktestingService(
   enum class ConflationBacktestingJobStatus {
     IN_PROGRESS,
     COMPLETED,
+    FAILED,
   }
 
   private val jobLifecycleLock = Any()
 
+  // jobIds that have been accepted but whose app is still being constructed. Guarded by [jobLifecycleLock].
+  private val reservedJobIds: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private val completedJobs: MutableSet<String> = ConcurrentHashMap.newKeySet()
+  private val failedJobs: MutableSet<String> = ConcurrentHashMap.newKeySet()
   private val conflationBackTestingApps: MutableMap<String, ConflationBacktestingApp> = ConcurrentHashMap()
 
   fun submitConflationBacktestingJob(conflationBacktestingConfig: ConflationBacktestingConfig): String {
     val jobId = conflationBacktestingConfig.jobId()
-    val app = ConflationBacktestingApp(
-      vertx = vertx,
-      conflationBacktestingAppConfig = conflationBacktestingConfig,
-      mainCoordinatorConfig = configs,
-      httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      metricsFacade = metricsFacade,
-    )
+    // Accept (or reject) the job id before doing any of the expensive app setup, so a duplicate or
+    // already-completed submission is rejected without running the full construction path for work that
+    // will never be scheduled.
     synchronized(jobLifecycleLock) {
       if (completedJobs.contains(jobId)) {
         throw IllegalArgumentException("Given Conflation backtesting Request with jobId=$jobId is already completed")
       }
-      if (conflationBackTestingApps.putIfAbsent(jobId, app) != null) {
+      if (conflationBackTestingApps.containsKey(jobId) || !reservedJobIds.add(jobId)) {
         throw IllegalArgumentException(
           "Given Conflation backtesting Request with jobId=$jobId is already being processed",
         )
       }
+      // A previously failed job may be resubmitted; clear the terminal state now that it is accepted again.
+      failedJobs.remove(jobId)
     }
+
+    val app = try {
+      ConflationBacktestingApp(
+        vertx = vertx,
+        conflationBacktestingAppConfig = conflationBacktestingConfig,
+        mainCoordinatorConfig = configs,
+        httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+        metricsFacade = metricsFacade,
+      )
+    } catch (error: Throwable) {
+      // Construction failed: release the reservation so the id can be retried.
+      synchronized(jobLifecycleLock) {
+        reservedJobIds.remove(jobId)
+      }
+      throw error
+    }
+
+    synchronized(jobLifecycleLock) {
+      conflationBackTestingApps[jobId] = app
+      reservedJobIds.remove(jobId)
+    }
+
     app.start().thenPeek {
       log.info("Conflation backtesting job started: jobId={}", jobId)
     }.exceptionally { error ->
       log.error("Conflation backtesting job failed: jobId={}, errorMessage={}", jobId, error.message, error)
+      handleFailedJobStart(jobId, app)
     }
     return jobId
+  }
+
+  /**
+   * Handles a failure of [ConflationBacktestingApp.start] by moving the job to a terminal [FAILED] state
+   * and stopping the partially started app, so status checks no longer report it as [IN_PROGRESS] and its
+   * resources are released. Does nothing if the app is no longer the active one for [jobId] (e.g. it was
+   * concurrently stopped), which already removed it and ran [ConflationBacktestingApp.stop].
+   */
+  private fun handleFailedJobStart(jobId: String, app: ConflationBacktestingApp) {
+    val shouldStop = synchronized(jobLifecycleLock) {
+      if (conflationBackTestingApps.remove(jobId, app)) {
+        failedJobs.add(jobId)
+        true
+      } else {
+        false
+      }
+    }
+    if (shouldStop) {
+      app.stop().whenException { error ->
+        log.error(
+          "Error while stopping failed conflation backtesting job: jobId={}, errorMessage={}",
+          jobId,
+          error.message,
+          error,
+        )
+      }
+    }
   }
 
   fun getConflationBacktestingJobStatus(jobId: String): ConflationBacktestingJobStatus {
@@ -70,7 +122,10 @@ class ConflationBacktestingService(
       if (completedJobs.contains(jobId)) {
         return ConflationBacktestingJobStatus.COMPLETED
       }
-      if (conflationBackTestingApps.containsKey(jobId)) {
+      if (failedJobs.contains(jobId)) {
+        return ConflationBacktestingJobStatus.FAILED
+      }
+      if (conflationBackTestingApps.containsKey(jobId) || reservedJobIds.contains(jobId)) {
         return ConflationBacktestingJobStatus.IN_PROGRESS
       }
     }
@@ -129,7 +184,9 @@ class ConflationBacktestingService(
       val appsToShutdown = synchronized(jobLifecycleLock) {
         val apps = conflationBackTestingApps.values.toList()
         conflationBackTestingApps.clear()
+        reservedJobIds.clear()
         completedJobs.clear()
+        failedJobs.clear()
         apps
       }
       SafeFuture.allOf(*appsToShutdown.map { app -> app.stop() }.toTypedArray())

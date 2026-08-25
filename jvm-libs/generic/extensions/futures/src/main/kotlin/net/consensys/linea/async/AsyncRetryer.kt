@@ -133,15 +133,18 @@ internal class SequentialAsyncActionRetryer<T>(
       remainingTime =
         timeout?.let { it.inWholeMilliseconds - timeElapsedSinceStarted }
       val stopRetrying =
-        if (errorThrowable != null) {
-          stopRetriesOnErrorPredicate(throwable)
-        } else {
-          try {
+        try {
+          if (errorThrowable != null) {
+            stopRetriesOnErrorPredicate(throwable)
+          } else {
             stopRetriesPredicate(result)
-          } catch (predicateError: Throwable) {
-            errorThrowable = predicateError
-            false
           }
+        } catch (predicateError: Throwable) {
+          // A throwing predicate (either success or error variant) must not abort the handle callback
+          // before resultFuture is completed, otherwise the retry operation would hang forever. Record
+          // the failure so the retry logic can eventually complete the outer future exceptionally.
+          errorThrowable = predicateError
+          false
         }
 
       if (errorThrowable != null && timeElapsedSinceStarted >

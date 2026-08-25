@@ -112,6 +112,31 @@ class AsyncRetryerTest {
   }
 
   @Test
+  fun `retry should complete exceptionally instead of hanging when stopRetriesOnErrorPredicate throws`(vertx: Vertx) {
+    val callCount = AtomicInteger(0)
+    val future =
+      AsyncRetryer.retry<String>(
+        vertx,
+        backoffDelay = 20.milliseconds,
+        maxRetries = 3,
+        stopRetriesOnErrorPredicate = { throw IllegalStateException("predicate boom") },
+      ) {
+        SafeFuture.failedFuture(RuntimeException("action failure ${callCount.incrementAndGet()}"))
+      }
+
+    runCatching { future.get() }
+
+    assertThat(callCount.get()).isEqualTo(4)
+    assertThat(future)
+      .isCompletedExceptionally
+      .isNotCancelled
+      .failsWithin(2.seconds.toJavaDuration())
+      .withThrowableOfType(ExecutionException::class.java)
+      .withCauseInstanceOf(IllegalStateException::class.java)
+      .withMessageContaining("predicate boom")
+  }
+
+  @Test
   fun `Retryer should retry endlessly if predicate is never met when both timeout and maxRetries are null`(
     vertx: Vertx,
     testContext: VertxTestContext,
