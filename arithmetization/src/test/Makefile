@@ -135,9 +135,13 @@ compile: require-src
 elf-exec: elf-to-json install-zkc
 	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT)
 
+# Convert and trace an already compiled external ELF
+elf-trace: elf-to-json install-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-trace JSON=$(JSON_EXT)
+
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
-	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)
+	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)	
 
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
@@ -226,14 +230,14 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 	[ -x "$$elf_to_json_bin" ] || { echo "ELF-to-JSON helper not found. Run vector-build first"; exit 1; }; \
 	if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		echo "rendering ZKC JSON to $(VECTOR_JSON_FILE)"; \
-		"$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
 	elif [ "$(VECTOR_JSON_MODE)" = "per-vector" ]; then \
 		mkdir -p $(VECTOR_JSON_DIR); \
 		rm -f $(VECTOR_JSON_DIR)/*.json; \
 		echo "rendering one ZKC JSON per vector under $(VECTOR_JSON_DIR)"; \
 		n=0; while IFS= read -r in_bytes; do \
 			n=$$((n + 1)); idx=$$(printf '%03d' $$n); \
-			"$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
+			ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
 		done < $(VECTOR_SUBSET_FILE); \
 		echo "generated $$n vector JSON(s) in $(VECTOR_JSON_DIR)"; \
 	fi
@@ -431,7 +435,7 @@ act4-build:
 		name=$$(basename "$$elf" .elf); \
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
-		"$$elf_to_json_bin" "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
 		[ -s "$$base.json.err" ] || rm -f "$$base.json.err"; \
 	done; \
 	if [ "$$count" -eq 0 ]; then echo "error: no ACT4 ELFs found in $(ACT4_ELF_DIR)" >&2; exit 1; fi; \
