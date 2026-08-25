@@ -19,12 +19,23 @@ pub fn zkvm_secp256k1_verify(
         lineth_std.panic();
     }
 
+    // R-type instructions expose only rs1, rs2, and rd. Pack both read-only
+    // operands carried by rs2 as r || s || Qx || Qy.
+    var request: [128]u8 align(8) = undefined;
+    const sig_bytes: [*]const u8 = @ptrCast(sig);
+    const pubkey_bytes: [*]const u8 = @ptrCast(pubkey);
+    var i: usize = 0;
+    while (i < 64) : (i += 1) {
+        request[i] = sig_bytes[i];
+        request[64 + i] = pubkey_bytes[i];
+    }
+
     asm volatile (
-        \\.insn r 0x2b, 0b000, 0b0000001, %[verified], %[msg], %[sig]
+        \\.insn r 0x2b, 0b000, 0b0000001, %[verified], %[msg], %[request]
         :
         : [verified] "r" (@intFromPtr(verified)),
           [msg] "r" (@intFromPtr(msg)),
-          [sig] "r" (@intFromPtr(sig)),
+          [request] "r" (@intFromPtr(&request)),
         : .{ .memory = true });
     return .ZKVM_EOK;
 }

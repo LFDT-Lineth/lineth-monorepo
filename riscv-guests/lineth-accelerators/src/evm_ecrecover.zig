@@ -31,12 +31,25 @@ pub fn zkvm_secp256k1_ecrecover(
     }
     sig_recid[64] = recid;
 
+    // The accelerator writes Qx || Qy || ok into this private response. Keeping
+    // it separate from `output` lets the C API leave caller memory untouched
+    // when recovery fails.
+    var response: [65]u8 align(8) = undefined;
     asm volatile (
-        \\.insn r 0x0b, 0b000, 0b0000001, %[out], %[msg], %[sig]
+        \\.insn r 0x0b, 0b000, 0b0000001, %[response], %[msg], %[sig]
         :
-        : [out] "r" (@intFromPtr(output)),
+        : [response] "r" (@intFromPtr(&response)),
           [msg] "r" (@intFromPtr(msg)),
           [sig] "r" (@intFromPtr(&sig_recid)),
         : .{ .memory = true });
+
+    if (response[64] == 0) {
+        return .ZKVM_EFAIL;
+    }
+    const output_bytes: [*]u8 = @ptrCast(output);
+    i = 0;
+    while (i < 64) : (i += 1) {
+        output_bytes[i] = response[i];
+    }
     return .ZKVM_EOK;
 }
