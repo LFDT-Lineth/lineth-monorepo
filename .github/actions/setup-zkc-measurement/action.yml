@@ -19,8 +19,10 @@ inputs:
   zkc-ref:
     description: 'zkc ref to build, ideally a full SHA so every job measures the same commit.'
     required: true
-  cache-enabled:
-    description: 'Whether the Go module/build cache is enabled.'
+  cache-save:
+    description: >
+      When true, the Go module/build cache is saved on a miss. Default false: this action builds an
+      input-supplied ref, so the cache stays restore-only unless a caller explicitly opts in.
     required: false
     default: 'false'
 
@@ -36,8 +38,9 @@ runs:
     # access. The mitigation that matters is kept structural: the jobs that build and run the measured
     # tree never mint the GitHub App token. Only the report job holds it, and it checks out the tooling
     # ref alone. Do not add a measured checkout to that job. The measured jobs' Go module/build cache
-    # is disabled and the Zig cache runs restore-only (lookup-only), so a dispatched run reads caches
-    # but never saves into the refs/heads/main-scoped cache namespace.
+    # never saves (setup-go has no restore-only mode, so it is off entirely), and the Zig cache is
+    # restored through actions/cache/restore, which has no save phase: a dispatched run reads caches
+    # but has no step that can write into the refs/heads/main-scoped cache namespace.
     - name: Checkout the monorepo commit under measurement
       if: ${{ inputs.monorepo-ref != '' }}
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -65,7 +68,7 @@ runs:
       with:
         go-version: '1.24.6'
         cache-dependency-path: "**/*.sum"
-        cache: ${{ inputs.cache-enabled }}
+        cache: ${{ inputs.cache-save }}
 
     # Built to an explicit path rather than GOBIN so the measured binary is named rather than implicit
     # on PATH. Building from the checkout also stamps vcs.revision in, which the report reads back as
