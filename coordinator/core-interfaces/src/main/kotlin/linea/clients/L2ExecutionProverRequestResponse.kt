@@ -43,7 +43,8 @@ data class ExecutionInfo(
 
 data class L2ExecutionProofRequestV1(
   val executions: List<ExecutionInfo>,
-  val chainConfig: ChainConfig,
+  val chainId: ULong,
+  val coinbase: String,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
@@ -72,7 +73,8 @@ data class L2ExecutionProofRequestV1(
     other as L2ExecutionProofRequestV1
 
     if (executions != other.executions) return false
-    if (chainConfig != other.chainConfig) return false
+    if (chainId != other.chainId) return false
+    if (coinbase != other.coinbase) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
 
@@ -81,7 +83,8 @@ data class L2ExecutionProofRequestV1(
 
   override fun hashCode(): Int {
     var result = executions.hashCode()
-    result = 31 * result + chainConfig.hashCode()
+    result = 31 * result + chainId.hashCode()
+    result = 31 * result + coinbase.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
     return result
@@ -113,30 +116,6 @@ data class ForcedTransaction(
     result = 31 * result + deadlineBlockNumber.hashCode()
     result = 31 * result + signedTxRlp.contentHashCode()
     result = 31 * result + acceptance.hashCode()
-    return result
-  }
-}
-
-// References StatelessChainConfig in rollup_spec/src/rollup_spec/block.py
-data class ChainConfig(
-  val chainId: ULong,
-  val forkName: String,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ChainConfig
-
-    if (chainId != other.chainId) return false
-    if (forkName != other.forkName) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = chainId.hashCode()
-    result = 31 * result + forkName.hashCode()
     return result
   }
 }
