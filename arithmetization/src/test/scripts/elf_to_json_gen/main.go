@@ -749,7 +749,23 @@ func main() {
 	// input tables consumed by the interpreter. Must use the same executable
 	// blobs as blobs_data / read_instruction_from_blobs (not raw SHF_EXECINSTR sections).
 	base, _, decodedHex := buildDecodedProgram(blobs)
-	printJson(blobs, elfFile.Entry, base, decodedHex)
+	printJson(blobs, elfFile.Entry, base, decodedHex, predecodingProofFromEnv())
+}
+
+// predecodingProofFromEnv controls emission of blobs_executable, an input used
+// only by the offline predecoding justification pass (predecoding/*.zkc). Decode
+// tables (instruction_base, decoded) are always emitted regardless.
+func predecodingProofFromEnv() bool {
+	switch v := os.Getenv("ELF2JSON_PREDECODING_PROOF"); v {
+	case "", "false":
+		return false
+	case "true":
+		return true
+	default:
+		fmt.Fprintf(os.Stderr, "ELF2JSON_PREDECODING_PROOF must be true or false, got %q\n", v)
+		os.Exit(1)
+		return false
+	}
 }
 
 // parseInBytes turns an arg into input bytes. Four forms:
@@ -1076,7 +1092,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string, includePredecodingProof bool) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -1092,19 +1108,20 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHe
 		}
 	}
 
-	var executableBits bitWriter
-	for _, blob := range blobs {
-		if blob.executable {
-			executableBits.writeBits(1, 1)
-		} else {
-			executableBits.writeBits(0, 1)
-		}
-	}
-
 	fmt.Println("{")
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", ENTRY_POINT_AND_BLOBS_COUNT, entryPointAndBlobs)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_OFFSET_AND_SIZE, strings.Join(blobMetadata, "____"))
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_EXECUTABLE, hex.EncodeToString(executableBits.buf))
+	if includePredecodingProof {
+		var executableBits bitWriter
+		for _, blob := range blobs {
+			if blob.executable {
+				executableBits.writeBits(1, 1)
+			} else {
+				executableBits.writeBits(0, 1)
+			}
+		}
+		fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_EXECUTABLE, hex.EncodeToString(executableBits.buf))
+	}
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
 	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)

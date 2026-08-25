@@ -674,3 +674,54 @@ func TestClassifyRoundTripELF(t *testing.T) {
 		})
 	}
 }
+
+func captureStdout(fn func()) string {
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	fn()
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	return buf.String()
+}
+
+func TestPrintJsonPredecodingProof(t *testing.T) {
+	blobs := []memoryBlob{
+		{offset: 0x00800000, data: []byte{0, 0, 0, 0}, executable: true, name: ".text"},
+		{offset: 0x08800000, data: []byte{1, 2}, executable: false, name: "in_bytes"},
+	}
+
+	t.Run("default omits blobs_executable", func(t *testing.T) {
+		out := captureStdout(func() {
+			printJson(blobs, 0x00800000, 0x00800000, "ab", false)
+		})
+		if strings.Contains(out, `"blobs_executable"`) {
+			t.Fatalf("expected blobs_executable omitted, got:\n%s", out)
+		}
+		if !strings.Contains(out, `"instruction_base"`) || !strings.Contains(out, `"decoded"`) {
+			t.Fatalf("expected decode tables present, got:\n%s", out)
+		}
+	})
+
+	t.Run("proof mode includes blobs_executable", func(t *testing.T) {
+		out := captureStdout(func() {
+			printJson(blobs, 0x00800000, 0x00800000, "ab", true)
+		})
+		if !strings.Contains(out, `"blobs_executable": "0x`) {
+			t.Fatalf("expected blobs_executable present, got:\n%s", out)
+		}
+	})
+}
+
+func TestPredecodingProofFromEnv(t *testing.T) {
+	t.Setenv("ELF2JSON_PREDECODING_PROOF", "")
+	if predecodingProofFromEnv() {
+		t.Fatal("expected false for unset env")
+	}
+	t.Setenv("ELF2JSON_PREDECODING_PROOF", "true")
+	if !predecodingProofFromEnv() {
+		t.Fatal("expected true")
+	}
+}

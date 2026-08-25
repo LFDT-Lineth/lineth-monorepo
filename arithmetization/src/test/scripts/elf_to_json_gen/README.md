@@ -22,7 +22,7 @@ and the field set and order of every record **must** match the corresponding
 | ----------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------ |
 | `entry_point_and_blobs_count` | `entry_point:Address, blobs_count:u64`               | ELF entry point + number of sparse RAM blobs                       |
 | `blobs_offset_and_size`       | `blob_offset:Address, blob_size:Length`              | RAM offset and byte length of each blob                            |
-| `blobs_executable`            | `executable:u1`                                      | `1` if blob `i` holds executable (`SHF_EXECINSTR`) bytes, else `0` |
+| `blobs_executable`            | `executable:u1`                                      | Optional. `1` if blob `i` holds executable (`SHF_EXECINSTR`) bytes, else `0`. Emitted only when `ELF2JSON_PREDECODING_PROOF=true` (offline predecoding justification in `predecoding/*.zkc`). |
 | `blobs_data`                  | `byte:u8`                                             | concatenated bytes of all blobs, in blob order                    |
 | `instruction_base`            | `base:Address`                                       | lowest executable address (4-aligned); maps `pc` → table index    |
 | `decoded`                     | `compute_op, imm, rs1, rs2, rd`                      | unified pre-decoded instruction table (one record per 4-byte word)|
@@ -212,6 +212,15 @@ Operand fields not used by a given instruction format are written as zero (e.g.
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
 > silently misaligns the whole stream and the interpreter reads garbage.
+
+
+## Environment variables
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `ELF2JSON_PREDECODING_PROOF` | `false` | When `true`, also emit `blobs_executable` for the offline predecoding justification pass. Decode tables (`instruction_base`, `decoded`) are always emitted. Makefile passthrough: `PREDECODING_PROOF=true`. |
+| `ELF2JSON_WRITE_SECTIONS` | `false` | When `true`, write a `.sections` debug file next to the ELF. |
+| `ELF2JSON_MAX_DECODED_RECORDS` | `2000000` | Cap on pre-decoded instruction records (OOM guard). |
 
 
 ## Related files
