@@ -35,8 +35,9 @@ make -C l2-execution compile KECCAK_ACCEL=true   # arithmetization keccak wrappe
 Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
 
     make linker-script
-    zig build                       # standard zig keccak
-    zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
+    zig build                           # standard zig keccak
+    zig build -Dkeccak-accel=true       # arithmetization keccak wrapper
+    zig build -Dsecp256k1-accel=true    # secp256k1_verify + EVM ecrecover wrappers
 
 ## Shell alias
 
