@@ -1,0 +1,58 @@
+include "../../riscv/utils/type.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+include "../secp256k1/ecrecover.zkc"
+
+// ============================================================================
+// secp256k1 ecrecover accelerator
+//
+// The two entry points expose distinct cryptographic operations:
+//   - ecrecover_precompile recovers a public key and allows canonical high-s.
+//   - secp256k1_verify verifies an Ethereum low-s transaction signature against
+//     the caller-supplied plain public key.
+//
+// Memory ABI (all integers are 32-byte big-endian, MSB at the lowest address):
+//   msg_address    : z          (32 bytes)  — the message hash
+// Recovery:
+//   sig_address      : r || s || recid       — 65 bytes
+//   response_address : Qx || Qy || ok         — 65 bytes; ok is canonical 0/1
+// Verification:
+//   request_address  : r || s || Qx || Qy     — 128 bytes
+//   verified_address : verified               — one canonical 0/1 byte
+// ============================================================================
+
+fn ecrecover_precompile<ram>(msg_address:Address, sig_address:Address, response_address:Address) {
+    var z:u256 = read_u256_be(msg_address)
+    var r:u256 = read_u256_be(sig_address)
+    var s:u256 = read_u256_be(sig_address + 32)
+    var recid:u8 = read_8(sig_address + 64)
+
+    // map the recovery id (0/1) to the EVM v (27/28); anything else -> invalid v
+    // (0), which ecrecover_generic soft-fails.
+    var v:u5 = 0
+    if recid == 0 {
+        v = 27
+    }
+    if recid == 1 {
+        v = 28
+    }
+
+    var pkx:u256, pky:u256, ok:u1
+    pkx, pky, ok = ecrecover_generic(z, r, s, v)
+
+    // Always initialize the private response. The Zig wrapper copies Qx||Qy to
+    // the caller only when ok is one, preserving caller output on failure.
+    write_u256_be(response_address, pkx)
+    write_u256_be(response_address + 32, pky)
+    write_8(response_address + 64, ok as u8)
+}
+
+fn secp256k1_verify<ram>(msg_address:Address, request_address:Address, verified_address:Address) {
+    var z:u256 = read_u256_be(msg_address)
+    var r:u256 = read_u256_be(request_address)
+    var s:u256 = read_u256_be(request_address + 32)
+    var qx:u256 = read_u256_be(request_address + 64)
+    var qy:u256 = read_u256_be(request_address + 96)
+    var verified:u1 = secp256k1_verify_generic(z, r, s, qx, qy)
+    write_8(verified_address, verified as u8)
+}

@@ -154,6 +154,10 @@ const OP_32:Opcode = 0b0111011 // ADDW, SUBW, SLLW, SRLW, SRAW (RV64 only)
 const CUSTOM_0:Opcode = 0b0001011 // custom-0
 const CUSTOM_1:Opcode = 0b0101011 // custom-1
 
+// EVM precompiles
+const FUNCT3_EVM_ECRECOVER:Funct3 = 0b000
+const FUNCT7_EVM_ECRECOVER:Funct7 = 0b0000001
+
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000
 const FUNCT7_KECCAK:Funct7 = 0b0000000
@@ -161,6 +165,8 @@ const FUNCT3_POSEIDON2:Funct3 = 0b001
 const FUNCT7_POSEIDON2:Funct7 = 0b0000000
 const FUNCT3_WRITE_OUTPUT:Funct3 = 0b010
 const FUNCT7_WRITE_OUTPUT:Funct7 = 0b0000000
+const FUNCT3_SECP256K1_VERIFY:Funct3 = 0b000
+const FUNCT7_SECP256K1_VERIFY:Funct7 = 0b0000001
 
 // I_type
 const LOAD:Opcode = 0b0000011 // LB, LH, LW, LBU, LHU, LWU, LD
@@ -337,6 +343,8 @@ const R_REMUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUN
 const R_KECCAK:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17)
 const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17)
 const R_WRITE_OUTPUT:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17)
+const R_EVM_ECRECOVER:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECRECOVER as u17) << 7) | (FUNCT7_EVM_ECRECOVER as u17)
+const R_SECP256K1_VERIFY:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_SECP256K1_VERIFY as u17) << 7) | (FUNCT7_SECP256K1_VERIFY as u17)
 
 // Concatenate constant to flatten the I_switch table
 const I_LB:u10 = (((LOAD as u10) << 3) | (FUNCT3_LB as u10))
@@ -359,4 +367,3 @@ const I_SLLIW:u10 = (((OP_IMM_32 as u10) << 3) | (FUNCT3_SLLIW as u10))
 const I_SRLIW:u10 = (((OP_IMM_32 as u10) << 3) | (FUNCT3_SRLIW as u10))
 const I_JALR:u10 = (((JALR as u10) << 3) | (FUNCT3_JALR as u10))
 const I_ECALL:u10 = (((SYSTEM as u10) << 3) | (FUNCT3_ECALL as u10))
-

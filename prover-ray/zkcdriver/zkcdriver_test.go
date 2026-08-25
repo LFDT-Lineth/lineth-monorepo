@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"iter"
 	"os"
+	"strings"
 
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -191,4 +193,19 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 		return fmt.Errorf("verification failed: %w", err)
 	}
 	return nil
+}
+
+func filterCommentsFromZkcInput(lines []string) iter.Seq2[int, string] {
+	return func(yield func(int, string) bool) {
+		lineNr := 0
+		for _, line := range lines {
+			// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
+			if strings.HasPrefix(line, "{") {
+				if !yield(lineNr, line) {
+					return
+				}
+				lineNr++
+			}
+		}
+	}
 }

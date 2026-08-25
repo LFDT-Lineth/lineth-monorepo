@@ -90,3 +90,34 @@ fn read_64<ram>(address:Address) -> (value:u64) {
         value = hi::lo
     }
 }
+
+fn read_u16_be<ram>(address:Address) -> (value:u16) {
+    var hi:u8 = read_8(address)
+    var lo:u8 = read_8(address + 1)
+    value = hi::lo
+}
+
+fn read_u32_be<ram>(address:Address) -> (value:u32) {
+    var hi:u16 = read_u16_be(address)
+    var lo:u16 = read_u16_be(address + 2)
+    value = hi::lo
+}
+
+fn read_u64_be<ram>(address:Address) -> (value:u64) {
+    var hi:u32 = read_u32_be(address)
+    var lo:u32 = read_u32_be(address + 4)
+    value = hi::lo
+}
+
+fn read_u128_be<ram>(address:Address) -> (value:u128) {
+    var hi:u64 = read_u64_be(address)
+    var lo:u64 = read_u64_be(address + 8)
+    value = hi::lo
+}
+
+// Read a 32-byte big-endian integer from memory (byte at `address` is the MSB).
+fn read_u256_be<ram>(address:Address) -> (value:u256) {
+    var hi:u128 = read_u128_be(address)
+    var lo:u128 = read_u128_be(address + 16)
+    value = hi::lo
+}

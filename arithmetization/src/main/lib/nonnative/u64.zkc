@@ -6,16 +6,14 @@ fn mulmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
     // integer product result `product = lhsL * rhsL`
     var product:u128 = (lhsL as u128) * (rhsL as u128)
 
-    var overflow:u64
+    var q:u128, rem:u128, overflow:u64, overflow2:u64
     var quotient:u64
-    overflow::quotient = product / (modL as u128)
+    q, rem = product /% (modL as u128)
+    overflow::remainder = rem
     if overflow != 0 {
         fail
     }
-    var overflow2:u64
-    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
-    overflow2::remainder = product - ((quotient as u128) * (modL as u128))
-    //overflow2::remainder = product % (modL as u128)
+    overflow2::quotient = q
     if overflow2 != 0 {
         fail
     }

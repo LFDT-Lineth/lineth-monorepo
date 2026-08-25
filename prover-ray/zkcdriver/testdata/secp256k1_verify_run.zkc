@@ -1,0 +1,19 @@
+// Single-case driver for secp256k1_verify.accepts.
+// Every input is handled as a total verification result: malformed signatures
+// and public keys produce verified=0 rather than aborting.
+
+include "../../../arithmetization/src/main/lib/secp256k1/ecrecover.zkc"
+
+pub input in_msg(address:u1) -> (val:u256)
+pub input in_r(address:u1) -> (val:u256)
+pub input in_s(address:u1) -> (val:u256)
+pub input in_pkx(address:u1) -> (val:u256)
+pub input in_pky(address:u1) -> (val:u256)
+pub input in_verified(address:u1) -> (val:u8)
+
+fn main() {
+    var verified:u1 = secp256k1_verify_generic(in_msg[0], in_r[0], in_s[0], in_pkx[0], in_pky[0])
+    if verified != (in_verified[0] as u1) {
+        fail
+    }
+}

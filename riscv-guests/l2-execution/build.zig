@@ -21,10 +21,14 @@ pub fn build(b: *std.Build) void {
     // Lineth write_output custom-op accelerator is opted in with -Dwrite-output-accel=true.
     // Read by zkvm_provide.zig at comptime.
     const write_output_accel = b.option(bool, "write-output-accel", "Use the Lineth write_output custom-opcode accelerator instead of the default stdout ecall (default: standard)") orelse false;
+    // secp256k1 provider: software by default, or Lineth custom-op accelerators
+    // for secp256k1_verify and EVM public-key recovery when opted in.
+    const secp256k1_accel = b.option(bool, "secp256k1-accel", "Use Lineth secp256k1 custom-opcode accelerators (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
     guest_options.addOption(bool, "write_output_accel", write_output_accel);
+    guest_options.addOption(bool, "secp256k1_accel", secp256k1_accel);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";

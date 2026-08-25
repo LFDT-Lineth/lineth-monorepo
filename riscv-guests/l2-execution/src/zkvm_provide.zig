@@ -6,7 +6,7 @@
 //! all of them, from two sources:
 //!
 //!   • Lineth accelerator wrappers (`lineth_zkvm_accel`) — for the precompiles the prover accelerates
-//!     (keccak today). We re-export each wrapper under the C name zesu references; HOW a wrapper
+//!     (Keccak and opt-in secp256k1 today). We re-export each wrapper under the C name zesu references; HOW a wrapper
 //!     accelerates is the wrapper module's own concern. The *set of wrappers that exist* is what is
 //!     accelerated, and grows as the prover implements more.
 //!   • zesu-zkvm `stdlibs_accel` (`zesu_zkvm_accel`) — every precompile without a wrapper yet, via a
@@ -19,11 +19,11 @@
 const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
 const linea_io = @import("linea_zkvm_io"); // zesu-zkvm's zkvm_io: default (stdout ecall) write_output
-const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
+const build_options = @import("build_options"); // provider selections supplied by build.zig
 
-// The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
-// the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
-// by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
+// The manifest: every `zkvm_*` symbol zesu references and where each comes from.
+// Keccak and secp256k1 can select Lineth custom-op wrappers at build time; the
+// remaining primitives use the stdlibs_accel shims below.
 comptime {
     if (build_options.keccak_accel) {
         @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
@@ -31,8 +31,13 @@ comptime {
         @export(&keccak256, .{ .name = "zkvm_keccak256" });
     }
     @export(&sha256, .{ .name = "zkvm_sha256" });
-    @export(&secp256k1_verify, .{ .name = "zkvm_secp256k1_verify" });
-    @export(&secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
+    if (build_options.secp256k1_accel) {
+        @export(&lineth_accel.zkvm_secp256k1_verify, .{ .name = "zkvm_secp256k1_verify" });
+        @export(&lineth_accel.zkvm_secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
+    } else {
+        @export(&secp256k1_verify, .{ .name = "zkvm_secp256k1_verify" });
+        @export(&secp256k1_ecrecover, .{ .name = "zkvm_secp256k1_ecrecover" });
+    }
     @export(&ripemd160, .{ .name = "zkvm_ripemd160" });
     @export(&modexp, .{ .name = "zkvm_modexp" });
     @export(&bn254_g1_add, .{ .name = "zkvm_bn254_g1_add" });
@@ -58,8 +63,8 @@ comptime {
     }
 }
 
-const OK: i32 = 0;
-const ERR: i32 = 1;
+const OK: i32 = @intFromEnum(lineth_accel.zkvm_status.ZKVM_EOK);
+const ERR: i32 = @intFromEnum(lineth_accel.zkvm_status.ZKVM_EFAIL);
 
 // ── io — zkvm-standards io-interface ──────────────────────────────────────────
 // Default (non-accelerated) write_output: forward the C-ABI (ptr+len) to zesu's

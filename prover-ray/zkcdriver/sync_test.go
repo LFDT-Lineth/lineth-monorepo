@@ -83,25 +83,19 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				fatalIfNotKnown(t, failures, baseName, -2, failReasonCompileZkc, "failed to compile binary constraints: %v", err)
 				return
 			}
-			lineNr := 0
 			acceptCases, ok := file.ReadInputFileAsLines(acceptPath)
 			if !ok {
 				fatalIfNotKnown(t, failures, baseName, -3, failReasonNoTestData, "failed to read accept file %s for test-case %s", acceptPath, f)
 				return
 			}
-			for _, line := range acceptCases[:min(len(acceptCases), maxCasesPerUnit)] {
-				// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
-				if !strings.HasPrefix(line, "{") {
-					continue
-				}
-				l := lineNr
+			for lineNr, line := range filterCommentsFromZkcInput(acceptCases[:min(len(acceptCases), maxCasesPerUnit)]) {
 				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
 					t.Parallel()
 					// The reason we early-abort on parsing errors is that they
 					// may result from tests that are skipped in short testing
 					// mode. Early aborting allow us to ensure, the case does
 					// not break down the road at a later stage.
-					if isKnownError(failures, baseName, l, failReasonParse) {
+					if isKnownError(failures, baseName, lineNr, failReasonParse) {
 						return
 					}
 					zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF, !testing.Short())
@@ -111,7 +105,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 					for outputName, expectedOutput := range zkcOutputs {
 						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
 							fatalIfNotKnown(
-								t, failures, baseName, l, failReasonOutputMismatch,
+								t, failures, baseName, lineNr, failReasonOutputMismatch,
 								"output mismatch for %s: expected %x, got %x",
 								outputName, expectedOutput, zkcInput.Inputs[outputName],
 							)
@@ -119,11 +113,10 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 						}
 					}
 					if err = runProveVerify(zkcInput, binF, sysPipeline); err != nil {
-						fatalIfNotKnown(t, failures, baseName, l, failReasonProve, "failed to run test case: %v", err)
+						fatalIfNotKnown(t, failures, baseName, lineNr, failReasonProve, "failed to run test case: %v", err)
 						return
 					}
 				})
-				lineNr++
 			}
 		})
 	}
