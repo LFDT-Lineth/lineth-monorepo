@@ -68,8 +68,17 @@ func TestSecp256k1ScalarMul(t *testing.T) {
 // single representative case additionally runs the full prove/verify pipeline
 // (skipped under -short, since an ecrecover proof is expensive).
 func TestSecp256k1Ecrecover(t *testing.T) {
-	const program = "testdata/ecrecover_run.zkc"
-	const acceptCasesPath = "testdata/ecrecover.accepts"
+	runSecp256k1Cases(t, "testdata/ecrecover_run.zkc", "testdata/ecrecover.accepts")
+}
+
+// TestSecp256k1Verify checks ordinary ECDSA verification against the supplied
+// plain public key, including Ethereum's low-s transaction rule.
+func TestSecp256k1Verify(t *testing.T) {
+	runSecp256k1Cases(t, "testdata/secp256k1_verify_run.zkc", "testdata/secp256k1_verify.accepts")
+}
+
+func runSecp256k1Cases(t *testing.T, program, acceptCasesPath string) {
+	t.Helper()
 	binf, err := compileBinaryConstraints(program)
 	if err != nil {
 		t.Fatalf("failed to compile zkc source: %v", err)
@@ -83,10 +92,10 @@ func TestSecp256k1Ecrecover(t *testing.T) {
 			tc := zkcTestCase{ZkcFilePath: program, InputStr: line}
 			inputs, _, err := parseTestCase(tc, binf, !testing.Short())
 			if err != nil {
-				t.Fatalf("expected (pkx, pky, isSuccess) to match; tracing/constraint-check failed: %v", err)
+				t.Fatalf("expected secp256k1 result to match; tracing/constraint-check failed: %v", err)
 			}
-			// Prove exactly one representative case; ecrecover proofs
-			// are expensive, so gate behind !-short.
+			// Prove exactly one representative case per primitive; secp256k1
+			// proofs are expensive, so gate behind !-short.
 			if lineNr == 0 && !testing.Short() {
 				if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
 					t.Fatalf("prove/verify failed: %v", err)
