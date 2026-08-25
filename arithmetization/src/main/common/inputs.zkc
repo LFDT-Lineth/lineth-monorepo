@@ -1,8 +1,8 @@
 // Canonical `pub input` declarations for the RISC-V arithmetization.
 //
 // Shared file for:
-//   - riscv/memory.zkc       
-//   - predecoding/main.zkc 
+//   - riscv/memory.zkc
+//   - predecoding/main.zkc
 include "type.zkc"
 
 // Entry point of the RISC-V executable binary and number of sparse memory blobs to copy into RAM before execution
@@ -12,7 +12,7 @@ pub input entry_point_and_blobs_count(i:u1) -> (entry_point:Address, blobs_count
 pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length)
 
 // Whether blob i holds executable (SHF_EXECINSTR) section bytes (1) or data (0).
-pub input blobs_executable(i:u64) -> (executable:u1)
+// pub input blobs_executable(i:u64) -> (executable:u1)
 
 // Concatenated bytes for all sparse memory blobs, in blob order
 pub input blobs_data(i:Address) -> (byte:u8)

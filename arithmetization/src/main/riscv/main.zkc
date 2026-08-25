@@ -11,9 +11,9 @@ include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
 include "memory.zkc"
-include "../predecoding/predecoding.zkc"
-include "../predecoding/read_instruction.zkc"
-include "../predecoding/executable_region.zkc"
+// include "../predecoding/predecoding.zkc"
+// include "../predecoding/read_instruction.zkc"
+// include "../predecoding/executable_region.zkc"
 include "../lib/poseidon2/ram.zkc"
 
 // TODO @Ghost
