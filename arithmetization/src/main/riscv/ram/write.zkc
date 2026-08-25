@@ -94,3 +94,39 @@ fn write_64<ram>(address:Address, value:u64) -> () {
     write_32(address, lo)
     write_32(address + 4, hi)
 }
+
+fn write_u16_be<ram>(address:Address, value:u16) {
+    var hi:u8, lo:u8
+    hi::lo = value
+    write_8(address, hi)
+    write_8(address + 1, lo)
+}
+
+fn write_u32_be<ram>(address:Address, value:u32) {
+    var hi:u16, lo:u16
+    hi::lo = value
+    write_u16_be(address, hi)
+    write_u16_be(address + 2, lo)
+}
+
+fn write_u64_be<ram>(address:Address, value:u64) {
+    var hi:u32, lo:u32
+    hi::lo = value
+    write_u32_be(address, hi)
+    write_u32_be(address + 4, lo)
+}
+
+fn write_u128_be<ram>(address:Address, value:u128) {
+    var hi:u64, lo:u64
+    hi::lo = value
+    write_u64_be(address, hi)
+    write_u64_be(address + 8, lo)
+}
+
+// Write a 32-byte big-endian integer to memory (MSB at `address`).
+fn write_u256_be<ram>(address:Address, value:u256) {
+    var hi:u128, lo:u128
+    hi::lo = value
+    write_u128_be(address, hi)
+    write_u128_be(address + 16, lo)
+}
