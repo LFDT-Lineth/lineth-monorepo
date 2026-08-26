@@ -188,7 +188,7 @@ func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
 	assert.Error(t, err, "malformed ELF must return an error")
 }
 
-func TestElfBlobs_ToyGuestSectionsParseAndPrepareInput(t *testing.T) {
+func TestElfBlobs_InstructionCoverageGuestsPrepareInput(t *testing.T) {
 	tests := []struct {
 		name        string
 		elfProgram  []byte

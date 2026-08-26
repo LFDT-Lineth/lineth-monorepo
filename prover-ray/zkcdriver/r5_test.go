@@ -11,14 +11,14 @@ import (
 
 const riscvMainZkcPath = "../../arithmetization/src/main/riscv/main.zkc"
 
-// TestRisc5ToyGuestPrograms traces small hand-written guest ELFs through the
-// real main.zkc interpreter and checks each resulting trace against every
-// compiled constraint. Each guest below exercises interpreter paths that
-// ExitZeroGuestELF (only addi/ecall) never touches. These only trace and
-// check constraints — they do not run the (expensive) prove/verify pipeline,
-// which is already covered by verifier-ray/codegen/riscv_bootstrap.go for
-// ExitZeroGuestELF.
-func TestRisc5ToyGuestPrograms(t *testing.T) {
+// TestRisc5InstructionCoverageGuests traces small hand-written guest ELFs
+// through the real main.zkc interpreter and checks each resulting trace
+// against every compiled constraint. Each guest below exercises interpreter
+// paths that ExitZeroGuestELF (only addi/ecall) never touches. These only
+// trace and check constraints — they do not run the (expensive) prove/verify
+// pipeline, which is already covered by verifier-ray/codegen/riscv_bootstrap.go
+// for ExitZeroGuestELF.
+func TestRisc5InstructionCoverageGuests(t *testing.T) {
 	binf, err := compileBinaryConstraints(riscvMainZkcPath)
 	if err != nil {
 		t.Fatalf("failed to compile zkc source: %v", err)
