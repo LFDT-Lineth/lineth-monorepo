@@ -1,0 +1,5 @@
+include "../../common/type.zkc"
+
+// TODO: implement secp256k1 signature verification
+fn secp256k1_verify<ram>() {
+}

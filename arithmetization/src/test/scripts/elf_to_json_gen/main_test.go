@@ -82,6 +82,7 @@ func TestShouldUseNoOp(t *testing.T) {
 		{name: "xori x0 x0 0xff", instr: encodeIType(opcodeOPIMM, 0b100, 0, 0, 0xff), want: true},
 		{name: "slli x0 x0 4", instr: encodeIType(opcodeOPIMM, 0b001, 0, 0, 4), want: true},
 		{name: "keccak x0", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 0), want: false},
+		{name: "secp256k1_verify x0", instr: encodeRType(opcodeCUSTOM1, 0b0000001, 0, 0, 0b000, 0), want: false},
 		{name: "jal x0", instr: encodeJType(0, 8), want: false},
 	}
 
@@ -306,6 +307,7 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
 		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
 		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
+		{name: "secp256k1_verify", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpSecp256k1Verify},
 		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
 		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeInvalid},
 		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
@@ -337,6 +339,9 @@ func TestRtypeOpForRd(t *testing.T) {
 	}
 	if got := rtypeOpForRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
 		t.Fatalf("rtypeOpForRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
+	}
+	if got := rtypeOpForRd(rtypeOpSecp256k1Verify, 5); got != rtypeOpSecp256k1Verify {
+		t.Fatalf("rtypeOpForRd(secp256k1_verify, x5) = %d, want %d", got, rtypeOpSecp256k1Verify)
 	}
 }
 
@@ -598,6 +603,7 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
 		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
+		{name: "secp256k1_verify", instr: encodeRType(opcodeCUSTOM1, 0b0000001, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpSecp256k1Verify},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

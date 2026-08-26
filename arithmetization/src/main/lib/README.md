@@ -32,6 +32,7 @@ Note. We use '.' to represent '0'.
 | keccak              |   🟢   | custom-1 | 0b000  | 0b0000000 |
 | poseidon2           |   🟢   | custom-1 | 0b001  | 0b0000000 |
 | write_output        |   🟡   | custom-1 | 0b010  | 0b0000000 |
+| secp256k1_verify    |   🟡   | custom-1 | 0b000  | 0b0000001 |
 | ecrecover           |   🔴   | custom-1 |        |           |
 | poly_eval           |   🔴   | custom-1 |        |           |
 | ...                 |   🔴   | custom-1 |        |           |

@@ -106,7 +106,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return false
 		}
 		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
+		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput, rtypeOpSecp256k1Verify:
 			return false
 		default:
 			return true
@@ -211,6 +211,7 @@ const (
 	rtypeOpKeccak      = 28
 	rtypeOpPoseidon2   = 29
 	rtypeOpWriteOutput = 30
+	rtypeOpSecp256k1Verify = 31
 	rtypeInvalid       = 63
 )
 
@@ -272,10 +273,10 @@ const (
 	computeNoOp   = 0
 	computeITypeBase = 1
 	computeRTypeBase = 25
-	computeSTypeBase = 56
-	computeBTypeBase = 60
-	computeJTypeBase = 66
-	computeUTypeBase = 68
+	computeSTypeBase = 57
+	computeBTypeBase = 61
+	computeJTypeBase = 67
+	computeUTypeBase = 69
 	computeInvalid   = 255
 )
 
@@ -517,6 +518,14 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		}
 		return rtypeInvalid
 	case opcodeCUSTOM1:
+		if funct7 == 0b0000001 {
+			switch funct3 {
+			case 0b000:
+				return rtypeOpSecp256k1Verify
+			default:
+				return rtypeInvalid
+			}
+		}
 		if funct7 != 0b0000000 {
 			return rtypeInvalid
 		}

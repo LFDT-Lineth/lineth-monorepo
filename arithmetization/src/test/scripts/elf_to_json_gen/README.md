@@ -113,17 +113,19 @@ For an R-type instruction, the `decoded` record does not replay raw `funct3` /
 to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
 `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
 keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
-`RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
+`RTYPE_WRITE_OUTPUT`, `RTYPE_SECP256K1_VERIFY`) have no `_WB` variant and return early after the
 precompile side effects.
 
 ### Custom-1 precompiles (`opcode` = `0b0101011`)
 
-Both use `funct7 = 0b0000000`. `decodeRTypeSemantic` discriminates on `funct3`:
+`decodeRTypeSemantic` discriminates on `(funct3, funct7)`:
 
-| `funct3` | Local op (`main.go`) | Unified `compute_op` (`constants.zkc`) | Runtime handler |
-| -------- | -------------------- | --------------------------------------- | --------------- |
-| `0b000`  | `rtypeOpKeccak` (28) | `RTYPE_KECCAK` (53)                     | `keccak(...)` in `interpreter.zkc` |
-| `0b001`  | `rtypeOpPoseidon2` (29) | `RTYPE_POSEIDON2` (54)              | `poseidon2(...)` in `interpreter.zkc` |
+| `funct3` | `funct7`   | Local op (`main.go`) | Unified `compute_op` (`constants.zkc`) | Runtime handler |
+| -------- | ---------- | -------------------- | --------------------------------------- | --------------- |
+| `0b000`  | `0b0000000` | `rtypeOpKeccak` (28) | `RTYPE_KECCAK` (53)                     | `keccak(...)` in `interpreter.zkc` |
+| `0b001`  | `0b0000000` | `rtypeOpPoseidon2` (29) | `RTYPE_POSEIDON2` (54)              | `poseidon2(...)` in `interpreter.zkc` |
+| `0b010`  | `0b0000000` | `rtypeOpWriteOutput` (30) | `RTYPE_WRITE_OUTPUT` (55)         | `write_output(...)` in `interpreter.zkc` |
+| `0b000`  | `0b0000001` | `rtypeOpSecp256k1Verify` (31) | `RTYPE_SECP256K1_VERIFY` (56) | `secp256k1_verify(...)` in `interpreter.zkc` |
 
 Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
 (255) in the `decoded` table.
@@ -159,7 +161,7 @@ Not mapped to `NO_OP` (keep semantic `compute_op`):
 - `jal` / `jalr x0, …` — control flow
 - branches and stores — side effects
 - `ecall` / `ebreak` — syscalls
-- **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`) — memory side effects
+- **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`, `WRITE_OUTPUT`, `SECP256K1_VERIFY`) — memory side effects
 
 The predicate lives in `shouldUseNoOp` / `finalizeComputeOp` in `main.go`
 (see `main_test.go`).
