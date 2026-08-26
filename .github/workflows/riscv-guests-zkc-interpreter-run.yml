@@ -17,9 +17,8 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
-    branches:
-      - main
     paths:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)

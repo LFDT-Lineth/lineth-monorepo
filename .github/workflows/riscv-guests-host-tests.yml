@@ -9,9 +9,8 @@ name: riscv-guests host tests
 
 on:
   pull_request:
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
-    branches:
-      - main
     paths:
       - 'riscv-guests/**'
       - '.github/actions/setup-riscv-guests/**'

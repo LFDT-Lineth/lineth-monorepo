@@ -36,8 +36,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.triggering_actor }}
         run: |
-          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)" \
-            || { echo "::error::Permission lookup failed for '${ACTOR}'."; exit 1; }
+          set -euo pipefail
+          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)"
           [ -n "$perm" ] || { echo "::error::No permission returned for '${ACTOR}' (not a repo collaborator)."; exit 1; }
           echo "Dispatch actor '${ACTOR}' permission: ${perm}"
           # triage intentionally excluded: it cannot push code, so it must not drive the publish pipeline.
@@ -258,7 +258,9 @@ jobs:
 
   testing:
     needs: [filter-commit-changes, compute-commit-tags]
-    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
+    # !cancelled() (not always()): run on need failure/skip, but not after a
+    # concurrency cancel supersedes this run.
+    if: ${{ !cancelled() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
@@ -325,7 +327,8 @@ jobs:
         manual-docker-build-and-e2e-tests,
       ]
     # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reusable-run-e2e-tests.yml
-    if: ${{ always() && (needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success') }}
+    # !cancelled() (not always()): don't start expensive e2e after a concurrency cancel.
+    if: ${{ !cancelled() && (needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success') }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -340,8 +343,9 @@ jobs:
   publish-linea-besu-after-run-tests-success:
     needs: [filter-commit-changes, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
+    # !cancelled() (not always()): don't start a publish after a concurrency cancel.
     if: >
-      always() && 
+      !cancelled() &&
       github.ref != 'refs/heads/main' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) &&
       needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&
@@ -355,13 +359,21 @@ jobs:
 
   cleanup-deployments:
     needs: [authorise-dispatch, run-e2e-tests]
-    # always(): still clean up after failed/cancelled e2e runs. Skips draft/fork PRs and
-    # unauthorised manual dispatches; PR/push events pass because authorise-dispatch is skipped.
-    # Unlike main's PR-only form, manual workflow_dispatch still cleans up (per PR requirement).
+    # always(): still clean up after failed/cancelled e2e runs. Only eligible PRs and
+    # authorised manual dispatches may remove deployments; main pushes must not.
     if: >
       always() &&
-      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
-      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
+      (
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.fork == false &&
+          github.event.pull_request.draft == false
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          needs.authorise-dispatch.result == 'success'
+        )
+      )
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       contents: read

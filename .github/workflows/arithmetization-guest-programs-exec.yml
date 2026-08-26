@@ -2,9 +2,8 @@ name: Tracer guest programs execution - l2-execution, Add in Zig and Blake in Ru
 
 on:
   pull_request:
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
-    branches:
-      - main
     paths:
       - 'arithmetization/**'
       - 'riscv-guests/l2-execution/**'
