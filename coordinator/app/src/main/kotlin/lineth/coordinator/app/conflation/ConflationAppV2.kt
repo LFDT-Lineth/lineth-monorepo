@@ -103,20 +103,13 @@ class ConflationAppV2(
     vertx = vertx,
   )
 
-  private val coinbase: String = l2EthClient.ethCoinbase().get().encodeHex()
   private val chainId: ULong = l2EthClient.ethChainId().get()
 
   private val riscvProverClientFactory = RiscvProverClientFactory(
     vertx = vertx,
     config = configs.riscvProversConfig!!,
     l2MessageServiceAddress = configs.protocol.l2.contractAddress,
-    coinbase = coinbase,
     metricsFacade = metricsFacade,
-  )
-
-  private val chainConfigProvider = ChainConfigProvider(
-    chainId = chainId,
-    proversConfig = configs.riscvProversConfig!!,
   )
 
   private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
@@ -144,7 +137,7 @@ class ConflationAppV2(
     val requestBuilder = L2ExecutionRequestBuilderImpl(
       executionWitnessClient = executionWitnessClient,
       forcedTransactionsDao = forcedTransactionsDao,
-      chainConfigProvider = chainConfigProvider,
+      chainId = chainId,
     )
 
     val batchProofHandler = BatchProofHandlerImpl(batchesRepository)
