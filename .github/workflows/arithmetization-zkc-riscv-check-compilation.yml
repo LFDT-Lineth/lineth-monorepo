@@ -7,14 +7,14 @@ on:
     paths:
       - 'arithmetization/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   workflow_call:
     inputs:
       zkc-ref:

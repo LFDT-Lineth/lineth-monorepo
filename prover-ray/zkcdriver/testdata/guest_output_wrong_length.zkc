@@ -1,0 +1,19 @@
+pub input data(address:u8) -> (byte:u8)
+pub output guest_output(address:u8) -> (byte:u8)
+
+// Same as guest_output.zkc, but one byte too long: it writes nine output bytes
+// where the binding expects risc5.NumGuestPublicOutputs = 8, so the last address
+// of the memory is 8 instead of 7. This is the shape the length constraint has to
+// reject — without it a prover could grow the output memory and pick which of its
+// rows end up as the public inputs.
+fn main() {
+    guest_output[0] = data[0]
+    guest_output[1] = data[1]
+    guest_output[2] = data[2]
+    guest_output[3] = data[3]
+    guest_output[4] = data[4]
+    guest_output[5] = data[5]
+    guest_output[6] = data[6]
+    guest_output[7] = data[7]
+    guest_output[8] = data[8]
+}
