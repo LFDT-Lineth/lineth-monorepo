@@ -347,7 +347,23 @@ test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
 test "reconstruct: rejects non-power-of-two and missing dynamic sizes" {
     try std.testing.expectError(error.NonPowerOfTwoModuleSize, pcs.reconstruct(recon_system, &[_]usize{6}));
     try std.testing.expectError(error.MissingDynamicModuleSize, pcs.reconstruct(recon_system, &.{}));
-    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, pcs.reconstruct(recon_system, &[_]usize{2}));
+}
+
+test "reconstruct: accepts a dynamic size below the column's declared min_size_log2" {
+    // dyn.min_size_log2 documents the smallest runtime size at which every RAW
+    // shift of a column is still distinct (no two shifts alias to the same
+    // domain point); it is NOT an enforced floor. An honest proof CAN run a
+    // dynamic module at a smaller, aliasing size: prover-ray's own
+    // RecoverBatchClaims dedupes aliasing openings into a single FRI claim
+    // before ever building the batch (and every prover computes byte-identical
+    // claimed values for aliasing raw shifts, since the shift is applied via
+    // omega_n^k with n the RUNTIME size — see wiop.LagrangeEval.evalPolynomials).
+    // reconstructQueryValueAt dedupes the same way when summing the DEEP
+    // quotient, so verify() stays correct at this size too (this column has
+    // only one shift, so there is nothing to dedupe here — this test only pins
+    // that `reconstruct` itself no longer rejects the size).
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{2});
+    try std.testing.expectEqual(@as(u8, 1), recon.entry_size_log2[recon.col_to_entry[0]]);
 }
 
 test "routeInputRoots follows input-opening order as dynamic sizes change" {

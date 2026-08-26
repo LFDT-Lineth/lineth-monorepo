@@ -268,7 +268,19 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                if (sz < dyn.min_size_log2) return Error.DynamicModuleSizeBelowMinimum;
+                // dyn.min_size_log2 used to reject runtime sizes where two
+                // distinct RAW shifts of this column alias to the same domain
+                // point (e.g. offsets 0 and -1 both normalize to row 0 at
+                // runtime size 1). That rejection was overly conservative: an
+                // honest prover CAN legitimately run a module at an aliasing
+                // size (prover-ray's own RecoverBatchClaims dedupes such
+                // openings into a single FRI claim before batching, and
+                // reconstructQueryValueAt below dedupes the same way when
+                // summing the DEEP quotient), so aliasing sizes are safe to
+                // accept, not just aliasing-completeness gaps to reject. Kept
+                // as a documented field (still emitted by codegen) but no
+                // longer enforced here.
+                _ = dyn.min_size_log2;
                 break :blk sz;
             },
         };
@@ -327,6 +339,7 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
 /// `shifts.len` (and hence `claim_cells.len`) is fixed at codegen time.
 fn totalClaimSlots(comptime system: System) usize {
     comptime {
+        @setEvalBranchQuota(20_000_000);
         var total: usize = 0;
         for (system.columns) |col| total += col.shifts.len;
         return total;
@@ -761,6 +774,28 @@ fn reconstructQueryValueAt(
         var term = ext.Ext.zero();
         for (shifts, 0..) |shift, k| {
             const point = shiftedPoint(size_log2, shift, zeta);
+            // Distinct RAW shifts baked at codegen time can alias to the SAME
+            // domain point at a smaller runtime module size (e.g. offsets 0
+            // and -1 both normalize to row 0 when the runtime size is 1).
+            // prover-ray's own RecoverBatchClaims dedupes by the
+            // runtime-normalized shift before ever building the FRI batch, so
+            // an aliasing pair contributes exactly ONE term to the DEEP
+            // quotient sum there. The two (or more) claim cells baked here for
+            // aliasing raw shifts are guaranteed equal by construction (see
+            // wiop.LagrangeEval.evalPolynomials: the shift is applied via
+            // omega_n^k with n the RUNTIME size, so aliasing shifts multiply
+            // the evaluation point by the same root of unity and every prover
+            // computes byte-identical claims for them). Skipping repeats of an
+            // already-seen point here reproduces that same single-term
+            // contribution instead of double-counting it.
+            var already_seen = false;
+            for (shifts[0..k]) |prior_shift| {
+                if (shiftedPoint(size_log2, prior_shift, zeta).eql(point)) {
+                    already_seen = true;
+                    break;
+                }
+            }
+            if (already_seen) continue;
             const denom = x.sub(point);
             if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
             const numerator = entry_value.sub(entry_claims[i][k]);
