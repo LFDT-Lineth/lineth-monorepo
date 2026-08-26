@@ -17,17 +17,17 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
-    branches:
-      - main
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
       - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
-      - 'arithmetization/src/main/wrappers/**'    # linea_zkvm_accel — imported by the guest build (l2-execution/build.zig)
       - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
       - 'arithmetization/src/test/scripts/**'     # elf_to_json_gen
       - 'arithmetization/Makefile'                # install-zkc / ZKC_REF
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   push:
     branches:
@@ -36,11 +36,11 @@ on:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'
       - 'arithmetization/src/main/lib/**'
-      - 'arithmetization/src/main/wrappers/**'
       - 'arithmetization/src/test/Makefile'
       - 'arithmetization/src/test/scripts/**'
       - 'arithmetization/Makefile'
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   workflow_dispatch:
     inputs:
@@ -62,6 +62,7 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large

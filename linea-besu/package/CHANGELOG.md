@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(sequencer)* Deduplicate forced transactions in pool (#3807)
 ## [2.2.0] - 2026-08-21
 
 ### 🚀 Features

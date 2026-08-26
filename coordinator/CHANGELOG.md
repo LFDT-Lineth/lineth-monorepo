@@ -23,6 +23,7 @@
 ### 🚜 Refactor
 
 - *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
+- *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
 
 ### ⚙️ Miscellaneous Tasks
 

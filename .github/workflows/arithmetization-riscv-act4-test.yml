@@ -2,18 +2,24 @@ name: Tracer riscv ACT4 test
 
 on:
   pull_request:
-    branches:
-      - main
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/build_common/**'
+     - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
     inputs:
@@ -34,6 +40,7 @@ permissions:
 
 jobs:
   act4-reference-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       ZKC_EXEC_FLAGS: "--fast --gogen"

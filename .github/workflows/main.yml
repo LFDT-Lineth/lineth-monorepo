@@ -2,9 +2,16 @@ name: main
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -13,10 +20,48 @@ permissions:
   packages: write
 
 jobs:
+  # Manual-dispatch gate: only internal contributors (collaborators with
+  # write/maintain/admin) may trigger the full pipeline via workflow_dispatch.
+  # triage is intentionally excluded (cannot push code, so must not drive the
+  # publish pipeline). PR and push triggers skip this gate entirely.
+  # Read-only; fails fast to block external dispatches before any job runs.
+  authorise-dispatch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions:
+      contents: read
+    steps:
+      - name: Verify dispatch actor is a repo collaborator
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.triggering_actor }}
+        run: |
+          set -euo pipefail
+          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)"
+          [ -n "$perm" ] || { echo "::error::No permission returned for '${ACTOR}' (not a repo collaborator)."; exit 1; }
+          echo "Dispatch actor '${ACTOR}' permission: ${perm}"
+          # triage intentionally excluded: it cannot push code, so it must not drive the publish pipeline.
+          case "$perm" in
+            admin|maintain|write) echo "Authorised." ;;
+            *) echo "::error::Actor '${ACTOR}' (permission '${perm}') is not authorised to run this workflow manually."; exit 1 ;;
+          esac
+
   code-analysis:
+    needs: [authorise-dispatch]
+    # !cancelled() (not always()): tolerate the skipped dispatch gate without
+    # letting a cancelled run still start CodeQL.
+    if: |
+      !cancelled() &&
+      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/codeql.yml
 
   lint-latest-commit-messages:
+    needs: [authorise-dispatch]
+    if: |
+      !cancelled() &&
+      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/lint-commit-messages.yml
     permissions:
       contents: read
@@ -24,12 +69,14 @@ jobs:
     secrets: inherit
 
   component-changelog-upload:
-    if: github.ref == 'refs/heads/main'
+    # Push-only: never run on manual dispatch, which could otherwise push
+    # changelog commits to main via the release bot.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint-latest-commit-messages]
     uses: ./.github/workflows/component-changelog-upload.yml
 
   component-changelog-commit:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [component-changelog-upload]
     permissions:
       contents: write
@@ -67,7 +114,9 @@ jobs:
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
-          base: ${{ github.ref }}
+          # On manual dispatch, diff against main so a stacked branch's full
+          # change set is detected (github.ref would diff the branch vs itself).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
           filters: |
             coordinator:
@@ -187,7 +236,8 @@ jobs:
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: exclusion-filter
         with:
-          base: ${{ github.ref }}
+          # On manual dispatch, diff against main (see Filter commit changes).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
           filters: |
             has-changes-requiring-build:
@@ -208,7 +258,9 @@ jobs:
 
   testing:
     needs: [filter-commit-changes, compute-commit-tags]
-    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
+    # !cancelled() (not always()): run on need failure/skip, but not after a
+    # concurrency cancel supersedes this run.
+    if: ${{ !cancelled() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' && needs.compute-commit-tags.outputs.commit_tag != '' }}
     uses: ./.github/workflows/testing.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
@@ -275,7 +327,8 @@ jobs:
         manual-docker-build-and-e2e-tests,
       ]
     # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reusable-run-e2e-tests.yml
-    if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
+    # !cancelled() (not always()): don't start expensive e2e after a concurrency cancel.
+    if: ${{ !cancelled() && (needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success') }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -290,8 +343,9 @@ jobs:
   publish-linea-besu-after-run-tests-success:
     needs: [filter-commit-changes, run-e2e-tests]
     # Only run for same-repo PRs: do not checkout and run PR head from forks (avoids untrusted code with contents/packages write).
+    # !cancelled() (not always()): don't start a publish after a concurrency cancel.
     if: >
-      always() && 
+      !cancelled() &&
       github.ref != 'refs/heads/main' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) &&
       needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build == 'true' &&
@@ -304,8 +358,22 @@ jobs:
     secrets: inherit
 
   cleanup-deployments:
-    needs: [run-e2e-tests]
-    if: ${{ always() && github.event.pull_request.head.repo.fork == false }}
+    needs: [authorise-dispatch, run-e2e-tests]
+    # always(): still clean up after failed/cancelled e2e runs. Only eligible PRs and
+    # authorised manual dispatches may remove deployments; main pushes must not.
+    if: >
+      always() &&
+      (
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.fork == false &&
+          github.event.pull_request.draft == false
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          needs.authorise-dispatch.result == 'success'
+        )
+      )
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       contents: read

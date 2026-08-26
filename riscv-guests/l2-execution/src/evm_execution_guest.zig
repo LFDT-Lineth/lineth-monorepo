@@ -1,96 +1,36 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const executor = @import("zesu_executor");
-const ssz_decode = @import("zesu_ssz_decode");
-const ssz_output = @import("zesu_ssz_output");
-const zesu_allocator = @import("zesu_allocator");
+/// Log-preserving stateless-execution seam (full event logs, unlike zesu's own bloom-only
+/// `executor.executeStatelessInput`). `pub` for `evm_execution_guest_test.zig`'s parity check
+/// against zesu's raw executor; the guest itself reaches this seam only through
+/// `l2_execution.runL2Execution`.
+pub const execution = @import("execution.zig");
+const l2_execution = @import("l2_execution.zig");
+const l2_execution_ssz = @import("l2_execution_ssz");
 
 // Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
 extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
-const EXIT_VALID: u64 = 0;
-const EXIT_SSZ_DECODE_ERROR: u64 = 1;
-const EXIT_EXECUTOR_ERROR: u64 = 2;
-const EXIT_POST_STATE_ROOT_MISMATCH: u64 = 3;
-const EXIT_RECEIPTS_ROOT_MISMATCH: u64 = 4;
-const EXIT_STATE_AND_RECEIPTS_ROOTS_MISMATCH: u64 = 5;
-const EXIT_SSZ_SERIALIZE_ERROR: u64 = 6;
-
-// This guest is a thin wrapper over zesu's vanilla stateless execution: it decodes an SSZ-encoded
-// StatelessInput, executes the block, and serializes the SSZ validation result — the same pipeline
-// as zesu's `runner.runStateless` / `zkevm-blockchain-test-runner`.
+// This is the Rollup's extended l2-execution zkVM guest: it decodes the extended
+// `L2ExecutionProofPrivateInput` SSZ envelope, runs `l2_execution.runL2Execution` (the
+// Linea/Rollup-specific layer over per-block stateless execution — conflation, forced
+// transactions, the L1<->L2 bridge, the public-input tuple), and emits the SSZ output.
 //
 // The crypto accelerators (zkvm_*) that zesu declares as externs are DEFINED in-guest by
 // zkvm_provide.zig (pulled in below for the riscv64 build), so the statically-linked guest ELF has
 // no unresolved zkvm_* externals. The native host build doesn't reference them — it uses zesu's
 // C-backed crypto instead.
 
-/// Result of running one SSZ-encoded StatelessInput:
-///   `out`     — the 105-byte SSZ SszStatelessValidationResult
-///   `success` — successful_validation: execution succeeded AND the computed post-state and
-///               receipts roots match the values claimed in the payload.
-pub const Result = struct {
-    out: [105]u8,
-    success: bool,
-};
-
-const ExitReason = enum {
-    valid,
-    execution_error,
-    post_state_root_mismatch,
-    receipts_root_mismatch,
-    state_and_receipts_roots_mismatch,
-};
-
-const RunResult = struct {
-    result: Result,
-    exit_reason: ExitReason,
-};
-
-const GuestRunOutcome = union(enum) {
-    result: RunResult,
-    decode_error,
-    serialize_error,
-};
-
-/// Vanilla zesu stateless block execution. Fed an explicit byte slice so it runs identically on the
-/// native host (tests) and from the zkVM guest entry below.
-pub fn runStateless(allocator: std.mem.Allocator, ssz_input: []const u8) !Result {
-    return switch (runStatelessWithExitReason(allocator, ssz_input)) {
-        .result => |run_result| run_result.result,
-        .decode_error => error.DecodeError,
-        .serialize_error => error.SerializeError,
-    };
-}
-
-fn runStatelessWithExitReason(allocator: std.mem.Allocator, ssz_input: []const u8) GuestRunOutcome {
-    zesu_allocator.set(allocator);
-
-    const si = ssz_decode.decode(allocator, ssz_input) catch return .decode_error;
-    const ep = &si.new_payload_request.execution_payload;
-
-    const exit_reason: ExitReason = blk: {
-        const proof = executor.executeStatelessInput(allocator, si, si.chain_config.fork_name) catch break :blk .execution_error;
-        const state_root_matches = std.mem.eql(u8, &proof.post_state_root, &ep.state_root);
-        const receipts_root_matches = std.mem.eql(u8, &proof.receipts_root, &ep.receipts_root);
-        if (state_root_matches and receipts_root_matches) break :blk .valid;
-        if (!state_root_matches and !receipts_root_matches) break :blk .state_and_receipts_roots_mismatch;
-        if (!state_root_matches) break :blk .post_state_root_mismatch;
-        break :blk .receipts_root_mismatch;
-    };
-
-    const out = ssz_output.serialize(allocator, si.new_payload_request, si.chain_config.chain_id, exit_reason == .valid) catch return .serialize_error;
-    return .{ .result = .{ .result = .{ .out = out, .success = exit_reason == .valid }, .exit_reason = exit_reason } };
-}
-
-/// zkVM guest entry. Reads the SSZ StatelessInput via the zkvm-standards `read_input` — the same ABI
-/// Zesu uses — then executes it and exits 0 on successful_validation, 1 otherwise. WHERE the input
-/// lives is the proving system's concern, NOT the guest's: for Linea, `read_input` is satisfied by
-/// zesu-zkvm's `linea/src/zkvm_io.zig` (imported as `linea_zkvm_io`), which reads the memory-mapped
-/// `_in_start` (framed `[u64 LE len][SSZ]`). The guest never names a memory slot.
+/// zkVM guest entry. Reads the extended `L2ExecutionProofPrivateInput` via `read_input`, runs
+/// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success,
+/// 1 on any error. `read_input`/`write_output` are satisfied by zesu-zkvm's `linea_zkvm_io` — where
+/// the input lives and how the output surfaces is the proving system's concern, not the guest's.
+///
+/// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);
+/// the `--json`/`--ssz` toggle lives on the native `l2-execution-runner` tool instead.
 fn guestMain() callconv(.c) noreturn {
     const zkvm_io = @import("linea_zkvm_io");
 
@@ -101,29 +41,41 @@ fn guestMain() callconv(.c) noreturn {
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
     zkvm_io.read_input(&buf_ptr, &buf_size);
-    const ssz_input = buf_ptr[0..buf_size];
+    const raw_input = buf_ptr[0..buf_size];
 
-    switch (runStatelessWithExitReason(allocator, ssz_input)) {
-        .decode_error => exit(EXIT_SSZ_DECODE_ERROR),
-        .serialize_error => exit(EXIT_SSZ_SERIALIZE_ERROR),
-        .result => |run_result| exit(exitCode(run_result.exit_reason)),
-    }
+    const out = runL2ExecutionGuest(allocator, raw_input) catch exit(1);
+    zkvm_io.write_output(&out);
+    exit(0);
 }
 
-fn exitCode(reason: ExitReason) u64 {
-    return switch (reason) {
-        .valid => EXIT_VALID,
-        .execution_error => EXIT_EXECUTOR_ERROR,
-        .post_state_root_mismatch => EXIT_POST_STATE_ROOT_MISMATCH,
-        .receipts_root_mismatch => EXIT_RECEIPTS_ROOT_MISMATCH,
-        .state_and_receipts_roots_mismatch => EXIT_STATE_AND_RECEIPTS_ROOTS_MISMATCH,
-    };
+/// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one
+/// `catch exit(1)` away from a clean guest rejection. Returns the output BY VALUE (a small,
+/// fixed-size array — see `l2_execution_ssz.encodeOutput`'s doc comment) rather than an
+/// allocator-backed slice: there's nothing for an allocator to do here.
+fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![l2_execution_ssz.OUTPUT_SIZE]u8 {
+    const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
+    const result = try l2_execution.runL2Execution(allocator, decoded);
+
+    // Debug visibility for the plain, SSZ-encoded 16-field public-input tuple: `encodeOutput`
+    // below commits only its keccak256 (see `l2_execution_ssz.hashPublicInputs`), so this is the
+    // only place the plain tuple is still observable. `zkvm_log` (zesu's real logging ABI — see
+    // zesu/src/zkvm/root.zig — DEFINED as a no-op in `zkvm_provide.zig`, see its doc comment for
+    // why) is the standard sink for this; level 0 mirrors zesu's own `std.log`/panic usage.
+    const public_inputs_bytes = l2_execution_ssz.encodePublicInputsBytes(result.public_inputs);
+    zkvm_log(0, &public_inputs_bytes, public_inputs_bytes.len);
+
+    return l2_execution_ssz.encodeOutput(result.public_inputs);
 }
+
+/// zesu's own logging ABI (see zesu/src/zkvm/root.zig's doc comment) — DEFINED (as a no-op, for
+/// now) in `zkvm_provide.zig` alongside every other `zkvm_*` symbol this statically-linked ELF must
+/// satisfy locally.
+extern fn zkvm_log(level: u8, msg_ptr: [*]const u8, msg_len: usize) void;
 
 comptime {
     // Export `main` only for the freestanding RISC-V guest, which owns its entry point. Native
-    // builds import this as a library (the unit test and the spec runner exe) and get `main` from
-    // std.start — exporting it here too would be a symbol collision.
+    // builds import this as a library (the unit test) and get `main` from std.start — exporting it
+    // here too would be a symbol collision.
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers (zkvm_provide.zig): it DEFINES every zkvm_* symbol zesu
