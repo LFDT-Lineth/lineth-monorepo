@@ -23,7 +23,7 @@ include "../lib/io/write_output.zkc"
 //
 // Runtime dispatch is on the pre-decoded semantic compute op (`compute_op`).
 // Invalid opcodes (COMPUTE_INVALID) are handled by the default arm.
-// 
+//
 // Each slot is justified with the predecoding justification loop in `main.zkc`
 // (it will be done offline by `predecoding/main.zkc` in the future) :
 // raw blob words must match `decoded[index]` in memory.zkc
@@ -39,7 +39,7 @@ include "../lib/io/write_output.zkc"
 // when rd is x0.
 //
 // =======
-// I-type  
+// I-type
 // =======
 //
 // In the predecoding phase, the operands for I-type instructions come from a
@@ -55,10 +55,10 @@ include "../lib/io/write_output.zkc"
 // ========
 // R-type
 // ========
-// 
+//
 // In the predecoding phase, the operands for R-type instructions come from the 25-bit
 // encoding (opcode stripped) that is laid out as:
-// 
+//
 //   funct7 :: rs2 :: rs1 :: funct3 :: rd
 //
 // Supported operation groups:
@@ -78,7 +78,7 @@ include "../lib/io/write_output.zkc"
 //   Custom-1 — Keccak precompile (no register writeback)
 //
 // =======
-// S-type  
+// S-type
 // =======
 //
 // In the predecoding phase, the operands for S-type instructions come from the 25-bit
@@ -89,7 +89,7 @@ include "../lib/io/write_output.zkc"
 //
 // The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
 // sign-extended to 64 bits at ELF time into `imm`.
-// 
+//
 // var imm:DoubleWord = sgn_extension_u12_u64(imm12)
 //
 // Store variants selected by compute_op (from funct3 at ELF time):
@@ -99,12 +99,12 @@ include "../lib/io/write_output.zkc"
 //   STYPE_STORE64 (funct3 = 0b011) — store doubleword (64 bits)
 //
 // Effect:
-//   mem[rs1 + imm] ← lower N bits of rs2 
+//   mem[rs1 + imm] ← lower N bits of rs2
 //
 // =======
-// B-type  
+// B-type
 // =======
-// 
+//
 // In the predecoding phase, the operands for B-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
 //
@@ -132,9 +132,9 @@ include "../lib/io/write_output.zkc"
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
 //
 // =======
-// J-type  
+// J-type
 // =======
-// 
+//
 // In the predecoding phase, the operands for J-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
 //
@@ -151,11 +151,11 @@ include "../lib/io/write_output.zkc"
 // Effect:
 //   JTYPE_JAL    — pc_new = pc + imm
 //   JTYPE_JAL_WB — pc_new = pc + imm; rd = pc + 4
-// 
+//
 // =======
-// U-type  
+// U-type
 // =======
-// 
+//
 // In the predecoding phase, the operands for U-type instructions come from the 25-bit
 // encoding (opcode stripped) is simply:
 //
@@ -165,7 +165,7 @@ include "../lib/io/write_output.zkc"
 // zeroed) and sign-extended to 64 bits at ELF time into `imm`.
 //
 //   var imm:DoubleWord = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
-// 
+//
 // ================
 // NO_OP
 // ================
@@ -210,7 +210,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
 
     switch compute_op {
         // ==============
-        // I-type — LOAD 
+        // I-type — LOAD
         // ==============
         case READ8_ZEXT_WB: {
             printf "READ8_ZEXT_WB(a) "
@@ -228,7 +228,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = read_64(rs1_plus_imm) as DoubleWord
         }
         // ================
-        // I-type 
+        // I-type
         // ================
         case OP_ADDI_WB: {
             printf "OP_ADDI_WB(a) "
@@ -259,8 +259,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         }
 
         // ============================
-        // R-type 
-        // ============================                
+        // R-type
+        // ============================
         case RTYPE_ADD_WB: {
             printf "RTYPE_ADD_WB(a) "
             print_r_operands(rd, rs1, rs2)
@@ -299,8 +299,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             result = v1 >> shift_amount_6
         }
         // =======
-        // S-type 
-        // =======        
+        // S-type
+        // =======
         case STYPE_STORE64: {
             printf "STYPE_STORE64(a) "
             print_s_operands(rs2, rs1, imm)
@@ -325,8 +325,8 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
         }
 
         // =======
-        // B-type 
-        // =======        
+        // B-type
+        // =======
         case BRANCH_BEQ: {
             printf "BRANCH_BEQ(a) "
             print_b_operands(rs1, rs2, imm)
@@ -370,7 +370,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Addr
             return
         }
         // =======
-        // U-type 
+        // U-type
         // =======
         case UTYPE_AUIPC_WB: {
             printf "UTYPE_AUIPC_WB(a) "
@@ -541,8 +541,8 @@ fn interpreter_b<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             return
         }
         // =======
-        // B-type 
-        // =======        
+        // B-type
+        // =======
         case BRANCH_BLT: {
             printf "BRANCH_BLT(b) "
             print_b_operands(rs1, rs2, imm)
@@ -619,10 +619,6 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     var v1_lower:Word
     var v2_upper:Word
     var v2_lower:Word
-    var product_upper:Word
-    var product_lower:Word
-    var product_hi:DoubleWord
-    var product_lo:DoubleWord
     var word_wip:Word
     var result:DoubleWord
     var mem_address:Address
@@ -630,8 +626,8 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     switch compute_op {
 
         // ============================
-        // R-type — writeback variants 
-        // ============================                
+        // R-type — writeback variants
+        // ============================
         case RTYPE_SLT_WB: {
             printf "RTYPE_SLT_WB(c) "
             print_r_operands(rd, rs1, rs2)
@@ -651,22 +647,22 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
         case RTYPE_MUL_WB: {
             printf "RTYPE_MUL_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            product_hi, result = mul64_uu(v1, v2)
+            _, result = mul64_uu(v1, v2)
         }
         case RTYPE_MULH_WB: {
             printf "RTYPE_MULH_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result, product_lo = mul64_ss(v1, v2)
+            result, _ = mul64_ss(v1, v2)
         }
         case RTYPE_MULHSU_WB: {
             printf "RTYPE_MULHSU_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result, product_lo = mul64_su(v1, v2)
+            result, _= mul64_su(v1, v2)
         }
         case RTYPE_MULHU_WB: {
             printf "RTYPE_MULHU_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result, product_lo = mul64_uu(v1, v2)
+            result, _ = mul64_uu(v1, v2)
         }
         case RTYPE_DIV_WB: {
             printf "RTYPE_DIV_WB(c) "
@@ -689,12 +685,12 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
         case RTYPE_REM_WB: {
             printf "RTYPE_REM_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result = rem64_ss(v1, v2)
+            _, result = divMod_64_ss(v1, v2)
         }
         case RTYPE_REMU_WB: {
             printf "RTYPE_REMU_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result = rem64_uu(v1, v2)
+            _, result = divMod_64_uu(v1, v2)
         }
         case RTYPE_ADDW_WB: {
             v1_upper::v1_lower = v1
@@ -745,8 +741,8 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             v2_upper::v2_lower = v2
             printf "RTYPE_MULW_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            product_upper, product_lower = mul32_uu(v1_lower, v2_lower)
-            result = sgn_extension_u32_u64(product_lower)
+            _, word_wip = mul32_uu(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_DIVW_WB: {
             v1_upper::v1_lower = v1
@@ -777,7 +773,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             v2_upper::v2_lower = v2
             printf "RTYPE_REMW_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            word_wip = rem32_ss(v1_lower, v2_lower)
+            _, word_wip = divMod_32_ss(v1_lower, v2_lower)
             result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_REMUW_WB: {
@@ -785,12 +781,12 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             v2_upper::v2_lower = v2
             printf "RTYPE_REMUW_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            word_wip = rem32_uu(v1_lower, v2_lower)
+            _, word_wip = divMod_32_uu(v1_lower, v2_lower)
             result = sgn_extension_u32_u64(word_wip)
         }
         // =======
-        // S-type 
-        // =======        
+        // S-type
+        // =======
         case STYPE_STORE16: {
             mem_address = signed_sum_of_double_word(v1, imm) as Address
             printf "STYPE_STORE16(c) "
@@ -816,7 +812,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             return
         }
         // =======
-        // J-type 
+        // J-type
         // =======
         case JTYPE_JAL: {
             printf "JTYPE_JAL(c) "
@@ -839,7 +835,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             return
         }
         // =======
-        // U-type 
+        // U-type
         // =======
         case UTYPE_LUI_WB: {
             printf "UTYPE_LUI_WB(c) "

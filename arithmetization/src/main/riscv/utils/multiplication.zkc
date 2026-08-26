@@ -15,7 +15,10 @@ fn mul64_ss(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
     var lhs_abs:u64 = absolute_value_double_word(lhs)
     var rhs_abs:u64 = absolute_value_double_word(rhs)
     // Perform unsigned multiplication
-    var val:u128 = (lhs_abs as u128) * (rhs_abs as u128)
+    var tmp_hi:u64
+    var tmp_lo:u64
+    tmp_hi, tmp_lo = mul64_uu(lhs_abs, rhs_abs)
+    var val:u128 = tmp_hi::tmp_lo
     // Apply sign
     if (lhs_sign ^ rhs_sign) == 1 && val != 0 {
         hi::lo = (~val) + 1
@@ -24,12 +27,15 @@ fn mul64_ss(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
     }
 }
 
-// 64-bit "signed unsigned" multiplication. 
+// 64-bit "signed unsigned" multiplication.
 fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
     var lhs_abs:u64 = absolute_value_double_word(lhs)
     var lhs_sign:u1 = sign_bit_of_double_word(lhs)
     // Perform unsigned multiplication
-    var val:u128 = (lhs_abs as u128) * (rhs as u128)
+     var tmp_hi:u64
+        var tmp_lo:u64
+        tmp_hi, tmp_lo = mul64_uu(lhs_abs, rhs)
+        var val:u128 = tmp_hi::tmp_lo
     // Apply sign
     if lhs_sign == 1 && val != 0 {
         hi::lo = (~val) + 1
@@ -38,86 +44,99 @@ fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
     }
 }
 
-// 32-bit "unsigned unsigned" division.
-fn div32_uu(lhs:u32, rhs:u32) -> (res:u32) {
-    res = lhs / rhs
-}
-
-fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
-    var lhs_abs:u32 = absolute_value_word(lhs)
-    var rhs_abs:u32 = absolute_value_word(rhs)
-    // Perform unsigned division
-    var val:u32 = lhs_abs / rhs_abs
-    // Apply sign
-    if sign_bit_of_word(lhs) != sign_bit_of_word(rhs) {
-        res = negative_of_word(val)
-    } else {
-        res = val
-    }
-}
+///////////////////////////////
+///  Division and Remainder  //
+///////////////////////////////
 
 // 64-bit unsigned division.
 fn div64_uu(lhs:u64, rhs:u64) -> (res:u64) {
-    res = lhs / rhs
+    if rhs == 0 {
+        printf "Division by zero"
+                    fail
+    } else {
+        res, _ = divMod_64_uu(lhs, rhs)
+    }
+}
+
+// 64-bit unsigned div mod
+fn divMod_64_uu(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
+    if rhs == 0 {
+        q = 0
+        r = lhs
+    } else {
+        q, r = lhs /% rhs
+    }
 }
 
 fn div64_ss(lhs:u64, rhs:u64) -> (res:u64) {
-    var lhs_abs:u64 = absolute_value_double_word(lhs)
-    var rhs_abs:u64 = absolute_value_double_word(rhs)
-    // Perform unsigned division
-    var val:u64 = lhs_abs / rhs_abs
-    // Apply sign
-    if sign_bit_of_double_word(lhs) != sign_bit_of_double_word(rhs) {
-        res = negative_of_double_word(val)
+     if rhs == 0 {
+            printf "Division by zero"
+            fail
+        } else {
+            res, _ = divMod_64_ss(lhs, rhs)
+        }
+}
+
+fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
+    var q_u:u64
+    var r_u:u64
+    // compute unsigned remainder
+    q_u, r_u = divMod_64_uu(absolute_value_double_word(lhs), absolute_value_double_word(rhs))
+    // apply sign
+    if sign_bit_of_double_word(lhs) == 0 {
+        q = q_u
+        r = r_u
     } else {
-        res = val
+        q = negative_of_double_word(q_u)
+        r = negative_of_double_word(r_u)
     }
 }
 
-fn rem32_ss(lhs:u32, rhs:u32) -> (res:u32) {
-    var rem:u32
+
+///////////////////////////////////////////
+//////// same same but for 32-bit /////////
+///////////////////////////////////////////
+
+// 32-bit unsigned division.
+fn div32_uu(lhs:u32, rhs:u32) -> (res:u32) {
+    if rhs == 0 {
+         printf "Division by zero"
+                    fail
+    } else {
+        res, _ = divMod_32_uu(lhs, rhs)
+    }
+}
+
+// 32-bit unsigned div mod
+fn divMod_32_uu(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
+    if rhs == 0 {
+        q = 0
+        r = lhs
+    } else {
+        q, r = lhs /% rhs
+    }
+}
+
+fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
+     if rhs == 0 {
+            printf "Division by zero"
+                       fail
+        } else {
+            res, _ = divMod_32_ss(lhs, rhs)
+        }
+}
+
+fn divMod_32_ss(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
+    var q_u:u32
+    var r_u:u32
     // compute unsigned remainder
-    rem = rem32_uu(absolute_value_word(lhs), absolute_value_word(rhs))
+    q_u, r_u = divMod_32_uu(absolute_value_word(lhs), absolute_value_word(rhs))
     // apply sign
     if sign_bit_of_word(lhs) == 0 {
-        res = rem
+        q = q_u
+        r = r_u
     } else {
-        res = negative_of_word(rem)
-    }
-}
-
-fn rem32_uu(lhs:u32, rhs:u32) -> (res:u32) {
-    if rhs == 0 {
-        res = lhs
-    } else {
-        res = lhs % rhs
-    }
-}
-
-// 64-bit "unsigned unsigned" remainder.
-fn rem64_uu(lhs:u64, rhs:u64) -> (res:u64) {
-    if rhs == 0 {
-        res = lhs
-    } else {
-        res = lhs % rhs
-    }
-}
-
-fn rem64_ss(lhs:u64, rhs:u64) -> (res:u64) {
-    if rhs == 0 {
-        res = lhs
-    } else if (lhs == OVERFLOW_DIVIDEND) && (rhs == NEGATIVE_ONE_AS_I64) {
-        res = 0
-    } else {
-        var lhs_abs:u64 = absolute_value_double_word(lhs)
-        var rhs_abs:u64 = absolute_value_double_word(rhs)
-        // Perform unsigned remainder
-        var val:u64 = lhs_abs % rhs_abs
-        // Apply sign
-        if sign_bit_of_double_word(lhs) == 1 {
-            res = negative_of_double_word(val)
-        } else {
-            res = val
-        }
+        q = negative_of_word(q_u)
+        r = negative_of_word(r_u)
     }
 }
