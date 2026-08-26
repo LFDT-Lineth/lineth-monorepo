@@ -185,6 +185,9 @@ runs:
           elif [ -z "${!env_var:-}" ]; then
             # Fall back to "develop" only when the job-level env var is unset or empty.
             echo "${env_var}=develop" >> "$GITHUB_ENV"
+          else
+            # Propagate the caller-supplied tag to later steps (e.g. compose spin-up).
+            echo "${env_var}=${!env_var}" >> "$GITHUB_ENV"
           fi
         done
         echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
@@ -203,10 +206,11 @@ runs:
         artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-besu-package-images.tar.gz"
         if [ -f "$artifact_path" ]; then
           gunzip -c "$artifact_path" | docker load
-          echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
         else
           echo "No artifact at ${artifact_path}; skipping docker load."
         fi
+        # Propagate the tag to later steps (e.g. compose spin-up) regardless of artifact presence.
+        echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
 
     - name: Spin up fresh environment with retry
       shell: bash
