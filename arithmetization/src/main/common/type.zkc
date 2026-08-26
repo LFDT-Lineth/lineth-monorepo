@@ -6,7 +6,7 @@ type Register = u5
 
 type Opcode = u7
 
-type Type = u3
+type Type = u4
 
 type Funct3 = u3
 type Funct6 = u6
@@ -31,4 +31,15 @@ type UnsignedDoubleWord = u64
 
 type Length = u64
 type Offset = u64
+
+// Unified semantic compute op (see compute_ops.zkc).
+type ComputeOp = u8
+
+// Legacy per-type op tags (used by instruction_processing/*.zkc reference handlers).
+type ITypeComputeOp = u6
+type RTypeComputeOp = u6
+type STypeComputeOp = u6
+type BTypeComputeOp = u6
+type JTypeComputeOp = u6
+type UTypeComputeOp = u6
 

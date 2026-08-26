@@ -26,6 +26,11 @@ ELF_TO_JSON_GEN := $(BUILD_COMMON_DIR)../../arithmetization/src/test/scripts/elf
 # Hex big-endian input or `@path/to/in_bytes`
 IN_BYTES ?= ""
 
+# When true, elf_to_json_gen also emits blobs_executable for the 
+# predecoding justification pass. Decode table and instruction_base
+# inputs are always emitted. 
+PREDECODING_PROOF ?= false
+
 # Already-compiled external ELF to convert (and its derived output JSON path)
 BIN_EXT  ?=
 JSON_EXT ?= $(BIN_EXT).json
@@ -33,7 +38,7 @@ JSON_EXT ?= $(BIN_EXT).json
 # Support function to generate JSON from an ELF: $(call ELF_TO_JSON,<elf>,<out.json>)
 define ELF_TO_JSON
 	@echo "\nGenerating $(2) from $(1)"
-	@go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_ORIGIN) > "$(2)"
+	@ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_ORIGIN) > "$(2)"
 endef
 
 # The following variables
