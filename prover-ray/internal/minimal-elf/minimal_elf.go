@@ -171,14 +171,6 @@ var ValidSectionData = []byte{0x97, 0x02, 0x00, 0x00}
 //	sraw t0, t2, t3            ; expect -1 (arithmetic shift of all-ones is still all-ones)
 //	bne  t0, -1, fail
 //
-//	addi a0, x0, 0
-//	ecall
-//
-// fail:
-//
-//	addi a0, x0, 1
-//	ecall
-//
 // add_mul:
 //
 //	add  t2, t0, t1
