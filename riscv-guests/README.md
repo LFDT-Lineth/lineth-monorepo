@@ -13,7 +13,7 @@ riscv-guests/
   l2-execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
 ```
 
-Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**; host-only code (unit tests, the spec-test harness, fixture parsing) lives in `test/`, and committed sample/test data in `test/testdata/`. The split mirrors what `build.zig` builds: the object + `elf` step compile `src/`; `zig build test` / `spec-tests` compile `test/`. (Automated tests pull their EF fixtures from the lazy `execution_spec_tests_zkevm` dependency, not from committed data — `test/testdata/` is just the manual ZkC-run samples.)
+Within a guest, `src/` holds **only the production code that ships in the rv64im object/ELF**; host-only code (unit tests, the reference-test harness, fixture parsing) lives in `test/`, and committed sample/test data in `test/testdata/`. The split mirrors what `build.zig` builds: the object + `elf` step compile `src/`; `zig build test` / `extended-vanilla` compile `test/`. (Automated tests pull their EF fixtures from the lazy `execution_spec_tests_zkevm` dependency, not from committed data — `test/testdata/` is just the manual ZkC-run samples.)
 
 **Add a guest:** create `riscv-guests/<name>/` (its own `build.zig`, `build.zig.zon`, `Makefile`, `src/` for production code + `test/` for host tests, depending on `../build_common`) and append `<name>` to `GUESTS` in the top-level `Makefile`. Future guests (Rollup, Aggregation) slot in this way — each with its own dependencies and compile/lint sequence.
 
@@ -63,18 +63,18 @@ make -C l2-execution compile ZIG=/path/to/zig IN_ORIGIN=0x08800000   # override 
 
 `make -C l2-execution compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests (see [Native test dependencies](#native-test-dependencies)).
 
-### Spec tests (l2-execution only — full EF zkevm fixture suite)
+### Reference tests (l2-execution only — full EF zkevm fixture suite)
 
-The EF stateless-fixture suite is specific to the EVM-execution guest, so `spec-test` is an **l2-execution target**, not an orchestrated one (a rollup/aggregation guest has no equivalent). `make test` is the fast single-fixture smoke test; the full suite:
+l2-execution is the Rollup's extended guest, not a vanilla EVM-execution guest — the EF stateless-fixture suite is used as a reference test: it asserts the dummy-wrapped extended guest (`runL2Execution`) agrees with the fixture's own expected validity verdict on block validity (the reference-test corpus is the source of truth — no second, independently re-run implementation needed), so `reference-test` is an **l2-execution target**, not an orchestrated one (a rollup/aggregation guest has no equivalent). `make test` is the fast single-fixture smoke test; the full suite:
 
 ```bash
-make -C l2-execution spec-test ZIG=/path/to/zig
-make -C l2-execution spec-test ZIG=/path/to/zig SPEC_ARGS="--fork Amsterdam"
-make -C l2-execution spec-test ZIG=/path/to/zig SPEC_ARGS="--match bal_self_transfer"
-make -C l2-execution spec-test ZIG=/path/to/zig SPEC_ARGS="--report-only"
+make -C l2-execution reference-test ZIG=/path/to/zig
+make -C l2-execution reference-test ZIG=/path/to/zig REFERENCE_ARGS="--fork Amsterdam"
+make -C l2-execution reference-test ZIG=/path/to/zig REFERENCE_ARGS="--match bal_self_transfer"
+make -C l2-execution reference-test ZIG=/path/to/zig REFERENCE_ARGS="--report-only"
 ```
 
-The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_tests_zkevm` dependency and runs every block through the guest, failing if any output differs from the fixture's expected `statelessOutputBytes`. The corpus walking/reporting is reusable ([`spec_runner.zig`](l2-execution/test/spec_runner.zig)); a future extended-execution guest supplies its own input **adapter** ([`evm_spec_runner.zig`](l2-execution/test/evm_spec_runner.zig) is the vanilla one).
+The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_tests_zkevm` dependency and, for every block, wraps it into a dummy-filled extended input and checks the extended guest's validity verdict against the fixture's own expected `successful_validation` result — see [`extended_vanilla_runner.zig`](l2-execution/test/extended_vanilla_runner.zig). The corpus walking/reporting is reusable ([`spec_runner.zig`](l2-execution/test/spec_runner.zig)); `extended_vanilla_runner.zig` supplies the only adapter that plugs into it today.
 
 ## Continuous Integration
 
@@ -83,9 +83,9 @@ Two workflows guard the guests.
 [`riscv-guests-host-tests.yml`](../.github/workflows/riscv-guests-host-tests.yml) runs on every PR touching `riscv-guests/**`, with two parallel host-machine jobs:
 
 - **Guest unit tests** — `zig fmt --check` plus the orchestrated `make test` (every guest in `GUESTS`).
-- **l2-execution EF spec tests** — the full fixture suite via `make spec-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
+- **l2-execution extended-guest reference-test guards** — the full EF fixture suite via `make reference-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
 
-[`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2-execution exec ZKC_EXEC_FLAGS="--quiet --gogen --fast"` (the ELF → JSON → `zkc` path described below). Execution uses zkc's **generated-Go backend in fast mode** (`--gogen --fast`) rather than the tree-walking interpreter, because tracing is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json_gen`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host spec-test suite's job above.
+[`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2-execution exec ZKC_EXEC_FLAGS="--quiet --gogen --fast"` (the ELF → JSON → `zkc` path described below). Execution uses zkc's **generated-Go backend in fast mode** (`--gogen --fast`) rather than the tree-walking interpreter, because tracing is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json_gen`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above.
 
 The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. The interpreter-run workflow reuses that same action for the guest build (the freestanding ELF links none of the crypto) and adds Go plus a `zkc` install.
 
@@ -104,5 +104,5 @@ These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `e
 
 Each guest folder is a complete package: its own dependencies (`build.zig.zon`), compile/test logic (`build.zig`), lifecycle (`Makefile`), production source (`src/`) and host-only test code (`test/`). Shared build helpers are factored into `build_common/`; the toolchain pin (`.zigversion`) is shared at this level.
 
-- `l2-execution/`: vanilla EVM execution guest. See `l2-execution/README.md`.
+- `l2-execution/`: the Rollup's extended l2-execution guest. See `l2-execution/README.md`.
 ```
