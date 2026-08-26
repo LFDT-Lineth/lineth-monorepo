@@ -7,10 +7,12 @@ import io.vertx.micrometer.backends.NoopBackendRegistry
 import io.vertx.sqlclient.SqlClient
 import linea.DisabledService
 import linea.LongRunningService
+import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl
+import linea.ftx.ForcedTransactionsApp
 import linea.persistence.db.Db
 import linea.persistence.db.PersistenceRetryer
 import linea.web3j.createWeb3jHttpClient
@@ -18,6 +20,11 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.api.Api
 import lineth.coordinator.app.conflation.ConflationAppV1
 import lineth.coordinator.app.conflation.ConflationAppV2
+import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
+import lineth.coordinator.app.conflation.TracesClients
+import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
+import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
@@ -204,6 +211,106 @@ class CoordinatorApp(
     consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
   ).getLastFinalizedBlock().get()
 
+  private val proverClientFactory: ProverClientFactory = ProverClientFactory(
+    vertx = vertx,
+    config = configs.proversConfig,
+    metricsFacade = micrometerMetricsFacade,
+  )
+
+  private val l2EthClientForConflation = createEthApiClient(
+    rpcUrl = configs.conflation.l2Endpoint.toString(),
+    log = LogManager.getLogger("clients.l2.eth.conflation"),
+    requestRetryConfig = configs.conflation.l2RequestRetries,
+    vertx = vertx,
+  )
+
+  private val zkStateClient: StateManagerV1JsonRpcClient = StateManagerV1JsonRpcClient.create(
+    rpcClientFactory = httpJsonRpcClientFactory,
+    endpoints = configs.stateManager.endpoints.map { it.toURI() },
+    maxInflightRequestsPerClient = configs.stateManager.requestLimitPerEndpoint,
+    requestRetry = configs.stateManager.requestRetries.toJsonRpcRetry(),
+    requestTimeout = configs.stateManager.requestTimeout?.inWholeMilliseconds,
+    logger = LogManager.getLogger("clients.StateManagerShomeiClient"),
+  )
+
+  private val tracesClients: TracesClients = createTracesClients(
+    vertx = vertx,
+    rpcClientFactory = httpJsonRpcClientFactory,
+    configs = configs.traces,
+    fallBackTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
+  )
+
+  private val forcedTransactionsApp: ForcedTransactionsApp = run {
+    if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
+      ForcedTransactionsApp.createDisabled()
+    } else {
+      check(configs.proversConfig.proverA.invalidity != null) {
+        "prover.invalidity config is required for forced transactions feature to work"
+      }
+      val ftxConfig = configs.forcedTransactions
+      val l1EthClient = createEthApiClient(
+        rpcUrl = ftxConfig.l1Endpoint.toString(),
+        log = LogManager.getLogger("clients.l1.eth.ftx"),
+        vertx = vertx,
+        requestRetryConfig = ftxConfig.l1RequestRetries,
+      )
+      val ftxAppConfig = ForcedTransactionsApp.Config(
+        l1PollingInterval = ftxConfig.l1EventScraping.pollingInterval,
+        l1ContractAddress = configs.protocol.l1.contractAddress,
+        l1HighestBlockTag = ftxConfig.l1HighestBlockTag,
+        l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
+        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
+        ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
+        maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
+        ftxProcessingDelay = ftxConfig.processingDelay,
+        invalidityProofProcessingInterval = ftxConfig.invalidityProofCheckInterval,
+      )
+      val ftxClient = ForcedTransactionsJsonRpcClient(
+        vertx = vertx,
+        rpcClient = httpJsonRpcClientFactory.create(
+          endpoint = ftxConfig.sequencerEndpoint,
+          log = LogManager.getLogger("clients.l2.ftx.sequencer"),
+        ),
+        retryConfig = ftxConfig.sequencerRequestRetries.toJsonRpcRetry(),
+        log = LogManager.getLogger("clients.l2.ftx.sequencer"),
+      )
+      val l1Web3jClient = createWeb3jHttpClient(
+        rpcUrl = ftxConfig.l1Endpoint.toString(),
+        log = LogManager.getLogger("clients.l1.eth.ftx"),
+      )
+      val contractClient = Web3JLinethRollupSmartContractClientReadOnly(
+        contractAddress = configs.protocol.l1.contractAddress,
+        web3j = l1Web3jClient,
+        ethLogsSearcher = EthLogsSearcherImpl(
+          vertx = vertx,
+          ethApiClient = createEthApiClient(
+            web3jClient = l1Web3jClient,
+            requestRetryConfig = ftxConfig.l1RequestRetries,
+            vertx = vertx,
+          ),
+        ),
+        finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+          ?: BlockParameter.Tag.EARLIEST,
+      )
+      ForcedTransactionsApp.create(
+        config = ftxAppConfig,
+        vertx = vertx,
+        ftxDao = forcedTransactionsDao,
+        l1EthApiClient = l1EthClient,
+        l2EthApiClient = l2EthClientForConflation,
+        ftxClient = ftxClient,
+        finalizedStateProvider = contractClient,
+        contractVersionProvider = contractClient,
+        invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
+        stateManagerClient = zkStateClient,
+        accountProofClient = zkStateClient,
+        tracesClient = tracesClients.tracesConflationClient,
+        clock = clock,
+        metricsFacade = micrometerMetricsFacade,
+      )
+    }
+  }
+
   private val conflationApp: ConflationAppV1 = ConflationAppV1(
     vertx = vertx,
     clock = clock,
@@ -215,6 +322,11 @@ class CoordinatorApp(
     configs = configs,
     metricsFacade = micrometerMetricsFacade,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+    proverClientFactory = proverClientFactory,
+    l2EthClient = l2EthClientForConflation,
+    zkStateClient = zkStateClient,
+    tracesClients = tracesClients,
+    forcedTransactionsApp = forcedTransactionsApp,
   )
 
   private val conflationAppV2: ConflationAppV2? =
@@ -224,6 +336,7 @@ class CoordinatorApp(
         lastFinalizedBlock = lastFinalizedBlock,
         batchesRepository = batchesRepository,
         configs = configs,
+        forcedTransactionsApp = forcedTransactionsApp,
       )
     } else {
       null
@@ -325,6 +438,7 @@ class CoordinatorApp(
     SafeFuture.completedFuture(Unit)
       .thenCompose { l1FinalizationMonitorApp.start() }
       .thenCompose { conflationApp.start() }
+      .thenCompose { forcedTransactionsApp.start() }
       .thenCompose { conflationAppV2?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { l1RelayingAppV1.start() }
       .thenCompose { messageAnchoringApp.start() }
@@ -352,6 +466,7 @@ class CoordinatorApp(
             l1RelayingAppV1.stop(),
             api.stop(),
             conflationBacktestingService.stop(),
+            forcedTransactionsApp.stop(),
           )
         }.thenApply {
           LoadBalancingJsonRpcClient.stop()
