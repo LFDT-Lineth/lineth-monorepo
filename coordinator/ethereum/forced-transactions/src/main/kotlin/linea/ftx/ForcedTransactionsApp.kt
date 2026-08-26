@@ -82,6 +82,7 @@ interface ForcedTransactionsApp : LongRunningService {
       tracesClient: TracesConflationVirtualBlockClientV1,
       clock: Clock,
       metricsFacade: MetricsFacade,
+      riscvCutoverTimestamp: Instant? = null,
     ): ForcedTransactionsApp {
       val l1EthLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthApiClient)
       val ftxInvalidityProofService = ForcedTransactionsInvalidityProofService(
@@ -98,6 +99,7 @@ interface ForcedTransactionsApp : LongRunningService {
         ),
         vertx = vertx,
         pollingInterval = config.invalidityProofProcessingInterval,
+        riscvCutoverTimestamp = riscvCutoverTimestamp,
       )
       return ForcedTransactionsAppImpl(
         config = config,

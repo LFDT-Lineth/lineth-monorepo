@@ -307,6 +307,7 @@ class CoordinatorApp(
         tracesClient = tracesClients.tracesConflationClient,
         clock = clock,
         metricsFacade = micrometerMetricsFacade,
+        riscvCutoverTimestamp = configs.conflation.riscvStartingBlockTimestampInclusive,
       )
     }
   }
