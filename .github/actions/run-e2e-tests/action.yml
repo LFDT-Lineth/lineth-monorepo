@@ -26,10 +26,18 @@ inputs:
   maru_tag:
     required: false
     default: ''
+  maru_image_name:
+    description: 'Maru Docker image name (overrides the compose default)'
+    required: false
+    default: consensys/maru
   maru_jar:
     description: 'Maru JAR filename to launch'
     required: false
     default: maru.jar
+  maru_artifact_name:
+    description: 'Artifact name prefix for the Maru Docker image'
+    required: false
+    default: linea-maru
   linea_coordinator_image_name:
     description: 'Coordinator Docker image name (overrides the compose default)'
     required: false
@@ -123,11 +131,12 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         LINEA_COORDINATOR_ARTIFACT_NAME: ${{ inputs.linea_coordinator_artifact_name }}
+        MARU_ARTIFACT_NAME: ${{ inputs.maru_artifact_name }}
       run: |
         set -euo pipefail
         for service in coordinator postman transaction-exclusion-api prover maru; do
           if [ "$service" = "maru" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-maru-docker-image.tar.gz"
+            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${MARU_ARTIFACT_NAME}-docker-image.tar.gz"
           elif [ "$service" = "coordinator" ]; then
             artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
           else
@@ -153,13 +162,15 @@ runs:
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
+        MARU_ARTIFACT_NAME: ${{ inputs.maru_artifact_name }}
+        MARU_IMAGE_NAME: ${{ inputs.maru_image_name }}
         MARU_TAG: ${{ inputs.maru_tag }}
         MARU_JAR: ${{ inputs.maru_jar }}
       run: |
         set -euo pipefail
         for service in coordinator postman transaction-exclusion-api prover maru; do
           if [ "$service" = "maru" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-maru-docker-image.tar.gz"
+            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${MARU_ARTIFACT_NAME}-docker-image.tar.gz"
             env_var="MARU_TAG"
           elif [ "$service" = "coordinator" ]; then
             artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
@@ -178,6 +189,7 @@ runs:
         done
         echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
         echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
+        echo "MARU_IMAGE_NAME=${MARU_IMAGE_NAME}" >> "$GITHUB_ENV"
         echo "MARU_JAR=${MARU_JAR}" >> "$GITHUB_ENV"
 
     - name: Load linea-besu-package Docker image
