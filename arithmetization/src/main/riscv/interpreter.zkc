@@ -188,9 +188,27 @@ include "../lib/io/write_output.zkc"
 // The tiers above list explicit semantic opcodes (`*_WB`, branches, stores,
 // precompiles, …); anything not matched there eventually reaches the
 // `interpreter_c` default and behaves as a no-op.
-//
-fn interpreter<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter<registers, ram, keccak_state, poseidon2_state>(clk:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+    var new_output_write_address:OutputAddress
+    var new_pc:Address
+    var index:u62
+    var rem:u2
+    // determine index of predecoded program
+    index::rem = pc - base
+    //
+    printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clk
+    // Execute current instruction
+    new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
+    // Check for termination
+    if new_pc != MAX_UINT_64 {
+        // Execute next instruction
+        interpreter!(clk + 1, base, new_pc, new_output_write_address)
+    }
+    // Termination
+    done
+}
 
+fn interpreter_a<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register

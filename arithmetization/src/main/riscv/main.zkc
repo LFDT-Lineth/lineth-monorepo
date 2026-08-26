@@ -76,43 +76,6 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // -- PREDECODING SECTION END-- 
 
     // -- NO PREDECODING -- 
-    main_loop(entry_point, base)
+    interpreter!(0, base, entry_point, 0)
     // -- NO PREDECODING END-- 
 }
-
-// -- PREDECODING SECTION -- 
-// fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64, exec_end:u64) {
-// -- PREDECODING SECTION END-- 
-
-// -- NO PREDECODING -- 
-fn main_loop<registers, ram, keccak_state, poseidon2_state>(entry_point:u64, base:u64) {
-    // -- NO PREDECODING END-- 
-    var clock_cycle:u32 = 0
-    var output_write_address:OutputAddress = 0
-    var pc:Address = entry_point
-
-    // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
-    while pc != MAX_UINT_64 {
-        var index:u62
-        var rem:u2
-        // rem is the remainder of pc - base divided by 4
-        index::rem = pc - base
-
-        // NOTE: This section pertains to the predecoding justification
-        // It is pending decision and is commented for now.
-        // Execution must stay inside the span justified by predecoding, at 4-byte
-        // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
-        // if pc<base || pc >= exec_end || rem != 0 {
-        //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
-        //     fail
-        // }
-
-        // clock cycle starts at 1
-        clock_cycle = clock_cycle + 1
-        printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
-
-        // update pc and output_write_address
-        pc, output_write_address = interpreter(index as u64, pc, output_write_address)
-    }
-}
-
