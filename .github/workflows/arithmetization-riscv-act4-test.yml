@@ -2,9 +2,8 @@ name: Tracer riscv ACT4 test
 
 on:
   pull_request:
-    # No branches: filter — this must also run on PRs targeting stacked, non-main
-    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
-    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'arithmetization/**'
       - 'riscv-guests/build_common/**'
@@ -41,6 +40,7 @@ permissions:
 
 jobs:
   act4-reference-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       ZKC_EXEC_FLAGS: "--fast --gogen"
