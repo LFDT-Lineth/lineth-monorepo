@@ -11,7 +11,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-guest-programs-exec.yml'
   push:
     branches:
      - main
@@ -21,7 +21,7 @@ on:
      - 'riscv-guests/build_common/**'
      - 'riscv-guests/lineth-accelerators/**'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-guest-programs-exec.yml'
   workflow_call:
     inputs:
       zkc-ref:
