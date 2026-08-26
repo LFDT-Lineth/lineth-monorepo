@@ -72,7 +72,8 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // ==========================
 
     // -- PREDECODING PROOF SECTION -- 
-    // main_loop(entry_point, base, exec_end)
+    // parameters: clock_cycle, base, pc, exec_end, output_write_address
+    // interpreter!(0, base, entry_point, exec_end, 0)
     // -- PREDECODING PROOF SECTION END-- 
 
     // -- NO PREDECODING PROOF -- 

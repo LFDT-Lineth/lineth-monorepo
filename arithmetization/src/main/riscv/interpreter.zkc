@@ -189,7 +189,13 @@ include "../lib/io/write_output.zkc"
 // precompiles, …); anything not matched there eventually reaches the
 // `interpreter_c` default and behaves as a no-op.
 
+// -- PREDECODING PROOF SECTION -- 
+// fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address, output_write_address:OutputAddress) -> ! {
+// -- PREDECODING PROOF SECTION END-- 
+
+// -- NO PREDECODING PROOF SECTION -- 
 fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+// -- NO PREDECODING PROOF SECTION END-- 
 
     var new_output_write_address:OutputAddress
     var new_pc:Address
@@ -211,7 +217,14 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, b
     // Check for termination
     if new_pc != MAX_UINT_64 {
         // Execute next instruction
+
+        // -- PREDECODING PROOF SECTION -- 
+        // interpreter!(clock_cycle + 1, base, new_pc, exec_end, new_output_write_address)
+        // -- PREDECODING PROOF SECTION END-- 
+
+        // -- NO PREDECODING PROOF SECTION -- 
         interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
+        // -- NO PREDECODING PROOF SECTION END-- 
     }
     // Termination
     done
