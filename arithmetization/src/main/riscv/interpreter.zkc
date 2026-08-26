@@ -195,7 +195,7 @@ include "../lib/io/write_output.zkc"
 
 // -- NO PREDECODING PROOF SECTION -- 
 fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
-// -- NO PREDECODING PROOF SECTION END-- 
+    // -- NO PREDECODING PROOF SECTION END-- 
 
     var new_output_write_address:OutputAddress
     var new_pc:Address
