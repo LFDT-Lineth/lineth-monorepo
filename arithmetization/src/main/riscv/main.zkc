@@ -13,11 +13,11 @@ include "utils/register_utils.zkc"
 include "memory.zkc"
 include "../lib/poseidon2/ram.zkc"
 
-// -- PREDECODING SECTION -- 
+// -- PREDECODING PROOF SECTION -- 
 // include "../predecoding/predecoding.zkc"
 // include "../predecoding/read_instruction.zkc"
 // include "../predecoding/executable_region.zkc"
-// -- PREDECODING SECTION END-- 
+// -- PREDECODING PROOF SECTION END-- 
 
 // TODO @Ghost
 fn main<registers, ram, keccak_state, poseidon2_state>() {
@@ -37,10 +37,10 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // This section is pending decision and is commented for now.
     // It can be done once per guest upgrade.
     // To re-enable predecoding : 
-    // - uncomment all sections labeled from "PREDECODING SECTION"
-    //   to "PREDECODING SECTION END"
-    // - comment the section labeled from "NO PREDECODING"
-    //   to "NO PREDECODING END"
+    // - uncomment all sections labeled from "PREDECODING PROOF SECTION"
+    //   to "PREDECODING PROOF SECTION END"
+    // - comment the section labeled from "NO PREDECODING PROOF"
+    //   to "NO PREDECODING PROOF END"
 
     // var pc_predecoding:Address = base
     // var exec_end:Address = executable_region_end()
@@ -71,11 +71,12 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // Execution of the program
     // ==========================
 
-    // -- PREDECODING SECTION -- 
+    // -- PREDECODING PROOF SECTION -- 
     // main_loop(entry_point, base, exec_end)
-    // -- PREDECODING SECTION END-- 
+    // -- PREDECODING PROOF SECTION END-- 
 
-    // -- NO PREDECODING -- 
+    // -- NO PREDECODING PROOF -- 
+    // parameters: clock_cycle, base, pc, output_write_address
     interpreter!(0, base, entry_point, 0)
-    // -- NO PREDECODING END-- 
+    // -- NO PREDECODING PROOF END-- 
 }

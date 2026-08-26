@@ -188,29 +188,30 @@ include "../lib/io/write_output.zkc"
 // The tiers above list explicit semantic opcodes (`*_WB`, branches, stores,
 // precompiles, …); anything not matched there eventually reaches the
 // `interpreter_c` default and behaves as a no-op.
-fn interpreter<registers, ram, keccak_state, poseidon2_state>(clk:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+
+fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+
     var new_output_write_address:OutputAddress
     var new_pc:Address
     var index:u62
     var rem:u2
     // determine index of predecoded program
     index::rem = pc - base
-    // NOTE: This section pertains to the predecoding justification
-    // It is pending decision and is commented for now.
+    // -- PREDECODING PROOF SECTION -- 
     // Execution must stay inside the span justified by predecoding, at 4-byte
     // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
     // if pc<base || pc >= exec_end || rem != 0 {
     //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
     //     fail
     // }
-    //
-    printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clk
+    // -- PREDECODING PROOF SECTION END-- 
+    printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
     // Execute current instruction
     new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
     // Check for termination
     if new_pc != MAX_UINT_64 {
         // Execute next instruction
-        interpreter!(clk + 1, base, new_pc, new_output_write_address)
+        interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
     }
     // Termination
     done
