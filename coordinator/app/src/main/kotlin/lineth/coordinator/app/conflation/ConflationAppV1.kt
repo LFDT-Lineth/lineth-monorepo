@@ -8,7 +8,6 @@ import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.BlockHeaderSummary
-import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl

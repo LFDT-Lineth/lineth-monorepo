@@ -22,10 +22,10 @@ import lineth.coordinator.app.conflation.ConflationAppV1
 import lineth.coordinator.app.conflation.ConflationAppV2
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import lineth.coordinator.app.conflation.TracesClients
+import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
 import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
-import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
 import lineth.coordinator.config.v2.isEnabled
