@@ -40,7 +40,6 @@ ZKC             ?= zkc
 TEST ?=
 
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
-# 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
 ZKC_EXEC_FLAGS ?=--fast
 
