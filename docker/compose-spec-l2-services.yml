@@ -22,7 +22,8 @@ services:
         condition: service_healthy
     environment:
       LINETH_USE_MARU_OVERRIDE_CONFIG: ${LINETH_USE_MARU_OVERRIDE_CONFIG:-false}
-      MARU_COMMAND: exec java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml -jar maru.jar --genesis-file /initialization/genesis-maru.json --config configs/config.toml
+      # Which jar to launch. Override to point at a different entrypoint jar.
+      MARU_COMMAND: exec java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml -jar ${MARU_JAR:-maru.jar} --genesis-file /initialization/genesis-maru.json --config configs/config.toml
     command:
       - /bin/sh
       - -c
@@ -383,8 +384,7 @@ services:
       config__override__l1_submission__data_availability: ${LINETH_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
       dev_LINETH_COORDINATOR_DISABLED: ${dev_LINETH_COORDINATOR_DISABLED:-false}
       CONFIG_OVERRIDE_OPTS: ''
-      # Which jar to launch from libs/. Defaults to the OSS coordinator jar; enterprise images set
-      # this to their own entrypoint jar (which sits alongside the OSS jar in libs/).
+      # Which jar to launch from libs/. Override to point at a different entrypoint jar.
       COORDINATOR_JAR: ${LINEA_COORDINATOR_JAR:-coordinator.jar}
     command:
       - sh

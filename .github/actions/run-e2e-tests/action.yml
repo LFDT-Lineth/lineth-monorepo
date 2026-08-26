@@ -26,6 +26,10 @@ inputs:
   maru_tag:
     required: false
     default: ''
+  maru_jar:
+    description: 'Maru JAR filename to launch'
+    required: false
+    default: maru.jar
   linea_coordinator_image_name:
     description: 'Coordinator Docker image name (overrides the compose default)'
     required: false
@@ -150,6 +154,7 @@ runs:
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
         MARU_TAG: ${{ inputs.maru_tag }}
+        MARU_JAR: ${{ inputs.maru_jar }}
       run: |
         set -euo pipefail
         for service in coordinator postman transaction-exclusion-api prover maru; do
@@ -173,6 +178,7 @@ runs:
         done
         echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
         echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
+        echo "MARU_JAR=${MARU_JAR}" >> "$GITHUB_ENV"
 
     - name: Load linea-besu-package Docker image
       if: ${{ inputs.linea_besu_package_tag != '' }}
