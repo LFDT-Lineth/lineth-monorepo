@@ -351,7 +351,8 @@ jobs:
 
   cleanup-deployments:
     needs: [run-e2e-tests]
-    if: ${{ always() && github.event.pull_request.head.repo.fork == false }}
+    # always(): still clean up after failed/cancelled e2e runs. Skip only for draft or fork PRs; manual dispatch (no pull_request context) still cleans up.
+    if: ${{ always() && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false)) }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       contents: read
