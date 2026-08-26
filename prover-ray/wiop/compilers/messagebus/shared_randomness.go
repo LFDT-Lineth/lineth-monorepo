@@ -65,9 +65,8 @@ func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round, seededCoi
 	}
 
 	// The contribution cells sit on coinRound rather than beside γ: their value is
-	// a function of the commitments of every round before coinRound, which do not
-	// exist until the runtime has advanced past those rounds. On round 0 they would
-	// be demanded by AdvanceRound long before anything could compute them.
+	// a function of the bus round's commitment, which does not exist until the
+	// runtime has advanced past that round.
 	for i := range NumSharedRandomnessContribution {
 		cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
 		sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
@@ -137,10 +136,9 @@ func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 	}
 }
 
-// SharedRandomnessContributionAssigner is a prover action that takes all the
-// PCS commitment preceding the shared randomness seed Fiat-Shamir override and
-// hash them into a multiset hash that is then exposed to the verifier as a
-// public-input.
+// SharedRandomnessContributionAssigner is a prover action that takes the PCS
+// commitment of the bus round and hashes it into a multiset hash that is then
+// exposed to the verifier as a public-input.
 //
 // This function is meant to be run as a prover action at the round where the
 // the message BUS randomness is sampled.
@@ -153,35 +151,37 @@ type SharedRandomnessContributionAssigner struct{}
 
 // SharedRandomnessContributionChecker is a verifier action that checks that the
 // public-input cells of the shared randomness contribution are correctly
-// computed against the commitment cell values. It is the verifier analog to
+// computed against the bus round's commitment. It is the verifier analog to
 // [SharedRandomnessContributionAssigner].
 type SharedRandomnessContributionChecker struct{}
 
-// sharedRandomnessContribution maps every commitment preceding the round the
-// caller is running on into the multiset-hash group and sums them. The prover
-// action and its verifier analog both go through here, so neither can drift from
-// the other's preimage: [wiop.Runtime.CurrentRound] is the round the running
-// action was registered on on both sides.
+// sharedRandomnessContribution maps the bus round's commitment into the
+// multiset-hash group. The bus round is the one before the round the caller runs
+// on: [ensureCoinRound] places the coins exactly one past the last round any
+// message-bus entry reads. The prover action and its verifier analog both go
+// through here, so neither can drift from the other's preimage.
 //
-// The value returned here is exactly the
-// Hash(root) that [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/preflight.Run]
-// accumulates for that shard. Combining several rounds with
-// [multisethashing.Combine] keeps that correspondence while staying
-// order-independent, so no round ordering has to be agreed.
+// The value returned here is exactly the Hash(root) that
+// [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/preflight.Run] accumulates
+// for that shard, which is what lets an aggregator recompute γ from the shards'
+// contributions.
+//
+// This assumes the bus round holds the bus input set and nothing else: the
+// contribution hashes the round's commitment whole, while preflight commits the
+// bus columns alone. The assumption is not checked here. Breaking it does not
+// break the shard's own proof — the checker recomputes the same value the
+// assigner did — it makes γ irreconcilable at the aggregation stage.
 func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
-	acc := multisethashing.Identity()
-	for i := range rt.CurrentRound().ID {
-		if !rt.System.Rounds[i].HasCommitment {
-			logrus.Warnf(
-				"No commitment found for round: %v. Did you use a message bus? "+
-					"And did you reduce the current system using a PCS?", i)
-			continue
-		}
+	// In range: registerSharedRandomness refuses a coin round of 0.
+	busRound := rt.System.Rounds[rt.CurrentRound().ID-1]
 
-		acc = multisethashing.Combine(acc, multisethashing.Hash(rt.Commitments[i]))
+	if !busRound.HasCommitment {
+		logrus.Warnf(
+			"No commitment found for the bus round: %v. Did you use a message bus? "+
+				"And did you reduce the current system using a PCS?", busRound.ID)
 	}
 
-	return acc
+	return multisethashing.Hash(rt.Commitments[busRound.ID])
 }
 
 // contributionCell returns the public-input cell carrying limb i of the shared
