@@ -21,8 +21,9 @@ permissions:
 
 jobs:
   # Manual-dispatch gate: only internal contributors (collaborators with
-  # triage/write/maintain/admin) may trigger the full pipeline via
-  # workflow_dispatch. PR and push triggers skip this gate entirely.
+  # write/maintain/admin) may trigger the full pipeline via workflow_dispatch.
+  # triage is intentionally excluded (cannot push code, so must not drive the
+  # publish pipeline). PR and push triggers skip this gate entirely.
   # Read-only; fails fast to block external dispatches before any job runs.
   authorise-dispatch:
     if: github.event_name == 'workflow_dispatch'
