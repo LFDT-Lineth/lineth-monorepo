@@ -195,6 +195,14 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clk:u32, base:Addr
     var rem:u2
     // determine index of predecoded program
     index::rem = pc - base
+    // NOTE: This section pertains to the predecoding justification
+    // It is pending decision and is commented for now.
+    // Execution must stay inside the span justified by predecoding, at 4-byte
+    // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
+    // if pc<base || pc >= exec_end || rem != 0 {
+    //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
+    //     fail
+    // }
     //
     printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clk
     // Execute current instruction
