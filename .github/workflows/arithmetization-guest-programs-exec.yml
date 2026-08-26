@@ -13,7 +13,6 @@ on:
       - 'riscv-guests/lineth-accelerators/**'
       - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
@@ -26,7 +25,6 @@ on:
      - 'riscv-guests/lineth-accelerators/**'
      - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
     inputs:

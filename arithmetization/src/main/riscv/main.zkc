@@ -2,7 +2,7 @@ include "interpreter.zkc"
 include "ram/read.zkc"
 include "ram/write.zkc"
 include "utils/sign_extend.zkc"
-include "utils/constants.zkc"
+include "../common/constants.zkc"
 include "utils/signed_comparisons.zkc"
 include "utils/absolute_value.zkc"
 include "utils/bit_flip.zkc"
@@ -11,15 +11,48 @@ include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
 include "memory.zkc"
+include "../lib/poseidon2/ram.zkc"
+
+// -- PREDECODING PROOF SECTION -- 
+// include "../predecoding/predecoding.zkc"
+// include "../predecoding/read_instruction.zkc"
+// include "../predecoding/executable_region.zkc"
+// -- PREDECODING PROOF SECTION END-- 
 
 // TODO @Ghost
 fn main<registers, ram, keccak_state, poseidon2_state>() {
-    var instruction:Instruction
-    var clock_cycle:u32 = 0
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]
-    var pc:Address = entry_point
+
+    // Base address of the pre-decoded instruction tables (lowest executable
+    // instruction address). Used to map pc -> instruction index.
+    var base:Address = instruction_base[0]
+
+    // ==========================
+    // Predecoding justification
+    // ==========================
+
+    // Note: static linear pass over the executable region;
+    // This section is pending decision and is commented for now.
+    // It can be done once per guest upgrade.
+    // To re-enable predecoding : 
+    // - uncomment all sections labeled from "PREDECODING PROOF SECTION"
+    //   to "PREDECODING PROOF SECTION END"
+    // - comment the section labeled from "NO PREDECODING PROOF"
+    //   to "NO PREDECODING PROOF END"
+
+    // var pc_predecoding:Address = base
+    // var exec_end:Address = executable_region_end()
+    // while pc_predecoding<exec_end {
+    //     var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
+    //     predecoding(pc_predecoding, instruction)
+    //     pc_predecoding = (pc_predecoding + 4) as Address
+    // }
+
+    // =============================
+    // Loading blobs data into RAM
+    // =============================
 
     var internal_offset:Length = 0 // internal offset to blobs_data
     for i:u64 = 0; i<blobs_count; i = i + 1 {
@@ -34,18 +67,17 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
         internal_offset = internal_offset + blob_size
     }
 
-    var output_write_address:OutputAddress = 0
+    // ==========================
+    // Execution of the program
+    // ==========================
 
-    // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
-    while pc != MAX_UINT_64 {
-        instruction = read_32(pc) as Instruction
+    // -- PREDECODING PROOF SECTION -- 
+    // parameters: clock_cycle, base, pc, exec_end, output_write_address
+    // interpreter!(0, base, entry_point, exec_end, 0)
+    // -- PREDECODING PROOF SECTION END-- 
 
-        // clock cycle starts at 1
-        clock_cycle = clock_cycle + 1
-        printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
-
-        // update pc and output_write_address
-        pc, output_write_address = interpreter(instruction, pc, output_write_address)
-    }
+    // -- NO PREDECODING PROOF -- 
+    // parameters: clock_cycle, base, pc, output_write_address
+    interpreter!(0, base, entry_point, 0)
+    // -- NO PREDECODING PROOF END-- 
 }
-
