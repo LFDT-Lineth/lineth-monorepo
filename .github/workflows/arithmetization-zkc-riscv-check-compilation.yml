@@ -2,6 +2,7 @@ name: Tracer riscv-constraints check compilation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -34,6 +35,7 @@ permissions:
 
 jobs:
   check-compilation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository

@@ -10,6 +10,7 @@ name: riscv-guests host tests
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -32,6 +33,7 @@ permissions:
 jobs:
   host-tests:
     name: Guest unit tests (host)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -55,6 +57,7 @@ jobs:
 
   spec-tests:
     name: l2-execution EF spec tests (host)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository

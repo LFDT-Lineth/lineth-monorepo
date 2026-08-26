@@ -17,6 +17,7 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -62,6 +63,7 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
