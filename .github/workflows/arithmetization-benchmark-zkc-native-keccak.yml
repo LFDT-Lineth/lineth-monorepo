@@ -18,6 +18,20 @@ name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 # (1..20000);
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
+  push:
+    branches:
+     - main
+    paths:
+     - 'arithmetization/**'
+     - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
   workflow_dispatch:
     inputs:
       zkc_base_ref:
