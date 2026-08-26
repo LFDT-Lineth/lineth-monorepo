@@ -125,7 +125,7 @@ class ConflationAppV1(
       smartContractErrors = configs.smartContractErrors,
       smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
     ),
-  private val forcedTransactionsApp: ForcedTransactionsApp = ForcedTransactionsApp.createDisabled(),
+  private val forcedTransactionsApp: ForcedTransactionsApp,
   val lastProcessedBlocks: LastProcessedBlocks = getLastConflatedAndAggregatedBlocks(
     lastFinalizedBlock,
     aggregationsRepository,

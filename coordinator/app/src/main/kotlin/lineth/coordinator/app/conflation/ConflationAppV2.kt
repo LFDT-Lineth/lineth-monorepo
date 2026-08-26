@@ -31,7 +31,7 @@ class ConflationAppV2(
   private val lastFinalizedBlock: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
-  val forcedTransactionsApp: ForcedTransactionsApp = ForcedTransactionsApp.createDisabled(),
+  val forcedTransactionsApp: ForcedTransactionsApp,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppV2::class.java)

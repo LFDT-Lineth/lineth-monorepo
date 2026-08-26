@@ -72,7 +72,7 @@ interface ForcedTransactionsApp : LongRunningService {
       ftxDao: ForcedTransactionsDao,
       clock: Clock,
       metricsFacade: MetricsFacade,
-      ftxInvalidityProofService: LongRunningService = DisabledService("forced-transactions-invalidity-proof"),
+      ftxInvalidityProofService: LongRunningService,
     ): ForcedTransactionsApp = ForcedTransactionsAppImpl(
       config = config,
       vertx = vertx,
@@ -112,8 +112,7 @@ internal class ForcedTransactionsAppImpl(
   private val metricsFacade: MetricsFacade,
   safeBlockNumberProvider: ForcedTransactionConflationSafeBlockNumberProvider =
     ForcedTransactionConflationSafeBlockNumberProvider(),
-  private val ftxInvalidityProofService: LongRunningService =
-    DisabledService("forced-transactions-invalidity-proof"),
+  private val ftxInvalidityProofService: LongRunningService,
 ) : ForcedTransactionsApp {
   private val log = LogManager.getLogger(ForcedTransactionsAppImpl::class.java)
   private val l1EthLogsSearcher: EthLogsSearcher = EthLogsSearcherImpl(
