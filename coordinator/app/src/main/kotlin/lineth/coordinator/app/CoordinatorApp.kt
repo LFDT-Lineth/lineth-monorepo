@@ -32,6 +32,8 @@ import lineth.coordinator.config.v2.isEnabled
 import lineth.coordinator.config.v2.logPretty
 import lineth.coordinator.extensions.CoordinatorContext
 import lineth.coordinator.extensions.CoordinatorExtensionFactory
+import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
+import lineth.ftx.conflation.InvalidityProofAssembler
 import lineth.persistence.DisabledForcedTransactionsDao
 import lineth.persistence.FeeHistoriesPostgresDao
 import lineth.persistence.conflation.AggregationsRepositoryImpl
@@ -56,6 +58,7 @@ import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
@@ -244,9 +247,6 @@ class CoordinatorApp(
     if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
       ForcedTransactionsApp.createDisabled()
     } else {
-      check(configs.proversConfig.proverA.invalidity != null) {
-        "prover.invalidity config is required for forced transactions feature to work"
-      }
       val ftxConfig = configs.forcedTransactions
       val l1EthClient = createEthApiClient(
         rpcUrl = ftxConfig.l1Endpoint.toString(),
@@ -292,6 +292,47 @@ class CoordinatorApp(
         finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
           ?: BlockParameter.Tag.EARLIEST,
       )
+      val riscvCutoverTimestamp = configs.conflation.riscvStartingBlockTimestampInclusive
+      val lastFinalizedBlockTimestamp: Instant = if (lastFinalizedBlock == 0UL) {
+        Instant.fromEpochSeconds(0)
+      } else {
+        l2EthClientForConflation
+          .ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(lastFinalizedBlock.toLong()))
+          .thenApply { block -> Instant.fromEpochSeconds(block.timestamp.toLong()) }
+          .get()
+      }
+      val ftxInvalidityProofService: LongRunningService = if (
+        riscvCutoverTimestamp != null && lastFinalizedBlockTimestamp >= riscvCutoverTimestamp
+      ) {
+        log.info(
+          "FTX invalidity proof service disabled: already past RISC-V cutover. " +
+            "lastFinalizedBlockTimestamp={}, cutover={}",
+          lastFinalizedBlockTimestamp,
+          riscvCutoverTimestamp,
+        )
+        DisabledService("forced-transactions-invalidity-proof")
+      } else {
+        check(configs.proversConfig.proverA.invalidity != null) {
+          "prover.invalidity config is required for forced transactions feature to work"
+        }
+        val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)
+        ForcedTransactionsInvalidityProofService(
+          ftxDao = forcedTransactionsDao,
+          invalidityProofAssembler = InvalidityProofAssembler(
+            invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
+            stateManagerClient = zkStateClient,
+            accountProofClient = zkStateClient,
+            ethApiLogsSearcher = l1EthLogsSearcherForFtx,
+            ftxDao = forcedTransactionsDao,
+            tracesClient = tracesClients.tracesConflationClient,
+            contractAddress = configs.protocol.l1.contractAddress,
+            l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
+          ),
+          vertx = vertx,
+          pollingInterval = ftxConfig.invalidityProofCheckInterval,
+          riscvCutoverTimestamp = riscvCutoverTimestamp,
+        )
+      }
       ForcedTransactionsApp.create(
         config = ftxAppConfig,
         vertx = vertx,
@@ -301,13 +342,9 @@ class CoordinatorApp(
         ftxClient = ftxClient,
         finalizedStateProvider = contractClient,
         contractVersionProvider = contractClient,
-        invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
-        stateManagerClient = zkStateClient,
-        accountProofClient = zkStateClient,
-        tracesClient = tracesClients.tracesConflationClient,
         clock = clock,
         metricsFacade = micrometerMetricsFacade,
-        riscvCutoverTimestamp = configs.conflation.riscvStartingBlockTimestampInclusive,
+        ftxInvalidityProofService = ftxInvalidityProofService,
       )
     }
   }

@@ -4,10 +4,6 @@ import io.vertx.core.Vertx
 import linea.DisabledService
 import linea.EthLogsSearcher
 import linea.LongRunningService
-import linea.clients.InvalidityProverClientV1
-import linea.clients.StateManagerAccountProofClient
-import linea.clients.StateManagerClientV1
-import linea.clients.TracesConflationVirtualBlockClientV1
 import linea.contract.Web3JContractVersionAwaiter
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.contract.l1.ContractVersionProvider
@@ -25,10 +21,8 @@ import lineth.conflation.calculators.ConflationTriggerCalculator
 import lineth.conflation.calculators.ConflationTriggerCalculatorByTargetBlockNumbers
 import lineth.ftx.conflation.ConflationCalculatorByForcedTransaction
 import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
-import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
 import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.ftx.conflation.FtxConflationInfo
-import lineth.ftx.conflation.InvalidityProofAssembler
 import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
@@ -76,57 +70,9 @@ interface ForcedTransactionsApp : LongRunningService {
       contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
       ftxClient: ForcedTransactionsClient,
       ftxDao: ForcedTransactionsDao,
-      invalidityProofClient: InvalidityProverClientV1,
-      stateManagerClient: StateManagerClientV1,
-      accountProofClient: StateManagerAccountProofClient,
-      tracesClient: TracesConflationVirtualBlockClientV1,
       clock: Clock,
       metricsFacade: MetricsFacade,
-      riscvCutoverTimestamp: Instant? = null,
-    ): ForcedTransactionsApp {
-      val l1EthLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthApiClient)
-      val ftxInvalidityProofService = ForcedTransactionsInvalidityProofService(
-        ftxDao = ftxDao,
-        invalidityProofAssembler = InvalidityProofAssembler(
-          invalidityProofClient = invalidityProofClient,
-          stateManagerClient = stateManagerClient,
-          accountProofClient = accountProofClient,
-          ethApiLogsSearcher = l1EthLogsSearcher,
-          ftxDao = ftxDao,
-          tracesClient = tracesClient,
-          contractAddress = config.l1ContractAddress,
-          l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
-        ),
-        vertx = vertx,
-        pollingInterval = config.invalidityProofProcessingInterval,
-        riscvCutoverTimestamp = riscvCutoverTimestamp,
-      )
-      return ForcedTransactionsAppImpl(
-        config = config,
-        vertx = vertx,
-        l1EthApiClient = l1EthApiClient,
-        l2EthApiClient = l2EthApiClient,
-        finalizedStateProvider = finalizedStateProvider,
-        contractVersionProvider = contractVersionProvider,
-        ftxClient = ftxClient,
-        ftxDao = ftxDao,
-        clock = clock,
-        metricsFacade = metricsFacade,
-        ftxInvalidityProofService = ftxInvalidityProofService,
-      )
-    }
-
-    fun createWithoutInvalidityProofs(
-      config: Config,
-      vertx: Vertx,
-      l1EthApiClient: EthApiClient,
-      l2EthApiClient: EthApiClient,
-      finalizedStateProvider: LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
-      contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
-      ftxClient: ForcedTransactionsClient,
-      ftxDao: ForcedTransactionsDao,
-      clock: Clock,
-      metricsFacade: MetricsFacade,
+      ftxInvalidityProofService: LongRunningService = DisabledService("forced-transactions-invalidity-proof"),
     ): ForcedTransactionsApp = ForcedTransactionsAppImpl(
       config = config,
       vertx = vertx,
@@ -138,6 +84,7 @@ interface ForcedTransactionsApp : LongRunningService {
       ftxDao = ftxDao,
       clock = clock,
       metricsFacade = metricsFacade,
+      ftxInvalidityProofService = ftxInvalidityProofService,
     )
   }
 }
