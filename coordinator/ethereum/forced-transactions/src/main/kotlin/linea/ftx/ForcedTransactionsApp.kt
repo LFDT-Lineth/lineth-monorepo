@@ -82,6 +82,49 @@ interface ForcedTransactionsApp : LongRunningService {
       tracesClient: TracesConflationVirtualBlockClientV1,
       clock: Clock,
       metricsFacade: MetricsFacade,
+    ): ForcedTransactionsApp {
+      val l1EthLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthApiClient)
+      val ftxInvalidityProofService = ForcedTransactionsInvalidityProofService(
+        ftxDao = ftxDao,
+        invalidityProofAssembler = InvalidityProofAssembler(
+          invalidityProofClient = invalidityProofClient,
+          stateManagerClient = stateManagerClient,
+          accountProofClient = accountProofClient,
+          ethApiLogsSearcher = l1EthLogsSearcher,
+          ftxDao = ftxDao,
+          tracesClient = tracesClient,
+          contractAddress = config.l1ContractAddress,
+          l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
+        ),
+        vertx = vertx,
+        pollingInterval = config.invalidityProofProcessingInterval,
+      )
+      return ForcedTransactionsAppImpl(
+        config = config,
+        vertx = vertx,
+        l1EthApiClient = l1EthApiClient,
+        l2EthApiClient = l2EthApiClient,
+        finalizedStateProvider = finalizedStateProvider,
+        contractVersionProvider = contractVersionProvider,
+        ftxClient = ftxClient,
+        ftxDao = ftxDao,
+        clock = clock,
+        metricsFacade = metricsFacade,
+        ftxInvalidityProofService = ftxInvalidityProofService,
+      )
+    }
+
+    fun createWithoutInvalidityProofs(
+      config: Config,
+      vertx: Vertx,
+      l1EthApiClient: EthApiClient,
+      l2EthApiClient: EthApiClient,
+      finalizedStateProvider: LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
+      contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
+      ftxClient: ForcedTransactionsClient,
+      ftxDao: ForcedTransactionsDao,
+      clock: Clock,
+      metricsFacade: MetricsFacade,
     ): ForcedTransactionsApp = ForcedTransactionsAppImpl(
       config = config,
       vertx = vertx,
@@ -91,10 +134,6 @@ interface ForcedTransactionsApp : LongRunningService {
       contractVersionProvider = contractVersionProvider,
       ftxClient = ftxClient,
       ftxDao = ftxDao,
-      invalidityProofClient = invalidityProofClient,
-      stateManagerClient = stateManagerClient,
-      accountProofClient = accountProofClient,
-      tracesClient = tracesClient,
       clock = clock,
       metricsFacade = metricsFacade,
     )
@@ -120,14 +159,12 @@ internal class ForcedTransactionsAppImpl(
   private val contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
   private val ftxClient: ForcedTransactionsClient,
   private val ftxDao: ForcedTransactionsDao,
-  private val invalidityProofClient: InvalidityProverClientV1,
-  private val stateManagerClient: StateManagerClientV1,
-  private val accountProofClient: StateManagerAccountProofClient,
-  private val tracesClient: TracesConflationVirtualBlockClientV1,
   private val clock: Clock,
   private val metricsFacade: MetricsFacade,
   safeBlockNumberProvider: ForcedTransactionConflationSafeBlockNumberProvider =
     ForcedTransactionConflationSafeBlockNumberProvider(),
+  private val ftxInvalidityProofService: LongRunningService =
+    DisabledService("forced-transactions-invalidity-proof"),
 ) : ForcedTransactionsApp {
   private val log = LogManager.getLogger(ForcedTransactionsAppImpl::class.java)
   private val l1EthLogsSearcher: EthLogsSearcher = EthLogsSearcherImpl(
@@ -152,22 +189,6 @@ internal class ForcedTransactionsAppImpl(
   override val conflationCalculator: ConflationTriggerCalculator = ConflationCalculatorByForcedTransaction(
     processedFtxQueue = conflationFtxQueue,
   )
-  private val ftxInvalidityProofService = ForcedTransactionsInvalidityProofService(
-    ftxDao = ftxDao,
-    invalidityProofAssembler = InvalidityProofAssembler(
-      invalidityProofClient = invalidityProofClient,
-      stateManagerClient = stateManagerClient,
-      accountProofClient = accountProofClient,
-      ethApiLogsSearcher = l1EthLogsSearcher,
-      ftxDao = ftxDao,
-      tracesClient = tracesClient,
-      contractAddress = config.l1ContractAddress,
-      l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
-    ),
-    vertx = vertx,
-    pollingInterval = config.invalidityProofProcessingInterval,
-  )
-
   override fun start(): CompletableFuture<Unit> {
     log.info("starting ForcedTransactionsApp")
     return contractVersionProvider
