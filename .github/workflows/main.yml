@@ -35,10 +35,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.triggering_actor }}
         run: |
-          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)"
+          perm="$(gh api "repos/${{ github.repository }}/collaborators/${ACTOR}/permission" --jq .permission)" \
+            || { echo "::error::Permission lookup failed for '${ACTOR}'."; exit 1; }
+          [ -n "$perm" ] || { echo "::error::No permission returned for '${ACTOR}' (not a repo collaborator)."; exit 1; }
           echo "Dispatch actor '${ACTOR}' permission: ${perm}"
+          # triage intentionally excluded: it cannot push code, so it must not drive the publish pipeline.
           case "$perm" in
-            admin|maintain|write|triage) echo "Authorised." ;;
+            admin|maintain|write) echo "Authorised." ;;
             *) echo "::error::Actor '${ACTOR}' (permission '${perm}') is not authorised to run this workflow manually."; exit 1 ;;
           esac
 
@@ -350,9 +353,13 @@ jobs:
     secrets: inherit
 
   cleanup-deployments:
-    needs: [run-e2e-tests]
-    # always(): still clean up after failed/cancelled e2e runs. Skip only for draft or fork PRs; manual dispatch (no pull_request context) still cleans up.
-    if: ${{ always() && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false)) }}
+    needs: [authorise-dispatch, run-e2e-tests]
+    # always(): still clean up after failed/cancelled e2e runs. Skips draft/fork PRs and
+    # unauthorised manual dispatches; PR/push events pass because authorise-dispatch is skipped.
+    if: >
+      always() &&
+      (needs.authorise-dispatch.result == 'success' || needs.authorise-dispatch.result == 'skipped') &&
+      (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.draft == false))
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     permissions:
       contents: read
