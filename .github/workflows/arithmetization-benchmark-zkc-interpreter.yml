@@ -44,7 +44,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-benchmark-zkc-interpreter.yml'
   push:
     branches:
       - main
@@ -54,7 +54,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-benchmark-zkc-interpreter.yml'
   workflow_dispatch:
     inputs:
       base_ref:

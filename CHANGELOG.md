@@ -78,6 +78,7 @@
 - *(coordinator)* Make runtime invariants explicit (#3716)
 - *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
+- *(sequencer)* Deduplicate forced transactions in pool (#3807)
 
 ### 🚜 Refactor
 
