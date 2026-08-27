@@ -1,6 +1,8 @@
-// Command generate-riscv-system compiles the real RISC-V main.zkc arithmetization,
-// proves an honest witness for a real guest ELF, and writes the verifier-facing
-// artifacts verifier-ray consumes directly:
+// Command generate-riscv-system compiles the real RISC-V main.zkc
+// arithmetization, proves an honest witness for zkc_r5.AllInOneGuestELF (the
+// one guest in codegen.HonestRiscvGuests, which exercises the full RV64I +
+// M-extension + custom-precompile surface in a single witness), and writes
+// the verifier-facing artifacts verifier-ray consumes directly:
 //
 //   - testdata/generated/riscv_system.zig
 //   - testdata/riscv_proof_image.bin
@@ -9,12 +11,13 @@
 // system and the committed proof image cannot drift onto different synthetic
 // paths.
 //
-// testdata/riscv_proof_image.bin is a distinct file from testdata/proof_image.bin:
-// the latter is prover-ray's TestVerifierRayImageIsUpToDate fixture (a small,
-// synthetic VerifyInput at a different base address, used for a cross-language
-// ABI-agreement check), not this real end-to-end proof. The two must not share
-// a path — each writer would silently clobber the other's fixture with content
-// the other's reader can't decode.
+// testdata/riscv_proof_image.bin is a distinct file from
+// testdata/proof_image.bin: the latter is prover-ray's
+// TestVerifierRayImageIsUpToDate fixture (a small, synthetic VerifyInput at a
+// different base address, used for a cross-language ABI-agreement check),
+// not this real end-to-end proof. The two must not share a path — each
+// writer would silently clobber the other's fixture with content the
+// other's reader can't decode.
 package main
 
 import (
@@ -36,7 +39,7 @@ func main() {
 }
 
 func run() error {
-	artifacts, err := verifierraycodegen.BuildHonestRiscvArtifacts()
+	artifacts, err := verifierraycodegen.BuildAllInOneHonestRiscvArtifacts()
 	if err != nil {
 		return err
 	}
