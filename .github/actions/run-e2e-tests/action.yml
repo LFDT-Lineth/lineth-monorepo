@@ -11,6 +11,14 @@ inputs:
   linea_besu_package_tag:
     required: false
     default: ''
+  linea_besu_package_image_name:
+    description: 'linea-besu-package Docker image name (overrides the compose default)'
+    required: false
+    default: consensys/linea-besu-package
+  linea_besu_package_artifact_filename:
+    description: 'Filename of the gzipped besu-package image tarball inside tmp/artifacts'
+    required: false
+    default: linea-besu-package-images.tar.gz
   coordinator_tag:
     required: false
     default: ''
@@ -201,16 +209,20 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+        BESU_PACKAGE_IMAGE_NAME: ${{ inputs.linea_besu_package_image_name }}
+        BESU_PACKAGE_ARTIFACT_FILENAME: ${{ inputs.linea_besu_package_artifact_filename }}
       run: |
         set -euo pipefail
-        artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-besu-package-images.tar.gz"
+        artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${BESU_PACKAGE_ARTIFACT_FILENAME}"
         if [ -f "$artifact_path" ]; then
           gunzip -c "$artifact_path" | docker load
         else
           echo "No artifact at ${artifact_path}; skipping docker load."
         fi
-        # Propagate the tag to later steps (e.g. compose spin-up) regardless of artifact presence.
+        # Propagate the tag and image name to later steps (e.g. compose spin-up) regardless of
+        # artifact presence. BESU_PACKAGE_IMAGE_NAME overrides the compose default image name.
         echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
+        echo "BESU_PACKAGE_IMAGE_NAME=${BESU_PACKAGE_IMAGE_NAME}" >> "$GITHUB_ENV"
 
     - name: Spin up fresh environment with retry
       shell: bash
