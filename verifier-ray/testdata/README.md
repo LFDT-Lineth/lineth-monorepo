@@ -7,13 +7,14 @@ Generated Zig fixtures live in:
 ```text
 testdata/generated/vectors.zig
 testdata/generated/vanishing.zig
+testdata/generated/verify.zig
+testdata/generated/riscv_system.zig
 ```
 
-Native and R5 smoke-test binary inputs live in:
+The real proof image used by the native and R5 smoke tests lives in:
 
 ```text
-testdata/inputs/passing.bin
-testdata/inputs/failing.bin
+testdata/proof_image.bin
 ```
 
 Refresh generated Zig fixtures from `verifier-ray/` with:
