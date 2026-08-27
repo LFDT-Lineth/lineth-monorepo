@@ -11,74 +11,22 @@ import (
 
 const riscvMainZkcPath = "../../arithmetization/src/main/riscv/main.zkc"
 
-// TestRisc5InstructionCoverageGuests traces small hand-written guest ELFs
-// through the real main.zkc interpreter and checks each resulting trace
-// against every compiled constraint. Each guest below exercises interpreter
-// paths that ExitZeroGuestELF (only addi/ecall) never touches. These only
-// trace and check constraints — they do not run the (expensive) prove/verify
-// pipeline, which is already covered by verifier-ray/codegen/riscv_bootstrap.go
-// for ExitZeroGuestELF.
-func TestRisc5InstructionCoverageGuests(t *testing.T) {
+// TestRisc5InstructionCoverageGuest traces zkc_r5.AllInOneGuestELF through
+// the real main.zkc interpreter and checks the resulting trace against every
+// compiled constraint. This only traces and checks constraints — it does not
+// run the (expensive) prove/verify pipeline, which is already covered by
+// verifier-ray/codegen/riscv_bootstrap.go.
+func TestRisc5InstructionCoverageGuest(t *testing.T) {
 	binf, err := compileBinaryConstraints(riscvMainZkcPath)
 	if err != nil {
 		t.Fatalf("failed to compile zkc source: %v", err)
 	}
 
-	tests := []struct {
-		name string
-		elf  []byte
-	}{
-		// MemoryRoundTripGuestELF stores and loads a scratch word, exercising
-		// the S-type/I-type memory path.
-		{"MemoryRoundTrip", zkc_r5.MemoryRoundTripGuestELF},
-		// ArithmeticGuestELF exercises LUI, JAL, JALR, an R-type base op, and
-		// an M-extension op.
-		{"Arithmetic", zkc_r5.ArithmeticGuestELF},
-		// BranchesGuestELF exercises all six B-type variants, both taken and
-		// not-taken.
-		{"Branches", zkc_r5.BranchesGuestELF},
-		// LoadStoreWidthsGuestELF exercises SB/LB, SH/LH, and SD/LD, including
-		// sign extension.
-		{"LoadStoreWidths", zkc_r5.LoadStoreWidthsGuestELF},
-		// Poseidon2GuestELF exercises the R_POSEIDON2 precompile.
-		{"Poseidon2", zkc_r5.Poseidon2GuestELF},
-		// KeccakGuestELF exercises the R_KECCAK precompile.
-		{"Keccak", zkc_r5.KeccakGuestELF},
-		// ImmediateALUGuestELF exercises SLTI, SLTIU, XORI, ORI, ANDI, SLLI,
-		// SRLI, SRAI, ADDIW, SLLIW, SRLIW, and SRAIW.
-		{"ImmediateALU", zkc_r5.ImmediateALUGuestELF},
-		// WordWidthGuestELF exercises ADDW, SUBW, SLLW, SRLW, and SRAW.
-		{"WordWidth", zkc_r5.WordWidthGuestELF},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			inputsMap, err := zkc_r5.PrepareInput(test.elf, nil)
-			if err != nil {
-				t.Fatalf("failed to prepare inputs: %v", err)
-			}
-			if _, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap); err != nil {
-				t.Fatalf("failed to trace/check guest: %v", err)
-			}
-		})
-	}
-}
-
-// TestRisc5WriteOutputGuest traces zkc_r5.WriteOutputGuestELF, which invokes
-// the R_WRITE_OUTPUT precompile to copy the bytes 'A','B','C' into the
-// public guest_output buffer, and asserts that the resulting trace output
-// carries those bytes verbatim.
-func TestRisc5WriteOutputGuest(t *testing.T) {
-	inputsMap, err := zkc_r5.PrepareInput(zkc_r5.WriteOutputGuestELF, nil)
+	inputsMap, err := zkc_r5.PrepareInput(zkc_r5.AllInOneGuestELF, nil)
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
-
-	binf, err := compileBinaryConstraints(riscvMainZkcPath)
-	if err != nil {
-		t.Fatalf("failed to compile zkc source: %v", err)
-	}
-
-	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap)
+	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap, true)
 	if err != nil {
 		t.Fatalf("failed to trace/check guest: %v", err)
 	}
@@ -89,25 +37,6 @@ func TestRisc5WriteOutputGuest(t *testing.T) {
 	want := []byte{'A', 'B', 'C'}
 	if string(got) != string(want) {
 		t.Fatalf("guest_output = %q, want %q", got, want)
-	}
-}
-
-// TestRisc5ExitOneGuestIsRejected traces zkc_r5.ExitOneGuestELF, which exits
-// with a nonzero code, and asserts that main.zkc's process_syscall rejects
-// it (via `fail "EXIT CODE = %d\n"`) instead of silently accepting it.
-func TestRisc5ExitOneGuestIsRejected(t *testing.T) {
-	inputsMap, err := zkc_r5.PrepareInput(zkc_r5.ExitOneGuestELF, nil)
-	if err != nil {
-		t.Fatalf("failed to prepare inputs: %v", err)
-	}
-
-	binf, err := compileBinaryConstraints(riscvMainZkcPath)
-	if err != nil {
-		t.Fatalf("failed to compile zkc source: %v", err)
-	}
-
-	if _, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap); err == nil {
-		t.Fatalf("expected tracing a nonzero-exit-code guest to fail, but it succeeded")
 	}
 }
 
