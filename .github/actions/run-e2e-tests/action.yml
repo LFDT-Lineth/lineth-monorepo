@@ -216,6 +216,11 @@ runs:
         echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
     
     - name: Pull all external-to-monorepo images with retry
+      # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
+      # external-to-monorepo profile, so this pull would fetch ${BESU_PACKAGE_IMAGE_NAME}:${LINEA_BESU_PACKAGE_TAG}
+      # from the registry — failing on unpublished CI tags, or overwriting the image just loaded from
+      # the artifact. Genuinely-missing external images are still pulled by compose on spin-up.
+      if: ${{ inputs.linea_besu_package_tag == '' }}
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
       with:
         max_attempts: 10
