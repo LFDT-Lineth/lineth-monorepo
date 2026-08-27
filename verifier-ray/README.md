@@ -19,6 +19,7 @@ Generated fixtures are checked into git and live in:
 testdata/generated/vectors.zig
 testdata/generated/vanishing.zig
 testdata/generated/verify.zig
+testdata/generated/riscv_system.zig
 ```
 
 The generator is in:
@@ -76,38 +77,35 @@ make build-r5
 The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Binary smoke-test inputs live in:
 
 ```text
-testdata/inputs/passing.bin
-testdata/inputs/failing.bin
+testdata/proof_image.bin
 ```
 
 ## Running Example Programs
 
-Run the native executable with `INPUT_FILE`, defaulting to the passing fixture:
+Run the native executable against the committed honest proof image:
 
 ```bash
 make run
 ```
 
-Run explicit native fixtures:
+Run the negative embedded-fixture check:
 
 ```bash
-make run-passing
 make run-failing
 make run-failing-expected
 ```
 
 `run-failing` is expected to exit non-zero. `run-failing-expected` wraps it and succeeds only when the failure happens.
 
-Run through `zkc` with `INPUT_FILE`, defaulting to the passing fixture:
+Run through `zkc` against the committed honest proof image:
 
 ```bash
 make zkc-verify
 ```
 
-Run explicit `zkc` fixtures:
+Run the negative embedded-fixture check:
 
 ```bash
-make zkc-verify-passing
 make zkc-verify-failing
 make zkc-verify-failing-expected
 ```
