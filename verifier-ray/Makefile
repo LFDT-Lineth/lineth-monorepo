@@ -11,7 +11,7 @@ include ../riscv-guests/build_common/Makefile
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
-PROOF_IMAGE := testdata/proof_image.bin
+PROOF_IMAGE := testdata/riscv_proof_image.bin
 
 # Optional legacy embedded-fixture mode, still used by the profiling targets.
 # The default smoke-test run/zkc path loads the committed real proof image.
@@ -37,7 +37,7 @@ help:
 		'  build                 Build verifier-ray natively' \
 		'  build-release         Build verifier-ray natively with ReleaseSmall and stripped symbols' \
 		'  build-r5              Build verifier-ray for the Lineth R5 zkVM target' \
-		'  run                   Run verifier-ray natively against testdata/proof_image.bin' \
+		'  run                   Run verifier-ray natively against testdata/riscv_proof_image.bin' \
 		'  run-passing           Alias for run' \
 		'  run-failing           Run verifier-ray natively with an invalid embedded fixture (exits non-zero)' \
 		'  run-failing-expected  Run native invalid input and require it to fail' \
@@ -47,7 +47,7 @@ help:
 		'  generate-testdata     Generate testdata for Zig tests' \
 		'  verify-testdata       Verify generated testdata is up to date with git (for CI)' \
 		'  zkc-build             Build the R5 ELF and generate the zkc JSON input' \
-		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter against testdata/proof_image.bin' \
+		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter against testdata/riscv_proof_image.bin' \
 		'  zkc-verify-passing    Alias for zkc-verify' \
 		'  zkc-verify-failing    Run zkc with an invalid embedded fixture (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
@@ -116,7 +116,7 @@ generate-testdata:
 	cd codegen/generate-riscv-system && go run .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/*.zig testdata/proof_image.bin
+	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
 
 zkc-build: build-r5
 	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
