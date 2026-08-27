@@ -13,15 +13,14 @@ import (
 // Emits the runtime PCS opening fixture for verify.zig. The compile-time
 // `pcs.System` is emitted separately by `codegen.WritePcsSystemZig`.
 
-// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .entry_claims = ..., .proof = ... }`.
-func pcsOpeningZigLiteral(entryClaims [][]field.Ext, proof fri.OpeningProof) string {
-	var b strings.Builder
-	b.WriteString("verifier.PcsOpening{ .entry_claims = &")
-	b.WriteString(extJaggedLiteral(entryClaims))
-	b.WriteString(", .proof = ")
-	b.WriteString(pcsOpeningProofZigLiteral(proof))
-	b.WriteString(" }")
-	return b.String()
+// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .proof = ... }`.
+//
+// No `.entry_claims` field: the verifier reconstructs those claimed
+// evaluations itself, from `rounds[*].cells`, via the compiled `pcs.System`'s
+// per-column `claim_cells` table (see `verifier.zig`'s `verify`). There is
+// nothing left for this fixture to embed for them.
+func pcsOpeningZigLiteral(proof fri.OpeningProof) string {
+	return "verifier.PcsOpening{ .proof = " + pcsOpeningProofZigLiteral(proof) + " }"
 }
 
 // pcsOpeningProofZigLiteral renders a `pcs.OpeningProof{...}` (input_queries +
@@ -108,18 +107,6 @@ func extArrayLiteral(values []field.Ext) string {
 		parts[i] = extValueLiteral(v)
 	}
 	return "[_]ext.Ext{ " + strings.Join(parts, ", ") + " }"
-}
-
-// extJaggedLiteral renders `[][]field.Ext` for `[]const []const ext.Ext`.
-func extJaggedLiteral(rows [][]field.Ext) string {
-	if len(rows) == 0 {
-		return ".{}"
-	}
-	parts := make([]string, len(rows))
-	for i, row := range rows {
-		parts[i] = "&" + extArrayLiteral(row)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
 func elemArrayLiteral(values []field.Element) string {

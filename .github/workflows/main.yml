@@ -71,12 +71,20 @@ jobs:
   component-changelog-upload:
     # Push-only: never run on manual dispatch, which could otherwise push
     # changelog commits to main via the release bot.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # !cancelled() + explicit success check: without a status function the skipped
+    # authorise-dispatch gate propagates down the needs graph and skips this job.
+    if: >
+      !cancelled() &&
+      needs.lint-latest-commit-messages.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint-latest-commit-messages]
     uses: ./.github/workflows/component-changelog-upload.yml
 
   component-changelog-commit:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      !cancelled() &&
+      needs.component-changelog-upload.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [component-changelog-upload]
     permissions:
       contents: write
@@ -86,6 +94,9 @@ jobs:
 
   filter-commit-changes:
     needs: [lint-latest-commit-messages]
+    # !cancelled() + explicit success check: break the skip cascade from the
+    # skipped authorise-dispatch gate while still gating on a green lint.
+    if: ${{ !cancelled() && needs.lint-latest-commit-messages.result == 'success' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     name: Filter commit changes
     outputs:
@@ -254,6 +265,7 @@ jobs:
 
   compute-commit-tags:
     needs: [filter-commit-changes]
+    if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
     uses: ./.github/workflows/reusable-compute-commit-tags.yml
 
   testing:
@@ -282,12 +294,17 @@ jobs:
 
   get-has-changes-requiring-e2e-testing:
     needs: [filter-commit-changes]
+    if: ${{ !cancelled() && needs.filter-commit-changes.result == 'success' }}
     uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     needs: [compute-commit-tags, get-has-changes-requiring-e2e-testing]
-    if: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' }}
+    if: >
+      !cancelled() &&
+      needs.compute-commit-tags.result == 'success' &&
+      needs.get-has-changes-requiring-e2e-testing.result == 'success' &&
+      needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true'
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
       group: manual-docker-build-and-e2e-tests-${{ github.workflow }}-${{ github.ref }}
@@ -304,6 +321,14 @@ jobs:
         compute-commit-tags,
         manual-docker-build-and-e2e-tests,
       ]
+    # !cancelled() + explicit success checks replicate the previous implicit
+    # success() gate (all three needs must succeed) while breaking the skip
+    # cascade from the skipped authorise-dispatch gate.
+    if: >
+      !cancelled() &&
+      needs.filter-commit-changes.result == 'success' &&
+      needs.compute-commit-tags.result == 'success' &&
+      needs.manual-docker-build-and-e2e-tests.result == 'success'
     uses: ./.github/workflows/build-and-publish.yml
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
@@ -358,11 +383,21 @@ jobs:
     secrets: inherit
 
   cleanup-deployments:
-    needs: [authorise-dispatch, run-e2e-tests]
-    # always(): still clean up after failed/cancelled e2e runs. Only eligible PRs and
-    # authorised manual dispatches may remove deployments; main pushes must not.
+    needs: [authorise-dispatch, manual-docker-build-and-e2e-tests, run-e2e-tests]
+    # Only clean up when a deployment was actually created. The docker-build-and-e2e
+    # environment is approval-gated (required reviewers), so manual-docker-build-and-e2e-tests
+    # creates the deployment the moment it engages the environment (waiting-for-approval),
+    # regardless of whether it later succeeds, fails, or is cancelled/rejected. Hence we
+    # gate on result != 'skipped' (skipped is the only state where the environment was never
+    # engaged, i.e. no e2e changes) rather than == 'success', so a cancelled/rejected approval
+    # gate is still cleaned up instead of leaked.
+    # run-e2e-tests stays in needs so cleanup waits for it to finish before deleting the
+    # environment; always() keeps cleaning up even after a failed/cancelled e2e run.
+    # Only eligible PRs and authorised manual dispatches may remove deployments; main
+    # pushes must not.
     if: >
       always() &&
+      needs.manual-docker-build-and-e2e-tests.result != 'skipped' &&
       (
         (
           github.event_name == 'pull_request' &&
