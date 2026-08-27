@@ -25,14 +25,14 @@ ZKC_INPUT ?= input.json
 
 .PHONY: prepare-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
 
-# Use go.mod's pinned tool unless ZKC_REF requests a temporary module override.
+# Use go.mod's pinned tool unless ZKC_REF requests a module override, then pre-download dependencies.
 prepare-zkc:
 	@set -eu; \
 	if [ -n "$(ZKC_REF)" ]; then \
 		echo "Using zkc override $(ZKC_REF)..."; \
 		cd "$(MAKEFILE_DIR)" && go get "github.com/LFDT-Lineth/zkc@$(ZKC_REF)"; \
 	fi; \
-	:
+	cd "$(MAKEFILE_DIR)" && go mod download
 
 # Compile zkc program in a binary file
 zkc-compile: prepare-zkc $(ZKC_FILES)

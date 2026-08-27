@@ -20,7 +20,7 @@ The [`zkc`](https://github.com/LFDT-Lineth/zkc) tool is pinned in [`go.mod`](go.
 go tool zkc
 ```
 
-Make targets use this pinned version by default. To select another commit, branch, or tag, pass `ZKC_REF`, for example `make riscv-check-lint ZKC_REF=main`. This updates `go.mod` and `go.sum` with `go get` before running the tool.
+Make targets use this pinned version by default and download its module dependencies before invoking the tool. To select another commit, branch, or tag, pass `ZKC_REF`, for example `make riscv-check-lint ZKC_REF=main`. This updates `go.mod` and `go.sum` with `go get` before downloading the selected dependencies and running the tool.
 
 ## CI actions and workflows
 
