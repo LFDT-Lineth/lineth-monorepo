@@ -12,7 +12,7 @@ const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag ==
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
-const native_input_path: [:0]const u8 = "testdata/proof_image.bin";
+const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
 const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;

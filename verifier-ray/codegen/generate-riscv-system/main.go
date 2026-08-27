@@ -3,11 +3,18 @@
 // artifacts verifier-ray consumes directly:
 //
 //   - testdata/generated/riscv_system.zig
-//   - testdata/proof_image.bin
+//   - testdata/riscv_proof_image.bin
 //
 // Both artifacts come from the same honest proof, so the committed verifier
 // system and the committed proof image cannot drift onto different synthetic
 // paths.
+//
+// testdata/riscv_proof_image.bin is a distinct file from testdata/proof_image.bin:
+// the latter is prover-ray's TestVerifierRayImageIsUpToDate fixture (a small,
+// synthetic VerifyInput at a different base address, used for a cross-language
+// ABI-agreement check), not this real end-to-end proof. The two must not share
+// a path — each writer would silently clobber the other's fixture with content
+// the other's reader can't decode.
 package main
 
 import (
@@ -76,7 +83,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("proofserialization.Encode: %w", err)
 	}
-	imagePath := "../../testdata/proof_image.bin"
+	imagePath := "../../testdata/riscv_proof_image.bin"
 	if err := os.WriteFile(imagePath, image, 0o644); err != nil {
 		return fmt.Errorf("writing %s: %w", imagePath, err)
 	}

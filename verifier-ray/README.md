@@ -77,7 +77,7 @@ make build-r5
 The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Binary smoke-test inputs live in:
 
 ```text
-testdata/proof_image.bin
+testdata/riscv_proof_image.bin
 ```
 
 ## Running Example Programs
