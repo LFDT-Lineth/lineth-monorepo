@@ -4,12 +4,10 @@ import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ExecutionProverClientV2
 import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.BlockHeaderSummary
-import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl
@@ -53,7 +51,6 @@ import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
-import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
 import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -128,77 +125,7 @@ class ConflationAppV1(
       smartContractErrors = configs.smartContractErrors,
       smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
     ),
-  private val forcedTransactionsApp: ForcedTransactionsApp = run {
-    if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
-      ForcedTransactionsApp.createDisabled()
-    } else {
-      check(configs.proversConfig.proverA.invalidity != null) {
-        "prover.invalidity config is required for forced transactions feature to work"
-      }
-
-      val ftxConfig = configs.forcedTransactions
-      val l1EthClient = createEthApiClient(
-        rpcUrl = ftxConfig.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.ftx"),
-        vertx = vertx,
-        requestRetryConfig = ftxConfig.l1RequestRetries,
-      )
-      val config = ForcedTransactionsApp.Config(
-        l1PollingInterval = ftxConfig.l1EventScraping.pollingInterval,
-        l1ContractAddress = configs.protocol.l1.contractAddress,
-        l1HighestBlockTag = configs.forcedTransactions.l1HighestBlockTag,
-        l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
-        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
-        ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
-        maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
-        ftxProcessingDelay = ftxConfig.processingDelay,
-        invalidityProofProcessingInterval = ftxConfig.invalidityProofCheckInterval,
-      )
-      val ftxClient = ForcedTransactionsJsonRpcClient(
-        vertx = vertx,
-        rpcClient = httpJsonRpcClientFactory.create(
-          endpoint = ftxConfig.sequencerEndpoint,
-          log = LogManager.getLogger("clients.l2.ftx.sequencer"),
-        ),
-        retryConfig = ftxConfig.sequencerRequestRetries.toJsonRpcRetry(),
-        log = LogManager.getLogger("clients.l2.ftx.sequencer"),
-      )
-      val l1Web3jClient = createWeb3jHttpClient(
-        rpcUrl = ftxConfig.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.ftx"),
-      )
-      val contractClient = Web3JLinethRollupSmartContractClientReadOnly(
-        contractAddress = configs.protocol.l1.contractAddress,
-        web3j = l1Web3jClient,
-        ethLogsSearcher = EthLogsSearcherImpl(
-          vertx = vertx,
-          ethApiClient = createEthApiClient(
-            web3jClient = l1Web3jClient,
-            requestRetryConfig = ftxConfig.l1RequestRetries,
-            vertx = vertx,
-          ),
-        ),
-        finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
-          ?: BlockParameter.Tag.EARLIEST,
-      )
-      ForcedTransactionsApp.create(
-        config = config,
-        vertx = vertx,
-        ftxDao = forcedTransactionsDao,
-        l1EthApiClient = l1EthClient,
-        l2EthApiClient = l2EthClient,
-        ftxClient = ftxClient,
-        finalizedStateProvider = contractClient,
-        contractVersionProvider = contractClient,
-        invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
-        stateManagerClient = zkStateClient,
-        accountProofClient = zkStateClient,
-        tracesClient = tracesClients.tracesConflationClient,
-        clock = clock,
-        metricsFacade = metricsFacade,
-      )
-    }
-  },
+  private val forcedTransactionsApp: ForcedTransactionsApp,
   val lastProcessedBlocks: LastProcessedBlocks = getLastConflatedAndAggregatedBlocks(
     lastFinalizedBlock,
     aggregationsRepository,
@@ -574,7 +501,6 @@ class ConflationAppV1(
       .thenCompose { conflationCalculators.service.start() }
       .thenCompose { blockCreationMonitor.start() }
       .thenCompose { blobCompressionProofCoordinator.start() }
-      .thenCompose { forcedTransactionsApp.start() }
       .thenCompose { provenBlockNumberMonitor.start() }
       .thenPeek {
         log.info("Conflation started")
@@ -588,7 +514,6 @@ class ConflationAppV1(
       blockCreationMonitor.stop(),
       conflationCalculators.service.stop(),
       blobCompressionProofCoordinator.stop(),
-      forcedTransactionsApp.stop(),
       provenBlockNumberMonitor.stop(),
     )
       .thenCompose { requestFileCleanup.cleanup() }

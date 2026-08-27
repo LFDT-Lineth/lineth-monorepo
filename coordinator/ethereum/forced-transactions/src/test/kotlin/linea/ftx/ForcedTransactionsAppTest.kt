@@ -3,10 +3,7 @@ package linea.ftx
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.clients.InvalidityProverClientV1
-import linea.clients.StateManagerAccountProofClient
-import linea.clients.StateManagerClientV1
-import linea.clients.TracesConflationVirtualBlockClientV1
+import linea.DisabledService
 import linea.contract.events.FactoryForcedTransactionAddedEvent
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.contract.events.ForcedTransactionAddedEvent
@@ -30,7 +27,6 @@ import lineth.conflation.FixedLaggingHeadSafeBlockProvider
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.ConflationTriggerCalculator
 import lineth.coordination.blob.FakeBlobCompressor
-import lineth.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
 import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
 import lineth.ftx.conflation.SafeBlockNumberUpdateListener
 import lineth.persistence.ForcedTransactionRecord
@@ -72,10 +68,6 @@ class ForcedTransactionsAppTest {
   private lateinit var fxtDao: ForcedTransactionsDao
   private lateinit var fakeContractClient: FakeLinethRollupSmartContractClient
   private val fakeClock = FakeFixedClock(Instant.parse("2025-01-01T00:00:00Z"))
-  private lateinit var invalidityProofClient: InvalidityProverClientV1
-  private lateinit var stateManagerClient: StateManagerClientV1
-  private lateinit var accountProofClient: StateManagerAccountProofClient
-  private lateinit var tracesClient: TracesConflationVirtualBlockClientV1
 
   @BeforeEach
   fun setUp(vertx: Vertx) {
@@ -105,13 +97,6 @@ class ForcedTransactionsAppTest {
       contractVersion = LinethRollupContractVersion.V8,
     )
     this.fxtDao = FakeForcedTransactionsDao()
-    this.tracesClient = FakeTracesConflationVirtualBlockClientV1()
-    this.invalidityProofClient = FakeInvalidityProverClient()
-    FakeStateManagerClient()
-      .also {
-        this.stateManagerClient = it
-        this.accountProofClient = it
-      }
   }
 
   private fun createApp(
@@ -142,13 +127,10 @@ class ForcedTransactionsAppTest {
       ftxClient = this.ftxClient,
       ftxDao = this.fxtDao,
       l2EthApiClient = this.l2Client,
-      invalidityProofClient = this.invalidityProofClient,
-      stateManagerClient = this.stateManagerClient,
-      accountProofClient = this.accountProofClient,
-      tracesClient = this.tracesClient,
       clock = fakeClock,
       metricsFacade = metricsFacade,
       safeBlockNumberProvider = ForcedTransactionConflationSafeBlockNumberProvider(listener = safeBlockTracker),
+      ftxInvalidityProofService = DisabledService("forced-transactions-invalidity-proof"),
     )
   }
 
