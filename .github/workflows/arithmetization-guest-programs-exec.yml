@@ -30,13 +30,13 @@ on:
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
 
@@ -61,7 +61,7 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
 
-      - name: Install zkc and run simple Zig guest program with zkc interpreter
+      - name: Run simple Zig guest program with zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
         run: make TEST=test.zig IN_BYTES="0xAABB" IN_ORIGIN=0x08800000
         working-directory: arithmetization/src/test
@@ -78,4 +78,3 @@ jobs:
         env:
           INPUT: test/testdata/stateless_input.ssz
           KECCAK_ACCEL: true
-

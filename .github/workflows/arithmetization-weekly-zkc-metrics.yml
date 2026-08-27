@@ -104,8 +104,8 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref || 'main' }}
 
-      # install-zkc does `git fetch --depth=1 origin <ref>`, which cannot fetch an abbreviated SHA,
-      # so expand short hashes through the API. Branches and tags pass through untouched.
+      # Expand short hashes through the API so every measurement job resolves the same zkc revision.
+      # Branches and tags pass through untouched.
       - name: Resolve the zkc ref
         id: zkc
         env:

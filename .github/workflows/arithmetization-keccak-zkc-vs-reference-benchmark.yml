@@ -40,21 +40,21 @@ jobs:
       - name: Install GNU time
         run: sudo apt-get update && sudo apt-get install -y time
 
-      - name: Install zkc
+      - name: Prepare zkc
         env:
           ZKC_REF_OVERRIDE: ${{ inputs.zkc-ref }}
         run: |
           if [ -n "$ZKC_REF_OVERRIDE" ]; then
-            make -C arithmetization install-zkc ZKC_REF="$ZKC_REF_OVERRIDE"
+            make -C arithmetization prepare-zkc ZKC_REF="$ZKC_REF_OVERRIDE"
           else
-            make -C arithmetization install-zkc
+            make -C arithmetization prepare-zkc
           fi
 
       - name: Run batched 512-byte input benchmark
         shell: bash
         run: |
           set -o pipefail
-          ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+          ZKC_REF= go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup \
             --intervals 5 --size 5 \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -62,7 +62,6 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+          ZKC_REF= go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup \
             --single-input-lengths 512,1024,2048,4096,8192,16384,32768 \
             | tee -a "$GITHUB_STEP_SUMMARY"
-

@@ -6,7 +6,7 @@ inputs:
     required: false
     default: 'false'
   zkc-ref:
-    description: 'Optional zkc commit/branch/tag override (default: arithmetization/Makefile ZKC_REF)'
+    description: 'Optional zkc commit/branch/tag override (default: version pinned in arithmetization/go.mod)'
     required: false
     default: ''
   cache-save:
@@ -91,18 +91,12 @@ runs:
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
 
-      - name: Set zkc version
+      - name: Set optional zkc override
         shell: bash
         run: |
           zkc_ref="${{ inputs.zkc-ref }}"
-          if [ -z "$zkc_ref" ]; then
-            zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
-          fi
           {
             echo "ZKC_REF<<EOF"
             echo "$zkc_ref"
             echo "EOF"
           } >> "$GITHUB_ENV"
-
-
-

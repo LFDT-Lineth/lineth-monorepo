@@ -19,13 +19,13 @@ on:
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
 
@@ -48,9 +48,8 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
 
-      - name: Install zkc and check compilation of RISC-V in ZkC
+      - name: Check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint
-
