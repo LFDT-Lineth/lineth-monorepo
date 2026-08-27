@@ -384,17 +384,20 @@ jobs:
 
   cleanup-deployments:
     needs: [authorise-dispatch, manual-docker-build-and-e2e-tests, run-e2e-tests]
-    # Only clean up when a deployment was actually created, i.e. when
-    # manual-docker-build-and-e2e-tests ran (has-changes-requiring-e2e-testing == 'true').
+    # Only clean up when a deployment was actually created. The docker-build-and-e2e
+    # environment is approval-gated (required reviewers), so manual-docker-build-and-e2e-tests
+    # creates the deployment the moment it engages the environment (waiting-for-approval),
+    # regardless of whether it later succeeds, fails, or is cancelled/rejected. Hence we
+    # gate on result != 'skipped' (skipped is the only state where the environment was never
+    # engaged, i.e. no e2e changes) rather than == 'success', so a cancelled/rejected approval
+    # gate is still cleaned up instead of leaked.
     # run-e2e-tests stays in needs so cleanup waits for it to finish before deleting the
-    # environment; always() keeps cleaning up even after a failed/cancelled e2e run so the
-    # created deployment is never leaked. When no deployment was created (e2e skipped),
-    # this job is skipped rather than firing immediately.
+    # environment; always() keeps cleaning up even after a failed/cancelled e2e run.
     # Only eligible PRs and authorised manual dispatches may remove deployments; main
     # pushes must not.
     if: >
       always() &&
-      needs.manual-docker-build-and-e2e-tests.result == 'success' &&
+      needs.manual-docker-build-and-e2e-tests.result != 'skipped' &&
       (
         (
           github.event_name == 'pull_request' &&
