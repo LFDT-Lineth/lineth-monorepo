@@ -6,8 +6,9 @@
 //! `testdata/README.md` asks fixtures there to stay small and deterministic,
 //! and 10 honest proofs at ~52MB apiece would be ~525MB of binary fixtures for
 //! no benefit over reusing the one guest already committed. Instead,
-//! `codegen/generate-riscv-guest-proofs` (run via `make
-//! generate-riscv-guest-proofs`, or directly) writes one
+//! `codegen/generate-riscv-guest-proofs` (run via `make generate-testdata`,
+//! which this test's own generation step is now part of, or directly with
+//! `cd codegen/generate-riscv-guest-proofs && go run .`) writes one
 //! `riscv_proof_image_<guest>.bin` per guest plus a `manifest.txt` naming them
 //! into a gitignored scratch directory; this test reads that manifest at
 //! runtime (there is no comptime guest list here to keep in sync — the

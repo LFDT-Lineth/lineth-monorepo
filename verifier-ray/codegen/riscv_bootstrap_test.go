@@ -13,13 +13,18 @@ import (
 // TestRisc5InstructionCoverageGuests already covers more cheaply).
 //
 // This only checks that BuildAllHonestRiscvArtifacts's own internal
-// sys.Verify + AssertAllVerifierActionsHandled calls succeed for every guest,
-// and that the projected VerifyInput round-trips through Encode/Decode
-// byte-for-byte — it does not commit any of these (large: tens of MB each)
-// proofs as testdata, so this exercises real end-to-end coverage without the
-// repo-size cost of a fixture per guest. testdata/proof_image.bin (built from
-// HonestRiscvGuests[0], ExitZeroGuestELF) remains the one committed fixture
-// for the cross-language Zig mmap test in test/proof_image_test.zig.
+// sys.Verify + AssertAllVerifierActionsHandled calls succeed for every guest
+// (prover-ray's own Go-side protocol verification), and that the projected
+// VerifyInput round-trips through Encode/Decode byte-for-byte — it does not
+// call verifier-ray's actual Zig verifier.verify(), which is what
+// test/riscv_guest_proofs_test.zig covers instead (via
+// codegen/generate-riscv-guest-proofs's scratch fixtures). Nor does it commit
+// any of these (large: tens of MB each) proofs as testdata, so this exercises
+// real end-to-end proving/Go-side-verification coverage without the
+// repo-size cost of a fixture per guest. testdata/riscv_proof_image.bin
+// (built from HonestRiscvGuests[0], ExitZeroGuestELF) remains the one
+// committed fixture, for the cross-language Zig mmap test in
+// test/proof_image_test.zig.
 func TestBuildAllHonestRiscvArtifactsCoversEveryGuest(t *testing.T) {
 	all, err := BuildAllHonestRiscvArtifacts()
 	if err != nil {
