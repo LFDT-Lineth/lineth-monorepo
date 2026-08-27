@@ -375,6 +375,31 @@ pub fn build(b: *std.Build) void {
     if (b.args) |extra| run_l2_execution_runner.addArgs(extra);
     run_l2_execution_runner_step.dependOn(&run_l2_execution_runner.step);
 
+    // ── `mainnet-runner` native host tool ────────────────────────────────────────────────────────────
+    // Runs Linea mainnet zkevm SSZ fixtures (schema 0x0002, L2ExecutionProofPrivateInput) through
+    // the extended l2-execution guest on the host, expecting all to succeed. Fixtures are downloaded
+    // externally (the `fetch-mainnet-fixtures` Makefile target) and passed via `--fixtures DIR`.
+    // The same approach as `extended-vanilla` (reference-test): the guest runs as native code on the
+    // host — no riscv64 compilation and no ZkC required.
+    const mainnet_runner_exe = b.addExecutable(.{
+        .name = "mainnet-runner",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/mainnet_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    mainnet_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+    mainnet_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    mainnet_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    linkNativeZesuCrypto(mainnet_runner_exe, native_target, native_crypto);
+    b.installArtifact(mainnet_runner_exe);
+
+    const mainnet_test_step = b.step("mainnet-test", "Run Linea mainnet zkevm SSZ fixtures through the extended l2-execution guest (pass --fixtures DIR via --)");
+    const run_mainnet = b.addRunArtifact(mainnet_runner_exe);
+    if (b.args) |extra| run_mainnet.addArgs(extra);
+    mainnet_test_step.dependOn(&run_mainnet.step);
+
     // The SSZ fixture comes from the execution-spec-tests zkevm dependency (lazy: only fetched when
     // this test is built). An empty-block vector → no transactions → no secp256k1/curve precompiles,
     // so the full native crypto backend is linked but only keccak is exercised.
