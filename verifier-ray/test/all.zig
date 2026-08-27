@@ -16,4 +16,5 @@ comptime {
     _ = @import("proof_abi_test.zig");
     _ = @import("proof_image_test.zig");
     _ = @import("riscv_system_test.zig");
+    _ = @import("riscv_guest_proofs_test.zig");
 }
