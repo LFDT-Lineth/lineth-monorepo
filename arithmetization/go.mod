@@ -2,8 +2,9 @@ module github.com/LFDT-Lineth/lineth-monorepo/arithmetization
 
 go 1.25.7
 
+require github.com/LFDT-Lineth/zkc v1.2.31-0.20260827073811-35e3bb4b8185
+
 require (
-	github.com/LFDT-Lineth/zkc v1.2.30 // indirect
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect
 	github.com/consensys/gnark-crypto v0.18.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
