@@ -114,7 +114,6 @@ generate-testdata:
 	cd testdata/generate && go run .
 	cd testdata/generate/fri && go run .
 	cd codegen/generate-riscv-system && go run .
-	cd codegen/generate-riscv-guest-proofs && go run .
 
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
