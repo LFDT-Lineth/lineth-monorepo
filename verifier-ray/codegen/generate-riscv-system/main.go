@@ -1,8 +1,8 @@
 // Command generate-riscv-system compiles the real RISC-V main.zkc
-// arithmetization, proves an honest witness for zkc_r5.AllInOneGuestELF (the
-// one guest in codegen.HonestRiscvGuests, which exercises the full RV64I +
-// M-extension + custom-precompile surface in a single witness), and writes
-// the verifier-facing artifacts verifier-ray consumes directly:
+// arithmetization, proves an honest witness for zkc_r5.AllInOneGuestELF (a
+// single guest that exercises the full RV64I + M-extension +
+// custom-precompile surface in one witness), and writes the verifier-facing
+// artifacts verifier-ray consumes directly:
 //
 //   - testdata/generated/riscv_system.zig
 //   - testdata/riscv_proof_image.bin

@@ -42,85 +42,26 @@ type HonestRiscvArtifacts struct {
 	VerifyInput    proofserialization.VerifyInput
 }
 
-// HonestRiscvGuest names one of the honest, halting guest ELFs proved against
-// main.zkc. Every guest here must be accepted by main.zkc's real interpreter
-// circuit.
-type HonestRiscvGuest struct {
-	// Name identifies this guest in generated file/const names (e.g.
-	// "all_in_one") — must be a valid Zig identifier suffix.
-	Name string
-	ELF  []byte
-}
-
-// HonestRiscvGuests lists every guest ELF proved end to end against the real
-// main.zkc interpreter circuit. AllInOneGuestELF alone covers the full
-// RV64I + M-extension + custom-precompile surface exercised by
-// prover-ray/zkcdriver/r5_test.go's TestRisc5InstructionCoverageGuests (it
-// concatenates every one of those guests' checks into a single witness), but
-// through the real prove/PCS/verify pipeline rather than
-// trace-and-check-constraints alone.
-var HonestRiscvGuests = []HonestRiscvGuest{
-	{Name: "all_in_one", ELF: zkc_r5.AllInOneGuestELF},
-}
-
-type honestRiscvProof struct {
-	Sys   *wiop.System
-	Proof wiop.Proof
-	Pub   wiop.PublicInput
-}
-
-// BuildAllInOneHonestRiscvArtifacts exercises the real main.zkc -> wiop.System
-// -> real proof path for HonestRiscvGuests[0] (zkc_r5.AllInOneGuestELF) and
-// returns the verifier-facing artifacts derived from it. Kept for callers
-// that only need one honest witness (e.g.
-// codegen/generate-riscv-system's committed single-guest
-// fixture); proves only that one guest, not every guest — use
-// BuildAllHonestRiscvArtifacts to cover every guest in HonestRiscvGuests
-// against the same compiled system.
+// BuildAllInOneHonestRiscvArtifacts compiles the real main.zkc entrypoint,
+// proves zkc_r5.AllInOneGuestELF against it — a single honest, halting guest
+// that concatenates the full RV64I + M-extension + custom-precompile surface
+// exercised piecemeal by prover-ray/zkcdriver/r5_test.go's
+// TestRisc5InstructionCoverageGuest, but through the real prove/PCS/verify
+// pipeline rather than trace-and-check-constraints alone — and returns the
+// verifier-facing artifacts derived from it.
 func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
-	compiled, err := compileHonestRiscvSystem()
-	if err != nil {
-		return HonestRiscvArtifacts{}, err
-	}
-	result, err := compiled.proveGuest(HonestRiscvGuests[0])
-	if err != nil {
-		return HonestRiscvArtifacts{}, err
-	}
-	return result.Artifacts, nil
-}
-
-// HonestRiscvArtifactsForGuest pairs one HonestRiscvGuest with the verifier
-// artifacts from proving it against main.zkc.
-type HonestRiscvArtifactsForGuest struct {
-	Guest     HonestRiscvGuest
-	Artifacts HonestRiscvArtifacts
-}
-
-// compiledHonestRiscvSystem is main.zkc compiled exactly once: the shared
-// wiop.System, its driver (already bound to sys via zkcdriver.NewZkCDriver,
-// which declares sys's columns/constraints as a side effect — must not be
-// reconstructed per guest), and the CompiledSystem every guest's
-// HonestRiscvArtifacts reuses verbatim (main.zkc's circuit doesn't depend on
-// the witness).
-type compiledHonestRiscvSystem struct {
-	sys            *wiop.System
-	driver         *zkcdriver.ZkCDriver
-	compiledSystem CompiledSystem
-}
-
-func compileHonestRiscvSystem() (compiledHonestRiscvSystem, error) {
 	sourcePath, err := honestRiscvSourcePath()
 	if err != nil {
-		return compiledHonestRiscvSystem{}, err
+		return HonestRiscvArtifacts{}, err
 	}
 
 	binF, err := compileBinaryConstraints(sourcePath)
 	if err != nil {
-		return compiledHonestRiscvSystem{}, fmt.Errorf("compiling %s: %w", sourcePath, err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("compiling %s: %w", sourcePath, err)
 	}
 	compiledConstraints, err := binF.MarshalBinary()
 	if err != nil {
-		return compiledHonestRiscvSystem{}, fmt.Errorf("marshaling %s constraints: %w", sourcePath, err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("marshaling %s constraints: %w", sourcePath, err)
 	}
 
 	sys := wiop.NewSystemf("zkc-riscv-system")
@@ -130,66 +71,13 @@ func compileHonestRiscvSystem() (compiledHonestRiscvSystem, error) {
 
 	compiledSystem, err := BuildCompiledSystem(sys)
 	if err != nil {
-		return compiledHonestRiscvSystem{}, fmt.Errorf("BuildCompiledSystem: %w", err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("BuildCompiledSystem: %w", err)
 	}
 
-	return compiledHonestRiscvSystem{sys: sys, driver: driver, compiledSystem: compiledSystem}, nil
-}
-
-func (c compiledHonestRiscvSystem) proveGuest(guest HonestRiscvGuest) (HonestRiscvArtifactsForGuest, error) {
-	honest, err := proveHonestRiscvGuest(c.sys, c.driver, guest)
-	if err != nil {
-		return HonestRiscvArtifactsForGuest{}, fmt.Errorf("guest %q: %w", guest.Name, err)
-	}
-	verifyInput, err := proofserialization.Project(honest.Sys, honest.Proof, honest.Pub)
-	if err != nil {
-		return HonestRiscvArtifactsForGuest{}, fmt.Errorf("guest %q: proofserialization.Project: %w", guest.Name, err)
-	}
-	return HonestRiscvArtifactsForGuest{
-		Guest: guest,
-		Artifacts: HonestRiscvArtifacts{
-			CompiledSystem: c.compiledSystem,
-			VerifyInput:    verifyInput,
-		},
-	}, nil
-}
-
-// BuildAllHonestRiscvArtifacts compiles the real main.zkc entrypoint exactly
-// once, then proves every guest in HonestRiscvGuests against that same
-// compiled wiop.System, returning one HonestRiscvArtifacts per guest. Every
-// artifacts' CompiledSystem describes the identical circuit (main.zkc is
-// compiled once, independent of the witness); only the proof/public-input
-// differ per guest. sys.Prove creates a fresh Runtime per call and never
-// mutates sys itself, so reusing sys across guests is safe and produces fully
-// independent proofs.
-func BuildAllHonestRiscvArtifacts() ([]HonestRiscvArtifactsForGuest, error) {
-	compiled, err := compileHonestRiscvSystem()
-	if err != nil {
-		return nil, err
-	}
-
-	results := make([]HonestRiscvArtifactsForGuest, len(HonestRiscvGuests))
-	for i, guest := range HonestRiscvGuests {
-		result, err := compiled.proveGuest(guest)
-		if err != nil {
-			return nil, err
-		}
-		results[i] = result
-	}
-	return results, nil
-}
-
-// proveHonestRiscvGuest proves guest.ELF against sys using driver, which must
-// already have been constructed against sys (via zkcdriver.NewZkCDriver,
-// which declares sys's columns/constraints as a side effect) before any
-// guest is proved. driver itself carries no per-guest state — only
-// AssignWithPreRead's arguments vary per call — so the same driver is reused
-// across every guest.
-func proveHonestRiscvGuest(sys *wiop.System, driver *zkcdriver.ZkCDriver, guest HonestRiscvGuest) (honestRiscvProof, error) {
 	// The witness is a real halting guest ELF, not a synthetic verifier fixture.
-	honestInputs, err := zkc_r5.PrepareInput(guest.ELF, nil)
+	honestInputs, err := zkc_r5.PrepareInput(zkc_r5.AllInOneGuestELF, nil)
 	if err != nil {
-		return honestRiscvProof{}, fmt.Errorf("PrepareInput: %w", err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("PrepareInput: %w", err)
 	}
 	inputs := &zkcdriver.PreReadInputs{Inputs: honestInputs}
 
@@ -200,16 +88,20 @@ func proveHonestRiscvGuest(sys *wiop.System, driver *zkcdriver.ZkCDriver, guest 
 		wiop.ProveOptions{CheckUnreducedQueries: true},
 	)
 	if err := sys.Verify(proof, pub); err != nil {
-		return honestRiscvProof{}, fmt.Errorf("verifying proof: %w", err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("verifying proof: %w", err)
 	}
 	if err := AssertAllVerifierActionsHandled(sys); err != nil {
-		return honestRiscvProof{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("AssertAllVerifierActionsHandled: %w", err)
 	}
 
-	return honestRiscvProof{
-		Sys:   sys,
-		Proof: proof,
-		Pub:   pub,
+	verifyInput, err := proofserialization.Project(sys, proof, pub)
+	if err != nil {
+		return HonestRiscvArtifacts{}, fmt.Errorf("proofserialization.Project: %w", err)
+	}
+
+	return HonestRiscvArtifacts{
+		CompiledSystem: compiledSystem,
+		VerifyInput:    verifyInput,
 	}, nil
 }
 
