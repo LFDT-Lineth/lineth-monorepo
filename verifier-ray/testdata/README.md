@@ -22,6 +22,14 @@ prover-ray's `TestVerifierRayImageIsUpToDate` (a small synthetic `VerifyInput`
 at a different base address, for a cross-language ABI-agreement check) — the
 two fixtures serve different purposes and must not share a path.
 
+`testdata/scratch/` holds real honest proofs for every guest ELF in
+`codegen`'s `HonestRiscvGuests` (not just the one committed above), written by
+`codegen/generate-riscv-guest-proofs` and read by
+`test/riscv_guest_proofs_test.zig`. Not committed — ~52MB per guest would be
+~525MB of binary fixtures for no benefit over the one guest already committed
+above — so the whole directory is gitignored; `make generate-testdata`
+regenerates it every time.
+
 Refresh generated Zig fixtures from `verifier-ray/` with:
 
 ```bash
