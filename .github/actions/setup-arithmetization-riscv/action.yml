@@ -9,6 +9,7 @@ inputs:
     description: 'Optional zkc commit/branch/tag override (default: version pinned in arithmetization/go.mod)'
     required: false
     default: ''
+  # Downstream workflows may enable cache saves for trusted pinned inputs; keep them disabled for custom refs.
   cache-save:
     description: >
       When true, the Go module/build cache and the Zig cache are saved on a miss. Default false:

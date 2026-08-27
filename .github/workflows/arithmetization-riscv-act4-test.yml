@@ -54,6 +54,8 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
+          # Share caches for go.mod-pinned runs; custom ZKC refs must not write to shared caches.
+          cache-save: ${{ inputs.zkc-ref == '' }}
 
       - name: Install Sail
         run: make -C arithmetization install-sail
