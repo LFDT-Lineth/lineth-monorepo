@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test prep-execution-specs-json-fixtures fetch-mainnet-fixtures mainnet-test clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -18,6 +18,7 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ARITHMETIZATION_TESTING_MAKEFILE ?= $(MAKEFILE_DIR)../../arithmetization/src/test/Makefile
 
 ZIG ?= zig
+GO  ?= go
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
@@ -43,6 +44,25 @@ ZKC_EXEC_FLAGS ?=
 # Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
+
+# Parameters for Linea mainnet zkevm fixture archives.
+# Archives (JSON) are cached under MAINNET_FIXTURES_ARCHIVE_DIR and only re-downloaded when absent.
+# Converted SSZ inputs live under MAINNET_FIXTURES_SSZ_DIR, produced by zesu-convert.
+# Override MAINNET_FIXTURES_DIR to keep downloads outside /tmp.
+MAINNET_FIXTURES_DIR              ?= /tmp/zkevm-fixtures-mainnet
+MAINNET_FIXTURES_ARCHIVE_DIR      := $(MAINNET_FIXTURES_DIR)/archives
+MAINNET_FIXTURES_JSON_DIR         := $(MAINNET_FIXTURES_DIR)/json
+MAINNET_FIXTURES_SSZ_DIR          := $(MAINNET_FIXTURES_DIR)/ssz
+MAINNET_FIXTURES_EXTRACTED        := $(MAINNET_FIXTURES_SSZ_DIR)/.extracted
+MAINNET_FIXTURES_CONVERTER_REPO   := https://github.com/Gabriel-Trintinalia/stateless-executor
+MAINNET_FIXTURES_CONVERTER_DIR    := $(MAINNET_FIXTURES_DIR)/stateless-executor
+MAINNET_FIXTURES_CONVERTER_BIN    := $(MAINNET_FIXTURES_CONVERTER_DIR)/bin/zesu-convert
+MAINNET_FIXTURES_URLS             := \
+	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-1.tar.zst \
+	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-2.tar.zst
+
+# Extra args forwarded to mainnet-runner, e.g. --limit 10 or -x.
+MAINNET_ARGS ?=
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -71,6 +91,50 @@ reference-test:
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
 	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
+
+# Downloads archives → extracts JSON under MAINNET_FIXTURES_JSON_DIR → clones+builds zesu-convert
+# → converts rpc_block_*.json to SSZ under MAINNET_FIXTURES_SSZ_DIR. Archives are cached so only the
+# first run downloads. Delete $(MAINNET_FIXTURES_EXTRACTED) (or the whole SSZ_DIR) to re-convert.
+fetch-mainnet-fixtures: $(MAINNET_FIXTURES_EXTRACTED)
+
+$(MAINNET_FIXTURES_EXTRACTED):
+	@set -eu; \
+	mkdir -p "$(MAINNET_FIXTURES_ARCHIVE_DIR)"; \
+	rm -rf "$(MAINNET_FIXTURES_JSON_DIR)"; \
+	mkdir -p "$(MAINNET_FIXTURES_JSON_DIR)"; \
+	for url in $(MAINNET_FIXTURES_URLS); do \
+		archive="$(MAINNET_FIXTURES_ARCHIVE_DIR)/$$(basename "$$url")"; \
+		if [ ! -f "$$archive" ]; then \
+			echo "downloading $$url"; \
+			rm -f "$$archive.tmp"; \
+			curl -L --fail -o "$$archive.tmp" "$$url"; \
+			mv "$$archive.tmp" "$$archive"; \
+		fi; \
+		echo "extracting $$archive"; \
+		tar --zstd -xf "$$archive" -C "$(MAINNET_FIXTURES_JSON_DIR)"; \
+	done; \
+	if [ ! -d "$(MAINNET_FIXTURES_CONVERTER_DIR)/.git" ]; then \
+		rm -rf "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
+		git clone "$(MAINNET_FIXTURES_CONVERTER_REPO)" "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
+	fi; \
+	cd "$(MAINNET_FIXTURES_CONVERTER_DIR)" && $(GO) build -o bin/zesu-convert ./cmd/zesu-convert; \
+	rm -rf "$(MAINNET_FIXTURES_SSZ_DIR)"; \
+	mkdir -p "$(MAINNET_FIXTURES_SSZ_DIR)"; \
+	find "$(MAINNET_FIXTURES_JSON_DIR)" -name "rpc_block_*.json" | while read json; do \
+		stem=$$(basename "$$json" .json); \
+		subdir=$$(dirname "$$json"); \
+		rel=$$(realpath --relative-to="$(MAINNET_FIXTURES_JSON_DIR)" "$$subdir"); \
+		mkdir -p "$(MAINNET_FIXTURES_SSZ_DIR)/$$rel"; \
+		"$(MAINNET_FIXTURES_CONVERTER_BIN)" "$$json" "$(MAINNET_FIXTURES_SSZ_DIR)/$$rel/$$stem.ssz"; \
+	done; \
+	touch "$@"
+
+# Runs Linea mainnet zkevm SSZ fixtures through the extended l2-execution guest on the host.
+# Downloads the fixture archives first if not already cached. Same approach as reference-test:
+# the guest runs as native code — no riscv64 compilation and no ZkC required.
+# Narrow/triage with MAINNET_ARGS, e.g. `make mainnet-test MAINNET_ARGS="--limit 10"`.
+mainnet-test: fetch-mainnet-fixtures
+	$(ZIG) build mainnet-test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- --fixtures "$(MAINNET_FIXTURES_SSZ_DIR)" $(MAINNET_ARGS)
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
