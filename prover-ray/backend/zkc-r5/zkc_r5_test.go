@@ -189,40 +189,20 @@ func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
 }
 
 func TestElfBlobs_InstructionCoverageGuestsPrepareInput(t *testing.T) {
-	tests := []struct {
-		name        string
-		elfProgram  []byte
-		sectionData []byte
-	}{
-		{"MemoryRoundTrip", minimalelf.MemoryRoundTripElfProgram, minimalelf.MemoryRoundTripSectionData},
-		{"Arithmetic", minimalelf.ArithmeticElfProgram, minimalelf.ArithmeticSectionData},
-		{"ExitOne", minimalelf.ExitOneElfProgram, minimalelf.ExitOneSectionData},
-		{"Branches", minimalelf.BranchesElfProgram, minimalelf.BranchesSectionData},
-		{"LoadStoreWidths", minimalelf.LoadStoreWidthsElfProgram, minimalelf.LoadStoreWidthsSectionData},
-		{"Poseidon2", minimalelf.Poseidon2ElfProgram, minimalelf.Poseidon2SectionData},
-		{"Keccak", minimalelf.KeccakElfProgram, minimalelf.KeccakSectionData},
-		{"WriteOutput", minimalelf.WriteOutputElfProgram, minimalelf.WriteOutputSectionData},
-		{"ImmediateALU", minimalelf.ImmediateALUElfProgram, minimalelf.ImmediateALUSectionData},
-		{"WordWidth", minimalelf.WordWidthElfProgram, minimalelf.WordWidthSectionData},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			parsedELF, err := zkcr5.LoadGuestElf(bytes.NewReader(test.elfProgram))
-			require.NoError(t, err)
-			require.Len(t, parsedELF.Sections, 1, "one loadable section must yield one memory blob")
-			assert.Equal(t, uint64(minimalelf.DefaultSectionAddr), parsedELF.Sections[0].Offset, "memory blob offset must match the section's virtual address")
-			assert.Equal(t, test.sectionData, parsedELF.Sections[0].Data, "memory blob data must match the section bytes")
-			assert.Equal(t, uint64(minimalelf.DefaultEntryPoint), parsedELF.EntryPoint, "entry point must match ELF e_entry")
+	parsedELF, err := zkcr5.LoadGuestElf(bytes.NewReader(minimalelf.AllInOneElfProgram))
+	require.NoError(t, err)
+	require.Len(t, parsedELF.Sections, 1, "one loadable section must yield one memory blob")
+	assert.Equal(t, uint64(minimalelf.DefaultSectionAddr), parsedELF.Sections[0].Offset, "memory blob offset must match the section's virtual address")
+	assert.Equal(t, minimalelf.AllInOneSectionData, parsedELF.Sections[0].Data, "memory blob data must match the section bytes")
+	assert.Equal(t, uint64(minimalelf.DefaultEntryPoint), parsedELF.EntryPoint, "entry point must match ELF e_entry")
 
-			// PrepareInput must succeed too, since these ELFs are fed to zkc's
-			// public inputs the same way ExitZeroGuestELF is in riscv_bootstrap.go.
-			inputs, err := zkcr5.PrepareInput(test.elfProgram, nil)
-			require.NoError(t, err)
-			assert.Contains(t, inputs, "entry_point_and_blobs_count")
-			assert.Contains(t, inputs, "blobs_offset_and_size")
-			assert.Contains(t, inputs, "blobs_data")
-		})
-	}
+	// PrepareInput must succeed too, since this ELF is fed to zkc's public
+	// inputs the same way AllInOneGuestELF is in riscv_bootstrap.go.
+	inputs, err := zkcr5.PrepareInput(minimalelf.AllInOneElfProgram, nil)
+	require.NoError(t, err)
+	assert.Contains(t, inputs, "entry_point_and_blobs_count")
+	assert.Contains(t, inputs, "blobs_offset_and_size")
+	assert.Contains(t, inputs, "blobs_data")
 }
 
 func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
