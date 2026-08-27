@@ -27,7 +27,7 @@ services:
       - -c
       - |
         set -- java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml \
-          -jar "$$LINETH_APP_JAR" \
+          -jar "$${LINETH_APP_JAR:-/opt/consensys/maru/maru.jar}" \
           --genesis-file /initialization/genesis-maru.json \
           --config configs/config.toml
         if [ "$$LINETH_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
@@ -398,7 +398,7 @@ services:
             -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json \
             -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml \
             $$CONFIG_OVERRIDE_OPTS \
-            -jar "$$LINETH_APP_JAR" \
+            -jar "$${LINETH_APP_JAR:-/opt/consensys/linea/coordinator/libs/coordinator.jar}" \
             --traces-limits-v5 config/traces-limits-v5.toml \
             --smart-contract-errors config/smart-contract-errors.toml \
             --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml \
