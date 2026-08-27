@@ -1,10 +1,13 @@
 //! Reads the committed honest-proof image as a real `verifier.VerifyInput`.
 //!
-//! The fixture is `testdata/riscv_proof_image.bin`, generated from the same real
-//! `arithmetization/src/main/riscv/main.zkc` proof path that emits
-//! `testdata/generated/riscv_system.zig`. This is the cross-language end-to-end
-//! check: Go writes the native layout bytes, Zig mmaps and casts them directly,
-//! then the real verifier accepts the proof against the real compiled system.
+//! The fixture is `testdata/riscv_proof_image.bin`, generated
+//! from the same real `arithmetization/src/main/riscv/main.zkc` proof path
+//! (proving `zkc_r5.AllInOneGuestELF`, which exercises the full RV64I +
+//! M-extension + custom-precompile surface in a single witness) that emits
+//! `testdata/generated/riscv_system.zig`. This is the
+//! cross-language end-to-end check: Go writes the native layout bytes, Zig
+//! mmaps and casts them directly, then the real verifier accepts the proof
+//! against the real compiled system.
 //!
 //! Deliberately a distinct file from `testdata/proof_image.bin`, which is
 //! prover-ray's `TestVerifierRayImageIsUpToDate` fixture: a small synthetic

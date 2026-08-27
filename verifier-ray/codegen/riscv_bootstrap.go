@@ -44,32 +44,23 @@ type HonestRiscvArtifacts struct {
 
 // HonestRiscvGuest names one of the honest, halting guest ELFs proved against
 // main.zkc. Every guest here must be accepted by main.zkc's real interpreter
-// circuit; ExitOneGuestELF is deliberately excluded because main.zkc must
-// reject it (see prover-ray/zkcdriver/r5_test.go's
-// TestRisc5ExitOneGuestIsRejected), so it has no honest proof to produce.
+// circuit.
 type HonestRiscvGuest struct {
 	// Name identifies this guest in generated file/const names (e.g.
-	// "exit_zero", "poseidon2") — must be a valid Zig identifier suffix.
+	// "all_in_one") — must be a valid Zig identifier suffix.
 	Name string
 	ELF  []byte
 }
 
 // HonestRiscvGuests lists every guest ELF proved end to end against the real
-// main.zkc interpreter circuit, covering the full RV64I + M-extension +
-// custom-precompile surface exercised by prover-ray/zkcdriver/r5_test.go's
-// TestRisc5InstructionCoverageGuests, but through the real prove/PCS/verify
-// pipeline rather than trace-and-check-constraints alone.
+// main.zkc interpreter circuit. AllInOneGuestELF alone covers the full
+// RV64I + M-extension + custom-precompile surface exercised by
+// prover-ray/zkcdriver/r5_test.go's TestRisc5InstructionCoverageGuests (it
+// concatenates every one of those guests' checks into a single witness), but
+// through the real prove/PCS/verify pipeline rather than
+// trace-and-check-constraints alone.
 var HonestRiscvGuests = []HonestRiscvGuest{
-	{Name: "exit_zero", ELF: zkc_r5.ExitZeroGuestELF},
-	{Name: "memory_round_trip", ELF: zkc_r5.MemoryRoundTripGuestELF},
-	{Name: "arithmetic", ELF: zkc_r5.ArithmeticGuestELF},
-	{Name: "branches", ELF: zkc_r5.BranchesGuestELF},
-	{Name: "load_store_widths", ELF: zkc_r5.LoadStoreWidthsGuestELF},
-	{Name: "poseidon2", ELF: zkc_r5.Poseidon2GuestELF},
-	{Name: "keccak", ELF: zkc_r5.KeccakGuestELF},
-	{Name: "write_output", ELF: zkc_r5.WriteOutputGuestELF},
-	{Name: "immediate_alu", ELF: zkc_r5.ImmediateALUGuestELF},
-	{Name: "word_width", ELF: zkc_r5.WordWidthGuestELF},
+	{Name: "all_in_one", ELF: zkc_r5.AllInOneGuestELF},
 }
 
 type honestRiscvProof struct {
@@ -78,14 +69,15 @@ type honestRiscvProof struct {
 	Pub   wiop.PublicInput
 }
 
-// BuildHonestRiscvArtifacts exercises the real main.zkc -> wiop.System -> real
-// proof path for zkc_r5.ExitZeroGuestELF and returns the verifier-facing
-// artifacts derived from it. Kept for callers that only need one honest
-// witness (e.g. codegen/generate-riscv-system's default single-guest fixture);
-// proves only HonestRiscvGuests[0], not every guest — use
+// BuildAllInOneHonestRiscvArtifacts exercises the real main.zkc -> wiop.System
+// -> real proof path for HonestRiscvGuests[0] (zkc_r5.AllInOneGuestELF) and
+// returns the verifier-facing artifacts derived from it. Kept for callers
+// that only need one honest witness (e.g.
+// codegen/generate-riscv-system's committed single-guest
+// fixture); proves only that one guest, not every guest — use
 // BuildAllHonestRiscvArtifacts to cover every guest in HonestRiscvGuests
 // against the same compiled system.
-func BuildHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
+func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	compiled, err := compileHonestRiscvSystem()
 	if err != nil {
 		return HonestRiscvArtifacts{}, err
