@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input wrap-vanilla adapt-vanilla require-vanilla require-extended
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -21,6 +21,11 @@ ZIG ?= zig
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
+# Native host tools (wrap/adapt/runner) link blst+mcl. Override when they are not under
+# /usr/local (Linux) or /opt/homebrew (macOS), e.g. CRYPTO_PREFIX=$(HOME)/.local/crypto-deps
+CRYPTO_PREFIX ?=
+# Host tools that execute EVM (adapt/runner) may need libmcl.so from CRYPTO_PREFIX at runtime.
+HOST_LIB_ENV := $(if $(CRYPTO_PREFIX),LD_LIBRARY_PATH=$(CRYPTO_PREFIX)/lib:$$LD_LIBRARY_PATH)
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
 # must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
 ZIG_FETCH_FLAGS ?=
@@ -32,6 +37,12 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+
+# Vanilla SSZ → extended/Amsterdam host tools (also produced by `compile` / plain `zig build`).
+WRAP_BIN  := $(MAKEFILE_DIR)zig-out/bin/l2-execution-wrap
+ADAPT_BIN := $(MAKEFILE_DIR)zig-out/bin/l2-execution-adapt
+VANILLA   ?=
+EXTENDED  ?=
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity. Override to pick the execution backend — e.g. "--gogen --fast" runs
@@ -77,7 +88,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(CRYPTO_PREFIX),-Dcrypto-prefix=$(CRYPTO_PREFIX)) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \
@@ -90,6 +101,22 @@ compile:
 # Fail early on a missing/empty INPUT instead of building then erroring in the converter.
 require-input:
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
+
+require-vanilla:
+	@[ -n "$(VANILLA)" ] && [ -f "$(VANILLA)" ] || { echo "VANILLA not found: '$(VANILLA)' (set VANILLA=path/to/vanilla.ssz)"; exit 1; }
+
+require-extended:
+	@[ -n "$(EXTENDED)" ] || { echo "EXTENDED not set (set EXTENDED=path/to/extended.ssz)"; exit 1; }
+
+# Dummy-wrap vanilla EF SSZ as extended 0x0002 (verbatim inner bytes; no fork rewrite).
+# Example: make wrap-vanilla VANILLA=block.ssz EXTENDED=block_extended.ssz
+wrap-vanilla: require-vanilla require-extended compile
+	$(WRAP_BIN) $(VANILLA) $(EXTENDED)
+
+# Re-execute vanilla BPO2 SSZ as Amsterdam, patch state/receipts roots + BAL, then wrap.
+# Example: make adapt-vanilla VANILLA=block.ssz EXTENDED=block_amsterdam.ssz CRYPTO_PREFIX=$(HOME)/.local/crypto-deps
+adapt-vanilla: require-vanilla require-extended compile
+	$(HOST_LIB_ENV) $(ADAPT_BIN) $(VANILLA) $(EXTENDED)
 
 exec: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

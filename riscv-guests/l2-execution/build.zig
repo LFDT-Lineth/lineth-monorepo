@@ -355,6 +355,42 @@ pub fn build(b: *std.Build) void {
     if (b.args) |extra| run_l2_execution_wrap.addArgs(extra);
     run_l2_execution_wrap_step.dependOn(&run_l2_execution_wrap.step);
 
+    // ── Amsterdam adapter (test/amsterdam_adapt.zig) + `l2-execution-adapt` CLI ─────────────────────
+    // Host-only: re-execute a vanilla BPO2 (etc.) stateless input under Amsterdam, rewrite claimed
+    // state/receipts roots + EIP-7928 BAL, dummy-wrap as extended 0x0002 input. Needs the encode
+    // module (lazy `ssz` dep) and the native execution seam.
+    const amsterdam_adapt_mod = b.createModule(.{
+        .root_source_file = b.path("test/amsterdam_adapt.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    amsterdam_adapt_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+    amsterdam_adapt_mod.addImport("zesu_mpt", native_imports.mpt);
+    amsterdam_adapt_mod.addImport("zesu_executor", native_imports.executor);
+    amsterdam_adapt_mod.addImport("l2_execution", l2_execution_mod);
+    amsterdam_adapt_mod.addImport("vanilla_wrap", vanilla_wrap_mod);
+    amsterdam_adapt_mod.addImport("stateless_input_encode", stateless_input_encode_mod);
+
+    const l2_execution_adapt_exe = b.addExecutable(.{
+        .name = "l2-execution-adapt",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_adapt.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_adapt_exe.root_module.addImport("amsterdam_adapt", amsterdam_adapt_mod);
+    linkNativeZesuCrypto(l2_execution_adapt_exe, native_target, native_crypto);
+    b.installArtifact(l2_execution_adapt_exe);
+
+    const run_l2_execution_adapt_step = b.step(
+        "l2-execution-adapt",
+        "Adapt a vanilla BPO2 .ssz into an Amsterdam extended .ssz (recompute state root, wrap)",
+    );
+    const run_l2_execution_adapt = b.addRunArtifact(l2_execution_adapt_exe);
+    if (b.args) |extra| run_l2_execution_adapt.addArgs(extra);
+    run_l2_execution_adapt_step.dependOn(&run_l2_execution_adapt.step);
+
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
     // output on stdout. See test/l2_execution_runner.zig's doc comment for why the SSZ/JSON toggle

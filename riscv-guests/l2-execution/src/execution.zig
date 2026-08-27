@@ -47,6 +47,17 @@ pub const ProofOutputWithLogs = struct {
     fork_name: []const u8,
 };
 
+/// Host-only trace of one stateless execution: the proof plus the post-execution values needed to
+/// rewrite a BPO2 (or other pre-Amsterdam) payload so its claimed header commitments match
+/// Amsterdam rules (EIP-7778 gas accounting / EIP-7928 BAL / no beacon withdrawals).
+pub const ExecutionTrace = struct {
+    proof: ProofOutputWithLogs,
+    cumulative_gas: u64,
+    blob_gas_used: u64,
+    accessed: []const types.AccessedEntry,
+    post_alloc: std.AutoHashMapUnmanaged(types.Address, types.AllocAccount),
+};
+
 // ─── Private helpers (adapted from Zesu executor/main.zig) ───────────────────────────────────────
 
 fn buildEnv(
@@ -123,6 +134,20 @@ pub fn executeStatelessInputWithLogs(
     fork_name: []const u8,
     node_index: *mpt.NodeIndex,
 ) !ProofOutputWithLogs {
+    const trace = try executeStatelessInputTrace(alloc, si, fork_name, node_index, true);
+    return trace.proof;
+}
+
+/// Same execution as `executeStatelessInputWithLogs`. When `validate_commitments` is false, skip
+/// `validatePostExecution` so a host adapter can rewrite the payload's claimed state/receipts
+/// roots, gasUsed, and BAL to the Amsterdam-computed values and re-encode.
+pub fn executeStatelessInputTrace(
+    alloc: std.mem.Allocator,
+    si: input.StatelessInput,
+    fork_name: []const u8,
+    node_index: *mpt.NodeIndex,
+    validate_commitments: bool,
+) !ExecutionTrace {
     zesu_allocator.set(alloc);
 
     const ep = &si.new_payload_request.execution_payload;
@@ -202,6 +227,7 @@ pub fn executeStatelessInputWithLogs(
         fork_name,
         si.chain_config.chain_id,
         si.public_keys,
+        validate_commitments,
     );
 }
 
@@ -216,7 +242,8 @@ fn executeBlockStatelessWithLogs(
     fork_name: []const u8,
     chain_id: u64,
     public_keys: []const []const u8,
-) !ProofOutputWithLogs {
+    validate_commitments: bool,
+) !ExecutionTrace {
     const ep = &req.execution_payload;
 
     const spec = hardfork.specForBlock(fork_name, ep.timestamp) orelse return error.UnsupportedFork;
@@ -250,11 +277,19 @@ fn executeBlockStatelessWithLogs(
     defer access_log.deinit();
     const accessed = try executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched);
     const proof = try finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb());
-    try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
-        .computed_state_root = proof.post_state_root,
-        .expected_state_root = ep.state_root,
-        .computed_receipts_root = proof.receipts_root,
-        .expected_receipts_root = ep.receipts_root,
-    });
-    return proof;
+    if (validate_commitments) {
+        try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
+            .computed_state_root = proof.post_state_root,
+            .expected_state_root = ep.state_root,
+            .computed_receipts_root = proof.receipts_root,
+            .expected_receipts_root = ep.receipts_root,
+        });
+    }
+    return .{
+        .proof = proof,
+        .cumulative_gas = result.cumulative_gas,
+        .blob_gas_used = result.blob_gas_used,
+        .accessed = accessed,
+        .post_alloc = result.alloc,
+    };
 }

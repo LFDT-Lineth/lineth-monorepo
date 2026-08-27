@@ -30,6 +30,11 @@ const l2_execution_ssz = @import("l2_execution_ssz");
 
 const execution = @import("execution.zig");
 
+/// Host adapter: re-execute without post-execution commitment checks so claimed
+/// Amsterdam header fields can be rewritten (see `test/amsterdam_adapt.zig`).
+pub const executeStatelessInputTrace = execution.executeStatelessInputTrace;
+pub const ExecutionTrace = execution.ExecutionTrace;
+
 const types = executor.executor_types;
 const tx_decode = executor.executor_tx_decode;
 const tx_signing = executor.executor_tx_signing;
