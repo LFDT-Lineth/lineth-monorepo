@@ -12,18 +12,15 @@ Install toolchain `riscv64im_zicclsm-unknown-none-elf`
 
 Note: The target riscv64im_zicclsm-unknown-none-elf is not a standard target. To install it, you can use a standard RISC‑V toolchain and just specify the architecture/extensions manually.
 
-### Install Zkc
+### Zkc
 
-No official releases yet.
-Clone repo [zkc](https://github.com/LFDT-Lineth/zkc)
+The [`zkc`](https://github.com/LFDT-Lineth/zkc) tool is pinned in [`go.mod`](go.mod) and requires no separate installation. Run it from this directory with:
 
-`go install ./cmd/zkc`
-
-Or from this directory:
-
-```bash
-make install-zkc
+```console
+go tool zkc
 ```
+
+Make targets use this pinned version by default. To select another commit, branch, or tag, pass `ZKC_REF`, for example `make riscv-check-lint ZKC_REF=main`. This updates `go.mod` and `go.sum` with `go get` before running the tool.
 
 ## CI actions and workflows
 
@@ -37,9 +34,7 @@ It installs:
 
 The workflow **[Tracer riscv-constraints check compilation](../.github/workflows/arithmetization-zkc-riscv-check-compilation.yml)** verifies that the ZkC program compiles in CI.
 It runs the arithmetization setup step above.
-It checks out [zkc](https://github.com/LFDT-Lineth/zkc), installs the `zkc` CLI, and runs `zkc compile` on the main entrypoint under this tree.
-
-As there are no official releases for `zkc` CLI yet, the install is done from main. If you wish to install the version from a branch, the flow can be modified at step `checkout-zkc-repo`, see comment in the Makefile.
+It runs the `zkc` tool pinned in `arithmetization/go.mod` and compiles the main entrypoint under this tree. A workflow input can override the pinned version when needed.
 
 It runs on **push** and **pull_request** to `main` when relevant paths change, including:
 
