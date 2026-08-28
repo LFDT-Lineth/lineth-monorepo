@@ -47,11 +47,12 @@ enum class ConflationTrigger(val triggerPriority: Int) {
   // as it is used as conflation, blob and aggregation boundary.
   TARGET_BLOCK_NUMBER(1),
   FORCED_TRANSACTION(2),
-  HARD_FORK(3),
-  DATA_LIMIT(4),
-  TRACES_LIMIT(5),
-  TIME_LIMIT(6),
-  BLOCKS_LIMIT(7),
+  COINBASE_CHANGE(3),
+  HARD_FORK(4),
+  DATA_LIMIT(5),
+  TRACES_LIMIT(6),
+  TIME_LIMIT(7),
+  BLOCKS_LIMIT(8),
 }
 
 data class ConflationCalculationResult(
