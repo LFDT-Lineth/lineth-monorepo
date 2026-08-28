@@ -7,6 +7,7 @@ const vanishing = verifier_ray.query.vanishing;
 const logderivativesum = verifier_ray.query.logderivativesum;
 const grandproduct = verifier_ray.query.grandproduct;
 const rowlimit = verifier_ray.query.rowlimit;
+const shared_randomness = verifier_ray.query.shared_randomness;
 
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
 pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };
@@ -69,6 +70,12 @@ const system_0_grandproduct = grandproduct.System{ .queries = &system_0_grandpro
 const system_0_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks };
+// shared-randomness system: "bool-col"
+const system_0_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_0_shared_randomness = shared_randomness.System{ .rounds = &system_0_shared_randomness_rounds, .contribution_refs = &system_0_shared_randomness_contribution_refs };
 const scenario_0 = Scenario{
     .name = "BooleanColumn",
     .spec = system_0_spec,
@@ -177,6 +184,12 @@ const system_1_grandproduct = grandproduct.System{ .queries = &system_1_grandpro
 const system_1_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks };
+// shared-randomness system: "fib"
+const system_1_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_1_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_1_shared_randomness = shared_randomness.System{ .rounds = &system_1_shared_randomness_rounds, .contribution_refs = &system_1_shared_randomness_contribution_refs };
 const scenario_1 = Scenario{
     .name = "Fibonacci",
     .spec = system_1_spec,
@@ -289,6 +302,12 @@ const system_2_grandproduct = grandproduct.System{ .queries = &system_2_grandpro
 const system_2_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks };
+// shared-randomness system: "geo"
+const system_2_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_2_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_2_shared_randomness = shared_randomness.System{ .rounds = &system_2_shared_randomness_rounds, .contribution_refs = &system_2_shared_randomness_contribution_refs };
 const scenario_2 = Scenario{
     .name = "GeometricProgression",
     .spec = system_2_spec,
@@ -399,6 +418,12 @@ const system_3_grandproduct = grandproduct.System{ .queries = &system_3_grandpro
 const system_3_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks };
+// shared-randomness system: "ctr"
+const system_3_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_3_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_3_shared_randomness = shared_randomness.System{ .rounds = &system_3_shared_randomness_rounds, .contribution_refs = &system_3_shared_randomness_contribution_refs };
 const scenario_3 = Scenario{
     .name = "ConditionalCounter",
     .spec = system_3_spec,
@@ -514,6 +539,12 @@ const system_4_grandproduct = grandproduct.System{ .queries = &system_4_grandpro
 const system_4_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks };
+// shared-randomness system: "pyth"
+const system_4_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_4_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_4_shared_randomness = shared_randomness.System{ .rounds = &system_4_shared_randomness_rounds, .contribution_refs = &system_4_shared_randomness_contribution_refs };
 const scenario_4 = Scenario{
     .name = "PythagoreanTriplet",
     .spec = system_4_spec,
@@ -626,6 +657,12 @@ const system_5_grandproduct = grandproduct.System{ .queries = &system_5_grandpro
 const system_5_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks };
+// shared-randomness system: "dyn-fib"
+const system_5_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_5_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_5_shared_randomness = shared_randomness.System{ .rounds = &system_5_shared_randomness_rounds, .contribution_refs = &system_5_shared_randomness_contribution_refs };
 const scenario_5 = Scenario{
     .name = "DynamicFibonacci",
     .spec = system_5_spec,
@@ -736,6 +773,12 @@ const system_6_grandproduct = grandproduct.System{ .queries = &system_6_grandpro
 const system_6_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks };
+// shared-randomness system: "const-col"
+const system_6_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_6_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_6_shared_randomness = shared_randomness.System{ .rounds = &system_6_shared_randomness_rounds, .contribution_refs = &system_6_shared_randomness_contribution_refs };
 const scenario_6 = Scenario{
     .name = "ConstantColumn",
     .spec = system_6_spec,
@@ -842,6 +885,12 @@ const system_7_grandproduct = grandproduct.System{ .queries = &system_7_grandpro
 const system_7_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks };
+// shared-randomness system: "fwd-shift"
+const system_7_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_7_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_7_shared_randomness = shared_randomness.System{ .rounds = &system_7_shared_randomness_rounds, .contribution_refs = &system_7_shared_randomness_contribution_refs };
 const scenario_7 = Scenario{
     .name = "ForwardShiftConstant",
     .spec = system_7_spec,
@@ -954,6 +1003,12 @@ const system_8_grandproduct = grandproduct.System{ .queries = &system_8_grandpro
 const system_8_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks };
+// shared-randomness system: "bool-cube"
+const system_8_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_8_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_8_shared_randomness = shared_randomness.System{ .rounds = &system_8_shared_randomness_rounds, .contribution_refs = &system_8_shared_randomness_contribution_refs };
 const scenario_8 = Scenario{
     .name = "BooleanCube",
     .spec = system_8_spec,
@@ -1068,6 +1123,12 @@ const system_9_grandproduct = grandproduct.System{ .queries = &system_9_grandpro
 const system_9_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks };
+// shared-randomness system: "lin-comb"
+const system_9_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_9_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_9_shared_randomness = shared_randomness.System{ .rounds = &system_9_shared_randomness_rounds, .contribution_refs = &system_9_shared_randomness_contribution_refs };
 const scenario_9 = Scenario{
     .name = "LinearCombination",
     .spec = system_9_spec,
@@ -1180,6 +1241,12 @@ const system_10_grandproduct = grandproduct.System{ .queries = &system_10_grandp
 const system_10_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks };
+// shared-randomness system: "fib-16"
+const system_10_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_10_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_10_shared_randomness = shared_randomness.System{ .rounds = &system_10_shared_randomness_rounds, .contribution_refs = &system_10_shared_randomness_contribution_refs };
 const scenario_10 = Scenario{
     .name = "LargeFibonacci",
     .spec = system_10_spec,
@@ -1294,6 +1361,12 @@ const system_11_grandproduct = grandproduct.System{ .queries = &system_11_grandp
 const system_11_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks };
+// shared-randomness system: "same-ratio"
+const system_11_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_11_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_11_shared_randomness = shared_randomness.System{ .rounds = &system_11_shared_randomness_rounds, .contribution_refs = &system_11_shared_randomness_contribution_refs };
 const scenario_11 = Scenario{
     .name = "MultipleVanishingsSameRatio",
     .spec = system_11_spec,
@@ -1408,6 +1481,12 @@ const system_12_grandproduct = grandproduct.System{ .queries = &system_12_grandp
 const system_12_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks };
+// shared-randomness system: "mixed-ratio"
+const system_12_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_12_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_12_shared_randomness = shared_randomness.System{ .rounds = &system_12_shared_randomness_rounds, .contribution_refs = &system_12_shared_randomness_contribution_refs };
 const scenario_12 = Scenario{
     .name = "MixedRatioVanishings",
     .spec = system_12_spec,
@@ -1536,6 +1615,12 @@ const system_13_grandproduct = grandproduct.System{ .queries = &system_13_grandp
 const system_13_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks };
+// shared-randomness system: "multi-mod"
+const system_13_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_13_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_13_shared_randomness = shared_randomness.System{ .rounds = &system_13_shared_randomness_rounds, .contribution_refs = &system_13_shared_randomness_contribution_refs };
 const scenario_13 = Scenario{
     .name = "MultiModule",
     .spec = system_13_spec,
@@ -1648,6 +1733,12 @@ const system_14_grandproduct = grandproduct.System{ .queries = &system_14_grandp
 const system_14_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks };
+// shared-randomness system: "manual-cxl"
+const system_14_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_14_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_14_shared_randomness = shared_randomness.System{ .rounds = &system_14_shared_randomness_rounds, .contribution_refs = &system_14_shared_randomness_contribution_refs };
 const scenario_14 = Scenario{
     .name = "ManualCancellation",
     .spec = system_14_spec,
@@ -1758,6 +1849,12 @@ const system_15_grandproduct = grandproduct.System{ .queries = &system_15_grandp
 const system_15_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks };
+// shared-randomness system: "pre-sel"
+const system_15_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_15_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_15_shared_randomness = shared_randomness.System{ .rounds = &system_15_shared_randomness_rounds, .contribution_refs = &system_15_shared_randomness_contribution_refs };
 const scenario_15 = Scenario{
     .name = "PrecomputedSelector",
     .spec = system_15_spec,
@@ -1866,6 +1963,12 @@ const system_16_grandproduct = grandproduct.System{ .queries = &system_16_grandp
 const system_16_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks };
+// shared-randomness system: "cell-leaf"
+const system_16_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_16_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_16_shared_randomness = shared_randomness.System{ .rounds = &system_16_shared_randomness_rounds, .contribution_refs = &system_16_shared_randomness_contribution_refs };
 const scenario_16 = Scenario{
     .name = "CellLeaf",
     .spec = system_16_spec,
@@ -1978,6 +2081,12 @@ const system_17_grandproduct = grandproduct.System{ .queries = &system_17_grandp
 const system_17_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks };
+// shared-randomness system: "coin-scaled"
+const system_17_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_17_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_17_shared_randomness = shared_randomness.System{ .rounds = &system_17_shared_randomness_rounds, .contribution_refs = &system_17_shared_randomness_contribution_refs };
 const scenario_17 = Scenario{
     .name = "CoinScaled",
     .spec = system_17_spec,
@@ -2094,6 +2203,12 @@ const system_18_grandproduct = grandproduct.System{ .queries = &system_18_grandp
 const system_18_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks };
+// shared-randomness system: "step3"
+const system_18_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_18_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_18_shared_randomness = shared_randomness.System{ .rounds = &system_18_shared_randomness_rounds, .contribution_refs = &system_18_shared_randomness_contribution_refs };
 const scenario_18 = Scenario{
     .name = "ThreeStepRecurrence",
     .spec = system_18_spec,
@@ -2210,6 +2325,12 @@ const system_19_grandproduct = grandproduct.System{ .queries = &system_19_grandp
 const system_19_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks };
+// shared-randomness system: "quartic"
+const system_19_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_19_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_19_shared_randomness = shared_randomness.System{ .rounds = &system_19_shared_randomness_rounds, .contribution_refs = &system_19_shared_randomness_contribution_refs };
 const scenario_19 = Scenario{
     .name = "Quartic",
     .spec = system_19_spec,
@@ -2322,6 +2443,12 @@ const system_20_grandproduct = grandproduct.System{ .queries = &system_20_grandp
 const system_20_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks };
+// shared-randomness system: "dyn-leftpad"
+const system_20_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_20_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_20_shared_randomness = shared_randomness.System{ .rounds = &system_20_shared_randomness_rounds, .contribution_refs = &system_20_shared_randomness_contribution_refs };
 const scenario_20 = Scenario{
     .name = "LeftPadDynamic",
     .spec = system_20_spec,
@@ -2434,6 +2561,12 @@ const system_21_grandproduct = grandproduct.System{ .queries = &system_21_grandp
 const system_21_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks };
+// shared-randomness system: "cube-shift"
+const system_21_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_21_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_21_shared_randomness = shared_randomness.System{ .rounds = &system_21_shared_randomness_rounds, .contribution_refs = &system_21_shared_randomness_contribution_refs };
 const scenario_21 = Scenario{
     .name = "CubicWithBackShift",
     .spec = system_21_spec,
@@ -2562,6 +2695,12 @@ const system_22_grandproduct = grandproduct.System{ .queries = &system_22_grandp
 const system_22_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks };
+// shared-randomness system: "mixed-hi-ratio"
+const system_22_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_22_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_22_shared_randomness = shared_randomness.System{ .rounds = &system_22_shared_randomness_rounds, .contribution_refs = &system_22_shared_randomness_contribution_refs };
 const scenario_22 = Scenario{
     .name = "MixedHighRatio",
     .spec = system_22_spec,
@@ -2704,6 +2843,12 @@ const system_23_grandproduct = grandproduct.System{ .queries = &system_23_grandp
 const system_23_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks };
+// shared-randomness system: "multi-mod-hi-ratio"
+const system_23_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_23_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_23_shared_randomness = shared_randomness.System{ .rounds = &system_23_shared_randomness_rounds, .contribution_refs = &system_23_shared_randomness_contribution_refs };
 const scenario_23 = Scenario{
     .name = "MultiModuleHighRatio",
     .spec = system_23_spec,
@@ -2822,6 +2967,12 @@ const system_24_grandproduct = grandproduct.System{ .queries = &system_24_grandp
 const system_24_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks };
+// shared-randomness system: "cube-32"
+const system_24_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_24_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_24_shared_randomness = shared_randomness.System{ .rounds = &system_24_shared_randomness_rounds, .contribution_refs = &system_24_shared_randomness_contribution_refs };
 const scenario_24 = Scenario{
     .name = "SizeThirtyTwoCubic",
     .spec = system_24_spec,
@@ -2930,6 +3081,12 @@ const system_25_grandproduct = grandproduct.System{ .queries = &system_25_grandp
 const system_25_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks };
+// shared-randomness system: "fwd-shift-3"
+const system_25_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_25_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_25_shared_randomness = shared_randomness.System{ .rounds = &system_25_shared_randomness_rounds, .contribution_refs = &system_25_shared_randomness_contribution_refs };
 const scenario_25 = Scenario{
     .name = "LargeForwardShift",
     .spec = system_25_spec,
@@ -3042,6 +3199,12 @@ const system_26_grandproduct = grandproduct.System{ .queries = &system_26_grandp
 const system_26_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks };
+// shared-randomness system: "two-shift"
+const system_26_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_26_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_26_shared_randomness = shared_randomness.System{ .rounds = &system_26_shared_randomness_rounds, .contribution_refs = &system_26_shared_randomness_contribution_refs };
 const scenario_26 = Scenario{
     .name = "BackAndForwardShift",
     .spec = system_26_spec,
@@ -3154,6 +3317,12 @@ const system_27_grandproduct = grandproduct.System{ .queries = &system_27_grandp
 const system_27_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks };
+// shared-randomness system: "dyn-quad"
+const system_27_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_27_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_27_shared_randomness = shared_randomness.System{ .rounds = &system_27_shared_randomness_rounds, .contribution_refs = &system_27_shared_randomness_contribution_refs };
 const scenario_27 = Scenario{
     .name = "DynamicQuadratic",
     .spec = system_27_spec,
@@ -3268,6 +3437,12 @@ const system_28_grandproduct = grandproduct.System{ .queries = &system_28_grandp
 const system_28_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks };
+// shared-randomness system: "quartic-shift"
+const system_28_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_28_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_28_shared_randomness = shared_randomness.System{ .rounds = &system_28_shared_randomness_rounds, .contribution_refs = &system_28_shared_randomness_contribution_refs };
 const scenario_28 = Scenario{
     .name = "QuarticWithBackShift",
     .spec = system_28_spec,
@@ -3384,6 +3559,12 @@ const system_29_grandproduct = grandproduct.System{ .queries = &system_29_grandp
 const system_29_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks };
+// shared-randomness system: "dyn-fib-multisize"
+const system_29_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_29_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_29_shared_randomness = shared_randomness.System{ .rounds = &system_29_shared_randomness_rounds, .contribution_refs = &system_29_shared_randomness_contribution_refs };
 const scenario_29 = Scenario{
     .name = "DynamicFibonacciMultiSize",
     .spec = system_29_spec,
@@ -3492,6 +3673,12 @@ const system_30_grandproduct = grandproduct.System{ .queries = &system_30_grandp
 const system_30_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks };
+// shared-randomness system: "dyn-fib-two-modules"
+const system_30_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_30_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_30_shared_randomness = shared_randomness.System{ .rounds = &system_30_shared_randomness_rounds, .contribution_refs = &system_30_shared_randomness_contribution_refs };
 const scenario_30 = Scenario{
     .name = "DynamicFibonacciTwoModules",
     .spec = system_30_spec,
@@ -3607,6 +3794,12 @@ const system_31_grandproduct = grandproduct.System{ .queries = &system_31_grandp
 const system_31_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks };
+// shared-randomness system: "lds-ones"
+const system_31_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_31_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_31_shared_randomness = shared_randomness.System{ .rounds = &system_31_shared_randomness_rounds, .contribution_refs = &system_31_shared_randomness_contribution_refs };
 const scenario_31 = Scenario{
     .name = "SingleFractionAllOnes",
     .spec = system_31_spec,
@@ -3733,6 +3926,12 @@ const system_32_grandproduct = grandproduct.System{ .queries = &system_32_grandp
 const system_32_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks };
+// shared-randomness system: "lds-partial"
+const system_32_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_32_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_32_shared_randomness = shared_randomness.System{ .rounds = &system_32_shared_randomness_rounds, .contribution_refs = &system_32_shared_randomness_contribution_refs };
 const scenario_32 = Scenario{
     .name = "PartialFilter",
     .spec = system_32_spec,
@@ -3862,6 +4061,12 @@ const system_33_grandproduct = grandproduct.System{ .queries = &system_33_grandp
 const system_33_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks };
+// shared-randomness system: "lds-zeros"
+const system_33_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_33_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_33_shared_randomness = shared_randomness.System{ .rounds = &system_33_shared_randomness_rounds, .contribution_refs = &system_33_shared_randomness_contribution_refs };
 const scenario_33 = Scenario{
     .name = "AllZeroFilter",
     .spec = system_33_spec,
@@ -3991,6 +4196,12 @@ const system_34_grandproduct = grandproduct.System{ .queries = &system_34_grandp
 const system_34_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks };
+// shared-randomness system: "lds-maskzero"
+const system_34_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_34_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_34_shared_randomness = shared_randomness.System{ .rounds = &system_34_shared_randomness_rounds, .contribution_refs = &system_34_shared_randomness_contribution_refs };
 const scenario_34 = Scenario{
     .name = "FilterMasksZeroDenominator",
     .spec = system_34_spec,
@@ -4183,6 +4394,12 @@ const system_35_grandproduct = grandproduct.System{ .queries = &system_35_grandp
 const system_35_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks };
+// shared-randomness system: "lds-pack"
+const system_35_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_35_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_35_shared_randomness = shared_randomness.System{ .rounds = &system_35_shared_randomness_rounds, .contribution_refs = &system_35_shared_randomness_contribution_refs };
 const scenario_35 = Scenario{
     .name = "Packing4Fractions",
     .spec = system_35_spec,
@@ -4357,6 +4574,12 @@ const system_36_grandproduct = grandproduct.System{ .queries = &system_36_grandp
 const system_36_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks };
+// shared-randomness system: "lds-multi-mod"
+const system_36_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_36_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_36_shared_randomness = shared_randomness.System{ .rounds = &system_36_shared_randomness_rounds, .contribution_refs = &system_36_shared_randomness_contribution_refs };
 const scenario_36 = Scenario{
     .name = "MultiModuleBucketing",
     .spec = system_36_spec,
@@ -4474,6 +4697,12 @@ const system_37_grandproduct = grandproduct.System{ .queries = &system_37_grandp
 const system_37_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks };
+// shared-randomness system: "lds-size1"
+const system_37_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_37_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_37_shared_randomness = shared_randomness.System{ .rounds = &system_37_shared_randomness_rounds, .contribution_refs = &system_37_shared_randomness_contribution_refs };
 const scenario_37 = Scenario{
     .name = "SizeOneModule",
     .spec = system_37_spec,
@@ -4651,6 +4880,12 @@ const system_38_grandproduct = grandproduct.System{ .queries = &system_38_grandp
 const system_38_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks };
+// shared-randomness system: "lds-cond"
+const system_38_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_38_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_38_shared_randomness = shared_randomness.System{ .rounds = &system_38_shared_randomness_rounds, .contribution_refs = &system_38_shared_randomness_contribution_refs };
 const scenario_38 = Scenario{
     .name = "ConditionalLookupShape",
     .spec = system_38_spec,
@@ -4916,6 +5151,12 @@ const system_39_grandproduct = grandproduct.System{ .queries = &system_39_grandp
 const system_39_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks };
+// shared-randomness system: "lds-many"
+const system_39_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_39_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_39_shared_randomness = shared_randomness.System{ .rounds = &system_39_shared_randomness_rounds, .contribution_refs = &system_39_shared_randomness_contribution_refs };
 const scenario_39 = Scenario{
     .name = "ManyFractions",
     .spec = system_39_spec,
@@ -5050,6 +5291,12 @@ const system_40_grandproduct = grandproduct.System{ .queries = &system_40_grandp
 const system_40_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks };
+// shared-randomness system: "lds-size2"
+const system_40_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_40_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_40_shared_randomness = shared_randomness.System{ .rounds = &system_40_shared_randomness_rounds, .contribution_refs = &system_40_shared_randomness_contribution_refs };
 const scenario_40 = Scenario{
     .name = "SizeTwoModule",
     .spec = system_40_spec,
@@ -5198,6 +5445,12 @@ const system_41_grandproduct = grandproduct.System{ .queries = &system_41_grandp
 const system_41_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks };
+// shared-randomness system: "lds-multi-q"
+const system_41_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_41_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_41_shared_randomness = shared_randomness.System{ .rounds = &system_41_shared_randomness_rounds, .contribution_refs = &system_41_shared_randomness_contribution_refs };
 const scenario_41 = Scenario{
     .name = "MultipleQueries",
     .spec = system_41_spec,
@@ -5325,6 +5578,12 @@ const system_42_grandproduct = grandproduct.System{ .queries = &system_42_grandp
 const system_42_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks };
+// shared-randomness system: "lds-vec-den"
+const system_42_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_42_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_42_shared_randomness = shared_randomness.System{ .rounds = &system_42_shared_randomness_rounds, .contribution_refs = &system_42_shared_randomness_contribution_refs };
 const scenario_42 = Scenario{
     .name = "VectorDenominator",
     .spec = system_42_spec,
@@ -5506,6 +5765,12 @@ const system_43_grandproduct = grandproduct.System{ .queries = &system_43_grandp
 const system_43_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks };
+// shared-randomness system: "lds-ones-pack"
+const system_43_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_43_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_43_shared_randomness = shared_randomness.System{ .rounds = &system_43_shared_randomness_rounds, .contribution_refs = &system_43_shared_randomness_contribution_refs };
 const scenario_43 = Scenario{
     .name = "AllFiltersOnesPacked",
     .spec = system_43_spec,
@@ -5699,6 +5964,12 @@ const system_44_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks };
+// shared-randomness system: "lk-simple"
+const system_44_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_44_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_44_shared_randomness = shared_randomness.System{ .rounds = &system_44_shared_randomness_rounds, .contribution_refs = &system_44_shared_randomness_contribution_refs };
 const scenario_44 = Scenario{
     .name = "SingleColumnNoFilters",
     .spec = system_44_spec,
@@ -5900,6 +6171,12 @@ const system_45_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks };
+// shared-randomness system: "lk-filterA"
+const system_45_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_45_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_45_shared_randomness = shared_randomness.System{ .rounds = &system_45_shared_randomness_rounds, .contribution_refs = &system_45_shared_randomness_contribution_refs };
 const scenario_45 = Scenario{
     .name = "FilterOnIncluded",
     .spec = system_45_spec,
@@ -6114,6 +6391,12 @@ const system_46_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks };
+// shared-randomness system: "lk-filterT"
+const system_46_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_46_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_46_shared_randomness = shared_randomness.System{ .rounds = &system_46_shared_randomness_rounds, .contribution_refs = &system_46_shared_randomness_contribution_refs };
 const scenario_46 = Scenario{
     .name = "FilterOnIncluding",
     .spec = system_46_spec,
@@ -6332,6 +6615,12 @@ const system_47_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks };
+// shared-randomness system: "lk-double"
+const system_47_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_47_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_47_shared_randomness = shared_randomness.System{ .rounds = &system_47_shared_randomness_rounds, .contribution_refs = &system_47_shared_randomness_contribution_refs };
 const scenario_47 = Scenario{
     .name = "DoubleConditional",
     .spec = system_47_spec,
@@ -6547,6 +6836,12 @@ const system_48_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks };
+// shared-randomness system: "lk-multi-col"
+const system_48_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_48_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_48_shared_randomness = shared_randomness.System{ .rounds = &system_48_shared_randomness_rounds, .contribution_refs = &system_48_shared_randomness_contribution_refs };
 const scenario_48 = Scenario{
     .name = "MultiColumn",
     .spec = system_48_spec,
@@ -6793,6 +7088,12 @@ const system_49_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks };
+// shared-randomness system: "lk-shared"
+const system_49_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_49_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_49_shared_randomness = shared_randomness.System{ .rounds = &system_49_shared_randomness_rounds, .contribution_refs = &system_49_shared_randomness_contribution_refs };
 const scenario_49 = Scenario{
     .name = "SharedTable",
     .spec = system_49_spec,
@@ -7100,6 +7401,12 @@ const system_50_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks };
+// shared-randomness system: "lk-distinct"
+const system_50_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_50_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_50_shared_randomness = shared_randomness.System{ .rounds = &system_50_shared_randomness_rounds, .contribution_refs = &system_50_shared_randomness_contribution_refs };
 const scenario_50 = Scenario{
     .name = "DistinctTables",
     .spec = system_50_spec,
@@ -7344,6 +7651,12 @@ const system_51_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks };
+// shared-randomness system: "lk-multi-filterT"
+const system_51_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_51_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_51_shared_randomness = shared_randomness.System{ .rounds = &system_51_shared_randomness_rounds, .contribution_refs = &system_51_shared_randomness_contribution_refs };
 const scenario_51 = Scenario{
     .name = "MultiColumnFilterOnIncluding",
     .spec = system_51_spec,
@@ -7544,6 +7857,12 @@ const system_52_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks };
+// shared-randomness system: "lk-repeated"
+const system_52_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_52_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_52_shared_randomness = shared_randomness.System{ .rounds = &system_52_shared_randomness_rounds, .contribution_refs = &system_52_shared_randomness_contribution_refs };
 const scenario_52 = Scenario{
     .name = "RepeatedValueInTable",
     .spec = system_52_spec,
@@ -7741,6 +8060,12 @@ const system_53_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks };
+// shared-randomness system: "lk-shift-a"
+const system_53_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_53_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_53_shared_randomness = shared_randomness.System{ .rounds = &system_53_shared_randomness_rounds, .contribution_refs = &system_53_shared_randomness_contribution_refs };
 const scenario_53 = Scenario{
     .name = "ShiftedAColumn",
     .spec = system_53_spec,
@@ -7938,6 +8263,12 @@ const system_54_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks };
+// shared-randomness system: "lk-shift-b"
+const system_54_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_54_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_54_shared_randomness = shared_randomness.System{ .rounds = &system_54_shared_randomness_rounds, .contribution_refs = &system_54_shared_randomness_contribution_refs };
 const scenario_54 = Scenario{
     .name = "ShiftedBColumn",
     .spec = system_54_spec,
@@ -8183,6 +8514,12 @@ const system_55_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks };
+// shared-randomness system: "lk-multi-A"
+const system_55_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_55_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_55_shared_randomness = shared_randomness.System{ .rounds = &system_55_shared_randomness_rounds, .contribution_refs = &system_55_shared_randomness_contribution_refs };
 const scenario_55 = Scenario{
     .name = "MultipleAFragments",
     .spec = system_55_spec,
@@ -8419,6 +8756,12 @@ const system_56_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks };
+// shared-randomness system: "lk-w3"
+const system_56_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_56_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_56_shared_randomness = shared_randomness.System{ .rounds = &system_56_shared_randomness_rounds, .contribution_refs = &system_56_shared_randomness_contribution_refs };
 const scenario_56 = Scenario{
     .name = "WidthThree",
     .spec = system_56_spec,
@@ -8597,6 +8940,12 @@ const system_57_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks };
+// shared-randomness system: "lk-size1"
+const system_57_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_57_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_57_shared_randomness = shared_randomness.System{ .rounds = &system_57_shared_randomness_rounds, .contribution_refs = &system_57_shared_randomness_contribution_refs };
 const scenario_57 = Scenario{
     .name = "SizeOne",
     .spec = system_57_spec,
@@ -8792,6 +9141,12 @@ const system_58_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks };
+// shared-randomness system: "lk-precomp"
+const system_58_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_58_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_58_shared_randomness = shared_randomness.System{ .rounds = &system_58_shared_randomness_rounds, .contribution_refs = &system_58_shared_randomness_contribution_refs };
 const scenario_58 = Scenario{
     .name = "PrecomputedTable",
     .spec = system_58_spec,
@@ -8989,6 +9344,12 @@ const system_59_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks };
+// shared-randomness system: "lk-rep-s"
+const system_59_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_59_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_59_shared_randomness = shared_randomness.System{ .rounds = &system_59_shared_randomness_rounds, .contribution_refs = &system_59_shared_randomness_contribution_refs };
 const scenario_59 = Scenario{
     .name = "RepeatedSValues",
     .spec = system_59_spec,
@@ -9190,6 +9551,12 @@ const system_60_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks };
+// shared-randomness system: "lk-empty"
+const system_60_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_60_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_60_shared_randomness = shared_randomness.System{ .rounds = &system_60_shared_randomness_rounds, .contribution_refs = &system_60_shared_randomness_contribution_refs };
 const scenario_60 = Scenario{
     .name = "EmptySelected",
     .spec = system_60_spec,
@@ -9477,6 +9844,12 @@ const system_61_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks };
+// shared-randomness system: "rc-distinct"
+const system_61_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_61_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_61_shared_randomness = shared_randomness.System{ .rounds = &system_61_shared_randomness_rounds, .contribution_refs = &system_61_shared_randomness_contribution_refs };
 const scenario_61 = Scenario{
     .name = "DistinctBounds",
     .spec = system_61_spec,
@@ -9598,6 +9971,12 @@ const system_62_grandproduct = grandproduct.System{ .queries = &system_62_grandp
 const system_62_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
+// shared-randomness system: "public-input"
+const system_62_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_62_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_62_shared_randomness = shared_randomness.System{ .rounds = &system_62_shared_randomness_rounds, .contribution_refs = &system_62_shared_randomness_contribution_refs };
 const scenario_62 = Scenario{
     .name = "OpenedCellPublicInput",
     .spec = system_62_spec,
@@ -9710,6 +10089,12 @@ const system_63_grandproduct = grandproduct.System{ .queries = &system_63_grandp
 const system_63_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
+// shared-randomness system: "public-input-dyn"
+const system_63_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_63_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_63_shared_randomness = shared_randomness.System{ .rounds = &system_63_shared_randomness_rounds, .contribution_refs = &system_63_shared_randomness_contribution_refs };
 const scenario_63 = Scenario{
     .name = "OpenedCellPublicInputDynamic",
     .spec = system_63_spec,
@@ -9822,6 +10207,12 @@ const system_64_grandproduct = grandproduct.System{ .queries = &system_64_grandp
 const system_64_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
+// shared-randomness system: "lagrange-sel"
+const system_64_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_64_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_64_shared_randomness = shared_randomness.System{ .rounds = &system_64_shared_randomness_rounds, .contribution_refs = &system_64_shared_randomness_contribution_refs };
 const scenario_64 = Scenario{
     .name = "LagrangeSelectorBoundary",
     .spec = system_64_spec,
@@ -9930,6 +10321,12 @@ const system_65_grandproduct = grandproduct.System{ .queries = &system_65_grandp
 const system_65_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_65_rowlimit = rowlimit.System{ .checks = &system_65_rowlimit_checks };
+// shared-randomness system: "lagrange-sel-dyn"
+const system_65_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_65_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_65_shared_randomness = shared_randomness.System{ .rounds = &system_65_shared_randomness_rounds, .contribution_refs = &system_65_shared_randomness_contribution_refs };
 const scenario_65 = Scenario{
     .name = "DynamicLagrangeSelectorBoundary",
     .spec = system_65_spec,
@@ -10191,6 +10588,12 @@ const system_66_rowlimit_checks = [_]rowlimit.Check{
 };
 
 const system_66_rowlimit = rowlimit.System{ .checks = &system_66_rowlimit_checks };
+// shared-randomness system: "lk-multi-col-bench"
+const system_66_shared_randomness_rounds = [_]shared_randomness.Round{};
+
+const system_66_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
+
+const system_66_shared_randomness = shared_randomness.System{ .rounds = &system_66_shared_randomness_rounds, .contribution_refs = &system_66_shared_randomness_contribution_refs };
 const scenario_66 = Scenario{
     .name = "MultiColumnBench",
     .spec = system_66_spec,

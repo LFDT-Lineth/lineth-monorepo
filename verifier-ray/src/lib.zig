@@ -31,6 +31,7 @@ pub const query = struct {
     pub const logderivativesum = @import("query/logderivativesum.zig");
     pub const grandproduct = @import("query/grandproduct.zig");
     pub const rowlimit = @import("query/rowlimit.zig");
+    pub const shared_randomness = @import("query/shared_randomness.zig");
     pub const fri = @import("query/fri.zig");
     pub const pcs = @import("query/pcs.zig");
 };
