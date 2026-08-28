@@ -106,7 +106,7 @@ const UTYPE_AUIPC_WB:ComputeOp = 69
 
 const NO_OP:ComputeOp = 0
 
-// Marker emitted by elf_to_json_gen (computeInvalid) for words in the executable
+// Marker emitted by the Go predecoder for words in the executable
 // span that are not instructions the interpreter models (e.g. CSR ops such as
 // `csrrw x0, cycle, x0`, embedded data, or padding). Never executed as a real
 // op; the pre-decoding pass treats it as a no-op-equivalent record.
@@ -117,7 +117,7 @@ const COMPUTE_INVALID:ComputeOp = 255
 // RISC-V base opcodes (7-bit)
 // ============================
 
-// Must match elf_to_json_gen opcode constants.
+// Must match the Go predecoding package's opcode constants.
 const OPCODE_OP:Opcode = 0b0110011
 const OPCODE_OP32:Opcode = 0b0111011
 const OPCODE_LOAD:Opcode = 0b0000011
