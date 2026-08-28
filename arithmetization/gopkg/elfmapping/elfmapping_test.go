@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
@@ -16,6 +17,52 @@ const (
 )
 
 var testText = []byte{0x97, 0x02, 0x00, 0x00}
+
+func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
+	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
+	inputData := []byte{0xaa, 0xbb}
+	got, err := elfmapping.PrepareInputs(
+		elfBytes,
+		inputData,
+		elfmapping.WithIncludeExecutable(),
+	)
+	if err != nil {
+		t.Fatalf("PrepareInputs() error = %v", err)
+	}
+
+	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	inputBlobs, err := elfmapping.NewLengthPrefixedData(
+		elfmapping.DefaultInputOrigin,
+		inputData,
+	)
+	if err != nil {
+		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+	}
+	want, err := elfmapping.EncodeInputs(
+		program,
+		inputBlobs,
+		elfmapping.WithIncludeExecutable(),
+	)
+	if err != nil {
+		t.Fatalf("EncodeInputs() error = %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("PrepareInputs() = %#v, want %#v", got, want)
+	}
+}
+
+func TestPrepareInputsRejectsInvalidELF(t *testing.T) {
+	inputs, err := elfmapping.PrepareInputs([]byte("not an ELF"), nil)
+	if err == nil {
+		t.Fatal("PrepareInputs() error = nil, want malformed ELF error")
+	}
+	if inputs != nil {
+		t.Fatalf("PrepareInputs() inputs = %#v, want nil", inputs)
+	}
+}
 
 func TestLoad(t *testing.T) {
 	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)

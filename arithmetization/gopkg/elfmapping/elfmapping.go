@@ -1,6 +1,7 @@
 package elfmapping
 
 import (
+	"bytes"
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
@@ -52,6 +53,25 @@ func WithIncludeExecutable() Option {
 		cfg.includeExecutable = true
 		return nil
 	}
+}
+
+// PrepareInputs maps a guest ELF and length-prefixed input data into the raw
+// public inputs consumed by the R5 arithmetization. Call [Load] and
+// [EncodeInputs] separately when the same ELF is reused across many inputs.
+func PrepareInputs(
+	elfBytes []byte,
+	inputData []byte,
+	options ...Option,
+) (map[string][]byte, error) {
+	program, err := Load(bytes.NewReader(elfBytes))
+	if err != nil {
+		return nil, err
+	}
+	inputBlobs, err := NewLengthPrefixedData(DefaultInputOrigin, inputData)
+	if err != nil {
+		return nil, err
+	}
+	return EncodeInputs(program, inputBlobs, options...)
 }
 
 // Load parses a guest ELF and copies its allocated, file-backed sections into
