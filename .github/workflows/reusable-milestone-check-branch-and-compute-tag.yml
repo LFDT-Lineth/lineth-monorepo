@@ -51,19 +51,6 @@ jobs:
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: linea
-          scopes: coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc
-          include-path: |
-            coordinator/**
-            maru/**
-            postman/**
-            prover/**
-            transaction-exclusion-api/**
-            tracer/**
-            tracer-constraints/**
-            linea-besu/plugins/linea-sequencer/**
-            linea-besu/besu/**
-            linea-besu/package/**
-            gradle/libs.versions.toml
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
       - name: Check if the next release tag already existed

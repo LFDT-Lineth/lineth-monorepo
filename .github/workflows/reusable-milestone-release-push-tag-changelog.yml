@@ -133,16 +133,22 @@ jobs:
           # Every component is scope-and-path gated: <scopes> is injected into
           # the shared cliff.template.toml (keeping only commits carrying one of
           # those scopes) AND the include-paths restrict to that component's
-          # paths — a commit must satisfy both.
+          # paths — a commit must satisfy both. <scopes>/paths are looked up from
+          # the single source of truth in
+          # .github/actions/run-git-cliff-commands/scripts/components.sh
+          # (same component names) rather than duplicated here.
           TEMPLATE="cliff.template.toml"
-          components=(
-            "coordinator#${COORDINATOR_VERSION}#coordinator|deps|misc#[\"coordinator/**\"]"
-            "maru#${MARU_VERSION}#maru|deps|misc#[\"maru/**\"]"
-            "postman#${POSTMAN_VERSION}#postman|deps|misc#[\"postman/**\"]"
-            "prover#${PROVER_VERSION}#prover|deps|misc#[\"prover/**\"]"
-            "tx-exclusion-api#${TX_EXCLUSION_API_VERSION}#tx-exclusion-api|deps|misc#[\"transaction-exclusion-api/**\"]"
-            "linea-besu-package#${LINEA_BESU_VERSION}#linea-besu|tracer|sequencer|deps|misc#[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
-          )
+          COMPONENT_MAKEFILE=".github/actions/run-git-cliff-commands/Makefile"
+          tags=(coordinator maru postman prover tx-exclusion-api linea-besu-package)
+          versions=("${COORDINATOR_VERSION}" "${MARU_VERSION}" "${POSTMAN_VERSION}" "${PROVER_VERSION}" "${TX_EXCLUSION_API_VERSION}" "${LINEA_BESU_VERSION}")
+          components=()
+          for i in "${!tags[@]}"; do
+            tag="${tags[i]}"
+            info="$(make -f "${COMPONENT_MAKEFILE}" component-info COMPONENT="${tag}")"
+            scopes="$(printf '%s\n' "${info}" | sed -n 's/^scopes=//p')"
+            paths_json="$(printf '%s\n' "${info}" | sed '1d' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+            components+=("${tag}#${versions[i]}#${scopes}#${paths_json}")
+          done
 
           for (( i=${#components[@]}-1; i>=0; i-- )); do
             entry="${components[i]}"

@@ -12,13 +12,21 @@ on:
         required: true
         type: string
       include-path:
-        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
-        required: true
+        description: >
+          newline-separated string to represent the "git-cliff --include-path filter".
+          Optional — defaults to component-name's entry in
+          .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
         type: string
+        default: ''
       scopes:
-        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
-        required: true
+        description: >
+          Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or
+          'linea-besu|tracer|sequencer|deps|misc'). Optional — defaults to component-name's
+          entry in .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
         type: string
+        default: ''
       release_tag_suffix:
         description: "Custom tag release tag suffix, i.e. releases/[component]/v[semver]-[suffix]"
         required: false
