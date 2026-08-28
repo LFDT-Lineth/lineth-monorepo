@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.33;
 
-import { LineaRollupPauseManager } from "../../security/pausing/LineaRollupPauseManager.sol";
+import { LinethRollupPauseManager } from "../../security/pausing/LinethRollupPauseManager.sol";
 import { RateLimiter } from "../../security/limiting/RateLimiter.sol";
 import { L1MessageManagerV1 } from "./v1/L1MessageManagerV1.sol";
 import { TransientStorageReentrancyGuardUpgradeable } from "../../security/reentrancy/TransientStorageReentrancyGuardUpgradeable.sol";
@@ -16,7 +16,7 @@ abstract contract L1MessageServiceBase is
   RateLimiter,
   L1MessageManagerV1,
   TransientStorageReentrancyGuardUpgradeable,
-  LineaRollupPauseManager,
+  LinethRollupPauseManager,
   IMessageService
 {
   /// @dev This is the transient message sender address.

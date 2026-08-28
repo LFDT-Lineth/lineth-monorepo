@@ -36,7 +36,7 @@ object ArgumentParser {
     try {
       return TransactionDecoder.decodeOpaqueBytes(
         Bytes.wrap(rlp),
-        EncodingContext.BLOCK_BODY,
+        EncodingContext.POOLED_TRANSACTION,
       ).run {
         TransactionInfo(
           hash = this.hash.bytes.toArray(),

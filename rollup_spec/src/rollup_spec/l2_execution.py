@@ -18,7 +18,7 @@ from .block import (
     ExecutionPayload,
     ForcedTransactionAcceptance,
     ForcedTransactionWitness,
-    LineaPayloadInput,
+    LinethPayloadInput,
     ResolvedForcedTransaction,
     StatelessInput,
     decode_signed_transaction_rlp,
@@ -47,6 +47,15 @@ BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0 = Hash32(
 LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: Bytes32 = Bytes32(int(280).to_bytes(32, "big"))
 L1_ROLLING_HASHES_MAPPING_BASE_SLOT: Bytes32 = Bytes32(int(281).to_bytes(32, "big"))
 
+# Sentinel meaning "no L2MessageService configured" (see `_is_zero_address`).
+ZERO_ADDRESS: Address = Address(b"\x00" * 20)
+ZERO_HASH: Hash32 = Hash32(b"\x00" * 32)
+
+
+def _is_zero_address(address: Address) -> bool:
+    """True for the all-zero 20-byte address — the "no L2MessageService" sentinel."""
+    return bytes(address) == bytes(ZERO_ADDRESS)
+
 
 def _mapping_slot(base_slot: Bytes32, key: bytes) -> Bytes32:
     """
@@ -65,7 +74,16 @@ def read_l1l2_bridge_state(state: L2State, l2_message_service_address: Address) 
 
     Two reads: `lastAnchoredL1MessageNumber` at a fixed slot, then
     `l1RollingHashes[thatNumber]` at `keccak256(uint256_be(number) || base_slot)`.
+
+    When `l2_message_service_address` is the zero address, there is no bridge
+    contract to read: both boundary values are zero. This is a real "no
+    L2MessageService configured" semantic — and it is what lets a vanilla
+    stateless input (which has no L2MessageService account, so its witness never
+    covers these slots) run through the guest unchanged.
     """
+    if _is_zero_address(l2_message_service_address):
+        return ZERO_HASH, U64(0)
+
     number_bytes = state.storage(l2_message_service_address, LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT)
     rolling_hash_number = U64(int.from_bytes(bytes(number_bytes), "big"))
 
@@ -230,7 +248,7 @@ class L2ExecutionProofPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
-    parent_processed_ftx_number: U64
+    parent_ftx_number: U64
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
@@ -240,7 +258,7 @@ class L2ExecutionProofPublicInput:
 @dataclass
 class L2ExecutionProofPrivateInput:
     """
-    l2-execution guest input: one Linea wrapper per block in the conflation.
+    l2-execution guest input: one Lineth wrapper per block in the conflation.
 
     Each wrapper's `stateless_input_ssz` is the raw vanilla stateless-input
     byte slice, decoded inside the guest path (no decoded-input fallback). The
@@ -253,11 +271,11 @@ class L2ExecutionProofPrivateInput:
     """
     parent_ftx_rolling_hash: Hash32
     parent_last_processed_ftx_number: U64
-    payloads: List[LineaPayloadInput]
+    payloads: List[LinethPayloadInput]
     chain_config: ChainConfig
 
 
-def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> List[StatelessInput]:
+def _decode_payload_stateless_inputs(payloads: Sequence[LinethPayloadInput]) -> List[StatelessInput]:
     """
     Decode the vanilla stateless-input SSZ bytes inside the guest path — matching
     the underlying engine's boundary, where the guest receives length-delimited
@@ -275,9 +293,9 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> L
 @dataclass
 class L2ExecutionProof:
     """
-    An l2-execution proof as the rollup guest consumes it: the guest *output*
-    (the 15-field `public_inputs` tuple + the revealed hash preimages) plus the
-    `proof` bytes the rollup guest recursively verifies.
+    An l2-execution proof as the l2-execution guest emits it: the guest
+    *output* (the 15-field `public_inputs` tuple + the revealed hash
+    preimages) plus the `proof` bytes the rollup guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
     lists only; `proof` is attached by the zkVM/prover layer above — a guest
@@ -286,6 +304,10 @@ class L2ExecutionProof:
     `end_block_number` is intentionally absent: it is already
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
     tuple) is carried, so the rollup guest can verify proof tiling.
+
+    This type has no verifying-key field: a guest cannot attest its own VK, so
+    `run_l2_execution_guest` never produces one. See `VerifiableL2ExecutionProof`
+    for the coordinator-populated wrapper the rollup guest actually consumes.
     """
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
@@ -295,13 +317,30 @@ class L2ExecutionProof:
     filtered_addresses: List[Address] = field(default_factory=list)
 
 
+@dataclass
+class VerifiableL2ExecutionProof:
+    """
+    An `L2ExecutionProof` paired with the `program_vk` the rollup guest
+    recursively verifies it against (§ProgramVK anchoring).
+
+    `program_vk` is a *runtime input* the coordinator supplies — the same
+    value it verifies `proof` against here is the value bubbled up into the
+    rollup guest's `program_vks` public output, so the anchored VK is provably
+    the key the verification ran against. Never produced by
+    `run_l2_execution_guest` (a guest cannot attest its own VK); only the
+    rollup request codec constructs this wrapper.
+    """
+    proof: L2ExecutionProof
+    program_vk: Hash32
+
+
 def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2ExecutionProof:
     """
     l2-execution: emits the 15-field l2-execution PI (§2.1) for a contiguous
     block range.
 
     The per-block state transition is delegated to the underlying engine
-    (`execute_stateless_input`); this function adds only the Linea logic on top —
+    (`execute_stateless_input`); this function adds only the Lineth logic on top —
     conflation-level linking, the empty-`executionRequests` policy, forced
     transactions, L2->L1 messages, and the L1->L2 bridge rolling-hash reads.
     """
@@ -309,7 +348,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         raise Exception("l2-execution proof must cover at least one payload")
 
     # Parse each vanilla stateless input ONCE via the underlying engine's parser
-    # (e.g. Zesu); the parsed objects are shared between execution and the Linea
+    # (e.g. Zesu); the parsed objects are shared between execution and the Lineth
     # logic below, so nothing is re-parsed.
     stateless_inputs = _decode_payload_stateless_inputs(execution_input.payloads)
     all_witnesses = [stateless_input.witness for stateless_input in stateless_inputs]
@@ -322,6 +361,9 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     start_block_number = first_payload.block_number
     base_fee = Uint(first_payload.base_fee_per_gas)  # asserted constant across the range (§2.1)
     l2_ms_address = execution_input.chain_config.l2_message_service_address
+    # "No L2MessageService configured" mode: a zero address suppresses both the L1->L2 bridge
+    # boundary reads (handled inside `read_l1l2_bridge_state`) and the L2->L1 message-log scan below.
+    bridge_suppressed = _is_zero_address(l2_ms_address)
 
     current_parent_hash = parent_block_hash
     current_ftx_rolling_hash = execution_input.parent_ftx_rolling_hash
@@ -331,7 +373,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     filtered_addresses: List[Address] = []
     results: List[StatelessExecutionResult] = []
 
-    for linea_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
+    for lineth_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
         payload = stateless_input.new_payload_request.execution_payload
 
         # ── Conflation-level invariants the engine cannot know (it validates each
@@ -348,10 +390,14 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # engine's per-block timestamp/parent checks plus the parentHash chaining
         # asserted above, so they are not restated here.
 
-        # ── Linea policy: this rollup does not support EIP-7685 requests ──
+        # ── Lineth policy: this rollup does not support EIP-7685 requests ──
         requests = stateless_input.new_payload_request.execution_requests
         if requests.deposits or requests.withdrawals or requests.consolidations:
             raise Exception("execution requests are not supported by this rollup")
+
+        # ── Linea policy: no beacon-chain withdrawals — this is an L2 rollup, not L1 ──
+        if payload.withdrawals:
+            raise Exception("withdrawals are not supported by this rollup")
 
         # ── State transition (delegated) ──
         # `execute_stateless_input` validates the witness header chain, the full
@@ -360,7 +406,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         result = execute_stateless_input(stateless_input)
         results.append(result)
 
-        # Linea PI: recover each transaction sender for `txFromsHash`.
+        # Lineth PI: recover each transaction sender for `txFromsHash`.
         for tx_rlp in parse_payload_transaction_rlps(payload):
             tx_froms.append(
                 recover_sender(
@@ -379,17 +425,19 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
                 execution_input.chain_config,
                 payload,
                 block_parent_state,
-                linea_payload.rollup_extension.forced_transactions,
+                lineth_payload.rollup_extension.forced_transactions,
             )
         )
         filtered_addresses.extend(block_filtered_addresses)
 
-        # L2->L1 messages from the block's logs.
-        for log in result.block_logs:
-            if log.address != l2_ms_address:
-                continue
-            if log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
-                l2_l1_message_hashes.append(Hash32(log.topics[3]))
+        # L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
+        # configured — see `bridge_suppressed`).
+        if not bridge_suppressed:
+            for log in result.block_logs:
+                if log.address != l2_ms_address:
+                    continue
+                if log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
+                    l2_l1_message_hashes.append(Hash32(log.topics[3]))
 
         current_parent_hash = payload.block_hash
 
@@ -412,14 +460,14 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_block_hash=last_payload.block_hash,
         end_block_number=last_payload.block_number,
         end_block_timestamp=U64(last_payload.timestamp),
-        l2_l1_messages_hash=hash_hash_list(l2_l1_message_hashes),
+        l2_l1_messages_hash=hash_digest_list(l2_l1_message_hashes),
         parent_l1_l2_bridge_rolling_hash=parent_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=parent_rolling_hash_number,
         end_l1_l2_bridge_rolling_hash=end_rolling_hash,
         end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=execution_input.chain_config.hash(base_fee),
         parent_ftx_rolling_hash=execution_input.parent_ftx_rolling_hash,
-        parent_processed_ftx_number=execution_input.parent_last_processed_ftx_number,
+        parent_ftx_number=execution_input.parent_last_processed_ftx_number,
         end_ftx_rolling_hash=current_ftx_rolling_hash,
         end_processed_ftx_number=current_last_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(filtered_addresses),
@@ -435,7 +483,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     )
 
 
-def hash_hash_list(values: Sequence[Hash32]) -> Hash32:
+def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
     return keccak256(b"".join(bytes(value) for value in values))
 
 

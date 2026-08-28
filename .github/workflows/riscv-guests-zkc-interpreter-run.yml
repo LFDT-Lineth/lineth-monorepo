@@ -3,8 +3,9 @@
 # Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
 # custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
 # under zkc via the existing `exec` entry point. Execution uses zkc's generated-Go backend in fast
-# mode (--gogen --fast); the tree-walking interpreter's trace path is skipped because tracing is not
-# implemented yet. This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
+# mode (--gogen --fast): this gate only needs to prove the guest runs, and skipping tracing keeps it
+# cheap. Tracing and constraint checking are measured by arithmetization-weekly-zkc-metrics.yml.
+# This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
 # on changes to either.
@@ -16,17 +17,17 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
-    branches:
-      - main
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
       - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
-      - 'arithmetization/src/main/wrappers/**'    # linea_zkvm_accel — imported by the guest build (l2-execution/build.zig)
       - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
       - 'arithmetization/src/test/scripts/**'     # elf_to_json_gen
       - 'arithmetization/Makefile'                # install-zkc / ZKC_REF
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   push:
     branches:
@@ -35,11 +36,11 @@ on:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'
       - 'arithmetization/src/main/lib/**'
-      - 'arithmetization/src/main/wrappers/**'
       - 'arithmetization/src/test/Makefile'
       - 'arithmetization/src/test/scripts/**'
       - 'arithmetization/Makefile'
       - '.github/actions/setup-riscv-guests/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
   workflow_dispatch:
     inputs:
@@ -61,10 +62,10 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
-    # gogen+fast execution is light (~tens of MB, seconds), so the 32 GB tier the heavy interpreter
-    # path would have needed is unnecessary — this job is build-bound, not memory-bound. The mid tier
-    # (16 GB) covers the zig/zesu build and the run comfortably.
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
+    # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -96,15 +97,14 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
 
         run: make -C arithmetization install-zkc
-      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
-      # the interpreter does not implement tracing yet, so this runnability check skips the trace path
-      # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
-      # exec's default INPUT (the committed sample stateless input). A trap/failure still exits
-      # non-zero under these flags.
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast): a
+      # runnability check, so it skips tracing to stay light. Tracing and constraint checking are
+      # measured weekly instead — see arithmetization-weekly-zkc-metrics.yml. Uses exec's default
+      # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
       #
       # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--quiet --fast"
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 

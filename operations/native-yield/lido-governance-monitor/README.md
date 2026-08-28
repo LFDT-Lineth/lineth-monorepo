@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Lido Governance Monitor is a cronjob that checks Lido governance proposals and alerts the Security Council when high-risk proposals may impact Linea's Native Yield system.
+The Lido Governance Monitor is a cronjob that checks Lido governance proposals and alerts the Security Council when high-risk proposals may impact Lineth's Native Yield system.
 
 Each run executes three sequential steps:
 

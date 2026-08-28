@@ -2,7 +2,7 @@
 %% Renders with: https://mermaid.live or any Mermaid-compatible viewer
 
 classDiagram
-    class LineaRollup {
+    class LinethRollup {
         +bytes32 currentFinalizedState
         +uint256 nextForcedTransactionNumber
         +mapping forcedTransactionL2BlockNumbers
@@ -71,14 +71,14 @@ classDiagram
         +submitFinalization()
     }
     
-    LineaRollup ..|> IAcceptForcedTransactions
+    LinethRollup ..|> IAcceptForcedTransactions
     ForcedTransactionGateway --> IAcceptForcedTransactions : calls
     ForcedTransactionGateway --> AddressFilter : validates
     ForcedTransactionGateway --> Mimc : uses
     ForcedTransactionGateway --> FinalizedStateHashing : uses
-    LineaRollup --> FinalizedStateHashing : uses
-    LineaRollup --> AddressFilter : references
-    LineaRollup ..> Coordinator : emits ForcedTransactionAdded
+    LinethRollup --> FinalizedStateHashing : uses
+    LinethRollup --> AddressFilter : references
+    LinethRollup ..> Coordinator : emits ForcedTransactionAdded
     Coordinator --> Sequencer : submits tx
     Sequencer --> Prover : provides L2 state
-    Prover --> LineaRollup : submits proof + finalization
+    Prover --> LinethRollup : submits proof + finalization

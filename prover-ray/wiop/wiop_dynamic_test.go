@@ -41,15 +41,16 @@ func TestDynamicModule_IsDynamic(t *testing.T) {
 	assert.True(t, dyn.IsDynamic())
 }
 
-// TestDynamicModule_StaticAPI confirms Size()==0 and IsSized()==false for a
-// dynamic module, consistent with the "permanently unsized" static view.
+// TestDynamicModule_StaticAPI confirms IsSized()==false and that Size() panics
+// for a dynamic module, consistent with the "permanently unsized" static view:
+// IsSized is the safe query, Size has no answer to give.
 func TestDynamicModule_StaticAPI(t *testing.T) {
 	sys := wiop.NewSystemf("test")
 	sys.NewRound()
 	dyn := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
 
 	assert.False(t, dyn.IsSized())
-	assert.Equal(t, 0, dyn.Size())
+	assert.Panics(t, func() { _ = dyn.Size() })
 }
 
 // TestDynamicModule_SetSizePanic confirms SetSize panics on a dynamic module.
@@ -65,7 +66,7 @@ func TestDynamicModule_SetSizePanic(t *testing.T) {
 // to a dynamic module records the data length as the module's domain size.
 func TestDynamicModule_AutoSizeOnFirstAssign(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
-	col := dyn.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, makeVec(8, 1))
@@ -78,8 +79,8 @@ func TestDynamicModule_AutoSizeOnFirstAssign(t *testing.T) {
 // whose data length exceeds the module's recorded size causes a panic.
 func TestDynamicModule_GrowOnLargerColumn(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, makeVec(4, 1)) // sets domain size = 4
@@ -94,7 +95,7 @@ func TestDynamicModule_StaticOverflowPanic(t *testing.T) {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() {
@@ -111,14 +112,32 @@ func TestDynamicModule_MissingSizePanic(t *testing.T) {
 	assert.Panics(t, func() { dyn.RuntimeSize(rt) })
 }
 
+// TestDynamicModule_SizePanics verifies that the static Size() accessor refuses
+// to answer for a dynamic module rather than reporting a silent 0, which would
+// turn any size-driven loop (e.g. RangeCheck.Check) into a no-op. Static
+// modules are unaffected, and IsDynamic remains the safe guard to query first.
+func TestDynamicModule_SizePanics(t *testing.T) {
+	sys, r0, _, dyn := newDynamicTestSystem(t)
+	static := sys.NewSizedModule(sys.Context.Childf("staticmod"), 8, wiop.PaddingDirectionRight)
+	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
+
+	assert.Panics(t, func() { _ = dyn.Size() })
+	assert.NotPanics(t, func() { _ = static.Size() })
+
+	// RuntimeSize stays the supported route for dynamic modules.
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, makeVec(8, 1))
+	assert.Equal(t, 8, dyn.RuntimeSize(rt))
+}
+
 // TestDynamicModule_VanishingCheck verifies that a vanishing constraint on a
 // dynamic module evaluates correctly, and that the same System can be reused
 // across two Runtimes with different module sizes.
 func TestDynamicModule_VanishingCheck(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
 
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 
 	// Constraint: A - B == 0
 	dyn.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(colA.View(), colB.View()))
@@ -140,8 +159,8 @@ func TestDynamicModule_VanishingCheck(t *testing.T) {
 func TestDynamicModule_VanishingCheckFailure(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
 
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 	dyn.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(colA.View(), colB.View()))
 
 	rt := wiop.NewRuntime(sys)

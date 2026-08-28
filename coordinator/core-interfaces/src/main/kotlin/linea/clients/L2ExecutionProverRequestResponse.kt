@@ -1,12 +1,12 @@
 package linea.clients
 
 import linea.domain.BlockInterval
+import linea.domain.ExecutionPayload
 import linea.domain.StartBlockTimestampProvider
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
-import java.math.BigInteger
 import kotlin.time.Instant
 
 data class ExecutionInfo(
@@ -43,7 +43,8 @@ data class ExecutionInfo(
 
 data class L2ExecutionProofRequestV1(
   val executions: List<ExecutionInfo>,
-  val chainConfig: ChainConfig,
+  val chainId: ULong,
+  val coinbase: String,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
@@ -72,7 +73,8 @@ data class L2ExecutionProofRequestV1(
     other as L2ExecutionProofRequestV1
 
     if (executions != other.executions) return false
-    if (chainConfig != other.chainConfig) return false
+    if (chainId != other.chainId) return false
+    if (coinbase != other.coinbase) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
 
@@ -81,7 +83,8 @@ data class L2ExecutionProofRequestV1(
 
   override fun hashCode(): Int {
     var result = executions.hashCode()
-    result = 31 * result + chainConfig.hashCode()
+    result = 31 * result + chainId.hashCode()
+    result = 31 * result + coinbase.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
     return result
@@ -117,138 +120,10 @@ data class ForcedTransaction(
   }
 }
 
-// References StatelessChainConfig in rollup_spec/src/rollup_spec/block.py
-data class ChainConfig(
-  val chainId: ULong,
-  val forkName: String,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ChainConfig
-
-    if (chainId != other.chainId) return false
-    if (forkName != other.forkName) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = chainId.hashCode()
-    result = 31 * result + forkName.hashCode()
-    return result
-  }
-}
-
-data class Withdrawal(
-  val index: ULong,
-  val validatorIndex: ULong,
-  val address: ByteArray,
-  val amount: ULong,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as Withdrawal
-
-    if (index != other.index) return false
-    if (validatorIndex != other.validatorIndex) return false
-    if (!address.contentEquals(other.address)) return false
-    if (amount != other.amount) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = index.hashCode()
-    result = 31 * result + validatorIndex.hashCode()
-    result = 31 * result + address.contentHashCode()
-    result = 31 * result + amount.hashCode()
-    return result
-  }
-}
-
-/**
- * Execution PayLoad V4 (Payload V3 + blockAccessList) for the Engine API and Beacon Block
- * Should retrieve by using eth_getBlockByNumber/eth_getBlockByHash or debug_getRawBlock
- */
-data class ExecutionPayload(
-  val parentHash: ByteArray,
-  val feeRecipient: ByteArray,
-  val stateRoot: ByteArray,
-  val receiptsRoot: ByteArray,
-  val logsBloom: ByteArray,
-  val prevRandao: ByteArray,
-  val blockNumber: ULong,
-  val gasLimit: ULong,
-  val gasUsed: ULong,
-  val timestamp: ULong,
-  val extraData: ByteArray,
-  val baseFeePerGas: BigInteger,
-  val blockHash: ByteArray,
-  val transactions: List<ByteArray>,
-  val withdrawals: List<Withdrawal>,
-  val blobGasUsed: ULong,
-  val excessBlobGas: ULong,
-  val blockAccessList: ByteArray,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ExecutionPayload
-
-    if (!parentHash.contentEquals(other.parentHash)) return false
-    if (!feeRecipient.contentEquals(other.feeRecipient)) return false
-    if (!stateRoot.contentEquals(other.stateRoot)) return false
-    if (!receiptsRoot.contentEquals(other.receiptsRoot)) return false
-    if (!logsBloom.contentEquals(other.logsBloom)) return false
-    if (!prevRandao.contentEquals(other.prevRandao)) return false
-    if (blockNumber != other.blockNumber) return false
-    if (gasLimit != other.gasLimit) return false
-    if (gasUsed != other.gasUsed) return false
-    if (timestamp != other.timestamp) return false
-    if (!extraData.contentEquals(other.extraData)) return false
-    if (baseFeePerGas != other.baseFeePerGas) return false
-    if (!blockHash.contentEquals(other.blockHash)) return false
-    if (!transactions.byteArrayListEquals(other.transactions)) return false
-    if (withdrawals != other.withdrawals) return false
-    if (blobGasUsed != other.blobGasUsed) return false
-    if (excessBlobGas != other.excessBlobGas) return false
-    if (!blockAccessList.contentEquals(other.blockAccessList)) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = parentHash.contentHashCode()
-    result = 31 * result + feeRecipient.contentHashCode()
-    result = 31 * result + stateRoot.contentHashCode()
-    result = 31 * result + receiptsRoot.contentHashCode()
-    result = 31 * result + logsBloom.contentHashCode()
-    result = 31 * result + prevRandao.contentHashCode()
-    result = 31 * result + blockNumber.hashCode()
-    result = 31 * result + gasLimit.hashCode()
-    result = 31 * result + gasUsed.hashCode()
-    result = 31 * result + timestamp.hashCode()
-    result = 31 * result + extraData.contentHashCode()
-    result = 31 * result + baseFeePerGas.hashCode()
-    result = 31 * result + blockHash.contentHashCode()
-    result = 31 * result + transactions.byteArrayListHashCode()
-    result = 31 * result + withdrawals.hashCode()
-    result = 31 * result + blobGasUsed.hashCode()
-    result = 31 * result + excessBlobGas.hashCode()
-    result = 31 * result + blockAccessList.contentHashCode()
-    return result
-  }
-}
-
 /**
  * The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1).
  *
- * Domain twin of `linea.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
+ * Domain twin of `lineth.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
  * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Field names
  * and types are identical to the DTO so the DTO -> domain mapping is a straight field copy.
  */
@@ -320,7 +195,7 @@ data class L2ExecutionProofPublicInputs(
 /**
  * Response of a l2-execution proof.
  *
- * Mirrors `linea.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
+ * Mirrors `lineth.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
  * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
  * directly onto this domain type.
  */
@@ -332,7 +207,7 @@ data class L2ExecutionProofResponseV1(
   val l2L1Messages: List<ByteArray>,
   val txFroms: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
-
+  val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -347,6 +222,7 @@ data class L2ExecutionProofResponseV1(
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
     if (!txFroms.byteArrayListEquals(other.txFroms)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (!programVk.contentEquals(other.programVk)) return false
 
     return true
   }
@@ -359,6 +235,7 @@ data class L2ExecutionProofResponseV1(
     result = 31 * result + l2L1Messages.byteArrayListHashCode()
     result = 31 * result + txFroms.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + programVk.contentHashCode()
     return result
   }
 }

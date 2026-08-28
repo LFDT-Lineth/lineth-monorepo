@@ -1,18 +1,52 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(sequencer)* Deduplicate forced transactions in pool (#3807)
+## [2.2.0] - 2026-08-21
+
 ### 🚀 Features
 
-- *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
+- *(linea-besu)* Support custom liveness signers (#3666)
 
 ### 🐛 Bug Fixes
 
-- *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Update Besu to 26.8.0 (#3830)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Logging consistency and noise reduction (#3788)
+- *(misc)* Docker image build streamlining (#3790)
+## [2.1.1] - 2026-08-11
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Package renaming to lineth.* (#3750)
+## [2.1.0] - 2026-08-07
+
+### 🚀 Features
+
+- *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+- *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Rename gradle plugins (#3729)
+## [2.0.0] - 2026-07-14
+
+### 🐛 Bug Fixes
+
 - *(linea-besu)* Updating Besu version (#3535)
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(coordinator)* Update kotlin to v2.4 (#3454)
-- *(ci)* Update image tags (#3553)
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 ## [1.1.1] - 2026-06-26
 

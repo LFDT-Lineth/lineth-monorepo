@@ -1,16 +1,16 @@
 # Blob Submission & Finalization
 
-This document outlines the core data and finalization flows involved in LineaRollup's lifecycle, including blob commitment and zk-proof-based finality (ABI `"9.0"`).
+This document outlines the core data and finalization flows involved in LinethRollup's lifecycle, including blob commitment and zk-proof-based finality (ABI `"9.0"`).
 
 ---
 
 ## Blob Submission
 
-This flow is used by the **Data Submission Operator** to submit blobs to the LineaRollup system.
+This flow is used by the **Data Submission Operator** to submit blobs to the LinethRollup system.
 
 ### Steps
 
-1. **Data Submission Operator** calls `submitBlobs(bytes32[] blobFinalBlockHashes, parentShnarf, finalBlobShnarf)` on the `LineaRollup` contract with **1 to N** final L2 block hashes (one per EIP-4844 blob in the transaction), where **N = network maximum**.
+1. **Data Submission Operator** calls `submitBlobs(bytes32[] blobFinalBlockHashes, parentShnarf, finalBlobShnarf)` on the `LinethRollup` contract with **1 to N** final L2 block hashes (one per EIP-4844 blob in the transaction), where **N = network maximum**.
 2. For each submitted blob index `i`:
    - The contract reads `blobhash(i)` as the data hash.
    - Computes `shnarf = keccak256(parentShnarf, blobFinalBlockHashes[i], blobhash(i))`.
@@ -22,7 +22,7 @@ Calldata DA (test harness / Validium-style acceptors) uses `submitDataAsCalldata
 
 **Note:** L1 no longer runs the EIP-4844 point-evaluation precompile for shnarf acceptance. Blob DA still requires a blob-carrying transaction so `blobhash(i)` is non-zero.
 
-**Note:** `Shnarf` denotes a generic and iterative hashing structure for a sequence of values. It is somewhat analog to a stack and supports efficient `proof of append` and `proof of pop`. The structure is similar to how block hashes are computed: for appends, `newShnarf = H(oldShnarf || appendedValue)`. In Linea ABI 9.0, appends use `H(parentShnarf || finalBlockHash || dataHash)`.
+**Note:** `Shnarf` denotes a generic and iterative hashing structure for a sequence of values. It is somewhat analog to a stack and supports efficient `proof of append` and `proof of pop`. The structure is similar to how block hashes are computed: for appends, `newShnarf = H(oldShnarf || appendedValue)`. In Lineth ABI 9.0, appends use `H(parentShnarf || finalBlockHash || dataHash)`.
 
 ---
 
@@ -33,7 +33,7 @@ This flow finalizes 1 or more aggregated blob transaction submissions by verifyi
 ### Steps
 
 1. **Finalization Submission Operator** calls `finalizeBlocks(aggregatedProof, proofType, FinalizationDataV5)`.
-2. `LineaRollup` contract:
+2. `LinethRollup` contract:
    - Validates guest-program `verifierKeys` against the on-chain allowlist.
    - Continuity:
      - If `blockHashes[lastFinalized]` is empty → **migration path**: require matching `parentStateRootHash` from legacy `stateRootHashes`, and `parentBlockHash == 0`.

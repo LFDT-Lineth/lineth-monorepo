@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.33;
 
-import { LineaRollup } from "./LineaRollup.sol";
+import { LinethRollup } from "./LinethRollup.sol";
 
 /**
- * @title Temporary placeholder rollup contract mirroring LineaRollup with no-op data submission and finalization.
- * @dev submitBlobs and finalizeBlocks are overridden as no-ops - all other behavior is inherited unchanged from LineaRollup.
+ * @title Temporary placeholder rollup contract mirroring LinethRollup with no-op data submission and finalization.
+ * @dev submitBlobs and finalizeBlocks are overridden as no-ops - all other behavior is inherited unchanged from LinethRollup.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract LinethRollupV9Stub is LineaRollup {
+contract LinethRollupV9Stub is LinethRollup {
   /**
    * @notice No-op placeholder for EIP-4844 blob submission.
    * @param _blobFinalBlockHashes The final L2 block hash for each blob being submitted.

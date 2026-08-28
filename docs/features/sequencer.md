@@ -1,6 +1,6 @@
 # Sequencer
 
-> Linea's block-producing Besu plugin with transaction selection, validation, and gas estimation.
+> The block-producing Besu plugin with transaction selection, validation, and gas estimation.
 
 ## Overview
 
@@ -50,7 +50,7 @@ Before entering the mempool, transactions pass through:
 
 ## Priority Transactions
 
-Transactions from addresses in a predefined priority list are processed before normal transactions. These typically correspond to Linea system transactions (message anchoring, forced transactions).
+Transactions from addresses in a predefined priority list are processed before normal transactions. These typically correspond to Lineth system transactions (message anchoring, forced transactions).
 
 ## Gas Estimation
 
@@ -58,7 +58,7 @@ The sequencer exposes `linea_estimateGas` via the Besu plugin, which accounts fo
 
 ## Transaction Bundles
 
-Linea supports atomic transaction bundles via two custom JSON-RPC methods:
+Lineth supports atomic transaction bundles via two custom JSON-RPC methods:
 
 - `linea_sendBundle` — Submit a bundle of raw signed transactions targeting a specific block number. All transactions must be individually valid; if any fails, the entire bundle is reverted.
 - `linea_cancelBundle` — Cancel a previously submitted bundle by its bundle hash.

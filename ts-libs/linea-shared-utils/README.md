@@ -1,8 +1,8 @@
-# Linea Shared Utils
+# Lineth Shared Utils
 
 ## Overview
 
-The linea-shared-utils package is a shared TypeScript utilities library for Linea TypeScript projects within the monorepo. This package houses shared TypeScript utilities that don't fit the SDK, which is designed for public external consumers.
+The linea-shared-utils package is a shared TypeScript utilities library for Lineth TypeScript projects within the monorepo. This package houses shared TypeScript utilities that don't fit the SDK, which is designed for public external consumers.
 
 The package may contain some duplication of SDK code to avoid bundling the SDK project in certain monorepo project builds (e.g., linea-native-yield-automation-service).
 

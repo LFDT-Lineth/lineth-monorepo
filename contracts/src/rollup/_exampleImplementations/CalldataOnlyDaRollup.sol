@@ -3,10 +3,10 @@ pragma solidity 0.8.33;
 import { CalldataBlobAcceptor } from "../dataAvailability/CalldataBlobAcceptor.sol";
 import { L1MessageService } from "../../messaging/l1/L1MessageService.sol";
 import { IMessageService } from "../../messaging/interfaces/IMessageService.sol";
-import { LineaRollupBase } from "../LineaRollupBase.sol";
+import { LinethRollupBase } from "../LinethRollupBase.sol";
 
 /// @custom:oz-upgrades-unsafe-allow missing-initializer
-contract CalldataOnlyDaRollup is LineaRollupBase, CalldataBlobAcceptor {
+contract CalldataOnlyDaRollup is LinethRollupBase, CalldataBlobAcceptor {
   /**
    * @dev These are examples of custom events and functionality.
    */
@@ -40,7 +40,7 @@ contract CalldataOnlyDaRollup is LineaRollupBase, CalldataBlobAcceptor {
     bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
 
     _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-    __LineaRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData, genesisShnarf);
   }
 
   /**

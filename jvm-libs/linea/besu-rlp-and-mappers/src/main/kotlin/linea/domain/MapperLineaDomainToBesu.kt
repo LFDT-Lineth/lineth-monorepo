@@ -17,11 +17,36 @@ import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder
 import org.hyperledger.besu.ethereum.core.CodeDelegation
 import org.hyperledger.besu.ethereum.core.Difficulty
 import org.hyperledger.besu.ethereum.core.Transaction
+import org.hyperledger.besu.ethereum.core.encoding.EncodingContext
+import org.hyperledger.besu.ethereum.core.encoding.TransactionEncoder
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions
 import java.math.BigInteger
 
 fun Block.toBesu(): org.hyperledger.besu.ethereum.core.Block = mapToBesu(this)
 fun linea.domain.Transaction.toBesu(): Transaction = mapToBesu(this)
+
+fun Block.toExecutionPayload(): ExecutionPayload = ExecutionPayload(
+  parentHash = parentHash,
+  feeRecipient = miner,
+  stateRoot = stateRoot,
+  receiptsRoot = receiptsRoot,
+  logsBloom = logsBloom,
+  prevRandao = mixHash,
+  blockNumber = number,
+  gasLimit = gasLimit,
+  gasUsed = gasUsed,
+  timestamp = timestamp,
+  extraData = extraData,
+  baseFeePerGas = baseFeePerGas?.toBigInteger() ?: BigInteger.ZERO,
+  blockHash = hash,
+  transactions = transactions.mapIndexed { index, tx ->
+    TransactionEncoder.encodeOpaqueBytes(mapToBesu(number, index, tx), EncodingContext.BLOCK_BODY).toArray()
+  },
+  withdrawals = emptyList(),
+  blobGasUsed = 0UL,
+  excessBlobGas = 0UL,
+  blockAccessList = ByteArray(0),
+)
 
 object MapperLineaDomainToBesu {
   private val secp256k1 = SECP256K1()

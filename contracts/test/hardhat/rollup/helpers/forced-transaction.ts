@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import { encodeData } from "contracts/common/helpers";
-import { LineaRollup, Mimc } from "contracts/typechain-types";
+import { LinethRollup, Mimc } from "contracts/typechain-types";
 import { AccessListish, ethers, Transaction } from "ethers";
 
 import { THREE_DAYS_IN_SECONDS } from "../../common/constants";
@@ -27,13 +27,13 @@ const _getExpectedL2BlockNumberForForcedTx = (params: {
 };
 
 export const setNextExpectedL2BlockNumberForForcedTx = async (
-  lineaRollup: LineaRollup,
+  linethRollup: LinethRollup,
   nextNetworkTimestamp: bigint,
   lastFinalizedBlockTimestamp: bigint,
   l2BlockDurationSeconds: bigint = 1n,
 ) => {
   await networkTime.setNextBlockTimestamp(nextNetworkTimestamp);
-  const lastFinalizedBlock = await lineaRollup.currentL2BlockNumber();
+  const lastFinalizedBlock = await linethRollup.currentL2BlockNumber();
   const expectedBlockNumber = _getExpectedL2BlockNumberForForcedTx({
     blockTimestamp: nextNetworkTimestamp,
     l2BlockBuffer: BigInt(THREE_DAYS_IN_SECONDS),
@@ -66,7 +66,7 @@ const splitBytes32 = (hashedPayload: string): { msb: string; lsb: string } => {
   };
 };
 
-export const decodeForcedTransactionAdded = async (tx: ethers.ContractTransactionResponse, contract: LineaRollup) => {
+export const decodeForcedTransactionAdded = async (tx: ethers.ContractTransactionResponse, contract: LinethRollup) => {
   const receipt = await tx.wait();
   if (!receipt) return [];
 
@@ -115,13 +115,13 @@ const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): strin
 
 export const getForcedTransactionRollingHash = async (
   mimcLibrary: Mimc,
-  lineaRollup: LineaRollup,
+  linethRollup: LinethRollup,
   eip1559Tx: Eip1559Transaction,
   expectedBlockNumber: bigint,
   from: string,
   chainId: bigint,
 ): Promise<string> => {
-  const { previousForcedTransactionRollingHash } = await lineaRollup.getRequiredForcedTransactionFields();
+  const { previousForcedTransactionRollingHash } = await linethRollup.getRequiredForcedTransactionFields();
 
   const hashedPayload = hashEip1559LikeSolidity(eip1559Tx, chainId);
 
@@ -135,9 +135,9 @@ export const getForcedTransactionRollingHash = async (
 };
 
 export const setForcedTransactionFee = async (
-  lineaRollup: LineaRollup,
+  linethRollup: LinethRollup,
   forcedTransactionFee: bigint,
   signer: SignerWithAddress,
 ) => {
-  await lineaRollup.connect(signer).setForcedTransactionFee(forcedTransactionFee);
+  await linethRollup.connect(signer).setForcedTransactionFee(forcedTransactionFee);
 };
