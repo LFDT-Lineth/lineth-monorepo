@@ -57,7 +57,7 @@ fn guestMain() callconv(.c) noreturn {
         exit(guest_errors.exitCode(err));
     };
     zkvm_io.write_output(&out);
-    exit(0);
+    exit(.success);
 }
 
 /// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one `catch`
@@ -97,17 +97,18 @@ comptime {
     }
 }
 
-fn exit(code: u64) noreturn {
+fn exit(code: guest_errors.ExitCode) noreturn {
+    const raw: u64 = @intCast(@intFromEnum(code));
     if (builtin.cpu.arch == .riscv64) {
         asm volatile (
             \\mv a0, %[code]
             \\li a7, 93
             \\ecall
             :
-            : [code] "r" (code),
+            : [code] "r" (raw),
             : .{ .x10 = true, .x17 = true });
         unreachable;
     }
 
-    std.debug.panic("guest exit({d})", .{code});
+    std.debug.panic("guest exit({d})", .{raw});
 }

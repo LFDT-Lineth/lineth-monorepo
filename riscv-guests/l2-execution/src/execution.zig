@@ -16,6 +16,11 @@ const output_mod = executor.executor_output;
 const tx_decode = executor.executor_tx_decode;
 const block_validation = executor.executor_block_validation;
 
+// Error classification (zesu-error re-namespacing and the exit-code taxonomy) lives in
+// guest_errors; this file only wraps zesu calls with it.
+const guest_errors = @import("guest_errors.zig");
+const zesuErr = guest_errors.zesuErr;
+
 /// Number of RLP header fields between `parent_hash` ([0]) and `number` ([8]): ommers_hash,
 /// beneficiary, state_root, transactions_root, receipts_root, logs_bloom, difficulty. Mirrors the
 /// field skip in zesu's `rlp_decode.decodeParentHeader`.
@@ -89,8 +94,8 @@ fn finalizeOutputWithLogs(
     spec: primitives.SpecId,
     witness_db: anytype,
 ) !ProofOutputWithLogs {
-    const post_state_root = try output_mod.computeStateRootDelta(alloc, pre_state_root, result.alloc, result.deleted_accounts, node_index, witness_db);
-    const receipts_root = try output_mod.computeReceiptsRoot(alloc, result.receipts);
+    const post_state_root = output_mod.computeStateRootDelta(alloc, pre_state_root, result.alloc, result.deleted_accounts, node_index, witness_db) catch |e| return zesuErr(e);
+    const receipts_root = output_mod.computeReceiptsRoot(alloc, result.receipts) catch |e| return zesuErr(e);
     return .{
         .pre_state_root = pre_state_root,
         .post_state_root = post_state_root,
@@ -222,11 +227,12 @@ fn executeBlockStatelessWithLogs(
     const spec = hardfork.specForBlock(fork_name, ep.timestamp) orelse return error.UnsupportedFork;
 
     const env = buildEnv(req, block_hashes, &.{}, parent_header);
-    try block_validation.validateBlock(env, spec);
-    const txs = try tx_decode.decodeTxsFromInput(alloc, ep.transactions);
+    block_validation.validateBlock(env, spec) catch |e| return zesuErr(e);
+    const txs = tx_decode.decodeTxsFromInput(alloc, ep.transactions) catch |e| return zesuErr(e);
 
+    const witness_db = db_mod.WitnessDatabase.init(alloc, node_index, pre_state_root, witness_codes, block_hashes) catch |e| return zesuErr(e);
     var ctx = context_mod.Context(db_mod.WitnessDatabase).new(
-        try db_mod.WitnessDatabase.init(alloc, node_index, pre_state_root, witness_codes, block_hashes),
+        witness_db,
         spec,
     );
     ctx.block = transition_mod.buildBlockEnv(env, spec);
@@ -234,7 +240,7 @@ fn executeBlockStatelessWithLogs(
     ctx.cfg.disable_base_fee = (env.base_fee == null);
 
     const empty_pre_alloc = std.AutoHashMapUnmanaged(types.Address, types.AllocAccount).empty;
-    const result = try transition_mod.transitionWithContext(
+    const result = transition_mod.transitionWithContext(
         alloc,
         &ctx,
         empty_pre_alloc,
@@ -244,17 +250,21 @@ fn executeBlockStatelessWithLogs(
         chain_id,
         hardfork.blockReward(spec),
         public_keys,
-    );
-    if (ctx.ctx_error != .ok) return error.InvalidWitness;
+    ) catch |e| return zesuErr(e);
+    // A witness miss surfaced through zesu's WitnessDatabase during live execution — the
+    // taxonomy's documented "witness-backed database" case — gets its own Linea-layer name so it
+    // stays in CODE_WITNESS_RESOLUTION rather than collapsing to EngineError like a zesu-internal
+    // InvalidWitness.
+    if (ctx.ctx_error != .ok) return error.WitnessDbResolution;
     var access_log = ctx.journaled_state.takeAccessLog();
     defer access_log.deinit();
-    const accessed = try executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched);
-    const proof = try finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb());
-    try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
+    const accessed = executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched) catch |e| return zesuErr(e);
+    const proof = finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb()) catch |e| return zesuErr(e);
+    block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
         .computed_state_root = proof.post_state_root,
         .expected_state_root = ep.state_root,
         .computed_receipts_root = proof.receipts_root,
         .expected_receipts_root = ep.receipts_root,
-    });
+    }) catch |e| return zesuErr(e);
     return proof;
 }
