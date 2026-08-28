@@ -89,6 +89,7 @@
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
 - *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 - *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
+- *(coordinator)* Extract ForcedTransactionsApp from ConflationAppV1, make invalidity proof service injectable (#3856)
 
 ### ⚡ Performance
 
