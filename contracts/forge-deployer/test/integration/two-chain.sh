@@ -10,6 +10,15 @@ L1_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 L2_KEY="0x0000000000000000000000000000000000000000000000000000000000000001"
 STATE_ROOT="0xabababababababababababababababababababababababababababababababab"
 
+RPC_READY_TIMEOUT_S=60
+RPC_READY_POLL_INTERVAL_S=1
+# The intent/pending-nonce condition below settles much faster than RPC
+# readiness (it's just local checkpoint-file + nonce reads, no container
+# boot), so it polls a shorter overall budget at a finer interval.
+INTENT_POLL_TIMEOUT_S=20
+INTENT_POLL_INTERVAL_S=0.1
+INTENT_POLL_ITERATIONS=200 # INTENT_POLL_TIMEOUT_S / INTENT_POLL_INTERVAL_S
+
 NETWORK=""
 CHECKPOINT_DIR=""
 L1_CONTAINER=""
@@ -44,12 +53,12 @@ DEPLOYER_IMAGE_DIGEST="$(docker image inspect --format '{{.Id}}' "$DEPLOYER_IMAG
 
 wait_for_rpc() {
   local container="$1"
-  for _ in $(seq 1 60); do
+  for _ in $(seq 1 "$RPC_READY_TIMEOUT_S"); do
     if docker run --rm --network "$NETWORK" --entrypoint cast "$FOUNDRY_IMAGE" \
       block-number --rpc-url "http://${container}:8545" >/dev/null 2>&1; then
       return 0
     fi
-    sleep 1
+    sleep "$RPC_READY_POLL_INTERVAL_S"
   done
   echo "${container} RPC did not become ready" >&2
   return 1
@@ -58,6 +67,8 @@ wait_for_rpc() {
 start_scenario() {
   local label="$1"
   cleanup_scenario
+  # Reset any bootstrap inputs a prior scenario exported so they never leak.
+  unset BOOTSTRAP_MANIFEST_FILE BOOTSTRAP_SCRIPTS_DIR
   NETWORK="forge-deployer-${label}-$$"
   CHECKPOINT_DIR="$(mktemp -d)"
   L1_CONTAINER="forge-deployer-${label}-l1-$$"
@@ -108,6 +119,8 @@ deployer_container() {
     -e "L1_DEPLOY_GAS_PRICE_WEI=0" \
     -e "L2_DEPLOY_GAS_PRICE_WEI=0" \
     -e "CHECKPOINT_FILE=/checkpoint/checkpoint.json" \
+    ${BOOTSTRAP_MANIFEST_FILE:+-e "BOOTSTRAP_MANIFEST_FILE=$BOOTSTRAP_MANIFEST_FILE"} \
+    ${BOOTSTRAP_SCRIPTS_DIR:+-e "BOOTSTRAP_SCRIPTS_DIR=$BOOTSTRAP_SCRIPTS_DIR"} \
     "$DEPLOYER_IMAGE"
 }
 
@@ -138,7 +151,7 @@ wait_for_intent_and_pending_nonce() {
   local signer="$3"
   local expected_pending_nonce="$4"
   local intent_address=""
-  for _ in $(seq 1 200); do
+  for _ in $(seq 1 "$INTENT_POLL_ITERATIONS"); do
     if [[ -s "$CHECKPOINT_DIR/checkpoint.json" ]]; then
       intent_address="$(
         jq -r --arg chain "$chain" \
@@ -151,7 +164,7 @@ wait_for_intent_and_pending_nonce() {
         return 0
       fi
     fi
-    sleep 0.1
+    sleep "$INTENT_POLL_INTERVAL_S"
   done
   echo "timed out waiting for ${chain} intent at pending nonce ${expected_pending_nonce}; address=${intent_address:-unknown}" >&2
   return 1
@@ -179,11 +192,23 @@ verify_happy_path() {
   l2_nonce_before="$(get_nonce latest "$L2_CONTAINER" "$L2_ADDRESS")"
 
   test "$l1_nonce_before" -eq "$((INITIAL_L1_NONCE + 10))"
+  # Anvil preinstalls the deterministic proxy factory in genesis, so the runner
+  # adopts it as recovered and the funding send is skipped: only the 8 contract
+  # deployments consume L2 deployer nonces here.
   test "$l2_nonce_before" -eq "$((INITIAL_L2_NONCE + 8))"
-  test "$(jq '.completedSteps | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 4
-  test "$(jq '.deployments | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 18
+  test "$(jq '.completedSteps | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 5
+  # Total deployment-key count from buildAddressPlan(); kept as a literal since
+  # this shell test can't import the TS plan. Update alongside
+  # test/checkpoint.test.ts (which derives it dynamically) if the plan changes.
+  test "$(jq '.deployments | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 19
   jq -e --arg digest "$DEPLOYER_IMAGE_DIGEST" \
-    '.schemaVersion == 2 and .artifactDigest == $digest and (.inFlightDeployments | length) == 0' \
+    '.schemaVersion == 3 and .artifactDigest == $digest and (.inFlightDeployments | length) == 0' \
+    "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
+
+  # The deterministic deployment proxy factory must be installed on L2, and the
+  # checkpoint records it as recovered (adopted from the preinstalled code).
+  test "$(get_code "$L2_CONTAINER" "0x4e59b44847b379578588920cA78FbF26c0B4956C")" != "0x"
+  jq -e '.deployments["l2-deterministic-proxy.factory"].recovered == true' \
     "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
 
   while IFS=$'\t' read -r chain address; do
@@ -265,9 +290,70 @@ verify_l2_broadcast_crash() {
   test "$(jq -c '{completedSteps, deployments: [.deployments | to_entries[] | select(.value.chainId == "31337")]}' "$CHECKPOINT_DIR/checkpoint.json")" = "$l1_prefix"
 }
 
+# Exercises the optional custom bootstrap phase: a sign funding item, a keyless
+# presigned deploy, and an operator script, all on L2, then asserts the rerun
+# skips every item and advances no further nonce.
+verify_custom_bootstrap() {
+  start_scenario bootstrap
+
+  # Operator-supplied bootstrap inputs are real files shipped under
+  # test/fixtures/bootstrap/ and copied into the checkpoint mount exactly as an
+  # operator would mount them, rather than being constructed inline here.
+  local fixtures_dir
+  fixtures_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../fixtures/bootstrap" && pwd)"
+  # Bytecode/salt/factory used by the fixture manifest and its create2 script.
+  local simple_initcode="0x6001600c60003960016000f300"
+  local create2_salt="0x00000000000000000000000000000000000000000000000000000000000000cd"
+  local proxy_factory="0x4e59b44847b379578588920cA78FbF26c0B4956C"
+
+  mkdir -p "$CHECKPOINT_DIR/bootstrap"
+  cp "$fixtures_dir/manifest.json" "$CHECKPOINT_DIR/manifest.json"
+  cp "$fixtures_dir/deploy-via-create2.js" "$CHECKPOINT_DIR/bootstrap/deploy-via-create2.js"
+  chmod -R 0777 "$CHECKPOINT_DIR/bootstrap"
+
+  BOOTSTRAP_MANIFEST_FILE="/checkpoint/manifest.json"
+  BOOTSTRAP_SCRIPTS_DIR="/checkpoint/bootstrap"
+
+  # The bootstrap phase runs sign items first (nonce N, N+1), then the script's
+  # create2 call (nonce N+2), where N = INITIAL_L2_NONCE + 8 (the 8 core L2
+  # deploys; the Anvil-preinstalled det-proxy consumes no nonce).
+  local bare_create_nonce=$((INITIAL_L2_NONCE + 9))
+
+  run_deployer
+  local l2_nonce_after_first
+  l2_nonce_after_first="$(get_nonce latest "$L2_CONTAINER" "$L2_ADDRESS")"
+  # 8 core L2 deploys + 2 sign items + 1 create2 script call.
+  test "$l2_nonce_after_first" -eq "$((INITIAL_L2_NONCE + 11))"
+
+  # The bare create landed at the deployer's CREATE address and the create2
+  # script landed at the deterministic CREATE2 address.
+  local bare_create_addr create2_addr
+  bare_create_addr="$(docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" compute-address --nonce "$bare_create_nonce" "$L2_ADDRESS" | awk '{print $NF}')"
+  create2_addr="$(docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" compute-address --salt "$create2_salt" --init-code "$simple_initcode" "$proxy_factory" | awk '{print $NF}')"
+  test "$(get_code "$L2_CONTAINER" "$bare_create_addr")" != "0x"
+  test "$(get_code "$L2_CONTAINER" "$create2_addr")" != "0x"
+
+  jq -e '.bootstrap["bootstrap.fund-target"].kind == "sign"' "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
+  jq -e '.bootstrap["bootstrap.bare-create"].kind == "sign"' "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
+  jq -e --arg addr "$bare_create_addr" \
+    '.bootstrap["bootstrap.bare-create"].address | ascii_downcase == ($addr | ascii_downcase)' \
+    "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
+  jq -e '.bootstrap["bootstrap.create2-deploy"].kind == "script"' "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
+
+  # A rerun with the same manifest completes no additional items and advances no
+  # further nonce: completed bootstrap items are skipped.
+  cp "$CHECKPOINT_DIR/checkpoint.json" "$CHECKPOINT_DIR/checkpoint.before-rerun.json"
+  run_deployer
+  test "$(get_nonce latest "$L2_CONTAINER" "$L2_ADDRESS")" -eq "$l2_nonce_after_first"
+  cmp "$CHECKPOINT_DIR/checkpoint.before-rerun.json" "$CHECKPOINT_DIR/checkpoint.json"
+
+  unset BOOTSTRAP_MANIFEST_FILE BOOTSTRAP_SCRIPTS_DIR
+}
+
 verify_happy_path
 verify_l1_broadcast_crash
 verify_l2_broadcast_crash
+verify_custom_bootstrap
 cleanup_scenario
 
-echo "two-chain deployment, zero-transaction rerun, checkpoint-loss refusal, and L1/L2 crash refusal verified"
+echo "two-chain deployment, zero-transaction rerun, checkpoint-loss refusal, L1/L2 crash refusal, and custom bootstrap verified"

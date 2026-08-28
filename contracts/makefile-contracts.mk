@@ -127,6 +127,15 @@ deploy-l2messageservice:
 		L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT=1000000000000000000000 \
 		pnpm exec ts-node local-deployments-artifacts/deployL2MessageServiceV1.ts
 
+deploy-deterministic-proxy-l2:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		# EIP-7997 / Arachnid Create2Factory at the well-known 0x4e59...956C. Runs after
+		# the parallel contract deploys; skips automatically when factory code exists.
+		cd $(contracts_package_dir); \
+		DEPLOYER_PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae} \
+		RPC_URL=http:\\localhost:8545/ \
+		pnpm exec ts-node local-deployments-artifacts/deploy-deterministic-deployment-proxy.ts
+
 deploy-token-bridge-l1:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd $(contracts_package_dir); \
@@ -188,6 +197,10 @@ deploy-contracts:
 	else \
 		$(MAKE) -j6 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-l2messageservice; \
 	fi
+	# Run serially after the parallel batch above (not folded into it): the proxy
+	# deploy needs the L2 deployer's next nonce settled after every L2 deploy in
+	# that batch has landed. Adding it to the -j6/-j7 list would race that nonce.
+	$(MAKE) deploy-deterministic-proxy-l2
 
 
 deploy-l2-evm-opcode-tester:

@@ -35,6 +35,7 @@ function identity() {
     chainIds: { l1: "1", l2: "1337" },
     signers: { l1: L1_SIGNER, l2: L2_SIGNER },
     configurationHash: `0x${"12".repeat(32)}`,
+    bootstrapHash: `0x${"00".repeat(32)}`,
     startingNonces: { l1: 3, l2: 7 },
   };
 }
@@ -56,13 +57,20 @@ function checkpoint() {
 test("creates a versioned checkpoint with every expected address and no secrets", () => {
   const value = checkpoint();
   const serialized = JSON.stringify(value);
+  const startingNonces = identity().startingNonces;
+  const expectedDeploymentCount = buildAddressPlan({
+    l1Signer: L1_SIGNER,
+    l2Signer: L2_SIGNER,
+    l1StartingNonce: startingNonces.l1,
+    l2StartingNonce: startingNonces.l2,
+  }).reduce((total, step) => total + step.deployments.length, 0);
 
   assert.equal(value.profile, DEPLOYMENT_PROFILE);
-  assert.equal(SCHEMA_VERSION, 2);
-  assert.equal(value.schemaVersion, 2);
+  assert.equal(SCHEMA_VERSION, 3);
+  assert.equal(value.schemaVersion, 3);
   assert.equal(value.artifactDigest, IMAGE_DIGEST);
   assert.deepEqual(value.inFlightDeployments, {});
-  assert.equal(Object.keys(value.expectedDeployments).length, 18);
+  assert.equal(Object.keys(value.expectedDeployments).length, expectedDeploymentCount);
   assert.doesNotMatch(serialized, /private.?key|rpc.?url/i);
 });
 
@@ -105,6 +113,44 @@ test("rejects incompatible chain, signer, state root, profile, and artifact", ()
     () => assertCheckpointCompatible(value, { ...identity(), artifactDigest: `sha256:${"ef".repeat(32)}` }),
     /artifact digest/,
   );
+  assert.throws(
+    () => assertCheckpointCompatible(value, { ...identity(), bootstrapHash: `0x${"11".repeat(32)}` }),
+    /bootstrap manifest/,
+  );
+});
+
+test("round-trips completed bootstrap records and rejects malformed ones", () => {
+  const value = checkpoint();
+  value.bootstrap["bootstrap.fund-relayer"] = {
+    kind: "sign",
+    chain: "l2",
+    transactionHash: `0x${"cd".repeat(32)}`,
+    blockNumber: 42,
+    chainId: "1337",
+  };
+  value.bootstrap["bootstrap.deploy-factory"] = {
+    kind: "presigned",
+    chain: "l2",
+    transactionHash: `0x${"ef".repeat(32)}`,
+    blockNumber: 43,
+    chainId: "1337",
+    address: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+  };
+  assert.deepEqual(parseCheckpoint(JSON.stringify(value)).bootstrap, value.bootstrap);
+
+  const malformed = checkpoint();
+  malformed.bootstrap["bootstrap.bad"] = {
+    kind: "sign",
+    chain: "l2",
+    transactionHash: "not-a-hash",
+    blockNumber: 1,
+    chainId: "1337",
+  };
+  assert.throws(() => parseCheckpoint(JSON.stringify(malformed)), /invalid bootstrap record/);
+
+  const missing = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
+  delete (missing as Record<string, unknown>).bootstrap;
+  assert.throws(() => parseCheckpoint(JSON.stringify(missing)), /missing bootstrap record/);
 });
 
 test("serializes sufficient ConfigMap state and public addresses", () => {

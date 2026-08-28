@@ -49,6 +49,7 @@ jobs:
   build-scan-and-publish:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Forge contract deployer build
+    timeout-minutes: 30
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}

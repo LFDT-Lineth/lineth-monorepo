@@ -2,6 +2,7 @@ import { getCreateAddress } from "ethers";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { ARACHNID_FACTORY } from "../../common/helpers/deterministicDeploymentProxy";
 import { buildAddressPlan } from "../src/address-plan";
 
 const L1_SIGNER = "0x1000000000000000000000000000000000000001";
@@ -22,6 +23,7 @@ test("builds the four-step deterministic deployment address plan", () => {
       ["l2-message-service", 3],
       ["l1-token-bridge", 5],
       ["l2-token-bridge", 5],
+      ["l2-deterministic-proxy", 1],
     ],
   );
   assert.equal(plan[0]?.deployments.at(-1)?.nonce, 14);
@@ -30,6 +32,16 @@ test("builds the four-step deterministic deployment address plan", () => {
   assert.equal(plan[3]?.deployments.at(-1)?.nonce, 27);
   assert.equal(plan[0]?.deployments.at(-1)?.expectedAddress, getCreateAddress({ from: L1_SIGNER, nonce: 14 }));
   assert.equal(plan[3]?.deployments.at(-1)?.expectedAddress, getCreateAddress({ from: L2_SIGNER, nonce: 27 }));
+
+  const proxy = plan[4];
+  assert.equal(proxy?.id, "l2-deterministic-proxy");
+  assert.equal(proxy?.chain, "l2");
+  // Funding send uses the nonce after the 8 L2 contract deployments (3 + 5).
+  assert.equal(proxy?.startingNonce, 28);
+  assert.equal(proxy?.deployments[0]?.nonce, 28);
+  assert.equal(proxy?.deployments[0]?.contractName, "DeterministicDeploymentProxy");
+  // Keyless pre-signed deployment: fixed well-known factory, not a CREATE address.
+  assert.equal(proxy?.deployments[0]?.expectedAddress, ARACHNID_FACTORY);
 });
 
 test("uses distinct stable keys for repeated infrastructure contracts", () => {

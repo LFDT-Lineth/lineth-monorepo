@@ -1,5 +1,5 @@
 import { getAddress } from "ethers";
-import { spawn } from "node:child_process";
+import { ChildProcess, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
 import { DeploymentStep } from "./address-plan";
@@ -27,6 +27,21 @@ interface DeploymentIntentMessage {
   type: "lineth-deployment-intent";
   id: string;
   contractName: string;
+}
+
+// A completed custom bootstrap item reported by the bootstrap step child.
+interface BootstrapRecordMessage {
+  type: "lineth-bootstrap-record";
+  id: string;
+  record: {
+    itemId: string;
+    kind: "sign" | "presigned" | "script";
+    chain: "l1" | "l2";
+    transactionHash: string;
+    blockNumber: number;
+    chainId: string;
+    address?: string;
+  };
 }
 
 const INHERITED_CHILD_ENVIRONMENT = [
@@ -70,21 +85,54 @@ function isDeploymentIntentMessage(message: unknown): message is DeploymentInten
   );
 }
 
-function expectedDeployment(input: RunStepScriptInput, contractName: string) {
-  const matches = input.step.deployments.filter((deployment) => deployment.contractName === contractName);
+function isBootstrapRecordMessage(message: unknown): message is BootstrapRecordMessage {
+  if (typeof message !== "object" || message === null) return false;
+  const candidate = message as Partial<BootstrapRecordMessage>;
+  return (
+    candidate.type === "lineth-bootstrap-record" &&
+    typeof candidate.id === "string" &&
+    !!candidate.record &&
+    typeof candidate.record.itemId === "string"
+  );
+}
+
+function expectedDeployment(step: DeploymentStep, contractName: string) {
+  const matches = step.deployments.filter((deployment) => deployment.contractName === contractName);
   if (matches.length !== 1) {
-    throw new Error(`${input.step.id} emitted unexpected or ambiguous deployment ${contractName}`);
+    throw new Error(`${step.id} emitted unexpected or ambiguous deployment ${contractName}`);
   }
   return matches[0]!;
 }
 
-export async function runStepScript(input: RunStepScriptInput): Promise<void> {
+interface RunChildScriptInput {
+  scriptPath: string;
+  environment: NodeJS.ProcessEnv;
+  sensitiveValues: readonly string[];
+  /** Used in "failed to capture output for X" and "X exited with code N" errors. */
+  errorContextLabel: string;
+  /**
+   * Invoked for every IPC message the child sends, in order (never
+   * concurrently). Throwing aborts the run: the child is killed and the
+   * thrown error propagates once the child has fully exited.
+   */
+  onMessage: (message: unknown, child: ChildProcess) => Promise<void> | void;
+}
+
+/**
+ * Owns the spawn/stdio/close/kill lifecycle shared by every forge-deployer
+ * child script (deployment steps and the bootstrap step): pipes stdout/stderr
+ * through `sanitizeText`, serializes IPC message handling so persistence
+ * never races itself, and kills the child if message handling throws.
+ * Callers only need to supply an `onMessage` handler for their own message
+ * shape and any post-run invariants (e.g. expected record counts).
+ */
+async function runChildScript(input: RunChildScriptInput): Promise<void> {
   const child = spawn(process.execPath, [input.scriptPath], {
     env: childEnvironment(input.environment),
     stdio: ["ignore", "pipe", "pipe", "ipc"],
   });
   const { stdout, stderr } = child;
-  if (!stdout || !stderr) throw new Error(`failed to capture output for ${input.step.id}`);
+  if (!stdout || !stderr) throw new Error(`failed to capture output for ${input.errorContextLabel}`);
 
   const closePromise = new Promise<number>((resolve, reject) => {
     child.once("error", reject);
@@ -96,72 +144,11 @@ export async function runStepScript(input: RunStepScriptInput): Promise<void> {
     }
   })();
 
-  const recordedKeys = new Set<string>();
   let messageProcessing = Promise.resolve();
   let messageProcessingError: unknown;
   child.on("message", (message: unknown) => {
-    if (!isDeploymentIntentMessage(message) && !isDeploymentRecordMessage(message)) return;
     messageProcessing = messageProcessing
-      .then(async () => {
-        try {
-          if (isDeploymentIntentMessage(message)) {
-            const { id, contractName } = message;
-            const expected = expectedDeployment(input, contractName);
-            if (input.checkpoint.deployments[expected.key] || input.checkpoint.inFlightDeployments[expected.key]) {
-              throw new Error(`${input.step.id} requested ${contractName} twice`);
-            }
-            input.checkpoint.inFlightDeployments[expected.key] = {
-              stepId: input.step.id,
-              chain: input.step.chain,
-              contractName: expected.contractName,
-              nonce: expected.nonce,
-              expectedAddress: getAddress(expected.expectedAddress),
-            };
-            await input.store.save(input.checkpoint);
-            child.send({ type: "lineth-deployment-intent-ack", id });
-            return;
-          }
-
-          const { id, record } = message;
-          const expected = expectedDeployment(input, record.contractName);
-          if (recordedKeys.has(expected.key) || input.checkpoint.deployments[expected.key]) {
-            throw new Error(`${input.step.id} emitted ${record.contractName} twice`);
-          }
-          if (!input.checkpoint.inFlightDeployments[expected.key]) {
-            throw new Error(`${input.step.id} emitted ${record.contractName} without a durable deployment intent`);
-          }
-          if (getAddress(record.address) !== getAddress(expected.expectedAddress)) {
-            throw new Error(
-              `${input.step.id} deployed ${record.contractName} at ${record.address}; expected ${expected.expectedAddress}`,
-            );
-          }
-          const expectedChainId = input.checkpoint.chainIds[input.step.chain];
-          if (record.chainId !== expectedChainId) {
-            throw new Error(
-              `${input.step.id} emitted chain ID ${record.chainId} for ${record.contractName}; expected ${expectedChainId}`,
-            );
-          }
-
-          input.checkpoint.deployments[expected.key] = {
-            address: getAddress(record.address),
-            transactionHash: record.transactionHash,
-            blockNumber: record.blockNumber,
-            chainId: record.chainId,
-            recovered: false,
-          };
-          delete input.checkpoint.inFlightDeployments[expected.key];
-          await input.store.save(input.checkpoint);
-          recordedKeys.add(expected.key);
-          child.send({ type: "lineth-deployment-record-ack", id });
-        } catch (error) {
-          child.send({
-            type: isDeploymentIntentMessage(message) ? "lineth-deployment-intent-ack" : "lineth-deployment-record-ack",
-            id: message.id,
-            error: "deployment checkpoint persistence failed",
-          });
-          throw error;
-        }
-      })
+      .then(() => input.onMessage(message, child))
       .catch((error: unknown) => {
         messageProcessingError ??= error;
         child.kill("SIGTERM");
@@ -181,10 +168,142 @@ export async function runStepScript(input: RunStepScriptInput): Promise<void> {
   const [exitCode] = await Promise.all([closePromise, stderrPromise]);
   await messageProcessing;
   if (messageProcessingError) throw messageProcessingError;
-  if (exitCode !== 0) throw new Error(`${input.step.id} deploy script exited with code ${exitCode}`);
+  if (exitCode !== 0) throw new Error(`${input.errorContextLabel} exited with code ${exitCode}`);
+}
+
+export async function runStepScript(input: RunStepScriptInput): Promise<void> {
+  const recordedKeys = new Set<string>();
+
+  await runChildScript({
+    scriptPath: input.scriptPath,
+    environment: input.environment,
+    sensitiveValues: input.sensitiveValues,
+    errorContextLabel: `${input.step.id} deploy script`,
+    onMessage: async (message, child) => {
+      if (!isDeploymentIntentMessage(message) && !isDeploymentRecordMessage(message)) return;
+      try {
+        if (isDeploymentIntentMessage(message)) {
+          const { id, contractName } = message;
+          const expected = expectedDeployment(input.step, contractName);
+          if (input.checkpoint.deployments[expected.key] || input.checkpoint.inFlightDeployments[expected.key]) {
+            throw new Error(`${input.step.id} requested ${contractName} twice`);
+          }
+          input.checkpoint.inFlightDeployments[expected.key] = {
+            stepId: input.step.id,
+            chain: input.step.chain,
+            contractName: expected.contractName,
+            nonce: expected.nonce,
+            expectedAddress: getAddress(expected.expectedAddress),
+          };
+          await input.store.save(input.checkpoint);
+          child.send({ type: "lineth-deployment-intent-ack", id });
+          return;
+        }
+
+        const { id, record } = message;
+        const expected = expectedDeployment(input.step, record.contractName);
+        if (recordedKeys.has(expected.key) || input.checkpoint.deployments[expected.key]) {
+          throw new Error(`${input.step.id} emitted ${record.contractName} twice`);
+        }
+        if (!input.checkpoint.inFlightDeployments[expected.key]) {
+          throw new Error(`${input.step.id} emitted ${record.contractName} without a durable deployment intent`);
+        }
+        if (getAddress(record.address) !== getAddress(expected.expectedAddress)) {
+          throw new Error(
+            `${input.step.id} deployed ${record.contractName} at ${record.address}; expected ${expected.expectedAddress}`,
+          );
+        }
+        const expectedChainId = input.checkpoint.chainIds[input.step.chain];
+        if (record.chainId !== expectedChainId) {
+          throw new Error(
+            `${input.step.id} emitted chain ID ${record.chainId} for ${record.contractName}; expected ${expectedChainId}`,
+          );
+        }
+
+        input.checkpoint.deployments[expected.key] = {
+          address: getAddress(record.address),
+          transactionHash: record.transactionHash,
+          blockNumber: record.blockNumber,
+          chainId: record.chainId,
+          recovered: false,
+        };
+        delete input.checkpoint.inFlightDeployments[expected.key];
+        await input.store.save(input.checkpoint);
+        recordedKeys.add(expected.key);
+        child.send({ type: "lineth-deployment-record-ack", id });
+      } catch (error) {
+        child.send({
+          type: isDeploymentIntentMessage(message) ? "lineth-deployment-intent-ack" : "lineth-deployment-record-ack",
+          id: message.id,
+          error: error instanceof Error ? error.message : "deployment checkpoint persistence failed",
+        });
+        throw error;
+      }
+    },
+  });
+
   if (recordedKeys.size !== input.step.deployments.length) {
     throw new Error(
       `${input.step.id} emitted ${recordedKeys.size} deployment records; expected ${input.step.deployments.length}`,
     );
   }
+}
+
+interface RunBootstrapScriptInput {
+  scriptPath: string;
+  environment: NodeJS.ProcessEnv;
+  checkpoint: DeploymentCheckpoint;
+  store: CheckpointStore;
+  sensitiveValues: readonly string[];
+  // Keys of bootstrap items the child is expected to complete (not already done).
+  pendingItemKeys: string[];
+}
+
+// Runs the custom bootstrap step child. Unlike runStepScript there is no
+// per-broadcast intent dance: bootstrap items may be plain transfers, keyless
+// broadcasts, or operator scripts, so the child reports each completed item via
+// a `lineth-bootstrap-record` message which the parent durably checkpoints.
+export async function runBootstrapScript(input: RunBootstrapScriptInput): Promise<void> {
+  await runChildScript({
+    scriptPath: input.scriptPath,
+    environment: input.environment,
+    sensitiveValues: input.sensitiveValues,
+    errorContextLabel: "bootstrap step script",
+    onMessage: async (message, child) => {
+      if (!isBootstrapRecordMessage(message)) return;
+      try {
+        const { id, record } = message;
+        const key = `bootstrap.${record.itemId}`;
+        if (!input.pendingItemKeys.includes(key)) {
+          throw new Error(`bootstrap step emitted unexpected or already-recorded item ${record.itemId}`);
+        }
+        if (input.checkpoint.bootstrap[key]) {
+          throw new Error(`bootstrap step emitted ${record.itemId} twice`);
+        }
+        const expectedChainId = input.checkpoint.chainIds[record.chain];
+        if (record.chainId !== expectedChainId) {
+          throw new Error(
+            `bootstrap item ${record.itemId} emitted chain ID ${record.chainId}; expected ${expectedChainId}`,
+          );
+        }
+        input.checkpoint.bootstrap[key] = {
+          kind: record.kind,
+          chain: record.chain,
+          transactionHash: record.transactionHash,
+          blockNumber: record.blockNumber,
+          chainId: record.chainId,
+          ...(record.address ? { address: getAddress(record.address) } : {}),
+        };
+        await input.store.save(input.checkpoint);
+        child.send({ type: "lineth-bootstrap-record-ack", id });
+      } catch (error) {
+        child.send({
+          type: "lineth-bootstrap-record-ack",
+          id: message.id,
+          error: error instanceof Error ? error.message : "bootstrap checkpoint failed",
+        });
+        throw error;
+      }
+    },
+  });
 }

@@ -83,6 +83,11 @@ export async function resolveOneModelFeeOverrides(
     }
   }
 
+  // Deliberately not delegating to scripts/utils.ts's get1559Fees: that helper
+  // treats a falsy fee (including a legitimate `0n`, used for gas-free L2s
+  // via L2_DEPLOY_GAS_PRICE_WEI=0) as absent, which would silently misreport
+  // "no usable fee data" here. Only null/undefined mean "provider didn't
+  // return this field".
   const { gasPrice, maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
   const hasMaxFee = maxFeePerGas !== null && maxFeePerGas !== undefined;
   const hasPriorityFee = maxPriorityFeePerGas !== null && maxPriorityFeePerGas !== undefined;

@@ -1,7 +1,9 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import https from "node:https";
 import path from "node:path";
+import { setTimeout as wait } from "node:timers/promises";
 
+import { L2_DETERMINISTIC_PROXY_FACTORY_KEY } from "./address-plan";
 import { DeploymentCheckpoint, parseCheckpoint, touchCheckpoint } from "./checkpoint";
 import { DeployerConfig } from "./config";
 
@@ -10,6 +12,7 @@ const CHECKPOINT_DATA_KEY = "checkpoint.json";
 const SERVICE_ACCOUNT_PATH = "/var/run/secrets/kubernetes.io/serviceaccount";
 const KUBERNETES_WRITE_ATTEMPTS = 5;
 const KUBERNETES_REQUEST_TIMEOUT_MS = 10_000;
+const KUBERNETES_RETRY_BASE_DELAY_MS = 100;
 
 export interface CheckpointStore {
   load(): Promise<DeploymentCheckpoint | undefined>;
@@ -36,6 +39,7 @@ export function checkpointToConfigMapData(checkpoint: DeploymentCheckpoint): Rec
     ["l2-message-service", completedAddress(checkpoint, "l2-message-service.proxy")],
     ["l1-token-bridge", completedAddress(checkpoint, "l1-token-bridge.proxy")],
     ["l2-token-bridge", completedAddress(checkpoint, "l2-token-bridge.proxy")],
+    ["deterministic-deployment-proxy", completedAddress(checkpoint, L2_DETERMINISTIC_PROXY_FACTORY_KEY)],
   ];
   for (const [key, value] of publicAddresses) {
     if (value !== undefined) data[key] = value;
@@ -114,10 +118,6 @@ class KubernetesHttpError extends Error {
 }
 
 class KubernetesTransportError extends Error {}
-
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
 
 export class KubernetesCheckpointStore implements CheckpointStore {
   private readonly host: string;
@@ -290,7 +290,7 @@ export class KubernetesCheckpointStore implements CheckpointStore {
             (error instanceof KubernetesHttpError && isRetryableKubernetesStatus(error.statusCode))) &&
           attempt < KUBERNETES_WRITE_ATTEMPTS;
         if (!shouldRetry) throw error;
-        await wait(100 * 2 ** (attempt - 1));
+        await wait(KUBERNETES_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
       }
     }
     throw new Error("Kubernetes ConfigMap write attempts exhausted");

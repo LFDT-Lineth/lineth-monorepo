@@ -1,6 +1,22 @@
 import { getAddress, isAddress, ZeroAddress } from "ethers";
 
 const UINT256_MAX = (1n << 256n) - 1n;
+const SECONDS_PER_DAY = 86_400;
+const DEFAULT_RATE_LIMIT_PERIOD_SECONDS = SECONDS_PER_DAY.toString();
+// 1000 tokens at 18 decimals.
+const DEFAULT_RATE_LIMIT_AMOUNT_WEI = (1000n * 10n ** 18n).toString();
+
+/**
+ * Env vars whose values must never appear in logs. Shared with `cli.ts` so
+ * the top-level error handler can redact them even when `loadConfig()`
+ * itself throws before producing a `DeployerConfig.sensitiveValues`.
+ */
+export const SENSITIVE_ENV_VAR_NAMES = [
+  "L1_DEPLOYER_PRIVATE_KEY",
+  "L2_DEPLOYER_PRIVATE_KEY",
+  "L1_RPC_URL",
+  "L2_RPC_URL",
+] as const;
 
 export interface DeployerConfig {
   l1RpcUrl: string;
@@ -26,6 +42,8 @@ export interface DeployerConfig {
   l1DeployGasPriceWei?: string;
   l2DeployGasPriceWei?: string;
   checkpointFile?: string;
+  bootstrapManifestFile?: string;
+  bootstrapScriptsDir?: string;
 }
 
 export interface RoleConfig {
@@ -119,12 +137,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DeployerConfig
   const l2StartingNonce = requireStartingNonce(env, "L2_STARTING_NONCE");
   const artifactDigest = requireSha256Digest(env, "DEPLOYER_IMAGE_DIGEST");
   const rateLimitPeriod = assertUint256(
-    optionalValue(env, "CONTRACT_RATE_LIMIT_PERIOD") ?? "86400",
+    optionalValue(env, "CONTRACT_RATE_LIMIT_PERIOD") ?? DEFAULT_RATE_LIMIT_PERIOD_SECONDS,
     "CONTRACT_RATE_LIMIT_PERIOD",
     false,
   );
   const rateLimitAmount = assertUint256(
-    optionalValue(env, "CONTRACT_RATE_LIMIT_AMOUNT") ?? "1000000000000000000000",
+    optionalValue(env, "CONTRACT_RATE_LIMIT_AMOUNT") ?? DEFAULT_RATE_LIMIT_AMOUNT_WEI,
     "CONTRACT_RATE_LIMIT_AMOUNT",
     false,
   );
@@ -156,6 +174,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DeployerConfig
     ["l1DeployGasPriceWei", optionalValue(env, "L1_DEPLOY_GAS_PRICE_WEI")],
     ["l2DeployGasPriceWei", optionalValue(env, "L2_DEPLOY_GAS_PRICE_WEI")],
     ["checkpointFile", optionalValue(env, "CHECKPOINT_FILE")],
+    ["bootstrapManifestFile", optionalValue(env, "BOOTSTRAP_MANIFEST_FILE")],
+    ["bootstrapScriptsDir", optionalValue(env, "BOOTSTRAP_SCRIPTS_DIR")],
   ];
   for (const [key, value] of optionalEntries) {
     if (value !== undefined) Object.assign(config, { [key]: value });
