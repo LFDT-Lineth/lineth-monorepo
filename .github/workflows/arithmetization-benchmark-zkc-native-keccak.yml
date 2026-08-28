@@ -19,6 +19,7 @@ name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -27,6 +28,7 @@ on:
       - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
       - '.github/actions/setup-zig/**'
+      - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
@@ -37,6 +39,7 @@ on:
      - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/actions/setup-zig/**'
+     - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
      - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
@@ -70,6 +73,7 @@ permissions:
 
 jobs:
   bench:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     steps:

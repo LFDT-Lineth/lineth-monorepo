@@ -2,6 +2,7 @@ name: verifier-ray
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -36,7 +37,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  ZKC_VERSION: 'v1.2.26'
+  ZKC_VERSION: 'v1.2.27'
   ZIG_VERSION: '0.16.0'
 
 concurrency:
@@ -45,6 +46,7 @@ concurrency:
 
 jobs:
   test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository

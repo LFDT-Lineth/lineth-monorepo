@@ -18,9 +18,8 @@ name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
-    # No branches: filter — this must also run on PRs targeting stacked, non-main
-    # integration branches (e.g. feat/l2-execution-guest-rollup-v2 and its own stack of
-    # PRs), not just PRs whose base is main. The paths: filter below still scopes it.
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'riscv-guests/**'
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
@@ -64,6 +63,7 @@ permissions:
 jobs:
   zkc-interpreter-run:
     name: guests in ZKC interpreter (accel)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large

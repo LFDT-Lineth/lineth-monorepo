@@ -29,6 +29,10 @@ If you already have an understanding of the tech stack, use our [Get Started](do
 
 For developers looking to build services locally (such as, the coordinator), see our detailed [Local Development Guide](docs/local-development-guide.md).
 
+## Lineth community calls
+
+Find the details to join the monthly Lineth community call in the [Lineth calendar](https://zoom-lfx.platform.linuxfoundation.org/meetings/lineth?view=week).
+
 ## Agent Documentation
 
 For AI coding agents and developer tools:

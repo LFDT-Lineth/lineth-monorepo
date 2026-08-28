@@ -3,6 +3,11 @@ pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
 pub const profiling = @import("profiling.zig");
 
+/// Assertion-only: pins the proof types' in-memory layout, which prover-ray's
+/// proof encoder reproduces byte-for-byte. Exported so its comptime checks are
+/// analyzed on every build that uses the library.
+pub const proof_abi = @import("proof_abi.zig");
+
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");
     pub const koalabear_ext = @import("field/koalabear_ext.zig");
