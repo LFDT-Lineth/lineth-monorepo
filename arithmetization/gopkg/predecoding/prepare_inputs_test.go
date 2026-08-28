@@ -3,6 +3,7 @@ package predecoding
 import (
 	"bytes"
 	"encoding/binary"
+	"maps"
 	"reflect"
 	"testing"
 
@@ -36,9 +37,7 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncodeInputs() error = %v", err)
 	}
-	for name, data := range decoded.EncodeInputs() {
-		want[name] = data
-	}
+	maps.Copy(want, decoded.EncodeInputs())
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("PrepareInputs() = %#v, want %#v", got, want)
 	}

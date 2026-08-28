@@ -624,7 +624,7 @@ type bitReader struct {
 
 func (r *bitReader) readBits(width int) uint64 {
 	var val uint64
-	for i := 0; i < width; i++ {
+	for range width {
 		bit := (r.buf[r.pos/8] >> uint(7-(r.pos%8))) & 1
 		val = (val << 1) | uint64(bit)
 		r.pos++
@@ -639,7 +639,7 @@ func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
 	}
 	r := &bitReader{buf: data}
 	ops := make([]uint32, nRecords)
-	for i := uint64(0); i < nRecords; i++ {
+	for i := range nRecords {
 		ops[i] = uint32(r.readBits(8))
 		r.readBits(64)
 		r.readBits(5)
@@ -653,7 +653,7 @@ func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
 	t.Helper()
 	nRecords := uint64(len(image) / 4)
 	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
-	for i := uint64(0); i < nRecords; i++ {
+	for i := range nRecords {
 		instr := binary.LittleEndian.Uint32(image[i*4:])
 		got := classifyInstruction(instr)
 		want := ops[i]

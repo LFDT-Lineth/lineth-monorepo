@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"sort"
 
@@ -739,9 +740,7 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	for name, data := range decoded.EncodeInputs() {
-		inputs[name] = data
-	}
+	maps.Copy(inputs, decoded.EncodeInputs())
 	return inputs, nil
 }
 
@@ -861,7 +860,7 @@ func executableImage(
 
 func decodeImage(image []byte, records uint64) []byte {
 	var decoded bitWriter
-	for record := uint64(0); record < records; record++ {
+	for record := range records {
 		offset := record * 4
 		instruction := binary.LittleEndian.Uint32(image[offset : offset+4])
 		decodeInstruction(&decoded, instruction)
