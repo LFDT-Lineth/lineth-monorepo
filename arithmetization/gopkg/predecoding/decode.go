@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"sort"
 
@@ -661,6 +662,7 @@ func (w *bitWriter) writeBits(val uint64, width int) {
 
 type config struct {
 	maxDecodedRecords uint64
+	mappingOptions    []elfmapping.Option
 }
 
 // Option configures predecoding.
@@ -675,6 +677,33 @@ func WithMaxDecodedRecords(maximum uint64) Option {
 	}
 }
 
+// WithIncludeExecutable includes the executable-blob bitmap used by the
+// standalone predecoding proof in the map returned by [PrepareInputs].
+func WithIncludeExecutable() Option {
+	return func(cfg *config) error {
+		cfg.mappingOptions = append(
+			cfg.mappingOptions,
+			elfmapping.WithIncludeExecutable(),
+		)
+		return nil
+	}
+}
+
+// WithSectionsWriter writes the legacy diagnostic blob table while
+// [PrepareInputs] encodes the ELF mapping.
+func WithSectionsWriter(writer io.Writer) Option {
+	return func(cfg *config) error {
+		if writer == nil {
+			return fmt.Errorf("sections writer is nil")
+		}
+		cfg.mappingOptions = append(
+			cfg.mappingOptions,
+			elfmapping.WithSectionsWriter(writer),
+		)
+		return nil
+	}
+}
+
 // PrepareInputs maps and predecodes a guest ELF and adds length-prefixed input
 // data, returning the complete raw input map consumed by the R5 interpreter.
 // Call [Predecode] separately when the same ELF is reused across many inputs.
@@ -683,11 +712,15 @@ func PrepareInputs(
 	inputData []byte,
 	options ...Option,
 ) (map[string][]byte, error) {
+	cfg, err := applyOptions(options)
+	if err != nil {
+		return nil, err
+	}
 	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
 	}
-	decoded, err := Predecode(program, options...)
+	decoded, err := predecode(program, cfg.maxDecodedRecords)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +731,11 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := elfmapping.EncodeInputs(program, inputBlobs)
+	inputs, err := elfmapping.EncodeInputs(
+		program,
+		inputBlobs,
+		cfg.mappingOptions...,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -727,17 +764,28 @@ func (program DecodedProgram) EncodeInputs() map[string][]byte {
 // Predecode creates one packed instruction row for every four-byte word in the
 // aligned span containing the program's executable blobs.
 func Predecode(program elfmapping.Program, options ...Option) (DecodedProgram, error) {
+	cfg, err := applyOptions(options)
+	if err != nil {
+		return DecodedProgram{}, err
+	}
+	return predecode(program, cfg.maxDecodedRecords)
+}
+
+func applyOptions(options []Option) (config, error) {
 	cfg := config{maxDecodedRecords: DefaultMaxDecodedRecords}
 	for _, option := range options {
 		if option == nil {
-			return DecodedProgram{}, fmt.Errorf("applying predecoding option: nil option")
+			return config{}, fmt.Errorf("applying predecoding option: nil option")
 		}
 		if err := option(&cfg); err != nil {
-			return DecodedProgram{}, fmt.Errorf("applying predecoding option: %w", err)
+			return config{}, fmt.Errorf("applying predecoding option: %w", err)
 		}
 	}
+	return cfg, nil
+}
 
-	base, image, records, err := executableImage(program.Blobs, cfg.maxDecodedRecords)
+func predecode(program elfmapping.Program, maxDecodedRecords uint64) (DecodedProgram, error) {
+	base, image, records, err := executableImage(program.Blobs, maxDecodedRecords)
 	if err != nil {
 		return DecodedProgram{}, err
 	}

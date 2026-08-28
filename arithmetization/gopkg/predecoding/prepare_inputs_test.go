@@ -69,6 +69,28 @@ func TestPrepareInputsForwardsPredecodingOptions(t *testing.T) {
 	}
 }
 
+func TestPrepareInputsForwardsMappingOptions(t *testing.T) {
+	var sections bytes.Buffer
+	inputs, err := PrepareInputs(
+		makePrepareInputsTestELF(),
+		[]byte{0xaa},
+		WithIncludeExecutable(),
+		WithSectionsWriter(&sections),
+	)
+	if err != nil {
+		t.Fatalf("PrepareInputs() error = %v", err)
+	}
+	if got := inputs[elfmapping.BlobsExecutableInput]; !bytes.Equal(got, []byte{0x80}) {
+		t.Errorf("blobs_executable = %x, want 80", got)
+	}
+	if !bytes.Contains(sections.Bytes(), []byte("yes, .text")) {
+		t.Errorf("sections table does not identify executable .text:\n%s", sections.String())
+	}
+	if !bytes.Contains(sections.Bytes(), []byte("no , ssz_payload")) {
+		t.Errorf("sections table does not contain input payload:\n%s", sections.String())
+	}
+}
+
 func TestPrepareInputsRejectsInvalidELF(t *testing.T) {
 	inputs, err := PrepareInputs([]byte("not an ELF"), nil)
 	if err == nil {

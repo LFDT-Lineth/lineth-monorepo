@@ -42,6 +42,7 @@ type Program struct {
 
 type config struct {
 	includeExecutable bool
+	sectionsWriter    io.Writer
 }
 
 // Option configures optional R5 mapping inputs.
@@ -51,6 +52,18 @@ type Option func(*config) error
 func WithIncludeExecutable() Option {
 	return func(cfg *config) error {
 		cfg.includeExecutable = true
+		return nil
+	}
+}
+
+// WithSectionsWriter writes a diagnostic table describing the encoded blobs.
+// The caller owns the writer and is responsible for closing it when needed.
+func WithSectionsWriter(writer io.Writer) Option {
+	return func(cfg *config) error {
+		if writer == nil {
+			return fmt.Errorf("sections writer is nil")
+		}
+		cfg.sectionsWriter = writer
 		return nil
 	}
 }
@@ -191,6 +204,9 @@ func EncodeInputs(
 ) (map[string][]byte, error) {
 	cfg := config{}
 	for _, option := range options {
+		if option == nil {
+			return nil, fmt.Errorf("applying input option: nil option")
+		}
 		if err := option(&cfg); err != nil {
 			return nil, fmt.Errorf("applying input option: %w", err)
 		}
@@ -204,6 +220,11 @@ func EncodeInputs(
 	})
 	if err := validateRanges(blobs); err != nil {
 		return nil, err
+	}
+	if cfg.sectionsWriter != nil {
+		if err := writeSections(cfg.sectionsWriter, blobs); err != nil {
+			return nil, fmt.Errorf("writing sections: %w", err)
+		}
 	}
 
 	entryAndCount := binary.BigEndian.AppendUint64(nil, program.EntryPoint)
@@ -228,6 +249,33 @@ func EncodeInputs(
 		inputs[BlobsExecutableInput] = encodeExecutableBits(blobs)
 	}
 	return inputs, nil
+}
+
+func writeSections(writer io.Writer, blobs []Blob) error {
+	if _, err := fmt.Fprintln(
+		writer,
+		"index, offset,             size,               exec, name",
+	); err != nil {
+		return err
+	}
+	for i, blob := range blobs {
+		executable := "no"
+		if blob.Executable {
+			executable = "yes"
+		}
+		if _, err := fmt.Fprintf(
+			writer,
+			"%-5d, 0x%016x, 0x%016x, %-3s, %s\n",
+			i,
+			blob.Address,
+			len(blob.Data),
+			executable,
+			blob.Name,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func blobDataSize(blobs []Blob) int {

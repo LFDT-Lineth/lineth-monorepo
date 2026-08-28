@@ -64,6 +64,29 @@ func TestPrepareInputsRejectsInvalidELF(t *testing.T) {
 	}
 }
 
+func TestPrepareInputsWritesLegacySectionsTable(t *testing.T) {
+	var sections bytes.Buffer
+	inputs, err := elfmapping.PrepareInputs(
+		makeELF(testEntryPoint, testTextAddress, testText),
+		[]byte{0xaa, 0xbb},
+		elfmapping.WithIncludeExecutable(),
+		elfmapping.WithSectionsWriter(&sections),
+	)
+	if err != nil {
+		t.Fatalf("PrepareInputs() error = %v", err)
+	}
+	if got := hex.EncodeToString(inputs[elfmapping.BlobsExecutableInput]); got != "80" {
+		t.Errorf("blobs_executable = %s, want 80", got)
+	}
+	want := "index, offset,             size,               exec, name\n" +
+		"0    , 0x0000000000800000, 0x0000000000000004, yes, .text\n" +
+		"1    , 0x0000000008800000, 0x0000000000000008, no , ssz_length\n" +
+		"2    , 0x0000000008800008, 0x0000000000000002, no , ssz_payload\n"
+	if sections.String() != want {
+		t.Errorf("sections table:\n%s\nwant:\n%s", sections.String(), want)
+	}
+}
+
 func TestLoad(t *testing.T) {
 	elfBytes := makeELF(testEntryPoint, testTextAddress, testText)
 	program, err := elfmapping.Load(bytes.NewReader(elfBytes))
