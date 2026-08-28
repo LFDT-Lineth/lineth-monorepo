@@ -366,6 +366,75 @@ test "reconstruct: accepts a dynamic size below the column's declared min_size_l
     try std.testing.expectEqual(@as(u8, 1), recon.entry_size_log2[recon.col_to_entry[0]]);
 }
 
+// ── Aliased-claim equality binding ────────────────────────────────────────────
+//
+// At an aliasing runtime size, distinct raw shifts open the SAME domain point
+// but carry DISTINCT transcript claim cells. Only the first cell of an aliasing
+// group is authenticated through the DEEP quotient (the repeats are deduped),
+// while routeClaims later routes every raw-shift slot independently — so the
+// dedup must equality-bind the skipped cells to the kept one, or a malicious
+// prover could keep the first claim commitment-consistent and smuggle a
+// different value through a skipped slot. No golden vector runs at an aliasing
+// size, so these drive pcs.entryDeepTerm directly.
+
+test "entryDeepTerm: rejects inconsistent aliased claims" {
+    // size_log2 = 1 (n = 2): raw shifts 1 and -1 both normalize to row 1, so
+    // both open zeta * omega. An honest prover writes the same value into both
+    // claim cells; this adversarial pair differs in the second cell.
+    const shifts = [_]isize{ 1, -1 };
+    const claims = [_]ext.Ext{
+        ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
+        ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }), // tampered duplicate
+    };
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+    try std.testing.expectError(
+        error.InconsistentAliasedClaim,
+        pcs.entryDeepTerm(&shifts, &claims, ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 }), 1, zeta, x),
+    );
+}
+
+test "entryDeepTerm: equal aliased claims contribute exactly one term" {
+    // Same aliasing pair, honest (equal) claims: the contribution must be the
+    // single term (entry_value - claim) / (x - zeta * omega), not twice it.
+    const shifts = [_]isize{ 1, -1 };
+    const claim = ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 });
+    const claims = [_]ext.Ext{ claim, claim };
+    const entry_value = ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 });
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+
+    const got = try pcs.entryDeepTerm(&shifts, &claims, entry_value, 1, zeta, x);
+
+    const omega = try field.rootOfUnityBy(2);
+    const point = zeta.mulByBase(omega); // shift 1 and -1 both land here at n = 2
+    const expected = entry_value.sub(claim).mul(x.sub(point).inverse());
+    try std.testing.expect(got.eql(expected));
+}
+
+test "entryDeepTerm: non-aliasing shifts still sum one term per point" {
+    // Control at a non-aliasing size (n = 4): shifts 1 and -1 open different
+    // points and both terms must be counted — pinning that the dedup only
+    // fires on genuine aliasing.
+    const shifts = [_]isize{ 1, -1 };
+    const claims = [_]ext.Ext{
+        ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
+        ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }),
+    };
+    const entry_value = ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 });
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+
+    const got = try pcs.entryDeepTerm(&shifts, &claims, entry_value, 2, zeta, x);
+
+    const omega = try field.rootOfUnityBy(4);
+    const p1 = zeta.mulByBase(omega.pow(1));
+    const p2 = zeta.mulByBase(omega.pow(3)); // -1 mod 4
+    const expected = entry_value.sub(claims[0]).mul(x.sub(p1).inverse())
+        .add(entry_value.sub(claims[1]).mul(x.sub(p2).inverse()));
+    try std.testing.expect(got.eql(expected));
+}
+
 test "routeInputRoots follows input-opening order as dynamic sizes change" {
     const roots = [_]poseidon2.Digest{
         challengeDigest(100),

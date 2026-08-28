@@ -8,6 +8,7 @@ pub const Error = error{
     InvalidClaimCount,
     QuotientIdentityMismatch,
     LagrangeSelectorInDomain,
+    LagrangeSelectorPositionOutOfRange,
     CellRefOutOfRange,
 };
 
@@ -300,6 +301,17 @@ fn evalOp(
 // Everything else (the annihilator, the r - omega^position denominator, the
 // division) depends on the runtime eval coin r and stays runtime in both cases.
 fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
+    // Bounds-check before normalizing. For a DYNAMIC module n comes from the
+    // proof-supplied module_sizes, so a hostile size can push a codegen-baked
+    // position out of [-n, n): a position < -n would underflow
+    // normalizePosition's usize subtraction, and a position >= n would be
+    // silently reduced mod n by the root-of-unity exponentiation, evaluating a
+    // DIFFERENT selector than the constraint declares. Mirrors the Go
+    // reference (wiop.LagrangeSelector.resolvedRow), which rejects positions
+    // outside [-n, n).
+    const n = if (static_n != 0) static_n else ctx.dynamic_n;
+    if (!validPosition(position, n)) return error.LagrangeSelectorPositionOutOfRange;
+
     const omega_pos = if (static_n != 0)
         staticRootPower(static_n, normalizePosition(position, static_n, 0))
     else blk: {
@@ -317,7 +329,6 @@ fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) E
     // out-of-domain contract.
     const r_minus_omega = ctx.coin.sub(ext.Ext.lift(omega_pos));
     if (r_minus_omega.isZero()) return error.LagrangeSelectorInDomain;
-    const n = if (static_n != 0) static_n else ctx.dynamic_n;
     const denominator = r_minus_omega.mulByBase(field.Element.init(@as(u64, n)));
 
     return numerator.div(denominator);
@@ -334,6 +345,16 @@ fn cancellationAtPoint(
     var result = ext.Ext.one();
 
     inline for (positions) |position| {
+        // Same runtime bounds check as evalLagrangeSelector, for the same
+        // reason: on the dynamic path n is proof-supplied, so a hostile size
+        // can push a codegen-baked position out of [-n, n) (usize underflow
+        // when position < -n, silent mod-n reduction when position >= n). The
+        // static path normalizes at comptime against the trusted static_n, so
+        // an out-of-range position there is a codegen bug caught at compile
+        // time, not a proof-dependent condition.
+        if (static_n == 0 and !validPosition(position, ctx.dynamic_n)) {
+            return error.LagrangeSelectorPositionOutOfRange;
+        }
         // Cancellation polynomial for openings already enforced elsewhere:
         // C(r) = product_{k in cancelled} (r - omega_n^norm(k)).
         const root = if (static_n != 0)
@@ -352,6 +373,21 @@ fn staticRootPower(comptime n: usize, k: usize) field.Element {
     return omega.pow(@as(u64, k));
 }
 
+// Whether an (end-relative) selector position is addressable in a module of
+// size n, i.e. lands in [-n, n). Callers must check this before
+// normalizePosition, whose negative branch underflows for position < -n.
+// The magnitude is widened through i64 so that position == minInt(i32) cannot
+// overflow the negation.
+fn validPosition(position: i32, n: usize) bool {
+    if (position >= 0) {
+        return @as(usize, @intCast(position)) < n;
+    }
+    const magnitude: usize = @intCast(-@as(i64, position));
+    return magnitude <= n;
+}
+
+// Resolves an end-relative position into [0, n). Precondition: position is in
+// [-n, n) — see validPosition; the subtraction below underflows otherwise.
 fn normalizePosition(position: i32, comptime static_n: usize, dynamic_n: usize) usize {
     const n = if (static_n != 0) static_n else dynamic_n;
     if (position < 0) return n - @as(usize, @intCast(-position));
