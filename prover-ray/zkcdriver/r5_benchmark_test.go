@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	r5ZKCPath      = "../../arithmetization/src/main/riscv/main.zkc"
 	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
 )
 
@@ -208,7 +207,7 @@ func BenchmarkR5ZKCCompile(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		if _, err := compileBinaryConstraints(r5ZKCPath); err != nil {
+		if _, err := embedded.CompiledBinaryFile(codegen.DEFAULT_CONFIG, nil, nil); err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
 	}
@@ -265,7 +264,7 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		binFile, err := compileBinaryConstraints(r5ZKCPath)
+		binFile, err := embedded.CompiledBinaryFile(codegen.DEFAULT_CONFIG, nil, nil)
 		if err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
