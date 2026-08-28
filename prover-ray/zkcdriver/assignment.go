@@ -80,6 +80,15 @@ func AssignFromTrace(
 						v := col.Get(uint(i))
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
+					var padding field.Element
+					if scMod.AllowPadding() && len(plain) != 0 {
+						// Expanded ZkC traces include a leading padding row. WIOP may
+						// prepend more rows when rounding the module domain, and those
+						// rows must repeat each column's valid padding value. In
+						// particular, computed inverse columns do not generally pad
+						// with zero.
+						padding = plain[0]
+					}
 
 					// Done
 					run.AssignColumn(
