@@ -179,7 +179,7 @@ VECTOR_N_VECTORS               ?=
 VECTOR_JSON_MODE               ?= per-vector
 VECTOR_JSON_FILE               ?= $(JSON)
 VECTOR_JSON_DIR                ?= $(dir $(JSON))vector_json
-VECTOR_SUBSET_FILE             ?= $(BIN).all
+VECTOR_SUBSET_FILE             ?= $(BIN).selected.hex
 
 vector-build: require-src
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile TEST=$(TEST)
