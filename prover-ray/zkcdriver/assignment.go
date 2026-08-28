@@ -88,7 +88,10 @@ func AssignFromTraceShard(
 					// Done
 					run.AssignColumn(
 						wCol,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+						&wiop.ConcreteVector{
+							Plain:   field.VecFromBase(plain),
+							Padding: padding,
+						},
 					)
 				}
 			})

@@ -48,7 +48,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, codegen.DEFAULT_MAX_STATIC_HEIGHT, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
 	if len(errs) > 0 {
 		for i := range errs {
 			fmt.Printf("zkc compile error: %s\n", errs[i].Error())

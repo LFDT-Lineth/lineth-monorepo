@@ -8,7 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	zkcr5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -19,7 +20,6 @@ import (
 )
 
 const (
-	r5ZKCPath      = "../../arithmetization/src/main/riscv/main.zkc"
 	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
 )
 
@@ -68,11 +68,11 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Skipf("R5 verifier ELF unavailable at %s; run `make -C ../verifier-ray build-r5`: %v", r5VerifierPath, err)
 	}
-	inputs, err := zkcr5.PrepareInput(verifierELF, []byte("foobar"))
+	inputs, err := predecoding.PrepareInputs(verifierELF, []byte("foobar"))
 	if err != nil {
 		b.Fatalf("preparing R5 input: %v", err)
 	}
-	binFile, err := compileBinaryConstraints(r5ZKCPath)
+	binFile, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
@@ -247,7 +247,7 @@ func BenchmarkR5ZKCCompile(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		if _, err := compileBinaryConstraints(r5ZKCPath); err != nil {
+		if _, err := embedded.CompiledBinaryFile(); err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
 	}
@@ -311,7 +311,7 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		binFile, err := compileBinaryConstraints(r5ZKCPath)
+		binFile, err := embedded.CompiledBinaryFile()
 		if err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
