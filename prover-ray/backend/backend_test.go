@@ -49,10 +49,42 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	fromCore, err := c.buildInputs(Job{Payload: ssz})
 	require.NoError(t, err)
 
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
+	fromFull, err := predecoding.PrepareInputs(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
+}
+
+func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
+	program, decoded := prepareTestProgram(t)
+	c := &Core{program: program, decoded: decoded}
+	wantProgramData := append([]byte(nil), c.program.Blobs[0].Data...)
+	wantDecoded := append([]byte(nil), c.decoded.Decoded...)
+
+	const workers = 16
+	errors := make(chan error, workers)
+	var wait sync.WaitGroup
+	for i := range workers {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			inputs, err := c.buildInputs(Job{Payload: []byte{byte(i)}})
+			if err != nil {
+				errors <- err
+				return
+			}
+			if !bytes.Equal(inputs[predecoding.DecodedInput], wantDecoded) {
+				errors <- fmt.Errorf("worker %d received mutated decoded input", i)
+			}
+		}()
+	}
+	wait.Wait()
+	close(errors)
+	for err := range errors {
+		require.NoError(t, err)
+	}
+	assert.Equal(t, wantProgramData, c.program.Blobs[0].Data)
+	assert.Equal(t, wantDecoded, c.decoded.Decoded)
 }
 
 // zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
