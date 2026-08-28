@@ -23,9 +23,8 @@ jobs:
   # Build
   # ==================================================================
   build:
-    # if: github.event.pull_request.draft == false && github.base_ref != 'main'
-    # if: ${{ github.ref != 'refs/heads/main' }}
-    if: ${{ github.event.pull_request.draft == false }}
+    # Skip on draft PRs, but still run when called (workflow_call) or dispatched manually.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Show metadata
@@ -73,9 +72,8 @@ jobs:
   # Fast Replay Tests
   # ==================================================================
   replay-tests:
-    # if: github.event.pull_request.draft == false && github.base_ref != 'main'
-    # if: ${{ github.ref != 'refs/heads/main' }}
-    if: ${{ github.event.pull_request.draft == false }}
+    # Skip on draft PRs, but still run when called (workflow_call) or dispatched manually.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     needs: [ build ]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:

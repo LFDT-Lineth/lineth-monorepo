@@ -30,7 +30,7 @@ func tableOfSize(size int, ctr *uint64) SizedTable {
 // rate (which must be >= 2 so plaintext size < codeword size).
 func makeEncoders(n, invRate int) []*RSEncoder {
 	encoders := make([]*RSEncoder, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		enc := NewEncoder(uint64(invRate)*(1<<i), 1<<i)
 		encoders[i] = &enc
 	}
@@ -200,5 +200,21 @@ func TestCommit(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestMerkleize_Regression_SizeOneAuxiliaryTable checks that a non-bottom
+// size-one table contributes no auxiliary leaves and therefore does not alter
+// the tree built from the bottom table.
+func TestMerkleize_Regression_SizeOneAuxiliaryTable(t *testing.T) {
+	var ctr uint64
+	aux := tableOfSize(1, &ctr)
+	bottom := tableOfSize(2, &ctr)
+
+	withAux := MultiSizeTable{aux, bottom}.Merkleize()
+	withoutAux := MultiSizeTable{bottom}.Merkleize()
+
+	if got, want := withAux.Root(), withoutAux.Root(); got != want {
+		t.Fatalf("size-one auxiliary table changed root: got %v, want %v", got, want)
 	}
 }

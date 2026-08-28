@@ -51,6 +51,10 @@ jobs:
     with:
       # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
       component-name: linea-besu-package
+      # Scope-and-path gated: the shared cliff.template.toml (scopes `linea-besu|tracer|sequencer|deps|misc`)
+      # keeps only commits scoped to `linea-besu`, AND include-path restricts to the linea-besu package paths;
+      # a commit must satisfy both to drive the version bump and changelog.
+      scopes: linea-besu|tracer|sequencer|deps|misc
       include-path: |
         tracer/**
         tracer-constraints/**

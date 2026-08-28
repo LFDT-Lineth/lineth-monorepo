@@ -1,0 +1,80 @@
+fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+
+    var funct3:Funct3
+    var imm_sign:SignBit
+    var imm_11:u1
+    var imm_10_5:u6
+    var imm_4_1:u4
+    var rs1:Register
+    var rs2:Register
+    var imm:DoubleWord
+    imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
+
+    // Verify the raw funct3 field actually encodes the claimed branch compute_op.
+    // Mapping (see elf_to_json_gen unifiedComputeOp / bTypeUnifiedIndex):
+    //   BEQ=0b000, BNE=0b001, BLT=0b100, BGE=0b101, BLTU=0b110, BGEU=0b111
+    switch funct3 {
+        case FUNCT3_BEQ: {
+            if compute_op != BRANCH_BEQ {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        case FUNCT3_BNE: {
+            if compute_op != BRANCH_BNE {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        case FUNCT3_BLT: {
+            if compute_op != BRANCH_BLT {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        case FUNCT3_BGE: {
+            if compute_op != BRANCH_BGE {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        case FUNCT3_BLTU: {
+            if compute_op != BRANCH_BLTU {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        case FUNCT3_BGEU: {
+            if compute_op != BRANCH_BGEU {
+                printf "[ERROR] B-type compute_op mismatch (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+        }
+        default: {
+            // Unrecognised branch funct3 → elf_to_json_gen maps to COMPUTE_INVALID.
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] invalid B-type funct3 requires COMPUTE_INVALID (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
+                fail
+            }
+            return
+        }
+    }
+
+    // Reassemble imm[12:1] (sign = imm[12]) and sign-extend, then << 1 (imm[0] = 0).
+    imm = sgn_extension_u12_u64(imm_sign::imm_11::imm_10_5::imm_4_1) << 1
+
+    // Check that the decoded operands match the raw instruction parameters.
+    if rs1_decoded != rs1 {
+        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
+        fail
+    }
+    if rs2_decoded != rs2 {
+        printf "[ERROR] rs2 mismatch (compute_op=%x opcode=%x rs2_decoded=%d)\n", compute_op, opcode, rs2_decoded
+        fail
+    }
+    if imm_decoded != imm {
+        printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
+        fail
+    }
+}
+

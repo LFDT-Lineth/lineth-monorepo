@@ -11,9 +11,9 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "LineaSequencerUptimeFeed";
     const signer = await getUiSigner(hre);
 
-    const initialStatus = getRequiredEnvVar("LINEA_SEQUENCER_UPTIME_FEED_INITIAL_STATUS");
-    const adminAddress = getRequiredEnvVar("LINEA_SEQUENCER_UPTIME_FEED_ADMIN");
-    const feedUpdaterAddress = getRequiredEnvVar("LINEA_SEQUENCER_UPTIME_FEED_UPDATER");
+    const initialStatus = getRequiredEnvVar("LINETH_SEQUENCER_UPTIME_FEED_INITIAL_STATUS");
+    const adminAddress = getRequiredEnvVar("LINETH_SEQUENCER_UPTIME_FEED_ADMIN");
+    const feedUpdaterAddress = getRequiredEnvVar("LINETH_SEQUENCER_UPTIME_FEED_UPDATER");
 
     const args = [initialStatus, adminAddress, feedUpdaterAddress];
 

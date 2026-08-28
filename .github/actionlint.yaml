@@ -1,0 +1,9 @@
+self-hosted-runner:
+  # Custom self-hosted runner labels used by LFDT-Lineth GitHub Actions runners.
+  labels:
+    - gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    - gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    - gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    - gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    - gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    - gha-lfdt-lineth-ss-ubuntu-24-arm64-med

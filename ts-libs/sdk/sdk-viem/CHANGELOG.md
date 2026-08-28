@@ -1,5 +1,7 @@
 # @lfdt-lineth/sdk-viem
 
+> Upgrading from `LineaRollup` to `LinethRollup`? See the [SDK Migration Guide](../MIGRATION.md).
+
 ## 1.1.0 (2026-06-29)
 
 - refactor(sdk-viem): extract inlined contract ABIs into shared module (#3460) (1be49d027)

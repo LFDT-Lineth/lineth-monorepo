@@ -9,7 +9,7 @@ export type BootPrecomputedAddressInput = {
 };
 
 export type BootPrecomputedAddresses = {
-  l1LineaRollup: string;
+  l1LinethRollup: string;
   l2MessageService: string;
 };
 
@@ -51,7 +51,7 @@ export function computeBootPrecomputedAddresses(input: BootPrecomputedAddressInp
 
   const l1StartNonce = toNonce(input.l1DeployerStartNonce, "l1 deployer start nonce");
   return {
-    l1LineaRollup: getCreateAddress({ from: input.l1DeployerAddress, nonce: l1StartNonce + 4n }),
+    l1LinethRollup: getCreateAddress({ from: input.l1DeployerAddress, nonce: l1StartNonce + 4n }),
     l2MessageService: getCreateAddress({ from: input.l2DeployerAddress, nonce: 2 }),
   };
 }

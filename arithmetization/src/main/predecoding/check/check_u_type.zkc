@@ -1,0 +1,52 @@
+fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
+    var imm20:u20
+    var rd:Register
+    imm20::rd = instruction_parameters
+
+    switch opcode {
+        case OPCODE_LUI: {
+            if rd == 0 {
+                if compute_op != NO_OP {
+                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+            } else if compute_op != UTYPE_LUI_WB {
+                printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case OPCODE_AUIPC: {
+            if rd == 0 {
+                if compute_op != NO_OP {
+                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+            } else if compute_op != UTYPE_AUIPC_WB {
+                printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        default: {
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] invalid U-type opcode requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+            return
+        }
+    }
+
+    if compute_op == NO_OP {
+        return
+    }
+
+    var imm:DoubleWord = sgn_extension_u32_u64((imm20 as u32) << 12)
+
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
+        fail
+    }
+    if imm_decoded != imm {
+        printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
+        fail
+    }
+}

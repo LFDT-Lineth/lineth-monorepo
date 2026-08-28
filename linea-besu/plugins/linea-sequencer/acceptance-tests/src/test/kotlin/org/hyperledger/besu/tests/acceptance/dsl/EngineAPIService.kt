@@ -84,7 +84,7 @@ class EngineAPIService(
       // deserializers and DTOs). To keep things simple and lightweight, we instead
       // parse the relevant fields manually from the expected JSON structure.
       payloadId = mapper
-        .readTree(buildBlockResponse.body!!.string())
+        .readTree(buildBlockResponse.body.string())
         .get("result")
         .get("payloadId")
         .asText()
@@ -110,7 +110,7 @@ class EngineAPIService(
     val expectedBlobVersionedHashes = mapper.createArrayNode()
     getPayloadRequest.execute().use { getPayloadResponse ->
       assertThat(getPayloadResponse.code).isEqualTo(200)
-      val result = mapper.readTree(getPayloadResponse.body!!.string()).get("result")
+      val result = mapper.readTree(getPayloadResponse.body.string()).get("result")
       executionPayload = result.get("executionPayload") as ObjectNode
       blobsBundle = result.get("blobsBundle") as ObjectNode
       executionRequests = result.get("executionRequests") as ArrayNode
@@ -133,7 +133,7 @@ class EngineAPIService(
     newPayloadRequest.execute().use { newPayloadResponse ->
       assertThat(newPayloadResponse.code).isEqualTo(200)
       val responseStatus = mapper
-        .readTree(newPayloadResponse.body!!.string())
+        .readTree(newPayloadResponse.body.string())
         .get("result")
         .get("status")
         .asText()

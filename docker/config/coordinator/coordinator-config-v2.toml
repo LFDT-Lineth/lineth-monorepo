@@ -27,7 +27,8 @@ conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at lea
 l2-fetch-blocks-limit = 4000
 backtesting-directory = "/data/conflation-backtesting"
 force-stop-conflation-at-block-inclusive=100_000_000
-#force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# riscv-starting-block-timestamp-inclusive=2000000000
 
 # This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
 # Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
@@ -81,6 +82,23 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #[prover.new.proof-aggregation]
 #fs-requests-directory = "/data/prover/v3/aggregation/requests"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+# RISC-V prover config
+
+[riscv-prover]
+[riscv-prover.execution]
+fs-requests-directory = "/data/prover/riscv/execution/requests"
+fs-responses-directory = "/data/prover/riscv/execution/responses"
+program-vk = "0x..."
+fork-name = "cancun"
+[riscv-prover.rollup]
+fs-requests-directory = "/data/prover/riscv/rollup/requests"
+fs-responses-directory = "/data/prover/riscv/rollup/responses"
+program-vk = "0x..."
+[riscv-prover.proof-aggregation]
+fs-requests-directory = "/data/prover/riscv/aggregation/requests"
+fs-responses-directory = "/data/prover/riscv/aggregation/responses"
+program-vk = "0x..."
 
 [traces]
 [traces.counters]
@@ -220,7 +238,7 @@ trust-store-password = "changeit"
 [message-anchoring]
 disabled = false
 l1-highest-block-tag="LATEST"
-l2-highest-block-tag="LATEST" # optional, default to LATEST it shall not be necessary as Linea has instant finality
+l2-highest-block-tag="LATEST" # optional, defaults to LATEST; not strictly necessary since Lineth has instant finality
 anchoring-tick-interval = "PT2S"
 
 [message-anchoring.l1-event-scraping]

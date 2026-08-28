@@ -1012,7 +1012,7 @@ function ContractsDeployUiPage() {
           <p className="deploy-proxy-tip">
             <strong>Upgradeable (OpenZeppelin) deploys:</strong> Hardhat Upgrades stores prior deployments under{" "}
             <code>.openzeppelin/</code>. If an implementation or ProxyAdmin for this chain is already recorded, only the
-            missing contracts are deployed — so you may see <em>one</em> wallet prompt for LineaRollup instead of three
+            missing contracts are deployed — so you may see <em>one</em> wallet prompt for LinethRollup instead of three
             (implementation + ProxyAdmin + proxy). The rollup you use is still the <strong>proxy</strong> address from
             Hardhat logs; fewer prompts does not mean steps were skipped incorrectly.
           </p>

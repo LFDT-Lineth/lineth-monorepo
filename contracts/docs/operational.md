@@ -1,7 +1,7 @@
-# Linea Operational Scripts
+# Lineth Operational Scripts
 <br />
 
-This document aims to explain how to run the Linea operational scripts. There are several ways the scripts can be executed dependent if you have an environment file (.env) or not. 
+This document aims to explain how to run the Lineth operational scripts. There are several ways the scripts can be executed depending on whether you have an environment file (.env) or not. 
 
 Running the script with an .env file set, you will need to make sure that the correct variables are set in the .env file, considering the network that you're deploying on. In this way, when the script is being run, it will take the variables it needs to execute the script from that .env file. 
 
@@ -149,7 +149,7 @@ pnpm exec hardhat renounceContractRoles \
 ### setRateLimit
 
 
-This task can be executed on the LineaRollup or L2MessageService contracts.
+This task can be executed on the LinethRollup or L2MessageService contracts.
 <br /> 
 <br /> 
 Parameters that should be filled either in .env or passed as CLI arguments:
@@ -198,7 +198,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If omitted in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag|
-| LINEA_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
+| LINETH_ROLLUP_ADDRESS | true | address | Proxy contract address. If omitted in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
 | VERIFIER_ADDRESS | true | address | Verifier Address. If omitted in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
 | VERIFIER_CONTRACT_NAME | true | string | Verifier Name. If omitted in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
 

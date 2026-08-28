@@ -14,7 +14,7 @@ Refer to [EXAMPLES.md](EXAMPLES.md) for detailed do/don't examples.
 
 - Create a new versioned method when introducing breaking changes to a public API consumed by another component. The existing method must remain functional so consumers can migrate on their own schedule.
 - Mark the old method as deprecated with a pointer to the new version.
-- Create a new versioned asset (e.g. `LineaRollupV7.abi`, `LineaRollupV8.abi`) instead of overwriting an existing one.
+- Create a new versioned asset (e.g. `LinethRollupV7.abi`, `LinethRollupV8.abi`) instead of overwriting an existing one.
 - Use simple incremental version suffixes per method/asset (V1, V2, V3), similar to Ethereum Engine API conventions (`engine_getPayloadV1` ... `engine_getPayloadV5`).
 - Bump the version number when a breaking change is introduced to that specific method or asset - not when unrelated parts of the system change.
 

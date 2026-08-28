@@ -15,7 +15,7 @@
 
 plugins {
   id 'java'
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.lombok)
   alias(libs.plugins.hierynomusLicense)

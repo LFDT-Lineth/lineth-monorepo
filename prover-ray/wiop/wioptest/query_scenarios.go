@@ -15,7 +15,7 @@ func NewLagrangeEvalScenario() *Scenario {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, coin)
 
@@ -46,7 +46,7 @@ func NewLogDerivativeSumScenario() *Scenario {
 	r0 := sys.NewRound()
 	sys.NewRound() // result cell goes here
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	den := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	rr := sys.NewLogDerivativeSum(
@@ -80,7 +80,7 @@ func NewRangeCheckScenario() *Scenario {
 	sys := wiop.NewSystemf("rc-sc")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rc := mod.NewRangeCheck(sys.Context.Childf("rc"), col, 8)
 
 	return &Scenario{
@@ -104,8 +104,8 @@ func NewInclusionScenario() *Scenario {
 	sys := wiop.NewSystemf("inc-sc")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colA.View())},

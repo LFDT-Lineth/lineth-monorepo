@@ -38,9 +38,9 @@ Design notes:
     (schema-checked by the schemas' conformance test, round-trip-checked by
     `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
-    (on responses) and `guestProgramId` (on requests) are routing metadata.
+    (on responses) and `programVk` (on requests) are routing metadata.
 
-Conventions (Linea): byte/hash fields are 0x-prefixed hex; integers that fit in
+Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
 """
 
@@ -49,28 +49,29 @@ from typing import Any
 
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
-from ethereum_types.bytes import Bytes48
 from ethereum_types.numeric import U64
 
 from .block import (
     ChainConfig,
     ForcedTransactionAcceptance,
     ForcedTransactionWitness,
-    LineaPayloadInput,
-    LineaRollupExtension,
+    LinethPayloadInput,
+    LinethRollupExtension,
 )
 from .stateless_input import encode_stateless_input_ssz
 from .l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPrivateInput,
     L2ExecutionProofPublicInput,
+    VerifiableL2ExecutionProof,
     run_l2_execution_guest,
 )
 from .rollup import (
-    BlobWitness,
+    ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
     RollupPublicInput,
+    VerifiableRollupProof,
     run_rollup_guest,
 )
 from .l1_rollup import FinalizationSubmission
@@ -166,7 +167,7 @@ def _decode_forced_transaction(obj: dict, ctx: str) -> ForcedTransactionWitness:
     )
 
 
-def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> LineaPayloadInput:
+def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> LinethPayloadInput:
     ctx = f"payloads[{index}]."
     stateless_input = _require(obj, "statelessInput", ctx)
     new_payload_request = _require(stateless_input, "newPayloadRequest", f"{ctx}statelessInput.")
@@ -204,9 +205,9 @@ def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> Lin
     forced = _require(rollup_extension, "forcedTransactions", f"{ctx}rollupExtension.")
     if not isinstance(forced, list):
         raise ProofIoError(f"'{ctx}rollupExtension.forcedTransactions' must be an array")
-    return LineaPayloadInput(
+    return LinethPayloadInput(
         stateless_input_ssz=stateless_input_ssz,
-        rollup_extension=LineaRollupExtension(
+        rollup_extension=LinethRollupExtension(
             forced_transactions=[
                 _decode_forced_transaction(ftx, f"{ctx}rollupExtension.forcedTransactions[{i}].")
                 for i, ftx in enumerate(forced)
@@ -220,9 +221,9 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
     input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by the payloads. The single
-    `proofRequest.chainConfig` carries both the Linea range-level config
+    `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
     the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
     latter when SSZ-encoding each payload's readable `statelessInput`.
@@ -234,7 +235,7 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     chain_config_obj = _require(proof_request, "chainConfig", "proofRequest.")
     chain_config = _decode_chain_config(chain_config_obj)
     # `forkName` selects the stateless-input SSZ fork (the only part the guest
-    # validates); it is not part of the Linea range-level `ChainConfig` dataclass.
+    # validates); it is not part of the Lineth range-level `ChainConfig` dataclass.
     fork_name = _require(chain_config_obj, "forkName", "proofRequest.chainConfig.")
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=Hash32(
@@ -244,8 +245,8 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
             )
         ),
         parent_last_processed_ftx_number=_u64(
-            _require(proof_request, "parentLastProcessedFtxNumber", "proofRequest."),
-            "proofRequest.parentLastProcessedFtxNumber",
+            _require(proof_request, "parentFtxNumber", "proofRequest."),
+            "proofRequest.parentFtxNumber",
         ),
         chain_config=chain_config,
         payloads=[
@@ -262,11 +263,18 @@ def decode_request_json(text: str | bytes) -> L2ExecutionProofPrivateInput:
 # ── response: guest dataclass -> JSON dict ────────────────────────────────────
 
 
-def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
+def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `L2ExecutionProof` into a
     `getZkL2ExecutionProofV1.response.json` object the coordinator's Jackson
     mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata (like `proof`
+    and `prover_version`) — the guest cannot attest its own VK, so it is not
+    part of `L2ExecutionProof`/`public_inputs`, but the prover knows which
+    guest binary it ran and carries the VK on the wire response so the
+    coordinator can echo it, unchanged, into the rollup request's embedded
+    l2-execution proof (see `_decode_l2_execution_proof`).
     """
     pi = proof.public_inputs
     return {
@@ -289,7 +297,7 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
             ),
             "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
             "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-            "parentProcessedFtxNumber": int(pi.parent_processed_ftx_number),
+            "parentFtxNumber": int(pi.parent_ftx_number),
             "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
             "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
             "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
@@ -298,23 +306,28 @@ def encode_response(proof: L2ExecutionProof, prover_version: str) -> dict:
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
         "txFroms": [_hx(a) for a in proof.tx_froms],
         "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
+        "programVk": _hx(program_vk),
     }
 
 
 def encode_response_json(
-    proof: L2ExecutionProof, prover_version: str, *, indent: int | None = None
+    proof: L2ExecutionProof,
+    prover_version: str,
+    *,
+    program_vk: Hash32,
+    indent: int | None = None,
 ) -> str:
-    return json.dumps(encode_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── prover entrypoint ─────────────────────────────────────────────────────────
 
 
-def run_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse request JSON, run the guest, return response JSON dict."""
     execution_input = decode_request_json(text)
     proof = run_l2_execution_guest(execution_input)
-    return encode_response(proof, prover_version)
+    return encode_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -349,7 +362,7 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
         parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_processed_ftx_number=n("parentProcessedFtxNumber"),
+        parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
@@ -357,11 +370,11 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
     )
 
 
-def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
+def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProof:
     l2_l1_messages = _require_list(obj, "l2L1Messages", ctx)
     tx_froms = _require_list(obj, "txFroms", ctx)
     filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
-    return L2ExecutionProof(
+    proof = L2ExecutionProof(
         public_inputs=_decode_l2_execution_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
@@ -379,28 +392,25 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
             for i, a in enumerate(filtered_addresses)
         ],
     )
+    return VerifiableL2ExecutionProof(
+        proof=proof,
+        # §ProgramVK anchoring: the l2-execution proof's VK, supplied by the
+        # coordinator as a runtime input for the rollup guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
+    )
 
 
 # ── rollup request: JSON dict -> guest dataclass ──────────────────────────────
 
 
-def _decode_blob_witness(obj: dict, ctx: str) -> BlobWitness:
-    # The blob is flat: `startBlockNumber`/`endBlockNumber` give the range and
-    # `blobHash`/`blobKzgProof`/`blockRlps` the DA witness (no nested wrappers).
-    start = _u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber")
-    end = _u64(_require(obj, "endBlockNumber", ctx), f"{ctx}endBlockNumber")
+def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     block_rlps = _require_list(obj, "blockRlps", ctx)
-    return BlobWitness(
-        block_number_range=(int(start), int(end)),
+    if not block_rlps:
+        raise ProofIoError(f"'{ctx}blockRlps' must be a non-empty array")
+    return ConflationWitness(
         block_rlps=[
             _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
         ],
-        blob_hash=Hash32(
-            _bytes_from_hex(_require(obj, "blobHash", ctx), f"{ctx}blobHash")
-        ),
-        blob_kzg_proof=Bytes48(
-            _bytes_from_hex(_require(obj, "blobKzgProof", ctx), f"{ctx}blobKzgProof")
-        ),
     )
 
 
@@ -409,31 +419,69 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
-    is routing metadata and the block range is implied by the blobs. `parentShnarf`
-    is a guest input; the outbound `endShnarf` is recomputed by the guest and
-    returned in the response PI, so it is not echoed in the request.
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    is routing metadata and the block range is implied by `conflations` (paired
+    1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
+    touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
+    are top-level (not per-chunk): relevant only to the first/last touched
+    chunk respectively, and empty (`0x`) when absent. `parentDataRollingHash`/`startOffset`
+    are guest inputs; the outbound `endDataRollingHash`/`endOffset` are recomputed by the
+    guest and returned in the response PI, so they are not echoed in the
+    request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
+    (`startOffset > 0`, §3.4).
     """
     proof_request = _require(obj, "proofRequest", "")
-    blobs = _require_list(proof_request, "blobs", "proofRequest.")
-    if not blobs:
-        raise ProofIoError("'proofRequest.blobs' must be a non-empty array")
+    conflations = _require_list(proof_request, "conflations", "proofRequest.")
+    if not conflations:
+        raise ProofIoError("'proofRequest.conflations' must be a non-empty array")
+    chunks = _require_list(proof_request, "chunks", "proofRequest.")
+    if not chunks:
+        raise ProofIoError("'proofRequest.chunks' must be a non-empty array")
     l2_execution_proofs = _require_list(proof_request, "l2ExecutionProofs", "proofRequest.")
     if not l2_execution_proofs:
         raise ProofIoError("'proofRequest.l2ExecutionProofs' must be a non-empty array")
+    if len(conflations) != len(l2_execution_proofs):
+        raise ProofIoError(
+            "'proofRequest.conflations' and 'proofRequest.l2ExecutionProofs' must have the same length"
+        )
+    start_offset = int(_u64(_require(proof_request, "startOffset", "proofRequest."), "proofRequest.startOffset"))
+    boundary_prev_data_rolling_hash_hex = proof_request.get("boundaryPrevDataRollingHash")
+    if start_offset > 0 and boundary_prev_data_rolling_hash_hex is None:
+        raise ProofIoError("'proofRequest.boundaryPrevDataRollingHash' is required when startOffset > 0")
+    opaque_prefix_bytes = _bytes_from_hex(
+        proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
+    )
+    if len(opaque_prefix_bytes) != start_offset:
+        raise ProofIoError("'proofRequest.opaquePrefixBytes' length must equal startOffset")
     return RollupProofPrivateInput(
-        parent_shnarf=Hash32(
+        parent_data_rolling_hash=Hash32(
             _bytes_from_hex(
-                _require(proof_request, "parentShnarf", "proofRequest."),
-                "proofRequest.parentShnarf",
+                _require(proof_request, "parentDataRollingHash", "proofRequest."),
+                "proofRequest.parentDataRollingHash",
             )
         ),
+        start_offset=start_offset,
         chain_id=_u64(_require(proof_request, "chainId", "proofRequest."), "proofRequest.chainId"),
-        blobs=[_decode_blob_witness(b, f"proofRequest.blobs[{i}].") for i, b in enumerate(blobs)],
+        conflations=[
+            _decode_conflation_witness(c, f"proofRequest.conflations[{i}].")
+            for i, c in enumerate(conflations)
+        ],
+        chunks=[
+            Hash32(_bytes_from_hex(c, f"proofRequest.chunks[{i}]")) for i, c in enumerate(chunks)
+        ],
         l2_execution_proofs=[
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
+        opaque_prefix_bytes=opaque_prefix_bytes,
+        opaque_suffix_bytes=_bytes_from_hex(
+            proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
+        ),
+        boundary_prev_data_rolling_hash=(
+            Hash32(_bytes_from_hex(boundary_prev_data_rolling_hash_hex, "proofRequest.boundaryPrevDataRollingHash"))
+            if boundary_prev_data_rolling_hash_hex is not None
+            else None
+        ),
     )
 
 
@@ -445,7 +493,7 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 
 
 def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
-    """The 14-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
+    """The 20-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
     rollup-aggregation responses, which expose the identical PI structure."""
     return {
         "endBlockNumber": int(pi.end_block_number),
@@ -461,22 +509,35 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         ),
         "dynamicChainConfigHash": _hx(pi.dynamic_chain_config_hash),
         "parentFtxRollingHash": _hx(pi.parent_ftx_rolling_hash),
-        "parentProcessedFtxNumber": int(pi.parent_processed_ftx_number),
+        "parentFtxNumber": int(pi.parent_ftx_number),
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
-        "parentShnarf": _hx(pi.parent_shnarf),
-        "endShnarf": _hx(pi.end_shnarf),
+        "parentDataRollingHash": _hx(pi.parent_data_rolling_hash),
+        "endDataRollingHash": _hx(pi.end_data_rolling_hash),
+        "parentBlockHash": _hx(pi.parent_block_hash),
+        "endBlockHash": _hx(pi.end_block_hash),
+        "startOffset": int(pi.start_offset),
+        "endOffset": int(pi.end_offset),
+        # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
+        # program VKs verified beneath this proof, checked against L1's single
+        # combined approved-VK set (exec vs rollup not distinguished).
+        "programVks": [_hx(v) for v in pi.program_vks],
     }
 
 
-def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
+def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_vk: Hash32) -> dict:
     """
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
+
+    §ProgramVK anchoring: `program_vk` is host-attached metadata the coordinator
+    supplies from the request envelope and the prover echoes on the response —
+    mirroring the L2-execution response pattern.
     """
     return {
         "proverVersion": prover_version,
+        "programVk": _hx(program_vk),
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
         "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
@@ -486,19 +547,19 @@ def encode_rollup_response(proof: RollupProof, prover_version: str) -> dict:
 
 
 def encode_rollup_response_json(
-    proof: RollupProof, prover_version: str, *, indent: int | None = None
+    proof: RollupProof, prover_version: str, *, program_vk: Hash32, indent: int | None = None
 ) -> str:
-    return json.dumps(encode_rollup_response(proof, prover_version), indent=indent)
+    return json.dumps(encode_rollup_response(proof, prover_version, program_vk=program_vk), indent=indent)
 
 
 # ── rollup prover entrypoint ──────────────────────────────────────────────────
 
 
-def run_rollup_from_request_json(text: str | bytes, prover_version: str) -> dict:
+def run_rollup_from_request_json(text: str | bytes, prover_version: str, *, program_vk: Hash32) -> dict:
     """Full host flow: parse rollup request JSON, run the guest, return response JSON dict."""
     rollup_input = decode_rollup_request_json(text)
     proof = run_rollup_guest(rollup_input)
-    return encode_rollup_response(proof, prover_version)
+    return encode_rollup_response(proof, prover_version, program_vk=program_vk)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -521,6 +582,7 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     def n(key: str) -> U64:
         return _u64(_require(obj, key, ctx), f"{ctx}{key}")
 
+    program_vks = _require_list(obj, "programVks", ctx)
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
@@ -531,19 +593,27 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=n("endL1L2BridgeRollingHashMessageNumber"),
         dynamic_chain_config_hash=h("dynamicChainConfigHash"),
         parent_ftx_rolling_hash=h("parentFtxRollingHash"),
-        parent_processed_ftx_number=n("parentProcessedFtxNumber"),
+        parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
-        parent_shnarf=h("parentShnarf"),
-        end_shnarf=h("endShnarf"),
+        parent_data_rolling_hash=h("parentDataRollingHash"),
+        end_data_rolling_hash=h("endDataRollingHash"),
+        parent_block_hash=h("parentBlockHash"),
+        end_block_hash=h("endBlockHash"),
+        start_offset=int(n("startOffset")),
+        end_offset=int(n("endOffset")),
+        program_vks=[
+            Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
+            for i, v in enumerate(program_vks)
+        ],
     )
 
 
-def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
+def _decode_rollup_proof(obj: dict, ctx: str) -> VerifiableRollupProof:
     l2_l1_roots = _require_list(obj, "l2L1Roots", ctx)
     filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
-    return RollupProof(
+    proof = RollupProof(
         public_inputs=_decode_rollup_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
@@ -557,6 +627,12 @@ def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
             for i, a in enumerate(filtered_addresses)
         ],
     )
+    return VerifiableRollupProof(
+        proof=proof,
+        # §ProgramVK anchoring: the rollup proof's own VK, supplied by the
+        # coordinator for the aggregation guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
+    )
 
 
 # ── rollup-aggregation request: JSON dict -> guest dataclass ──────────────────
@@ -567,7 +643,7 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
+    The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the aggregation guest input is just the flat list of
     rollup proofs. There is no `chainId` (unlike the rollup request): the
     aggregation guest does no sender recovery and inherits chain-config integrity

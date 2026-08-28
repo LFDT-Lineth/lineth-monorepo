@@ -54,7 +54,7 @@ const tests: TestCase[] = [
       assert.equal(first.reused, false);
       assert.equal(restarted.reused, true);
       assert.equal(restarted.plan._meta.l1DeployerStartNonce, 5);
-      assert.equal(restarted.plan.l1.LineaRollupV8, first.plan.l1.LineaRollupV8);
+      assert.equal(restarted.plan.l1.LinethRollupV8, first.plan.l1.LinethRollupV8);
       assert.equal(restarted.plan.l2.L2MessageService, first.plan.l2.L2MessageService);
     },
   },
@@ -81,11 +81,11 @@ const tests: TestCase[] = [
         ...first.plan,
         l1: {
           ...first.plan.l1,
-          LineaRollupV8: testWallet("wrong-rollup-address").address,
+          LinethRollupV8: testWallet("wrong-rollup-address").address,
         },
       };
 
-      assert.throws(() => buildPlan(25, broken), /L1 LineaRollupV8 changed .* run \.\/scripts\/reset\.sh/);
+      assert.throws(() => buildPlan(25, broken), /L1 LinethRollupV8 changed .* run \.\/scripts\/reset\.sh/);
     },
   },
 ];

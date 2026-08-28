@@ -122,7 +122,7 @@ public class EngineAPIService {
     final ObjectNode blobsBundle;
     final String newBlockHash;
     ArrayNode executionRequests = null;
-    String parentBeaconBlockRoot = "";
+    String parentBeaconBlockRoot = Hash.ZERO.getBytes().toHexString();
     ArrayNode expectedBlobVersionedHashes = mapper.createArrayNode();
     try (final Response getPayloadResponse = getPayloadRequest.execute()) {
       assertThat(getPayloadResponse.code()).isEqualTo(200);
@@ -155,8 +155,11 @@ public class EngineAPIService {
 
     try (final Response newPayloadResponse = newPayloadRequest.execute()) {
       assertThat(newPayloadResponse.code()).isEqualTo(200);
-      final String responseStatus =
-          mapper.readTree(newPayloadResponse.body().string()).get("result").get("status").asText();
+      final JsonNode response = mapper.readTree(newPayloadResponse.body().string());
+      assertThat(response.get("result"))
+          .withFailMessage("engine_newPayload failed: %s", response)
+          .isNotNull();
+      final String responseStatus = response.get("result").get("status").asText();
       assertThat(responseStatus).isEqualTo("VALID");
     }
 

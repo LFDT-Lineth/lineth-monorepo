@@ -1,10 +1,10 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   id 'linea.download-native-libs'
   id 'java-test-fixtures'
 }
 
-description = 'Java JNA wrapper for Linea Blob Compressor Library implemented in GO Lang'
+description = 'Java JNA wrapper for Lineth Blob Compressor Library implemented in GO Lang'
 
 dependencies {
   compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"

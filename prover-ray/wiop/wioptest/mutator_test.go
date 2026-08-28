@@ -24,7 +24,7 @@ func TestMutator_ColumnEntry(t *testing.T) {
 	sys := wiop.NewSystemf("col-mut")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	wioptest.Mutator{Column: col, Row: 2, Tweak: wioptest.AddOne}.Compile(sys)
 
@@ -104,7 +104,7 @@ func TestMutator_NegativeRow(t *testing.T) {
 	sys := wiop.NewSystemf("neg-mut")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	wioptest.Mutator{Column: col, Row: -1, Tweak: wioptest.AddOne}.Compile(sys)
 
@@ -123,7 +123,7 @@ func TestMutator_Padding(t *testing.T) {
 	sys := wiop.NewSystemf("pad-mut")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	wioptest.Mutator{Column: col, Padding: true, Tweak: wioptest.AddOne}.Compile(sys)
 
@@ -147,7 +147,7 @@ func TestMutator_Compile_Panics(t *testing.T) {
 	sys := wiop.NewSystemf("panic-mut")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r0.NewCell(sys.Context.Childf("cell"), false)
 
 	require.Panics(t, func() { wioptest.Mutator{}.Compile(sys) },

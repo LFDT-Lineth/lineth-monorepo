@@ -56,7 +56,7 @@ internal interface GoNativeBlobDecompressorJnaBinding {
 
   /**
 
-   * Decompress processes a Linea blob and outputs an RLP encoded list of blocks.
+   * Decompress processes a Lineth blob and outputs an RLP encoded list of blocks.
    * Due to information loss during pre-compression encoding, two pieces of information are represented "hackily":
    * The block hash is in the ParentHash field.
    * The transaction from address is in the signature.R field.

@@ -14,7 +14,7 @@ const ext = verifier_ray.field.koalabear_ext;
 // makeCtx builds a single-round Context whose cells slice is the given slice.
 fn makeCtx(comptime cells: []const protocol.Scalar) protocol.Context {
     const rounds: []const protocol.RoundMessage = &[_]protocol.RoundMessage{
-        .{ .columns = &.{}, .cells = cells },
+        .{ .cells = cells },
     };
     return .{ .all_coins = &.{}, .rounds = rounds };
 }

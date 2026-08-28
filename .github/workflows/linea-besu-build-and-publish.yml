@@ -92,7 +92,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No cache updates to commit"
           else
-            git commit -m "chore: refresh linea-besu/besu/.besu-resolved after besuCommit bump"
+            git commit -m "chore(linea-besu): refresh linea-besu/besu/.besu-resolved after besuCommit bump"
             git push origin "$BRANCH"
           fi
 

@@ -2,7 +2,7 @@ import { describe, beforeEach } from "@jest/globals";
 import { Wallet } from "ethers";
 import { MockProxy, mock } from "jest-mock-extended";
 
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../../contracts/typechain";
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
@@ -14,31 +14,31 @@ import { testL2MessagingBlockAnchoredEvent, testMessageSentEvent } from "../../.
 import {
   generateL2MerkleTreeAddedLog,
   generateL2MessagingBlockAnchoredLog,
-  generateLineaRollupClient,
+  generateLinethRollupClient,
   generateTransactionReceiptWithLogs,
 } from "../../../utils/testing/helpers";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
 import { LineaProvider, Provider } from "../../providers";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+import { EthersLinethRollupLogClient } from "../EthersLinethRollupLogClient";
 import { MerkleTreeService } from "../MerkleTreeService";
 
 describe("MerkleTreeService", () => {
   let providerMock: MockProxy<Provider>;
   let l2ProviderMock: MockProxy<LineaProvider>;
   let walletMock: MockProxy<Wallet>;
-  let lineaRollupMock: MockProxy<LineaRollup>;
+  let linethRollupMock: MockProxy<LinethRollup>;
 
   let merkleTreeService: MerkleTreeService;
-  let lineaRollupLogClient: EthersLineaRollupLogClient;
+  let linethRollupLogClient: EthersLinethRollupLogClient;
   let l2MessageServiceLogClient: EthersL2MessageServiceLogClient;
 
   beforeEach(() => {
     providerMock = mock<Provider>();
     l2ProviderMock = mock<LineaProvider>();
     walletMock = mock<Wallet>();
-    lineaRollupMock = mock<LineaRollup>();
+    linethRollupMock = mock<LinethRollup>();
 
-    const clients = generateLineaRollupClient(
+    const clients = generateLinethRollupClient(
       providerMock,
       l2ProviderMock,
       TEST_CONTRACT_ADDRESS_1,
@@ -48,7 +48,7 @@ describe("MerkleTreeService", () => {
     );
     merkleTreeService = clients.merkleTreeService;
     l2MessageServiceLogClient = clients.l2MessageServiceLogClient;
-    lineaRollupLogClient = clients.lineaRollupLogClient;
+    linethRollupLogClient = clients.linethRollupLogClient;
   });
 
   afterEach(() => {
@@ -80,10 +80,10 @@ describe("MerkleTreeService", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByBlockRange")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
-      jest.spyOn(LineaRollup__factory, "connect").mockReturnValueOnce(lineaRollupMock);
+      jest.spyOn(LinethRollup__factory, "connect").mockReturnValueOnce(linethRollupMock);
 
       await expect(merkleTreeService.getMessageProof(messageHash)).rejects.toThrow("Merkle tree build failed.");
     });

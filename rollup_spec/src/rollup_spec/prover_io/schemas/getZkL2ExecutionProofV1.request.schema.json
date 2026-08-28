@@ -6,16 +6,16 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "guestProgramId",
+    "programVk",
     "proofRequest"
   ],
   "properties": {
-    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "programVk": { "$ref": "#/$defs/hash32" },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["chainConfig", "parentFtxRollingHash", "parentLastProcessedFtxNumber", "payloads"],
+      "required": ["chainConfig", "parentFtxRollingHash", "parentFtxNumber", "payloads"],
       "properties": {
         "chainConfig": {
           "type": "object",
@@ -29,7 +29,7 @@
           }
         },
         "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
-        "parentLastProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "parentFtxNumber": { "$ref": "#/$defs/uint" },
         "payloads": {
           "type": "array",
           "minItems": 1,

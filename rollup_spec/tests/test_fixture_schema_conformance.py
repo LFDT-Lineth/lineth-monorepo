@@ -10,7 +10,12 @@ any Python and is the cheapest way to catch a fixture drifting from its schema.
 
 Fixture <-> schema pairing is by filename convention:
 
-    prover_io/testdata/<name>.json   <->   prover_io/schemas/<name>.schema.json
+    prover_io/testdata/[<startBlock>-<endBlock>-]<name>.json   <->   prover_io/schemas/<name>.schema.json
+
+A fixture may be prefixed with its block range (e.g. `10-11-` for a sample
+covering blocks 10-11), distinguishing multiple samples for the same guest
+program; the schema itself is not per-sample, so the prefix is stripped before
+lookup.
 
 Fixtures are discovered automatically, so a new fixture/schema pair is covered
 without editing this file.
@@ -19,6 +24,7 @@ Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -29,10 +35,13 @@ _PROVER_IO_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io"
 _SCHEMA_DIR = _PROVER_IO_DIR / "schemas"
 _FIXTURE_DIR = _PROVER_IO_DIR / "testdata"
 
+_BLOCK_RANGE_PREFIX = re.compile(r"^\d+-\d+-")
+
 
 def _schema_path_for(fixture_path: Path) -> Path:
-    """testdata/<name>.json -> schemas/<name>.schema.json."""
-    return _SCHEMA_DIR / f"{fixture_path.name[: -len('.json')]}.schema.json"
+    """testdata/[<startBlock>-<endBlock>-]<name>.json -> schemas/<name>.schema.json."""
+    name = _BLOCK_RANGE_PREFIX.sub("", fixture_path.name)
+    return _SCHEMA_DIR / f"{name[: -len('.json')]}.schema.json"
 
 
 def _fixture_files() -> list[Path]:

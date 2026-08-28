@@ -12,8 +12,8 @@ import (
 func makeVecEvalSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Column, *wiop.Runtime) {
 	t.Helper()
 	sys, r0, _, mod := newTestSystem(t)
-	c1 := mod.NewColumn(sys.Context.Childf("c1"), wiop.VisibilityOracle, r0)
-	c2 := mod.NewColumn(sys.Context.Childf("c2"), wiop.VisibilityOracle, r0)
+	c1 := mod.NewColumn(sys.Context.Childf("c1"), r0)
+	c2 := mod.NewColumn(sys.Context.Childf("c2"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(c1, baseVec(4, 2)) // all 2
 	rt.AssignColumn(c2, baseVec(4, 3)) // all 3

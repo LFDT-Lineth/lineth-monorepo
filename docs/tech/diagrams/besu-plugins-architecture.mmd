@@ -17,7 +17,7 @@ flowchart TB
 
         subgraph StateRecovery["state-recovery"]
             subgraph RecoveryPlugin["LineaStateRecoveryPlugin"]
-                L1Monitor["L1 Event<br/>Monitor<br/><br/>Watch<br/>LineaRollup"]
+                L1Monitor["L1 Event<br/>Monitor<br/><br/>Watch<br/>LinethRollup"]
                 BlobScanClient["BlobScan<br/>Client<br/><br/>Fetch blob<br/>data"]
                 BlockImporter["Block Importer<br/><br/>- Decompress blob<br/>- Import blocks<br/>- Verify state"]
             end

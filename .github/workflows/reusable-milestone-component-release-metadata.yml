@@ -36,17 +36,25 @@ jobs:
       matrix:
         component-name: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
         include:
+          # Scope-and-path gated: cliff-<component>.toml keeps only commits
+          # scoped to that component, AND include-path restricts to its paths.
           - component-name: coordinator
+            scopes: coordinator|deps|misc
             include-path: coordinator/**
           - component-name: maru
+            scopes: maru|deps|misc
             include-path: maru/**
           - component-name: prover
+            scopes: prover|deps|misc
             include-path: prover/**
           - component-name: postman
+            scopes: postman|deps|misc
             include-path: postman/**
           - component-name: tx-exclusion-api
+            scopes: tx-exclusion-api|deps|misc
             include-path: transaction-exclusion-api/**
           - component-name: linea-besu-package
+            scopes: linea-besu|tracer|sequencer|deps|misc
             include-path: |
               tracer/**
               tracer-constraints/**
@@ -81,6 +89,7 @@ jobs:
         with:
           component-name: ${{ matrix.component-name }}
           include-path: ${{ matrix.include-path }}
+          scopes: ${{ matrix.scopes }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
 

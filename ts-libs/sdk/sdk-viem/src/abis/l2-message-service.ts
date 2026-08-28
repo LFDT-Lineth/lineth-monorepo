@@ -4,7 +4,7 @@
  * The `as const` assertions are required for viem to infer argument and return types from the ABI.
  */
 
-// L2-only: L1 claiming goes through `claimMessageWithProof` on `LineaRollup`.
+// L2-only: L1 claiming goes through `claimMessageWithProof` on `LinethRollup`.
 export const CLAIM_MESSAGE_ABI = [
   {
     inputs: [

@@ -7,6 +7,7 @@ import {
   MessageNotFoundError,
   MessagesNotFoundInBlockRangeError,
   MissingMessageProofOrClientForClaimingOnL1Error,
+  RollupAddressRequiredError,
 } from "./bridge";
 import { TEST_MERKLE_ROOT, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 
@@ -74,6 +75,16 @@ describe("Bridge Errors", () => {
   it("MissingMessageProofOrClientForClaimingOnL1Error", () => {
     expect(new MissingMessageProofOrClientForClaimingOnL1Error()).toMatchInlineSnapshot(`
     [MissingMessageProofOrClientForClaimingOnL1Error: Either \`messageProof\` or \`l2Client\` must be provided to claim a message on L1.
+
+    Version: viem@x.y.z]
+  `);
+  });
+
+  it("RollupAddressRequiredError", () => {
+    const chainId = 59144;
+    expect(new RollupAddressRequiredError({ chainId })).toMatchInlineSnapshot(`
+    [RollupAddressRequiredError: Cannot resolve a default rollup contract address for chain ID ${chainId}.
+    Pass \`rollupAddress\` explicitly when the settlement client is not Ethereum Mainnet or Sepolia (e.g. a Validium chain settling on Linea).
 
     Version: viem@x.y.z]
   `);

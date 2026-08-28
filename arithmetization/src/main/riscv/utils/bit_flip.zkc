@@ -1,5 +1,5 @@
-include "constants.zkc"
-include "type.zkc"
+include "../../common/constants.zkc"
+include "../../common/type.zkc"
 
 #[inline]
 fn bit_flip_double_word(a:DoubleWord) -> (a_bit_flip:DoubleWord) {

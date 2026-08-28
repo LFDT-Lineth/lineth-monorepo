@@ -69,7 +69,3 @@ func (cf *CoinField) EvaluateVector(_ *Runtime) ConcreteVector {
 func (cf *CoinField) EvaluateSingle(rt *Runtime) ConcreteField {
 	return ConcreteField{Value: rt.GetCoinValue(cf), promise: cf}
 }
-
-// Visibility implements [Expression]. Always returns [VisibilityPublic]: coins
-// are drawn by the verifier and are therefore always verifier-visible.
-func (cf *CoinField) Visibility() Visibility { return VisibilityPublic }

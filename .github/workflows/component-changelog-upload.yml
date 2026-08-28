@@ -67,24 +67,32 @@ jobs:
       matrix:
         component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
+          # Scope-and-path gated: cliff-<component>.toml keeps only commits
+          # scoped to that component, AND include-path restricts to its paths.
           - component: coordinator
             folder-name: coordinator
+            scopes: coordinator|deps|misc
             include-path: coordinator/**
           - component: maru
             folder-name: maru
+            scopes: maru|deps|misc
             include-path: maru/**
           - component: prover
             folder-name: prover
+            scopes: prover|deps|misc
             include-path: prover/**
           - component: postman
             folder-name: postman
+            scopes: postman|deps|misc
             include-path: postman/**
           - component: tx-exclusion-api
             folder-name: transaction-exclusion-api
+            scopes: tx-exclusion-api|deps|misc
             include-path: transaction-exclusion-api/**
           - component: linea-besu-package
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
+            scopes: linea-besu|tracer|sequencer|deps|misc
             include-path: |
               tracer/**
               tracer-constraints/**
@@ -95,8 +103,10 @@ jobs:
           - component: linea
             folder-name: .
             artifact-name: linea
+            scopes: coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc
             include-path: |
               coordinator/**
+              maru/**
               postman/**
               prover/**
               transaction-exclusion-api/**
@@ -134,6 +144,7 @@ jobs:
           component-name: ${{ matrix.component }}
           folder-name: ${{ matrix.folder-name }}
           include-path: ${{ matrix.include-path }}
+          scopes: ${{ matrix.scopes }}
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact

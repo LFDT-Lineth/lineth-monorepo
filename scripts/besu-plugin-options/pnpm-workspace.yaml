@@ -1,0 +1,3 @@
+# Own workspace root so `pnpm install` here does not adopt the monorepo workspace.
+packages:
+  - "."

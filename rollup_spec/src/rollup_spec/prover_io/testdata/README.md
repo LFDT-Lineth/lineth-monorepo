@@ -20,14 +20,18 @@ of the matching guest program (the codec in `proof_io_v1.py` converts
 between them). A request maps to the entry function's input dataclass; a response
 maps to its output.
 
+Each fixture file name is prefixed with the `<startBlockNumber>-<endBlockNumber>-`
+range from its request's `metadata` (e.g. `10-11-getZkL2ExecutionProofV1.request.json`
+covers blocks 10-11), disambiguating multiple samples for the same guest program.
+
 | Fixture | Guest dataclass | Defined in | Guest entry function |
 |---|---|---|---|
-| `getZkL2ExecutionProofV1.request.json` | `L2ExecutionProofPrivateInput` | `l2_execution.py` | `run_l2_execution_guest` (input) |
-| `getZkL2ExecutionProofV1.response.json` | `L2ExecutionProof` | `l2_execution.py` | `run_l2_execution_guest` (output) |
-| `getZkRollupProofV1.request.json` | `RollupProofPrivateInput` | `rollup.py` | `run_rollup_guest` (input) |
-| `getZkRollupProofV1.response.json` | `RollupProof` | `rollup.py` | `run_rollup_guest` (output) |
-| `getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
-| `getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
+| `*-getZkL2ExecutionProofV1.request.json` | `L2ExecutionProofPrivateInput` | `l2_execution.py` | `run_l2_execution_guest` (input) |
+| `*-getZkL2ExecutionProofV1.response.json` | `L2ExecutionProof` | `l2_execution.py` | `run_l2_execution_guest` (output) |
+| `*-getZkRollupProofV1.request.json` | `RollupProofPrivateInput` | `rollup.py` | `run_rollup_guest` (input) |
+| `*-getZkRollupProofV1.response.json` | `RollupProof` | `rollup.py` | `run_rollup_guest` (output) |
+| `*-getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
+| `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
 **Guest output vs prover output.** A guest emits its public-input tuple plus the
 revealed hash preimages (`l2L1Messages`, `txFroms`, `l2L1Roots`,
@@ -42,8 +46,8 @@ finalization.
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
 few request fields are metadata the entry-function input dataclass does not
-carry: each request is a `{guestProgramId, proofRequest}` envelope, where
-`guestProgramId` is routing metadata (the block range is implied by the
+carry: each request is a `{programVk, proofRequest}` envelope, where
+`programVk` is routing metadata (the block range is implied by the
 payloads/blobs), plus `chainId` on the rollup request (used for DA sender
 recovery). Derivable duplication is deliberately kept off the wire: no top-level
 `endBlockNumber` (it is in `publicInputs`), no `endShnarf` echo on the rollup

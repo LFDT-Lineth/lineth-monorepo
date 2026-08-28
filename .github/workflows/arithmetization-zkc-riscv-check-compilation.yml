@@ -2,24 +2,30 @@ name: Tracer riscv-constraints check compilation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
       - 'arithmetization/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
         required: false
         type: string
 
@@ -29,6 +35,7 @@ permissions:
 
 jobs:
   check-compilation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository
@@ -38,11 +45,11 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
-        env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint

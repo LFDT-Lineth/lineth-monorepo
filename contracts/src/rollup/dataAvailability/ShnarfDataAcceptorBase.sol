@@ -2,14 +2,14 @@
 pragma solidity ^0.8.33;
 
 import { IShnarfDataAcceptorBase } from "./interfaces/IShnarfDataAcceptorBase.sol";
-import { LineaRollupBase } from "../LineaRollupBase.sol";
+import { LinethRollupBase } from "../LinethRollupBase.sol";
 
 /**
  * @title Contract to manage shared functions for shnarf accepting and storing.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract ShnarfDataAcceptorBase is LineaRollupBase, IShnarfDataAcceptorBase {
+abstract contract ShnarfDataAcceptorBase is LinethRollupBase, IShnarfDataAcceptorBase {
   /// @dev Value indicating a shnarf exists.
   uint256 internal constant SHNARF_EXISTS_DEFAULT_VALUE = 1;
 

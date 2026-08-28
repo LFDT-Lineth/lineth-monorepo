@@ -85,6 +85,9 @@ func (sys *System) LookupColumn(id ObjectID) *Column {
 	if id.Kind() != KindColumn {
 		panic(fmt.Sprintf("wiop: LookupColumn: id has kind %s, want Column", id.Kind()))
 	}
+	if id.Slot() >= len(sys.Modules) || id.Position() >= len(sys.Modules[id.Slot()].Columns) {
+		panic(fmt.Sprintf("wiop: LookupColumn: id has out-of-range slot/position: %d %d", id.Slot(), id.Position()))
+	}
 	return sys.Modules[id.Slot()].Columns[id.Position()]
 }
 
@@ -94,6 +97,9 @@ func (sys *System) LookupCell(id ObjectID) *Cell {
 	if id.Kind() != KindCell {
 		panic(fmt.Sprintf("wiop: LookupCell: id has kind %s, want Cell", id.Kind()))
 	}
+	if id.Slot() >= len(sys.Rounds) || id.Position() >= len(sys.Rounds[id.Slot()].Cells) {
+		panic(fmt.Sprintf("wiop: LookupCell: id has out-of-range slot/position: %d %d", id.Slot(), id.Position()))
+	}
 	return sys.Rounds[id.Slot()].Cells[id.Position()]
 }
 
@@ -102,6 +108,9 @@ func (sys *System) LookupCell(id ObjectID) *Cell {
 func (sys *System) LookupCoinField(id ObjectID) *CoinField {
 	if id.Kind() != KindCoinField {
 		panic(fmt.Sprintf("wiop: LookupCoinField: id has kind %s, want CoinField", id.Kind()))
+	}
+	if id.Slot() >= len(sys.Rounds) || id.Position() >= len(sys.Rounds[id.Slot()].Coins) {
+		panic(fmt.Sprintf("wiop: LookupCoinField: id has out-of-range slot/position: %d %d", id.Slot(), id.Position()))
 	}
 	return sys.Rounds[id.Slot()].Coins[id.Position()]
 }

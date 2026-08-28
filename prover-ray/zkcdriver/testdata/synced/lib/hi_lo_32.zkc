@@ -1,9 +1,0 @@
-fn lo_32(value:u64) -> (lo:u32) {
-    lo = (value & 0xffffffff) as u32
-    return
-}
-
-fn hi_32(value:u64) -> (hi:u32) {
-    hi = (value >> 32) as u32
-    return
-}

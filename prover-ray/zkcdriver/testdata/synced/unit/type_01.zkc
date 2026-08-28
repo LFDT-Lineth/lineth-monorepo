@@ -1,3 +1,0 @@
-type address = u160
-// starts with u
-type uniform = u32

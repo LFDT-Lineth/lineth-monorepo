@@ -18,11 +18,6 @@ const poly_lagrange = verifier_ray.polynomial.lagrange;
 const poly_canonical = verifier_ray.polynomial.canonical;
 const protocol = verifier_ray.protocol;
 
-test "runtime visibility tags match prover-ray" {
-    try std.testing.expectEqual(vectors.prover_visibility_oracle, @intFromEnum(protocol.Visibility.oracle));
-    try std.testing.expectEqual(vectors.prover_visibility_public, @intFromEnum(protocol.Visibility.public));
-}
-
 test "koalabear base field matches prover-ray golden cases" {
     for (vectors.field_cases) |case| {
         const a = field.Element.init(case.a);
@@ -173,6 +168,18 @@ test "poseidon2 compression and merkle-damgard match prover-ray golden cases" {
     }
 }
 
+test "poseidon2.eql matches digests limb-for-limb" {
+    const a = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    const b = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    try std.testing.expect(poseidon2.eql(a, b));
+
+    const wrong_first = digest(.{ 9, 2, 3, 4, 5, 6, 7, 8 });
+    try std.testing.expect(!poseidon2.eql(a, wrong_first));
+
+    const wrong_last = digest(.{ 1, 2, 3, 4, 5, 6, 7, 9 });
+    try std.testing.expect(!poseidon2.eql(a, wrong_last));
+}
+
 test "fiat-shamir transcript matches prover-ray golden cases" {
     for (vectors.fiat_shamir_cases) |case| {
         var transcript = fiat_shamir.Transcript.init();
@@ -192,19 +199,14 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
 
 test "transcript derives round coins matching prover-ray golden vectors" {
     for (vectors.runtime_trace_cases) |case| {
-        // protocol.replay is parametric on a comptime Spec; the golden vectors
+        // protocol.replayWithTranscript is parametric on a comptime Spec; the golden vectors
         // carry runtime coin counts, so drive fiat_shamir.Transcript directly
         // and compare against the prover-ray expected values.
         var transcript = fiat_shamir.Transcript.init();
         for (case.rounds) |round_case| {
             var backing = TraceRoundBacking{};
             const message = try backing.fill(round_case, false);
-            for (message.columns) |entry| {
-                switch (entry) {
-                    .oracle_commitment => |c| transcript.updateElements(&c),
-                    .public_column => |col| transcript.absorbVector(col),
-                }
-            }
+            if (message.commitment) |c| transcript.updateElements(&c);
             for (message.cells) |cell| transcript.absorbScalar(cell);
             for (round_case.expected_coins) |expected| {
                 try expectExt(transcript.randomExt(), ext.Ext.fromUints(expected));
@@ -218,12 +220,7 @@ test "tampered round message produces different downstream coins" {
     var transcript = fiat_shamir.Transcript.init();
     var backing = TraceRoundBacking{};
     const message = try backing.fill(case.rounds[0], true);
-    for (message.columns) |entry| {
-        switch (entry) {
-            .oracle_commitment => |c| transcript.updateElements(&c),
-            .public_column => |col| transcript.absorbVector(col),
-        }
-    }
+    if (message.commitment) |c| transcript.updateElements(&c);
     for (message.cells) |cell| transcript.absorbScalar(cell);
     try std.testing.expect(case.rounds[0].expected_coins.len > 0);
     const got = transcript.randomExt();
@@ -271,18 +268,11 @@ fn expectDigest(actual: poseidon2.Digest, expected: [8]u32) !void {
 }
 
 const trace_dimensions = traceDimensions(vectors.runtime_trace_cases);
-const max_trace_columns = trace_dimensions.columns;
-const max_trace_commitments = trace_dimensions.commitments;
-const max_trace_values = trace_dimensions.values;
 const max_trace_cells = trace_dimensions.cells;
 const max_trace_coins = trace_dimensions.coins;
 
 /// Maximum scratch-buffer sizes needed to replay all generated runtime traces.
 const TraceDimensions = struct {
-    columns: usize = 0,
-    commitments: usize = 0,
-    message_columns: usize = 0,
-    values: usize = 0,
     cells: usize = 0,
     coins: usize = 0,
 };
@@ -292,29 +282,8 @@ fn traceDimensions(comptime cases: anytype) TraceDimensions {
     var dimensions = TraceDimensions{};
     for (cases) |case| {
         for (case.rounds) |round| {
-            dimensions.columns = @max(dimensions.columns, round.columns.len);
             dimensions.cells = @max(dimensions.cells, round.cells.len);
             dimensions.coins = @max(dimensions.coins, round.expected_coins.len);
-            var commitments: usize = 0;
-            var message_columns: usize = 0;
-            for (round.columns) |column| {
-                switch (column) {
-                    .oracle => |commitments_for_column| {
-                        commitments += commitments_for_column.len;
-                        message_columns += commitments_for_column.len;
-                    },
-                    .public_base => |values| {
-                        message_columns += 1;
-                        dimensions.values = @max(dimensions.values, values.len);
-                    },
-                    .public_ext => |values| {
-                        message_columns += 1;
-                        dimensions.values = @max(dimensions.values, values.len);
-                    },
-                }
-            }
-            dimensions.commitments = @max(dimensions.commitments, commitments);
-            dimensions.message_columns = @max(dimensions.message_columns, message_columns);
         }
     }
     return dimensions;
@@ -325,56 +294,17 @@ fn traceDimensions(comptime cases: anytype) TraceDimensions {
 /// `RoundMessage` stores slices into this backing, so callers must keep the
 /// backing alive until the runtime has absorbed the message.
 const TraceRoundBacking = struct {
-    oracle_commitments: [max_trace_commitments]protocol.Commitment = undefined,
-    columns: [trace_dimensions.message_columns]protocol.ColumnMessage = undefined,
     cells: [max_trace_cells]protocol.Scalar = undefined,
-    base_values: [max_trace_columns][max_trace_values]field.Element = undefined,
-    ext_values: [max_trace_columns][max_trace_values]ext.Ext = undefined,
 
     /// Convert one generated trace round into the verifier runtime message shape.
     fn fill(self: *TraceRoundBacking, round_case: vectors.RuntimeTraceRound, tamper_first_absorb: bool) !protocol.RoundMessage {
-        try std.testing.expect(round_case.columns.len <= max_trace_columns);
         try std.testing.expect(round_case.cells.len <= max_trace_cells);
 
-        var tampered = false;
-        var oracle_commitment_count: usize = 0;
-        var column_count: usize = 0;
-        for (round_case.columns, 0..) |column_case, i| {
-            switch (column_case) {
-                .oracle => |commitments| {
-                    try std.testing.expect(commitments.len <= max_trace_commitments);
-                    for (commitments) |c| {
-                        self.oracle_commitments[oracle_commitment_count] = commitment_mod.fromUints(c);
-                        if (tamper_first_absorb and !tampered) {
-                            self.oracle_commitments[oracle_commitment_count][0] = field.Element.init(self.oracle_commitments[oracle_commitment_count][0].value ^ 1);
-                            tampered = true;
-                        }
-                        self.columns[column_count] = .{ .oracle_commitment = self.oracle_commitments[oracle_commitment_count] };
-                        oracle_commitment_count += 1;
-                        column_count += 1;
-                    }
-                },
-                .public_base => |values| {
-                    try std.testing.expect(values.len <= max_trace_values);
-                    fillElems(&self.base_values[i], values);
-                    if (tamper_first_absorb and !tampered and values.len != 0) {
-                        self.base_values[i][0] = field.Element.init(self.base_values[i][0].value ^ 1);
-                        tampered = true;
-                    }
-                    self.columns[column_count] = .{ .public_column = .{ .base = self.base_values[i][0..values.len] } };
-                    column_count += 1;
-                },
-                .public_ext => |values| {
-                    try std.testing.expect(values.len <= max_trace_values);
-                    fillExts(&self.ext_values[i], values);
-                    if (tamper_first_absorb and !tampered and values.len != 0) {
-                        self.ext_values[i][0].B0.a0 = field.Element.init(self.ext_values[i][0].B0.a0.value ^ 1);
-                        tampered = true;
-                    }
-                    self.columns[column_count] = .{ .public_column = .{ .ext = self.ext_values[i][0..values.len] } };
-                    column_count += 1;
-                },
-            }
+        var commitment: ?protocol.Commitment = null;
+        if (round_case.commitment) |c| {
+            var root = commitment_mod.fromUints(c);
+            if (tamper_first_absorb) root[0] = field.Element.init(root[0].value ^ 1);
+            commitment = root;
         }
 
         for (round_case.cells, 0..) |cell_case, i| {
@@ -385,7 +315,7 @@ const TraceRoundBacking = struct {
         }
 
         return .{
-            .columns = self.columns[0..column_count],
+            .commitment = commitment,
             .cells = self.cells[0..round_case.cells.len],
         };
     }

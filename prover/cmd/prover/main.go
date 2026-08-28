@@ -15,14 +15,14 @@ var (
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd = &cobra.Command{
 		Use:   "prover",
-		Short: "run pre-compute or compute proofs for Linea circuits",
+		Short: "run pre-compute or compute proofs for Lineth circuits",
 	}
 	fConfigFile string
 
 	// setupCmd represents the setup command
 	setupCmd = &cobra.Command{
 		Use:   "setup",
-		Short: "pre-compute assets for Linea circuits",
+		Short: "pre-compute assets for Lineth circuits",
 		RunE:  cmdSetup,
 	}
 	setupArgs cmd.SetupArgs

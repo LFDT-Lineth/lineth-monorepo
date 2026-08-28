@@ -2,7 +2,7 @@
 name: lineth-quickstart
 description: >-
   Operating manual for the Lineth Stack quickstart — the Docker-Compose dev/demo stack at
-  docs/getting-started/lineth-stack in the linea-monorepo that boots a local Linea/Lineth L2 with
+  docs/getting-started/lineth-stack in the lineth-monorepo that boots a local Linea/Lineth L2 with
   Sepolia or local L1 finality. Use whenever you are working inside the lineth-stack quickstart and
   need to boot or run the stack, choose between local and Sepolia L1 mode, get past the Sepolia
   deployer-funding step, read the finality/success signals, run traffic or bridge smoke tests, reset

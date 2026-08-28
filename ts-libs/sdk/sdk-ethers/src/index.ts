@@ -28,21 +28,26 @@ export { DefaultGasProvider, GasProvider, LineaGasProvider } from "./clients/gas
 export { makeBaseError, isBaseError } from "./core/errors";
 
 // Contracts types and factories (generated from typechain)
-export { LineaRollup, LineaRollup__factory, L2MessageService, L2MessageService__factory } from "./contracts/typechain";
+export {
+  LinethRollup,
+  LinethRollup__factory,
+  L2MessageService,
+  L2MessageService__factory,
+} from "./contracts/typechain";
 
 // Utils functions
 export { formatMessageStatus, serialize, isEmptyBytes, isString, isNull, isUndefined, wait } from "./core/utils";
 
 // Testing helpers
 import {
-  generateLineaRollupClient,
+  generateLinethRollupClient,
   generateL2MessageServiceClient,
   generateTransactionReceipt,
   generateTransactionResponse,
 } from "./utils/testing/helpers";
 
 const testingHelpers = {
-  generateLineaRollupClient,
+  generateLinethRollupClient,
   generateL2MessageServiceClient,
   generateTransactionReceipt,
   generateTransactionResponse,

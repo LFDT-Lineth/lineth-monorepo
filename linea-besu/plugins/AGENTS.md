@@ -8,7 +8,7 @@
 
 ## Package Overview
 
-Besu blockchain client plugins for Linea: the sequencer plugin (transaction ordering, profitability, tracing integration), finalized-tag-updater, and state-recovery modules. Built as Gradle distributions that extend Hyperledger Besu.
+Besu blockchain client plugins for Lineth: the sequencer plugin (transaction ordering, profitability, tracing integration), finalized-tag-updater, and state-recovery modules. Built as Gradle distributions that extend Hyperledger Besu.
 
 ## How to Run
 
@@ -56,7 +56,7 @@ linea-besu/plugins/
 
 ### Acceptance Tests
 
-- Use Web3j contract wrappers generated from Solidity 0.8.19
+- Use Web3j contract wrappers generated from Solidity 0.8.30
 - Max parallel forks: CI = runtime.processors, local = 3
 - Parallel execution disabled by default
 - Includes REST-assured for HTTP testing and Wiremock for mocking

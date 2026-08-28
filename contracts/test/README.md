@@ -1,6 +1,6 @@
 # Smart Contract Testing Guidelines
 
-The following document serves to be a guide on the best practices for the Linea smart contract testing codebase.
+The following document serves to be a guide on the best practices for the Lineth smart contract testing codebase.
 
 **Note:** some areas might not conform to the practices - feel free to open a PR to have them comply. Work is constantly being done to improve.
 
@@ -19,7 +19,7 @@ In order to make it easy to navigate between the smart contracts themselves and 
 
 # Tests
 /contracts/test/hardhat/messaging/l1
-/contracts/test/hardhat/rollup/LineaRollup/Finalization.ts
+/contracts/test/hardhat/rollup/LinethRollup/Finalization.ts
 ```
 
 - All common or shared utilities and helpers that are test specific should be placed in `/contracts/test/hardhat/common/`.
@@ -36,19 +36,19 @@ In order to make it easy to navigate between the smart contracts themselves and 
 
     Example:
     ```plaintext
-    /contracts/src/LineaRollup/Finalization.ts
-    /contracts/src/LineaRollup/BlobSubmission.ts
-    /contracts/src/LineaRollup/CalldataDataSubmission.ts
-    /contracts/src/LineaRollup/PermissionsOrOtherThings.ts
+    /contracts/src/LinethRollup/Finalization.ts
+    /contracts/src/LinethRollup/BlobSubmission.ts
+    /contracts/src/LinethRollup/CalldataDataSubmission.ts
+    /contracts/src/LinethRollup/PermissionsOrOtherThings.ts
     ```
 
 - Contract-specific or feature-specific helper or utility functions should be in a separate file within a child folder named `helpers/contractName.ts`.
 
     Example:
     ```plaintext
-    /contracts/src/LineaRollup/Finalization.ts
-    /contracts/src/LineaRollup/helpers/finalization.ts
-    /contracts/src/LineaRollup/helpers/blobSubmission.ts
+    /contracts/src/LinethRollup/Finalization.ts
+    /contracts/src/LinethRollup/helpers/finalization.ts
+    /contracts/src/LinethRollup/helpers/blobSubmission.ts
     ```
 
 ### Utilities

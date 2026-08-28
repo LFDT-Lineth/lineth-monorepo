@@ -186,6 +186,7 @@ jobs:
     with:
       component-name: coordinator
       folder-name: coordinator
+      scopes: coordinator|deps|misc
       include-path: coordinator/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -205,6 +206,7 @@ jobs:
     with:
       component-name: prover
       folder-name: prover
+      scopes: prover|deps|misc
       include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -224,6 +226,7 @@ jobs:
     with:
       component-name: postman
       folder-name: postman
+      scopes: postman|deps|misc
       include-path: postman/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -243,6 +246,7 @@ jobs:
     with:
       component-name: tx-exclusion-api
       folder-name: transaction-exclusion-api
+      scopes: tx-exclusion-api|deps|misc
       include-path: transaction-exclusion-api/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
@@ -262,6 +266,7 @@ jobs:
     with:
       component-name: maru
       folder-name: maru
+      scopes: maru|deps|misc
       include-path: maru/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases

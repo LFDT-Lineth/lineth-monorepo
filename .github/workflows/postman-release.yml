@@ -35,6 +35,9 @@ jobs:
     with:
       component-name: postman
       folder-name: postman
+      # Scope-and-path gated: the shared cliff.template.toml (scope `postman`) keeps only `postman`-scoped
+      # commits, AND include-path restricts to the postman paths.
+      scopes: postman|deps|misc
       include-path: postman/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}

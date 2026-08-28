@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
 .DEFAULT_GOAL := exec
@@ -42,7 +42,13 @@ TEST ?=
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
 # 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
-ZKC_EXEC_FLAGS ?=--fast -q
+ZKC_EXEC_FLAGS ?=--fast
+
+# Flags to use when invoking zkc trace via zkc-trace:
+# 	--stats for the trace summary (cells, columns, per-module breakdown)
+# 	--check to additionally verify the generated trace against the constraints
+# 	-o out.lt to write the trace out
+ZKC_TRACE_FLAGS ?=--stats
 
 # If TEST=src_optional_subfolder/your_test(.s|.zig|.rs), the variables below are set as follows:
 # src_optional_subfolder/your_test
@@ -129,9 +135,13 @@ compile: require-src
 elf-exec: elf-to-json install-zkc
 	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT)
 
+# Convert and trace an already compiled external ELF
+elf-trace: elf-to-json install-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-trace JSON=$(JSON_EXT)
+
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
-	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)
+	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)	
 
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
@@ -139,6 +149,11 @@ install-zkc:
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
 zkc-exec: require-json
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+
+# Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
+# Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
+zkc-trace: require-json
+	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
 
 zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
@@ -215,14 +230,14 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 	[ -x "$$elf_to_json_bin" ] || { echo "ELF-to-JSON helper not found. Run vector-build first"; exit 1; }; \
 	if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		echo "rendering ZKC JSON to $(VECTOR_JSON_FILE)"; \
-		"$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
 	elif [ "$(VECTOR_JSON_MODE)" = "per-vector" ]; then \
 		mkdir -p $(VECTOR_JSON_DIR); \
 		rm -f $(VECTOR_JSON_DIR)/*.json; \
 		echo "rendering one ZKC JSON per vector under $(VECTOR_JSON_DIR)"; \
 		n=0; while IFS= read -r in_bytes; do \
 			n=$$((n + 1)); idx=$$(printf '%03d' $$n); \
-			"$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
+			ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
 		done < $(VECTOR_SUBSET_FILE); \
 		echo "generated $$n vector JSON(s) in $(VECTOR_JSON_DIR)"; \
 	fi
@@ -420,7 +435,7 @@ act4-build:
 		name=$$(basename "$$elf" .elf); \
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
-		"$$elf_to_json_bin" "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
 		[ -s "$$base.json.err" ] || rm -f "$$base.json.err"; \
 	done; \
 	if [ "$$count" -eq 0 ]; then echo "error: no ACT4 ELFs found in $(ACT4_ELF_DIR)" >&2; exit 1; fi; \

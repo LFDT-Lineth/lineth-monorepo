@@ -20,7 +20,7 @@ import {
   generateL2MerkleTreeAddedLog,
   generateL2MessageServiceClient,
   generateL2MessagingBlockAnchoredLog,
-  generateLineaRollupClient,
+  generateLinethRollupClient,
   generateMessage,
   generateTransactionReceipt,
   generateTransactionResponse,
@@ -28,26 +28,26 @@ import {
 import { L2MessageServiceClient } from "../../linea";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
 import { LineaProvider, Provider } from "../../providers";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+import { EthersLinethRollupLogClient } from "../EthersLinethRollupLogClient";
 import { L1ClaimingService } from "../L1ClaimingService";
-import { LineaRollupClient } from "../LineaRollupClient";
+import { LinethRollupClient } from "../LinethRollupClient";
 
 describe("L1ClaimingService", () => {
   let l1Provider: MockProxy<Provider>;
   let l2Provider: MockProxy<LineaProvider>;
 
   let l1ClaimingService: L1ClaimingService;
-  let lineaRollupClient: LineaRollupClient;
+  let linethRollupClient: LinethRollupClient;
   let l2MessageServiceClient: L2MessageServiceClient;
   let l2Client2MessageServiceLogClient: EthersL2MessageServiceLogClient;
   let l1ClientL2MessageServiceLogClient: EthersL2MessageServiceLogClient;
-  let l1LogClient: EthersLineaRollupLogClient;
+  let l1LogClient: EthersLinethRollupLogClient;
 
   beforeEach(() => {
     l1Provider = mock<Provider>();
     l2Provider = mock<LineaProvider>();
 
-    const clients = generateLineaRollupClient(
+    const clients = generateLinethRollupClient(
       l1Provider,
       l2Provider,
       TEST_CONTRACT_ADDRESS_1,
@@ -55,8 +55,8 @@ describe("L1ClaimingService", () => {
       "read-only",
     );
 
-    lineaRollupClient = clients.lineaRollupClient;
-    l1LogClient = clients.lineaRollupLogClient;
+    linethRollupClient = clients.linethRollupClient;
+    l1LogClient = clients.linethRollupLogClient;
     l1ClientL2MessageServiceLogClient = clients.l2MessageServiceLogClient;
 
     const l2Clients = generateL2MessageServiceClient(l2Provider, TEST_CONTRACT_ADDRESS_2, "read-only");
@@ -64,7 +64,7 @@ describe("L1ClaimingService", () => {
     l2Client2MessageServiceLogClient = l2Clients.l2MessageServiceLogClient;
 
     l1ClaimingService = new L1ClaimingService(
-      lineaRollupClient,
+      linethRollupClient,
       l2MessageServiceClient,
       l2Client2MessageServiceLogClient,
       "linea-sepolia",
@@ -402,9 +402,9 @@ describe("L1ClaimingService", () => {
     it("should use the old estimate gas method when proof is not needed", async () => {
       jest.spyOn(l1ClaimingService, "isClaimingNeedingProof").mockResolvedValueOnce(false);
       const estimateClaimGasSpy = jest
-        .spyOn(lineaRollupClient, "estimateClaimWithoutProofGas")
+        .spyOn(linethRollupClient, "estimateClaimWithoutProofGas")
         .mockResolvedValue(50_000n);
-      const estimateClaimWithProofGasSpy = jest.spyOn(lineaRollupClient, "estimateClaimGas");
+      const estimateClaimWithProofGasSpy = jest.spyOn(linethRollupClient, "estimateClaimGas");
 
       const { messageSender, destination, fee, value, messageNonce, calldata, messageHash } = generateMessage();
       await l1ClaimingService.estimateClaimMessageGas({
@@ -445,8 +445,10 @@ describe("L1ClaimingService", () => {
 
     it("should use the new estimate gas method when proof is needed", async () => {
       jest.spyOn(l1ClaimingService, "isClaimingNeedingProof").mockResolvedValueOnce(true);
-      const estimateClaimWithoutProofGasSpy = jest.spyOn(lineaRollupClient, "estimateClaimWithoutProofGas");
-      const estimateClaimWithProofGasSpy = jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValue(50_000n);
+      const estimateClaimWithoutProofGasSpy = jest.spyOn(linethRollupClient, "estimateClaimWithoutProofGas");
+      const estimateClaimWithProofGasSpy = jest
+        .spyOn(linethRollupClient, "estimateClaimGas")
+        .mockResolvedValue(50_000n);
 
       const { messageSender, destination, fee, value, messageNonce, calldata, messageHash } = generateMessage();
       await l1ClaimingService.estimateClaimMessageGas({
@@ -490,9 +492,9 @@ describe("L1ClaimingService", () => {
     it("should use the old claimMessage method when proof is not needed", async () => {
       jest.spyOn(l1ClaimingService, "isClaimingNeedingProof").mockResolvedValueOnce(false);
       const claimWithoutProofSpy = jest
-        .spyOn(lineaRollupClient, "claimWithoutProof")
+        .spyOn(linethRollupClient, "claimWithoutProof")
         .mockResolvedValue(generateTransactionResponse() as ContractTransactionResponse);
-      const claimWithProofSpy = jest.spyOn(lineaRollupClient, "claim");
+      const claimWithProofSpy = jest.spyOn(linethRollupClient, "claim");
 
       const { messageSender, destination, fee, value, messageNonce, calldata, messageHash } = generateMessage();
       await l1ClaimingService.claimMessage({
@@ -533,9 +535,9 @@ describe("L1ClaimingService", () => {
 
     it("should use the new claimMessageWithProof method when proof is needed", async () => {
       jest.spyOn(l1ClaimingService, "isClaimingNeedingProof").mockResolvedValueOnce(true);
-      const claimWithoutProofSpy = jest.spyOn(lineaRollupClient, "claimWithoutProof");
+      const claimWithoutProofSpy = jest.spyOn(linethRollupClient, "claimWithoutProof");
       const claimWithProofSpy = jest
-        .spyOn(lineaRollupClient, "claim")
+        .spyOn(linethRollupClient, "claim")
         .mockResolvedValue(generateTransactionResponse() as ContractTransactionResponse);
 
       const { messageSender, destination, fee, value, messageNonce, calldata, messageHash } = generateMessage();

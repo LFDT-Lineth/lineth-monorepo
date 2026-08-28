@@ -6,37 +6,34 @@ import io.restassured.http.ContentType
 import io.restassured.module.kotlin.extensions.When
 import io.restassured.specification.RequestSpecification
 import io.vertx.core.Vertx
-import io.vertx.junit5.VertxExtension
 import net.consensys.linea.async.get
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 
-@ExtendWith(VertxExtension::class)
 class ObservabilityServerTest {
+  private lateinit var vertx: Vertx
   private lateinit var monitorRequestSpecification: RequestSpecification
-  private lateinit var observabilityServerDeploymentId: String
 
   @BeforeEach
-  fun beforeEach(vertx: Vertx) {
-    val (newDeploymentId, newPort) = runServerOnARandomPort(vertx)
-    observabilityServerDeploymentId = newDeploymentId
+  fun beforeEach() {
+    vertx = VertxFactory.createVertx()
+    val port = runServerOnARandomPort(vertx)
     monitorRequestSpecification =
       RequestSpecBuilder()
-        .setBaseUri("http://localhost:$newPort/")
+        .setBaseUri("http://localhost:$port/")
         .build()
   }
 
   @AfterEach
-  fun afterEach(vertx: Vertx) {
-    vertx.undeploy(observabilityServerDeploymentId).get()
+  fun afterEach() {
+    vertx.close().get()
   }
 
   @Test
-  fun `when no port is defined it shall start server at random port`(vertx: Vertx) {
+  fun `when no port is defined it shall start server at random port`() {
     val observabilityServer = ObservabilityServer(
       ObservabilityServer.Config(
         applicationName = "test",
@@ -111,11 +108,11 @@ class ObservabilityServerTest {
       .contentType(ContentType.TEXT)
   }
 
-  private fun runServerOnARandomPort(vertx: Vertx): Pair<String, Int> {
+  private fun runServerOnARandomPort(vertx: Vertx): Int {
     val observabilityServer = ObservabilityServer(
       config = ObservabilityServer.Config(applicationName = "test"),
     )
-    val deploymentId = vertx.deployVerticle(observabilityServer).get()
-    return deploymentId to observabilityServer.port
+    vertx.deployVerticle(observabilityServer).get()
+    return observabilityServer.port
   }
 }

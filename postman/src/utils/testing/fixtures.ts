@@ -13,8 +13,8 @@ import {
   mockL2MessageServiceClient,
   mockL2MessageServiceLogClient,
   mockLineaProvider,
-  mockLineaRollupClient,
-  mockLineaRollupLogClient,
+  mockLinethRollupClient,
+  mockLinethRollupLogClient,
   mockMessageRepository,
   mockNonceManager,
   mockProvider,
@@ -149,7 +149,7 @@ export function buildTestPostmanConfig(overrides?: Partial<PostmanConfig>): Post
 export function buildL1ToL2Deps(overrides?: Partial<L1ToL2Deps>): L1ToL2Deps {
   const config = buildTestPostmanConfig();
   return {
-    l1LogClient: mockLineaRollupLogClient(),
+    l1LogClient: mockLinethRollupLogClient(),
     l1Provider: mockProvider(),
     l2MessageServiceClient: mockL2MessageServiceClient(),
     l2Provider: mockLineaProvider(),
@@ -174,7 +174,7 @@ export function buildL2ToL1Deps(overrides?: Partial<L2ToL1Deps>): L2ToL1Deps {
   return {
     l2LogClient: mockL2MessageServiceLogClient(),
     l2Provider: mockProvider(),
-    lineaRollupClient: mockLineaRollupClient(),
+    linethRollupClient: mockLinethRollupClient(),
     l1Provider: mockProvider(),
     l1NonceManager: mockNonceManager(),
     l1TransactionRetrier: mockTransactionRetrier(),

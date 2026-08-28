@@ -1,8 +1,8 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
-description = "Linea test utilities for Besu"
+description = "Lineth test utilities for Besu"
 
 dependencies {
   implementation project(':jvm-libs:generic:extensions:kotlin')
@@ -20,7 +20,7 @@ dependencies {
   implementation("org.hyperledger.besu.internal:besu-consensus-qbft")
   implementation("org.hyperledger.besu.internal:besu-plugins-rocksdb")
   implementation(group: 'org.hyperledger.besu.internal', name: 'besu-ethereum-core', classifier: 'test-support')
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
   implementation "org.web3j:core:${libs.versions.web3j.get()}"
   implementation "org.assertj:assertj-core:${libs.versions.assertj.get()}"

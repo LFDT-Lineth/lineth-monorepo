@@ -25,16 +25,16 @@ schema: ../../examples/schemas/yield-manager.json
 
 ---
 
-## Contract: TestLineaRollup-Proxy
+## Contract: TestLinethRollup-Proxy
 
 ```verifier
-name: TestLineaRollup-Proxy
+name: TestLinethRollup-Proxy
 address: 0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48
 chain: test-chain
-artifact: ./artifacts/LineaRollup.json
+artifact: ./artifacts/LinethRollup.json
 isProxy: true
 ozVersion: v4
-schema: ../../examples/schemas/linea-rollup.json
+schema: ../../examples/schemas/lineth-rollup.json
 ```
 
 ### State Verification
@@ -48,13 +48,13 @@ schema: ../../examples/schemas/linea-rollup.json
 
 ---
 
-## Contract: TestLineaRollup-Implementation
+## Contract: TestLinethRollup-Implementation
 
 ```verifier
-name: TestLineaRollup-Implementation
+name: TestLinethRollup-Implementation
 address: 0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E
 chain: test-chain
-artifact: ./artifacts/LineaRollup.json
+artifact: ./artifacts/LinethRollup.json
 isProxy: false
 ```
 

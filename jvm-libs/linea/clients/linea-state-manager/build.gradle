@@ -1,8 +1,8 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
-description="Linea state manager client"
+description="Lineth state manager client"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
@@ -14,9 +14,9 @@ dependencies {
   api project(':jvm-libs:generic:extensions:kotlin')
   api "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
 
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
   testImplementation(project(":jvm-libs:linea:testing:file-system"))
   testImplementation project(':jvm-libs:linea:metrics:micrometer')

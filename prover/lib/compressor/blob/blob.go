@@ -30,7 +30,7 @@ func LoadDict(dictPath string) ([]byte, error) {
 	return os.ReadFile(dictPath)
 }
 
-// DecompressBlob takes in a Linea blob and outputs an RLP encoded list of RLP encoded blocks.
+// DecompressBlob takes in a Lineth blob and outputs an RLP encoded list of RLP encoded blocks.
 // Due to information loss during pre-compression encoding, two pieces of information are represented "hackily":
 // The block hash is in the ParentHash field.
 // The transaction from address is in the signature.R field.

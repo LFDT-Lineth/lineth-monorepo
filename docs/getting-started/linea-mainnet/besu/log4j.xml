@@ -14,10 +14,10 @@
     <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="INFO" />
     <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" />
     <Logger name="io.opentelemetry" level="WARN" />
-    <Logger name="net.consensys.linea.bl.TransactionProfitabilityCalculator" level="INFO" />
-    <Logger name="net.consensys.linea.sequencer.txselection" level="INFO" />
-    <Logger name="net.consensys.linea.sequencer.liveness" level="INFO" />
-    <Logger name="net.consensys.linea.sequencer.txselection.selectors" level="INFO" />
+    <Logger name="lineth.bl.TransactionProfitabilityCalculator" level="INFO" />
+    <Logger name="lineth.sequencer.txselection" level="INFO" />
+    <Logger name="lineth.sequencer.liveness" level="INFO" />
+    <Logger name="lineth.sequencer.txselection.selectors" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.EthSendRawTransaction" level="DEBUG" />

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Thank you for your interest in contributing to Linea's zkEVM monorepo. This document provides guidelines and instructions on how to contribute effectively. We use trunk-based development, and our main languages are Kotlin, Golang, Solidity, and TypeScript. Our releases use GitOps, ArgoCD, Helm, and Kubernetes.
+Thank you for your interest in contributing to Lineth's zkEVM monorepo. This document provides guidelines and instructions on how to contribute effectively. We use trunk-based development, and our main languages are Kotlin, Golang, Solidity, and TypeScript. Our releases use GitOps, ArgoCD, Helm, and Kubernetes.
 
 ## Submit a Contribution
 

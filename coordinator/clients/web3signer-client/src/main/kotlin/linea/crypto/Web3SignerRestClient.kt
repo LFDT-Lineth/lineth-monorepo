@@ -8,40 +8,46 @@ import io.vertx.ext.web.client.impl.HttpResponseImpl
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.HttpRestClient
-import java.math.BigInteger
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-class Web3SignerRestClient(private val client: HttpRestClient, private val publicKey: String) :
-  Signer {
-  override fun sign(bytes: ByteArray): Pair<BigInteger, BigInteger> {
-    val path = WEB3SIGNER_SIGN_ENDPOINT + publicKey
+class Web3SignerRestClient(
+  private val client: HttpRestClient,
+  private val publicKey: ByteArray,
+) : Signer<Secp256k1Signature> {
+  private val publicKeyHex = publicKey.encodeHex()
+
+  override fun publicKey(): ByteArray = publicKey
+
+  override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> {
+    require(bytes.size == DIGEST_SIZE_BYTES) {
+      "Web3Signer requires a $DIGEST_SIZE_BYTES-byte digest, but received ${bytes.size} bytes"
+    }
+    val path = WEB3SIGNER_SIGN_ENDPOINT + publicKeyHex
     val requestJson =
       """
-      {"data":"${bytes.encodeHex()}"}
+      {"data":"${bytes.encodeHex()}","applyHash":false}
       """.trimIndent()
     val buffer = Buffer.buffer(requestJson)
 
-    val response =
-      client.post(path, buffer).get().map {
-        it as HttpResponseImpl<*>
-        it.body().toString()
-      }
+    return client.post(path, buffer).thenApply { response ->
+      when (val body = response.map { (it as HttpResponseImpl<*>).body().toString() }) {
+        is Ok -> {
+          val signature = body.value.decodeHex()
+          require(signature.size == WEB3SIGNER_SIGNATURE_SIZE_BYTES) {
+            "Web3Signer returned a ${signature.size}-byte signature; expected " +
+              "$WEB3SIGNER_SIGNATURE_SIZE_BYTES bytes (r || s || v)"
+          }
+          Secp256k1Signature.fromRSBytes(signature.sliceArray(0 until Secp256k1Signature.SIZE_BYTES))
+        }
 
-    return when (response) {
-      is Ok -> {
-        val signature = response.value.decodeHex()
-        val rSize = 32
-        val sSize = 32
-        val rSlice = signature.sliceArray(0 until rSize)
-        val sSlice = signature.sliceArray(rSize until rSize + sSize)
-        val r = BigInteger(1, rSlice)
-        val s = BigInteger(1, sSlice)
-        Pair(r, s)
+        is Err -> throw body.error.asException()
       }
-      is Err -> throw response.error.asException()
     }
   }
 
   companion object {
     const val WEB3SIGNER_SIGN_ENDPOINT = "/api/v1/eth1/sign/"
+    private const val DIGEST_SIZE_BYTES = 32
+    private const val WEB3SIGNER_SIGNATURE_SIZE_BYTES = Secp256k1Signature.SIZE_BYTES + 1
   }
 }

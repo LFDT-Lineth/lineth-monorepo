@@ -1,8 +1,16 @@
 comptime {
     _ = @import("field_test.zig");
     _ = @import("golden_test.zig");
+    _ = @import("public_input_test.zig");
     _ = @import("transcript_test.zig");
     _ = @import("vanishing_test.zig");
     _ = @import("logderivativesum_test.zig");
+    _ = @import("grandproduct_test.zig");
+    _ = @import("rowlimit_test.zig");
+    _ = @import("fri_test.zig");
+    _ = @import("pcs_test.zig");
     _ = @import("verifier_test.zig");
+    _ = @import("pcs_endpoint_binding_test.zig");
+    _ = @import("proof_abi_test.zig");
+    _ = @import("proof_image_test.zig");
 }

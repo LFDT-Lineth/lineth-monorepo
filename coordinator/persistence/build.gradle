@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id "net.consensys.zkevm.kotlin-library-conventions"
+  id "lineth.kotlin-library-conventions"
   id "java-test-fixtures"
 }
 
@@ -24,9 +24,9 @@ dependencies {
   testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
-  testImplementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
-  testImplementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
-  testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
+  testImplementation("com.fasterxml.jackson.core:jackson-annotations")
+  testImplementation("com.fasterxml.jackson.core:jackson-databind")
+  testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
   testImplementation("io.vertx:vertx-junit5")
 
   testFixturesImplementation("io.vertx:vertx-pg-client:${libs.versions.vertx.get()}")

@@ -6,10 +6,10 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
 
 /*
   *******************************************************************************************
-  Setup and execute TestLineaRollup.claimMessageWithProof.
+  Setup and execute TestLinethRollup.claimMessageWithProof.
 
-  1) Signer must have DEFAULT_ADMIN_ROLE role for TestLineaRollup
-  2) TestLineaRollup must have >= `value` balance
+  1) Signer must have DEFAULT_ADMIN_ROLE role for TestLinethRollup
+  2) TestLinethRollup must have >= `value` balance
 
   -------------------------------------------------------------------------------------------
   Example (Hoodi):
@@ -17,7 +17,7 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
   DEPLOYER_PRIVATE_KEY=<key> \
   CUSTOM_RPC_URL=https://0xrpc.io/hoodi \
   pnpm exec hardhat addAndClaimMessage \
-    --linea-rollup-address <address> \
+    --lineth-rollup-address <address> \
     --to <address> \
     --value <uint256> \
     --data <hex_string> \
@@ -28,22 +28,22 @@ import { runWithSignerUiSession } from "../../../../scripts/hardhat/signer-ui-br
 // TASKS
 task(
   "addAndClaimMessage",
-  "Setup and execute TestLineaRollup.claimMessageWithProof by adding L2->L1 message merkle tree root",
+  "Setup and execute TestLinethRollup.claimMessageWithProof by adding L2->L1 message merkle tree root",
 )
-  .addOptionalParam("lineaRollupAddress")
+  .addOptionalParam("linethRollupAddress")
   .addOptionalParam("from")
   .addOptionalParam("to")
   .addOptionalParam("value")
   .addOptionalParam("data")
   .setAction(async (taskArgs, hre) => {
     return runWithSignerUiSession(hre, "task:addAndClaimMessage", async () => {
-      const { claimParams, lineaRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, false);
+      const { claimParams, linethRollup } = await prepareAndAddMessageMerkleRoot(taskArgs, hre, false);
 
       {
         console.log("Waiting for 10 seconds...");
         await delay(10000);
         console.log("Claiming message...");
-        const tx = await lineaRollup.claimMessageWithProof({
+        const tx = await linethRollup.claimMessageWithProof({
           proof: claimParams.proof,
           messageNumber: claimParams.messageNumber,
           leafIndex: claimParams.leafIndex,

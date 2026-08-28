@@ -536,14 +536,14 @@ class JsonRpcV2ClientImplTest {
       assertThatThrownBy { reqFuture.get() }
         .isInstanceOfSatisfying(ExecutionException::class.java) {
           assertThat(it.cause).isInstanceOfSatisfying(ConnectException::class.java) {
-            assertThat(it.message).contains("Connection refused: localhost/127.0.0.1:")
+            assertThat(it.message).matches("Connection refused.*: localhost/127\\.0\\.0\\.1:\\d+.*")
           }
         }
 
       assertThat(retryPredicateCalls.size).isEqualTo(2)
       assertThatThrownBy { retryPredicateCalls[0].orElseThrow() }
         .isInstanceOfSatisfying(ConnectException::class.java) {
-          assertThat(it.message).contains("Connection refused: localhost/127.0.0.1:")
+          assertThat(it.message).matches("Connection refused.*: localhost/127\\.0\\.0\\.1:\\d+.*")
         }
     }
   }
@@ -569,7 +569,7 @@ class JsonRpcV2ClientImplTest {
       assertThatThrownBy { reqFuture.get() }
         .isInstanceOfSatisfying(ExecutionException::class.java) {
           assertThat(it.cause).isInstanceOfSatisfying(ConnectException::class.java) {
-            assertThat(it.message).contains("Connection refused: /127.0.0.1:19472")
+            assertThat(it.message).matches("Connection refused.*: /127\\.0\\.0\\.1:19472.*")
           }
         }
       assertThat(retryPredicateCalls).hasSizeBetween(1, 3)

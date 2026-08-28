@@ -163,7 +163,7 @@ class JsonRpcMessageProcessor(
     val serializedResponses =
       executionFutures.map { future -> future.map(this::encodeAndMeasureResponse) }
 
-    return Future.all<Any>(serializedResponses)
+    return Future.all(serializedResponses)
       .transform { ar: AsyncResult<CompositeFuture> ->
         val responses = ar.result().list<String>()
         val finalResponseJsonStr =

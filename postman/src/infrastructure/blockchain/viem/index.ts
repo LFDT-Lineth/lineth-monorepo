@@ -1,13 +1,13 @@
 export { ViemProvider } from "./providers/ViemProvider";
 export { ViemLineaProvider } from "./providers/ViemLineaProvider";
-export { ViemLineaRollupLogClient } from "./clients/ViemLineaRollupLogClient";
+export { ViemLinethRollupLogClient } from "./clients/ViemLinethRollupLogClient";
 export { ViemL2MessageServiceLogClient } from "./clients/ViemL2MessageServiceLogClient";
 export { ViemEthereumGasProvider } from "./gas/ViemEthereumGasProvider";
 export { ViemLineaGasProvider } from "./gas/ViemLineaGasProvider";
 export { ViemTransactionSigner } from "./signers/ViemTransactionSigner";
 export { ViemCalldataDecoder } from "./ViemCalldataDecoder";
 export { NonceManager } from "./signers/NonceManager";
-export { ViemLineaRollupClient } from "./clients/ViemLineaRollupClient";
+export { ViemLinethRollupClient } from "./clients/ViemLinethRollupClient";
 export { ViemL2MessageServiceClient } from "./clients/ViemL2MessageServiceClient";
 export { createSignerClient } from "./signers/createSignerClient";
 export { contractSignerToViemAccount } from "./signers/contractSignerToViemAccount";

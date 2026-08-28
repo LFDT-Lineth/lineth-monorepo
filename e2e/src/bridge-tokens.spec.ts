@@ -187,7 +187,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
       const l2TokenBridge = context.l2Contracts.tokenBridge(l2PublicClient);
       const l1TokenBridge = context.l1Contracts.tokenBridge(l1PublicClient);
       const l2Token = context.l2Contracts.testERC20(l2PublicClient);
-      const lineaRollup = context.l1Contracts.lineaRollup(l1PublicClient);
+      const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const lineaEstimateGasClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuNode });
       const l2TokenAddress = l2Token.address;
       const l2TokenBridgeAddress = l2TokenBridge.address;
@@ -303,8 +303,8 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
 
       const [[claimedEvent]] = await Promise.all([
         waitForEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "MessageClaimed",
           args: {
             _messageHash: messageHash,

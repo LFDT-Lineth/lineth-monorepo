@@ -21,7 +21,7 @@ const createValidEnv = () => ({
   CONSENSYS_STAKING_OAUTH2_CLIENT_ID: "client-id",
   CONSENSYS_STAKING_OAUTH2_CLIENT_SECRET: "client-secret",
   CONSENSYS_STAKING_OAUTH2_AUDIENCE: "audience",
-  LINEA_ROLLUP_ADDRESS: "0x1111111111111111111111111111111111111111",
+  LINETH_ROLLUP_ADDRESS: "0x1111111111111111111111111111111111111111",
   LAZY_ORACLE_ADDRESS: "0x2222222222222222222222222222222222222222",
   VAULT_HUB_ADDRESS: "0x3333333333333333333333333333333333333333",
   YIELD_MANAGER_ADDRESS: "0x4444444444444444444444444444444444444444",
@@ -82,7 +82,7 @@ describe("configSchema", () => {
     expect(parsed.SHOULD_SUBMIT_VAULT_REPORT).toBe(true);
     expect(parsed.SHOULD_REPORT_YIELD).toBe(true);
     expect(parsed.IS_UNPAUSE_STAKING_ENABLED).toBe(true);
-    expect(parsed.LINEA_ROLLUP_ADDRESS).toBe(getAddress(env.LINEA_ROLLUP_ADDRESS));
+    expect(parsed.LINETH_ROLLUP_ADDRESS).toBe(getAddress(env.LINETH_ROLLUP_ADDRESS));
     expect(parsed.LAZY_ORACLE_ADDRESS).toBe(getAddress(env.LAZY_ORACLE_ADDRESS));
     expect(parsed.VAULT_HUB_ADDRESS).toBe(getAddress(env.VAULT_HUB_ADDRESS));
     expect(parsed.STETH_ADDRESS).toBe(getAddress(env.STETH_ADDRESS));
@@ -91,7 +91,7 @@ describe("configSchema", () => {
 
   it("rejects invalid Ethereum addresses", () => {
     // Arrange
-    const env = createEnvWithInvalidAddress("LINEA_ROLLUP_ADDRESS");
+    const env = createEnvWithInvalidAddress("LINETH_ROLLUP_ADDRESS");
 
     // Act
     const result = configSchema.safeParse(env);
@@ -99,7 +99,7 @@ describe("configSchema", () => {
     // Assert
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.path.join(".") === "LINEA_ROLLUP_ADDRESS")).toBe(true);
+      expect(result.error.issues.some((issue) => issue.path.join(".") === "LINETH_ROLLUP_ADDRESS")).toBe(true);
     }
   });
 

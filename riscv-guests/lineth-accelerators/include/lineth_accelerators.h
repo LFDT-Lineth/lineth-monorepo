@@ -1,7 +1,7 @@
 /**
- * Lineth (Linea zkVM) Cryptographic Accelerators C Interface
+ * Lineth Cryptographic Accelerators C Interface
  *
- * This header defines Linea-specific accelerators that are NOT part of the
+ * This header defines Lineth-specific accelerators that are NOT part of the
  * upstream zkVM accelerator standard. They live in the `lineth_zkvm_` namespace
  * to keep them distinct from the standard `zkvm_` accelerators.
  *

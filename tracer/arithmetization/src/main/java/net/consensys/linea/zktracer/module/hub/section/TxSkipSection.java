@@ -175,7 +175,7 @@ public final class TxSkipSection extends TraceSection implements EndTransactionD
     delegateNew = canonical(hub, world, delegateAddress, initialWarmth(hub, delegateAddress));
     coinbaseNew = canonical(hub, world, coinbaseAddress, initialWarmth(hub, coinbaseAddress));
 
-    final Wei value = (Wei) txMetadata.getBesuTransaction().getValue();
+    final Wei value = txMetadata.getBesuTransaction().getValue();
 
     if (txMetadata.senderAddressCollision()) {
       final BigInteger gasUsed = BigInteger.valueOf(txMetadata.getTotalGasUsed());

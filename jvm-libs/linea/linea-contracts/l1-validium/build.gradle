@@ -7,7 +7,7 @@ java {
     languageVersion = JavaLanguageVersion.of(25)
   }
 }
-description = 'Web3J Java client for Linea L1 Validium Smart Contract'
+description = 'Web3J Java client for Lineth L1 Validium Smart Contract'
 ext.artifactId = 'l1-validium-contract-client'
 
 dependencies {

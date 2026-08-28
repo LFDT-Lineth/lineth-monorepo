@@ -78,7 +78,7 @@
     <!--    <Logger name="linea.coordination.dynamicgasprice.GasPriceUpdaterImpl" level="TRACE" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
-    <!--    <Logger name="linea.coordinator.blockcreation" level="DEBUG" additivity="false">-->
+    <!--    <Logger name="lineth.coordinator.blockcreation" level="DEBUG" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
     <!--    <Logger name="net.consensys.linea" level="DEBUG" additivity="false">-->
@@ -87,25 +87,25 @@
     <!--    <Logger name="linea" level="DEBUG" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
-    <!--    <Logger name="linea.coordination.conflation" level="TRACE" additivity="false">-->
+    <!--    <Logger name="lineth.coordination.conflation" level="TRACE" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
-    <!--    <Logger name="linea.coordination.blob" level="TRACE" additivity="false">-->
+    <!--    <Logger name="lineth.coordination.blob" level="TRACE" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
-    <Logger name="linea.submission" level="INFO" additivity="false">
+    <Logger name="lineth.submission" level="INFO" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="net.consensys.linea.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
+    <Logger name="lineth.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="linea.finalization" level="INFO" additivity="false">
+    <Logger name="lineth.finalization" level="INFO" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="net.consensys.linea.ethereum.gaspricing.dynamiccap" level="INFO" additivity="false">
+    <Logger name="lineth.ethereum.gaspricing.dynamiccap" level="INFO" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
@@ -113,7 +113,7 @@
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>
-    <Logger name="linea.coordinator.clients.prover.GenericFileBasedProverClient" level="TRACE" additivity="false">
+    <Logger name="lineth.coordinator.clients.prover.GenericFileBasedProverClient" level="INFO" additivity="false">
       <appender-ref ref="console"/>
     </Logger>
 <!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
@@ -128,7 +128,7 @@
 <!--      <DebouncingFilter/>-->
 <!--      <appender-ref ref="console"/>-->
 <!--    </Logger>-->
-    <Logger name="clients.l2.ftx" level="TRACE" additivity="false">
+    <Logger name="clients.l2.ftx" level="INFO" additivity="false">
       <appender-ref ref="console"/>
     </Logger>
     <!--    <Logger name="clients.TracesCounters" level="TRACE" additivity="false">-->

@@ -30,7 +30,7 @@ import { ProposalSource } from "../src/core/entities/ProposalSource.js";
 import { ProposalState } from "../src/core/entities/ProposalState.js";
 import { ProposalProcessor } from "../src/services/ProposalProcessor.js";
 
-const TEST_SYSTEM_PROMPT = `You are a security analyst for Linea's Native Yield integration with Lido.
+const TEST_SYSTEM_PROMPT = `You are a security analyst for Lineth's Native Yield integration with Lido.
 
 Analyze the governance proposal and respond with a JSON object containing:
 - riskScore (0-100): Overall risk score

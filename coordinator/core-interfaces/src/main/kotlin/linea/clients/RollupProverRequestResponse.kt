@@ -9,13 +9,16 @@ import linea.kotlin.byteArrayListHashCode
 import kotlin.time.Instant
 
 data class RollupProofRequestV1(
-  val blobs: List<BlobWitness>,
-  val parentShnarf: ByteArray,
-  val endShnarf: ByteArray,
+  val conflations: List<ConflationWitness>,
   val l2Executions: List<BlockIntervalProofIndex>,
+  val chunks: List<ByteArray>,
+  val parentDataRollingHash: ByteArray,
+  val startOffset: Int,
+  val opaquePrefixBytes: ByteArray = ByteArray(0),
+  val opaqueSuffixBytes: ByteArray = ByteArray(0),
+  val boundaryPrevDataRollingHash: ByteArray? = null,
 ) : BlockInterval, StartBlockTimestampProvider {
   init {
-    assertConsecutiveIntervals(blobs)
     assertConsecutiveIntervals(l2Executions)
   }
 
@@ -35,10 +38,14 @@ data class RollupProofRequestV1(
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (blobs != other.blobs) return false
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!endShnarf.contentEquals(other.endShnarf)) return false
+    if (conflations != other.conflations) return false
     if (l2Executions != other.l2Executions) return false
+    if (!chunks.byteArrayListEquals(other.chunks)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (startOffset != other.startOffset) return false
+    if (!opaquePrefixBytes.contentEquals(other.opaquePrefixBytes)) return false
+    if (!opaqueSuffixBytes.contentEquals(other.opaqueSuffixBytes)) return false
+    if (!boundaryPrevDataRollingHash.contentEquals(other.boundaryPrevDataRollingHash)) return false
 
     return true
   }
@@ -47,50 +54,39 @@ data class RollupProofRequestV1(
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + blobs.hashCode()
-    result = 31 * result + parentShnarf.contentHashCode()
-    result = 31 * result + endShnarf.contentHashCode()
+    result = 31 * result + conflations.hashCode()
     result = 31 * result + l2Executions.hashCode()
+    result = 31 * result + chunks.byteArrayListHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
+    result = 31 * result + startOffset.hashCode()
+    result = 31 * result + opaquePrefixBytes.contentHashCode()
+    result = 31 * result + opaqueSuffixBytes.contentHashCode()
+    result = 31 * result + (boundaryPrevDataRollingHash?.contentHashCode() ?: 0)
     return result
   }
 }
 
-data class BlobWitness(
-  override val startBlockNumber: ULong,
-  override val endBlockNumber: ULong,
-  val blobHash: ByteArray,
-  val blobKzgProof: ByteArray,
+data class ConflationWitness(
   val blockRlps: List<ByteArray>,
-) : BlockInterval {
+) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as BlobWitness
+    other as ConflationWitness
 
-    if (startBlockNumber != other.startBlockNumber) return false
-    if (endBlockNumber != other.endBlockNumber) return false
-    if (!blobHash.contentEquals(other.blobHash)) return false
-    if (!blobKzgProof.contentEquals(other.blobKzgProof)) return false
     if (!blockRlps.byteArrayListEquals(other.blockRlps)) return false
 
     return true
   }
 
-  override fun hashCode(): Int {
-    var result = startBlockNumber.hashCode()
-    result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + blobHash.contentHashCode()
-    result = 31 * result + blobKzgProof.contentHashCode()
-    result = 31 * result + blockRlps.byteArrayListHashCode()
-    return result
-  }
+  override fun hashCode(): Int = blockRlps.byteArrayListHashCode()
 }
 
 /**
- * The 14-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4).
+ * The 20-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4).
  *
- * Domain twin of `linea.coordinator.clients.prover.riscv.RollupPublicInputsDto`. Kept here (rather than reusing the
+ * Domain twin of `lineth.coordinator.clients.prover.riscv.RollupPublicInputsDto`. Kept here (rather than reusing the
  * DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
  * uses `String` (hex) this uses `ByteArray`, and where the DTO uses `Long` this uses `ULong`.
  */
@@ -108,8 +104,13 @@ data class RollupProofPublicInputs(
   val endFtxNumber: ULong,
   val endFtxRollingHash: ByteArray,
   val filteredAddressesHash: ByteArray,
-  val parentShnarf: ByteArray,
-  val endShnarf: ByteArray,
+  val parentDataRollingHash: ByteArray,
+  val endDataRollingHash: ByteArray,
+  val parentBlockHash: ByteArray,
+  val endBlockHash: ByteArray,
+  val startOffset: Int,
+  val endOffset: Int,
+  val programVks: List<ByteArray>,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -130,8 +131,13 @@ data class RollupProofPublicInputs(
     if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
     if (endFtxNumber != other.endFtxNumber) return false
     if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!endShnarf.contentEquals(other.endShnarf)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (!endDataRollingHash.contentEquals(other.endDataRollingHash)) return false
+    if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
+    if (!endBlockHash.contentEquals(other.endBlockHash)) return false
+    if (startOffset != other.startOffset) return false
+    if (endOffset != other.endOffset) return false
+    if (!programVks.byteArrayListEquals(other.programVks)) return false
 
     return true
   }
@@ -150,8 +156,13 @@ data class RollupProofPublicInputs(
     result = 31 * result + endFtxRollingHash.contentHashCode()
     result = 31 * result + endFtxNumber.hashCode()
     result = 31 * result + filteredAddressesHash.contentHashCode()
-    result = 31 * result + parentShnarf.contentHashCode()
-    result = 31 * result + endShnarf.contentHashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
+    result = 31 * result + endDataRollingHash.contentHashCode()
+    result = 31 * result + parentBlockHash.contentHashCode()
+    result = 31 * result + endBlockHash.contentHashCode()
+    result = 31 * result + startOffset.hashCode()
+    result = 31 * result + endOffset.hashCode()
+    result = 31 * result + programVks.byteArrayListHashCode()
     return result
   }
 }
@@ -159,7 +170,7 @@ data class RollupProofPublicInputs(
 /**
  * Response of a rollup proof.
  *
- * Mirrors `linea.coordinator.clients.prover.riscv.RollupProofResponseDto`: the DTO's `String` (hex) fields are
+ * Mirrors `lineth.coordinator.clients.prover.riscv.RollupProofResponseDto`: the DTO's `String` (hex) fields are
  * `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint — deserializes
  * into the DTO and maps onto this domain type.
  */
@@ -170,6 +181,7 @@ data class RollupProofResponseV1(
   val publicInputs: RollupProofPublicInputs,
   val l2L1Roots: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
+  val programVk: ByteArray,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -183,6 +195,7 @@ data class RollupProofResponseV1(
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
     if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (!programVk.contentEquals(other.programVk)) return false
 
     return true
   }
@@ -194,6 +207,7 @@ data class RollupProofResponseV1(
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Roots.byteArrayListHashCode()
     result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + programVk.contentHashCode()
     return result
   }
 }

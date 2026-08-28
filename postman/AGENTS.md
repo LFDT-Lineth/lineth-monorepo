@@ -71,7 +71,7 @@ postman/
 │   │   └── types/                       Shared types (hex, log, receipt)
 │   ├── infrastructure/                  Implementations
 │   │   ├── blockchain/viem/             Viem-based blockchain clients
-│   │   │   ├── clients/                 LineaRollup, L2MessageService clients
+│   │   │   ├── clients/                 LinethRollup, L2MessageService clients
 │   │   │   ├── providers/               Viem/Linea providers
 │   │   │   ├── gas/                     Gas estimation (Ethereum + Linea)
 │   │   │   ├── signers/                 Private key + Web3Signer support

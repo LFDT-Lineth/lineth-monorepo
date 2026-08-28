@@ -14,8 +14,10 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+import linea.crypto.CloseableSigner
+import linea.crypto.Secp256k1Signature
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
@@ -91,7 +93,7 @@ interface MaruAppFactoryCreator {
     clock: Clock = Clock.systemUTC(),
     overridingP2PNetwork: P2PNetwork? = null,
     overridingFinalizationProvider: FinalizationProvider? = null,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly? = null,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly? = null,
     overridingApiServer: ApiServer? = null,
     p2pNetworkFactory: (
       ByteArray,
@@ -110,8 +112,12 @@ interface MaruAppFactoryCreator {
   ): LongRunningCloseable
 }
 
-class MaruAppFactory : MaruAppFactoryCreator {
+class MaruAppFactory(
+  customValidatorSignerFactory: CustomValidatorSignerFactory = MissingCustomValidatorSignerFactory,
+) : MaruAppFactoryCreator {
   private val log = LogManager.getLogger(this.javaClass)
+  private val validatorSignerInitializer =
+    ValidatorSignerInitializer(customValidatorSignerFactory)
 
   override fun create(
     config: MaruConfig,
@@ -119,7 +125,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
     clock: Clock,
     overridingP2PNetwork: P2PNetwork?,
     overridingFinalizationProvider: FinalizationProvider?,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
     overridingApiServer: ApiServer?,
     p2pNetworkFactory: (
       ByteArray,
@@ -139,6 +145,69 @@ class MaruAppFactory : MaruAppFactoryCreator {
     log.info("configs={}", config)
     log.info("beaconGenesisConfig={}", beaconGenesisConfig)
 
+    val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
+
+    config.persistence.dataPath.createDirectories()
+    val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
+    val validatorSigner =
+      config.qbft?.let { qbftConfig ->
+        validatorSignerInitializer.initialize(
+          qbftConfig = qbftConfig,
+          beaconGenesisConfig = beaconGenesisConfig,
+          privateKey = privateKey,
+        )
+      }
+
+    return try {
+      createMaruApp(
+        config = config,
+        beaconGenesisConfig = beaconGenesisConfig,
+        clock = clock,
+        privateKey = privateKey,
+        blockHashing = blockHashing,
+        validatorSigner = validatorSigner,
+        overridingP2PNetwork = overridingP2PNetwork,
+        overridingFinalizationProvider = overridingFinalizationProvider,
+        overridingLineaContractClient = overridingLineaContractClient,
+        overridingApiServer = overridingApiServer,
+        p2pNetworkFactory = p2pNetworkFactory,
+      )
+    } catch (error: Throwable) {
+      try {
+        validatorSigner?.close()
+      } catch (closeError: Throwable) {
+        error.addSuppressed(closeError)
+      }
+      throw error
+    }
+  }
+
+  private fun createMaruApp(
+    config: MaruConfig,
+    beaconGenesisConfig: ForksSchedule,
+    clock: Clock,
+    privateKey: ByteArray,
+    blockHashing: ForkAwareBlockHashing,
+    validatorSigner: CloseableSigner<Secp256k1Signature>?,
+    overridingP2PNetwork: P2PNetwork?,
+    overridingFinalizationProvider: FinalizationProvider?,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
+    overridingApiServer: ApiServer?,
+    p2pNetworkFactory: (
+      ByteArray,
+      P2PConfig,
+      UInt,
+      ForkAwareBlockHashing,
+      MetricsFacade,
+      BesuMetricsSystem,
+      StatusManager,
+      BeaconChain,
+      ForkPeeringManager,
+      () -> Boolean,
+      P2PState,
+      TimerFactory,
+    ) -> P2PNetworkImpl,
+  ): MaruApp {
     val l2EthWeb3j: Web3j? =
       config.forkTransition.l2EthApiEndpoint?.let {
         Web3j.build(HttpService(it.endpoint.toString()))
@@ -146,10 +215,6 @@ class MaruAppFactory : MaruAppFactoryCreator {
 
     checkL2EthApiEndpointAndForks(clock, beaconGenesisConfig, l2EthWeb3j)
 
-    val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
-
-    config.persistence.dataPath.createDirectories()
-    val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
     val nodeId = PeerId.fromPubKey(unmarshalPrivateKey(privateKey).publicKey())
     val vertx =
       VertxFactory.createVertx(
@@ -332,7 +397,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
       beaconGenesisConfig = beaconGenesisConfig,
       clock = clock,
       p2pNetwork = p2pNetwork,
-      privateKeyProvider = { privateKey },
+      validatorSigner = validatorSigner,
       finalizationProvider = finalizationProvider,
       metricsFacade = metricsFacade,
       vertx = vertx,
@@ -360,7 +425,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
 
     private fun setupFinalizationProvider(
       config: MaruConfig,
-      overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+      overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
       vertx: Vertx,
       timerFactory: TimerFactory,
     ): FinalizationProvider =
@@ -373,7 +438,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
             )
           val contractClient =
             overridingLineaContractClient
-              ?: Web3JLineaRollupSmartContractClientReadOnly(
+              ?: Web3JLinethRollupSmartContractClientReadOnly(
                 web3j = web3jClient,
                 contractAddress = lineaConfig.contractAddress.encodeHex(),
                 ethLogsSearcher = EthLogsSearcherImpl(

@@ -1,12 +1,12 @@
 ---
-description: Linea Smart Contract Development Guidelines
+description: Lineth Smart Contract Development Guidelines
 globs: contracts/**/*.sol, contracts/token-generation-event/**/*.sol
 alwaysApply: false
 ---
 
-Reference: [Linea Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
+Reference: [Lineth Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
 
-# Linea Smart Contracts - Development Guidelines
+# Lineth Smart Contracts - Development Guidelines
 
 ## Licenses
 
@@ -147,7 +147,7 @@ contract SampleContract is ISampleContract {
 
 ## Inheritance & Customization
 
-When extending Linea contracts:
+When extending Lineth contracts:
 
 - Use `virtual`/`override` keywords
 - Override `CONTRACT_VERSION()` for custom versions

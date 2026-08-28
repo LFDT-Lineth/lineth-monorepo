@@ -26,13 +26,13 @@ Captured by `makefile-contracts.mk:158-159`:
 | `L1_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0xac09…ff80 --rpc-url http://l1-el-node:8545` | computed at runtime |
 | `L2_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0x1dd1…1aae --rpc-url http://l2-node-besu:8545` | computed at runtime |
 
-Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINEAROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
+Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINETHROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
 
-Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLineaRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
+Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLinethRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
 
 ## L1 leaf targets
 
-### 1. `deploy-linea-rollup-v8` → `deployPlonkVerifierAndLineaRollupV8.ts`
+### 1. `deploy-lineth-rollup-v8` → `deployPlonkVerifierAndLinethRollupV8.ts`
 
 Source: `makefile-contracts.mk:34-57` (V8 default).
 
@@ -45,9 +45,9 @@ Source: `makefile-contracts.mk:34-57` (V8 default).
 | `INITIAL_L2_BLOCK_NUMBER` | `0` | literal | required |
 | `L2_GENESIS_TIMESTAMP` | `$FORK_TIMESTAMP` (read from `/initialization/fork-timestamp.txt`, fallback `1683325137`) | dynamic; written by `l2-genesis-init` | required |
 | `L1_SECURITY_COUNCIL` | `0x90F79bf6EB2c4f870365E785982E1f101E93b906` (DEV — public dev address) | literal | required |
-| `LINEA_ROLLUP_OPERATORS` | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` (DEV) | literal default; comma-separated | required |
-| `LINEA_ROLLUP_RATE_LIMIT_PERIOD` | `86400` (1 day in seconds) | literal | required |
-| `LINEA_ROLLUP_RATE_LIMIT_AMOUNT` | `1000000000000000000000` (1000 ETH wei) | literal | required |
+| `LINETH_ROLLUP_OPERATORS` | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC` (DEV) | literal default; comma-separated | required |
+| `LINETH_ROLLUP_RATE_LIMIT_PERIOD` | `86400` (1 day in seconds) | literal | required |
+| `LINETH_ROLLUP_RATE_LIMIT_AMOUNT` | `1000000000000000000000` (1000 ETH wei) | literal | required |
 | `DEPLOY_FORCED_TRANSACTION_GATEWAY` | `false` in quickstart, `true` if unset upstream | quickstart override | optional |
 | `FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID` | `1337` | literal | required only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true` |
 | `FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER` | `2000` | literal | required only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true` |
@@ -61,8 +61,8 @@ Source: `makefile-contracts.mk:34-57` (V8 default).
 
 **Outputs** (consumed by token-bridge-l1 + token-bridge-l2):
 
-- `dynamic-artifacts/31648428-LineaRollupV8.json` — proxy address. Internal stack expects this to land at `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` (deterministic from nonce 0 of deployer).
-- Plus side-deploys: `IntegrationTestTrueVerifier`, `LineaRollupV8Implementation`, `ProxyAdmin`, `AddressFilter`. `Mimc` and `ForcedTransactionGateway` are deployed only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true`.
+- `dynamic-artifacts/31648428-LinethRollupV8.json` — proxy address. Internal stack expects this to land at `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` (deterministic from nonce 0 of deployer).
+- Plus side-deploys: `IntegrationTestTrueVerifier`, `LinethRollupV8Implementation`, `ProxyAdmin`, `AddressFilter`. `Mimc` and `ForcedTransactionGateway` are deployed only when `DEPLOY_FORCED_TRANSACTION_GATEWAY=true`.
 
 ### 2. `deploy-token-bridge-l1` → `deployBridgedTokenAndTokenBridgeV1_1.ts`
 
@@ -77,7 +77,7 @@ Source: `makefile-contracts.mk:105-116`.
 | `REMOTE_CHAIN_ID` | `1337` (L2 chain ID) | literal | required |
 | `L1_SECURITY_COUNCIL` | `0x90F79bf6EB2c4f870365E785982E1f101E93b906` | literal | required |
 | `L2_MESSAGE_SERVICE_ADDRESS` | `0xe537D669CA013d86EBeF1D64e40fC74CADC91987` (deterministic) | **literal in internal** — but in the rewrite we **forward from `dynamic-artifacts/1337-L2MessageService.json`** | required |
-| `LINEA_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` (deterministic) | **literal in internal** — but in the rewrite we **forward from `dynamic-artifacts/31648428-LineaRollupV8.json`** | required |
+| `LINETH_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` (deterministic) | **literal in internal** — but in the rewrite we **forward from `dynamic-artifacts/31648428-LinethRollupV8.json`** | required |
 | `REMOTE_TOKEN_BRIDGE_ADDRESS` | precomputed L2 TokenBridge | forwarded by `04-deploy-contracts.sh` | required (used directly as `remoteSender`) |
 | `L1_NONCE` | from prelude | parent | unused by the forked script (serial deploys read the live nonce) |
 | `L1_RESERVED_TOKEN_ADDRESSES` | (none) | optional, comma-separated | optional |
@@ -116,7 +116,7 @@ Source: `makefile-contracts.mk:118-129`.
 | `REMOTE_CHAIN_ID` | `31648428` (local L1 chain ID) | literal | required |
 | `L2_SECURITY_COUNCIL` | `0xf17f52151EbEF6C7334FAD080c5704D77216b732` (DEV — note differs from `deploy-l2messageservice` L2_SECURITY_COUNCIL!) | literal | required |
 | `L2_MESSAGE_SERVICE_ADDRESS` | `0xe537D669CA013d86EBeF1D64e40fC74CADC91987` | **literal in internal** — **forward from `dynamic-artifacts/1337-L2MessageService.json`** | required |
-| `LINEA_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` | **literal in internal** — **forward from `dynamic-artifacts/31648428-LineaRollupV8.json`** | required |
+| `LINETH_ROLLUP_ADDRESS` | `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9` | **literal in internal** — **forward from `dynamic-artifacts/31648428-LinethRollupV8.json`** | required |
 | `REMOTE_TOKEN_BRIDGE_ADDRESS` | L1 TokenBridge from step 3 | forwarded by `04-deploy-contracts.sh` | required (used directly as `remoteSender`) |
 | `L2_NONCE` | from prelude | parent | unused by the forked script (serial deploys read the live nonce) |
 | `L2_RESERVED_TOKEN_ADDRESSES` | (none) | optional, comma-separated | optional |
@@ -127,14 +127,14 @@ Output: L2 BridgedToken + L2 TokenBridge addresses.
 
 The internal `make -j7` parallel run is replaced by serial execution. Order matters because:
 
-1. **`deploy-linea-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINEA_ROLLUP_ADDRESS`.
+1. **`deploy-lineth-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINETH_ROLLUP_ADDRESS`.
 2. **`deploy-l2messageservice`** must run before `deploy-token-bridge-l1` and `deploy-token-bridge-l2` so we can forward `L2_MESSAGE_SERVICE_ADDRESS`.
 3. **`deploy-token-bridge-l1`** and **`deploy-token-bridge-l2`** consume both forwarded addresses.
 Order in our serial flow:
 
 ```
 Prelude:  capture L1_NONCE, L2_NONCE
-Step 1:   deploy-linea-rollup-v8           [L1]   → emits LINEA_ROLLUP_ADDRESS
+Step 1:   deploy-lineth-rollup-v8           [L1]   → emits LINETH_ROLLUP_ADDRESS
 Step 2:   deploy-l2messageservice          [L2]   → emits L2_MESSAGE_SERVICE_ADDRESS
 Step 3:   deploy-token-bridge-l1           [L1]   ← consumes both addresses
 Step 4:   deploy-token-bridge-l2           [L2]   ← consumes both addresses
@@ -150,7 +150,7 @@ After each L1/L2 step that emits an address we care about, the wrapper reads:
 
 | Filename written by deploy script | Field consumed | Forwarded as |
 |-----------------------------------|----------------|--------------|
-| `contracts/local-deployments-artifacts/dynamic-artifacts/31648428-LineaRollupV8.json` | `.address` (proxy) | `LINEA_ROLLUP_ADDRESS` env into steps 3 + 4 |
+| `contracts/local-deployments-artifacts/dynamic-artifacts/31648428-LinethRollupV8.json` | `.address` (proxy) | `LINETH_ROLLUP_ADDRESS` env into steps 3 + 4 |
 | `contracts/local-deployments-artifacts/dynamic-artifacts/1337-L2MessageService.json` | `.address` (proxy) | `L2_MESSAGE_SERVICE_ADDRESS` env into steps 3 + 4 |
 
 If either file is missing after its parent step succeeds, the wrapper aborts (don't continue with stale literals — that's how we'd silently produce a broken deployment if a future contract version changes the deterministic address).

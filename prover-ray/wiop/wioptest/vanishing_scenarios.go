@@ -20,7 +20,7 @@ func NewFibonacciVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("fib")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// A[i] − A[i−1] − A[i−2] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("fib"),
@@ -53,7 +53,7 @@ func NewGeometricProgressionVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("geo")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	two := wiop.NewConstantField(field.NewFromString("2"))
 	// A[i] − 2·A[i−1] = 0
 	mod.NewVanishing(
@@ -85,8 +85,8 @@ func NewConditionalCounterVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("ctr")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	// A[i] − A[i−1] − B[i] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("ctr"),
@@ -118,9 +118,9 @@ func NewPythagoreanTripletVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("pyth")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
-	colC := mod.NewColumn(sys.Context.Childf("colC"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
+	colC := mod.NewColumn(sys.Context.Childf("colC"), r0)
 	// A² − B² − C² = 0
 	mod.NewVanishing(
 		sys.Context.Childf("pyth"),
@@ -155,7 +155,7 @@ func NewBooleanColumnVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("bool-col")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// col² − col = 0  ⟺  col ∈ {0, 1} on every row.
 	mod.NewVanishing(
 		sys.Context.Childf("bool"),
@@ -186,7 +186,7 @@ func NewDynamicFibonacciVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("dyn-fib")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// A[i] − A[i−1] − A[i−2] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("fib"),
@@ -219,7 +219,7 @@ func NewConstantColumnVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("const-col")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	seven := wiop.NewConstantField(field.NewFromString("7"))
 	mod.NewVanishing(sys.Context.Childf("const"), wiop.Sub(col.View(), seven))
 
@@ -247,7 +247,7 @@ func NewForwardShiftVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("fwd-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// A[i] − A[i+1] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("eq-next"),
@@ -277,7 +277,7 @@ func NewBooleanCubeVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("bool-cube")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// col*col*col − col = 0
 	cube := wiop.Mul(wiop.Mul(col.View(), col.View()), col.View())
 	mod.NewVanishing(sys.Context.Childf("cube"), wiop.Sub(cube, col.View()))
@@ -303,9 +303,9 @@ func NewLinearCombinationVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("lin-comb")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
-	colC := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("a"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("b"), r0)
+	colC := mod.NewColumn(sys.Context.Childf("c"), r0)
 	two := wiop.NewConstantField(field.NewFromString("2"))
 	three := wiop.NewConstantField(field.NewFromString("3"))
 	expr := wiop.Sub(
@@ -341,7 +341,7 @@ func NewLargeFibonacciVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("fib-16")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 16, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("fib"),
 		wiop.Sub(
@@ -377,8 +377,8 @@ func NewMultipleVanishingsSameRatioScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("same-ratio")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("a"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("b"), r0)
 	four := wiop.NewConstantField(field.NewFromString("4"))
 	// A − 4 = 0 and B − A = 0
 	mod.NewVanishing(sys.Context.Childf("v1"), wiop.Sub(colA.View(), four))
@@ -410,7 +410,7 @@ func NewMixedRatioVanishingsScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("mixed-ratio")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("a"), r0)
 	// A[i] − A[i−1] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("lin"),
@@ -449,8 +449,8 @@ func NewMultiModuleVanishingScenario() *VanishingScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), r0)
 	modA.NewVanishing(
 		sys.Context.Childf("a-bool"),
 		wiop.Sub(wiop.Mul(colA.View(), colA.View()), colA.View()),
@@ -489,7 +489,7 @@ func NewManualCancellationVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("manual-cxl")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	one := wiop.NewConstantField(field.NewFromString("1"))
 	// A[i] − A[i−1] − 1, but only on rows 1..n−1.
 	expr := wiop.Sub(wiop.Sub(col.View(), col.View().Shift(-1)), one)
@@ -518,12 +518,12 @@ func NewPrecomputedSelectorVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("pre-sel")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	sel := mod.NewPrecomputedColumn(
 		sys.Context.Childf("sel"),
-		wiop.VisibilityOracle,
-		makeVec(1, 0, 1, 0),
-	)
+
+		makeVec(1, 0, 1, 0))
+
 	nine := wiop.NewConstantField(field.NewFromString("9"))
 	// sel·(col − 9) = 0
 	expr := wiop.Mul(sel.View(), wiop.Sub(col.View(), nine))
@@ -552,7 +552,7 @@ func NewCellLeafVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("cell-leaf")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r0.NewCell(sys.Context.Childf("c"), false)
 	mod.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(col.View(), cell))
 
@@ -585,7 +585,7 @@ func NewCoinScaledVanishingScenario() *VanishingScenario {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	expr := wiop.Mul(coin, wiop.Sub(col.View(), col.View().Shift(-1)))
 	mod.NewVanishing(sys.Context.Childf("scaled"), expr)
@@ -613,7 +613,7 @@ func NewThreeStepRecurrenceVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("step3")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// A[i] − A[i−1] − A[i−3] = 0
 	mod.NewVanishing(
 		sys.Context.Childf("rec"),
@@ -645,7 +645,7 @@ func NewQuarticVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("quartic")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	sq := wiop.Mul(col.View(), col.View())
 	quart := wiop.Mul(sq, sq)
 	mod.NewVanishing(sys.Context.Childf("q"), wiop.Sub(quart, col.View()))
@@ -673,7 +673,7 @@ func NewLeftPadDynamicVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("dyn-leftpad")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionLeft)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("eq"),
 		wiop.Sub(col.View(), col.View().Shift(-1)),
@@ -704,7 +704,7 @@ func NewCubicWithBackShiftVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("cube-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// col² · col<<-1 − col = 0
 	sq := wiop.Mul(col.View(), col.View())
 	mod.NewVanishing(
@@ -735,7 +735,7 @@ func NewMixedHighRatioVanishingsScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("mixed-hi-ratio")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// col^3 − col (factor 3, ratio 2)
 	cube := wiop.Mul(wiop.Mul(col.View(), col.View()), col.View())
 	mod.NewVanishing(sys.Context.Childf("cube"), wiop.Sub(cube, col.View()))
@@ -764,8 +764,8 @@ func NewMultiModuleHighRatioVanishingScenario() *VanishingScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), r0)
 	cubeA := wiop.Mul(wiop.Mul(colA.View(), colA.View()), colA.View())
 	cubeB := wiop.Mul(wiop.Mul(colB.View(), colB.View()), colB.View())
 	modA.NewVanishing(sys.Context.Childf("cubeA"), wiop.Sub(cubeA, colA.View()))
@@ -793,7 +793,7 @@ func NewSizeThirtyTwoCubicVanishingScenario() *VanishingScenario {
 	r0 := sys.NewRound()
 	const n = 32
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), n, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cube := wiop.Mul(wiop.Mul(col.View(), col.View()), col.View())
 	mod.NewVanishing(sys.Context.Childf("cube"), wiop.Sub(cube, col.View()))
 
@@ -827,7 +827,7 @@ func NewLargeForwardShiftVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("fwd-shift-3")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// A[i] − A[i+3] = 0 → cancels last 3 rows.
 	mod.NewVanishing(
 		sys.Context.Childf("eq-plus3"),
@@ -860,7 +860,7 @@ func NewBackAndForwardShiftVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("two-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	two := wiop.NewConstantField(field.NewFromString("2"))
 	// A[i+1] − A[i−1] − 2·A[i] = 0, cancels first and last row.
 	expr := wiop.Sub(
@@ -893,7 +893,7 @@ func NewDynamicQuadraticVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("dyn-quad")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewVanishing(
 		sys.Context.Childf("bool"),
 		wiop.Sub(wiop.Mul(col.View(), col.View()), col.View()),
@@ -931,7 +931,7 @@ func NewQuarticWithBackShiftVanishingScenario() *VanishingScenario {
 	sys := wiop.NewSystemf("quartic-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// col² · col<<-1² − col² = 0. Row 0 cancelled by back-shift.
 	sq := wiop.Mul(col.View(), col.View())
 	prev := col.View().Shift(-1)

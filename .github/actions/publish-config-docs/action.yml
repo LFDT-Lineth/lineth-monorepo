@@ -1,0 +1,112 @@
+name: 'Publish config docs to doc.linea'
+description: >-
+  Reusable publishing for any component using the shared `config-docs` engine.
+  Downloads the artifact produced by `validate-config-docs`, checks out
+  `Consensys/doc.linea` with a GitHub App token, atomically swaps the component's
+  generated namespace into place, refuses any change that escapes the
+  namespace, and opens a pull request against doc.linea's main branch.
+
+  The caller is responsible for the trigger guard (release tag / manual
+  dispatch boolean) and the `needs: validate` dependency.
+
+inputs:
+  docs-owner:
+    description: 'Owner of the target docs repository. Defaults to Consensys.'
+    required: false
+    default: 'Consensys'
+  docs-repo-name:
+    description: 'Name of the target docs repository. Defaults to doc.linea.'
+    required: false
+    default: 'doc.linea'
+  docs-namespace:
+    description: 'Repo-relative directory under the docs checkout that this action is allowed to mutate (e.g. docs/stack/reference/_generated/coordinator).'
+    required: true
+  artifact-name:
+    description: 'Name of the artifact produced by validate-config-docs (e.g. `coordinator-config-docs-<github-sha>`).'
+    required: true
+  artifact-namespace:
+    description: 'Directory inside the artifact that contains the generated MDX partials (e.g. _generated/coordinator). Defaults to the basename of docs-namespace.'
+    required: false
+    default: ''
+  pr-branch:
+    description: 'Branch name to use for the doc.linea PR.'
+    required: true
+  pr-title:
+    description: 'Title for the doc.linea PR.'
+    required: true
+  pr-commit-message:
+    description: 'Commit message for the doc.linea PR.'
+    required: true
+  pr-body:
+    description: 'Body for the doc.linea PR.'
+    required: true
+  pr-base:
+    description: 'Base branch for the doc.linea PR. Defaults to main.'
+    required: false
+    default: 'main'
+
+# Secrets are passed via env (DOC_LINEA_PR_APP_ID, DOC_LINEA_PR_PRIVATE_KEY) by the
+# caller, because composite actions do not support the `secrets:` key (only
+# reusable workflows do). The caller sets these env vars at the step that
+# invokes this action; they are inherited by every step below.
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download validated output
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ github.workspace }}/config-docs-artifact
+
+    - name: Generate App token for ${{ inputs.docs-owner }}/${{ inputs.docs-repo-name }}
+      id: app-token
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ env.DOC_LINEA_PR_APP_ID }}
+        private-key: ${{ env.DOC_LINEA_PR_PRIVATE_KEY }}
+        owner: ${{ inputs.docs-owner }}
+        repositories: ${{ inputs.docs-repo-name }}
+
+    - name: Checkout ${{ inputs.docs-owner }}/${{ inputs.docs-repo-name }}
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        repository: ${{ inputs.docs-owner }}/${{ inputs.docs-repo-name }}
+        token: ${{ steps.app-token.outputs.token }}
+        path: doc.linea
+
+    - name: Atomically swap generated namespace into place
+      shell: bash
+      env:
+        ARTIFACT_DIR: ${{ github.workspace }}/config-docs-artifact
+        DOCS_CHECKOUT: ${{ github.workspace }}/doc.linea
+        DOCS_NAMESPACE: ${{ inputs.docs-namespace }}
+        ARTIFACT_NAMESPACE: ${{ inputs.artifact-namespace }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=scripts/atomic-copy-namespace.sh
+        bash "${{ github.action_path }}/scripts/atomic-copy-namespace.sh"
+
+    - name: Refuse changes outside the component namespace
+      shell: bash
+      env:
+        DOCS_CHECKOUT: ${{ github.workspace }}/doc.linea
+        DOCS_NAMESPACE: ${{ inputs.docs-namespace }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=scripts/enforce-boundary.sh
+        bash "${{ github.action_path }}/scripts/enforce-boundary.sh"
+
+    - name: Create pull request on ${{ inputs.docs-owner }}/${{ inputs.docs-repo-name }}
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      with:
+        token: ${{ steps.app-token.outputs.token }}
+        path: doc.linea
+        commit-message: ${{ inputs.pr-commit-message }}
+        branch: ${{ inputs.pr-branch }}
+        delete-branch: true
+        base: ${{ inputs.pr-base }}
+        title: ${{ inputs.pr-title }}
+        body: ${{ inputs.pr-body }}
+        add-paths: |
+          ${{ inputs.docs-namespace }}/**

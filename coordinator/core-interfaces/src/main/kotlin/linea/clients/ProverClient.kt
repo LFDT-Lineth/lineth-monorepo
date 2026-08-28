@@ -20,6 +20,7 @@ interface ProverProofResponseChecker<ProofResponse, TProofIndex : ProofIndex> {
 }
 
 interface ProverProofRequestCreator<ProofRequest : Any, TProofIndex : ProofIndex> {
+  fun getProofIndex(proofRequest: ProofRequest): TProofIndex
   fun createProofRequest(proofRequest: ProofRequest): SafeFuture<TProofIndex>
 }
 

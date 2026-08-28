@@ -5,8 +5,11 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
@@ -18,12 +21,21 @@ import (
 // rangecheck → lookuptologderivsum → logderivativesum pipeline. The
 // verifier must accept.
 func TestCompile_WioptestCompleteness(t *testing.T) {
+
 	for _, build := range wioptest.RangeCheckCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			rangecheck.Compile(sc.Sys)
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
+
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must accept an honest witness")
@@ -54,7 +66,7 @@ func newRC(t *testing.T, b int) (sys *wiop.System, col *wiop.Column, rc *wiop.Ra
 	sys = wiop.NewSystemf("rc-test")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col = mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col = mod.NewColumn(sys.Context.Childf("col"), r0)
 	rc = mod.NewRangeCheck(sys.Context.Childf("rc"), col, b)
 	return
 }
@@ -81,8 +93,8 @@ func TestCompile_SharedRangeColumn(t *testing.T) {
 	sys := wiop.NewSystemf("rc-shared")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rcA"), colA, 4)
 	mod.NewRangeCheck(sys.Context.Childf("rcB"), colB, 4)
 	modulesBeforeCompile := len(sys.Modules) // 1
@@ -98,8 +110,8 @@ func TestCompile_DistinctBoundsDistinctModules(t *testing.T) {
 	sys := wiop.NewSystemf("rc-distinct")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rcA"), colA, 4)
 	mod.NewRangeCheck(sys.Context.Childf("rcB"), colB, 8)
 	modulesBeforeCompile := len(sys.Modules)

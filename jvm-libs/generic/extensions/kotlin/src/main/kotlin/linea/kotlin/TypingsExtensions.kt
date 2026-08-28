@@ -17,10 +17,11 @@ fun Double.tokWeiUInt(): UInt = (this / OneKWei).toUInt()
 fun Double.toKWei(): Double = this / OneKWei
 
 // BigDecimal extensions
-fun BigDecimal.roundUpToBigInteger(): BigInteger = this.setScale(0, RoundingMode.HALF_UP).toBigInteger()
+fun BigDecimal.toBigIntegerHalfUp(): BigInteger = this.setScale(0, RoundingMode.HALF_UP).toBigInteger()
 fun BigDecimal.toGWei(): BigDecimal = this.divide(OneGWeiBigDecimal, MathContext.DECIMAL128)
 fun BigDecimal.toKWei(): BigDecimal = this.divide(OneKWeiBigDecimal, MathContext.DECIMAL128)
-fun BigDecimal.toUInt(): UInt = this.roundUpToBigInteger().toUInt()
+fun BigDecimal.toUInt(): UInt = this.toBigIntegerHalfUp().toUInt()
+fun BigDecimal.toULong(): ULong = this.toBigIntegerHalfUp().toULong()
 
 // BigInteger extensions
 fun BigInteger.multiply(multiplicand: Double): BigInteger = this.toBigDecimal()
@@ -32,6 +33,9 @@ fun BigInteger.toKWei(): BigDecimal = this.toBigDecimal().toKWei()
 inline val BigInteger.kwei: BigInteger get() = this.multiply(OneKWei.toBigInteger())
 fun BigInteger.toULong(): ULong = this.toString().toULong()
 fun BigInteger.toUInt(): UInt = this.toString().toUInt()
+fun BigInteger.toHexString(hexPrefix: Boolean = true): String = toString(16).let {
+  if (hexPrefix) "0x$it" else it
+}
 
 // ULong extensions
 

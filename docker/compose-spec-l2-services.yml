@@ -13,7 +13,7 @@ services:
       - ./config/coordinator/coordinator-config-v2.toml:/coordinator/coordinator-config-v2.toml:ro
 
   maru:
-    image: consensys/maru:${MARU_TAG:-v1.2.1-20260410142843-d326b73}
+    image: ${MARU_IMAGE_NAME:-consensys/maru}:${MARU_TAG:-1.3.0-20260714-ced387a}
     hostname: maru
     container_name: maru
     profiles: [ "l2", "l2-bc", "debug" ]
@@ -21,13 +21,14 @@ services:
       sequencer:
         condition: service_healthy
     environment:
-      LINEA_USE_MARU_OVERRIDE_CONFIG: ${LINEA_USE_MARU_OVERRIDE_CONFIG:-false}
-      MARU_COMMAND: exec java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml -jar maru.jar --genesis-file /initialization/genesis-maru.json --config configs/config.toml
+      LINETH_USE_MARU_OVERRIDE_CONFIG: ${LINETH_USE_MARU_OVERRIDE_CONFIG:-false}
+      # Which jar to launch. Override to point at a different entrypoint jar.
+      MARU_COMMAND: exec java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml -jar ${MARU_JAR:-maru.jar} --genesis-file /initialization/genesis-maru.json --config configs/config.toml
     command:
       - /bin/sh
       - -c
       - |
-        if [ "$$LINEA_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
+        if [ "$$LINETH_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
           $$MARU_COMMAND --config configs/config.overrides.toml
         else
           $$MARU_COMMAND
@@ -57,7 +58,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -145,7 +146,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -195,7 +196,7 @@ services:
   l2-node-besu-leader:
     hostname: l2-node-besu-leader
     container_name: l2-node-besu-leader
-    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
+    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -246,7 +247,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
+    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -352,7 +353,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-0.3.0-20260707-2fc1581}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-1.1.0-20260728-703923b}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -376,21 +377,20 @@ services:
       retries: 120
     restart: on-failure
     environment:
-      config__override__type2_state_proof_provider__disabled: ${LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}
-      config__override__l1_submission__blob__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__l1_submission__aggregation__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__message_anchoring__signer__type: ${LINEA_COORDINATOR_SIGNER_TYPE:-web3j}
-      config__override__l1_submission__data_availability: ${LINEA_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
-      dev_LINEA_COORDINATOR_DISABLED: ${dev_LINEA_COORDINATOR_DISABLED:-false}
+      config__override__type2_state_proof_provider__disabled: ${LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}
+      config__override__l1_submission__blob__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__l1_submission__aggregation__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__message_anchoring__signer__type: ${LINETH_COORDINATOR_SIGNER_TYPE:-web3j}
+      config__override__l1_submission__data_availability: ${LINETH_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
+      dev_LINETH_COORDINATOR_DISABLED: ${dev_LINETH_COORDINATOR_DISABLED:-false}
       CONFIG_OVERRIDE_OPTS: ''
-      # Which jar to launch from libs/. Defaults to the OSS coordinator jar; enterprise images set
-      # this to their own entrypoint jar (which sits alongside the OSS jar in libs/).
+      # Which jar to launch from libs/. Override to point at a different entrypoint jar.
       COORDINATOR_JAR: ${LINEA_COORDINATOR_JAR:-coordinator.jar}
     command:
       - sh
       - -c
       - |
-        if [ "$$dev_LINEA_COORDINATOR_DISABLED" = "true" ]; then
+        if [ "$$dev_LINETH_COORDINATOR_DISABLED" = "true" ]; then
           echo "Coordinator disabled"
         else
           exec java \
@@ -429,7 +429,7 @@ services:
   web3signer:
     hostname: web3signer
     container_name: web3signer
-    image: consensys/web3signer:26.3.0
+    image: consensys/web3signer:26.7.0
     profiles: [ "l2", "debug", "external-to-monorepo" ]
     ports:
       - "9000:9000"
@@ -686,7 +686,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
+    image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]
@@ -772,4 +772,3 @@ services:
       - --trace-start-block-number=0
     volumes:
       - ./config/shomei/log4j.xml:/log4j.xml:ro
-

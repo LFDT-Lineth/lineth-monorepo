@@ -95,7 +95,7 @@ export type PauseTypeRole = {
   role: string;
 };
 
-export type LineaRollupInitializationData = {
+export type LinethRollupInitializationData = {
   initialBlockHash: string;
   initialL2BlockNumber: bigint;
   genesisTimestamp: bigint;

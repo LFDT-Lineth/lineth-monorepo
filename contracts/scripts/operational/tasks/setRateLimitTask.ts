@@ -36,7 +36,7 @@ task("setRateLimit", "Sets the rate limit on a Message Service contract")
       let messageServiceAddress = getTaskCliOrEnvValue(taskArgs, "messageServiceAddress", "MESSAGE_SERVICE_ADDRESS");
 
       if (messageServiceContractType === undefined) {
-        throw "Please specify a Message Service name e.g: --message-service-type LineaRollup or MESSAGE_SERVICE_TYPE=LineaRollup";
+        throw "Please specify a Message Service name e.g: --message-service-type LinethRollup or MESSAGE_SERVICE_TYPE=LinethRollup";
       }
 
       if (messageServiceAddress === undefined) {

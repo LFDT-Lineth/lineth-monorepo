@@ -18,7 +18,7 @@ import (
 
 /*
 Below, we give a high level overview of the Accumulator module. The inputs of the
-Accumulator module are the Shomei traces. Shomei is the state manager of Linea zkEVM.
+Accumulator module are the Shomei traces. Shomei is the state manager of Lineth zkEVM.
 It stores the various states of the account and storage trie in many sparse Merkle trees. As described in
 https://docs.google.com/document/d/12oRcoDDql-2FpmRjcrBa8n7c_X41bZFO5leBzMcehlQ/edit#heading=h.9ssjg7avtkms,
 Shomei generates traces for five operations on the Merkle trees, namely INSERT, UPDATE, DELETE, READ-ZERO,
@@ -229,7 +229,7 @@ type Module struct {
 }
 
 // NewModule generates and constraints the accumulator module. The accumulator
-// module is entrusted to check all individual Linea's state accumulator traces.
+// module is entrusted to check all individual Lineth's state accumulator traces.
 func NewModule(comp *wizard.CompiledIOP, s Settings) Module {
 	am := Module{}
 	am.define(comp, s)

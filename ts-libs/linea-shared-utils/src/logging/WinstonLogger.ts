@@ -77,6 +77,24 @@ const DEFAULT_REDACT_KEYS: ReadonlyArray<string> = [
  */
 const URL_PATTERN_RE = /\b(?:https?|wss?|postgres(?:ql)?|mysql|mongodb|redis):\/\/[^\s"'<>`\\]+/gi;
 
+/**
+ * Hard cap on the final formatted log line length, in characters. Downstream log
+ * aggregators impose entry-size limits, so an unbounded line is dropped (or truncates
+ * the agent's send buffer); capping at 250 KiB (256000 chars) keeps lines well within
+ * typical limits while leaving headroom for the timestamp/level/logger prefix and the
+ * truncation marker.
+ *
+ * Applied unconditionally to every WinstonLogger consumer because the log pipeline is
+ * shared across all services using this logger. Exposing it as a per-consumer option
+ * would let one service opt out and reintroduce the dropped-line failures this cap
+ * prevents.
+ */
+const MAX_LOG_LINE_LENGTH = 250 * 1024;
+const TRUNCATION_MARKER_PREFIX = " ... [truncated, +";
+const TRUNCATION_MARKER_SUFFIX = " chars over cap]";
+
+export { MAX_LOG_LINE_LENGTH };
+
 export type WinstonLoggerOptions = LoggerOptions & {
   /**
    * Additional keys (case-insensitive) whose values must be replaced with
@@ -99,6 +117,20 @@ function formatValue(value: string): string {
  */
 function stripUrlsFromText(text: string): string {
   return text.replace(URL_PATTERN_RE, URL_REPLACEMENT);
+}
+
+/**
+ * Caps the formatted log line to `MAX_LOG_LINE_LENGTH` characters. When the line exceeds
+ * the cap, the tail is replaced with a marker reporting how many characters the original
+ * line went over the cap. The returned string is always exactly `MAX_LOG_LINE_LENGTH`
+ * characters when truncation occurs (`contentLen + marker.length == MAX_LOG_LINE_LENGTH`).
+ */
+function truncateLine(str: string): string {
+  if (str.length <= MAX_LOG_LINE_LENGTH) return str;
+  const overage = str.length - MAX_LOG_LINE_LENGTH;
+  const marker = `${TRUNCATION_MARKER_PREFIX}${overage}${TRUNCATION_MARKER_SUFFIX}`;
+  const contentLen = MAX_LOG_LINE_LENGTH - marker.length;
+  return str.slice(0, contentLen) + marker;
 }
 
 export class WinstonLogger implements ILogger {
@@ -153,7 +185,7 @@ export class WinstonLogger implements ILogger {
             str += ` error=${formatValue(safeStack)}`;
           }
 
-          return str;
+          return truncateLine(str);
         }),
       ),
     });

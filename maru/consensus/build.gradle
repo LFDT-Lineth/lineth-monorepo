@@ -14,7 +14,7 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 dependencies {
@@ -26,6 +26,7 @@ dependencies {
   implementation(project(':maru:executionlayer')) {
     because "because of protocol builders"
   }
+  api(project(':jvm-libs:linea:core:signer-interfaces'))
 
   api("org.hyperledger.besu.internal:besu-consensus-common") {
     because("API of the BftEventHandler interface")
@@ -34,6 +35,7 @@ dependencies {
   implementation("org.hyperledger.besu.internal:besu-ethereum-rlp")
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
   implementation("org.hyperledger.besu.internal:besu-crypto-services")
+  implementation("org.hyperledger.besu:besu-plugin-api")
   implementation("org.hyperledger.besu.internal:besu-ethereum-p2p")
   implementation("org.hyperledger.besu.internal:besu-config")
   api("org.hyperledger.besu.internal:besu-ethereum-blockcreation") {

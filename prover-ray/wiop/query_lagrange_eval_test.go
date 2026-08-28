@@ -36,7 +36,7 @@ func lagrangeSystem(t *testing.T) (*wiop.System, *wiop.Round, *wiop.Round, *wiop
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("leMod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("leCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("leCol"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("leCoin"))
 	return sys, r0, r1, mod, col, coin
 }
@@ -68,7 +68,7 @@ func TestLagrangeEval_NewLagrangeEval_NoNextRoundPanic(t *testing.T) {
 	sys := wiop.NewSystemf("leNoRound")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r0.NewCell(sys.Context.Childf("ep"), false)
 	assert.Panics(t, func() {
 		sys.NewLagrangeEval(sys.Context.Childf("le3"), []*wiop.ColumnView{col.View()}, cell)
@@ -120,7 +120,7 @@ func TestLagrangeEval_Check_ColumnNotAssigned(t *testing.T) {
 	r0b := sys2.NewRound()
 	r1b := sys2.NewRound()
 	mod2 := sys2.NewSizedModule(sys2.Context.Childf("mod2"), 4, wiop.PaddingDirectionNone)
-	col2 := mod2.NewColumn(sys2.Context.Childf("col2"), wiop.VisibilityOracle, r0b)
+	col2 := mod2.NewColumn(sys2.Context.Childf("col2"), r0b)
 	coin2 := r1b.NewCoinField(sys2.Context.Childf("coin2"))
 	le2 := sys2.NewLagrangeEval(sys2.Context.Childf("le2q"), []*wiop.ColumnView{col2.View()}, coin2)
 	_ = le
@@ -164,7 +164,7 @@ func TestLagrangeEval_CellEvalPoint_Round(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r1.NewCell(sys.Context.Childf("ep"), false)
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, cell)
 	assert.Equal(t, r1, le.Round())
@@ -178,7 +178,7 @@ func TestLagrangeEval_PaddingLeft_SelfAssign_Check(t *testing.T) {
 	r1 := sys.NewRound()
 	// Module size 4, but assignment provides 3 elements; padding=Left → [pad,v,v,v]
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionLeft)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, coin)
 
@@ -236,7 +236,7 @@ func TestLagrangeEval_Check_UnassignedColumn(t *testing.T) {
 	r0 := sys3.NewRound()
 	r1 := sys3.NewRound()
 	mod3 := sys3.NewSizedModule(sys3.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col3 := mod3.NewColumn(sys3.Context.Childf("col3"), wiop.VisibilityOracle, r0)
+	col3 := mod3.NewColumn(sys3.Context.Childf("col3"), r0)
 	coin3 := r1.NewCoinField(sys3.Context.Childf("coin3"))
 	le3 := sys3.NewLagrangeEval(sys3.Context.Childf("le3"), []*wiop.ColumnView{col3.View()}, coin3)
 
@@ -261,9 +261,9 @@ func evalWithBaseZ(t *testing.T, padding wiop.PaddingDirection, ext bool) {
 
 	var col *wiop.Column
 	if ext {
-		col = mod.NewExtensionColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col = mod.NewExtensionColumn(sys.Context.Childf("col"), r0)
 	} else {
-		col = mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col = mod.NewColumn(sys.Context.Childf("col"), r0)
 	}
 
 	// Evaluation point is a Cell holding a base-field value → z.IsBase() = true.
@@ -319,7 +319,7 @@ func TestEvalLagrangePaddedExtExt(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionLeft)
-	col := mod.NewExtensionColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewExtensionColumn(sys.Context.Childf("col"), r0)
 	// Coin gives an extension element → z.IsBase() = false.
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, coin)
@@ -347,7 +347,7 @@ func TestEvalPolynomials_Shift(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 
 	// Shifted view: ShiftingOffset = 1

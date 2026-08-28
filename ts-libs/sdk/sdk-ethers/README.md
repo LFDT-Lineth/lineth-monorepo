@@ -170,7 +170,7 @@ interface WriteModeOptions extends ReadOnlyModeOptions {
 
 ## Main Components
 
-### L1 Contract (LineaRollupClient)
+### L1 Contract (LinethRollupClient)
 
 The L1 contract handles operations on the Ethereum side.
 
