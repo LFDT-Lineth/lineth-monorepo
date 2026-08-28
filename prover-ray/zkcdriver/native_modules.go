@@ -28,7 +28,7 @@ const (
 )
 
 func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element]) error {
-	modName := mod.Name().String()
+	modName := mod.Name()
 	if after, found := strings.CutPrefix(modName, nativeMulmod); found {
 		if err := s.defineNativeMulmod(mod, after); err != nil {
 			return fmt.Errorf("native mulmod %s: %w", modName, err)
@@ -47,7 +47,7 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 // native module without adding any constraint, leaving the module genuinely
 // unconstrained while still giving callers a valid column to reference.
 func (s *schemaScanner) defineNativeExpUnconstrained(mod schema.Module[koalabear.Element]) {
-	modName := mod.Name().String()
+	modName := mod.Name()
 
 	moduleWIOP := s.Sys.NewDynamicModule(
 		s.Sys.Context.Childf("module-native-%s", modName),
@@ -85,7 +85,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		return fmt.Errorf("invalid number of bits %d: must be positive", nbBits)
 	}
 
-	modName := mod.Name().String()
+	modName := mod.Name()
 
 	// nbBitsPerLimb is the bitwidth of one limb register, as declared by the
 	// schema. All limb registers of a mulmod module share the same width.

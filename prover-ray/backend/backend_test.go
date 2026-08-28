@@ -2,11 +2,14 @@ package backend
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
-	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/internal/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
@@ -20,13 +23,8 @@ import (
 )
 
 func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
-	parsedELF, err := zkc_r5.LoadGuestElf(bytes.NewReader(minimal_elf.MinimalElfProgram))
-	require.NoError(t, err)
-
-	c := &Core{
-		cfg: Config{},
-		elf: parsedELF,
-	}
+	program, decoded := prepareTestProgram(t)
+	c := &Core{program: program, decoded: decoded}
 
 	payload1 := []byte{0x01, 0x02}
 	payload2 := []byte{0xFF, 0xFE}
@@ -41,13 +39,8 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 }
 
 func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
-	parsedELF, err := zkc_r5.LoadGuestElf(bytes.NewReader(minimal_elf.MinimalElfProgram))
-	require.NoError(t, err)
-
-	c := &Core{
-		cfg: Config{},
-		elf: parsedELF,
-	}
+	program, decoded := prepareTestProgram(t)
+	c := &Core{program: program, decoded: decoded}
 
 	ssz := []byte{0xAA, 0xBB}
 
@@ -87,7 +80,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 	zkcField := field.KOALABEAR_16
 	zkcCfg := codegen.DEFAULT_CONFIG
 
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
 	if len(errs) > 0 {
 		t.Fatalf("zkc macro compile %q: %v", srcPath, errs)
 	}
@@ -96,7 +89,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
 	}
 
-	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	binBytes, err := binF.MarshalBinary()
 	require.NoError(t, err)
 
@@ -117,15 +110,25 @@ func TestNew(t *testing.T) {
 	c, err := New(Config{CircuitBinPath: compileZKCBin(t, zkcTestSrc), GuestELFPath: elfPath})
 	require.NoError(t, err)
 
-	assert.Len(t, c.elf.Sections, 1, "one loadable section must be precomputed")
-	assert.Equal(t, uint64(minimal_elf.DefaultEntryPoint), c.elf.EntryPoint, "entry point must be precomputed")
+	assert.Len(t, c.program.Blobs, 1, "one loadable section must be precomputed")
+	assert.Equal(t, uint64(minimal_elf.DefaultEntryPoint), c.program.EntryPoint, "entry point must be precomputed")
+	assert.NotEmpty(t, c.decoded.Decoded, "decoded program must be precomputed")
 
 	ssz := []byte{0xAA, 0xBB}
 	fromCore, err := c.buildInputs(Job{Payload: ssz})
 	require.NoError(t, err)
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
+	fromFull, err := predecoding.PrepareInputs(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)
+}
+
+func prepareTestProgram(t *testing.T) (elfmapping.Program, predecoding.DecodedProgram) {
+	t.Helper()
+	program, err := elfmapping.Load(bytes.NewReader(minimal_elf.MinimalElfProgram))
+	require.NoError(t, err)
+	decoded, err := predecoding.Predecode(program)
+	require.NoError(t, err)
+	return program, decoded
 }
 
 // TestNew_Errors verifies that New reports missing or invalid startup inputs

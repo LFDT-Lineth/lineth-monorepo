@@ -8,6 +8,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
+	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/sirupsen/logrus"
@@ -60,8 +61,9 @@ func AssignFromTrace(
 						sys         = run.System
 						columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
 						col         = trMod.Column(uint(id))
-						moduleName  = trMod.Name().String()
-						name        = qualifiedCorsetName(moduleName, col.Name())
+						moduleName  = trMod.Name()
+						columnName  = scMod.Register(register.NewId(uint(id))).Name()
+						name        = qualifiedCorsetName(moduleName, columnName)
 					)
 
 					if _, ok := columnIDMap[name]; !ok {
@@ -69,28 +71,23 @@ func AssignFromTrace(
 						continue
 					}
 
-					var (
-						wCol    = sys.LookupColumn(columnIDMap[name])
-						padding field.Element
-						data    = col.Data()
-					)
+					wCol := sys.LookupColumn(columnIDMap[name])
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.
-					plain := make([]field.Element, data.Len())
+					plain := make([]field.Element, col.Len())
 					for i := range plain {
-						v := data.Get(uint(i))
+						v := col.Get(uint(i))
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
-
-					// Configure padding value
-					pad := col.Padding()
-					padding = *(*field.Element)(unsafe.Pointer(&pad))
 
 					// Done
 					run.AssignColumn(
 						wCol,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+						&wiop.ConcreteVector{
+							Plain:   field.VecFromBase(plain),
+							Padding: padding,
+						},
 					)
 				}
 			})
