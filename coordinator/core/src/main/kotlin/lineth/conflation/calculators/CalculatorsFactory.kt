@@ -4,9 +4,13 @@ import linea.DisabledService
 import linea.LongRunningService
 import linea.blob.BlobCompressor
 import linea.timer.TimerFactory
+import lineth.conflation.ConflationSafeBlockNumberProvider
+import lineth.conflation.ConflationService
 import lineth.conflation.SafeBlockProvider
+import lineth.coordination.conflation.ConflationServiceImpl
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCounters
+import net.consensys.linea.traces.TracesCountersV2
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.concurrent.ConcurrentSkipListSet
@@ -23,6 +27,11 @@ data class ConflationCalculators(
 data class AggregationCalculators(
   val aggregationCalculator: AggregationCalculator,
   val service: LongRunningService,
+)
+
+data class RiscVConflationCalculators(
+  val conflationCalculator: GlobalBlockConflationCalculator,
+  val conflationService: ConflationService,
 )
 
 object CalculatorsFactory {
@@ -193,6 +202,30 @@ object CalculatorsFactory {
     return AggregationCalculators(
       aggregationCalculator = aggregationCalculator,
       service = aggregationDeadlineCalculator ?: DisabledService("Aggregation Deadline"),
+    )
+  }
+
+  fun createForRiscV(
+    lastBlockNumber: ULong,
+    blocksPerBatch: UInt,
+    metricsFacade: MetricsFacade,
+    safeBlockNumberProvider: ConflationSafeBlockNumberProvider,
+    extraSyncCalculators: List<ConflationTriggerCalculator> = emptyList(),
+  ): RiscVConflationCalculators {
+    val conflationCalculator = GlobalBlockConflationCalculator(
+      lastBlockNumber = lastBlockNumber,
+      syncCalculators = listOf(ConflationTriggerCalculatorByBlockLimit(blocksPerBatch)) + extraSyncCalculators,
+      deferredTriggerConflationCalculators = emptyList(),
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+    )
+    val conflationService = ConflationServiceImpl(
+      calculator = conflationCalculator,
+      safeBlockNumberProvider = safeBlockNumberProvider,
+      metricsFacade = metricsFacade,
+    )
+    return RiscVConflationCalculators(
+      conflationCalculator = conflationCalculator,
+      conflationService = conflationService,
     )
   }
 

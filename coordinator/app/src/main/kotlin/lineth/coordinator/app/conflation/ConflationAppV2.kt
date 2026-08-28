@@ -10,14 +10,15 @@ import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
 import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
+import linea.web3j.createWeb3jHttpService
+import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
-import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
-import lineth.conflation.calculators.ConflationTriggerCalculatorByBlockLimit
+import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
 import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
-import lineth.coordination.conflation.ConflationServiceImpl
 import lineth.coordination.proofcreation.BatchProofHandlerImpl
 import lineth.coordination.riscv.execution.ExecutionProofGeneratingCoordinator
 import lineth.coordination.riscv.execution.L2ExecutionProofHandler
@@ -55,6 +56,7 @@ class ConflationAppV2(
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
+  private val forcedTransactionsDao: ForcedTransactionsDao,
   private val metricsFacade: MetricsFacade,
 ) : LongRunningService {
 
@@ -117,17 +119,15 @@ class ConflationAppV2(
       "conflation.blocksLimit must be set when riscv is enabled"
     }
 
-    val conflationCalculator = GlobalBlockConflationCalculator(
+    val riscvCalculators = CalculatorsFactory.createForRiscV(
       lastBlockNumber = lastFinalizedBlock,
-      syncCalculators = listOf(ConflationTriggerCalculatorByBlockLimit(blocksPerBatch)),
-      deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
-    )
-    val conflationService = ConflationServiceImpl(
-      calculator = conflationCalculator,
-      safeBlockNumberProvider = AlwaysSafeBlockNumberProvider(),
+      blocksPerBatch = blocksPerBatch,
       metricsFacade = metricsFacade,
+      safeBlockNumberProvider = forcedTransactionsApp.conflationSafeBlockNumberProvider,
+      extraSyncCalculators = listOf(forcedTransactionsApp.conflationCalculator),
     )
+    val conflationCalculator = riscvCalculators.conflationCalculator
+    val conflationService = riscvCalculators.conflationService
 
     val l2ExecutionProverClient = riscvProverClientFactory.executionProverClient()
 
@@ -190,6 +190,7 @@ class ConflationAppV2(
             blockRLPEncoded = blockRlp,
             numOfTransactions = block.transactions.size.toUInt(),
             gasUsed = block.gasUsed,
+            coinbase = block.miner.encodeHex(),
           ),
         )
       }.whenException { th ->
