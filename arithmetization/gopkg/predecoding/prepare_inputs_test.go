@@ -26,12 +26,13 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Predecode() error = %v", err)
 	}
-	inputBlobs, err := elfmapping.NewLengthPrefixedData(
+	inputBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		inputData,
+		elfmapping.WithLengthPrefix(),
 	)
 	if err != nil {
-		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+		t.Fatalf("NewData() error = %v", err)
 	}
 	want, err := elfmapping.EncodeInputs(program, inputBlobs)
 	if err != nil {
@@ -85,8 +86,8 @@ func TestPrepareInputsForwardsMappingOptions(t *testing.T) {
 	if !bytes.Contains(sections.Bytes(), []byte("yes, .text")) {
 		t.Errorf("sections table does not identify executable .text:\n%s", sections.String())
 	}
-	if !bytes.Contains(sections.Bytes(), []byte("no , ssz_payload")) {
-		t.Errorf("sections table does not contain input payload:\n%s", sections.String())
+	if !bytes.Contains(sections.Bytes(), []byte("0x0000000008800008, 0x0000000000000001, no , ")) {
+		t.Errorf("sections table does not contain unnamed input payload:\n%s", sections.String())
 	}
 }
 

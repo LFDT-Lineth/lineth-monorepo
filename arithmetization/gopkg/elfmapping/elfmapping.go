@@ -27,8 +27,9 @@ const (
 
 // Blob is a contiguous region mapped into guest memory.
 type Blob struct {
-	Address    uint64
-	Data       []byte
+	Address uint64
+	Data    []byte
+	// Name is used only by diagnostic sections output.
 	Name       string
 	Executable bool
 }
@@ -43,6 +44,36 @@ type Program struct {
 type config struct {
 	includeExecutable bool
 	sectionsWriter    io.Writer
+}
+
+type dataConfig struct {
+	name         string
+	lengthPrefix bool
+}
+
+// DataOption configures blobs created by [NewData].
+type DataOption func(*dataConfig) error
+
+// WithName assigns a descriptive blob name. Length-prefixed data uses the name
+// with _length and _payload suffixes. Names are used only by diagnostic
+// sections output and do not affect R5 inputs.
+func WithName(name string) DataOption {
+	return func(cfg *dataConfig) error {
+		if name == "" {
+			return fmt.Errorf("blob name is empty")
+		}
+		cfg.name = name
+		return nil
+	}
+}
+
+// WithLengthPrefix stores an eight-byte little-endian data length before the
+// payload. Guests that read raw bytes directly must not use this option.
+func WithLengthPrefix() DataOption {
+	return func(cfg *dataConfig) error {
+		cfg.lengthPrefix = true
+		return nil
+	}
 }
 
 // Option configures optional R5 mapping inputs.
@@ -68,9 +99,9 @@ func WithSectionsWriter(writer io.Writer) Option {
 	}
 }
 
-// PrepareInputs maps a guest ELF and length-prefixed input data into the raw
-// public inputs consumed by the R5 arithmetization. Call [Load] and
-// [EncodeInputs] separately when the same ELF is reused across many inputs.
+// PrepareInputs maps a guest ELF and input data using the length-prefixed guest
+// convention. Call [Load] and [EncodeInputs] separately for guests expecting
+// raw input or when the same ELF is reused across many inputs.
 func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
@@ -80,7 +111,11 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	inputBlobs, err := NewLengthPrefixedData(DefaultInputOrigin, inputData)
+	inputBlobs, err := NewData(
+		DefaultInputOrigin,
+		inputData,
+		WithLengthPrefix(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -172,10 +207,30 @@ func extractBlobs(elfFile *elf.File) ([]Blob, error) {
 	return blobs, nil
 }
 
-// NewLengthPrefixedData maps data using the framing expected at _in_start: an
-// eight-byte little-endian length followed by the payload. The payload is not
+// NewData maps data at the given address. WithLengthPrefix stores an eight-byte
+// little-endian length at that address and the payload eight bytes later. The
+// R5 interpreter itself does not require this framing. The payload is not
 // copied until [EncodeInputs] constructs the final input map.
-func NewLengthPrefixedData(address uint64, data []byte) ([]Blob, error) {
+func NewData(
+	address uint64,
+	data []byte,
+	options ...DataOption,
+) ([]Blob, error) {
+	cfg := dataConfig{}
+	for _, option := range options {
+		if option == nil {
+			return nil, fmt.Errorf("applying data option: nil option")
+		}
+		if err := option(&cfg); err != nil {
+			return nil, fmt.Errorf("applying data option: %w", err)
+		}
+	}
+	if !cfg.lengthPrefix {
+		if len(data) == 0 {
+			return nil, nil
+		}
+		return []Blob{{Address: address, Data: data, Name: cfg.name}}, nil
+	}
 	payloadAddress := address + 8
 	if payloadAddress < address {
 		return nil, fmt.Errorf("data input offset overflow: in_origin=%#x", address)
@@ -183,12 +238,17 @@ func NewLengthPrefixedData(address uint64, data []byte) ([]Blob, error) {
 
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(data)))
-	blobs := []Blob{{Address: address, Data: prefix, Name: "ssz_length"}}
+	lengthName, payloadName := "", ""
+	if cfg.name != "" {
+		lengthName = cfg.name + "_length"
+		payloadName = cfg.name + "_payload"
+	}
+	blobs := []Blob{{Address: address, Data: prefix, Name: lengthName}}
 	if len(data) != 0 {
 		blobs = append(blobs, Blob{
 			Address: payloadAddress,
 			Data:    data,
-			Name:    "ssz_payload",
+			Name:    payloadName,
 		})
 	}
 	return blobs, nil

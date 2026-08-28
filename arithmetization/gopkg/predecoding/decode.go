@@ -705,9 +705,9 @@ func WithSectionsWriter(writer io.Writer) Option {
 	}
 }
 
-// PrepareInputs maps and predecodes a guest ELF and adds length-prefixed input
-// data, returning the complete raw input map consumed by the R5 interpreter.
-// Call [Predecode] separately when the same ELF is reused across many inputs.
+// PrepareInputs maps and predecodes a guest ELF and adds input data using the
+// length-prefixed guest convention. Call [Predecode] and the elfmapping APIs
+// separately for guests expecting raw input or when reusing the same ELF.
 func PrepareInputs(
 	elfBytes []byte,
 	inputData []byte,
@@ -725,9 +725,10 @@ func PrepareInputs(
 	if err != nil {
 		return nil, err
 	}
-	inputBlobs, err := elfmapping.NewLengthPrefixedData(
+	inputBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		inputData,
+		elfmapping.WithLengthPrefix(),
 	)
 	if err != nil {
 		return nil, err

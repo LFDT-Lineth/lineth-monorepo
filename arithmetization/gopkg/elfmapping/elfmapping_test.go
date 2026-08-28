@@ -34,12 +34,13 @@ func TestPrepareInputsMatchesExplicitPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	inputBlobs, err := elfmapping.NewLengthPrefixedData(
+	inputBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		inputData,
+		elfmapping.WithLengthPrefix(),
 	)
 	if err != nil {
-		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+		t.Fatalf("NewData() error = %v", err)
 	}
 	want, err := elfmapping.EncodeInputs(
 		program,
@@ -80,8 +81,8 @@ func TestPrepareInputsWritesLegacySectionsTable(t *testing.T) {
 	}
 	want := "index, offset,             size,               exec, name\n" +
 		"0    , 0x0000000000800000, 0x0000000000000004, yes, .text\n" +
-		"1    , 0x0000000008800000, 0x0000000000000008, no , ssz_length\n" +
-		"2    , 0x0000000008800008, 0x0000000000000002, no , ssz_payload\n"
+		"1    , 0x0000000008800000, 0x0000000000000008, no , \n" +
+		"2    , 0x0000000008800008, 0x0000000000000002, no , \n"
 	if sections.String() != want {
 		t.Errorf("sections table:\n%s\nwant:\n%s", sections.String(), want)
 	}
@@ -192,14 +193,15 @@ func TestLoadRejectsInvalidMappings(t *testing.T) {
 	}
 }
 
-func TestNewLengthPrefixedData(t *testing.T) {
+func TestNewDataWithLengthPrefix(t *testing.T) {
 	payload := []byte{0xaa, 0xbb, 0xcc}
-	blobs, err := elfmapping.NewLengthPrefixedData(
+	blobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		payload,
+		elfmapping.WithLengthPrefix(),
 	)
 	if err != nil {
-		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+		t.Fatalf("NewData() error = %v", err)
 	}
 	if len(blobs) != 2 {
 		t.Fatalf("len(blobs) = %d, want 2", len(blobs))
@@ -216,12 +218,62 @@ func TestNewLengthPrefixedData(t *testing.T) {
 	if !bytes.Equal(blobs[1].Data, payload) {
 		t.Errorf("payload = %x, want %x", blobs[1].Data, payload)
 	}
+	if blobs[0].Name != "" || blobs[1].Name != "" {
+		t.Errorf("default blob names = %q, %q, want empty", blobs[0].Name, blobs[1].Name)
+	}
 }
 
-func TestNewLengthPrefixedDataEmpty(t *testing.T) {
-	blobs, err := elfmapping.NewLengthPrefixedData(0x1000, nil)
+func TestNewDataWithLengthPrefixAndName(t *testing.T) {
+	blobs, err := elfmapping.NewData(
+		0x1000,
+		[]byte{1},
+		elfmapping.WithName("guest_input"),
+		elfmapping.WithLengthPrefix(),
+	)
 	if err != nil {
-		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+		t.Fatalf("NewData() error = %v", err)
+	}
+	if blobs[0].Name != "guest_input_length" {
+		t.Errorf("length name = %q, want guest_input_length", blobs[0].Name)
+	}
+	if blobs[1].Name != "guest_input_payload" {
+		t.Errorf("payload name = %q, want guest_input_payload", blobs[1].Name)
+	}
+}
+
+func TestBlobNamesDoNotAffectEncodedInputs(t *testing.T) {
+	unnamed, err := elfmapping.NewData(0x1000, []byte{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	named, err := elfmapping.NewData(
+		0x1000,
+		[]byte{1},
+		elfmapping.WithName("input"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if named[0].Name != "input" {
+		t.Fatalf("named raw blob = %q, want input", named[0].Name)
+	}
+	unnamedInputs, err := elfmapping.EncodeInputs(elfmapping.Program{}, unnamed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	namedInputs, err := elfmapping.EncodeInputs(elfmapping.Program{}, named)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(unnamedInputs, namedInputs) {
+		t.Fatalf("blob names changed encoded inputs: unnamed=%x named=%x", unnamedInputs, namedInputs)
+	}
+}
+
+func TestNewDataWithLengthPrefixEmpty(t *testing.T) {
+	blobs, err := elfmapping.NewData(0x1000, nil, elfmapping.WithLengthPrefix())
+	if err != nil {
+		t.Fatalf("NewData() error = %v", err)
 	}
 	if len(blobs) != 1 {
 		t.Fatalf("len(blobs) = %d, want 1", len(blobs))
@@ -231,10 +283,10 @@ func TestNewLengthPrefixedDataEmpty(t *testing.T) {
 	}
 }
 
-func TestNewLengthPrefixedDataRejectsAddressOverflow(t *testing.T) {
-	_, err := elfmapping.NewLengthPrefixedData(math.MaxUint64-4, []byte{1})
+func TestNewDataWithLengthPrefixRejectsAddressOverflow(t *testing.T) {
+	_, err := elfmapping.NewData(math.MaxUint64-4, []byte{1}, elfmapping.WithLengthPrefix())
 	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("offset overflow")) {
-		t.Fatalf("NewLengthPrefixedData() error = %v, want offset overflow", err)
+		t.Fatalf("NewData() error = %v, want offset overflow", err)
 	}
 }
 
@@ -248,12 +300,13 @@ func TestEncodeInputsLegacyGolden(t *testing.T) {
 			Executable: true,
 		}},
 	}
-	payload, err := elfmapping.NewLengthPrefixedData(
+	payload, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		[]byte{0xaa, 0xbb, 0xcc},
+		elfmapping.WithLengthPrefix(),
 	)
 	if err != nil {
-		t.Fatalf("NewLengthPrefixedData() error = %v", err)
+		t.Fatalf("NewData() error = %v", err)
 	}
 	inputs, err := elfmapping.EncodeInputs(
 		program,
