@@ -59,11 +59,20 @@ jobs:
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
 
-      - name: Trace l2-execution guest program and check it
+      - name: Trace l2-execution guest program with tiny block
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "" # Empty to avoid installing zkc again
           INPUT: test/testdata/stateless_input.ssz
+          KECCAK_ACCEL: true
+          ZKC_TRACE_FLAGS: "--stats -vv"
+
+      - name: Trace l2-execution guest program with small Amsterdam block
+        run: make -C riscv-guests/l2-execution trace
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "" # Empty to avoid installing zkc again
+          INPUT: test/testdata/block_amsterdam_175k.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"
