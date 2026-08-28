@@ -2,7 +2,10 @@ module github.com/consensys/linea-monorepo/verifier-ray/codegen
 
 go 1.25.7
 
-require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827095445-9c51af6cc3b1
+require (
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827100714-38d9bb10f9d3
+	github.com/LFDT-Lineth/zkc v1.2.27
+)
 
 require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect

@@ -3,11 +3,12 @@ module github.com/consensys/linea-monorepo/verifier-ray/testdata/generate
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827095445-9c51af6cc3b1
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827100714-38d9bb10f9d3
 	github.com/consensys/linea-monorepo/verifier-ray/codegen v0.0.0
 )
 
 require (
+	github.com/LFDT-Lineth/zkc v1.2.27 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
