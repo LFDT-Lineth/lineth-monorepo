@@ -42,6 +42,16 @@ inputs:
     description: "Prepend the unreleased changelogs to the CHANGELOG.md"
     required: false
     default: "false"
+  target-ref:
+    description: >
+      Branch name to fast-forward before prepending, to dodge a race with a concurrent push
+      to that same branch. Only pass this when the caller will commit-and-push the result
+      afterward. Leave empty (default) otherwise — e.g. read-only CI previews must not pass
+      this, and must never derive it from `github.head_ref`/`github.ref_name` for a workflow
+      reachable by `pull_request`, since `github.head_ref` is attacker-controlled on fork PRs
+      (CodeQL actions/cache-poisoning).
+    required: false
+    default: ''
   generate-changelog-with-next-tag-version:
     description: "Generate the unreleased changelogs but replace the header with next-tag-version"
     required: false
@@ -134,5 +144,5 @@ runs:
         INCLUDE_PATHS: ${{ steps.paths.outputs.include_paths }}
         GENERATE_WITH_NEXT_TAG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' }}
         NEXT_VERSION: ${{ steps.version.outputs.version }}
-        TARGET_REF: ${{ github.head_ref || github.ref_name }}
+        TARGET_REF: ${{ inputs.target-ref }}
       run: make -f "${{ github.action_path }}/Makefile" prepend
