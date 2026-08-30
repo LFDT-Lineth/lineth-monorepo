@@ -3,6 +3,7 @@ package zkcdriver_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 const (
@@ -28,17 +30,35 @@ var (
 )
 
 type r5BenchmarkFixture struct {
-	binFile       *constraints.BinaryFile[koalabear.Element]
-	inputs        map[string][]byte
-	expandedTrace trace.Trace[koalabear.Element]
-	serialized    []byte
-	system        *wiop.System
-	driver        *zkcdriver.ZkCDriver
-	traceRows     uint64
-	traceCells    uint64
+	binFile        *constraints.BinaryFile[koalabear.Element]
+	inputs         map[string][]byte
+	expandedShards []trace.Shard[koalabear.Element]
+	serialized     []byte
+	system         *wiop.System
+	driver         *zkcdriver.ZkCDriver
+	traceRows      []uint64
+	traceCells     []uint64
 }
 
 func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
+	var (
+		// NOTE: the "sharding strategy" controls how sharding operators, and is
+		// fairly simplistic (at this stage).  In essence, the strategy below
+		// indicates that each shard will contain 500K invocations of the
+		// "interpreter()" function.  Since this function is involved once per
+		// RISC-V instruction, this indicates that each shard contains 500K
+		// RISC-V instruction executions.  Note, for example, that the first
+		// shard is expected to be bigger under this simplistic strategy, since
+		// it will also include the initialisation phase of the interpreter
+		// (i.e. loading inputs into RAM).
+		shardingStrategy = vm.NewShardingStrategy("interpreter", 500000)
+		// Specificy tracing options
+		tracingConfig = vm.DEFAULT_TRACE_CONFIG.WithSharding(shardingStrategy).
+			// Indicate shards should be traced in parallel after an initial
+			// "fast mode" execution run to create checkpoints (i.e. as
+			// determined by the sharding strategy).
+			WithParallelism(true)
+	)
 	b.Helper()
 
 	verifierELF, err := os.ReadFile(r5VerifierPath)
@@ -53,7 +73,7 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
-	_, _, expandedTrace, errs := binFile.Trace(inputs, constraints.DEFAULT_TRACE_CONFIG)
+	_, expandedTrace, errs := binFile.Trace(inputs, tracingConfig)
 	if len(errs) > 0 {
 		b.Fatalf("tracing R5 fixture: %v", errors.Join(errs...))
 	}
@@ -62,15 +82,21 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 		b.Fatalf("serializing R5 constraints: %v", err)
 	}
 	fixture := &r5BenchmarkFixture{
-		binFile:       binFile,
-		inputs:        inputs,
-		expandedTrace: expandedTrace,
-		serialized:    serialized,
+		binFile:        binFile,
+		inputs:         inputs,
+		expandedShards: expandedTrace,
+		serialized:     serialized,
 	}
-	for moduleID := range expandedTrace.Width() {
-		module := expandedTrace.Module(moduleID)
-		fixture.traceRows += uint64(module.Height())
-		fixture.traceCells += uint64(module.Height()) * uint64(module.Width())
+	// Initialise traceRows/traceCells
+	fixture.traceRows = make([]uint64, len(expandedTrace))
+	fixture.traceCells = make([]uint64, len(expandedTrace))
+	// Collect per-shard metrics
+	for i, shard := range expandedTrace {
+		for moduleID := range shard.Width() {
+			module := shard.Module(moduleID)
+			fixture.traceRows[i] += uint64(module.Height())
+			fixture.traceCells[i] += uint64(module.Height()) * uint64(module.Width())
+		}
 	}
 
 	return fixture
@@ -99,9 +125,11 @@ func compileR5BenchmarkSystem(b *testing.B, serialized []byte) (*wiop.System, *z
 
 func reportR5Work(b *testing.B, fixture *r5BenchmarkFixture) {
 	b.Helper()
-	b.ReportMetric(float64(fixture.traceRows), "trace-rows/op")
-	b.ReportMetric(float64(fixture.traceCells), "trace-cells/op")
-	b.ReportMetric(float64(runtime.GOMAXPROCS(0)), "gomaxprocs")
+	for i := range fixture.traceCells {
+		b.ReportMetric(float64(fixture.traceRows[i]), fmt.Sprintf("shard_%d/trace-rows/op", i))
+		b.ReportMetric(float64(fixture.traceCells[i]), fmt.Sprintf("shard_%d/trace-cells/op", i))
+		b.ReportMetric(float64(runtime.GOMAXPROCS(0)), "gomaxprocs")
+	}
 }
 
 // BenchmarkR5Trace measures RISC-V execution and AIR trace expansion. It does
@@ -112,9 +140,9 @@ func BenchmarkR5Trace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, _, expandedTrace, errs := fixture.binFile.Trace(
+		_, expandedTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
-			constraints.DEFAULT_TRACE_CONFIG,
+			vm.DEFAULT_TRACE_CONFIG,
 		)
 		if len(errs) > 0 {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
@@ -132,16 +160,16 @@ func BenchmarkR5TraceAndCheck(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		_, _, expandedTrace, errs := fixture.binFile.Trace(
+		_, expandedTrace, errs := fixture.binFile.Trace(
 			fixture.inputs,
-			constraints.DEFAULT_TRACE_CONFIG,
+			vm.DEFAULT_TRACE_CONFIG,
 		)
 		if len(errs) > 0 {
 			b.Fatalf("tracing R5 program: %v", errors.Join(errs...))
 		}
 		if failures := fixture.binFile.Check(
+			vm.DEFAULT_TRACE_CONFIG,
 			expandedTrace,
-			constraints.DEFAULT_TRACE_CONFIG,
 		); len(failures) > 0 {
 			b.Fatalf("checking R5 trace: %s", failures[0].Message())
 		}
@@ -162,7 +190,7 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 		rt := wiop.NewRuntime(fixture.system)
 		zkcdriver.AssignFromTrace(
 			rt,
-			fixture.expandedTrace,
+			fixture.expandedShards,
 			fixture.binFile.AirConstraints(),
 			koalafield.Octuplet{},
 		)
