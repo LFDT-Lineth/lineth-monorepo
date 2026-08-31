@@ -28,6 +28,10 @@ pub fn build(b: *std.Build) void {
     // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
+    // The `aggregator` option builds the two-proof aggregator entry point: the
+    // guest (or native binary) expects an aggregator pair image (two proofs) as
+    // input, verifies both, and checks their public-input consistency.
+    const aggregator = b.option(bool, "aggregator", "Build the two-proof aggregator entry point") orelse false;
     const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
     const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
 
@@ -120,6 +124,9 @@ pub fn build(b: *std.Build) void {
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
     embedded_data_opts.addOption(bool, "embed_input", embedded_input != EmbeddedInputType.none);
     embedded_data_opts.addOption(bool, "invalid_input", embedded_input == EmbeddedInputType.invalid);
+
+    const main_opts = b.addOptions();
+    main_opts.addOption(bool, "aggregator", aggregator);
     const embedded_data_mod = b.addModule("embedded_data", .{
         .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,
@@ -138,6 +145,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
             .{ .name = "embedded_data", .module = embedded_data_mod },
             .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
+            .{ .name = "main_config", .module = main_opts.createModule() },
             .{ .name = "riscv_system", .module = riscv_system_mod },
         },
     });
