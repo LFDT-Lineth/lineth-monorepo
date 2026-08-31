@@ -6,7 +6,10 @@
 #                FOLDER_NAME (dir holding CHANGELOG.md),
 #                GENERATE_WITH_NEXT_TAG (true|false, default false),
 #                NEXT_VERSION (required when GENERATE_WITH_NEXT_TAG=true),
-#                TARGET_REF (branch to fast-forward before writing; CI only),
+#                TARGET_REF (optional; branch to fast-forward before writing, to dodge a
+#                            race with a concurrent push to that same branch. Only pass
+#                            this when the caller will push the result back — skipped
+#                            when empty),
 #                DRY_RUN (true|false, default false)
 #
 # With DRY_RUN=true it works on a throwaway copy and prints the resulting
@@ -35,10 +38,14 @@ if [ "${DRY_RUN}" = "true" ]; then
   trap 'rm -f "${target}"' EXIT
   cp "${CHANGELOG_FILE}" "${target}"
 else
-  # retrieve the latest changes of CHANGELOG.md first to avoid chances of
-  # rebase or merge conflicts later from other workflows
-  : "${TARGET_REF:?TARGET_REF is required}"
-  git pull --ff-only origin "refs/heads/${TARGET_REF}"
+  # When the caller is about to commit-and-push this file, retrieve the latest
+  # changes first to avoid rebase/merge conflicts with a concurrent push to the
+  # same branch. Skipped when TARGET_REF is unset — callers that don't push the
+  # result (e.g. a read-only CI preview) have nothing to race against, and must
+  # not pass an event-derived ref here (see action.yml).
+  if [ -n "${TARGET_REF:-}" ]; then
+    git pull --ff-only origin "refs/heads/${TARGET_REF}"
+  fi
   target="${CHANGELOG_FILE}"
 fi
 
