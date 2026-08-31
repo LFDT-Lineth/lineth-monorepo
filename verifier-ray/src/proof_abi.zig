@@ -300,6 +300,14 @@ comptime {
     expectField(verifier.Proof, "module_sizes", 16);
     expectField(verifier.Proof, "pcs_opening", 32);
 
+    // The aggregator pair image root: two absolute pointers to VerifyInputs.
+    // Written by verifier-ray/codegen's EncodeAggregatorPair rather than
+    // prover-ray, but pinned with the same rationale: the aggregator guest
+    // casts its input region to *const AggregatorInput with no parsing step.
+    expectSize(verifier.AggregatorInput, 16, 8);
+    expectField(verifier.AggregatorInput, "a", 0);
+    expectField(verifier.AggregatorInput, "b", 8);
+
     // ---- tagged unions and optionals ----------------------------------------
     // Sizes and discriminant values here; discriminant byte offsets, which
     // @offsetOf cannot express, in test/proof_abi_test.zig.

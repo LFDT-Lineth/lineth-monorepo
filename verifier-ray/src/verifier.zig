@@ -99,6 +99,21 @@ pub const VerifyInput = struct {
     public_inputs: PublicInput = &.{},
 };
 
+/// The root of an aggregator pair image: two pointers to independently encoded
+/// `VerifyInput`s in the same input region. This is what the aggregator guest
+/// casts `_in_start` to (and the native aggregator mmaps), the two-proof
+/// analogue of casting the region to a single `*const VerifyInput`.
+///
+/// The pointers are absolute addresses written by the encoder
+/// (verifier-ray/codegen's `EncodeAggregatorPair`), so dereferencing needs no
+/// arithmetic and no fix-up pass — the same zero-cost-decode contract as the
+/// single-proof image, with the same cost: the image is only valid at the base
+/// it was encoded for. Layout is pinned in `proof_abi.zig`.
+pub const AggregatorInput = struct {
+    a: *const VerifyInput,
+    b: *const VerifyInput,
+};
+
 /// Verifies TWO proofs of the same compiled protocol and checks that their
 /// public-input statements agree. This is the aggregation-shaped entry point:
 /// a caller (e.g. a recursive R5 guest) that attests to a pair of proofs must

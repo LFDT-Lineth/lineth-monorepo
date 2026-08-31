@@ -1,0 +1,6 @@
+# Derived at generate time from the same honest proof as riscv_proof_image.bin
+# (see codegen/generate-riscv-system). Not committed: it is ~2x the single
+# image (above Git hosting file-size limits) and fully reproducible via
+# `make generate-testdata`.
+riscv_proof_pair_image.bin
+riscv_proof_pair_image_test.bin

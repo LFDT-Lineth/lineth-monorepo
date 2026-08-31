@@ -17,6 +17,16 @@ The real proof image used by the native and R5 smoke tests lives in:
 testdata/riscv_proof_image.bin
 ```
 
+The two-proof aggregator pair images (the same honest proof encoded twice
+behind a two-pointer header — see `codegen/aggregator_image.go`) are derived
+data and NOT committed (they are ~2x the single image, above Git hosting
+limits). `make generate-testdata` writes both:
+
+```text
+testdata/riscv_proof_pair_image.bin        # based at GuestBase, for run/zkc
+testdata/riscv_proof_pair_image_test.bin   # based at 0x50000000, for Zig tests
+```
+
 This is a distinct file from `testdata/proof_image.bin`, which belongs to
 prover-ray's `TestVerifierRayImageIsUpToDate` (a small synthetic `VerifyInput`
 at a different base address, for a cross-language ABI-agreement check) — the

@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
+const main_config = @import("main_config");
 const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
 
@@ -12,7 +13,25 @@ const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag ==
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
-const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
+// Aggregator mode (`-Daggregator=true`): the input region carries an
+// aggregator pair image (verifier.AggregatorInput: two proofs of the real
+// riscv system), and the binary verifies BOTH proofs plus their public-input
+// consistency instead of one proof. Proving THIS guest's execution under the
+// R5 zkVM is what turns the pair into one proof attesting to both.
+const aggregator_mode = main_config.aggregator;
+
+comptime {
+    // The embedded fixtures are single synthetic proofs against their own
+    // embedded systems; the aggregator verifies a pair against the real riscv
+    // system. Combining the two flags has no meaningful semantics.
+    if (aggregator_mode and embedded_data_conf.embed_input)
+        @compileError("aggregator mode loads a pair image; -Dembedded-input does not apply");
+}
+
+const native_input_path: [:0]const u8 = if (aggregator_mode)
+    "testdata/riscv_proof_pair_image.bin"
+else
+    "testdata/riscv_proof_image.bin";
 const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;
@@ -43,6 +62,12 @@ pub fn main() noreturn {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
 
+    if (comptime aggregator_mode) {
+        const image = mapNativeImage() orelse exitNative(1);
+        const input: *const verifier.AggregatorInput = @ptrCast(@alignCast(image));
+        exitNative(runAggregator(input));
+    }
+
     const input = loadNativeInput();
     exitNative(runVerifier(input));
 }
@@ -58,6 +83,14 @@ fn r5_main() callconv(.c) noreturn {
         unreachable;
     }
 
+    if (comptime aggregator_mode) {
+        // The zkc JSON input writer places the pair image bytes directly at
+        // `_in_start`, already relocated for GuestBase — same contract as the
+        // single-proof image, with AggregatorInput as the root instead.
+        const input: *const verifier.AggregatorInput = @ptrCast(@alignCast(&_in_start));
+        exitR5(runAggregator(input));
+    }
+
     // load the input depending on the running mode (embedded by the zkVM or at compile time)
     const input = loadR5Input();
 
@@ -71,6 +104,22 @@ comptime {
     if (is_r5_zkvm) {
         @export(&r5_main, .{ .name = "main" });
     }
+}
+
+// The aggregator: verify BOTH proofs of the pair against the real compiled
+// riscv system, and reject unless their public-input statements agree.
+// Everything protocol-level lives in `verifier.verifyPair`; this wrapper only
+// dereferences the image's two absolute pointers. There is no embedded-fixture
+// variant (see the comptime exclusion above), so the spec/systems are always
+// the generated riscv system's.
+fn runAggregator(input: *const verifier.AggregatorInput) u8 {
+    verifier.verifyPair(
+        riscv_system.system_0_spec,
+        riscv_system.system_0_systems,
+        input.a.*,
+        input.b.*,
+    ) catch return 1;
+    return 0;
 }
 
 fn runVerifier(input: *const verifier.VerifyInput) u8 {
@@ -108,20 +157,20 @@ extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
-fn loadNativeInput() *const verifier.VerifyInput {
+// Maps the fixed binary input image (single-proof or aggregator-pair; the
+// build mode picks `native_input_path`) at the guest base address, returning
+// null on any failure so each caller can exit through its own path.
+fn mapNativeImage() ?[*]const u8 {
     if (comptime !is_supported_native) {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
-    if (comptime embedded_data_conf.embed_input) {
-        return &embedded_input;
-    }
 
     const fd = open(native_input_path.ptr, o_rdonly);
-    if (fd < 0) exitNative(1);
+    if (fd < 0) return null;
     defer _ = close(fd);
 
     const image_len = lseek(fd, 0, seek_end);
-    if (image_len <= 0) exitNative(1);
+    if (image_len <= 0) return null;
 
     const mapped_addr = mmap(
         @ptrFromInt(input_guest_base),
@@ -131,10 +180,18 @@ fn loadNativeInput() *const verifier.VerifyInput {
         fd,
         0,
     );
-    if (@intFromPtr(mapped_addr) == map_failed) exitNative(1);
+    if (@intFromPtr(mapped_addr) == map_failed) return null;
 
-    const mapped_bytes: [*]const u8 = @ptrCast(mapped_addr);
-    return @ptrCast(@alignCast(mapped_bytes));
+    return @ptrCast(mapped_addr);
+}
+
+fn loadNativeInput() *const verifier.VerifyInput {
+    if (comptime embedded_data_conf.embed_input) {
+        return &embedded_input;
+    }
+
+    const image = mapNativeImage() orelse exitNative(1);
+    return @ptrCast(@alignCast(image));
 }
 
 fn loadR5Input() *const verifier.VerifyInput {
