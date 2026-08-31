@@ -18,6 +18,6 @@
         "build.zig",
         "build.zig.zon",
         "src", // production guest code (compiled into the rv64im object/ELF)
-        "test", // host-only: unit tests and committed sample input
+        "test", // host-only: unit tests and the shared sample-input builder
     },
 }

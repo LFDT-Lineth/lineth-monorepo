@@ -45,5 +45,5 @@ defined and commented in `src/guest_errors.zig`.
 ```bash
 make -C rollup test      # native host unit tests (rollup_ssz + rollup logic)
 make -C rollup compile   # statically-linked rv64im ELF at zig-out/bin/rollup_guest
-make -C rollup exec      # compile, then run under the ZkC interpreter on the checked-in golden input
+make -C rollup exec      # compile, then run under the ZkC interpreter on a freshly generated sample input
 ```

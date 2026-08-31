@@ -18,6 +18,10 @@ pub fn read_input(buf_ptr: *[*]const u8, buf_size: *usize) void {
     const base = @intFromPtr(&_input_start);
     const size_ptr: *const u64 = @ptrFromInt(base);
     const payload_len = std.mem.littleToNative(u64, size_ptr.*);
+    // A length word claiming more than the IN region can hold means the input slot itself is
+    // corrupt — an ABI-level integrity violation, not a malformed message — so this fails the
+    // execution outright rather than handing the guest a slice it could misclassify as a
+    // decodable-but-invalid input.
     if (payload_len > IN_REGION_SIZE - 8) @panic("input payload_len exceeds IN region");
 
     buf_ptr.* = @ptrFromInt(base + 8);
@@ -43,4 +47,3 @@ pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
           // optimizer may drop/reorder the buffer's stores before the opcode reads them.
         : .{ .memory = true });
 }
-

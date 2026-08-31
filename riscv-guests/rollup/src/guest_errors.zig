@@ -18,8 +18,8 @@ pub const CODE_MALFORMED_FRAME: ExitCode = 2;
 /// canonical encoding (short buffer, misaligned/out-of-order/out-of-bounds offset, truncated
 /// variable region).
 pub const CODE_MALFORMED_SSZ: ExitCode = 3;
-/// A list decoded to more elements than its wire-format bound allows (mirrors the `MAX_*`
-/// constants `rollup_ssz.py` declares).
+/// A list or byte field decoded to more elements/bytes than its wire-format bound (the `MAX_*`
+/// constants) allows.
 pub const CODE_BOUNDS_VIOLATION: ExitCode = 4;
 /// `l2_execution_proofs` decoded successfully but is empty — the rollup guest needs at least one
 /// exec proof to source its "first"/"last" echoed fields from.

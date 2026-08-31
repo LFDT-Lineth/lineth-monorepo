@@ -50,7 +50,7 @@ pub fn decodeVariableList(alloc: std.mem.Allocator, data: []const u8, max_len: u
     if (first_off == 0 or first_off % 4 != 0) return error.InvalidSsz;
     if (first_off > data.len) return error.InvalidSsz;
     const n = first_off / 4;
-    if (n > max_len) return error.InvalidSsz;
+    if (n > max_len) return error.BoundsViolation;
 
     const result = try alloc.alloc([]const u8, n);
     for (0..n) |i| {
@@ -69,6 +69,8 @@ pub fn encodeVariableList(alloc: std.mem.Allocator, items: []const []const u8) !
     const n = items.len;
     var total: usize = n * 4;
     for (items) |item| total += item.len;
+    // The offset table is u32; a region that a u32 offset cannot address is unencodable.
+    if (total > std.math.maxInt(u32)) return error.InvalidSsz;
 
     const out = try alloc.alloc(u8, total);
     var offset: u32 = @intCast(n * 4);

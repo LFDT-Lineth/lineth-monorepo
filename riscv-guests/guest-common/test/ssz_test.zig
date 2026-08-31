@@ -84,7 +84,7 @@ test "decodeVariableList: rejects an element count above max_len" {
 
     const items = [_][]const u8{ "a", "b", "c" };
     const encoded = try ssz.encodeVariableList(alloc, &items);
-    try std.testing.expectError(error.InvalidSsz, ssz.decodeVariableList(alloc, encoded, 2));
+    try std.testing.expectError(error.BoundsViolation, ssz.decodeVariableList(alloc, encoded, 2));
 }
 
 test "decodeVariableList: rejects a non-monotonic (overlapping) offset table" {

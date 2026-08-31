@@ -104,7 +104,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(rollup_tests).step);
 
     // ── Fixture generation ─────────────────────────────────────────────────────────────────────
-    // Prints a framed sample input as hex on stdout, from the same `sampleInput` the tests use —
+    // Prints a framed sample input as raw bytes on stdout, from the same `sampleInput` the tests use —
     // `make exec`'s guest input is this package's own encoder output, not an externally-produced
     // or separately-checked-in fixture. `require-input` in this guest's Makefile invokes this step
     // to (re)generate the default INPUT on every `make exec`/`debug`, so nothing here is checked
@@ -119,6 +119,6 @@ pub fn build(b: *std.Build) void {
     });
     gen_fixture.root_module.addImport("rollup_ssz", rollup_ssz_native_mod);
     gen_fixture.root_module.addImport("support.zig", support_mod);
-    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed hex on stdout");
+    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupProofPrivateInput as framed raw bytes on stdout");
     gen_fixture_step.dependOn(&b.addRunArtifact(gen_fixture).step);
 }
