@@ -30,6 +30,9 @@ func arithmetizationSourceFiles(rootFs fs.FS) []source.File {
 	}
 	srcFiles := []source.File{}
 	if err := fs.WalkDir(subFs, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		// skip predecoding directory, as it contains files that are not part of
 		// the main R5 interpreter source code.
 		if d.IsDir() && path == predecodingDir {
