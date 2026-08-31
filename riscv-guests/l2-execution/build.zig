@@ -305,8 +305,8 @@ pub fn build(b: *std.Build) void {
     // dummy rollup fields, so the extended guest can run against the same EF corpus the vanilla guest
     // runs on. Needs `zesu_ssz_decode` (to read the vanilla input's chain_id/fee_recipient) and the
     // sibling `l2_execution_ssz` module (to build + encode the wrapper). Lives in `test/`, not `src/`:
-    // it's never reachable from the guest ELF's compile graph, only from the two native host
-    // consumers below (`l2-execution-wrap` and `extended-vanilla-runner`).
+    // it's never reachable from the guest ELF's compile graph, only from the native host
+    // `extended-vanilla-runner` below.
     const vanilla_wrap_mod = b.createModule(.{
         .root_source_file = b.path("test/vanilla_wrap.zig"),
         .target = native_target,
@@ -333,31 +333,6 @@ pub fn build(b: *std.Build) void {
     if (b.lazyDependency("ssz", .{ .target = native_target, .optimize = host_optimize })) |ssz_dep| {
         stateless_input_encode_mod.addImport("ssz", ssz_dep.module("ssz.zig"));
     }
-
-    // ── `l2-execution-wrap` native host tool ────────────────────────────────────────────────────────
-    // Wraps a vanilla EF stateless-input .ssz into an extended L2ExecutionProofPrivateInput .ssz
-    // (zero l2MessageServiceAddress -> bridge suppression), so the ZkC harness can feed the extended
-    // guest the same EF corpus the vanilla guest ran on. Installed to zig-out/bin so `make compile`
-    // (plain `zig build`) produces it alongside the guest ELF; the Go harness invokes it per input.
-    const l2_execution_wrap_exe = b.addExecutable(.{
-        .name = "l2-execution-wrap",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/l2_execution_wrap.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        }),
-    });
-    l2_execution_wrap_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-    linkNativeZesuCrypto(l2_execution_wrap_exe, native_target, native_crypto);
-    b.installArtifact(l2_execution_wrap_exe);
-
-    const run_l2_execution_wrap_step = b.step(
-        "l2-execution-wrap",
-        "Run the native l2-execution-wrap tool (vanilla .ssz -> extended .ssz)",
-    );
-    const run_l2_execution_wrap = b.addRunArtifact(l2_execution_wrap_exe);
-    if (b.args) |extra| run_l2_execution_wrap.addArgs(extra);
-    run_l2_execution_wrap_step.dependOn(&run_l2_execution_wrap.step);
 
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)

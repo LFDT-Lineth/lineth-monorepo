@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -18,7 +18,6 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ARITHMETIZATION_TESTING_MAKEFILE ?= $(MAKEFILE_DIR)../../arithmetization/src/test/Makefile
 
 ZIG ?= zig
-GO ?= go
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
@@ -41,12 +40,9 @@ INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 # tracing enabled.
 ZKC_EXEC_FLAGS ?=
 
-# Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
+# Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
-EXECUTION_SPECS_SSZ_FIXTURES_DIR    := /tmp/execution-specs-ssz-fixtures
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
-EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
-EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 100
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -65,9 +61,9 @@ test:
 # Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
 # host (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
 # delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the EF
-# fixture's own expected validity verdict — the property `run-execution-specs-ssz-fixtures`
-# (below) depends on. Scoped to --fork Amsterdam to keep runtime bounded; narrow further with
-# REFERENCE_ARGS.
+# fixture's own expected validity verdict, cheaply on the host instead of compiling to riscv64 and
+# executing the real guest ELF via ZkC. Scoped to --fork Amsterdam to keep runtime bounded; narrow
+# further with REFERENCE_ARGS.
 REFERENCE_ARGS ?= --fork Amsterdam
 reference-test:
 	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
@@ -75,10 +71,6 @@ reference-test:
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
 	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
-
-# Runs selected execution-spec fixtures through zkc; generated SSZ inputs can be inspected in $(EXECUTION_SPECS_SSZ_FIXTURES_DIR).
-run-execution-specs-ssz-fixtures: prep-execution-specs-json-fixtures
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixtures-dir "$(EXECUTION_SPECS_FIXTURES_DIR)" --ssz-dir "$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" --fixture-paths "$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" --ssz-limit "$(EXECUTION_SPECS_RUN_SSZ_LIMIT)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
