@@ -2,6 +2,7 @@ name: Tracer guest programs trace - l2-execution, Add in Zkc
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -40,6 +41,7 @@ permissions:
 
 jobs:
   binary-run-and-zkc-check:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository

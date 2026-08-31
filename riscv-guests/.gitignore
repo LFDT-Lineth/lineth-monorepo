@@ -7,3 +7,4 @@ zig-out/
 zig-pkg/
 .cache/
 *.objdump
+*/.cache/

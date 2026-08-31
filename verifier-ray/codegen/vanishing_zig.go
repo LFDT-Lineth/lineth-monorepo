@@ -174,7 +174,7 @@ func exprNodeLiteral(expr ExprNode) string {
 	case ExprCoinValue:
 		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, ZigString(expr.Coin.SourceName))
 	case ExprConstant:
-		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
+		return fmt.Sprintf(".{ .constant = .{ .value = %d } },", expr.Constant.Uint64())
 	case ExprOp:
 		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, IntSlice(expr.Operands))
 	case ExprLagrangeSelector:
