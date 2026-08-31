@@ -1,5 +1,5 @@
-//! Builds the `guest_common` module. Not itself a guest — no ELF is linked here, so the default
-//! `zig build` has nothing to install; `zig build test` runs this package's own unit tests.
+//! Builds the `guest_common` module. `zig build` checks compilation of the package; `zig build
+//! test` runs its unit tests.
 
 const std = @import("std");
 const common = @import("build_common");

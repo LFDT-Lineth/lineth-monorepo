@@ -1,7 +1,6 @@
-# Not itself a guest program (no ELF to link) — a plain Zig package the riscv-guests/ guests
-# consume as a path dependency. Still gets its own Makefile with the common
-# compile/test/fetch/clean targets so the top-level Makefile's fan-out (GUESTS) can run its unit
-# tests alongside every guest's own.
+# Shared Zig package consumed by the other riscv-guests/ guests as a path dependency. Implements
+# the common compile/test/fetch/clean targets so the top-level Makefile's fan-out (GUESTS) covers
+# it uniformly.
 
 .PHONY: fetch test compile clean
 
@@ -17,8 +16,7 @@ fetch:
 test:
 	$(ZIG) build test $(ZIG_BUILD_FLAGS)
 
-# No ELF to link here — nothing for the default `zig build` to install. Kept only so the
-# top-level fan-out (which calls compile/test/fetch/clean uniformly across GUESTS) has a target.
+# Dependency check + host-test compilation; the fan-out calls this uniformly on every GUESTS entry.
 compile:
 	$(ZIG) build $(ZIG_BUILD_FLAGS)
 
