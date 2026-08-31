@@ -1,0 +1,23 @@
+.{
+    .name = .rollup_aggregation_guest,
+    .version = "0.0.0",
+    .fingerprint = 0xd7964138f709f568,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers for all riscv-guests packages (sibling path dependency).
+        .build_common = .{ .path = "../build_common" },
+        // Lineth zkVM accelerator wrappers (sibling path dependency): only `write_output` (the
+        // zkvm-standards io-interface custom opcode) is used — this guest runs no EVM and needs no
+        // other precompile accelerator.
+        .lineth_accelerators = .{ .path = "../lineth-accelerators" },
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
+        // primitives `rollup_aggregation_ssz.zig`'s container codec builds on.
+        .guest_common = .{ .path = "../guest-common" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src", // production guest code (compiled into the rv64im object/ELF)
+        "test", // host-only: unit tests and committed sample input
+    },
+}
