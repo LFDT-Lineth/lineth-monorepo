@@ -3,6 +3,7 @@ package embedded
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"path/filepath"
 
@@ -64,7 +65,7 @@ func arithmetizationSourceFiles(rootFs fs.FS) []source.File {
 func CompiledBinaryFile(cfg codegen.Config, metadata []byte, attributes []constraints.Attribute) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New("failed to compile embedded R5 interpreter: " + r.(error).Error())
+			err = fmt.Errorf("failed to compile embedded R5 interpreter: %v", r)
 		}
 	}()
 	srcFiles := arithmetizationSourceFiles(arith_src.MainDir)
