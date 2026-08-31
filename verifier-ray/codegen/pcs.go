@@ -22,7 +22,10 @@ import (
 // protocol, so it can never drift from the prover's committed column ordering:
 // batch order, per-batch layout, and the LagrangeEval openings all come from
 // the prover-ray PCS compiler's own exported helpers. The proof-specific
-// claimed evaluations are extracted separately by ExtractPcsOpening.
+// claimed evaluations are never extracted at codegen time at all — each
+// column's ClaimCells table (below) tells the Zig verifier which transcript
+// cell to read the claim from at verify time, out of the proof's own
+// rounds[*].cells.
 //
 // Columns carries only the size-independent invariants (batch, base/ext, raw
 // shift schedule); the Zig engine (`src/query/pcs.zig`) reconstructs the
@@ -96,6 +99,19 @@ type PcsColumnDesc struct {
 	// Shifts is the size-independent opening schedule of this column (normalized
 	// shifts, in the slot order the claim maps' Shift references).
 	Shifts []int
+	// ClaimCells names, for each slot of Shifts (same length and order), the
+	// (round, index) transcript cell carrying that shift's claimed evaluation —
+	// the column's LagrangeEval.EvaluationClaims cell. The Zig verifier reads
+	// these directly out of rounds[*].cells.
+	ClaimCells []PcsCellRef
+}
+
+// PcsCellRef is the verifier-ray verify.CellRef: a (round, index) transcript
+// cell reference, using the same ObjectID.Slot() / .Position() encoding as
+// every other cell reference emitted by this codegen (see ScalarCellRef).
+type PcsCellRef struct {
+	Round int
+	Index int
 }
 
 // PcsClaimRef is the verifier-ray verify.ClaimRef: the column DECLARATION index
@@ -154,16 +170,24 @@ func pcsShiftFor(cv *wiop.ColumnView) (isDynamic bool, shift int) {
 	return false, ((cv.ShiftingOffset % size) + size) % size
 }
 
-// pcsShiftSlots returns, for each committed column opened by a LagrangeEval,
-// its distinct opened shifts in first-seen declaration order (the order
-// sys.LagrangeEvals is walked in; see pcsShiftFor for the static/dynamic
-// distinction). ShiftingOffset is fixed when a constraint declares its column
-// view, so this is a property of sys alone — identical for every proof of sys.
-func pcsShiftSlots(sys *wiop.System) map[wiop.ObjectID][]int {
+// pcsShiftClaimCells returns, for each committed column opened by a
+// LagrangeEval, its distinct opened shifts and, in the same slot order, the
+// (round, index) transcript cell carrying the FIRST-SEEN claim for each shift.
+// Building both from a single pass over sys.LagrangeEvals, deduped on the same
+// (id, shift) key, is what lets PcsColumnDesc.ClaimCells[k] correspond to
+// PcsColumnDesc.Shifts[k] for the same column.
+//
+// A (column, shift) opened by more than one LagrangeEval is legal — global.Compile
+// may re-open the same (column, shift) claim for different constraints — and
+// every such opening reads the SAME wiop.Cell, so it does not matter which
+// occurrence's claim cell is recorded; the first is as authoritative as any
+// other because they are, by construction, one cell.
+func pcsShiftClaimCells(sys *wiop.System) (map[wiop.ObjectID][]int, map[wiop.ObjectID][]PcsCellRef) {
 	slots := map[wiop.ObjectID][]int{}
+	cells := map[wiop.ObjectID][]PcsCellRef{}
 	seen := map[wiop.ObjectID]map[int]bool{}
 	for _, le := range sys.LagrangeEvals {
-		for _, cv := range le.Polynomials {
+		for k, cv := range le.Polynomials {
 			id := cv.Column.Context.ID
 			_, shift := pcsShiftFor(cv)
 			if seen[id] == nil {
@@ -174,9 +198,14 @@ func pcsShiftSlots(sys *wiop.System) map[wiop.ObjectID][]int {
 			}
 			seen[id][shift] = true
 			slots[id] = append(slots[id], shift)
+			claimCell := le.EvaluationClaims[k]
+			cells[id] = append(cells[id], PcsCellRef{
+				Round: claimCell.Context.ID.Slot(),
+				Index: claimCell.Context.ID.Position(),
+			})
 		}
 	}
-	return slots
+	return slots, cells
 }
 
 // pcsDynamicMinSizeLog2 returns the smallest runtime size_log2 a dynamic
@@ -199,8 +228,9 @@ func pcsShiftSlots(sys *wiop.System) map[wiop.ObjectID][]int {
 // observes this: it dedups by normalized shift before opening
 // (recoverBatchClaims), producing exactly one claim, so the two claims baked
 // here can never both be supplied correctly by an honest prover at an aliasing
-// size — there is no valid completion, only rejection (see ExtractPcsOpening,
-// which enforces this bound against each specific proof's actual size).
+// size — there is no valid completion, only rejection (enforced against each
+// specific proof's actual runtime size by the Zig verifier's own
+// `pcs.reconstruct`, which returns `error.DynamicModuleSizeBelowMinimum`).
 func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, error) {
 	minSizeLog2 := 0
 	var (
@@ -274,7 +304,7 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 	envelope := pcscompiler.FRIStaticParams()
 	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
 
-	// Every static column must be sized before pcsShiftSlots reads
+	// Every static column must be sized before pcsShiftClaimCells reads
 	// Module.Size() as a modulus: an unsized module reports size 0, which
 	// would divide-by-zero there instead of failing with a clear error here.
 	for _, b := range batches {
@@ -286,24 +316,25 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		}
 	}
 
-	shiftSlots := pcsShiftSlots(sys)
+	shiftSlots, claimCells := pcsShiftClaimCells(sys)
 	dynIdx := DynamicModuleIndex(sys)
 	colDeclByID := pcsColumnDeclIndex(sys)
 
 	// Columns: every committed column in prover DECLARATION order (batch-major,
 	// then round.Columns order). Each column carries its batch, is_ext, size
 	// source (static size_log2 from the module's fixed size, or a DynamicIndex
-	// into module_sizes for a dynamic module) and its size-independent shift
-	// schedule. colDeclByID (built above) maps a column ObjectID to its
-	// declaration index so the claim maps can reference a column instead of a
-	// size-frozen entry index.
+	// into module_sizes for a dynamic module), its size-independent shift
+	// schedule, and the transcript cell backing each shift's claim. colDeclByID
+	// (built above) maps a column ObjectID to its declaration index so the claim
+	// maps can reference a column instead of a size-frozen entry index.
 	var columns []PcsColumnDesc
 	for i, b := range batches {
 		for _, col := range b.Round.Columns {
 			desc := PcsColumnDesc{
-				BatchIdx: i,
-				IsExt:    col.IsExtension,
-				Shifts:   append([]int(nil), shiftSlots[col.Context.ID]...),
+				BatchIdx:   i,
+				IsExt:      col.IsExtension,
+				Shifts:     append([]int(nil), shiftSlots[col.Context.ID]...),
+				ClaimCells: append([]PcsCellRef(nil), claimCells[col.Context.ID]...),
 			}
 			if col.Module.IsDynamic() {
 				idx, ok := dynIdx[col.Module]

@@ -37,7 +37,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  ZKC_VERSION: 'v1.2.26'
+  ZKC_VERSION: 'v1.2.27'
   ZIG_VERSION: '0.16.0'
 
 concurrency:

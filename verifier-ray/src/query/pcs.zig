@@ -72,6 +72,23 @@ pub const ColumnDesc = struct {
     /// size, so one baked System's shifts work at every dynamic size. May be
     /// negative (a back-shift).
     shifts: []const isize,
+    /// Where to read this column's claimed evaluation for the matching entry of
+    /// `shifts` — same length and order as `shifts`, so `claim_cells[k]` is the
+    /// `(round, index)` transcript cell carrying the claim for `shifts[k]`.
+    /// These cells are ordinary `rounds[*].cells` entries (the prover's
+    /// `LagrangeEval.EvaluationClaims`), absorbed into the Fiat-Shamir
+    /// transcript before the opening challenges are derived. Emitted by codegen.
+    claim_cells: []const CellRef = &.{},
+};
+
+/// Locates one claimed-evaluation cell in `rounds[*].cells` by its
+/// `(round, index)` coordinates — the same `ObjectID.Slot()` / `.Position()`
+/// encoding used by every other cell reference in this codebase (see
+/// `query/vanishing.zig`'s `ScalarRef`, `query/logderivativesum.zig`'s
+/// `ScalarRef`). Consumed via `protocol.Context.cell(round, index)`.
+pub const CellRef = struct {
+    round: usize,
+    index: usize,
 };
 
 /// Routes one vanishing witness/quotient claim to its authenticated value.
@@ -302,6 +319,78 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
 
     r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Total number of (column, shift) claim slots across every column — the flat
+/// backing-array size `EntryClaims` needs to hold every column's claims
+/// contiguously. A comptime sum over `system.columns`, since each column's
+/// `shifts.len` (and hence `claim_cells.len`) is fixed at codegen time.
+fn totalClaimSlots(comptime system: System) usize {
+    comptime {
+        var total: usize = 0;
+        for (system.columns) |col| total += col.shifts.len;
+        return total;
+    }
+}
+
+/// Stack storage for one proof's reconstructed `entry_claims`, built by
+/// `buildEntryClaims` from `rounds[*].cells`. Two levels, both
+/// envelope-max-sized so nothing is allocated: a flat backing array holding
+/// every column's claims contiguously (avoids a jagged 2D array, since
+/// columns' shift counts differ), and a per-entry slice array of views into
+/// it, in the SAME canonical entry order `Reconstructed` assigns — exactly the
+/// shape `pcs.verify`'s `VerifyInput.entry_claims` expects.
+pub fn EntryClaims(comptime system: System) type {
+    return struct {
+        const entry_cap = @max(system.max_entries, 1);
+        const slot_cap = @max(totalClaimSlots(system), 1);
+
+        backing: [slot_cap]ext.Ext = undefined,
+        entries: [entry_cap][]const ext.Ext = undefined,
+        num_entries: usize = 0,
+
+        pub fn slice(self: *const @This()) []const []const ext.Ext {
+            return self.entries[0..self.num_entries];
+        }
+    };
+}
+
+/// Fills `out` with the claimed evaluation of every opened column, in
+/// reconstructed canonical entry order, by reading each column's `claim_cells`
+/// out of `ctx`'s bound round messages — the SAME cells (and hence the SAME
+/// values) `replayWithTranscript` already absorbed into the Fiat-Shamir
+/// transcript before any opening challenge was derived. The canonical ORDER is
+/// rebuilt here from the codegen-emitted per-column `claim_cells` table
+/// (parallel to `shifts`); the values themselves are read straight out of the
+/// bound rounds.
+///
+/// `map_ctx` is any type exposing `cell(round: usize, index: usize) CellError!Scalar`
+/// — `protocol.Context` in production, a caller-supplied stub in tests — kept
+/// generic here so this stays independent of `protocol.zig`.
+pub fn buildEntryClaims(
+    comptime system: System,
+    recon: Reconstructed(system),
+    ctx: anytype,
+    out: *EntryClaims(system),
+) !void {
+    out.num_entries = recon.num_entries;
+    var next_slot: usize = 0;
+    // Guarded exactly like `reconstruct`'s own entry-walk loops: a column-free
+    // System (system.columns == &.{}) must not force Zig to analyze indexing
+    // into that empty slice, even though `recon.num_entries` is always 0 in
+    // that case and the loop body would never actually run.
+    if (comptime system.columns.len > 0) {
+        for (0..recon.num_entries) |e| {
+            const col = system.columns[recon.entry_col_decl_idx[e]];
+            if (col.claim_cells.len != col.shifts.len) return error.ClaimCellsShiftsLengthMismatch;
+            const start = next_slot;
+            for (col.claim_cells) |ref| {
+                out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
+                next_slot += 1;
+            }
+            out.entries[e] = out.backing[start..next_slot];
+        }
+    }
 }
 
 /// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,

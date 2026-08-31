@@ -9,6 +9,10 @@ pub const execution = @import("execution.zig");
 const l2_execution = @import("l2_execution.zig");
 const l2_execution_ssz = @import("l2_execution_ssz");
 
+/// Exit-code taxonomy for guest failures (Readme.md §2.5); `pub` for the guest's test suite, like
+/// `execution` above.
+pub const guest_errors = @import("guest_errors.zig");
+
 // Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
 extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
@@ -25,9 +29,11 @@ const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 // C-backed crypto instead.
 
 /// zkVM guest entry. Reads the extended `L2ExecutionProofPrivateInput` via `read_input`, runs
-/// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success,
-/// 1 on any error. `read_input`/`write_output` are satisfied by zesu-zkvm's `linea_zkvm_io` — where
-/// the input lives and how the output surfaces is the proving system's concern, not the guest's.
+/// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success;
+/// on failure, exits with `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero
+/// code per Readme.md §2.5 — after logging the failing error's name via `zkvm_log`.
+/// `read_input`/`write_output` are satisfied by zesu-zkvm's `linea_zkvm_io` — where the input lives
+/// and how the output surfaces is the proving system's concern, not the guest's.
 ///
 /// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);
 /// the `--json`/`--ssz` toggle lives on the native `l2-execution-runner` tool instead.
@@ -43,15 +49,21 @@ fn guestMain() callconv(.c) noreturn {
     zkvm_io.read_input(&buf_ptr, &buf_size);
     const raw_input = buf_ptr[0..buf_size];
 
-    const out = runL2ExecutionGuest(allocator, raw_input) catch exit(1);
+    const out = runL2ExecutionGuest(allocator, raw_input) catch |err| {
+        // `zkvm_log` is the guest's one diagnostic sink (a documented no-op until the prover
+        // exposes logging that doesn't alias the output commitment).
+        const name = @errorName(err);
+        zkvm_log(0, name.ptr, name.len);
+        exit(guest_errors.exitCode(err));
+    };
     zkvm_io.write_output(&out);
-    exit(0);
+    exit(.success);
 }
 
-/// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one
-/// `catch exit(1)` away from a clean guest rejection. Returns the output BY VALUE (a small,
-/// fixed-size array — see `l2_execution_ssz.encodeOutput`'s doc comment) rather than an
-/// allocator-backed slice: there's nothing for an allocator to do here.
+/// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one `catch`
+/// away from a clean, categorized guest rejection (`guest_errors.exitCode`, Readme.md §2.5).
+/// Returns the output BY VALUE (a small, fixed-size array — see `l2_execution_ssz.encodeOutput`'s
+/// doc comment) rather than an allocator-backed slice: there's nothing for an allocator to do here.
 fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![l2_execution_ssz.OUTPUT_SIZE]u8 {
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
@@ -85,17 +97,18 @@ comptime {
     }
 }
 
-fn exit(code: u64) noreturn {
+fn exit(code: guest_errors.ExitCode) noreturn {
+    const raw: u64 = @intCast(@intFromEnum(code));
     if (builtin.cpu.arch == .riscv64) {
         asm volatile (
             \\mv a0, %[code]
             \\li a7, 93
             \\ecall
             :
-            : [code] "r" (code),
+            : [code] "r" (raw),
             : .{ .x10 = true, .x17 = true });
         unreachable;
     }
 
-    std.debug.panic("guest exit({d})", .{code});
+    std.debug.panic("guest exit({d})", .{raw});
 }
