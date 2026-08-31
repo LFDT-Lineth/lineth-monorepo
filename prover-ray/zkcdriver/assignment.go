@@ -19,11 +19,10 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
-// ReadExpandedTraces parses the provided trace file, expands it and returns the
-// corset object holding the expanded traces.
-func AssignFromTrace(
+// AssignFromTraceShard expands and assigns the trace to the given runtime.
+func AssignFromTraceShard(
 	run *wiop.Runtime,
-	traces trace.Trace[koalabear.Element],
+	shard trace.Shard[koalabear.Element],
 	schema air.Schema[koalabear.Element],
 	sharedRandomness field.Octuplet,
 ) {
@@ -37,70 +36,68 @@ func AssignFromTrace(
 	}
 
 	eg := &errgroup.Group{}
-	// FIXME: @djp this clearly is not working correctly, since it is putting
-	// all shards into the same assignment.
-	for _, shard := range traces {
-		// Parallelize across modules
-		for modID := range shard.Width() {
-			eg.Go(func() error {
 
-				trMod := shard.Module(modID)
-				scMod := schema.Module(modID)
+	// Parallelize across modules
+	for modID := range shard.Width() {
+		eg.Go(func() error {
 
-				if scMod.IsStatic() {
-					// @alex: the current version of corset flags modules as being
-					// static or not static. But it may be the case, that a module
-					// has static size, some its column have static content but some
-					// do not have static content.
-					return nil
-				}
+			trMod := shard.Module(modID)
+			scMod := schema.Module(modID)
 
-				// Iterate each column in module
-				parallel.Execute(int(trMod.Width()), func(start, stop int) {
-					for id := start; id < stop; id++ {
-
-						var (
-							sys         = run.System
-							columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
-							col         = trMod.Column(uint(id))
-							moduleName  = trMod.Name()
-							name        = qualifiedCorsetName(moduleName, trMod.Descriptor().Columns[id].Name)
-							pad         koalabear.Element
-						)
-
-						if _, ok := columnIDMap[name]; !ok {
-							logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
-							continue
-						}
-
-						var (
-							wCol    = sys.LookupColumn(columnIDMap[name])
-							padding field.Element
-						)
-
-						// Use unsafe cast to avoid per-element Bytes()/SetBytes()
-						// round-trip.
-						plain := make([]field.Element, col.Len())
-						for i := range plain {
-							v := col.Get(uint(i))
-							plain[i] = *(*field.Element)(unsafe.Pointer(&v))
-						}
-
-						// FIXME: @djp use of a padding value here does not make
-						// sense to me, since ZkC is in charge of padding.
-						padding = *(*field.Element)(unsafe.Pointer(&pad))
-
-						// Done
-						run.AssignColumn(
-							wCol,
-							&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
-						)
-					}
-				})
+			if scMod.IsStatic() {
+				// @alex: the current version of corset flags modules as being
+				// static or not static. But it may be the case, that a module
+				// has static size, some its column have static content but some
+				// do not have static content.
 				return nil
+			}
+
+			// Iterate each column in module
+			parallel.Execute(int(trMod.Width()), func(start, stop int) {
+				for id := start; id < stop; id++ {
+
+					var (
+						sys         = run.System
+						columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
+						col         = trMod.Column(uint(id))
+						moduleName  = trMod.Name()
+						name        = qualifiedCorsetName(moduleName, trMod.Descriptor().Columns[id].Name)
+						pad         koalabear.Element
+					)
+
+					if _, ok := columnIDMap[name]; !ok {
+						logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
+						continue
+					}
+
+					var (
+						wCol    = sys.LookupColumn(columnIDMap[name])
+						padding field.Element
+					)
+
+					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
+					// round-trip.
+					plain := make([]field.Element, col.Len())
+					for i := range plain {
+						v := col.Get(uint(i))
+						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
+					}
+
+					// FIXME: @djp use of a padding value here does not make
+					// sense to me, since ZkC is in charge of padding.
+					padding = *(*field.Element)(unsafe.Pointer(&pad))
+
+					// Done
+					run.AssignColumn(
+						wCol,
+						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+					)
+				}
 			})
-		}
+			return nil
+		})
 	}
+
 	if err := eg.Wait(); err != nil {
 		logrus.Panicf("zkcdriver: AssignFromTrace failed: %v", err)
 	}

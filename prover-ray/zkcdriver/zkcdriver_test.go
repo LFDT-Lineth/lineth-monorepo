@@ -181,14 +181,26 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	// Run the prover compile pipeline, which will compile the system and prepare it for proof generation
 	proverCompilePipeline(sys)
 
-	// Run the ZkC driver to produce a proof and public inputs
-	proof, pub := sys.Prove(
-		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{}) },
-		wiop.ProveOptions{CheckUnreducedQueries: true})
+	var (
+		preRead = zkcdriver.PreReadZkcInputs(inputs.InputsFile)
+		traces  = driver.TraceZkcInputs(preRead)
+		proofs  = make([]wiop.Proof, len(traces))
+		pubs    = make([]wiop.PublicInput, len(traces))
+	)
 
-	// Verify the proof and public inputs
-	if err := sys.Verify(proof, pub); err != nil {
-		return fmt.Errorf("verification failed: %w", err)
+	for i, shard := range traces {
+
+		proofs[i], pubs[i] = sys.Prove(
+			func(rt *wiop.Runtime) { driver.AssignTraceShard(rt, shard, koalafield.Octuplet{}) },
+			wiop.ProveOptions{CheckUnreducedQueries: true})
 	}
+
+	for i := range proofs {
+
+		if err := sys.Verify(proofs[i], pubs[i]); err != nil {
+			return fmt.Errorf("verification failed: %w", err)
+		}
+	}
+
 	return nil
 }

@@ -25,8 +25,8 @@ const (
 
 var (
 	r5TraceSink trace.Trace[koalabear.Element]
-	r5ProofSink wiop.Proof
-	r5PubSink   wiop.PublicInput
+	r5ProofSink []wiop.Proof
+	r5PubSink   []wiop.PublicInput
 )
 
 type r5BenchmarkFixture struct {
@@ -187,14 +187,16 @@ func BenchmarkR5AssignFromExpandedTrace(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		rt := wiop.NewRuntime(fixture.system)
-		zkcdriver.AssignFromTrace(
-			rt,
-			fixture.expandedShards,
-			fixture.binFile.AirConstraints(),
-			koalafield.Octuplet{},
-		)
+		for _, shard := range fixture.expandedShards {
+			zkcdriver.AssignFromTraceShard(
+				wiop.NewRuntime(fixture.system),
+				shard,
+				fixture.binFile.AirConstraints(),
+				koalafield.Octuplet{},
+			)
+		}
 	}
+
 	reportR5Work(b, fixture)
 }
 
@@ -208,9 +210,18 @@ func BenchmarkR5TraceAndAssign(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		rt := wiop.NewRuntime(fixture.system)
-		fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+		traces := fixture.driver.TraceZkcInputs(inputs)
+		fixture.expandedShards = traces
+		for _, shard := range traces {
+			zkcdriver.AssignFromTraceShard(
+				wiop.NewRuntime(fixture.system),
+				shard,
+				fixture.binFile.AirConstraints(),
+				koalafield.Octuplet{},
+			)
+		}
 	}
+
 	reportR5Work(b, fixture)
 }
 
@@ -242,30 +253,37 @@ func BenchmarkR5ZKCCompile(b *testing.B) {
 // BenchmarkR5Prove measures one warm proof on a precompiled immutable system.
 // It includes trace generation and column assignment, as production Prove does,
 // but excludes ZKC and WIOP compilation and excludes verification.
+//
+// The scope of the benchmark is a single (the first) shard
 func BenchmarkR5Prove(b *testing.B) {
 	fixture := loadR5BenchmarkFixture(b)
 	fixture.ensureSystem(b)
 	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
+	traces := fixture.driver.TraceZkcInputs(inputs)
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for b.Loop() {
 		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+			fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
 		})
-		r5ProofSink, r5PubSink = proof, pub
+		r5ProofSink, r5PubSink = []wiop.Proof{proof}, []wiop.PublicInput{pub}
 	}
 	reportR5Work(b, fixture)
 }
 
 // BenchmarkR5Verify measures verification of one proof produced before the
-// timer starts. The immutable proof and public input are reused.
+// timer starts. The immutable proof and public input are reused
+//
+// The scope of the benchmark is a single (the first) shard
 func BenchmarkR5Verify(b *testing.B) {
 	fixture := loadR5BenchmarkFixture(b)
 	fixture.ensureSystem(b)
 	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
+	traces := fixture.driver.TraceZkcInputs(inputs)
+
 	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+		fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
 	})
 	if err := fixture.system.Verify(proof, pub); err != nil {
 		b.Fatalf("verifying setup proof: %v", err)
@@ -298,14 +316,28 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 		if err != nil {
 			b.Fatalf("serializing R5 constraints: %v", err)
 		}
-		system, driver := compileR5BenchmarkSystem(b, serialized)
-		proof, pub := system.Prove(func(rt *wiop.Runtime) {
-			driver.AssignWithPreRead(rt, &zkcdriver.PreReadInputs{Inputs: fixture.inputs}, koalafield.Octuplet{})
-		})
-		if err := system.Verify(proof, pub); err != nil {
-			b.Fatalf("verifying R5 proof: %v", err)
+
+		var (
+			system, driver = compileR5BenchmarkSystem(b, serialized)
+			inputs         = &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
+			traces         = fixture.driver.TraceZkcInputs(inputs)
+			proofs         = make([]wiop.Proof, len(traces))
+			pubs           = make([]wiop.PublicInput, len(traces))
+		)
+
+		for i, shard := range traces {
+			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
+			})
 		}
-		r5ProofSink, r5PubSink = proof, pub
+
+		for i := range proofs {
+			if err := system.Verify(proofs[i], pubs[i]); err != nil {
+				b.Fatalf("verifying R5 proof: %v", err)
+			}
+		}
+
+		r5ProofSink, r5PubSink = proofs, pubs
 	}
 	reportR5Work(b, fixture)
 }
