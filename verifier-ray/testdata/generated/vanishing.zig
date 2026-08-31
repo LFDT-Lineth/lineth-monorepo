@@ -249,7 +249,7 @@ pub const system_2_public_input = protocol.public_input.Spec{
 // expression: "geo"
 const system_2_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(2) },
+    .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "col"
     .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
@@ -698,7 +698,7 @@ pub const system_6_public_input = protocol.public_input.Spec{
 // expression: "const"
 const system_6_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
 };
 
@@ -1024,11 +1024,11 @@ pub const system_9_public_input = protocol.public_input.Spec{
 // expression: "lin"
 const system_9_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
-    .{ .constant = field.Element.init(2) },
+    .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "b"
     .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
-    .{ .constant = field.Element.init(3) },
+    .{ .constant = .{ .value = 3 } },
     .{ .column_claim = 2 }, // col: "c"
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 4, 7 } } },
@@ -1251,7 +1251,7 @@ pub const system_11_public_input = protocol.public_input.Spec{
 
 const system_11_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
-    .{ .constant = field.Element.init(4) },
+    .{ .constant = .{ .value = 4 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
     .{ .column_claim = 1 }, // col: "b"
     .{ .column_claim = 0 }, // col: "a"
@@ -1496,7 +1496,7 @@ const system_13_module_0_buckets = [_]vanishing.Bucket{
 // expression: "b-const"
 const system_13_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
 };
 
@@ -1610,7 +1610,7 @@ const system_14_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
 };
 
@@ -1719,7 +1719,7 @@ pub const system_15_public_input = protocol.public_input.Spec{
 const system_15_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "sel"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .constant = field.Element.init(9) },
+    .{ .constant = .{ .value = 9 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
 };
@@ -3002,7 +3002,7 @@ const system_26_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
-    .{ .constant = field.Element.init(2) },
+    .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 2 }, // col: "col"
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 5 } } },
@@ -3546,12 +3546,12 @@ const system_31_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
     .{ .lagrange_selector = 0 },
@@ -3666,7 +3666,7 @@ const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
@@ -3678,7 +3678,7 @@ const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "num"
     .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
     .{ .lagrange_selector = 0 },
@@ -3795,7 +3795,7 @@ const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
@@ -3807,7 +3807,7 @@ const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "num"
     .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
     .{ .lagrange_selector = 0 },
@@ -4049,29 +4049,29 @@ pub const system_35_public_input = protocol.public_input.Spec{
 
 const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
@@ -4079,31 +4079,31 @@ const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 6 }, // col: "z-b0-k1"
     .{ .column_claim = 7 }, // col: "z-b0-k1"
     .{ .op = .{ .operator = .sub, .operands = &.{ 28, 29 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 27, 32 } } },
     .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 39, 40 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 41, 42 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 38, 43 } } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 45, 46 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 44, 49 } } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 51, 56 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 50, 57 } } },
@@ -4116,7 +4116,7 @@ const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
     .{ .column_claim = 5 }, // col: "c3"
     .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 67, 68 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 66, 69 } } },
     .{ .lagrange_selector = 0 },
@@ -4250,12 +4250,12 @@ const system_36_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
     .{ .column_claim = 0 }, // col: "cA"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
     .{ .lagrange_selector = 0 },
@@ -4287,7 +4287,7 @@ const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
@@ -4299,7 +4299,7 @@ const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "cB"
     .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
     .{ .lagrange_selector = 0 },
@@ -4420,7 +4420,7 @@ pub const system_37_public_input = protocol.public_input.Spec{
 const system_37_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
     .{ .lagrange_selector = 0 },
@@ -4527,12 +4527,12 @@ pub const system_38_public_input = protocol.public_input.Spec{
 
 const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "S"
     .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
@@ -4543,10 +4543,10 @@ const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "S"
     .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
@@ -4578,7 +4578,7 @@ const system_38_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "T"
     .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
@@ -4591,7 +4591,7 @@ const system_38_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .constant = field.Element.init(7) },
+    .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "T"
     .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
@@ -4716,56 +4716,56 @@ pub const system_39_public_input = protocol.public_input.Spec{
 
 const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
     .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 29, 30 } } },
     .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 32, 33 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 31, 36 } } },
     .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 37, 42 } } },
     .{ .column_claim = 8 }, // col: "z-b0-k1"
     .{ .column_claim = 9 }, // col: "z-b0-k1"
     .{ .op = .{ .operator = .sub, .operands = &.{ 44, 45 } } },
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 49, 50 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 46, 51 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 43, 52 } } },
@@ -4773,31 +4773,31 @@ const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 11 }, // col: "z-b0-k2"
     .{ .column_claim = 12 }, // col: "z-b0-k2"
     .{ .op = .{ .operator = .sub, .operands = &.{ 55, 56 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 54, 59 } } },
     .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 61, 62 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 66, 67 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 68, 69 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 65, 70 } } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 72, 73 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 74, 75 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 71, 76 } } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 79, 80 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 81, 82 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 78, 83 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 77, 84 } } },
@@ -4809,27 +4809,27 @@ const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 90, 91 } } },
     .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 93, 94 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 95, 96 } } },
     .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 98, 99 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 100, 101 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 97, 102 } } },
     .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 104, 105 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 106, 107 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 103, 108 } } },
     .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 111, 112 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 113, 114 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 110, 115 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 109, 116 } } },
@@ -4842,7 +4842,7 @@ const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 122, 123 } } },
     .{ .column_claim = 10 }, // col: "c6"
     .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 126, 127 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 125, 128 } } },
     .{ .lagrange_selector = 0 },
@@ -4989,12 +4989,12 @@ const system_40_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
     .{ .lagrange_selector = 0 },
@@ -5107,19 +5107,19 @@ const system_41_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
     .{ .column_claim = 3 }, // col: "c2"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 8, 9 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 10, 11 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 7, 12 } } },
     .{ .column_claim = 0 }, // col: "c1"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 17 } } },
     .{ .lagrange_selector = 0 },
@@ -5131,7 +5131,7 @@ const system_41_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
     .{ .column_claim = 3 }, // col: "c2"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 26, 29 } } },
     .{ .lagrange_selector = 0 },
@@ -5384,64 +5384,64 @@ const system_43_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "n1"
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 4, 5 } } },
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 2 }, // col: "n2"
     .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 6, 13 } } },
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 3 }, // col: "n3"
     .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 14, 21 } } },
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 23, 24 } } },
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 22, 31 } } },
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "n1"
     .{ .op = .{ .operator = .mul, .operands = &.{ 33, 34 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 35, 36 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 37, 38 } } },
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 2 }, // col: "n2"
     .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 42, 43 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 44, 45 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 39, 46 } } },
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 3 }, // col: "n3"
     .{ .op = .{ .operator = .mul, .operands = &.{ 48, 49 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 50, 51 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 47, 54 } } },
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = field.Element.init(1) },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 59, 60 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 56, 61 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 55, 62 } } },
@@ -5613,7 +5613,7 @@ const system_44_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_44_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -5627,7 +5627,7 @@ const system_44_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -5811,7 +5811,7 @@ const system_45_module_0_buckets = [_]vanishing.Bucket{
 
 const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
@@ -5827,7 +5827,7 @@ const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6020,7 +6020,7 @@ const system_46_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_46_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -6028,7 +6028,7 @@ const system_46_module_1_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S"
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 7, 8 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 10 } } },
@@ -6038,13 +6038,13 @@ const system_46_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S"
     .{ .op = .{ .operator = .mul, .operands = &.{ 21, 22 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 23, 24 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 20, 25 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 26 } } },
@@ -6235,7 +6235,7 @@ const system_47_module_0_buckets = [_]vanishing.Bucket{
 
 const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
@@ -6244,7 +6244,7 @@ const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "S"
     .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 6, 11 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 12 } } },
@@ -6255,14 +6255,14 @@ const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "S"
     .{ .op = .{ .operator = .mul, .operands = &.{ 25, 26 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 27, 28 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 24, 29 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 23, 30 } } },
@@ -6453,7 +6453,7 @@ const system_48_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_48_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -6471,7 +6471,7 @@ const system_48_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
@@ -6660,7 +6660,7 @@ const system_49_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_49_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -6674,7 +6674,7 @@ const system_49_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
@@ -6703,7 +6703,7 @@ const system_49_module_1_buckets = [_]vanishing.Bucket{
 };
 
 const system_49_module_2_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -6717,7 +6717,7 @@ const system_49_module_2_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
@@ -6956,7 +6956,7 @@ const system_50_module_1_buckets = [_]vanishing.Bucket{
 };
 
 const system_50_module_2_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -6970,7 +6970,7 @@ const system_50_module_2_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
@@ -6999,7 +6999,7 @@ const system_50_module_2_buckets = [_]vanishing.Bucket{
 };
 
 const system_50_module_3_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b3-k0"
     .{ .column_claim = 1 }, // col: "z-b3-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -7013,7 +7013,7 @@ const system_50_module_3_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b3-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
@@ -7242,7 +7242,7 @@ const system_51_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_51_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -7254,7 +7254,7 @@ const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 3 }, // col: "Sx"
     .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 5, 10 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 4, 13 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 14 } } },
@@ -7264,7 +7264,7 @@ const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
@@ -7274,7 +7274,7 @@ const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 3 }, // col: "Sx"
     .{ .op = .{ .operator = .add, .operands = &.{ 28, 29 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .add, .operands = &.{ 31, 32 } } },
     .{ .op = .{ .operator = .add, .operands = &.{ 24, 33 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 23, 34 } } },
@@ -7458,7 +7458,7 @@ const system_52_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_52_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -7472,7 +7472,7 @@ const system_52_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -7655,7 +7655,7 @@ const system_53_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_53_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -7664,7 +7664,7 @@ const system_53_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -7852,7 +7852,7 @@ const system_54_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_54_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -7866,7 +7866,7 @@ const system_54_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -8050,7 +8050,7 @@ const system_55_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_55_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -8064,7 +8064,7 @@ const system_55_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
@@ -8093,7 +8093,7 @@ const system_55_module_1_buckets = [_]vanishing.Bucket{
 };
 
 const system_55_module_2_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -8107,7 +8107,7 @@ const system_55_module_2_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
@@ -8317,7 +8317,7 @@ const system_56_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_56_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -8339,7 +8339,7 @@ const system_56_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
@@ -8522,7 +8522,7 @@ const system_57_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_57_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 1 }, // col: "S"
@@ -8706,7 +8706,7 @@ const system_58_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_58_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -8720,7 +8720,7 @@ const system_58_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -8903,7 +8903,7 @@ const system_59_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_59_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -8917,7 +8917,7 @@ const system_59_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
@@ -9101,7 +9101,7 @@ const system_60_module_0_buckets = [_]vanishing.Bucket{
 
 const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
@@ -9117,7 +9117,7 @@ const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
     .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9257,12 +9257,12 @@ pub const system_61_public_input = protocol.public_input.Spec{
 // scenario: "rc-distinct"
 
 const system_61_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 0 }, // col: "colB"
     .{ .op = .{ .operator = .add, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 1 }, // col: "colA"
     .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
@@ -9280,12 +9280,12 @@ const system_61_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 19 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 13, 20 } } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 21 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 0 }, // col: "colB"
     .{ .op = .{ .operator = .add, .operands = &.{ 24, 25 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 23, 26 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 1 }, // col: "colA"
     .{ .op = .{ .operator = .add, .operands = &.{ 29, 30 } } },
@@ -9783,7 +9783,7 @@ pub const system_64_public_input = protocol.public_input.Spec{
 const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(99) },
+    .{ .constant = .{ .value = 99 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
 };
@@ -9891,7 +9891,7 @@ pub const system_65_public_input = protocol.public_input.Spec{
 const system_65_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(99) },
+    .{ .constant = .{ .value = 99 } },
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
 };
@@ -10073,7 +10073,7 @@ const system_66_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_66_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
@@ -10103,7 +10103,7 @@ const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 25, 26 } } },
     .{ .lagrange_selector = 1023 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = field.Element.init(1) },
+    .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"

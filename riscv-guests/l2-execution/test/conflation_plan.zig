@@ -87,6 +87,18 @@ pub const BridgeValue = struct {
     hash: [32]u8 = ZERO_HASH,
 };
 
+/// An account the chain already holds when a range starts, realized as a real trie leaf at the
+/// declared nonce and balance, carrying the canonical empty code hash and empty storage root — the
+/// shape of a plain externally-owned account. A scenario declares one whenever the guest reads an
+/// account directly against a block's state root while the range's own transactions leave it
+/// untouched: a trie with no leaf for that address answers such a read with a proof of absence,
+/// which is a different outcome from the nonce and balance the scenario means to put there.
+pub const Account = struct {
+    address: [20]u8,
+    nonce: u64 = 0,
+    balance: u256 = 0,
+};
+
 // ─── Per-block plan ─────────────────────────────────────────────────────────────────────────────
 
 pub const BlockPlan = struct {
@@ -250,30 +262,42 @@ fn buildAccountRlp(alloc: std.mem.Allocator, nonce: u64, balance: u256, storage_
     return rlp.encodeList(alloc, &items);
 }
 
-/// A real MPT world state for the L2MessageService's two bridge storage slots. `null` `l2ms_address`
-/// (bridge-suppressed mode) yields the canonical empty-trie root and no nodes at all — genuinely
-/// correct MPT semantics for an account-less trie, not a shortcut. Otherwise, a single account leaf
-/// whose storage trie holds `bridge.number`/`bridge.hash` at the guest's own slot layout; a zero
-/// value is naturally omitted by the trie, matching real EVM "unset slot" semantics.
-fn buildWorld(alloc: std.mem.Allocator, l2ms_address: ?[20]u8, bridge: BridgeValue) !WorldState {
-    const address = l2ms_address orelse return .{ .root = mpt.builder.EMPTY_TRIE_HASH, .nodes = &.{} };
+/// A real MPT world state holding one leaf per declared `accounts` entry, plus — whenever
+/// `l2ms_address` is non-null — the L2MessageService's own account, whose storage trie carries
+/// `bridge.number`/`bridge.hash` at the guest's own slot layout; a zero value is naturally omitted
+/// by the trie, matching real EVM "unset slot" semantics. That account is derived here rather than
+/// declared, since a range's bridge storage follows from `bridgeStorage` and the address follows
+/// from the chain config the same range commits to. A `null` `l2ms_address` with an empty account
+/// list (bridge-suppressed mode, with nothing else to realize) yields the canonical empty-trie root
+/// and no nodes at all — genuinely correct MPT semantics for an account-less trie, not a shortcut.
+fn buildWorld(alloc: std.mem.Allocator, l2ms_address: ?[20]u8, bridge: BridgeValue, accounts: []const Account) !WorldState {
+    if (l2ms_address == null and accounts.len == 0) {
+        return .{ .root = mpt.builder.EMPTY_TRIE_HASH, .nodes = &.{} };
+    }
 
     var index = try mpt.buildNodeIndex(alloc, &.{});
-
-    var storage_root = mpt.builder.EMPTY_TRIE_HASH;
-    const number_slot = l2_execution.test_api.u64ToSlot32Fn(LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, bridge.number), &index);
-
-    const rolling_hash_slot = l2_execution.test_api.mappingSlotFn(
-        l2_execution.test_api.u64ToSlot32Fn(L1_ROLLING_HASHES_MAPPING_BASE_SLOT),
-        l2_execution.test_api.u64ToSlot32Fn(bridge.number),
-    );
-    const hash_value = std.mem.readInt(u256, &bridge.hash, .big);
-    try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_value, &index);
-
-    const account_rlp = try buildAccountRlp(alloc, 0, 0, storage_root, primitives.KECCAK_EMPTY);
     var state_root = mpt.builder.EMPTY_TRIE_HASH;
-    try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&address), account_rlp, &index);
+
+    if (l2ms_address) |address| {
+        var storage_root = mpt.builder.EMPTY_TRIE_HASH;
+        const number_slot = l2_execution.test_api.u64ToSlot32Fn(LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT);
+        try mpt.updateStorageChainedIndexed(alloc, &storage_root, number_slot, @as(u256, bridge.number), &index);
+
+        const rolling_hash_slot = l2_execution.test_api.mappingSlotFn(
+            l2_execution.test_api.u64ToSlot32Fn(L1_ROLLING_HASHES_MAPPING_BASE_SLOT),
+            l2_execution.test_api.u64ToSlot32Fn(bridge.number),
+        );
+        const hash_value = std.mem.readInt(u256, &bridge.hash, .big);
+        try mpt.updateStorageChainedIndexed(alloc, &storage_root, rolling_hash_slot, hash_value, &index);
+
+        const account_rlp = try buildAccountRlp(alloc, 0, 0, storage_root, primitives.KECCAK_EMPTY);
+        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&address), account_rlp, &index);
+    }
+
+    for (accounts) |account| {
+        const account_rlp = try buildAccountRlp(alloc, account.nonce, account.balance, mpt.builder.EMPTY_TRIE_HASH, primitives.KECCAK_EMPTY);
+        try mpt.updateAccountChainedIndexed(alloc, &state_root, mpt.keccak256(&account.address), account_rlp, &index);
+    }
 
     return .{ .root = state_root, .nodes = try collectNodeRlps(alloc, &index) };
 }
@@ -345,6 +369,13 @@ pub const ConflationPlan = struct {
 
     bridge_parent: ?BridgeValue = null,
     bridge_end: ?BridgeValue = null,
+    /// The accounts this range's chain already holds, alongside the L2MessageService account
+    /// `buildWorld` derives from `l2_message_service_address` and `bridgeStorage`. Realized
+    /// identically in world0 and world1: an account no block in the range touches keeps the same
+    /// nonce and balance at the range's pre-state and post-state, so realizing it in both worlds is
+    /// the modelling that matches an untouched account, and it leaves the two tries mutually
+    /// consistent.
+    accounts: []const Account = &.{},
 
     // ── Post-derivation hooks, applied to the built (not-yet-encoded) value ──
     /// Truncates payload `i`'s encoded stateless_input_ssz bytes so the vanilla SSZ decoder
@@ -400,12 +431,12 @@ pub const ConflationPlan = struct {
         const genesis = self.start_block_number == 0;
         const l2ms_for_world: ?[20]u8 = if (isZeroAddress(self.l2_message_service_address)) null else self.l2_message_service_address;
         const world0_bridge = self.bridge_parent orelse BridgeValue{};
-        const world0 = try buildWorld(alloc, l2ms_for_world, world0_bridge);
+        const world0 = try buildWorld(alloc, l2ms_for_world, world0_bridge, self.accounts);
         // Inherits world0's values (no divergence) unless `.end` was declared — "equal to world0
         // when no bridge storage declared" holds field-by-field, not just in the no-bridge-at-all
         // case.
         const world1_bridge = self.bridge_end orelse world0_bridge;
-        const world1 = try buildWorld(alloc, l2ms_for_world, world1_bridge);
+        const world1 = try buildWorld(alloc, l2ms_for_world, world1_bridge, self.accounts);
 
         // ── Headers: a real hash chain. header[i] represents block (start+i); its state_root is
         // that block's OWN post-state (world0 for every block but the last, world1 for the last)
