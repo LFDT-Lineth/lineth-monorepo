@@ -390,23 +390,40 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	switch cs := corsetCS.(type) {
 
 	case air.BusConstraint[koalabear.Element]:
-		// FIXME: @djp this needs to be implemented.  The layout of bus
-		// constraints is very similar to that for lookups.
-		//
-		// var bc = cs.Unwrap()
-		// // Iterate receive ports, each of which identifies a set of columns in a
-		// // given module (including a selector) which determine the message being
-		// // reveived.
-		// for _, recvPort := range bc.Receives {
-		//
-		// }
-		// // Iterate send ports, each of which identifies a set of columns in a
-		// // given module (including a selector) which determine the message being
-		// // sent.
-		// for _, sendPort := range bc.Receives {
-		//
-		// }
-		panic("support translation of bus constraints")
+
+		var bc = cs.Unwrap()
+		// Iterate receive ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// reveived.
+		for _, recvPort := range bc.Receives {
+
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
+				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
+
+		// Iterate send ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// sent.
+		for _, sendPort := range bc.Sends {
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
+				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
 
 	case air.LookupConstraint[koalabear.Element]:
 

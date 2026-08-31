@@ -41,6 +41,9 @@ type r5BenchmarkFixture struct {
 }
 
 func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
+
+	b.Helper()
+
 	var (
 		// NOTE: the "sharding strategy" controls how sharding operators, and is
 		// fairly simplistic (at this stage).  In essence, the strategy below

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
@@ -88,6 +89,7 @@ type PreReadInputs struct {
 func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 	traceF, err := ReadMaybeCompressedFile(inputsFile)
 	if err != nil {
+		utils.Panic("boom: %v", err)
 		return &PreReadInputs{Err: err, InputsFile: inputsFile}
 	}
 	inputs, err := ReadZkcInputFile(traceF)

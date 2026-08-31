@@ -83,8 +83,6 @@ func AssignFromTraceShard(
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
 
-					// FIXME: @djp use of a padding value here does not make
-					// sense to me, since ZkC is in charge of padding.
 					padding = *(*field.Element)(unsafe.Pointer(&pad))
 
 					// Done

@@ -182,10 +182,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	proverCompilePipeline(sys)
 
 	var (
-		preRead = zkcdriver.PreReadZkcInputs(inputs.InputsFile)
-		traces  = driver.TraceZkcInputs(preRead)
-		proofs  = make([]wiop.Proof, len(traces))
-		pubs    = make([]wiop.PublicInput, len(traces))
+		traces = driver.TraceZkcInputs(inputs)
+		proofs = make([]wiop.Proof, len(traces))
+		pubs   = make([]wiop.PublicInput, len(traces))
 	)
 
 	for i, shard := range traces {
