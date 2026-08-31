@@ -1,4 +1,4 @@
-// Package embedded stored the embedded R5 interpreter implementation.
+// Package embedded stores the embedded R5 interpreter implementation.
 package embedded
 
 import (
