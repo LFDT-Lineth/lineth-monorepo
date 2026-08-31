@@ -1,7 +1,7 @@
 .{
-    .name = .rollup_guest,
+    .name = .rollup_aggregation_guest,
     .version = "0.0.0",
-    .fingerprint = 0x9e91b56136b3846b,
+    .fingerprint = 0xd7964138f709f568,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
@@ -11,7 +11,7 @@
         // other precompile accelerator.
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
         // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
-        // primitives `rollup_ssz.zig`'s container codec builds on.
+        // primitives `rollup_aggregation_ssz.zig`'s container codec builds on.
         .guest_common = .{ .path = "../guest-common" },
     },
     .paths = .{

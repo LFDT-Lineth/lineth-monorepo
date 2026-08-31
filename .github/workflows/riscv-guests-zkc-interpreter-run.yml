@@ -117,3 +117,6 @@ jobs:
       - name: Run rollup guest under zkc (gogen, fast, accel keccak)
         run: make -C riscv-guests/rollup exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
+      - name: Run rollup-aggregation guest under zkc (gogen, fast, accel keccak)
+        run: make -C riscv-guests/rollup-aggregation exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+

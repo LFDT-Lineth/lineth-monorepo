@@ -1,4 +1,4 @@
-# rollup guest — self-contained lifecycle.
+# rollup-aggregation guest — self-contained lifecycle.
 #
 # This folder is its own Zig package (build.zig + build.zig.zon). The riscv-guests/ top-level
 # Makefile fans `compile`/`test`/`fetch`/`clean` out to this file for every guest.
@@ -23,7 +23,7 @@ ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # it must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
 ZIG_FETCH_FLAGS ?=
 
-NAME := rollup_guest
+NAME := rollup_aggregation_guest
 BIN  := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug. The default is generated fresh by `require-input` via
@@ -65,6 +65,7 @@ compile:
 		echo "\nSkipping objdump: riscv64-unknown-elf-objdump is not on PATH"; \
 	fi
 
+# Fail early on a missing/empty INPUT instead of building then erroring in the converter.
 # Regenerates the default INPUT via `zig build gen-fixture` (a no-op for a user-supplied INPUT=
 # override), then fails early on a still-missing/empty INPUT instead of building then erroring in
 # the converter.
