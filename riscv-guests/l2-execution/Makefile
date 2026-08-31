@@ -31,9 +31,7 @@ NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
-# INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
-INPUT      ?= /Users/lorenzo/Desktop/0001.ssz
-# TODO: remove new default input before merging
+INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
 # -v/-vv/-vvv raise verbosity. Override to pick the execution backend — e.g. "--gogen --fast" runs
