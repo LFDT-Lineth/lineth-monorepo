@@ -49,7 +49,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          # No ref override: defaults to github.sha, the immutable commit
+          # selected at dispatch time.
           fetch-depth: 0
           fetch-tags: true
           submodules: false
