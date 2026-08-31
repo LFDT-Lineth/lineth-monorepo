@@ -13530,6 +13530,40 @@ const verify_case_62_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_62_failing_public_inputs,
 };
 
+const verify_case_62_alt_module_sizes = [_]usize{};
+
+const verify_case_62_alt_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_62_alt_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_62_alt_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1051830028 }, .a1 = .{ .value = 2067667462 } }, .B1 = .{ .a0 = .{ .value = 804451369 }, .a1 = .{ .value = 63555147 } }, .B2 = .{ .a0 = .{ .value = 55693192 }, .a1 = .{ .value = 1260140606 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1012170143 }, .a1 = .{ .value = 1047896419 } }, .B1 = .{ .a0 = .{ .value = 2019595732 }, .a1 = .{ .value = 298287902 } }, .B2 = .{ .a0 = .{ .value = 902789877 }, .a1 = .{ .value = 1424797112 } } } },
+};
+
+const verify_case_62_alt_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 1189152016 }, .{ .value = 920622212 }, .{ .value = 935362528 }, .{ .value = 1886413110 }, .{ .value = 704755786 }, .{ .value = 1071327819 }, .{ .value = 1116603197 }, .{ .value = 2091089419 } }, .cells = &verify_case_62_alt_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 585965823 }, .{ .value = 48107532 }, .{ .value = 129818401 }, .{ .value = 63120423 }, .{ .value = 1185900359 }, .{ .value = 1086202572 }, .{ .value = 331527525 }, .{ .value = 1209709110 } }, .cells = &verify_case_62_alt_round_1_cells },
+    .{ .cells = &verify_case_62_alt_round_2_cells },
+};
+
+const verify_case_62_alt_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1952820941 }, .{ .value = 1467509005 }, .{ .value = 223268597 }, .{ .value = 1861483033 }, .{ .value = 1238061829 }, .{ .value = 2024171341 }, .{ .value = 1051239110 }, .{ .value = 647930527 } }, commitment.Commitment{ .{ .value = 1469481079 }, .{ .value = 659764944 }, .{ .value = 390787796 }, .{ .value = 642326498 }, .{ .value = 2091648666 }, .{ .value = 315983070 }, .{ .value = 1246764023 }, .{ .value = 2079333772 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 614174011 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 1675293423 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1452158557 }, .{ .value = 563613560 }, .{ .value = 1466799106 }, .{ .value = 1943244000 }, .{ .value = 2118162842 }, .{ .value = 1305004630 }, .{ .value = 1981023697 }, .{ .value = 533839590 } }, commitment.Commitment{ .{ .value = 1511173801 }, .{ .value = 339134788 }, .{ .value = 2125243090 }, .{ .value = 646729944 }, .{ .value = 1058675367 }, .{ .value = 64778672 }, .{ .value = 1583919526 }, .{ .value = 1686974297 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 912690258 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1261884332 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1908267476 }, .{ .value = 476650945 }, .{ .value = 1057710683 }, .{ .value = 1040847945 }, .{ .value = 66979322 }, .{ .value = 1365273979 }, .{ .value = 789996518 }, .{ .value = 2008863988 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1171803992 }, .a1 = .{ .value = 154133160 } }, .B1 = .{ .a0 = .{ .value = 459080680 }, .a1 = .{ .value = 701357690 } }, .B2 = .{ .a0 = .{ .value = 1958523594 }, .a1 = .{ .value = 215145437 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 862435251 }, .{ .value = 177802695 }, .{ .value = 1499236451 }, .{ .value = 1090702289 }, .{ .value = 2078707127 }, .{ .value = 1591785780 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 2055053470 }, .{ .value = 903444504 }, .{ .value = 1105029109 }, .{ .value = 1641890951 }, .{ .value = 1459267502 }, .{ .value = 463962425 }, .{ .value = 834716793 }, .{ .value = 1172287121 } }, commitment.Commitment{ .{ .value = 1752315828 }, .{ .value = 177802695 }, .{ .value = 1499236451 }, .{ .value = 1090702289 }, .{ .value = 2078707127 }, .{ .value = 1591785780 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_62_alt_proof = verifier.Proof{
+    .rounds = &verify_case_62_alt_rounds,
+    .module_sizes = &verify_case_62_alt_module_sizes,
+    .pcs_opening = verify_case_62_alt_pcs_opening,
+};
+
+const verify_case_62_alt_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 31 } },
+};
+
+const verify_case_62_alt_input = verifier.VerifyInput{
+    .proof = verify_case_62_alt_proof,
+    .public_inputs = &verify_case_62_alt_public_inputs,
+};
+
 const verify_case_62_systems = verifier.Systems{ .public_input = system_62_public_input, .vanishing = system_62, .logderivativesum = system_62_logderiv, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
 
 pub const system_63_spec = protocol.Spec{
@@ -14787,7 +14821,7 @@ pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {
         59 => @compileError("verifier fixture case 59 (RepeatedSValues) has no alt input"),
         60 => @compileError("verifier fixture case 60 (EmptySelected) has no alt input"),
         61 => @compileError("verifier fixture case 61 (DistinctBounds) has no alt input"),
-        62 => @compileError("verifier fixture case 62 (OpenedCellPublicInput) has no alt input"),
+        62 => verify_case_62_alt_input,
         63 => @compileError("verifier fixture case 63 (OpenedCellPublicInputDynamic) has no alt input"),
         64 => @compileError("verifier fixture case 64 (LagrangeSelectorBoundary) has no alt input"),
         65 => @compileError("verifier fixture case 65 (DynamicLagrangeSelectorBoundary) has no alt input"),
@@ -14860,7 +14894,7 @@ pub fn hasAlt(comptime index: usize) bool {
         59 => false,
         60 => false,
         61 => false,
-        62 => false,
+        62 => true,
         63 => false,
         64 => false,
         65 => false,

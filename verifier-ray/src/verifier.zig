@@ -99,6 +99,50 @@ pub const VerifyInput = struct {
     public_inputs: PublicInput = &.{},
 };
 
+/// Verifies TWO proofs of the same compiled protocol and checks that their
+/// public-input statements agree. This is the aggregation-shaped entry point:
+/// a caller (e.g. a recursive R5 guest) that attests to a pair of proofs must
+/// also attest that both proofs speak about the same statement — otherwise the
+/// pair "both verify" claim is meaningless, as each proof could be about a
+/// different instance.
+///
+/// The consistency rule is element-wise equality of the two flat statements
+/// (see `checkPublicInputConsistency`). It runs BEFORE either verification:
+/// it is O(statement length) while each `verify` is the expensive part, so an
+/// inconsistent pair is rejected without paying for two full verifications.
+///
+/// Both proofs are checked against the SAME comptime `spec`/`systems` by
+/// construction — there is deliberately no two-system variant: cross-system
+/// public-input consistency has no meaning while statement layouts can differ.
+pub fn verifyPair(
+    comptime spec: protocol.Spec,
+    comptime systems: Systems,
+    a: VerifyInput,
+    b: VerifyInput,
+) !void {
+    try checkPublicInputConsistency(a.public_inputs, b.public_inputs);
+    try verify(spec, systems, a.proof, a.public_inputs);
+    try verify(spec, systems, b.proof, b.public_inputs);
+}
+
+/// The public-input consistency rule for a proof pair: the two flat statements
+/// must be equal element-wise, in prover-ray registration order. Values are
+/// compared through `Scalar.toExt` so a base-encoded scalar equals its lifted
+/// extension encoding — equality is over field values, not wire representation.
+///
+/// Length inequality is also `InconsistentPublicInputs`: each statement's
+/// length-vs-spec check belongs to `verify` (via `bindRoundMessages`); here two
+/// different lengths simply cannot be the same statement.
+pub fn checkPublicInputConsistency(
+    a: PublicInput,
+    b: PublicInput,
+) error{InconsistentPublicInputs}!void {
+    if (a.len != b.len) return error.InconsistentPublicInputs;
+    for (a, b) |scalar_a, scalar_b| {
+        if (!scalar_a.toExt().eql(scalar_b.toExt())) return error.InconsistentPublicInputs;
+    }
+}
+
 /// Verifies a proof against the compiled protocol in three steps:
 ///
 ///   1. Replay   — absorb every round message into the shared Fiat-Shamir

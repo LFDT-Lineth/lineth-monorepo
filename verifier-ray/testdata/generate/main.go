@@ -529,9 +529,10 @@ type fixtureCase struct {
 	pcs     *codegen.PcsSystem
 	honest  proofFixture
 	invalid *proofFixture
-	// alt is a second honest proof of the same compiled protocol at a
-	// different dynamic-module size, verified against the same baked
-	// PcsSystem.
+	// alt is a second honest proof of the same compiled protocol, verified
+	// against the same baked PcsSystem. Used with a different dynamic-module
+	// size (multi-size coverage) and with a different public-input statement
+	// (verifyPair consistency coverage).
 	alt *proofFixture
 }
 
@@ -707,6 +708,19 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
 		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
+
+		// A SECOND honest proof of the same compiled protocol whose opened cell
+		// (col.At(2)) differs: 31 instead of 30. Both proofs verify individually
+		// against the same baked system, but their public-input statements
+		// disagree — exactly the pair that only verifyPair's consistency check
+		// can reject. Emitted through the existing alt slot (writeVerifyProof /
+		// getInputAlt are fixture-shape-agnostic, not multi-size-specific).
+		altHonest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 31, 40))) }
+		altFixture, err := buildProofFixture(sys, altHonest, "PublicInput", "OpenedCellPublicInput", "alt")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].alt = &altFixture
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
