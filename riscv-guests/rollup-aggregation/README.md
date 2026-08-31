@@ -45,5 +45,5 @@ Exit codes are defined and commented in `src/guest_errors.zig`.
 ```bash
 make -C rollup-aggregation test      # native host unit tests (rollup_aggregation_ssz + logic)
 make -C rollup-aggregation compile   # statically-linked rv64im ELF at zig-out/bin/rollup_aggregation_guest
-make -C rollup-aggregation exec      # compile, then run under the ZkC interpreter on the checked-in golden input
+make -C rollup-aggregation exec      # compile, then run under the ZkC interpreter on a freshly generated sample input
 ```

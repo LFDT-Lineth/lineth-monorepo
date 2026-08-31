@@ -120,6 +120,6 @@ pub fn build(b: *std.Build) void {
     });
     gen_fixture.root_module.addImport("rollup_aggregation_ssz", rollup_aggregation_ssz_native_mod);
     gen_fixture.root_module.addImport("support.zig", support_mod);
-    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupAggregationProofPrivateInput as framed hex on stdout");
+    const gen_fixture_step = b.step("gen-fixture", "Print a sample RollupAggregationProofPrivateInput as framed raw bytes on stdout");
     gen_fixture_step.dependOn(&b.addRunArtifact(gen_fixture).step);
 }
