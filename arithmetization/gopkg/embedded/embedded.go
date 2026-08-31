@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/src"
+	arith_src "github.com/LFDT-Lineth/lineth-monorepo/arithmetization/src"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/util/source"
@@ -16,52 +16,14 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 )
 
-// ArithmetizationFS is the embedded R5 interpreter implementation.
-//
-// It implements the fs.FS interface, allowing access to the embedded files in the "main" directory.
-// See [fs] package for more information how to walk the embedded files.
-var ArithmetizationFS = src.MainDir
-
 const mainDir = "main"
 const zkcExt = ".zkc"
 const predecodingDir = "predecoding"
 
-// ArithmetizationSourceFiles returns the embedded R5 interpreter source files
-// as a slice of fs.File.
-func ArithmetizationFiles() []fs.File {
-	subFs, err := fs.Sub(ArithmetizationFS, mainDir)
-	if err != nil {
-		panic("failed to get sub FS for embedded R5 interpreter: " + err.Error())
-	}
-	files := []fs.File{}
-	if err := fs.WalkDir(subFs, ".", func(path string, d fs.DirEntry, err error) error {
-		// skip predecoding directory, as it contains files that are not part of
-		// the main R5 interpreter source code.
-		if d.IsDir() && path == predecodingDir {
-			return fs.SkipDir
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if filepath.Ext(path) != zkcExt {
-			return nil
-		}
-		file, err := subFs.Open(path)
-		if err != nil {
-			return err
-		}
-		files = append(files, file)
-		return nil
-	}); err != nil {
-		panic("failed to walk embedded R5 interpreter files: " + err.Error())
-	}
-	return files
-}
-
-// ArithmetizationSourceFiles returns the embedded R5 interpreter source files
+// arithmetizationSourceFiles returns the embedded R5 interpreter source files
 // as a slice of source.File.
-func ArithmetizationSourceFiles() []source.File {
-	subFs, err := fs.Sub(ArithmetizationFS, mainDir)
+func arithmetizationSourceFiles(rootFs fs.FS) []source.File {
+	subFs, err := fs.Sub(rootFs, mainDir)
 	if err != nil {
 		panic("failed to get sub FS for embedded R5 interpreter: " + err.Error())
 	}
@@ -105,7 +67,7 @@ func CompiledBinaryFile(cfg codegen.Config, metadata []byte, attributes []constr
 			err = errors.New("failed to compile embedded R5 interpreter: " + r.(error).Error())
 		}
 	}()
-	srcFiles := ArithmetizationSourceFiles()
+	srcFiles := arithmetizationSourceFiles(arith_src.MainDir)
 	macroProgram, _, sErrs := compiler.Compile(field.KOALABEAR_16, cfg.GetMaxStaticHeight(), srcFiles...)
 	if len(sErrs) > 0 {
 		errs := make([]error, len(sErrs))
