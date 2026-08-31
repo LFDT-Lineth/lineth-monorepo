@@ -174,7 +174,7 @@ func CompiledBinaryFile(opts ...CompileOption) (binfile *constraints.BinaryFile[
 			err = fmt.Errorf("failed to compile embedded R5 interpreter: %v", r)
 		}
 	}()
-	srcFiles := arithmetizationSourceFiles(arith_src.MainDir)
+	srcFiles := arithmetizationSourceFiles(cfg.rootfs)
 	macroProgram, _, sErrs := compiler.Compile(field.KOALABEAR_16, cfg.config.GetMaxStaticHeight(), srcFiles...)
 	if len(sErrs) > 0 {
 		errs := make([]error, len(sErrs))
