@@ -71,3 +71,5 @@ jobs:
           INPUT: test/testdata/stateless_input.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"
+          # Added to be explicit but is the default <input>.expected_guest_output
+          EXPECTED_GUEST_OUTPUT: test/testdata/stateless_input.expected_guest_output

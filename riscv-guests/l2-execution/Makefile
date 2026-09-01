@@ -51,6 +51,33 @@ OBJDUMP     ?= false
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
 
+# Optional golden zkc guest_output hex (without 0x prefix). When set, exec/trace
+# require zkc stdout to contain `guest_output = 0x$(EXPECTED_GUEST_OUTPUT)`.
+# Defaults from test/testdata/<input-basename>.expected_guest_output when present.
+EXPECTED_GUEST_OUTPUT ?=
+ifeq ($(EXPECTED_GUEST_OUTPUT),)
+  _expected_guest_output_file := $(MAKEFILE_DIR)test/testdata/$(basename $(notdir $(INPUT))).expected_guest_output
+  ifneq ($(wildcard $(_expected_guest_output_file)),)
+    EXPECTED_GUEST_OUTPUT := $(shell tr -d ' \n\r' < '$(_expected_guest_output_file)')
+  endif
+endif
+
+define run_zkc_and_check_guest_output
+	@set -eu; \
+	log=$$(mktemp); \
+	$(1) >"$$log" 2>&1; \
+	status=$$?; \
+	cat "$$log"; \
+	if [ $$status -ne 0 ]; then rm -f "$$log"; exit $$status; fi; \
+	if [ -n "$(EXPECTED_GUEST_OUTPUT)" ]; then \
+		grep -Fqx 'guest_output = 0x$(EXPECTED_GUEST_OUTPUT)' "$$log" || { \
+			echo "expected guest_output = 0x$(EXPECTED_GUEST_OUTPUT)" >&2; \
+			rm -f "$$log"; exit 1; \
+		}; \
+	fi; \
+	rm -f "$$log"
+endef
+
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
 fetch:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
@@ -92,10 +119,10 @@ require-input:
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
 
 exec: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
+	$(call run_zkc_and_check_guest_output,$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)")
 
 trace: require-input compile
-	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-trace BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)"
+	$(call run_zkc_and_check_guest_output,$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-trace BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_TRACE_FLAGS="$(ZKC_TRACE_FLAGS)")
 
 debug: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-debug BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)"
