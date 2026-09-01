@@ -76,11 +76,9 @@ pub fn vanillaHasExecutionRequests(alloc: std.mem.Allocator, vanilla_stateless_i
     return r.deposits.len != 0 or r.withdrawals.len != 0 or r.consolidations.len != 0;
 }
 
-/// True when the vanilla stateless input's execution payload carries a non-empty beacon-chain
-/// withdrawals list. The extended guest rejects these outright by Linea policy
-/// (`error.WithdrawalsNotSupported` — this is an L2 rollup, not L1), so a harness feeding real EF
-/// fixtures should SKIP such inputs rather than hand the prover a guaranteed-reject block. Mirrors
-/// `vanillaHasExecutionRequests`: a presence check against the same field the guest rejects on.
+/// True when the execution payload carries a non-empty beacon-chain withdrawals list, which the
+/// guest rejects by Linea policy (`error.WithdrawalsNotSupported`). Same SKIP role as
+/// `vanillaHasExecutionRequests`.
 pub fn vanillaHasWithdrawals(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
     const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
     return si.new_payload_request.execution_payload.withdrawals.len != 0;

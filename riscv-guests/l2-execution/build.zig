@@ -359,8 +359,7 @@ pub fn build(b: *std.Build) void {
 
     // ── `zkc-reference-runner` native host tool ───────────────────────────────────────────────────
     // The ZkC twin of extended-vanilla-runner: drives the EF corpus through the compiled guest ELF
-    // under zkc (via the arithmetization elf-exec target), not in-process. Pure std + vanilla_wrap +
-    // zkevm_fixture (relative import); no crypto link — the wrap tool does the crypto.
+    // under zkc, not in-process. See test/zkc_reference_runner.zig's header.
     const zkc_reference_runner_exe = b.addExecutable(.{
         .name = "zkc-reference-runner",
         .root_module = b.createModule(.{
@@ -370,8 +369,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-    // Same native crypto link as l2-execution-wrap: the shared vanilla_wrap module's zesu decode
-    // chain resolves the same symbols.
+    // Same native crypto link as l2-execution-wrap (shared vanilla_wrap decode chain).
     linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
     b.installArtifact(zkc_reference_runner_exe);
 
@@ -573,9 +571,8 @@ pub fn build(b: *std.Build) void {
         extended_vanilla_step.dependOn(&run_extended_vanilla.step);
 
         // ── zkc corpus run (reference-test-zkc) ───────────────────────────────────────────────────
-        // Needs the guest ELF + wrap tool built, plus zkc/go on PATH. The runner walks the same
-        // blockchain_tests tree as the host guard. Pass-through extra args after `--`, e.g.
-        // `zig build reference-test-zkc -- --match bal_empty_block --limit 5`.
+        // Needs the guest ELF + wrap tool installed (hence the install-step dependency) and zkc/go
+        // on PATH. Pass-through extra args after `--`, e.g. `-- --match bal_empty_block --limit 5`.
         const reference_test_zkc_step = b.step(
             "reference-test-zkc",
             "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)",
@@ -588,7 +585,6 @@ pub fn build(b: *std.Build) void {
         run_zkc_reference.addArg("--makefile");
         run_zkc_reference.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
         if (b.args) |extra| run_zkc_reference.addArgs(extra);
-        // The guest ELF and wrap tool must be installed before the runner shells out to them.
         run_zkc_reference.step.dependOn(b.getInstallStep());
         reference_test_zkc_step.dependOn(&run_zkc_reference.step);
 
