@@ -116,12 +116,8 @@ jobs:
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
         run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
-  # Output-correctness counterpart to the runnability smoke gate above: the full reference-test
-  # verdict comparison (see riscv-guests/l2-execution/test/zkc_reference_runner.zig) through the
-  # real guest ELF under zkc. Manual-only — the emulator is far slower than the host reference-test
-  # (riscv-guests-host-tests.yml), so it is not a per-PR gate. REFERENCE_ARGS defaults to a bounded
-  # --limit (the guest has a fixed 256 MiB heap; heavy blocks can OOM it), pass e.g. "--match bal_"
-  # to scope. ZKC_EXEC_FLAGS mirrors the run job above (gogen disabled upstream — see its TODO).
+  # Manual-only: the emulator is too slow for a per-PR gate. The bounded default --limit respects
+  # the guest's fixed 256 MiB heap (heavy blocks can OOM it); scope further with reference-args.
   zkc-reference-test:
     name: l2-execution zkc reference-test (manual)
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
