@@ -354,45 +354,46 @@ func (d *decoder) friProof(off int) (FriProof, error) {
 }
 
 func (d *decoder) merkleCap(off int) (MerkleCap, error) {
-	var cap MerkleCap
+	var treeCap MerkleCap
 	var err error
-	if cap.Nodes, err = d.digests(off+OffMerkleCapNodes, "merkle.MerkleCap.nodes"); err != nil {
-		return cap, err
+	if treeCap.Nodes, err = d.digests(off+OffMerkleCapNodes, "merkle.MerkleCap.nodes"); err != nil {
+		return treeCap, err
 	}
 	auxOff, n, err := d.slice(off+OffMerkleCapAux, SizeOptDigest, 4, "merkle.MerkleCap.aux")
 	if err != nil {
-		return cap, err
+		return treeCap, err
 	}
 	if n > 0 {
-		cap.Aux = make([]*Digest, n)
-		for i := range cap.Aux {
-			if cap.Aux[i], err = d.optionalDigest(auxOff+i*SizeOptDigest, "merkle.MerkleCap.aux[i]"); err != nil {
-				return cap, err
+		treeCap.Aux = make([]*Digest, n)
+		for i := range treeCap.Aux {
+			if treeCap.Aux[i], err = d.optionalDigest(auxOff+i*SizeOptDigest, "merkle.MerkleCap.aux[i]"); err != nil {
+				return treeCap, err
 			}
 		}
 	}
-	return cap, nil
+	return treeCap, nil
 }
 
 func (d *decoder) inputCap(off int) (InputCap, error) {
-	var cap InputCap
+	var treeCap InputCap
 	var err error
-	if cap.Nodes, err = d.digests(off+OffInputCapNodes, "pcs.InputCap.nodes"); err != nil {
-		return cap, err
+	if treeCap.Nodes, err = d.digests(off+OffInputCapNodes, "pcs.InputCap.nodes"); err != nil {
+		return treeCap, err
 	}
 	tablesOff, n, err := d.slice(off+OffInputCapTables, SizeInputCapTable, 8, "pcs.InputCap.tables")
 	if err != nil {
-		return cap, err
+		return treeCap, err
 	}
+
 	if n > 0 {
-		cap.Tables = make([]InputCapTable, n)
-		for i := range cap.Tables {
-			if cap.Tables[i], err = d.inputCapTable(tablesOff + i*SizeInputCapTable); err != nil {
-				return cap, err
+		treeCap.Tables = make([]InputCapTable, n)
+		for i := range treeCap.Tables {
+			if treeCap.Tables[i], err = d.inputCapTable(tablesOff + i*SizeInputCapTable); err != nil {
+				return treeCap, err
 			}
 		}
 	}
-	return cap, nil
+	return treeCap, nil
 }
 
 func (d *decoder) inputCapTable(off int) (InputCapTable, error) {

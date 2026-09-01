@@ -203,8 +203,8 @@ func (e *encoder) putOpeningProof(off int, p OpeningProof) {
 	e.putFriProof(off+OffOpeningProofFriProof, p.FriProof)
 
 	caps := e.putSlice(off+OffOpeningProofInputCaps, len(p.InputCaps), SizeInputCap, 8)
-	for i, cap := range p.InputCaps {
-		e.putInputCap(caps+i*SizeInputCap, cap)
+	for i, treeCap := range p.InputCaps {
+		e.putInputCap(caps+i*SizeInputCap, treeCap)
 	}
 
 	queries := e.putSlice(off+OffOpeningProofInputQueries, len(p.InputQueries), SizeSlice, 8)
@@ -220,8 +220,8 @@ func (e *encoder) putFriProof(off int, p FriProof) {
 	e.putDigests(off+OffFriProofRoundRoots, p.RoundRoots)
 
 	caps := e.putSlice(off+OffFriProofRoundCaps, len(p.RoundCaps), SizeMerkleCap, 8)
-	for i, cap := range p.RoundCaps {
-		e.putMerkleCap(caps+i*SizeMerkleCap, cap)
+	for i, treeCap := range p.RoundCaps {
+		e.putMerkleCap(caps+i*SizeMerkleCap, treeCap)
 	}
 
 	e.putExts(off+OffFriProofFinalPoly, p.FinalPoly)
@@ -235,11 +235,11 @@ func (e *encoder) putFriProof(off int, p FriProof) {
 	}
 }
 
-func (e *encoder) putMerkleCap(off int, cap MerkleCap) {
-	e.putDigests(off+OffMerkleCapNodes, cap.Nodes)
+func (e *encoder) putMerkleCap(off int, treeCap MerkleCap) {
+	e.putDigests(off+OffMerkleCapNodes, treeCap.Nodes)
 
-	aux := e.putSlice(off+OffMerkleCapAux, len(cap.Aux), SizeOptDigest, SizeElement)
-	for i, node := range cap.Aux {
+	aux := e.putSlice(off+OffMerkleCapAux, len(treeCap.Aux), SizeOptDigest, SizeElement)
+	for i, node := range treeCap.Aux {
 		e.putOptionalDigest(aux+i*SizeOptDigest, node)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -135,12 +136,7 @@ func projectModuleSizes(sys *wiop.System, proof wiop.Proof) ([]uint64, error) {
 func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 	out := OpeningProof{FriProof: projectFriProof(op.FRIProof)}
 
-	if len(op.InputCaps) > 0 {
-		out.InputCaps = make([]InputCap, len(op.InputCaps))
-		for i, cap := range op.InputCaps {
-			out.InputCaps[i] = projectInputCap(cap)
-		}
-	}
+	out.InputCaps = utils.Map(projectInputCap, op.InputCaps)
 
 	if len(op.InputQueries) > 0 {
 		out.InputQueries = make([][]InputTreeOpening, len(op.InputQueries))
