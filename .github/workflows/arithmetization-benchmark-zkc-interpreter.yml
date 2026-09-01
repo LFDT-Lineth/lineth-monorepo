@@ -36,6 +36,7 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -44,7 +45,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-benchmark-zkc-interpreter.yml'
   push:
     branches:
       - main
@@ -54,7 +55,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-benchmark-zkc-interpreter.yml'
   workflow_dispatch:
     inputs:
       base_ref:
@@ -107,6 +108,7 @@ permissions:
 
 jobs:
   bench:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     env:

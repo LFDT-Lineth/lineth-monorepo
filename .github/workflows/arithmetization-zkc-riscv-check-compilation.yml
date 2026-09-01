@@ -2,19 +2,20 @@ name: Tracer riscv-constraints check compilation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
       - 'arithmetization/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-zkc-riscv-check-compilation.yml'
   workflow_call:
     inputs:
       zkc-ref:
@@ -34,6 +35,7 @@ permissions:
 
 jobs:
   check-compilation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout repository
