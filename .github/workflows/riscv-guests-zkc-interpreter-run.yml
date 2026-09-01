@@ -49,7 +49,7 @@ on:
         required: false
         type: string
       reference-args:
-        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); defaults to a bounded limit'
+        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); default runs the whole corpus'
         required: false
         type: string
   workflow_call:
@@ -59,7 +59,7 @@ on:
         required: false
         type: string
       reference-args:
-        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); defaults to a bounded limit'
+        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); default runs the whole corpus'
         required: false
         type: string
 
@@ -116,8 +116,8 @@ jobs:
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
         run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
-  # Manual-only: the emulator is too slow for a per-PR gate. The bounded default --limit respects
-  # the guest's fixed 256 MiB heap (heavy blocks can OOM it); scope further with reference-args.
+  # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
+  # scope with reference-args.
   zkc-reference-test:
     name: l2-execution zkc reference-test (manual)
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
@@ -143,5 +143,5 @@ jobs:
         run: make -C arithmetization install-zkc
 
       - name: Run zkc reference-test
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast" REFERENCE_ARGS="${{ inputs.reference-args || '--limit 200' }}"
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast" REFERENCE_ARGS="${{ inputs.reference-args }}"
 
