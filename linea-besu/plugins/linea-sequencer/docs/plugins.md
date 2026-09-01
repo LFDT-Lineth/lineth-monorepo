@@ -35,6 +35,13 @@ It is used in:
 |-------------------------------------------------------|----------------------|
 | `--plugin-linea-module-limit-file-path`               | moduleLimitFile.toml |
 | `--plugin-linea-over-line-count-limit-cache-size`     | 10_000               |
+| `--plugin-linea-tracing-end-timestamp`                | not set              |
+
+`--plugin-linea-tracing-end-timestamp` is an optional Unix epoch timestamp in seconds. Bespoke
+tracing and module-line-limit validation are enabled when the next pending block timestamp is
+strictly less than the configured value, and disabled when it is equal to or greater than the
+configured value. A value of `0` disables bespoke tracing for all normal blocks. When the option is
+not set, tracing remains enabled.
 
 
 ### L1<>L2 bridge
