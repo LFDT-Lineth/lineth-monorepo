@@ -284,10 +284,16 @@ def _chain_config_from_view(view: Any) -> ChainConfig:
 
 
 def _forced_transaction_witness_from_view(view: Any) -> ForcedTransactionWitness:
+    try:
+        acceptance = ForcedTransactionAcceptance(int(view.acceptance))
+    except ValueError as exc:
+        raise InvalidSsz(
+            f"SszForcedTransactionWitness.acceptance: invalid ForcedTransactionAcceptance value {int(view.acceptance)}"
+        ) from exc
     return ForcedTransactionWitness(
         number=U64(int(view.number)),
         signed_tx_rlp=bytes(view.signed_tx_rlp),
-        acceptance=ForcedTransactionAcceptance(int(view.acceptance)),
+        acceptance=acceptance,
         deadline=U64(int(view.deadline)),
     )
 
