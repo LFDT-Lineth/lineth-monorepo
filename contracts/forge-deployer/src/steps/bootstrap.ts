@@ -113,12 +113,36 @@ async function runPresignedItem(item: PresignedBootstrapItem, context: Bootstrap
     const existing = await context.provider.getCode(item.expectAddress);
     if (existing !== "0x") {
       console.log(`bootstrap=${item.id} already deployed at ${item.expectAddress}; skipping`);
+      // A skip still needs a checkpoint record, otherwise a rerun would keep
+      // this item pending and re-check it every time. No real tx hash exists
+      // for a skip, so reuse the script item's sentinel to signal "done".
+      const blockNow = await context.provider.getBlockNumber();
+      await awaitBootstrapRecord({
+        itemId: item.id,
+        kind: item.kind,
+        chain: context.chain,
+        transactionHash: SCRIPT_ITEM_SENTINEL,
+        blockNumber: blockNow,
+        chainId: context.chainId,
+        address: item.expectAddress,
+      });
       return;
     }
   }
   const tx = await context.provider.broadcastTransaction(item.rawTx);
   const receipt = await tx.wait();
   if (!receipt || receipt.status !== 1) throw new Error(`bootstrap presigned item ${item.id} tx ${tx.hash} failed`);
+  // Verify code actually landed at expectAddress when one is pinned — a
+  // "successful" broadcast isn't proof the deployment happened (e.g. it could
+  // be a value-only transfer, or the raw tx wasn't actually a deployment).
+  if (item.expectAddress) {
+    const code = await context.provider.getCode(item.expectAddress);
+    if (code === "0x") {
+      throw new Error(
+        `bootstrap presigned item ${item.id} produced no bytecode at expectAddress ${item.expectAddress}`,
+      );
+    }
+  }
   await awaitBootstrapRecord({
     itemId: item.id,
     kind: item.kind,
