@@ -6,9 +6,10 @@ inputs:
     required: false
     default: 'false'
   zkc-ref:
-    description: 'Optional zkc commit/branch/tag override (default: arithmetization/Makefile ZKC_REF)'
+    description: 'Optional zkc commit/branch/tag override (default: version pinned in arithmetization/go.mod)'
     required: false
     default: ''
+  # Downstream workflows may enable cache saves for trusted pinned inputs; keep them disabled for custom refs.
   cache-save:
     description: >
       When true, the Go module/build cache and the Zig cache are saved on a miss. Default false:
@@ -27,7 +28,7 @@ runs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.24.6'
+          go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
           # setup-go has no restore-only mode, so read-only here means the Go cache is off entirely.
           cache: ${{ inputs.cache-save }}
@@ -91,18 +92,12 @@ runs:
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
 
-      - name: Set zkc version
+      - name: Set optional zkc override
         shell: bash
         run: |
           zkc_ref="${{ inputs.zkc-ref }}"
-          if [ -z "$zkc_ref" ]; then
-            zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
-          fi
           {
             echo "ZKC_REF<<EOF"
             echo "$zkc_ref"
             echo "EOF"
           } >> "$GITHUB_ENV"
-
-
-
