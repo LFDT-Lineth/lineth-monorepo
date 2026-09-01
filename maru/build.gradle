@@ -11,20 +11,6 @@
 // licensing markers stay on every Kotlin and Java file.
 
 subprojects {
-  configurations.configureEach { cfg ->
-    resolutionStrategy.eachDependency { details ->
-      // Besu 26.5's metrics-core (PrometheusMetricsSystem, PrometheusGuavaCache$Context)
-      // is bytecode-bound to io.micrometer.prometheus.PrometheusMeterRegistry, which was
-      // renamed to io.micrometer.prometheusmetrics.PrometheusMeterRegistry in Micrometer
-      // 1.13+. zkevm's catalog pins 1.16.4 (new package); pinning maru to the last 1.12.x
-      // keeps the old package so Besu's class-load succeeds.
-      if (details.requested.group == 'io.micrometer') {
-        details.useVersion('1.12.13')
-        details.because('Match Besu 26.5 bytecode that references io.micrometer.prometheus.* (pre-1.13 package)')
-      }
-    }
-  }
-
   afterEvaluate { subproject ->
     if (subproject.plugins.hasPlugin('com.diffplug.spotless')) {
       subproject.spotless {
