@@ -80,9 +80,31 @@ type InputTreeOpening struct {
 	Leaves   []*RowPair
 }
 
+// MerkleCap mirrors verifier-ray's merkle.MerkleCap. Aux contains optional
+// digests: a nil entry means that the corresponding auxiliary node is absent.
+type MerkleCap struct {
+	Nodes []Digest
+	Aux   []*Digest
+}
+
+// InputCap mirrors verifier-ray's pcs.InputCap. It authenticates the shared
+// frontier of one input tree and carries the fully revealed tables above it.
+type InputCap struct {
+	Nodes  []Digest
+	Tables []InputCapTable
+}
+
+// InputCapTable mirrors verifier-ray's pcs.InputCapTable. Rows are the
+// fully-revealed encoded rows for one auxiliary table.
+type InputCapTable struct {
+	SizeLog2 uint8
+	Rows     []RowOpening
+}
+
 // FriProof is the running-layer FRI proof. Mirrors Zig's fri.Proof.
 type FriProof struct {
 	RoundRoots     []Digest
+	RoundCaps      []MerkleCap
 	FinalPoly      []Ext
 	RunningQueries [][]Branch
 }
@@ -91,6 +113,7 @@ type FriProof struct {
 // Zig's pcs.OpeningProof.
 type OpeningProof struct {
 	InputQueries [][]InputTreeOpening
+	InputCaps    []InputCap
 	FriProof     FriProof
 }
 

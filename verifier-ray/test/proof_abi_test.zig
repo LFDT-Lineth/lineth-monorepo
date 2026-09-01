@@ -21,6 +21,7 @@ const value = verifier_ray.field.value;
 const base = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
 const merkle = verifier_ray.crypto.merkle;
+const poseidon2 = verifier_ray.crypto.poseidon2;
 const commitment = verifier_ray.crypto.commitment;
 const protocol = verifier_ray.protocol;
 
@@ -109,6 +110,14 @@ test "optional Commitment has_value byte is at offset 32" {
     try std.testing.expectEqual(@as(u8, 0), std.mem.asBytes(&absent)[32]);
 
     const present: ?commitment.Commitment = std.mem.zeroes(commitment.Commitment);
+    try std.testing.expectEqual(@as(u8, 1), std.mem.asBytes(&present)[32]);
+}
+
+test "optional Digest has_value byte is at offset 32" {
+    const absent: ?poseidon2.Digest = null;
+    try std.testing.expectEqual(@as(u8, 0), std.mem.asBytes(&absent)[32]);
+
+    const present: ?poseidon2.Digest = std.mem.zeroes(poseidon2.Digest);
     try std.testing.expectEqual(@as(u8, 1), std.mem.asBytes(&present)[32]);
 }
 

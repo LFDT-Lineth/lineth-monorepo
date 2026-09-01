@@ -135,6 +135,13 @@ func projectModuleSizes(sys *wiop.System, proof wiop.Proof) ([]uint64, error) {
 func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 	out := OpeningProof{FriProof: projectFriProof(op.FRIProof)}
 
+	if len(op.InputCaps) > 0 {
+		out.InputCaps = make([]InputCap, len(op.InputCaps))
+		for i, cap := range op.InputCaps {
+			out.InputCaps[i] = projectInputCap(cap)
+		}
+	}
+
 	if len(op.InputQueries) > 0 {
 		out.InputQueries = make([][]InputTreeOpening, len(op.InputQueries))
 		for q, iq := range op.InputQueries {
@@ -148,6 +155,38 @@ func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 		}
 	}
 
+	return out
+}
+
+func projectMerkleCap(cap fri.MerkleCap) MerkleCap {
+	out := MerkleCap{Nodes: DigestsFrom(cap.Nodes)}
+	if len(cap.Aux) > 0 {
+		out.Aux = make([]*Digest, len(cap.Aux))
+		for i, aux := range cap.Aux {
+			if aux == nil {
+				continue
+			}
+			digest := DigestFrom(*aux)
+			out.Aux[i] = &digest
+		}
+	}
+	return out
+}
+
+func projectInputCap(cap fri.InputCap) InputCap {
+	out := InputCap{Nodes: DigestsFrom(cap.Nodes)}
+	if len(cap.Tables) > 0 {
+		out.Tables = make([]InputCapTable, len(cap.Tables))
+		for i, table := range cap.Tables {
+			out.Tables[i] = InputCapTable{SizeLog2: table.SizeLog2}
+			if len(table.Rows) > 0 {
+				out.Tables[i].Rows = make([]RowOpening, len(table.Rows))
+				for j, row := range table.Rows {
+					out.Tables[i].Rows[j] = projectRowOpening(row)
+				}
+			}
+		}
+	}
 	return out
 }
 
@@ -177,6 +216,12 @@ func projectFriProof(p fri.Proof) FriProof {
 		RoundRoots: DigestsFrom(p.RoundRoots),
 		FinalPoly:  ExtsFrom(p.FinalPoly),
 	}
+	if len(p.RoundCaps) > 0 {
+		out.RoundCaps = make([]MerkleCap, len(p.RoundCaps))
+		for i, cap := range p.RoundCaps {
+			out.RoundCaps[i] = projectMerkleCap(cap)
+		}
+	}
 
 	if len(p.RunningQueries) > 0 {
 		out.RunningQueries = make([][]Branch, len(p.RunningQueries))
@@ -186,16 +231,10 @@ func projectFriProof(p fri.Proof) FriProof {
 			}
 			out.RunningQueries[q] = make([]Branch, len(rq))
 			for j, layer := range rq {
-				if len(layer) == 0 {
-					continue
-				}
-				// The verifier reads one Branch per fold round. Go's QueryLayer is
-				// a slice, but only layer[0] is consumed, and AuxSiblings has no
-				// counterpart in Zig's merkle.Branch at all -- measured to be
-				// entirely nil, so dropping it loses nothing.
+				// The merged FRI representation carries one Branch per fold round.
 				out.RunningQueries[q][j] = Branch{
-					Siblings: DigestsFrom(layer[0].Siblings),
-					Leaf:     DigestFrom(layer[0].Leaf),
+					Siblings: DigestsFrom(layer.Siblings),
+					Leaf:     DigestFrom(layer.Leaf),
 				}
 			}
 		}

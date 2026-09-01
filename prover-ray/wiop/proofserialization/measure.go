@@ -51,12 +51,18 @@ type Stats struct {
 	RowExtElements    int
 	OpeningDepths     map[int]int
 	RoundRoots        int
+	RoundCaps         int
+	RoundCapNodes     int
+	RoundCapAuxSlots  int
+	RoundCapAuxNonNil int
 	FinalPolyCoeffs   int
 	LayersPerQuery    int
 	Branches          int
 	BranchSiblings    int
-	AuxSlots          int
-	AuxNonNil         int
+	InputCaps         int
+	InputCapNodes     int
+	InputCapTables    int
+	InputCapRows      int
 
 	Sections []Section
 	// Total is the image size in bytes. Payload is the part that is irreducible
@@ -69,9 +75,9 @@ type Stats struct {
 // Measure computes the image size for proof without encoding it.
 //
 // It deliberately counts what the VERIFIER reads, not what Go carries: one
-// merkle.Branch per fold round rather than the whole QueryLayer, and no
-// AuxSiblings, since the Zig type has no such field. AuxNonNil records whether
-// dropping those would actually lose anything.
+// merkle.Branch per fold round rather than the whole QueryLayer. Merkle-cap
+// auxiliary nodes are counted separately because they are authenticated data
+// in the current FRI proof shape, not branch metadata.
 func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 	replayedRounds := max(len(sys.Rounds)-1, 0)
 	s := Stats{
@@ -166,37 +172,61 @@ func Measure(sys *wiop.System, proof wiop.Proof, pub wiop.PublicInput) Stats {
 		s.Payload += s.InputTreeSiblings * SizeDigest
 		s.Payload += rowData
 
+		s.InputCaps = len(op.InputCaps)
+		capRowData := 0
+		for _, cap := range op.InputCaps {
+			s.InputCapNodes += len(cap.Nodes)
+			s.InputCapTables += len(cap.Tables)
+			for _, table := range cap.Tables {
+				s.InputCapRows += len(table.Rows)
+				for _, row := range table.Rows {
+					s.RowBaseElements += len(row.Base)
+					s.RowExtElements += len(row.Ext)
+					capRowData += len(row.Base)*SizeElement + len(row.Ext)*SizeExt
+				}
+			}
+		}
+		add("input_caps", s.InputCaps*SizeInputCap, "InputCap structs")
+		add("input-cap nodes", s.InputCapNodes*SizeDigest, "Merkle frontier digests")
+		add("input-cap tables", s.InputCapTables*SizeInputCapTable, "InputCapTable structs")
+		add("input-cap rows", s.InputCapRows*SizeRowOpening, "revealed RowOpening structs")
+		add("input-cap row data", capRowData, "fully revealed auxiliary rows")
+		s.Payload += s.InputCapNodes * SizeDigest
+		s.Payload += capRowData
+
 		fp := op.FRIProof
 		s.RoundRoots = len(fp.RoundRoots)
+		s.RoundCaps = len(fp.RoundCaps)
+		for _, cap := range fp.RoundCaps {
+			s.RoundCapNodes += len(cap.Nodes)
+			s.RoundCapAuxSlots += len(cap.Aux)
+			for _, aux := range cap.Aux {
+				if aux != nil {
+					s.RoundCapAuxNonNil++
+				}
+			}
+		}
 		s.FinalPolyCoeffs = len(fp.FinalPoly)
 		for _, rq := range fp.RunningQueries {
 			s.LayersPerQuery = len(rq)
 			for _, layer := range rq {
-				if len(layer) == 0 {
-					continue
-				}
 				s.Branches++
-				s.BranchSiblings += len(layer[0].Siblings)
-				// AuxSiblings is contractually as long as Siblings, with nil where
-				// a level has no aux node. Only non-nil entries are real data, and
-				// the Zig merkle.Branch has no field for them -- so a non-zero
-				// AuxNonNil is a prover/verifier disagreement, not a saving.
-				for _, aux := range layer[0].AuxSiblings {
-					s.AuxSlots++
-					if aux != nil {
-						s.AuxNonNil++
-					}
-				}
+				s.BranchSiblings += len(layer.Siblings)
 			}
 		}
 
 		add("round_roots", s.RoundRoots*SizeDigest, "")
+		add("round_caps", s.RoundCaps*SizeMerkleCap, "MerkleCap structs")
+		add("round-cap nodes", s.RoundCapNodes*SizeDigest, "Merkle frontier digests")
+		add("round-cap aux", s.RoundCapAuxSlots*SizeOptDigest, "optional auxiliary digests")
 		add("final_poly", s.FinalPolyCoeffs*SizeExt, "")
 		add("running_queries outer", len(fp.RunningQueries)*SizeSlice, "")
 		add("running_queries branches", s.Branches*SizeBranch, "")
 		add("branch siblings", s.BranchSiblings*SizeDigest, "Merkle path digests")
 
 		s.Payload += s.RoundRoots * SizeDigest
+		s.Payload += s.RoundCapNodes * SizeDigest
+		s.Payload += s.RoundCapAuxNonNil * SizeDigest
 		s.Payload += s.FinalPolyCoeffs * SizeExt
 		s.Payload += s.BranchSiblings * SizeDigest
 	}
@@ -241,18 +271,13 @@ func (s Stats) String() string {
 		fmt.Fprintf(&b, "  row elements             base %d, ext %d\n", s.RowBaseElements, s.RowExtElements)
 		fmt.Fprintf(&b, "  opening depths           %s\n", histogram(s.OpeningDepths))
 		fmt.Fprintf(&b, "  round roots              %d  (fri rounds = %d)\n", s.RoundRoots, s.RoundRoots+1)
+		fmt.Fprintf(&b, "  round caps               %d  (%d nodes, %d aux slots, %d non-nil)\n",
+			s.RoundCaps, s.RoundCapNodes, s.RoundCapAuxSlots, s.RoundCapAuxNonNil)
+		fmt.Fprintf(&b, "  input caps               %d  (%d nodes, %d tables, %d rows)\n",
+			s.InputCaps, s.InputCapNodes, s.InputCapTables, s.InputCapRows)
 		fmt.Fprintf(&b, "  final poly coeffs        %d\n", s.FinalPolyCoeffs)
 		fmt.Fprintf(&b, "  branches                 %d, %d sibling digests, %d layers per query\n",
 			s.Branches, s.BranchSiblings, s.LayersPerQuery)
-		fmt.Fprintf(&b, "  aux sibling slots        %d, of which NON-NIL %d\n", s.AuxSlots, s.AuxNonNil)
-		if s.AuxNonNil > 0 {
-			fmt.Fprintf(&b, "    WARNING: the Zig merkle.Branch has no AuxSiblings field, so these\n")
-			fmt.Fprintf(&b, "    %d values would be dropped by the projection. If the Go verifier\n", s.AuxNonNil)
-			fmt.Fprintf(&b, "    folds them into the running-layer root and the Zig one does not, the\n")
-			fmt.Fprintf(&b, "    two reconstruct different roots. Resolve before encoding anything.\n")
-		} else {
-			fmt.Fprintf(&b, "    all nil, so dropping the field loses nothing\n")
-		}
 	}
 
 	fmt.Fprintf(&b, "\nimage size by section:\n\n")
