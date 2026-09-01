@@ -154,11 +154,11 @@ func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 	return out
 }
 
-func projectMerkleCap(cap fri.MerkleCap) MerkleCap {
-	out := MerkleCap{Nodes: DigestsFrom(cap.Nodes)}
-	if len(cap.Aux) > 0 {
-		out.Aux = make([]*Digest, len(cap.Aux))
-		for i, aux := range cap.Aux {
+func projectMerkleCap(treeCap fri.MerkleCap) MerkleCap {
+	out := MerkleCap{Nodes: DigestsFrom(treeCap.Nodes)}
+	if len(treeCap.Aux) > 0 {
+		out.Aux = make([]*Digest, len(treeCap.Aux))
+		for i, aux := range treeCap.Aux {
 			if aux == nil {
 				continue
 			}
@@ -169,11 +169,11 @@ func projectMerkleCap(cap fri.MerkleCap) MerkleCap {
 	return out
 }
 
-func projectInputCap(cap fri.InputCap) InputCap {
-	out := InputCap{Nodes: DigestsFrom(cap.Nodes)}
-	if len(cap.Tables) > 0 {
-		out.Tables = make([]InputCapTable, len(cap.Tables))
-		for i, table := range cap.Tables {
+func projectInputCap(treeCap fri.InputCap) InputCap {
+	out := InputCap{Nodes: DigestsFrom(treeCap.Nodes)}
+	if len(treeCap.Tables) > 0 {
+		out.Tables = make([]InputCapTable, len(treeCap.Tables))
+		for i, table := range treeCap.Tables {
 			out.Tables[i] = InputCapTable{SizeLog2: table.SizeLog2}
 			if len(table.Rows) > 0 {
 				out.Tables[i].Rows = make([]RowOpening, len(table.Rows))
@@ -212,12 +212,7 @@ func projectFriProof(p fri.Proof) FriProof {
 		RoundRoots: DigestsFrom(p.RoundRoots),
 		FinalPoly:  ExtsFrom(p.FinalPoly),
 	}
-	if len(p.RoundCaps) > 0 {
-		out.RoundCaps = make([]MerkleCap, len(p.RoundCaps))
-		for i, cap := range p.RoundCaps {
-			out.RoundCaps[i] = projectMerkleCap(cap)
-		}
-	}
+	out.RoundCaps = utils.Map(projectMerkleCap, p.RoundCaps)
 
 	if len(p.RunningQueries) > 0 {
 		out.RunningQueries = make([][]Branch, len(p.RunningQueries))

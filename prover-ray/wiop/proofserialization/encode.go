@@ -244,11 +244,11 @@ func (e *encoder) putMerkleCap(off int, treeCap MerkleCap) {
 	}
 }
 
-func (e *encoder) putInputCap(off int, cap InputCap) {
-	e.putDigests(off+OffInputCapNodes, cap.Nodes)
+func (e *encoder) putInputCap(off int, treeCap InputCap) {
+	e.putDigests(off+OffInputCapNodes, treeCap.Nodes)
 
-	tables := e.putSlice(off+OffInputCapTables, len(cap.Tables), SizeInputCapTable, 8)
-	for i, table := range cap.Tables {
+	tables := e.putSlice(off+OffInputCapTables, len(treeCap.Tables), SizeInputCapTable, 8)
+	for i, table := range treeCap.Tables {
 		e.putInputCapTable(tables+i*SizeInputCapTable, table)
 	}
 }
