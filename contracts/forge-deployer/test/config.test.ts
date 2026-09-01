@@ -55,6 +55,19 @@ test("rejects identical L1 and L2 chain IDs", () => {
   assert.doesNotThrow(() => assertDistinctChainIds("1", "1337"));
 });
 
+test("captures optional bootstrap manifest and scripts dir inputs", () => {
+  const unset = loadConfig(requiredEnvironment());
+  assert.equal(unset.bootstrapManifestFile, undefined);
+  assert.equal(unset.bootstrapScriptsDir, undefined);
+
+  const env = requiredEnvironment();
+  env.BOOTSTRAP_MANIFEST_FILE = "/etc/bootstrap/manifest.json";
+  env.BOOTSTRAP_SCRIPTS_DIR = "/etc/bootstrap/scripts";
+  const config = loadConfig(env);
+  assert.equal(config.bootstrapManifestFile, "/etc/bootstrap/manifest.json");
+  assert.equal(config.bootstrapScriptsDir, "/etc/bootstrap/scripts");
+});
+
 test("requires pinned safe-integer starting nonces", () => {
   const missing = requiredEnvironment();
   delete missing.L1_STARTING_NONCE;

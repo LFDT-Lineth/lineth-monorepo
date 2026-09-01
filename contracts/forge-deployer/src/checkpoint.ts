@@ -2,7 +2,7 @@ import { getAddress, isAddress, keccak256, toUtf8Bytes } from "ethers";
 
 import { ChainName, DeploymentStep, StepId } from "./address-plan";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const DEPLOYMENT_PROFILE = "forge-dev-v1";
 
 export interface CheckpointIdentity {
@@ -15,6 +15,9 @@ export interface CheckpointIdentity {
   signers: { l1: string; l2: string };
   startingNonces: { l1: number; l2: number };
   configurationHash: string;
+  // keccak256 of the normalized bootstrap manifest. ZeroHash when no manifest is
+  // configured. Changing the manifest against an existing checkpoint fails closed.
+  bootstrapHash: string;
 }
 
 interface DeploymentConfiguration {
@@ -52,11 +55,24 @@ export interface InFlightDeployment {
   expectedAddress: string;
 }
 
+// A completed custom bootstrap item. `address` is present only for items that
+// deploy a contract (sign create or presigned/script with expectAddress).
+export interface CompletedBootstrapItem {
+  kind: "sign" | "presigned" | "script";
+  chain: ChainName;
+  transactionHash: string;
+  blockNumber: number;
+  chainId: string;
+  address?: string;
+}
+
 export interface DeploymentCheckpoint extends CheckpointIdentity {
   expectedDeployments: Record<string, ExpectedDeployment>;
   deployments: Record<string, CompletedDeployment>;
   inFlightDeployments: Record<string, InFlightDeployment>;
   completedSteps: StepId[];
+  // Completed custom bootstrap items keyed by `bootstrap.<id>`.
+  bootstrap: Record<string, CompletedBootstrapItem>;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,6 +133,7 @@ export function createCheckpoint(input: CreateCheckpointInput): DeploymentCheckp
     deployments: {},
     inFlightDeployments: {},
     completedSteps: [],
+    bootstrap: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -144,6 +161,7 @@ export function assertCheckpointCompatible(checkpoint: DeploymentCheckpoint, ide
   assertEqual(checkpoint.startingNonces.l1, expected.startingNonces.l1, "L1 starting nonce");
   assertEqual(checkpoint.startingNonces.l2, expected.startingNonces.l2, "L2 starting nonce");
   assertEqual(checkpoint.configurationHash.toLowerCase(), expected.configurationHash, "deployment configuration");
+  assertEqual(checkpoint.bootstrapHash.toLowerCase(), expected.bootstrapHash.toLowerCase(), "bootstrap manifest");
 }
 
 export function assertNoInFlightDeployments(checkpoint: DeploymentCheckpoint): void {
@@ -178,6 +196,28 @@ export function parseCheckpoint(raw: string): DeploymentCheckpoint {
     !Array.isArray(candidate.completedSteps)
   ) {
     throw new Error("checkpoint JSON is missing required fields");
+  }
+  if (typeof candidate.bootstrapHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(candidate.bootstrapHash)) {
+    throw new Error("checkpoint JSON has an invalid or missing bootstrap hash");
+  }
+  if (!candidate.bootstrap || typeof candidate.bootstrap !== "object" || Array.isArray(candidate.bootstrap)) {
+    throw new Error("checkpoint JSON has an invalid or missing bootstrap record");
+  }
+  for (const [key, record] of Object.entries(candidate.bootstrap)) {
+    if (
+      typeof record !== "object" ||
+      record === null ||
+      (record.kind !== "sign" && record.kind !== "presigned" && record.kind !== "script") ||
+      (record.chain !== "l1" && record.chain !== "l2") ||
+      !/^0x[0-9a-fA-F]{64}$/.test(record.transactionHash) ||
+      !Number.isSafeInteger(record.blockNumber) ||
+      record.blockNumber < 0 ||
+      typeof record.chainId !== "string" ||
+      !/^[0-9]+$/.test(record.chainId) ||
+      (record.address !== undefined && !isAddress(record.address))
+    ) {
+      throw new Error(`checkpoint contains invalid bootstrap record ${key}`);
+    }
   }
   if (
     !candidate.startingNonces ||

@@ -1,12 +1,13 @@
 # Forge contract deployer
 
 One-shot, dev/test-only deployer for the Lineth Forge chart. It packages the
-four boot-critical deployment steps used by the Lineth Stack quickstart:
+five boot-critical deployment steps used by the Lineth Stack quickstart:
 
 1. L1 `IntegrationTestTrueVerifier` and `LinethRollupV8`
 2. L2 `L2MessageService`
 3. L1 `BridgedToken` and `TokenBridge`
 4. L2 `BridgedToken` and `TokenBridge`
+5. L2 EIP-7997 / Arachnid deterministic deployment proxy (`Create2Factory`)
 
 It intentionally does not deploy coordinator, prover, postman, demo-token, or
 Forced Transaction Gateway contracts.
@@ -33,6 +34,8 @@ the corresponding starting nonce to its expected pending nonce before the
 first run; changing it after a checkpoint exists fails closed.
 
 `L2_GENESIS_TIMESTAMP` is optional and otherwise comes from L2 block 0.
+`BOOTSTRAP_MANIFEST_FILE` (and optionally `BOOTSTRAP_SCRIPTS_DIR`) enable the
+custom bootstrap phase; see below.
 `L1_DEPLOYER_ADDRESS` and `L2_DEPLOYER_ADDRESS` can be supplied to assert that
 the mounted keys derive the bootstrap/operator-published identities.
 `EXPECTED_L1_CHAIN_ID` and `EXPECTED_L2_CHAIN_ID` fail before deployment when
@@ -54,12 +57,14 @@ the service account namespace and can be set with `POD_NAMESPACE` and
 
 In Kubernetes the Lineth chart creates the `lineth-contract-addresses`
 placeholder ConfigMap and the deployer updates it using resource-version
-guards. Its schema-version-2 `checkpoint.json` contains the exact deployment
+guards. Its schema-version-3 `checkpoint.json` contains the exact deployment
 image digest, chain IDs, signer addresses, starting nonces, deterministic
-expected addresses, the public deployment-configuration hash, transaction
-hashes, and block numbers. It never contains private keys or RPC URLs.
+expected addresses, the public deployment-configuration hash, the bootstrap
+manifest hash, completed custom bootstrap records, transaction hashes, and
+block numbers. It never contains private keys or RPC URLs.
 `addresses.json` exposes the same versioned, secret-free deployment record,
-while four top-level keys expose the completed primary contract addresses.
+while five top-level keys expose the completed primary contract addresses
+(including `deterministic-deployment-proxy`).
 
 Before every deployment broadcast, the parent persists an intent containing
 the planned contract, nonce, and deterministic address, then acknowledges the
@@ -79,6 +84,112 @@ unexplained signer nonce drift also fail closed.
 
 For local runs, set `CHECKPOINT_FILE=/path/to/checkpoint.json` instead of using
 the Kubernetes API.
+
+## Deterministic deployment proxy (step 5)
+
+The final L2 step installs the well-known EIP-7997 / Arachnid
+`Create2Factory` so downstream tooling can deploy contracts at deterministic
+addresses:
+
+- Factory address: `0x4e59b44847b379578588920cA78FbF26c0B4956C` (a fixed,
+  well-known constant — not derived from the deployer nonce)
+- Keyless signer it funds: `0x3fAB184622Dc19b6109349B94811493BF2a45362`
+- Funding amount: exactly `0.01 ETH` (`10000000000000000` wei) — the budget the
+  pre-signed raw transaction hardcodes (`gasLimit 100000` x `gasPrice 100 gwei`)
+
+The step runs **after** the four contract-deployment steps. The deployment
+transaction is a pre-signed, keyless broadcast, so it consumes **no** deployer
+nonce; only the funding transfer consumes one L2 deployer nonce.
+
+The step is idempotent and restart-safe. When factory bytecode already exists
+at the well-known address — including dev chains such as anvil that preinstall
+it in genesis — the deployer adopts it as a `recovered` checkpoint record and
+sends nothing (no funding transfer, no broadcast). Otherwise it funds the
+signer and broadcasts the raw transaction, then verifies the factory bytecode
+and checkpoints the broadcast transaction hash.
+
+**Gas-free L2 caveat.** On a gas-free L2 (`L2_DEPLOY_GAS_PRICE_WEI=0`) the
+funding transfer itself is free, but the funding is still required: the
+pre-signed raw transaction hardcodes a 100 gwei gas price, so the signer must
+actually hold 0.01 ETH for the network to accept the broadcast regardless of
+the chain's configured gas price.
+
+## Custom bootstrap phase (optional)
+
+Operators of new networks can inject extra transactions after the five core
+steps — for example a consortium deploying its own contracts on every partner
+network for cross-chain interoperability. The phase is opt-in: when
+`BOOTSTRAP_MANIFEST_FILE` is unset the deployer behaves exactly as before.
+
+Set `BOOTSTRAP_MANIFEST_FILE` to the path of a JSON manifest mounted into the
+Job. The manifest declares an ordered list of items; `id` values must be unique
+lowercase kebab-case and stay stable across reruns (they key the checkpoint).
+
+```json
+{
+  "version": 1,
+  "items": [
+    { "id": "fund-relayer", "kind": "sign", "chain": "l2",
+      "to": "0xConsortiumRelayer", "valueWei": "100000000000000000" },
+    { "id": "bridge-factory", "kind": "presigned", "chain": "l2",
+      "rawTx": "0x...", "expectAddress": "0x..." },
+    { "id": "extra-setup", "kind": "script", "chain": "l2",
+      "script": "consortium/extra.js" }
+  ]
+}
+```
+
+Item kinds:
+
+- **`sign`** — the deployer signs and submits. Set `to` for a value transfer,
+  `data` (bytecode) for a bare contract create, or **both** for a contract call
+  that carries data — which is exactly how a CREATE2 deploy through the
+  deterministic proxy works (a signed call to the factory `to` with the encoded
+  deploy `data`). `valueWei` defaults to `0`; `gasLimit` is optional. These are
+  how you fund the external accounts that pre-signed transactions spend from.
+  They hook into the existing nonce management: the runner reads the deployer's
+  current pending nonce after the core steps and hands it to the phase as the
+  starting nonce, so each `sign` item continues the chain's nonce sequence with
+  no gaps.
+  - **Constructor args / create data:** `data` is the raw transaction payload,
+    so constructor arguments are pre-encoded onto the bytecode by the operator
+    (`bytecode ++ abiEncode(args)`); the step submits it verbatim.
+  - **Deployed address:** set `expectAddress` to pin and record the resulting
+    contract. For a bare create the step asserts `receipt.contractAddress`
+    matches it. For a CREATE2-proxy call the receipt has no contract address
+    (it's a call to the factory), so the step instead verifies bytecode landed
+    at `expectAddress`.
+- **`presigned`** — broadcast a keyless, externally-signed raw transaction
+  verbatim. Consumes no deployer nonce. With `expectAddress` set, the item is
+  skipped when that address already has bytecode (the same idempotency check
+  the deterministic-proxy step uses).
+- **`script`** — run an operator-supplied Node script (resolved relative to
+  `BOOTSTRAP_SCRIPTS_DIR`) that may create/sign/submit anything. The child
+  receives `RPC_URL`, `DEPLOYER_PRIVATE_KEY`, `BOOTSTRAP_ITEM_ID`,
+  `BOOTSTRAP_CHAIN`, `BOOTSTRAP_CHAIN_ID`, and `BOOTSTRAP_START_NONCE`, and can
+  `require("ethers")` (bundled into the image). Scripts run as restricted child
+  processes and are trusted operator input. A script performs arbitrary actions
+  with no single transaction hash, so on success it is recorded with a sentinel
+  hash and skipped on rerun — the script itself must make its own on-chain
+  actions safe to have run once.
+
+Within a run, `sign` (funding) items execute first in manifest order, then
+`presigned`, then `script` — so funded accounts exist before any pre-signed
+transaction that spends from them. Items are grouped by chain and each chain's
+pending items run in one pass.
+
+### Restart-safety and fail-closed semantics
+
+Each completed item is durably recorded in the checkpoint under
+`bootstrap.<id>` (kind, chain, transaction hash, block number, chain ID, and
+the deployed address when one exists). Completed items are skipped on rerun, so
+re-running with the same manifest sends no further transactions.
+
+The manifest content is hashed (`keccak256` over the normalized manifest) into
+the checkpoint identity as `bootstrapHash`. Changing the manifest against an
+existing checkpoint fails closed with a `bootstrap manifest` mismatch — the same
+rule that guards the image digest, chain IDs, and signers. To deploy a changed
+manifest, recreate the network from clean chain state and a fresh checkpoint.
 
 ## Development
 

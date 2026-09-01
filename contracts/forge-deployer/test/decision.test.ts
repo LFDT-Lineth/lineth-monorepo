@@ -27,13 +27,14 @@ function fixture() {
     chainIds: { l1: "1", l2: "1337" },
     signers: { l1: L1_SIGNER, l2: L2_SIGNER },
     configurationHash: `0x${"12".repeat(32)}`,
+    bootstrapHash: `0x${"00".repeat(32)}`,
     startingNonces: { l1: 5, l2: 9 },
     plan,
   });
   return { checkpoint, step: plan[0]! };
 }
 
-test("skips only when all records and bytecode verify", () => {
+test("skips only when all records and bytecode verify", async () => {
   const { checkpoint, step } = fixture();
   const codeByKey: Record<string, boolean> = {};
   for (const deployment of step.deployments) {
@@ -48,10 +49,10 @@ test("skips only when all records and bytecode verify", () => {
   }
   checkpoint.completedSteps.push(step.id);
 
-  assert.deepEqual(decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), { action: "skip" });
+  assert.deepEqual(await decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), { action: "skip" });
 });
 
-test("recovers a fully checkpointed step when only its completion marker is missing", () => {
+test("recovers a fully checkpointed step when only its completion marker is missing", async () => {
   const { checkpoint, step } = fixture();
   const codeByKey = Object.fromEntries(step.deployments.map((deployment) => [deployment.key, true]));
   for (const deployment of step.deployments) {
@@ -64,33 +65,33 @@ test("recovers a fully checkpointed step when only its completion marker is miss
     };
   }
 
-  assert.deepEqual(decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), { action: "recover" });
+  assert.deepEqual(await decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), { action: "recover" });
 });
 
-test("fails closed when addresses contain code without durable deployment records", () => {
+test("fails closed when addresses contain code without durable deployment records", async () => {
   const { checkpoint, step } = fixture();
   const codeByKey = Object.fromEntries(step.deployments.map((deployment) => [deployment.key, true]));
 
-  assert.throws(() => decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), /uncheckpointed code/);
+  await assert.rejects(decideStepAction({ step, checkpoint, codeByKey, currentNonce: 10 }), /uncheckpointed code/);
 });
 
-test("deploys only when the range is empty and nonce has not drifted", () => {
+test("deploys only when the range is empty and nonce has not drifted", async () => {
   const { checkpoint, step } = fixture();
   const codeByKey = Object.fromEntries(step.deployments.map((deployment) => [deployment.key, false]));
 
-  assert.deepEqual(decideStepAction({ step, checkpoint, codeByKey, currentNonce: 5 }), { action: "deploy" });
+  assert.deepEqual(await decideStepAction({ step, checkpoint, codeByKey, currentNonce: 5 }), { action: "deploy" });
 });
 
-test("fails closed on partial deployment, nonce drift, or lost bytecode", () => {
+test("fails closed on partial deployment, nonce drift, or lost bytecode", async () => {
   const { checkpoint, step } = fixture();
   const partialCode = Object.fromEntries(step.deployments.map((deployment, index) => [deployment.key, index === 0]));
   const noCode = Object.fromEntries(step.deployments.map((deployment) => [deployment.key, false]));
 
-  assert.throws(
-    () => decideStepAction({ step, checkpoint, codeByKey: partialCode, currentNonce: 6 }),
+  await assert.rejects(
+    decideStepAction({ step, checkpoint, codeByKey: partialCode, currentNonce: 6 }),
     /partial deployment/,
   );
-  assert.throws(() => decideStepAction({ step, checkpoint, codeByKey: noCode, currentNonce: 6 }), /nonce drift/);
+  await assert.rejects(decideStepAction({ step, checkpoint, codeByKey: noCode, currentNonce: 6 }), /nonce drift/);
 
   const first = step.deployments[0]!;
   checkpoint.deployments[first.key] = {
@@ -100,8 +101,66 @@ test("fails closed on partial deployment, nonce drift, or lost bytecode", () => 
     chainId: "1",
     recovered: false,
   };
-  assert.throws(
-    () => decideStepAction({ step, checkpoint, codeByKey: noCode, currentNonce: 5 }),
+  await assert.rejects(
+    decideStepAction({ step, checkpoint, codeByKey: noCode, currentNonce: 5 }),
     /checkpointed deployment.*has no bytecode/,
+  );
+});
+
+test("deterministic proxy step skips on existing factory code, ignoring nonce drift", async () => {
+  const { checkpoint } = fixture();
+  const plan = buildAddressPlan({ l1Signer: L1_SIGNER, l2Signer: L2_SIGNER, l1StartingNonce: 5, l2StartingNonce: 9 });
+  const step = plan.find((candidate) => candidate.id === "l2-deterministic-proxy")!;
+  const deployment = step.deployments[0]!;
+
+  // Factory already deployed and checkpointed: skip even though the L2 deployer
+  // nonce advanced past the funding-send nonce on the prior run.
+  checkpoint.deployments[deployment.key] = {
+    address: deployment.expectedAddress,
+    transactionHash: TX_HASH,
+    blockNumber: 200,
+    chainId: "1337",
+    recovered: false,
+  };
+  checkpoint.completedSteps.push(step.id);
+
+  assert.deepEqual(
+    await decideStepAction({ step, checkpoint, codeByKey: { [deployment.key]: true }, currentNonce: 18 }),
+    { action: "skip" },
+  );
+});
+
+test("adopts uncheckpointed well-known-address code when the verifier reports a match", async () => {
+  const { checkpoint } = fixture();
+  const plan = buildAddressPlan({ l1Signer: L1_SIGNER, l2Signer: L2_SIGNER, l1StartingNonce: 5, l2StartingNonce: 9 });
+  const step = plan.find((candidate) => candidate.id === "l2-deterministic-proxy")!;
+  const deployment = step.deployments[0]!;
+
+  const result = await decideStepAction({
+    step,
+    checkpoint,
+    codeByKey: { [deployment.key]: true },
+    currentNonce: 18,
+    verifyWellKnownCode: async () => "match",
+  });
+
+  assert.deepEqual(result, { action: "adopt" });
+});
+
+test("refuses to adopt uncheckpointed well-known-address code when the verifier reports a mismatch", async () => {
+  const { checkpoint } = fixture();
+  const plan = buildAddressPlan({ l1Signer: L1_SIGNER, l2Signer: L2_SIGNER, l1StartingNonce: 5, l2StartingNonce: 9 });
+  const step = plan.find((candidate) => candidate.id === "l2-deterministic-proxy")!;
+  const deployment = step.deployments[0]!;
+
+  await assert.rejects(
+    decideStepAction({
+      step,
+      checkpoint,
+      codeByKey: { [deployment.key]: true },
+      currentNonce: 18,
+      verifyWellKnownCode: async () => "mismatch",
+    }),
+    /unexpected bytecode/,
   );
 });
