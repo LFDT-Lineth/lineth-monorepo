@@ -85,6 +85,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build two zkc binaries (base + opt) via go install
         run: |

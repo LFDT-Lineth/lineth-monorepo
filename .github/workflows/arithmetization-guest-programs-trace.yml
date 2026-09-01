@@ -59,8 +59,8 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
-          # Share caches for go.mod-pinned runs; custom ZKC refs must not write to shared caches.
-          cache-save: ${{ inputs.zkc-ref == '' }}
+          # Share caches for go.mod-pinned runs from trusted refs; fork PRs and custom ZKC refs must not write to shared caches.
+          cache-save: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && inputs.zkc-ref == '' }}
 
       - name: Compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check

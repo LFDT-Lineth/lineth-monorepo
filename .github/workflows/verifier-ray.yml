@@ -67,6 +67,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
           dependency-hash-paths: verifier-ray/**/build.zig.zon
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Install native tools
         run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf xxd
