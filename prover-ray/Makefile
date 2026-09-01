@@ -10,7 +10,8 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 .PHONY: \
 	test \
 	ci-lint \
-	download-zkc-testdata
+	download-zkc-testdata \
+	download-instrumentation-testdata
 
 ##
 ## Run all the unit-tests
@@ -45,3 +46,16 @@ download-zkc-testdata:
 	find $(ZKC_TESTDATA_SYNC_DST_DIR) -type f -name "*.rejects" -delete
 
 	# we don't compile binaries. They are compiled as-needed during integration tests (to be up-to-date)
+
+##
+## Populate instrumentation/testdata/shards/ from the already-synced zkcdriver
+## testdata.  Each .zkc file is a fixture; its paired .accepts file holds the
+## inputs (one JSON object per line, copied as-is from the zkcdriver testdata).
+##
+INSTRUMENTATION_TESTDATA_DST := instrumentation/testdata/shards
+INSTRUMENTATION_TESTDATA_SRC := $(ZKC_TESTDATA_SYNC_DST_DIR)/unit
+download-instrumentation-testdata: download-zkc-testdata
+	rm -rf $(INSTRUMENTATION_TESTDATA_DST)/*.zkc $(INSTRUMENTATION_TESTDATA_DST)/*.accepts
+	mkdir -p $(INSTRUMENTATION_TESTDATA_DST)
+	cp $(INSTRUMENTATION_TESTDATA_SRC)/*.zkc $(INSTRUMENTATION_TESTDATA_DST)/
+	cp $(INSTRUMENTATION_TESTDATA_SRC)/*.accepts $(INSTRUMENTATION_TESTDATA_DST)/

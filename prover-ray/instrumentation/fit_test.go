@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/instrumentation"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/instrumentation"
 	"github.com/stretchr/testify/require"
 )
 
