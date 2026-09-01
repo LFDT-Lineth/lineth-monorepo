@@ -14,7 +14,13 @@ export interface ParsedDeploymentRecord {
   chainId: string;
 }
 
-interface Acknowledgement {
+// Generic wire shape for the checkpoint parent's reply to any `sendAndAwaitAck`
+// message. There is no single fixed meaning: `type` is the discriminator that
+// says *what* is being acknowledged (one of "lineth-deployment-intent-ack",
+// "lineth-deployment-record-ack", or bootstrap.ts's "lineth-bootstrap-record-ack"),
+// matched by the caller-supplied `ackType`. `error`, when present, means the
+// parent rejected the request rather than acknowledging it.
+interface AckEnvelope {
   type: string;
   id: string;
   error?: string;
@@ -45,9 +51,9 @@ export function parseDeploymentRecord(line: string): ParsedDeploymentRecord | un
   };
 }
 
-function isAcknowledgement(message: unknown, id: string, ackType: string): message is Acknowledgement {
+function isMatchingAckEnvelope(message: unknown, id: string, ackType: string): message is AckEnvelope {
   if (typeof message !== "object" || message === null) return false;
-  const candidate = message as Partial<Acknowledgement>;
+  const candidate = message as Partial<AckEnvelope>;
   return candidate.type === ackType && candidate.id === id;
 }
 
@@ -75,7 +81,7 @@ export async function sendAndAwaitAck(
       process.off("disconnect", onDisconnect);
     };
     const onMessage = (received: unknown) => {
-      if (!isAcknowledgement(received, id, ackType)) return;
+      if (!isMatchingAckEnvelope(received, id, ackType)) return;
       cleanup();
       if (received.error) reject(new Error(received.error));
       else resolve();
