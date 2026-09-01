@@ -91,19 +91,33 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
       transactionSelectionResult: TransactionSelectionResult,
     ) {
       val txHash = evaluationContext.pendingTransaction.transaction.hash
-      // Besu may retry block building and cancel an in-flight selection; when that happens a later
-      // SELECTION_CANCELLED outcome is delivered for a transaction that was already substantively
-      // rejected (e.g. BLOCK_COMPRESSED_SIZE_OVERFLOW). Never let a cancellation overwrite a real
-      // rejection, so the recorded reason reflects why the tx was actually excluded.
+      // Block building is retried, and a retry can produce scheduling/transient outcomes that are
+      // not real rejections: SELECTION_CANCELLED when a build is superseded, and a penalized
+      // EXECUTION_INTERRUPTED when the build's time budget runs out mid-evaluation. A transaction
+      // that is later selected (e.g. the small tx in the test) must not report these as its
+      // rejection reason, and they must not overwrite a substantive rejection (e.g.
+      // BLOCK_COMPRESSED_SIZE_OVERFLOW). Keep the first non-transient outcome.
       rejections.merge(txHash, transactionSelectionResult) { existing, new ->
-        if (new == TransactionSelectionResult.SELECTION_CANCELLED &&
-          existing != TransactionSelectionResult.SELECTION_CANCELLED
-        ) {
+        if (isTransientSchedulingOutcome(new) && !isTransientSchedulingOutcome(existing)) {
           existing
         } else {
           new
         }
       }
     }
+
+    private fun isTransientSchedulingOutcome(result: TransactionSelectionResult): Boolean =
+      result == TransactionSelectionResult.SELECTION_CANCELLED ||
+        (result.penalize() &&
+          result.maybeInvalidReason().orElse(null) == EXECUTION_INTERRUPTED_REASON)
+  }
+
+  companion object {
+    /**
+     * The `TransactionInvalidReason.EXECUTION_INTERRUPTED` name, produced when a block build's time
+     * budget interrupts a transaction's execution. Referenced by name because that enum lives in
+     * Besu's internal (non-plugin-api) module.
+     */
+    private const val EXECUTION_INTERRUPTED_REASON: String = "EXECUTION_INTERRUPTED"
   }
 }
