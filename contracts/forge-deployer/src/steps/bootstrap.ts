@@ -140,6 +140,9 @@ async function runPresignedItem(item: PresignedBootstrapItem, context: Bootstrap
       // A skip still needs a checkpoint record, otherwise a rerun would keep
       // this item pending and re-check it every time. No real tx hash exists
       // for a skip, so reuse the script item's sentinel to signal "done".
+      // The record requires a durable intent first (the parent's fail-closed
+      // contract), even though nothing is broadcast here.
+      await awaitBootstrapIntent(item);
       const blockNow = await context.provider.getBlockNumber();
       await awaitBootstrapRecord({
         itemId: item.id,

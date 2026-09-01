@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { DeploymentStep } from "../src/address-plan";
 import { DeploymentCheckpoint } from "../src/checkpoint";
-import { childEnvironment, runStepScript } from "../src/process-runner";
+import { childEnvironment, runBootstrapScript, runStepScript } from "../src/process-runner";
 import { CheckpointStore } from "../src/store";
 
 const FIRST_ADDRESS = "0x1000000000000000000000000000000000000001";
@@ -242,4 +242,54 @@ test("redacts credential canaries from child stdout and stderr", async () => {
 
   assert.doesNotMatch(output.join("\n"), /__PRIVATE_KEY_CANARY__|user:password@rpc\.example/);
   assert.match(output.join("\n"), /\[REDACTED\]/);
+});
+
+const BOOTSTRAP_RECORD = {
+  itemId: "fund-relayer",
+  kind: "sign",
+  chain: "l2",
+  transactionHash: FIRST_HASH,
+  blockNumber: 5,
+  chainId: "1337",
+};
+
+test("rejects a bootstrap record emitted without a durable intent", async () => {
+  // The presigned already-deployed skip used to emit a record with no intent;
+  // the parent must keep rejecting that so fail-closed ordering is enforced.
+  const control = controlledStore();
+  await assert.rejects(
+    runBootstrapScript({
+      scriptPath: path.join(__dirname, "fixtures/bootstrap-record-only-child.cjs"),
+      environment: { TEST_BOOTSTRAP_RECORD: JSON.stringify(BOOTSTRAP_RECORD) },
+      checkpoint: checkpoint(),
+      store: control.store,
+      sensitiveValues: [],
+      pendingItemKeys: ["bootstrap.fund-relayer"],
+    }),
+    /without a durable bootstrap intent/,
+  );
+  assert.equal(control.saveCount(), 0);
+  assert.deepEqual(checkpoint().inFlightBootstrap, {});
+});
+
+test("a durable bootstrap intent permits the record and resolves in-flight state", async () => {
+  const control = controlledStore();
+  const value = checkpoint();
+  await runBootstrapScript({
+    scriptPath: path.join(__dirname, "fixtures/bootstrap-intent-record-child.cjs"),
+    environment: {
+      TEST_BOOTSTRAP_INTENT: JSON.stringify({ itemId: "fund-relayer", kind: "sign", chain: "l2", nonce: 7 }),
+      TEST_BOOTSTRAP_RECORD: JSON.stringify(BOOTSTRAP_RECORD),
+    },
+    checkpoint: value,
+    store: control.store,
+    sensitiveValues: [],
+    pendingItemKeys: ["bootstrap.fund-relayer"],
+  });
+
+  assert.equal(control.saveCount(), 2);
+  assert.deepEqual(Object.keys(control.durableSnapshots[0]!.inFlightBootstrap), ["bootstrap.fund-relayer"]);
+  assert.deepEqual(control.durableSnapshots[0]!.bootstrap, {});
+  assert.deepEqual(control.durableSnapshots[1]!.inFlightBootstrap, {});
+  assert.ok(control.durableSnapshots[1]!.bootstrap["bootstrap.fund-relayer"]);
 });
