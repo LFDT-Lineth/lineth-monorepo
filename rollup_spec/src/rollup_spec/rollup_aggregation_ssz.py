@@ -5,9 +5,9 @@ This module is the contract a Zig guest decoder and a future Go encoder are
 written against: remerkleable SSZ containers that mirror the logical
 dataclasses in `rollup_aggregation.py` / `l1_rollup.py` / `rollup.py`, plus
 the framing and bounds needed to serialize them unambiguously. This Python
-spec is the source of truth for the wire format. The framing helpers, the
-shared `SszRollupPublicInput` container, and the bounds both guests share are
-imported from the sibling `rollup_ssz.py`.
+spec is the source of truth for the wire format. The framing helpers are imported from
+the sibling `l2_execution_ssz.py`, and the shared `SszRollupPublicInput` container plus common bounds
+are imported from the sibling `rollup_ssz.py`.
 
 Framing: exactly like `stateless_input.py::STATELESS_INPUT_SCHEMA_ID`, every
 message is `schema_id (2 bytes, big-endian) || SSZ bytes`. Two schema ids are
