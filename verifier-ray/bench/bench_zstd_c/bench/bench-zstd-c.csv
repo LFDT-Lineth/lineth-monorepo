@@ -1,2 +1,2 @@
 variant,compressed_bytes,decompressed_bytes,net_cycles,cycles_per_byte
-zstd -19 (C reference v1.5.7),69767,262144,2446636,9.33
+zstd -19 (C reference v1.5.7),188628,780000,5174274,6.63

@@ -12,14 +12,14 @@ pub fn build(b: *std.Build) void {
     // do not enter guest memory, so cycle counts are unaffected.
     const strip = false;
 
-    // zstd decode touches no crypto, so accelerators are irrelevant here; kept
-    // off by default only to match bench_compress's convention of measuring
-    // the plain path unless asked otherwise.
+    // Accelerators default ON, as in bench_hash: this bench now also Poseidon2-
+    // hashes the prefix to measure kappa_ctx, and the deployed circuit would use
+    // the accelerated path for that.
     const disable_accelerators = b.option(
         bool,
         "disable-accelerators",
-        "Disable Lineth zkVM accelerator wrappers (unused by this benchmark)",
-    ) orelse true;
+        "Disable Lineth zkVM accelerator wrappers (measure the software path instead)",
+    ) orelse false;
 
     const accel_dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
     const accel_mod = accel_dep.module("lineth_accelerators");

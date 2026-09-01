@@ -27,15 +27,42 @@ const (
 	r5JSON        = "zig-out/bin/bench-zstd-c.json"
 	tailLimit     = 40
 	defaultOutput = "bench/bench-zstd-c.csv"
-	// Must match decompressed_len in main.zig — update both together.
-	decompressedLen = 262_144
-	// FNV-1a (64-bit) of the first decompressedLen bytes of
-	// ~/linea-blob-corpus/payloads/2026-07-28_recent.payload.bin, the plaintext
-	// both fixtures were compressed from. The guest recomputes this over its
-	// own output so a decode that is fast because it is wrong cannot be
-	// reported as an improvement.
-	expectedFNV1a = 7520853736309397853
+	// Read from fixture_params.zig at run time (see readFixtureParams) so the
+	// sweep script can retarget this bench by regenerating one file.
 )
+
+// Filled from fixture_params.zig: the decoded length and the FNV-1a of the
+// corpus plaintext the fixture was compressed from. The guest recomputes the
+// hash over its own output, so a decode that is fast because it is wrong
+// cannot be reported as an improvement.
+var (
+	decompressedLen int
+	expectedFNV1a   uint64
+)
+
+var paramRE = regexp.MustCompile(`pub const (decompressed_len|expected_fnv1a)[^=]*=\s*([0-9_]+)`)
+
+func readFixtureParams() error {
+	b, err := os.ReadFile("fixture_params.zig")
+	if err != nil {
+		return err
+	}
+	for _, m := range paramRE.FindAllStringSubmatch(string(b), -1) {
+		v, err := strconv.ParseUint(strings.ReplaceAll(m[2], "_", ""), 10, 64)
+		if err != nil {
+			return err
+		}
+		if m[1] == "decompressed_len" {
+			decompressedLen = int(v)
+		} else {
+			expectedFNV1a = v
+		}
+	}
+	if decompressedLen == 0 {
+		return fmt.Errorf("decompressed_len not found in fixture_params.zig")
+	}
+	return nil
+}
 
 // Marker pairs, matching the IDs main.zig writes.
 var phases = []struct {
@@ -85,6 +112,10 @@ func main() {
 	zkcBin := "zkc"
 	if args := flag.Args(); len(args) > 0 {
 		zkcBin = args[0]
+	}
+
+	if err := readFixtureParams(); err != nil {
+		fatal(err)
 	}
 
 	fmt.Fprintln(os.Stderr, "building R5 ELF...")
@@ -165,7 +196,7 @@ func main() {
 		}
 		// The end marker carries the decoded length; a short decode would make
 		// the cycle count meaningless, so it is checked rather than reported.
-		if end.value != decompressedLen {
+		if end.value != uint64(decompressedLen) {
 			fatal(fmt.Errorf("%s decoded %d bytes, want %d", p.name, end.value, decompressedLen))
 		}
 		h, hOK := stats.markers[p.hash]
@@ -188,7 +219,7 @@ func main() {
 		results = append(results, result{
 			name:            p.name,
 			net:             net,
-			cyclesPerByte:   float64(net) / decompressedLen,
+			cyclesPerByte:   float64(net) / float64(decompressedLen),
 			compressedBytes: size,
 		})
 	}
@@ -201,6 +232,41 @@ func main() {
 		ratio := float64(decompressedLen) / float64(r.compressedBytes)
 		fmt.Printf("%-28s  %14d  %14d  %12.2f  %10.3f\n",
 			r.name, r.compressedBytes, r.net, r.cyclesPerByte, ratio)
+	}
+
+	// Markers 20/21 bracket the Poseidon2 hash of the prefix: under per-blob
+	// proofs the guest must bind that private context, so it is reported beside
+	// the decode cost rather than assumed away. Zero-length prefix (the per-blob
+	// arms) still shows the hasher's fixed cost.
+	fmt.Printf("\n%-14s %12s %14s %12s\n", "region", "ctx_bytes", "net_cycles", "cycles/byte")
+	if hs, ok := stats.markers[20]; ok {
+		if he, ok2 := stats.markers[21]; ok2 {
+			var ctxBytes int64
+			if fi, err := os.Stat("prefix.bin"); err == nil {
+				ctxBytes = fi.Size()
+			}
+			net := he.cycle - hs.cycle
+			if net > baselineDelta {
+				net -= baselineDelta
+			}
+			fmt.Printf("%-14s %12d %14d %12.2f\n", "context hash", ctxBytes, net,
+				float64(net)/float64(decompressedLen))
+		}
+	}
+	// The decompressed OUTPUT must also be bound -- it is what the DA circuit
+	// actually commits to -- and that cost is identical for every arm, since it
+	// depends only on decompressedLen, not on which scheme or context produced
+	// the plaintext. Reported the same way as context hash so run_one's regex
+	// in dictionary_vs_window.py can pick it up the same way.
+	if hs, ok := stats.markers[30]; ok {
+		if he, ok2 := stats.markers[31]; ok2 {
+			net := he.cycle - hs.cycle
+			if net > baselineDelta {
+				net -= baselineDelta
+			}
+			fmt.Printf("%-14s %12d %14d %12.2f\n", "output hash", int64(decompressedLen), net,
+				float64(net)/float64(decompressedLen))
+		}
 	}
 
 	printMix(stats)
