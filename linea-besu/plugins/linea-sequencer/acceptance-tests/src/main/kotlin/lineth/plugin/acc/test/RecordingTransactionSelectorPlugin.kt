@@ -91,7 +91,19 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
       transactionSelectionResult: TransactionSelectionResult,
     ) {
       val txHash = evaluationContext.pendingTransaction.transaction.hash
-      rejections[txHash] = transactionSelectionResult
+      // Besu may retry block building and cancel an in-flight selection; when that happens a later
+      // SELECTION_CANCELLED outcome is delivered for a transaction that was already substantively
+      // rejected (e.g. BLOCK_COMPRESSED_SIZE_OVERFLOW). Never let a cancellation overwrite a real
+      // rejection, so the recorded reason reflects why the tx was actually excluded.
+      rejections.merge(txHash, transactionSelectionResult) { existing, new ->
+        if (new == TransactionSelectionResult.SELECTION_CANCELLED &&
+          existing != TransactionSelectionResult.SELECTION_CANCELLED
+        ) {
+          existing
+        } else {
+          new
+        }
+      }
     }
   }
 }
