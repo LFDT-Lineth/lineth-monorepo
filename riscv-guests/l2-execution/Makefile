@@ -34,8 +34,7 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
-# -v/-vv/-vvv raise verbosity. Override to pick the execution backend — e.g. "--gogen --fast" runs
-# the guest via zkc's generated-Go backend in fast mode, the runnability path used while the
+# -v/-vv/-vvv raise verbosity. "--fast" skips tracing, the runnability path used while the
 # interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
 # tracing enabled.
 ZKC_EXEC_FLAGS ?=
@@ -70,8 +69,8 @@ reference-test:
 
 # ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
-# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --gogen
-# --fast). Far slower than reference-test; use it to prove the real ELF agrees with the corpus.
+# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --fast).
+# Minutes per heavy block; use it to prove the real ELF agrees with the corpus.
 reference-test-zkc:
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 

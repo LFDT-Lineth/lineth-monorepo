@@ -27,7 +27,7 @@
 //!   /// Run the guest on the adapted input (null if adaptation failed) and compare against the
 //!   /// fixture's expected output. Returns true on pass; on failure prints a one-line `FAIL …`
 //!   /// diagnostic and returns false.
-//!   pub fn runAndCheck(alloc: std.mem.Allocator, guest_input: ?[]const u8, expected_output: []const u8, ctx: BlockContext) !bool
+//!   pub fn runAndCheck(init: std.process.Init, alloc: std.mem.Allocator, guest_input: ?[]const u8, expected_output: []const u8, ctx: BlockContext) !bool
 //!   /// True if this block exercises a property belonging to the vanilla reference guest's
 //!   /// multi-fork/schedule model rather than this guest's own fixed-fork design. Skipped blocks
 //!   /// are excluded entirely from the pass/fail tally.
@@ -75,11 +75,13 @@ pub const BlockContext = struct {
 
 /// Walk `opts.fixtures_dir` (or run `opts.single_file`) and run every stateless block through
 /// `Adapter`. Returns aggregate stats; the caller decides the exit code.
-pub fn run(comptime Adapter: type, io: std.Io, gpa: std.mem.Allocator, opts: Options) !Stats {
+pub fn run(comptime Adapter: type, init: std.process.Init, opts: Options) !Stats {
+    const io = init.io;
+    const gpa = init.gpa;
     var stats = Stats{};
 
     if (opts.single_file) |path| {
-        try processFile(Adapter, io, gpa, path, opts, &stats);
+        try processFile(Adapter, init, path, opts, &stats);
         return stats;
     }
 
@@ -116,7 +118,7 @@ pub fn run(comptime Adapter: type, io: std.Io, gpa: std.mem.Allocator, opts: Opt
         defer gpa.free(full);
 
         const failed_before = stats.failed;
-        try processFile(Adapter, io, gpa, full, opts, &stats);
+        try processFile(Adapter, init, full, opts, &stats);
         if (opts.stop_on_fail and stats.failed > failed_before) break;
     }
 
@@ -125,14 +127,14 @@ pub fn run(comptime Adapter: type, io: std.Io, gpa: std.mem.Allocator, opts: Opt
 
 fn processFile(
     comptime Adapter: type,
-    io: std.Io,
-    gpa: std.mem.Allocator,
+    init: std.process.Init,
     path: []const u8,
     opts: Options,
     stats: *Stats,
 ) !void {
+    const io = init.io;
     // One arena per file: the parsed JSON, decoded bytes and adapted input live only for this file.
-    var arena = std.heap.ArenaAllocator.init(gpa);
+    var arena = std.heap.ArenaAllocator.init(init.gpa);
     defer arena.deinit();
     const alloc = arena.allocator();
 
@@ -173,7 +175,7 @@ fn processFile(
         }
 
         const guest_input = Adapter.adaptInput(alloc, block.input, ctx);
-        const ok = Adapter.runAndCheck(alloc, guest_input, block.expected_output, ctx) catch |err| blk: {
+        const ok = Adapter.runAndCheck(init, alloc, guest_input, block.expected_output, ctx) catch |err| blk: {
             std.debug.print("FAIL {s}[{}]  runAndCheck error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
             break :blk false;
         };

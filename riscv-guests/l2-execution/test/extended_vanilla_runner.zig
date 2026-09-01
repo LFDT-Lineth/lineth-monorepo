@@ -63,11 +63,13 @@ const ExtendedVanillaAdapter = struct {
     }
 
     pub fn runAndCheck(
+        init: std.process.Init,
         alloc: std.mem.Allocator,
         guest_input: ?[]const u8,
         expected_output: []const u8,
         ctx: spec_runner.BlockContext,
     ) !bool {
+        _ = init;
         // Ground truth: the fixture's OWN expected result, not a second, independently-run
         // implementation (see the file header comment for why).
         if (expected_output.len <= 32) {
@@ -184,7 +186,7 @@ pub fn main(init: std.process.Init) !void {
 
     std.debug.print("running {s}\n  over {s}\n", .{ ExtendedVanillaAdapter.label, opts.single_file orelse opts.fixtures_dir });
 
-    const stats = try spec_runner.run(ExtendedVanillaAdapter, init.io, gpa, opts);
+    const stats = try spec_runner.run(ExtendedVanillaAdapter, init, opts);
 
     const total = stats.total();
     const pct: u64 = if (total > 0) 100 * stats.passed / total else 0;
