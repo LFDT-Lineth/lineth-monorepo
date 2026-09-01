@@ -1,3 +1,7 @@
+@file:Suppress(
+  "DEPRECATION",
+) // MiningService is deprecated in Besu 26.8.1; only MiningService.stop() is used, migration is deferred.
+
 package lineth.staterecovery.plugin
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
