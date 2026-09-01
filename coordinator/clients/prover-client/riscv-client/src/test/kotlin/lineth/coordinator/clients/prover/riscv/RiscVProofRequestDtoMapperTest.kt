@@ -1,6 +1,5 @@
 package lineth.coordinator.clients.prover.riscv
 
-import linea.clients.ChainConfig
 import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
@@ -32,7 +31,7 @@ class RiscVProofRequestDtoMapperTest {
   private val chainId = 59144L
   private val forkName = "Amsterdam"
   private val l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
-  private val coinbase = "0x0000000000000000000000000000000000000000"
+  private val coinbase = RiscVProverClientTestFixtures.COINBASE
 
   @Test
   fun `L2ExecutionProofRequestDtoMapper encodes every field`() {
@@ -42,7 +41,7 @@ class RiscVProofRequestDtoMapperTest {
     val dto = L2ExecutionProofRequestDtoMapper(
       programVk,
       l2MessageServiceAddress,
-      coinbase,
+      forkName,
     ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
@@ -98,7 +97,7 @@ class RiscVProofRequestDtoMapperTest {
       L2ExecutionProofRequestDtoMapper(
         programVk,
         l2MessageServiceAddress,
-        coinbase,
+        forkName,
       ).invoke(badRequest)
     }
       .isInstanceOf(IllegalArgumentException::class.java)
@@ -299,10 +298,8 @@ class RiscVProofRequestDtoMapperTest {
         ),
       ),
     ),
-    chainConfig = ChainConfig(
-      chainId = chainId.toULong(),
-      forkName = forkName,
-    ),
+    chainId = chainId.toULong(),
+    coinbase = coinbase,
     parentFtxRollingHash = ByteArray(32) { 0x1a },
     parentFtxNumber = 8UL,
   )

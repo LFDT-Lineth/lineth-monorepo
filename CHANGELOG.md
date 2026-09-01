@@ -87,6 +87,7 @@
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
 - *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
+- *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
 
 ### ⚡ Performance
 

@@ -1,4 +1,4 @@
-include "type.zkc"
+include "../../common/type.zkc"
 
 #[debug]
 fn print_register_values<registers>() -> () {
