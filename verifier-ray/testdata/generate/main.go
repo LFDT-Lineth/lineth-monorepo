@@ -27,6 +27,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -892,6 +893,24 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		cases[last].invalidVerifyError = "ResultMismatch"
 	}
 
+	// Message-bus + SharedRandomness end-to-end coverage: a real
+	// messagebus.Compile(..., SharedRandomness: true) -> grandproduct.Compile ->
+	// global.Compile -> pcscompiler.Compile pipeline, run through
+	// BuildCompiledSystem and verifier.verify. The invalid fixture flips exactly
+	// one of the 328 shared-randomness contribution limbs in the public-input
+	// statement, which shared_randomness.zig's verify() must now reject.
+	if err := addMessageBusSharedRandomness(func(name string, sys *wiop.System, honest assignFn) error {
+		compiled, err := buildMessageBusFixtureCase(name, sys, honest)
+		if err != nil {
+			return err
+		}
+		cases = append(cases, compiled.tc)
+		systems = append(systems, compiled.compiled)
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+
 	return cases, systems, nil
 }
 
@@ -922,6 +941,48 @@ func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 	return sys, colA, colB
 }
 
+// messageBusFixtureCase bundles a built fixtureCase with the CompiledSystem it
+// was built against, so buildMessageBusFixtureCase's caller can append both to
+// the parallel cases/systems slices buildCompiledFixtureCases maintains.
+type messageBusFixtureCase struct {
+	tc       fixtureCase
+	compiled codegen.CompiledSystem
+}
+
+// buildMessageBusSharedRandomnessSystem builds a size-4 Send/Receive
+// message-bus handle compiled with messagebus.CompileOptions.SharedRandomness,
+// mirroring codegen's newSharedRandomnessMessageBusHandle test helper but
+// local to the fixture generator. Compile order matters: messagebus.Compile
+// must run before grandproduct.Compile (which needs the message-bus
+// permutation checks registered), and pcscompiler.Compile must run last so it
+// sees every committed column and LagrangeEval opening the earlier passes
+// registered — the same ordering compileFullPipeline uses for the
+// rangecheck/lookup/vanishing pipeline.
+func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+	sys := wiop.NewSystemf("mb-shared-randomness")
+	r0 := sys.NewRound()
+	sys.NewRound() // coin round: alpha/beta + the shared-randomness gamma hook
+	sys.NewRound() // result round
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+
+	sys.NewMessageBusSend(sys.Context.Childf("send"), "shard", "route", wiop.NewTable(colA.View()))
+	sys.NewMessageBusReceive(sys.Context.Childf("recv"), "shard", "route", wiop.NewTable(colB.View()))
+
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	grandproduct.Compile(sys)
+	// grandproduct registers a scalar (ColumnPosition-based) local opening for
+	// its z-final endpoint check; localvanishing must lift it to a multi-valued
+	// vanishing BEFORE global.Compile, which is the only pass that can discharge
+	// it (and the only one codegen's vanishing-expression translator supports).
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+	return sys, colA, colB
+}
+
 // flippedExtTraceCell returns an extension-field trace cell with a value
 // guaranteed to differ from cell's, for tampering a single committed cell in
 // a proof's rounds. Used for the grandproduct permutation fixture's invalid
@@ -937,6 +998,82 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 	var flipped field.Ext
 	field.AddByBase(&flipped, cell.extValue, &one)
 	return extTraceCell(flipped)
+}
+
+// addMessageBusSharedRandomness registers the message-bus + SharedRandomness
+// scenario with reg, which is responsible for turning (name, sys, honest) into
+// a fixtureCase/CompiledSystem pair and appending it to the caller's slices.
+func addMessageBusSharedRandomness(reg func(name string, sys *wiop.System, honest assignFn) error) error {
+	sys, colA, colB := buildMessageBusSharedRandomnessSystem()
+	honest := func(rt *wiop.Runtime) {
+		messagebus.AssignSharedRandomnessSeed(rt, octuplet(11, 22, 33, 44, 55, 66, 77, 88))
+		rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
+		rt.AssignColumn(colB, concreteBase(elems(1, 2, 3, 4)))
+	}
+	return reg("SharedRandomnessContribution", sys, honest)
+}
+
+// buildMessageBusFixtureCase runs the messagebus/SharedRandomness pipeline's
+// own build steps (AssertAllVerifierActionsHandled, BuildCompiledSystem,
+// buildProofFixture) rather than the add() closure's compileFullPipeline,
+// since this system is already fully compiled by
+// buildMessageBusSharedRandomnessSystem. The invalid fixture is the honest
+// proof's fixture with exactly one of the 328 shared-randomness contribution
+// public-input cells flipped — codegen.BuildSharedRandomnessSystem's
+// ContributionRefs give the (round, index) transcript coordinates of those
+// cells, and sys.LookupPublicInputByTag resolves the matching index into
+// view.publicInputs (registration order == statement order, per
+// wiop.System.PublicInputs/LookupPublicInputByTag).
+func buildMessageBusFixtureCase(name string, sys *wiop.System, honest assignFn) (messageBusFixtureCase, error) {
+	if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+		return messageBusFixtureCase{}, fmt.Errorf("verifier actions MessageBus/%s: %w", name, err)
+	}
+	compiled, err := codegen.BuildCompiledSystem(sys)
+	if err != nil {
+		return messageBusFixtureCase{}, fmt.Errorf("build compiled system MessageBus/%s: %w", name, err)
+	}
+	if len(compiled.SharedRandomness.ContributionRefs) != messagebus.NumSharedRandomnessContribution {
+		return messageBusFixtureCase{}, fmt.Errorf(
+			"MessageBus/%s: expected %d shared-randomness contribution refs, got %d",
+			name, messagebus.NumSharedRandomnessContribution, len(compiled.SharedRandomness.ContributionRefs),
+		)
+	}
+
+	honestFixture, err := buildProofFixture(sys, honest, "MessageBus", name, "honest")
+	if err != nil {
+		return messageBusFixtureCase{}, err
+	}
+
+	_, statementIndex := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedContributionPI, 0)
+	if statementIndex < 0 {
+		return messageBusFixtureCase{}, fmt.Errorf("MessageBus/%s: missing contribution-0 public input", name)
+	}
+	if statementIndex >= len(honestFixture.view.publicInputs) {
+		return messageBusFixtureCase{}, fmt.Errorf(
+			"MessageBus/%s: contribution-0 statement index %d outside public_inputs (len %d)",
+			name, statementIndex, len(honestFixture.view.publicInputs),
+		)
+	}
+
+	invalidFixture := honestFixture
+	invalidFixture.view.publicInputs = append([]runtimeTraceCell(nil), honestFixture.view.publicInputs...)
+	invalidFixture.view.publicInputs[statementIndex] = flippedTraceCell(invalidFixture.view.publicInputs[statementIndex])
+
+	tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, invalid: &invalidFixture}
+	return messageBusFixtureCase{tc: tc, compiled: compiled}, nil
+}
+
+// flippedTraceCell returns a base-field trace cell with a value guaranteed to
+// differ from cell's, for tampering a single public-input statement entry.
+// The shared-randomness contribution cells are always base-field (never
+// extension-field — see messagebus.contributionCell's IsExtension panic), so
+// cell.baseValue is always set here.
+func flippedTraceCell(cell runtimeTraceCell) runtimeTraceCell {
+	if cell.baseValue == nil {
+		panic("flippedTraceCell: expected a base-field trace cell")
+	}
+	flipped := elem(u(*cell.baseValue) + 1)
+	return baseTraceCell(flipped)
 }
 
 // buildLookupMultiColumnBenchSystem is a verifier-ray-local stress fixture for
@@ -1478,8 +1615,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
-		idx, idx, idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }

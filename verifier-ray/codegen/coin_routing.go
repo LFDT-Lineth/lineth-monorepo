@@ -12,8 +12,10 @@ import (
 // is built once per system rather than duplicated inside each sub-verifier's
 // System.
 type CoinRouting struct {
-	// RoundCoinCounts[i] is the number of coins squeezed after round i is
-	// absorbed. Index 0 is always 0: no coins precede the first round message.
+	// RoundCoinCounts[i] is the number of coins declared on wiop.Round i (i.e.
+	// squeezed once round i-1's message has been absorbed and round i is
+	// current). Index 0 is always 0: round 0 is the first message round, so
+	// nothing precedes it to base a challenge on.
 	RoundCoinCounts []int
 	// RoundCoinOffsets[i] is the start index of round i's coins in the flat
 	// all_coins array consumed by the Zig verifier.
@@ -28,11 +30,11 @@ type CoinRouting struct {
 	// byte-exact with the prover. Counted in the same order as the proof's
 	// module_sizes (VanishingSystem dynamic-module order).
 	DynamicModuleCount int
-	// SharedRandomnessCoinRound is the round index whose coins must be derived
-	// from γ (messagebus.CompileOptions.SharedRandomness) rather than from this
-	// shard's own transcript state, or -1 if the system was not compiled with
-	// that option. Mirrors prover-ray's Runtime.AdvanceRound, which runs every
-	// Round.PreSamplingHooks entry — here, exactly the
+	// SharedRandomnessCoinRound is the wiop.Round.ID whose coins must be
+	// derived from γ (messagebus.CompileOptions.SharedRandomness) rather than
+	// from this shard's own transcript state, or -1 if the system was not
+	// compiled with that option. Mirrors prover-ray's Runtime.AdvanceRound,
+	// which runs every Round.PreSamplingHooks entry — here, exactly the
 	// messagebus.SharedRandomnessSeedHook — before deriving the round's coins:
 	// without replaying that override, the Zig verifier's replay derives a
 	// different α/β than the prover did and every downstream check fails.

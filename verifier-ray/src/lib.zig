@@ -19,6 +19,7 @@ pub const crypto = struct {
     pub const fiat_shamir = @import("crypto/fiat_shamir.zig");
     pub const poseidon2 = @import("crypto/poseidon2.zig");
     pub const merkle = @import("crypto/merkle.zig");
+    pub const multiset_hashing = @import("crypto/multiset_hashing.zig");
 };
 
 pub const polynomial = struct {
