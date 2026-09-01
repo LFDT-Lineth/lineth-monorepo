@@ -71,9 +71,9 @@ MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block 
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
 MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
 MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged at the rollup layer
-# `opaque_prefix_bytes`/`opaque_suffix_bytes` are each strictly shorter than one
-# chunk (`_verify_and_fold_chunks` in rollup.py), so `BLOB_BYTES_LENGTH` (the
-# chunk byte size) is already the tightest correct bound; no separate constant.
+# `opaque_prefix_bytes`/`opaque_suffix_bytes` are each bounded by one chunk
+# (`_verify_and_fold_chunks` in rollup.py). Their exact lengths are constrained
+# by `start_offset`/`end_offset`, so `BLOB_BYTES_LENGTH` is a safe SSZ bound.
 
 # ── SSZ wire schema (remerkleable) ───────────────────────────────────────────
 
