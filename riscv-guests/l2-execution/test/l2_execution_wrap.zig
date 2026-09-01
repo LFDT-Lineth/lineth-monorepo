@@ -11,9 +11,9 @@
 //!
 //! usage: l2-execution-wrap <vanilla-in.ssz> <extended-out.ssz>
 //!
-//! The `run_execution_specs_ssz_fixtures.go` harness invokes this to produce the wrapped input it
-//! feeds to the guest, replacing the raw vanilla `.ssz` it used to write when the guest still
-//! consumed vanilla input directly.
+//! Use it to hand-wrap one corpus input for the ZkC path: wrap a vanilla `.ssz` here, then feed the
+//! extended output to `make exec INPUT=<extended-out.ssz>` to run it through the real guest ELF
+//! under zkc.
 
 const std = @import("std");
 const vanilla_wrap = @import("vanilla_wrap");

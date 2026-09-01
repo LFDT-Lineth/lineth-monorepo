@@ -15,8 +15,7 @@
 #   arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref main --timebox 120
 #   arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-src ~/dev/go/go-corset --skip-check
 #
-# It never touches ~/go/bin/zkc, never runs `make install-zkc` (which would overwrite it), and
-# invokes no Makefile target that rewrites a tracked file.
+# It never touches ~/go/bin/zkc and invokes no Makefile target that rewrites a tracked file.
 
 set -uo pipefail   # NOT -e: a step that fails or times out is data, not a reason to abort.
 export LC_ALL=C    # /usr/bin/time prints "0,21 real" under a French locale otherwise.

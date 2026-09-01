@@ -36,6 +36,9 @@ pub const System = struct {
 };
 
 pub fn verify(comptime system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
+    comptime {
+        @setEvalBranchQuota(20_000_000);
+    }
     inline for (system.queries) |query| {
         // Σ_i Z_i[n-1], reading each Z endpoint from the transcript. `cell` is
         // bounds-checked: the refs are trusted (comptime System) but the proof's

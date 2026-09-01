@@ -127,7 +127,8 @@ jobs:
       - name: Build zkc binaries via go install
         run: |
           set -eux
-          default_ref="${ZKC_REF}"
+          default_ref=$(go -C arithmetization list -m -f '{{.Version}}' github.com/LFDT-Lineth/zkc)
+          echo "ZKC_REF=${default_ref}" >> "$GITHUB_ENV"
           variants=(base opt)
           if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then
             variants=(opt)
@@ -405,4 +406,3 @@ jobs:
         with:
           name: zkc-bench-logs
           path: /tmp/bench/logs
-

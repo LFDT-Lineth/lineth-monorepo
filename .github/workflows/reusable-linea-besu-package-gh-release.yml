@@ -60,16 +60,6 @@ jobs:
       # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
       component-name: linea-besu-package
       folder-name: linea-besu/package
-      # Scope-and-path gated: the shared cliff.template.toml (scopes `linea-besu|tracer|sequencer|deps|misc`) 
-      # keeps only commits scoped to `linea-besu`, AND include-path restricts to the linea-besu package paths.
-      scopes: linea-besu|tracer|sequencer|deps|misc
-      include-path: |
-        tracer/**
-        tracer-constraints/**
-        linea-besu/plugins/linea-sequencer/**
-        linea-besu/besu/**
-        linea-besu/package/**
-        gradle/libs.versions.toml
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       upload_changelog: ${{ inputs.upload_changelog }}
     secrets: inherit

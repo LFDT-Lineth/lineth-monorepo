@@ -17,14 +17,9 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
-    // write_output provider: default stdout `write` ecall (zesu zkvm_io) unless the
-    // Lineth write_output custom-op accelerator is opted in with -Dwrite-output-accel=true.
-    // Read by zkvm_provide.zig at comptime.
-    const write_output_accel = b.option(bool, "write-output-accel", "Use the Lineth write_output custom-opcode accelerator instead of the default stdout ecall (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
-    guest_options.addOption(bool, "write_output_accel", write_output_accel);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
@@ -42,9 +37,9 @@ pub fn build(b: *std.Build) void {
     //   • zesu_crypto_backend — zesu's own native crypto backend (the handful of its precompiles
     //     with no C-library dependency: modexp, RIPEMD-160), standing in for the two of those
     //     zesu_zkvm_stdlibs leaves as unconditional-failure stubs;
-    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak today): the only actually
-    //     prover-accelerated (custom opcode / circuit) source in this file — zkvm_* the prover
-    //     accelerates at execution rather than at link time, so the ELF stays fully resolved;
+    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak and the standards `write_output`):
+    //     the only actually prover-accelerated (custom opcode / circuit) source in this file —
+    //     accelerated at execution rather than at link time, so the ELF stays fully resolved;
     //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
     //     guest; `_in_start` is supplied by the linker script).
@@ -94,8 +89,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    // provide_mod's default (non-accelerated) write_output forwards to zesu's zkvm_io.
-    provide_mod.addImport("linea_zkvm_io", linea_io_mod);
 
     // The extended wire format's SSZ codec, built for the SAME riscv64/optimize pair as the guest
     // itself (mirrors the native l2_execution_ssz_mod below, for the test host). `l2_execution.zig`
@@ -192,12 +185,58 @@ pub fn build(b: *std.Build) void {
     l2_execution_ssz_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
     test_step.dependOn(&b.addRunArtifact(l2_execution_ssz_tests).step);
 
-    // ── l2-execution guest logic (src/l2_execution.zig), native build ───────────────────────────────
-    // Built for the native target so `extended-vanilla` below can link the SAME Linea-layer logic the
-    // riscv64 guest ELF runs (reached there via `evm_execution_guest.zig`'s relative import inside
-    // `guestMain` — see the module-wiring comment near `l2_execution_ssz_guest_mod` above). Needs the
-    // full zesu import set (MPT, executor types/tx-decode, primitives, accelerators for ecrecover)
-    // plus the sibling `l2_execution_ssz` module.
+    // ── Shared signed-tx fixture builder (test/tx_fixtures.zig) ─────────────────────────────────────
+    // RLP encoders for legacy/EIP-1559/EIP-4844 wire shapes plus real secp256k1 signing, shared by
+    // every test root that needs a genuinely signed, sender-recoverable transaction rather than a
+    // byte literal. Defined here (not inside the lazy execution-spec-tests block below): neither
+    // this module nor secp256k1_wrapper_mod depends on that lazy dependency, and l2_execution_tests
+    // (just below) is the first consumer needing them that lives outside that block.
+    const tx_fixtures_mod = b.createModule(.{
+        .root_source_file = b.path("test/tx_fixtures.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    tx_fixtures_mod.addImport("zesu_executor", native_imports.executor);
+    tx_fixtures_mod.addImport("zesu_mpt", native_imports.mpt);
+
+    // secp256k1_wrapper.zig can't be rooted directly as its own module the way
+    // modexp_impl_mod/ripemd160_impl_mod are: unlike those two, this file is ALSO
+    // relatively-imported by zesu's own accel_impl root (already in this graph via
+    // accelerators), and Zig rejects one file belonging to two modules at once. The exposed
+    // accelerators surface has no path to `sign`/`getContext` either (it only exposes
+    // verify/ecrecover). A WriteFile step copies the file byte-for-byte to a fresh path
+    // nothing else claims, so the copy can root its own module. That module needs its own C
+    // include path for its `@cImport`'d secp256k1.h — C include paths are per-module and don't
+    // inherit from linkNativeZesuCrypto below (zesu's own build.zig hits the same constraint
+    // wiring accel_impl).
+    const secp256k1_wrapper_copy = b.addWriteFiles();
+    const secp256k1_wrapper_copy_path = secp256k1_wrapper_copy.addCopyFile(
+        zesu_native.path("src/crypto/backends/secp256k1_wrapper.zig"),
+        "secp256k1_wrapper.zig",
+    );
+    const secp256k1_wrapper_mod = b.createModule(.{
+        .root_source_file = secp256k1_wrapper_copy_path,
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    secp256k1_wrapper_mod.addIncludePath(.{ .cwd_relative = native_crypto.include_path });
+    tx_fixtures_mod.addImport("zesu_secp256k1", secp256k1_wrapper_mod);
+
+    // ── l2-execution guest logic (src/l2_execution.zig) unit tests ──────────────────────────────────
+    // These `zig build test` UNIT TESTS run only on the native target — like the l2_execution_ssz
+    // codec tests above, and like every other `b.addTest` artifact in this file. That's a standard
+    // Zig constraint, not specific to this module: a freestanding riscv64 target has no OS to run a
+    // `std.testing` binary against, so test binaries are always compiled and run for the native host.
+    // The `l2_execution.zig` LOGIC ITSELF is not native-only — it's compiled into the riscv64 guest
+    // ELF too, reached via `evm_execution_guest.zig`'s relative import inside `guestMain` (see the
+    // module-wiring comment near `l2_execution_ssz_guest_mod` above).
+    //
+    // These tests exercise the Linea-layer logic — the FTX rolling hash, dynamicChainConfigHash,
+    // hashAddressList/hashDigestList, the L1->L2 bridge storage-slot math, L2->L1 message
+    // extraction, forced-transaction dispatch, and the witness-backed MPT account/storage reads —
+    // against hand-built fixtures and Python-computed expected values (see Readme.md §6.3/§6.5/§2.1).
+    // Needs the full zesu import set (MPT, executor types/tx-decode, primitives, accelerators for
+    // ecrecover) plus the sibling `l2_execution_ssz` module.
     const l2_execution_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution.zig"),
         .target = native_target,
@@ -205,6 +244,25 @@ pub fn build(b: *std.Build) void {
     });
     addExecutionImports(l2_execution_mod, native_imports);
     l2_execution_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    const l2_execution_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_tests.root_module.addImport("l2_execution", l2_execution_mod);
+    l2_execution_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    l2_execution_tests.root_module.addImport("zesu_executor", native_imports.executor);
+    l2_execution_tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+    l2_execution_tests.root_module.addImport("zesu_input", native_imports.input);
+    l2_execution_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
+    l2_execution_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
+    l2_execution_tests.root_module.addImport("zesu_accelerators", native_imports.accelerators);
+    l2_execution_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
+    linkNativeZesuCrypto(l2_execution_tests, native_target, native_crypto);
+    test_step.dependOn(&b.addRunArtifact(l2_execution_tests).step);
 
     // ── l2-execution JSON output shape (test/l2_execution_json.zig) ─────────────────────────────────
     // Native-only, pure std + the sibling `l2_execution_ssz` module (no zesu dependency): asserts
@@ -352,16 +410,6 @@ pub fn build(b: *std.Build) void {
 
         test_step.dependOn(&b.addRunArtifact(tests).step);
 
-        // ── Shared legacy-tx RLP encoder (test/legacy_tx_rlp.zig) ───────────────────────────────────
-        // One RLP encoder for a legacy transaction's fixed field list, shared by every test fixture
-        // that builds one from named fields rather than a byte literal.
-        const legacy_tx_rlp_mod = b.createModule(.{
-            .root_source_file = b.path("test/legacy_tx_rlp.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        legacy_tx_rlp_mod.addImport("zesu_executor", native_imports.executor);
-
         // ── Vanilla StatelessInput SSZ encoder (test/stateless_input_encode.zig) unit tests ────────
         // Reuses the zesu_input/zesu_ssz_decode imports already resolved above for vanilla_wrap_mod,
         // plus the fixtures module already built for the guest smoke test above.
@@ -376,7 +424,7 @@ pub fn build(b: *std.Build) void {
         stateless_input_encode_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
         stateless_input_encode_tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
         stateless_input_encode_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
-        stateless_input_encode_tests.root_module.addImport("legacy_tx_rlp", legacy_tx_rlp_mod);
+        stateless_input_encode_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
         linkNativeZesuCrypto(stateless_input_encode_tests, native_target, native_crypto);
         test_step.dependOn(&b.addRunArtifact(stateless_input_encode_tests).step);
 
@@ -407,29 +455,6 @@ pub fn build(b: *std.Build) void {
         // ── Conflation-plan range scenario suite (test/l2_execution_range_test.zig) ───────────────
         // Same relative-import reasoning as the parity test above: needs conflation_plan.zig's own
         // import set wired directly here.
-        //
-        // secp256k1_wrapper.zig can't be rooted directly as its own module the way
-        // modexp_impl_mod/ripemd160_impl_mod are: unlike those two, this file is ALSO
-        // relatively-imported by zesu's own accel_impl root (already in this graph via
-        // accelerators), and Zig rejects one file belonging to two modules at once. The exposed
-        // accelerators surface has no path to `sign`/`getContext` either (it only exposes
-        // verify/ecrecover). A WriteFile step copies the file byte-for-byte to a fresh path
-        // nothing else claims, so the copy can root its own module. That module needs its own C
-        // include path for its `@cImport`'d secp256k1.h — C include paths are per-module and don't
-        // inherit from linkNativeZesuCrypto below (zesu's own build.zig hits the same constraint
-        // wiring accel_impl).
-        const secp256k1_wrapper_copy = b.addWriteFiles();
-        const secp256k1_wrapper_copy_path = secp256k1_wrapper_copy.addCopyFile(
-            zesu_native.path("src/crypto/backends/secp256k1_wrapper.zig"),
-            "secp256k1_wrapper.zig",
-        );
-        const secp256k1_wrapper_mod = b.createModule(.{
-            .root_source_file = secp256k1_wrapper_copy_path,
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        secp256k1_wrapper_mod.addIncludePath(.{ .cwd_relative = native_crypto.include_path });
-
         const l2_execution_range_tests = b.addTest(.{
             .root_module = b.createModule(.{
                 .root_source_file = b.path("test/l2_execution_range_test.zig"),
@@ -444,11 +469,43 @@ pub fn build(b: *std.Build) void {
         l2_execution_range_tests.root_module.addImport("zesu_input", native_imports.input);
         l2_execution_range_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
         l2_execution_range_tests.root_module.addImport("zesu_rlp_decode", native_imports.rlp_decode);
-        l2_execution_range_tests.root_module.addImport("zesu_secp256k1", secp256k1_wrapper_mod);
         l2_execution_range_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
-        l2_execution_range_tests.root_module.addImport("legacy_tx_rlp", legacy_tx_rlp_mod);
+        l2_execution_range_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
         linkNativeZesuCrypto(l2_execution_range_tests, native_target, native_crypto);
         test_step.dependOn(&b.addRunArtifact(l2_execution_range_tests).step);
+
+        // ── Real multi-block happy-path spike test (test/real_multiblock_test.zig) ──────────────────
+        // Engineers a real, multi-block EF corpus sequence (test/real_multiblock_fixture_gen.zig,
+        // pulled in by relative import — same reasoning as `conflation_plan.zig` above) into a
+        // self-consistent input at test run time and drives it through `l2_execution.runL2Execution`
+        // — the guest's REAL, full pipeline, not `conflation_plan.zig`'s StubEngine. No checked-in
+        // fixture: the chosen corpus JSON is embedded straight from the dependency tree (mirroring
+        // `evm_execution_fixtures.zig`'s own `zkevm_stateless_block.json` embed above), so the
+        // engineered input is always freshly derived from the current code, never stale. This test
+        // therefore lives inside this lazy-dependency block, like the range/parity suites above,
+        // rather than being part of the unconditional default run.
+        const real_multiblock_tests = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/real_multiblock_test.zig"),
+                .target = native_target,
+                .optimize = host_optimize,
+            }),
+        });
+        real_multiblock_tests.root_module.addAnonymousImport("slotnum_distinct_per_block.json", .{
+            .root_source_file = fixtures_dep.path("blockchain_tests/for_amsterdam/amsterdam/eip7843_slotnum/slotnum/slotnum_distinct_per_block.json"),
+        });
+        real_multiblock_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        real_multiblock_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
+        real_multiblock_tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+        real_multiblock_tests.root_module.addImport("zesu_executor", native_imports.executor);
+        real_multiblock_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
+        real_multiblock_tests.root_module.addImport("zesu_input", native_imports.input);
+        real_multiblock_tests.root_module.addImport("l2_execution", l2_execution_mod);
+        real_multiblock_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        real_multiblock_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
+        real_multiblock_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+        linkNativeZesuCrypto(real_multiblock_tests, native_target, native_crypto);
+        test_step.dependOn(&b.addRunArtifact(real_multiblock_tests).step);
 
         // ── extended-vs-fixture validity reference-test guard (permanent) ──
         // The single reference-test runner for the extended guest: wraps the vanilla EF input into a

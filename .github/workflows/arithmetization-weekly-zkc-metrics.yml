@@ -104,8 +104,8 @@ jobs:
         with:
           zkc-ref: ${{ inputs.zkc-ref || 'main' }}
 
-      # install-zkc does `git fetch --depth=1 origin <ref>`, which cannot fetch an abbreviated SHA,
-      # so expand short hashes through the API. Branches and tags pass through untouched.
+      # Expand short hashes through the API so every measurement job resolves the same zkc revision.
+      # Branches and tags pass through untouched.
       - name: Resolve the zkc ref
         id: zkc
         env:
@@ -414,7 +414,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.24.6'
+          go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
 
       - name: Prepare run directory

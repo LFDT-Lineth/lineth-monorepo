@@ -5,6 +5,8 @@ WORKDIR /opt/consensys/maru
 
 COPY --from=libs ./** ./
 
+ENV LINETH_APP_JAR=/opt/consensys/maru/maru.jar
+
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF

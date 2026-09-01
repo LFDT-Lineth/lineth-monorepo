@@ -92,8 +92,8 @@ Raw stdout/stderr/rusage per step land in `.claude/reports/runs/<timestamp>/`.
 Local numbers are for smoke-testing, not for the report: a laptop's wall clocks are not
 comparable week to week (thermals, other load). The CI rows are the ones to quote.
 
-The script never touches `~/go/bin/zkc` and never runs `make install-zkc`, which would overwrite
-it — the zkc under measurement is built into a private cache and passed explicitly.
+The script never touches `~/go/bin/zkc`. The zkc under measurement is built into a private cache
+and passed explicitly.
 
 ## Shared plumbing
 
@@ -102,7 +102,7 @@ rather than shelling out to `zkc` itself:
 
 | target | what it does |
 |---|---|
-| `make -C arithmetization install-zkc-to ZKC_BIN=<path> [ZKC_REF=<ref>]` | builds zkc to an explicit path instead of GOBIN, leaving the `zkc` on your PATH alone |
+| `make -C arithmetization prepare-zkc [ZKC_REF=<ref>]` | uses the version pinned in `go.mod`, or applies the requested override with `go get` |
 | `make -f arithmetization/src/test/Makefile zkc-trace JSON=<json> [ZKC=<bin>] [ZKC_TRACE_FLAGS=…]` | runs `zkc trace`; the counterpart to the existing `zkc-exec` |
 
 `ZKC_TRACE_FLAGS` defaults to `--stats`; the weekly job passes `--stats --check` for the second
@@ -111,7 +111,7 @@ heavy step. Both targets are usable from any other workflow that needs a pinned 
 ## Doing it by hand
 
 ```bash
-zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc
+go -C arithmetization tool zkc compile --stats --order name src/main/riscv/main.zkc
 
 make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true
 make -C riscv-guests/build_common elf-to-json \
@@ -119,19 +119,16 @@ make -C riscv-guests/build_common elf-to-json \
      JSON_EXT=/tmp/guest.json \
      IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz"
 
-zkc trace --stats         /tmp/guest.json arithmetization/src/main/riscv/main.zkc
-zkc trace --stats --check /tmp/guest.json arithmetization/src/main/riscv/main.zkc
+go -C arithmetization tool zkc trace --stats         /tmp/guest.json src/main/riscv/main.zkc
+go -C arithmetization tool zkc trace --stats --check /tmp/guest.json src/main/riscv/main.zkc
 ```
 
 ## Gotchas this tooling encodes
 
 - **A constraint failure does not change zkc's exit code.** It reports the failing constraints and
   still exits 0, so pass/fail is read from the `failing …` lines, never from `$?`.
-- **`zkc --version` is not a reliable identity.** Use `go version -m <binary>`; the `mod` line
-  embeds the commit and its timestamp. A version string that looks old can be *newer* than the
-  repo's pinned `ZKC_REF`.
-- **`make -C arithmetization install-zkc` overwrites `~/go/bin/zkc`** with the pinned `ZKC_REF`,
-  and every `make …-exec` target depends on it.
+- **`zkc --version` is not a reliable identity.** Use `go list -m` in the arithmetization module;
+  the selected module version records the pinned release or pseudo-version.
 - **`-q` no longer exists in zkc**, so `riscv-guests/l2-execution/Makefile`'s default
   `ZKC_EXEC_FLAGS ?= -q` fails. CI never notices because it always overrides the variable. This
   tooling calls `zkc` directly rather than going through `exec`.

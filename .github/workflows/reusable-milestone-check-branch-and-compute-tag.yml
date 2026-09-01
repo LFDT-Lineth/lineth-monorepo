@@ -36,7 +36,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          # No ref override: defaults to github.sha, the immutable commit
+          # selected at dispatch time.
           fetch-depth: 0
           fetch-tags: true
           submodules: false
@@ -51,19 +52,6 @@ jobs:
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: linea
-          scopes: coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc
-          include-path: |
-            coordinator/**
-            maru/**
-            postman/**
-            prover/**
-            transaction-exclusion-api/**
-            tracer/**
-            tracer-constraints/**
-            linea-besu/plugins/linea-sequencer/**
-            linea-besu/besu/**
-            linea-besu/package/**
-            gradle/libs.versions.toml
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
       - name: Check if the next release tag already existed

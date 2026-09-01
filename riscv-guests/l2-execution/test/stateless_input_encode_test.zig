@@ -11,7 +11,7 @@ const input = @import("zesu_input");
 const ssz_decode = @import("zesu_ssz_decode");
 const fixtures = @import("evm_execution_fixtures");
 const stateless_input_encode = @import("stateless_input_encode");
-const legacy_tx_rlp = @import("legacy_tx_rlp");
+const tx_fixtures = @import("tx_fixtures");
 
 fn repeat(comptime n: usize, byte: u8) [n]u8 {
     var out: [n]u8 = undefined;
@@ -140,8 +140,8 @@ test "encode then decode round-trips every field, covering every variable-length
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const tx_a_rlp = try legacy_tx_rlp.buildLegacyTxRlp(alloc, 7, 1_000_000_000, 21_000, TX_A_TO, 1000, &.{}, TX_A_V_RAW, TX_A_R, TX_A_S);
-    const tx_b_rlp = try legacy_tx_rlp.buildLegacyTxRlp(alloc, 0, 2_000_000_000, 100_000, null, 0, &TX_B_DATA, TX_B_V_RAW, TX_B_R, TX_B_S);
+    const tx_a_rlp = try tx_fixtures.buildLegacyTxRlp(alloc, 7, 1_000_000_000, 21_000, TX_A_TO, 1000, &.{}, TX_A_V_RAW, TX_A_R, TX_A_S);
+    const tx_b_rlp = try tx_fixtures.buildLegacyTxRlp(alloc, 0, 2_000_000_000, 100_000, null, 0, &TX_B_DATA, TX_B_V_RAW, TX_B_R, TX_B_S);
     // A named local, scoped to this test function, so the array's storage lasts as long as `value`,
     // `encoded`, and `decoded` below need it: its elements are runtime slices, and this function's own
     // stack frame is the shortest-lived scope that still covers every later use.

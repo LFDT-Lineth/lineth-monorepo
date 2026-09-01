@@ -83,7 +83,8 @@ jobs:
           set -eux
           # We collect each install into its own GOBIN and rename the output
           # so they coexist on disk.
-          default_ref="${ZKC_REF}"
+          default_ref=$(go -C arithmetization list -m -f '{{.Version}}' github.com/LFDT-Lineth/zkc)
+          echo "ZKC_REF=${default_ref}" >> "$GITHUB_ENV"
           for variant in base opt; do
             case "$variant" in
               base) ref="${{ inputs.zkc_base_ref }}" ;;
@@ -229,4 +230,3 @@ jobs:
         with:
           name: zkc-native-keccak-bench-logs
           path: /tmp/bench/logs
-
