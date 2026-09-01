@@ -11,21 +11,8 @@
 // licensing markers stay on every Kotlin and Java file.
 
 subprojects {
-  // Maru runs on Vert.x 4 at test runtime because Besu 26.5's acceptance-tests-dsl
-  // (and besu-ethereum-p2p / besu-metrics-core internals it loads via
-  // ThreadBesuNodeRunner) is bytecode-bound to removed Vert.x 4 types and methods
-  // (e.g. io.vertx.core.impl.ConcurrentHashSet, Vertx.nettyEventLoopGroup).
-  // zkevm's kotlin-common-conventions applies `api platform("vertx-stack-depchain
-  // :5.0.10")` which would normally win conflict resolution; resolutionStrategy.force
-  // on individual artifacts overrides that without colliding with the strict-5.0.10
-  // constraint on vertx-stack-depchain itself.
-  // Drop this block once Besu moves to Vert.x 5.
   configurations.configureEach { cfg ->
     resolutionStrategy.eachDependency { details ->
-      if (details.requested.group == 'io.vertx' && details.requested.name != 'vertx-stack-depchain') {
-        details.useVersion('4.5.24')
-        details.because('Force Vert.x 4 for Besu 26.5 acceptance-tests-dsl bytecode compatibility')
-      }
       // Besu 26.5's metrics-core (PrometheusMetricsSystem, PrometheusGuavaCache$Context)
       // is bytecode-bound to io.micrometer.prometheus.PrometheusMeterRegistry, which was
       // renamed to io.micrometer.prometheusmetrics.PrometheusMeterRegistry in Micrometer
