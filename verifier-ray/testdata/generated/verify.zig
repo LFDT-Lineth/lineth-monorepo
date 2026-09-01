@@ -183,7 +183,7 @@ const verify_case_0_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_0_failing_public_inputs,
 };
 
-const verify_case_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .rowlimit = system_0_rowlimit, .pcs = verify_case_0_pcs_system };
+const verify_case_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .pcs = verify_case_0_pcs_system };
 
 pub const system_1_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -342,7 +342,7 @@ const verify_case_1_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_1_failing_public_inputs,
 };
 
-const verify_case_1_systems = verifier.Systems{ .public_input = system_1_public_input, .vanishing = system_1, .logderivativesum = system_1_logderiv, .rowlimit = system_1_rowlimit, .pcs = verify_case_1_pcs_system };
+const verify_case_1_systems = verifier.Systems{ .public_input = system_1_public_input, .vanishing = system_1, .logderivativesum = system_1_logderiv, .grandproduct = system_1_grandproduct, .rowlimit = system_1_rowlimit, .pcs = verify_case_1_pcs_system };
 
 pub const system_2_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -497,7 +497,7 @@ const verify_case_2_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_2_failing_public_inputs,
 };
 
-const verify_case_2_systems = verifier.Systems{ .public_input = system_2_public_input, .vanishing = system_2, .logderivativesum = system_2_logderiv, .rowlimit = system_2_rowlimit, .pcs = verify_case_2_pcs_system };
+const verify_case_2_systems = verifier.Systems{ .public_input = system_2_public_input, .vanishing = system_2, .logderivativesum = system_2_logderiv, .grandproduct = system_2_grandproduct, .rowlimit = system_2_rowlimit, .pcs = verify_case_2_pcs_system };
 
 pub const system_3_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -658,7 +658,7 @@ const verify_case_3_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_3_failing_public_inputs,
 };
 
-const verify_case_3_systems = verifier.Systems{ .public_input = system_3_public_input, .vanishing = system_3, .logderivativesum = system_3_logderiv, .rowlimit = system_3_rowlimit, .pcs = verify_case_3_pcs_system };
+const verify_case_3_systems = verifier.Systems{ .public_input = system_3_public_input, .vanishing = system_3, .logderivativesum = system_3_logderiv, .grandproduct = system_3_grandproduct, .rowlimit = system_3_rowlimit, .pcs = verify_case_3_pcs_system };
 
 pub const system_4_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -824,7 +824,7 @@ const verify_case_4_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_4_failing_public_inputs,
 };
 
-const verify_case_4_systems = verifier.Systems{ .public_input = system_4_public_input, .vanishing = system_4, .logderivativesum = system_4_logderiv, .rowlimit = system_4_rowlimit, .pcs = verify_case_4_pcs_system };
+const verify_case_4_systems = verifier.Systems{ .public_input = system_4_public_input, .vanishing = system_4, .logderivativesum = system_4_logderiv, .grandproduct = system_4_grandproduct, .rowlimit = system_4_rowlimit, .pcs = verify_case_4_pcs_system };
 
 pub const system_5_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -983,7 +983,7 @@ const verify_case_5_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_5_failing_public_inputs,
 };
 
-const verify_case_5_systems = verifier.Systems{ .public_input = system_5_public_input, .vanishing = system_5, .logderivativesum = system_5_logderiv, .rowlimit = system_5_rowlimit, .pcs = verify_case_5_pcs_system };
+const verify_case_5_systems = verifier.Systems{ .public_input = system_5_public_input, .vanishing = system_5, .logderivativesum = system_5_logderiv, .grandproduct = system_5_grandproduct, .rowlimit = system_5_rowlimit, .pcs = verify_case_5_pcs_system };
 
 pub const system_6_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1132,7 +1132,7 @@ const verify_case_6_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_6_failing_public_inputs,
 };
 
-const verify_case_6_systems = verifier.Systems{ .public_input = system_6_public_input, .vanishing = system_6, .logderivativesum = system_6_logderiv, .rowlimit = system_6_rowlimit, .pcs = verify_case_6_pcs_system };
+const verify_case_6_systems = verifier.Systems{ .public_input = system_6_public_input, .vanishing = system_6, .logderivativesum = system_6_logderiv, .grandproduct = system_6_grandproduct, .rowlimit = system_6_rowlimit, .pcs = verify_case_6_pcs_system };
 
 pub const system_7_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1285,7 +1285,7 @@ const verify_case_7_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_7_failing_public_inputs,
 };
 
-const verify_case_7_systems = verifier.Systems{ .public_input = system_7_public_input, .vanishing = system_7, .logderivativesum = system_7_logderiv, .rowlimit = system_7_rowlimit, .pcs = verify_case_7_pcs_system };
+const verify_case_7_systems = verifier.Systems{ .public_input = system_7_public_input, .vanishing = system_7, .logderivativesum = system_7_logderiv, .grandproduct = system_7_grandproduct, .rowlimit = system_7_rowlimit, .pcs = verify_case_7_pcs_system };
 
 pub const system_8_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1444,7 +1444,7 @@ const verify_case_8_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_8_failing_public_inputs,
 };
 
-const verify_case_8_systems = verifier.Systems{ .public_input = system_8_public_input, .vanishing = system_8, .logderivativesum = system_8_logderiv, .rowlimit = system_8_rowlimit, .pcs = verify_case_8_pcs_system };
+const verify_case_8_systems = verifier.Systems{ .public_input = system_8_public_input, .vanishing = system_8, .logderivativesum = system_8_logderiv, .grandproduct = system_8_grandproduct, .rowlimit = system_8_rowlimit, .pcs = verify_case_8_pcs_system };
 
 pub const system_9_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1611,7 +1611,7 @@ const verify_case_9_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_9_failing_public_inputs,
 };
 
-const verify_case_9_systems = verifier.Systems{ .public_input = system_9_public_input, .vanishing = system_9, .logderivativesum = system_9_logderiv, .rowlimit = system_9_rowlimit, .pcs = verify_case_9_pcs_system };
+const verify_case_9_systems = verifier.Systems{ .public_input = system_9_public_input, .vanishing = system_9, .logderivativesum = system_9_logderiv, .grandproduct = system_9_grandproduct, .rowlimit = system_9_rowlimit, .pcs = verify_case_9_pcs_system };
 
 pub const system_10_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1770,7 +1770,7 @@ const verify_case_10_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_10_failing_public_inputs,
 };
 
-const verify_case_10_systems = verifier.Systems{ .public_input = system_10_public_input, .vanishing = system_10, .logderivativesum = system_10_logderiv, .rowlimit = system_10_rowlimit, .pcs = verify_case_10_pcs_system };
+const verify_case_10_systems = verifier.Systems{ .public_input = system_10_public_input, .vanishing = system_10, .logderivativesum = system_10_logderiv, .grandproduct = system_10_grandproduct, .rowlimit = system_10_rowlimit, .pcs = verify_case_10_pcs_system };
 
 pub const system_11_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1929,7 +1929,7 @@ const verify_case_11_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_11_failing_public_inputs,
 };
 
-const verify_case_11_systems = verifier.Systems{ .public_input = system_11_public_input, .vanishing = system_11, .logderivativesum = system_11_logderiv, .rowlimit = system_11_rowlimit, .pcs = verify_case_11_pcs_system };
+const verify_case_11_systems = verifier.Systems{ .public_input = system_11_public_input, .vanishing = system_11, .logderivativesum = system_11_logderiv, .grandproduct = system_11_grandproduct, .rowlimit = system_11_rowlimit, .pcs = verify_case_11_pcs_system };
 
 pub const system_12_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2088,7 +2088,7 @@ const verify_case_12_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_12_failing_public_inputs,
 };
 
-const verify_case_12_systems = verifier.Systems{ .public_input = system_12_public_input, .vanishing = system_12, .logderivativesum = system_12_logderiv, .rowlimit = system_12_rowlimit, .pcs = verify_case_12_pcs_system };
+const verify_case_12_systems = verifier.Systems{ .public_input = system_12_public_input, .vanishing = system_12, .logderivativesum = system_12_logderiv, .grandproduct = system_12_grandproduct, .rowlimit = system_12_rowlimit, .pcs = verify_case_12_pcs_system };
 
 pub const system_13_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -2269,7 +2269,7 @@ const verify_case_13_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_13_failing_public_inputs,
 };
 
-const verify_case_13_systems = verifier.Systems{ .public_input = system_13_public_input, .vanishing = system_13, .logderivativesum = system_13_logderiv, .rowlimit = system_13_rowlimit, .pcs = verify_case_13_pcs_system };
+const verify_case_13_systems = verifier.Systems{ .public_input = system_13_public_input, .vanishing = system_13, .logderivativesum = system_13_logderiv, .grandproduct = system_13_grandproduct, .rowlimit = system_13_rowlimit, .pcs = verify_case_13_pcs_system };
 
 pub const system_14_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2424,7 +2424,7 @@ const verify_case_14_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_14_failing_public_inputs,
 };
 
-const verify_case_14_systems = verifier.Systems{ .public_input = system_14_public_input, .vanishing = system_14, .logderivativesum = system_14_logderiv, .rowlimit = system_14_rowlimit, .pcs = verify_case_14_pcs_system };
+const verify_case_14_systems = verifier.Systems{ .public_input = system_14_public_input, .vanishing = system_14, .logderivativesum = system_14_logderiv, .grandproduct = system_14_grandproduct, .rowlimit = system_14_rowlimit, .pcs = verify_case_14_pcs_system };
 
 pub const system_15_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2582,7 +2582,7 @@ const verify_case_15_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_15_failing_public_inputs,
 };
 
-const verify_case_15_systems = verifier.Systems{ .public_input = system_15_public_input, .vanishing = system_15, .logderivativesum = system_15_logderiv, .rowlimit = system_15_rowlimit, .pcs = verify_case_15_pcs_system };
+const verify_case_15_systems = verifier.Systems{ .public_input = system_15_public_input, .vanishing = system_15, .logderivativesum = system_15_logderiv, .grandproduct = system_15_grandproduct, .rowlimit = system_15_rowlimit, .pcs = verify_case_15_pcs_system };
 
 pub const system_16_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2735,7 +2735,7 @@ const verify_case_16_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_16_failing_public_inputs,
 };
 
-const verify_case_16_systems = verifier.Systems{ .public_input = system_16_public_input, .vanishing = system_16, .logderivativesum = system_16_logderiv, .rowlimit = system_16_rowlimit, .pcs = verify_case_16_pcs_system };
+const verify_case_16_systems = verifier.Systems{ .public_input = system_16_public_input, .vanishing = system_16, .logderivativesum = system_16_logderiv, .grandproduct = system_16_grandproduct, .rowlimit = system_16_rowlimit, .pcs = verify_case_16_pcs_system };
 
 pub const system_17_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1, 0 },
@@ -2896,7 +2896,7 @@ const verify_case_17_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_17_failing_public_inputs,
 };
 
-const verify_case_17_systems = verifier.Systems{ .public_input = system_17_public_input, .vanishing = system_17, .logderivativesum = system_17_logderiv, .rowlimit = system_17_rowlimit, .pcs = verify_case_17_pcs_system };
+const verify_case_17_systems = verifier.Systems{ .public_input = system_17_public_input, .vanishing = system_17, .logderivativesum = system_17_logderiv, .grandproduct = system_17_grandproduct, .rowlimit = system_17_rowlimit, .pcs = verify_case_17_pcs_system };
 
 pub const system_18_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3055,7 +3055,7 @@ const verify_case_18_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_18_failing_public_inputs,
 };
 
-const verify_case_18_systems = verifier.Systems{ .public_input = system_18_public_input, .vanishing = system_18, .logderivativesum = system_18_logderiv, .rowlimit = system_18_rowlimit, .pcs = verify_case_18_pcs_system };
+const verify_case_18_systems = verifier.Systems{ .public_input = system_18_public_input, .vanishing = system_18, .logderivativesum = system_18_logderiv, .grandproduct = system_18_grandproduct, .rowlimit = system_18_rowlimit, .pcs = verify_case_18_pcs_system };
 
 pub const system_19_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3228,7 +3228,7 @@ const verify_case_19_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_19_failing_public_inputs,
 };
 
-const verify_case_19_systems = verifier.Systems{ .public_input = system_19_public_input, .vanishing = system_19, .logderivativesum = system_19_logderiv, .rowlimit = system_19_rowlimit, .pcs = verify_case_19_pcs_system };
+const verify_case_19_systems = verifier.Systems{ .public_input = system_19_public_input, .vanishing = system_19, .logderivativesum = system_19_logderiv, .grandproduct = system_19_grandproduct, .rowlimit = system_19_rowlimit, .pcs = verify_case_19_pcs_system };
 
 pub const system_20_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3381,7 +3381,7 @@ const verify_case_20_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_20_failing_public_inputs,
 };
 
-const verify_case_20_systems = verifier.Systems{ .public_input = system_20_public_input, .vanishing = system_20, .logderivativesum = system_20_logderiv, .rowlimit = system_20_rowlimit, .pcs = verify_case_20_pcs_system };
+const verify_case_20_systems = verifier.Systems{ .public_input = system_20_public_input, .vanishing = system_20, .logderivativesum = system_20_logderiv, .grandproduct = system_20_grandproduct, .rowlimit = system_20_rowlimit, .pcs = verify_case_20_pcs_system };
 
 pub const system_21_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3544,7 +3544,7 @@ const verify_case_21_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_21_failing_public_inputs,
 };
 
-const verify_case_21_systems = verifier.Systems{ .public_input = system_21_public_input, .vanishing = system_21, .logderivativesum = system_21_logderiv, .rowlimit = system_21_rowlimit, .pcs = verify_case_21_pcs_system };
+const verify_case_21_systems = verifier.Systems{ .public_input = system_21_public_input, .vanishing = system_21, .logderivativesum = system_21_logderiv, .grandproduct = system_21_grandproduct, .rowlimit = system_21_rowlimit, .pcs = verify_case_21_pcs_system };
 
 pub const system_22_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3741,7 +3741,7 @@ const verify_case_22_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_22_failing_public_inputs,
 };
 
-const verify_case_22_systems = verifier.Systems{ .public_input = system_22_public_input, .vanishing = system_22, .logderivativesum = system_22_logderiv, .rowlimit = system_22_rowlimit, .pcs = verify_case_22_pcs_system };
+const verify_case_22_systems = verifier.Systems{ .public_input = system_22_public_input, .vanishing = system_22, .logderivativesum = system_22_logderiv, .grandproduct = system_22_grandproduct, .rowlimit = system_22_rowlimit, .pcs = verify_case_22_pcs_system };
 
 pub const system_23_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -3940,7 +3940,7 @@ const verify_case_23_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_23_failing_public_inputs,
 };
 
-const verify_case_23_systems = verifier.Systems{ .public_input = system_23_public_input, .vanishing = system_23, .logderivativesum = system_23_logderiv, .rowlimit = system_23_rowlimit, .pcs = verify_case_23_pcs_system };
+const verify_case_23_systems = verifier.Systems{ .public_input = system_23_public_input, .vanishing = system_23, .logderivativesum = system_23_logderiv, .grandproduct = system_23_grandproduct, .rowlimit = system_23_rowlimit, .pcs = verify_case_23_pcs_system };
 
 pub const system_24_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4099,7 +4099,7 @@ const verify_case_24_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_24_failing_public_inputs,
 };
 
-const verify_case_24_systems = verifier.Systems{ .public_input = system_24_public_input, .vanishing = system_24, .logderivativesum = system_24_logderiv, .rowlimit = system_24_rowlimit, .pcs = verify_case_24_pcs_system };
+const verify_case_24_systems = verifier.Systems{ .public_input = system_24_public_input, .vanishing = system_24, .logderivativesum = system_24_logderiv, .grandproduct = system_24_grandproduct, .rowlimit = system_24_rowlimit, .pcs = verify_case_24_pcs_system };
 
 pub const system_25_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4252,7 +4252,7 @@ const verify_case_25_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_25_failing_public_inputs,
 };
 
-const verify_case_25_systems = verifier.Systems{ .public_input = system_25_public_input, .vanishing = system_25, .logderivativesum = system_25_logderiv, .rowlimit = system_25_rowlimit, .pcs = verify_case_25_pcs_system };
+const verify_case_25_systems = verifier.Systems{ .public_input = system_25_public_input, .vanishing = system_25, .logderivativesum = system_25_logderiv, .grandproduct = system_25_grandproduct, .rowlimit = system_25_rowlimit, .pcs = verify_case_25_pcs_system };
 
 pub const system_26_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4413,7 +4413,7 @@ const verify_case_26_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_26_failing_public_inputs,
 };
 
-const verify_case_26_systems = verifier.Systems{ .public_input = system_26_public_input, .vanishing = system_26, .logderivativesum = system_26_logderiv, .rowlimit = system_26_rowlimit, .pcs = verify_case_26_pcs_system };
+const verify_case_26_systems = verifier.Systems{ .public_input = system_26_public_input, .vanishing = system_26, .logderivativesum = system_26_logderiv, .grandproduct = system_26_grandproduct, .rowlimit = system_26_rowlimit, .pcs = verify_case_26_pcs_system };
 
 pub const system_27_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4564,7 +4564,7 @@ const verify_case_27_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_27_failing_public_inputs,
 };
 
-const verify_case_27_systems = verifier.Systems{ .public_input = system_27_public_input, .vanishing = system_27, .logderivativesum = system_27_logderiv, .rowlimit = system_27_rowlimit, .pcs = verify_case_27_pcs_system };
+const verify_case_27_systems = verifier.Systems{ .public_input = system_27_public_input, .vanishing = system_27, .logderivativesum = system_27_logderiv, .grandproduct = system_27_grandproduct, .rowlimit = system_27_rowlimit, .pcs = verify_case_27_pcs_system };
 
 pub const system_28_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4743,7 +4743,7 @@ const verify_case_28_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_28_failing_public_inputs,
 };
 
-const verify_case_28_systems = verifier.Systems{ .public_input = system_28_public_input, .vanishing = system_28, .logderivativesum = system_28_logderiv, .rowlimit = system_28_rowlimit, .pcs = verify_case_28_pcs_system };
+const verify_case_28_systems = verifier.Systems{ .public_input = system_28_public_input, .vanishing = system_28, .logderivativesum = system_28_logderiv, .grandproduct = system_28_grandproduct, .rowlimit = system_28_rowlimit, .pcs = verify_case_28_pcs_system };
 
 pub const system_29_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4902,7 +4902,7 @@ const verify_case_29_alt_input = verifier.VerifyInput{
     .public_inputs = &verify_case_29_alt_public_inputs,
 };
 
-const verify_case_29_systems = verifier.Systems{ .public_input = system_29_public_input, .vanishing = system_29, .logderivativesum = system_29_logderiv, .rowlimit = system_29_rowlimit, .pcs = verify_case_29_pcs_system };
+const verify_case_29_systems = verifier.Systems{ .public_input = system_29_public_input, .vanishing = system_29, .logderivativesum = system_29_logderiv, .grandproduct = system_29_grandproduct, .rowlimit = system_29_rowlimit, .pcs = verify_case_29_pcs_system };
 
 pub const system_30_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -5101,7 +5101,7 @@ const verify_case_30_alt_input = verifier.VerifyInput{
     .public_inputs = &verify_case_30_alt_public_inputs,
 };
 
-const verify_case_30_systems = verifier.Systems{ .public_input = system_30_public_input, .vanishing = system_30, .logderivativesum = system_30_logderiv, .rowlimit = system_30_rowlimit, .pcs = verify_case_30_pcs_system };
+const verify_case_30_systems = verifier.Systems{ .public_input = system_30_public_input, .vanishing = system_30, .logderivativesum = system_30_logderiv, .grandproduct = system_30_grandproduct, .rowlimit = system_30_rowlimit, .pcs = verify_case_30_pcs_system };
 
 pub const system_31_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5258,7 +5258,7 @@ const verify_case_31_input = verifier.VerifyInput{
     .public_inputs = &verify_case_31_public_inputs,
 };
 
-const verify_case_31_systems = verifier.Systems{ .public_input = system_31_public_input, .vanishing = system_31, .logderivativesum = system_31_logderiv, .rowlimit = system_31_rowlimit, .pcs = verify_case_31_pcs_system };
+const verify_case_31_systems = verifier.Systems{ .public_input = system_31_public_input, .vanishing = system_31, .logderivativesum = system_31_logderiv, .grandproduct = system_31_grandproduct, .rowlimit = system_31_rowlimit, .pcs = verify_case_31_pcs_system };
 
 pub const system_32_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5438,7 +5438,7 @@ const verify_case_32_input = verifier.VerifyInput{
     .public_inputs = &verify_case_32_public_inputs,
 };
 
-const verify_case_32_systems = verifier.Systems{ .public_input = system_32_public_input, .vanishing = system_32, .logderivativesum = system_32_logderiv, .rowlimit = system_32_rowlimit, .pcs = verify_case_32_pcs_system };
+const verify_case_32_systems = verifier.Systems{ .public_input = system_32_public_input, .vanishing = system_32, .logderivativesum = system_32_logderiv, .grandproduct = system_32_grandproduct, .rowlimit = system_32_rowlimit, .pcs = verify_case_32_pcs_system };
 
 pub const system_33_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5618,7 +5618,7 @@ const verify_case_33_input = verifier.VerifyInput{
     .public_inputs = &verify_case_33_public_inputs,
 };
 
-const verify_case_33_systems = verifier.Systems{ .public_input = system_33_public_input, .vanishing = system_33, .logderivativesum = system_33_logderiv, .rowlimit = system_33_rowlimit, .pcs = verify_case_33_pcs_system };
+const verify_case_33_systems = verifier.Systems{ .public_input = system_33_public_input, .vanishing = system_33, .logderivativesum = system_33_logderiv, .grandproduct = system_33_grandproduct, .rowlimit = system_33_rowlimit, .pcs = verify_case_33_pcs_system };
 
 pub const system_34_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5803,7 +5803,7 @@ const verify_case_34_input = verifier.VerifyInput{
     .public_inputs = &verify_case_34_public_inputs,
 };
 
-const verify_case_34_systems = verifier.Systems{ .public_input = system_34_public_input, .vanishing = system_34, .logderivativesum = system_34_logderiv, .rowlimit = system_34_rowlimit, .pcs = verify_case_34_pcs_system };
+const verify_case_34_systems = verifier.Systems{ .public_input = system_34_public_input, .vanishing = system_34, .logderivativesum = system_34_logderiv, .grandproduct = system_34_grandproduct, .rowlimit = system_34_rowlimit, .pcs = verify_case_34_pcs_system };
 
 pub const system_35_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6074,7 +6074,7 @@ const verify_case_35_input = verifier.VerifyInput{
     .public_inputs = &verify_case_35_public_inputs,
 };
 
-const verify_case_35_systems = verifier.Systems{ .public_input = system_35_public_input, .vanishing = system_35, .logderivativesum = system_35_logderiv, .rowlimit = system_35_rowlimit, .pcs = verify_case_35_pcs_system };
+const verify_case_35_systems = verifier.Systems{ .public_input = system_35_public_input, .vanishing = system_35, .logderivativesum = system_35_logderiv, .grandproduct = system_35_grandproduct, .rowlimit = system_35_rowlimit, .pcs = verify_case_35_pcs_system };
 
 pub const system_36_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
@@ -6311,7 +6311,7 @@ const verify_case_36_input = verifier.VerifyInput{
     .public_inputs = &verify_case_36_public_inputs,
 };
 
-const verify_case_36_systems = verifier.Systems{ .public_input = system_36_public_input, .vanishing = system_36, .logderivativesum = system_36_logderiv, .rowlimit = system_36_rowlimit, .pcs = verify_case_36_pcs_system };
+const verify_case_36_systems = verifier.Systems{ .public_input = system_36_public_input, .vanishing = system_36, .logderivativesum = system_36_logderiv, .grandproduct = system_36_grandproduct, .rowlimit = system_36_rowlimit, .pcs = verify_case_36_pcs_system };
 
 pub const system_37_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6456,7 +6456,7 @@ const verify_case_37_input = verifier.VerifyInput{
     .public_inputs = &verify_case_37_public_inputs,
 };
 
-const verify_case_37_systems = verifier.Systems{ .public_input = system_37_public_input, .vanishing = system_37, .logderivativesum = system_37_logderiv, .rowlimit = system_37_rowlimit, .pcs = verify_case_37_pcs_system };
+const verify_case_37_systems = verifier.Systems{ .public_input = system_37_public_input, .vanishing = system_37, .logderivativesum = system_37_logderiv, .grandproduct = system_37_grandproduct, .rowlimit = system_37_rowlimit, .pcs = verify_case_37_pcs_system };
 
 pub const system_38_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
@@ -6722,7 +6722,7 @@ const verify_case_38_input = verifier.VerifyInput{
     .public_inputs = &verify_case_38_public_inputs,
 };
 
-const verify_case_38_systems = verifier.Systems{ .public_input = system_38_public_input, .vanishing = system_38, .logderivativesum = system_38_logderiv, .rowlimit = system_38_rowlimit, .pcs = verify_case_38_pcs_system };
+const verify_case_38_systems = verifier.Systems{ .public_input = system_38_public_input, .vanishing = system_38, .logderivativesum = system_38_logderiv, .grandproduct = system_38_grandproduct, .rowlimit = system_38_rowlimit, .pcs = verify_case_38_pcs_system };
 
 pub const system_39_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7083,7 +7083,7 @@ const verify_case_39_input = verifier.VerifyInput{
     .public_inputs = &verify_case_39_public_inputs,
 };
 
-const verify_case_39_systems = verifier.Systems{ .public_input = system_39_public_input, .vanishing = system_39, .logderivativesum = system_39_logderiv, .rowlimit = system_39_rowlimit, .pcs = verify_case_39_pcs_system };
+const verify_case_39_systems = verifier.Systems{ .public_input = system_39_public_input, .vanishing = system_39, .logderivativesum = system_39_logderiv, .grandproduct = system_39_grandproduct, .rowlimit = system_39_rowlimit, .pcs = verify_case_39_pcs_system };
 
 pub const system_40_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7240,7 +7240,7 @@ const verify_case_40_input = verifier.VerifyInput{
     .public_inputs = &verify_case_40_public_inputs,
 };
 
-const verify_case_40_systems = verifier.Systems{ .public_input = system_40_public_input, .vanishing = system_40, .logderivativesum = system_40_logderiv, .rowlimit = system_40_rowlimit, .pcs = verify_case_40_pcs_system };
+const verify_case_40_systems = verifier.Systems{ .public_input = system_40_public_input, .vanishing = system_40, .logderivativesum = system_40_logderiv, .grandproduct = system_40_grandproduct, .rowlimit = system_40_rowlimit, .pcs = verify_case_40_pcs_system };
 
 pub const system_41_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7442,7 +7442,7 @@ const verify_case_41_input = verifier.VerifyInput{
     .public_inputs = &verify_case_41_public_inputs,
 };
 
-const verify_case_41_systems = verifier.Systems{ .public_input = system_41_public_input, .vanishing = system_41, .logderivativesum = system_41_logderiv, .rowlimit = system_41_rowlimit, .pcs = verify_case_41_pcs_system };
+const verify_case_41_systems = verifier.Systems{ .public_input = system_41_public_input, .vanishing = system_41, .logderivativesum = system_41_logderiv, .grandproduct = system_41_grandproduct, .rowlimit = system_41_rowlimit, .pcs = verify_case_41_pcs_system };
 
 pub const system_42_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7618,7 +7618,7 @@ const verify_case_42_input = verifier.VerifyInput{
     .public_inputs = &verify_case_42_public_inputs,
 };
 
-const verify_case_42_systems = verifier.Systems{ .public_input = system_42_public_input, .vanishing = system_42, .logderivativesum = system_42_logderiv, .rowlimit = system_42_rowlimit, .pcs = verify_case_42_pcs_system };
+const verify_case_42_systems = verifier.Systems{ .public_input = system_42_public_input, .vanishing = system_42, .logderivativesum = system_42_logderiv, .grandproduct = system_42_grandproduct, .rowlimit = system_42_rowlimit, .pcs = verify_case_42_pcs_system };
 
 pub const system_43_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7880,7 +7880,7 @@ const verify_case_43_input = verifier.VerifyInput{
     .public_inputs = &verify_case_43_public_inputs,
 };
 
-const verify_case_43_systems = verifier.Systems{ .public_input = system_43_public_input, .vanishing = system_43, .logderivativesum = system_43_logderiv, .rowlimit = system_43_rowlimit, .pcs = verify_case_43_pcs_system };
+const verify_case_43_systems = verifier.Systems{ .public_input = system_43_public_input, .vanishing = system_43, .logderivativesum = system_43_logderiv, .grandproduct = system_43_grandproduct, .rowlimit = system_43_rowlimit, .pcs = verify_case_43_pcs_system };
 
 pub const system_44_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -8150,7 +8150,7 @@ const verify_case_44_input = verifier.VerifyInput{
     .public_inputs = &verify_case_44_public_inputs,
 };
 
-const verify_case_44_systems = verifier.Systems{ .public_input = system_44_public_input, .vanishing = system_44, .logderivativesum = system_44_logderiv, .rowlimit = system_44_rowlimit, .pcs = verify_case_44_pcs_system };
+const verify_case_44_systems = verifier.Systems{ .public_input = system_44_public_input, .vanishing = system_44, .logderivativesum = system_44_logderiv, .grandproduct = system_44_grandproduct, .rowlimit = system_44_rowlimit, .pcs = verify_case_44_pcs_system };
 
 pub const system_45_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -8429,7 +8429,7 @@ const verify_case_45_input = verifier.VerifyInput{
     .public_inputs = &verify_case_45_public_inputs,
 };
 
-const verify_case_45_systems = verifier.Systems{ .public_input = system_45_public_input, .vanishing = system_45, .logderivativesum = system_45_logderiv, .rowlimit = system_45_rowlimit, .pcs = verify_case_45_pcs_system };
+const verify_case_45_systems = verifier.Systems{ .public_input = system_45_public_input, .vanishing = system_45, .logderivativesum = system_45_logderiv, .grandproduct = system_45_grandproduct, .rowlimit = system_45_rowlimit, .pcs = verify_case_45_pcs_system };
 
 pub const system_46_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -8720,7 +8720,7 @@ const verify_case_46_input = verifier.VerifyInput{
     .public_inputs = &verify_case_46_public_inputs,
 };
 
-const verify_case_46_systems = verifier.Systems{ .public_input = system_46_public_input, .vanishing = system_46, .logderivativesum = system_46_logderiv, .rowlimit = system_46_rowlimit, .pcs = verify_case_46_pcs_system };
+const verify_case_46_systems = verifier.Systems{ .public_input = system_46_public_input, .vanishing = system_46, .logderivativesum = system_46_logderiv, .grandproduct = system_46_grandproduct, .rowlimit = system_46_rowlimit, .pcs = verify_case_46_pcs_system };
 
 pub const system_47_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -9020,7 +9020,7 @@ const verify_case_47_input = verifier.VerifyInput{
     .public_inputs = &verify_case_47_public_inputs,
 };
 
-const verify_case_47_systems = verifier.Systems{ .public_input = system_47_public_input, .vanishing = system_47, .logderivativesum = system_47_logderiv, .rowlimit = system_47_rowlimit, .pcs = verify_case_47_pcs_system };
+const verify_case_47_systems = verifier.Systems{ .public_input = system_47_public_input, .vanishing = system_47, .logderivativesum = system_47_logderiv, .grandproduct = system_47_grandproduct, .rowlimit = system_47_rowlimit, .pcs = verify_case_47_pcs_system };
 
 pub const system_48_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -9316,7 +9316,7 @@ const verify_case_48_input = verifier.VerifyInput{
     .public_inputs = &verify_case_48_public_inputs,
 };
 
-const verify_case_48_systems = verifier.Systems{ .public_input = system_48_public_input, .vanishing = system_48, .logderivativesum = system_48_logderiv, .rowlimit = system_48_rowlimit, .pcs = verify_case_48_pcs_system };
+const verify_case_48_systems = verifier.Systems{ .public_input = system_48_public_input, .vanishing = system_48, .logderivativesum = system_48_logderiv, .grandproduct = system_48_grandproduct, .rowlimit = system_48_rowlimit, .pcs = verify_case_48_pcs_system };
 
 pub const system_49_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -9662,7 +9662,7 @@ const verify_case_49_input = verifier.VerifyInput{
     .public_inputs = &verify_case_49_public_inputs,
 };
 
-const verify_case_49_systems = verifier.Systems{ .public_input = system_49_public_input, .vanishing = system_49, .logderivativesum = system_49_logderiv, .rowlimit = system_49_rowlimit, .pcs = verify_case_49_pcs_system };
+const verify_case_49_systems = verifier.Systems{ .public_input = system_49_public_input, .vanishing = system_49, .logderivativesum = system_49_logderiv, .grandproduct = system_49_grandproduct, .rowlimit = system_49_rowlimit, .pcs = verify_case_49_pcs_system };
 
 pub const system_50_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 1, 0 },
@@ -10098,7 +10098,7 @@ const verify_case_50_input = verifier.VerifyInput{
     .public_inputs = &verify_case_50_public_inputs,
 };
 
-const verify_case_50_systems = verifier.Systems{ .public_input = system_50_public_input, .vanishing = system_50, .logderivativesum = system_50_logderiv, .rowlimit = system_50_rowlimit, .pcs = verify_case_50_pcs_system };
+const verify_case_50_systems = verifier.Systems{ .public_input = system_50_public_input, .vanishing = system_50, .logderivativesum = system_50_logderiv, .grandproduct = system_50_grandproduct, .rowlimit = system_50_rowlimit, .pcs = verify_case_50_pcs_system };
 
 pub const system_51_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -10415,7 +10415,7 @@ const verify_case_51_input = verifier.VerifyInput{
     .public_inputs = &verify_case_51_public_inputs,
 };
 
-const verify_case_51_systems = verifier.Systems{ .public_input = system_51_public_input, .vanishing = system_51, .logderivativesum = system_51_logderiv, .rowlimit = system_51_rowlimit, .pcs = verify_case_51_pcs_system };
+const verify_case_51_systems = verifier.Systems{ .public_input = system_51_public_input, .vanishing = system_51, .logderivativesum = system_51_logderiv, .grandproduct = system_51_grandproduct, .rowlimit = system_51_rowlimit, .pcs = verify_case_51_pcs_system };
 
 pub const system_52_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -10685,7 +10685,7 @@ const verify_case_52_input = verifier.VerifyInput{
     .public_inputs = &verify_case_52_public_inputs,
 };
 
-const verify_case_52_systems = verifier.Systems{ .public_input = system_52_public_input, .vanishing = system_52, .logderivativesum = system_52_logderiv, .rowlimit = system_52_rowlimit, .pcs = verify_case_52_pcs_system };
+const verify_case_52_systems = verifier.Systems{ .public_input = system_52_public_input, .vanishing = system_52, .logderivativesum = system_52_logderiv, .grandproduct = system_52_grandproduct, .rowlimit = system_52_rowlimit, .pcs = verify_case_52_pcs_system };
 
 pub const system_53_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -10955,7 +10955,7 @@ const verify_case_53_input = verifier.VerifyInput{
     .public_inputs = &verify_case_53_public_inputs,
 };
 
-const verify_case_53_systems = verifier.Systems{ .public_input = system_53_public_input, .vanishing = system_53, .logderivativesum = system_53_logderiv, .rowlimit = system_53_rowlimit, .pcs = verify_case_53_pcs_system };
+const verify_case_53_systems = verifier.Systems{ .public_input = system_53_public_input, .vanishing = system_53, .logderivativesum = system_53_logderiv, .grandproduct = system_53_grandproduct, .rowlimit = system_53_rowlimit, .pcs = verify_case_53_pcs_system };
 
 pub const system_54_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -11227,7 +11227,7 @@ const verify_case_54_input = verifier.VerifyInput{
     .public_inputs = &verify_case_54_public_inputs,
 };
 
-const verify_case_54_systems = verifier.Systems{ .public_input = system_54_public_input, .vanishing = system_54, .logderivativesum = system_54_logderiv, .rowlimit = system_54_rowlimit, .pcs = verify_case_54_pcs_system };
+const verify_case_54_systems = verifier.Systems{ .public_input = system_54_public_input, .vanishing = system_54, .logderivativesum = system_54_logderiv, .grandproduct = system_54_grandproduct, .rowlimit = system_54_rowlimit, .pcs = verify_case_54_pcs_system };
 
 pub const system_55_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -11573,7 +11573,7 @@ const verify_case_55_input = verifier.VerifyInput{
     .public_inputs = &verify_case_55_public_inputs,
 };
 
-const verify_case_55_systems = verifier.Systems{ .public_input = system_55_public_input, .vanishing = system_55, .logderivativesum = system_55_logderiv, .rowlimit = system_55_rowlimit, .pcs = verify_case_55_pcs_system };
+const verify_case_55_systems = verifier.Systems{ .public_input = system_55_public_input, .vanishing = system_55, .logderivativesum = system_55_logderiv, .grandproduct = system_55_grandproduct, .rowlimit = system_55_rowlimit, .pcs = verify_case_55_pcs_system };
 
 pub const system_56_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -11895,7 +11895,7 @@ const verify_case_56_input = verifier.VerifyInput{
     .public_inputs = &verify_case_56_public_inputs,
 };
 
-const verify_case_56_systems = verifier.Systems{ .public_input = system_56_public_input, .vanishing = system_56, .logderivativesum = system_56_logderiv, .rowlimit = system_56_rowlimit, .pcs = verify_case_56_pcs_system };
+const verify_case_56_systems = verifier.Systems{ .public_input = system_56_public_input, .vanishing = system_56, .logderivativesum = system_56_logderiv, .grandproduct = system_56_grandproduct, .rowlimit = system_56_rowlimit, .pcs = verify_case_56_pcs_system };
 
 pub const system_57_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -12136,7 +12136,7 @@ const verify_case_57_input = verifier.VerifyInput{
     .public_inputs = &verify_case_57_public_inputs,
 };
 
-const verify_case_57_systems = verifier.Systems{ .public_input = system_57_public_input, .vanishing = system_57, .logderivativesum = system_57_logderiv, .rowlimit = system_57_rowlimit, .pcs = verify_case_57_pcs_system };
+const verify_case_57_systems = verifier.Systems{ .public_input = system_57_public_input, .vanishing = system_57, .logderivativesum = system_57_logderiv, .grandproduct = system_57_grandproduct, .rowlimit = system_57_rowlimit, .pcs = verify_case_57_pcs_system };
 
 pub const system_58_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -12407,7 +12407,7 @@ const verify_case_58_input = verifier.VerifyInput{
     .public_inputs = &verify_case_58_public_inputs,
 };
 
-const verify_case_58_systems = verifier.Systems{ .public_input = system_58_public_input, .vanishing = system_58, .logderivativesum = system_58_logderiv, .rowlimit = system_58_rowlimit, .pcs = verify_case_58_pcs_system };
+const verify_case_58_systems = verifier.Systems{ .public_input = system_58_public_input, .vanishing = system_58, .logderivativesum = system_58_logderiv, .grandproduct = system_58_grandproduct, .rowlimit = system_58_rowlimit, .pcs = verify_case_58_pcs_system };
 
 pub const system_59_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -12677,7 +12677,7 @@ const verify_case_59_input = verifier.VerifyInput{
     .public_inputs = &verify_case_59_public_inputs,
 };
 
-const verify_case_59_systems = verifier.Systems{ .public_input = system_59_public_input, .vanishing = system_59, .logderivativesum = system_59_logderiv, .rowlimit = system_59_rowlimit, .pcs = verify_case_59_pcs_system };
+const verify_case_59_systems = verifier.Systems{ .public_input = system_59_public_input, .vanishing = system_59, .logderivativesum = system_59_logderiv, .grandproduct = system_59_grandproduct, .rowlimit = system_59_rowlimit, .pcs = verify_case_59_pcs_system };
 
 pub const system_60_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -12956,7 +12956,7 @@ const verify_case_60_input = verifier.VerifyInput{
     .public_inputs = &verify_case_60_public_inputs,
 };
 
-const verify_case_60_systems = verifier.Systems{ .public_input = system_60_public_input, .vanishing = system_60, .logderivativesum = system_60_logderiv, .rowlimit = system_60_rowlimit, .pcs = verify_case_60_pcs_system };
+const verify_case_60_systems = verifier.Systems{ .public_input = system_60_public_input, .vanishing = system_60, .logderivativesum = system_60_logderiv, .grandproduct = system_60_grandproduct, .rowlimit = system_60_rowlimit, .pcs = verify_case_60_pcs_system };
 
 pub const system_61_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -13375,7 +13375,7 @@ const verify_case_61_input = verifier.VerifyInput{
     .public_inputs = &verify_case_61_public_inputs,
 };
 
-const verify_case_61_systems = verifier.Systems{ .public_input = system_61_public_input, .vanishing = system_61, .logderivativesum = system_61_logderiv, .rowlimit = system_61_rowlimit, .pcs = verify_case_61_pcs_system };
+const verify_case_61_systems = verifier.Systems{ .public_input = system_61_public_input, .vanishing = system_61, .logderivativesum = system_61_logderiv, .grandproduct = system_61_grandproduct, .rowlimit = system_61_rowlimit, .pcs = verify_case_61_pcs_system };
 
 pub const system_62_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -13530,7 +13530,7 @@ const verify_case_62_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_62_failing_public_inputs,
 };
 
-const verify_case_62_systems = verifier.Systems{ .public_input = system_62_public_input, .vanishing = system_62, .logderivativesum = system_62_logderiv, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
+const verify_case_62_systems = verifier.Systems{ .public_input = system_62_public_input, .vanishing = system_62, .logderivativesum = system_62_logderiv, .grandproduct = system_62_grandproduct, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
 
 pub const system_63_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -13685,7 +13685,7 @@ const verify_case_63_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_63_failing_public_inputs,
 };
 
-const verify_case_63_systems = verifier.Systems{ .public_input = system_63_public_input, .vanishing = system_63, .logderivativesum = system_63_logderiv, .rowlimit = system_63_rowlimit, .pcs = verify_case_63_pcs_system };
+const verify_case_63_systems = verifier.Systems{ .public_input = system_63_public_input, .vanishing = system_63, .logderivativesum = system_63_logderiv, .grandproduct = system_63_grandproduct, .rowlimit = system_63_rowlimit, .pcs = verify_case_63_pcs_system };
 
 pub const system_64_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -13836,7 +13836,7 @@ const verify_case_64_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_64_failing_public_inputs,
 };
 
-const verify_case_64_systems = verifier.Systems{ .public_input = system_64_public_input, .vanishing = system_64, .logderivativesum = system_64_logderiv, .rowlimit = system_64_rowlimit, .pcs = verify_case_64_pcs_system };
+const verify_case_64_systems = verifier.Systems{ .public_input = system_64_public_input, .vanishing = system_64, .logderivativesum = system_64_logderiv, .grandproduct = system_64_grandproduct, .rowlimit = system_64_rowlimit, .pcs = verify_case_64_pcs_system };
 
 pub const system_65_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -13987,7 +13987,7 @@ const verify_case_65_failing_input = verifier.VerifyInput{
     .public_inputs = &verify_case_65_failing_public_inputs,
 };
 
-const verify_case_65_systems = verifier.Systems{ .public_input = system_65_public_input, .vanishing = system_65, .logderivativesum = system_65_logderiv, .rowlimit = system_65_rowlimit, .pcs = verify_case_65_pcs_system };
+const verify_case_65_systems = verifier.Systems{ .public_input = system_65_public_input, .vanishing = system_65, .logderivativesum = system_65_logderiv, .grandproduct = system_65_grandproduct, .rowlimit = system_65_rowlimit, .pcs = verify_case_65_pcs_system };
 
 pub const system_66_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -14361,7 +14361,7 @@ const verify_case_66_input = verifier.VerifyInput{
     .public_inputs = &verify_case_66_public_inputs,
 };
 
-const verify_case_66_systems = verifier.Systems{ .public_input = system_66_public_input, .vanishing = system_66, .logderivativesum = system_66_logderiv, .rowlimit = system_66_rowlimit, .pcs = verify_case_66_pcs_system };
+const verify_case_66_systems = verifier.Systems{ .public_input = system_66_public_input, .vanishing = system_66, .logderivativesum = system_66_logderiv, .grandproduct = system_66_grandproduct, .rowlimit = system_66_rowlimit, .pcs = verify_case_66_pcs_system };
 
 pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },

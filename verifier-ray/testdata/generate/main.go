@@ -1294,8 +1294,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
-		idx, idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }
