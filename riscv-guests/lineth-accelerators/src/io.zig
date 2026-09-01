@@ -1,6 +1,33 @@
-// zkVM standard io-interface: void write_output(const uint8_t* output, size_t size)
+// zkVM standard io-interface: read_input / write_output
 // https://github.com/eth-act/zkvm-standards/tree/main/standards/io-interface
-//
+
+const std = @import("std");
+
+// The linker-defined start of the IN memory region the proving system maps the private input
+// into. The region begins with an 8-byte little-endian u64 payload length, followed by that many
+// payload bytes.
+extern var _input_start: u8;
+
+/// Size of the linker-defined IN memory region (1 GiB).
+const IN_REGION_SIZE: usize = 0x40000000;
+
+/// Read the private input from the memory-mapped IN region: hands back a zero-copy slice into
+/// that region via `buf_ptr`/`buf_size`. The input slot's address is this module's own detail —
+/// a guest entry point only ever sees the slice.
+pub fn read_input(buf_ptr: *[*]const u8, buf_size: *usize) void {
+    const base = @intFromPtr(&_input_start);
+    const size_ptr: *const u64 = @ptrFromInt(base);
+    const payload_len = std.mem.littleToNative(u64, size_ptr.*);
+    // A length word claiming more than the IN region can hold means the input slot itself is
+    // corrupt — an ABI-level integrity violation, not a malformed message — so this fails the
+    // execution outright rather than handing the guest a slice it could misclassify as a
+    // decodable-but-invalid input.
+    if (payload_len > IN_REGION_SIZE - 8) @panic("input payload_len exceeds IN region");
+
+    buf_ptr.* = @ptrFromInt(base + 8);
+    buf_size.* = @intCast(payload_len);
+}
+
 // Append `size` bytes read from the buffer at `output` to the guest's public
 // output. Implemented as the Lineth custom opcode (custom-1); the prover's
 // RISC-V interpreter turns this into a write_output circuit call.
@@ -20,4 +47,3 @@ pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
           // optimizer may drop/reorder the buffer's stores before the opcode reads them.
         : .{ .memory = true });
 }
-

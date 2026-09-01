@@ -1,10 +1,11 @@
-# Guest-in-ZKC-interpreter CI for the l2-execution RISC-V guest.
+# Guest-in-ZKC-interpreter CI for the RISC-V guest programs.
 #
-# Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
-# custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
-# under zkc via the existing `exec` entry point. Execution uses zkc's generated-Go backend in fast
-# mode (--gogen --fast): this gate only needs to prove the guest runs, and skipping tracing keeps it
-# cheap. Tracing and constraint checking are measured by arithmetization-weekly-zkc-metrics.yml.
+# Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
+# prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
+# input, and executes it under zkc via the existing `exec` entry point. Execution uses zkc's
+# generated-Go backend in fast mode (--gogen --fast): this gate only needs to prove each guest runs,
+# and skipping tracing keeps it cheap. Tracing and constraint checking are measured by
+# arithmetization-weekly-zkc-metrics.yml.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
@@ -61,7 +62,7 @@ permissions:
 
 jobs:
   zkc-interpreter-run:
-    name: l2-execution guest in ZKC interpreter (accel)
+    name: guests in ZKC interpreter (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
@@ -107,4 +108,12 @@ jobs:
       # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
         run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+
+      # The stub guests decode a freshly-generated sample request and emit the echo/sentinel
+      # output; running them here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
+      # end-to-end for each guest program, not just l2-execution. KECCAK_ACCEL=true matches the
+      # production proving config, like the l2-execution step above (in the stub the flag is
+      # accepted but inert — its keccak use is comptime-only).
+      - name: Run rollup guest under zkc (gogen, fast, accel keccak)
+        run: make -C riscv-guests/rollup exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
