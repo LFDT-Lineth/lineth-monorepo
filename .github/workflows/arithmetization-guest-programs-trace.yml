@@ -2,6 +2,7 @@ name: Tracer guest programs trace - l2-execution, Add in Zkc
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -10,7 +11,7 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-guest-programs-trace.yml'
   push:
     branches:
       - main
@@ -20,17 +21,17 @@ on:
       - 'riscv-guests/build_common/**'
       - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-guest-programs-trace.yml'
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
 
@@ -40,6 +41,7 @@ permissions:
 
 jobs:
   binary-run-and-zkc-check:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
@@ -51,8 +53,10 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
+          # Share caches for go.mod-pinned runs; custom ZKC refs must not write to shared caches.
+          cache-save: ${{ inputs.zkc-ref == '' }}
 
-      - name: Install zkc, compile risc binary for simple zkc test program and check it
+      - name: Compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check
         env:
           ZKC_MAIN: src/test/zkc/simple_add.zkc
@@ -63,7 +67,7 @@ jobs:
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
-          ZKC_REF: "" # Empty to avoid installing zkc again
+          ZKC_REF: "" # Empty to avoid applying the optional module override again
           INPUT: test/testdata/stateless_input.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"

@@ -546,29 +546,26 @@ type vanishingProofView struct {
 type assignFn func(rt *wiop.Runtime)
 
 // proofFixture is everything a verify.zig fixture needs from one proving run:
-// the vanishing proof view, the PCS entry claims, and the FRI opening proof.
+// the vanishing proof view and the FRI opening proof. The PCS entry claims are
+// NOT here: verify.zig's verifier now reconstructs them itself from
+// rounds[*].cells (already carried by view), so there is nothing left for this
+// fixture to precompute for them.
 type proofFixture struct {
-	view        vanishingProofView
-	entryClaims [][]field.Ext
-	opening     fri.OpeningProof
+	view    vanishingProofView
+	opening fri.OpeningProof
 }
 
-// buildProofFixture runs the prover for one assignment against a PCS system
-// already baked for sys, and extracts the fixture data that proof yields.
-// label names the proof (e.g. "honest", "invalid", "alt") for error messages.
-func buildProofFixture(sys *wiop.System, pcs codegen.PcsSystem, assign assignFn, source, name, label string) (proofFixture, error) {
+// buildProofFixture runs the prover for one assignment and extracts the
+// fixture data that proof yields. label names the proof (e.g. "honest",
+// "invalid", "alt") for error messages.
+func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label string) (proofFixture, error) {
 	rt := runProver(sys, assign)
-	claims, err := codegen.ExtractPcsOpening(pcs, rt)
-	if err != nil {
-		return proofFixture{}, fmt.Errorf("extract %s pcs opening %s/%s: %w", label, source, name, err)
-	}
 	if rt.PCSOpeningProof == nil {
 		return proofFixture{}, fmt.Errorf("pcs %s/%s: %s runtime has no PCSOpeningProof", source, name, label)
 	}
 	return proofFixture{
-		view:        extractVanishingProofView(sys, rt),
-		entryClaims: claims,
-		opening:     *rt.PCSOpeningProof,
+		view:    extractVanishingProofView(sys, rt),
+		opening: *rt.PCSOpeningProof,
 	}, nil
 }
 
@@ -601,13 +598,13 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil
 		}
 
-		honestFixture, err := buildProofFixture(sys, *compiled.Pcs, honest, source, name, "honest")
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
 		if err != nil {
 			return err
 		}
 		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
 		if invalid != nil {
-			invalidFixture, err := buildProofFixture(sys, *compiled.Pcs, invalid, source, name, "invalid")
+			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
 			if err != nil {
 				return err
 			}
@@ -631,11 +628,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
 
-		honestFixture, err := buildProofFixture(sys, *compiled.Pcs, honest, source, name, "honest")
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
 		if err != nil {
 			return err
 		}
-		altFixture, err := buildProofFixture(sys, *compiled.Pcs, alt, source, name, "alt")
+		altFixture, err := buildProofFixture(sys, alt, source, name, "alt")
 		if err != nil {
 			return err
 		}
@@ -1323,10 +1320,11 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, fixture proofFixture) {
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
-	// The PCS opening: the authenticated entry_claims (which vanishing is then
-	// re-sliced from) and the FRI opening proof. No witness/quotient_claims —
-	// those are derived by the verifier from entry_claims via the claim maps.
-	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(fixture.entryClaims, fixture.opening))
+	// The PCS opening: just the FRI opening proof. No entry_claims — the
+	// verifier reconstructs those from rounds[*].cells (emitted above) via the
+	// compiled pcs.System's claim_cells table — and no witness/quotient_claims,
+	// which are derived by the verifier from entry_claims via the claim maps.
+	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(fixture.opening))
 	fmt.Fprintln(out)
 
 	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)

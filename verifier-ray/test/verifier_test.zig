@@ -148,6 +148,5 @@ const empty_pcs_system = pcs.System{
     .zeta_coin_index = 0,
 };
 const empty_pcs_opening = verifier.PcsOpening{
-    .entry_claims = &.{},
     .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &.{ext.Ext.zero()}, .running_queries = &.{} } },
 };

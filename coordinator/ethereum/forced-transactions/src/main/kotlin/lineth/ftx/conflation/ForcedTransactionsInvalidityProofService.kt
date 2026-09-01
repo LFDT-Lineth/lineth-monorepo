@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Coordinates forced transaction processing with invalidity proof generation.
@@ -26,6 +27,7 @@ class ForcedTransactionsInvalidityProofService(
   vertx: Vertx,
   pollingInterval: Duration = 5.seconds,
   log: Logger = LogManager.getLogger(ForcedTransactionsInvalidityProofService::class.java),
+  private val riscvCutoverTimestamp: Instant? = null,
 ) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
@@ -42,6 +44,7 @@ class ForcedTransactionsInvalidityProofService(
       .thenCompose { allFtxInDb ->
         val requestFutures = allFtxInDb
           .filter { it.proofStatus == ForcedTransactionRecord.ProofStatus.UNREQUESTED }
+          .filter { riscvCutoverTimestamp == null || it.simulatedExecutionBlockTimestamp < riscvCutoverTimestamp }
           .map { ftxRecord ->
             invalidityProofAssembler
               .requestInvalidityProof(ftxRecord)

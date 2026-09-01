@@ -5,6 +5,7 @@ import linea.LongRunningService
 import linea.domain.Block
 import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
+import linea.ftx.ForcedTransactionsApp
 import linea.web3j.ethapi.createEthApiClient
 import lineth.coordination.blockcreation.BlockCreationListener
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
@@ -30,6 +31,7 @@ class ConflationAppV2(
   private val lastFinalizedBlock: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
+  val forcedTransactionsApp: ForcedTransactionsApp,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppV2::class.java)

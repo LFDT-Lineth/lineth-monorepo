@@ -19,19 +19,20 @@ name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
       - 'arithmetization/**'
       - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
+      - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
+     - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
   workflow_dispatch:
     inputs:
       zkc_base_ref:
@@ -64,6 +65,7 @@ permissions:
 
 jobs:
   bench:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     timeout-minutes: 120
     steps:
@@ -81,7 +83,8 @@ jobs:
           set -eux
           # We collect each install into its own GOBIN and rename the output
           # so they coexist on disk.
-          default_ref="${ZKC_REF}"
+          default_ref=$(go -C arithmetization list -m -f '{{.Version}}' github.com/LFDT-Lineth/zkc)
+          echo "ZKC_REF=${default_ref}" >> "$GITHUB_ENV"
           for variant in base opt; do
             case "$variant" in
               base) ref="${{ inputs.zkc_base_ref }}" ;;
@@ -227,4 +230,3 @@ jobs:
         with:
           name: zkc-native-keccak-bench-logs
           path: /tmp/bench/logs
-

@@ -113,7 +113,7 @@ const {{.RootsName}} = [_]pcs.BatchRoot{
 pub const {{.ConstName}} = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = {{.System.LogCodewordSize}}, .log_plaintext_size = {{.System.LogPlaintextSize}}, .log_final_poly_size = {{.System.LogFinalPolySize}}, .num_queries = {{.System.NumQueries}} },
     .columns = &.{
-{{range .System.Columns}}        .{ .batch_idx = {{.BatchIdx}}, .is_ext = {{.IsExt}}, .size = {{if .IsDynamic}}.{ .dynamic = .{ .index = {{.DynamicIndex}}, .min_size_log2 = {{.DynamicMinSizeLog2}} } }{{else}}.{ .static = {{.SizeLog2}} }{{end}}, .shifts = &[_]isize{{shifts .Shifts}} },
+{{range .System.Columns}}        .{ .batch_idx = {{.BatchIdx}}, .is_ext = {{.IsExt}}, .size = {{if .IsDynamic}}.{ .dynamic = .{ .index = {{.DynamicIndex}}, .min_size_log2 = {{.DynamicMinSizeLog2}} } }{{else}}.{ .static = {{.SizeLog2}} }{{end}}, .shifts = &[_]isize{{shifts .Shifts}}, .claim_cells = &[_]pcs.CellRef{ {{range .ClaimCells}}.{ .round = {{.Round}}, .index = {{.Index}} }, {{end}}} },
 {{end}}    },
     .num_batches = {{.System.NumBatches}},
     .max_entries = {{.System.MaxEntries}},

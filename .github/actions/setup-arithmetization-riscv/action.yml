@@ -6,9 +6,17 @@ inputs:
     required: false
     default: 'false'
   zkc-ref:
-    description: 'Optional zkc commit/branch/tag override (default: arithmetization/Makefile ZKC_REF)'
+    description: 'Optional zkc commit/branch/tag override (default: version pinned in arithmetization/go.mod)'
     required: false
     default: ''
+  # Downstream workflows may enable cache saves for trusted pinned inputs; keep them disabled for custom refs.
+  cache-save:
+    description: >
+      When true, the Go module/build cache and the Zig cache are saved on a miss. Default false:
+      caches are restored only, so a run that builds an input-supplied ref cannot write into the
+      shared caches.
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -20,14 +28,17 @@ runs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.24.6'
+          go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
+          # setup-go has no restore-only mode, so read-only here means the Go cache is off entirely.
+          cache: ${{ inputs.cache-save }}
 
       - name: Install Zig
         uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
           dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
+          cache-save: ${{ inputs.cache-save }}
 
       - name: Install Rust nightly
         shell: bash
@@ -43,6 +54,27 @@ runs:
           curl https://mise.run | sh
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+
+      # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` (riscv-guests/Makefile)
+      # builds them from the pinned tags once and installs into /usr/local — the SAME command a
+      # developer runs locally, and the same one .github/actions/setup-riscv-guests calls, so there
+      # is one recipe to keep in sync instead of two. The l2-execution guest's native host tools
+      # (l2-execution-wrap, l2-execution-runner) link them via the default `zig build` step this job
+      # also runs, even though the benchmark itself only consumes the freestanding riscv64 ELF.
+      - name: Cache blst + mcl builds
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            /usr/local/lib/libblst.a
+            /usr/local/lib/libmcl.so
+            /usr/local/include/blst.h
+            /usr/local/include/blst_aux.h
+            /usr/local/include/mcl
+          key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
+
+      - name: Install native crypto deps (blst, mcl)
+        shell: bash
+        run: make -C riscv-guests install-native-crypto-deps
 
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
@@ -60,18 +92,12 @@ runs:
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
 
-      - name: Set zkc version
+      - name: Set optional zkc override
         shell: bash
         run: |
           zkc_ref="${{ inputs.zkc-ref }}"
-          if [ -z "$zkc_ref" ]; then
-            zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
-          fi
           {
             echo "ZKC_REF<<EOF"
             echo "$zkc_ref"
             echo "EOF"
           } >> "$GITHUB_ENV"
-
-
-
