@@ -12,6 +12,7 @@ import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFor
 
 import java.math.BigInteger;
 import java.util.Optional;
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import lineth.config.LineaTracerConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
@@ -24,23 +25,18 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 
 /** Creates sequencer bespoke tracers while their activation policy is enabled. */
 public class LineaTracerFactory {
-  @FunctionalInterface
-  public interface HardforkResolver {
-    Fork resolve(long pendingBlockTimestamp);
-  }
-
   private final BespokeTracingActivationPolicy activationPolicy;
   private final LineaTracerConfiguration tracerConfiguration;
   private final LineaL1L2BridgeSharedConfiguration bridgeConfiguration;
   private final Supplier<BigInteger> chainIdSupplier;
-  private final HardforkResolver hardforkResolver;
+  private final LongFunction<Fork> hardforkResolver;
 
   public LineaTracerFactory(
       final BespokeTracingActivationPolicy activationPolicy,
       final LineaTracerConfiguration tracerConfiguration,
       final LineaL1L2BridgeSharedConfiguration bridgeConfiguration,
       final Supplier<BigInteger> chainIdSupplier,
-      final HardforkResolver hardforkResolver) {
+      final LongFunction<Fork> hardforkResolver) {
     this.activationPolicy = activationPolicy;
     this.tracerConfiguration = tracerConfiguration;
     this.bridgeConfiguration = bridgeConfiguration;
@@ -74,7 +70,7 @@ public class LineaTracerFactory {
       return Optional.empty();
     }
 
-    final Fork fork = hardforkResolver.resolve(pendingBlockTimestamp);
+    final Fork fork = hardforkResolver.apply(pendingBlockTimestamp);
     return Optional.of(
         tracerConfiguration.isLimitless()
             ? new ZkCounter(bridgeConfiguration, fork)

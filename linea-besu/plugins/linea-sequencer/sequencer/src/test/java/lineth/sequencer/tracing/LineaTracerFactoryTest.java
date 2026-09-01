@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import lineth.config.LineaTracerConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
@@ -102,7 +103,7 @@ class LineaTracerFactoryTest {
       final OptionalLong tracingEndTimestamp,
       final boolean limitless,
       final Supplier<BigInteger> chainIdSupplier,
-      final LineaTracerFactory.HardforkResolver hardforkResolver) {
+      final LongFunction<Fork> hardforkResolver) {
     final var configuration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath("unused.toml")

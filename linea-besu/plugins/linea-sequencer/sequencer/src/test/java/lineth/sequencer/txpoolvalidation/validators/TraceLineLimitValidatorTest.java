@@ -11,6 +11,7 @@ package lineth.sequencer.txpoolvalidation.validators;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.OptionalLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
 import lineth.sequencer.tracing.BespokeTracingActivationPolicy;
 import lineth.sequencer.txselection.InvalidTransactionByLineCountCache;
@@ -36,17 +37,17 @@ class TraceLineLimitValidatorTest {
 
   @Test
   void shouldNotRequestPendingTimestampForCacheMiss() {
-    final var timestampSupplier = new RecordingPendingBlockTimestampSupplier(100L);
-    final var validator = validator(100L, timestampSupplier);
+    final var timestampRequests = new AtomicInteger();
+    final var validator = validator(100L, timestampRequests::incrementAndGet);
 
     assertThat(validator.validateTransaction(transaction, true, false)).isEmpty();
-    assertThat(timestampSupplier.calls()).isZero();
+    assertThat(timestampRequests).hasValue(0);
   }
 
   @Test
   void shouldRejectCachedTransactionBeforeCutoff() {
     cache.remember(transaction.getHash(), "EXT");
-    final var validator = validator(100L, new RecordingPendingBlockTimestampSupplier(99L));
+    final var validator = validator(100L, () -> 99L);
 
     assertThat(validator.validateTransaction(transaction, true, false))
         .hasValueSatisfying(
@@ -59,7 +60,7 @@ class TraceLineLimitValidatorTest {
   @Test
   void shouldAcceptCachedTransactionAtCutoff() {
     cache.remember(transaction.getHash(), "EXT");
-    final var validator = validator(100L, new RecordingPendingBlockTimestampSupplier(100L));
+    final var validator = validator(100L, () -> 100L);
 
     assertThat(validator.validateTransaction(transaction, true, false)).isEmpty();
   }
@@ -83,24 +84,5 @@ class TraceLineLimitValidatorTest {
         cache,
         new BespokeTracingActivationPolicy(OptionalLong.of(tracingEndTimestamp)),
         pendingBlockTimestampSupplier);
-  }
-
-  private static final class RecordingPendingBlockTimestampSupplier implements LongSupplier {
-    private final long pendingBlockTimestamp;
-    private int calls;
-
-    private RecordingPendingBlockTimestampSupplier(final long pendingBlockTimestamp) {
-      this.pendingBlockTimestamp = pendingBlockTimestamp;
-    }
-
-    @Override
-    public long getAsLong() {
-      calls++;
-      return pendingBlockTimestamp;
-    }
-
-    private int calls() {
-      return calls;
-    }
   }
 }
