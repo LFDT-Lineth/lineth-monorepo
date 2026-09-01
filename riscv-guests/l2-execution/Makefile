@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test reference-test-zkc prep-execution-specs-json-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -67,6 +67,20 @@ test:
 REFERENCE_ARGS ?= --fork Amsterdam
 reference-test:
 	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
+
+# ZkC twin of reference-test: run the SAME EF zkevm corpus through the real compiled guest ELF
+# under zkc (ELF->JSON via elf_to_json_gen, then zkc exec), instead of in-process on the host. The
+# corpus walk, dump->wrap->run->compare loop, and tallies live in test/zkc_reference_runner.zig —
+# the ZkC counterpart of extended_vanilla_runner.zig — with verdict parity against the fixture's
+# own expected verdict and the same Lineth-policy SKIP allowance.
+#
+# Needs `zkc` and `go` on PATH (like exec/debug). Scoped to --fork Amsterdam to keep emulator
+# runtime bounded; narrow further with REFERENCE_ARGS="--match bal_self_transfer --limit 20".
+# ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --gogen --fast, the generated-Go fast path CI
+# uses). Far slower than reference-test; use it to prove the real ELF agrees with the corpus, not as
+# the fast guard.
+reference-test-zkc:
+	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
