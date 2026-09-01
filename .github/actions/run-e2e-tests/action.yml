@@ -11,14 +11,6 @@ inputs:
   linea_besu_package_tag:
     required: false
     default: ''
-  linea_besu_package_image_name:
-    description: 'linea-besu-package Docker image name (overrides the compose default)'
-    required: false
-    default: consensys/linea-besu-package
-  linea_besu_package_artifact_filename:
-    description: 'Filename of the gzipped besu-package image tarball inside tmp/artifacts'
-    required: false
-    default: linea-besu-package-images.tar.gz
   coordinator_tag:
     required: false
     default: ''
@@ -34,30 +26,6 @@ inputs:
   maru_tag:
     required: false
     default: ''
-  maru_image_name:
-    description: 'Maru Docker image name (overrides the compose default)'
-    required: false
-    default: consensys/maru
-  maru_jar:
-    description: 'Maru JAR filename to launch'
-    required: false
-    default: maru.jar
-  maru_artifact_name:
-    description: 'Artifact name prefix for the Maru Docker image'
-    required: false
-    default: linea-maru
-  linea_coordinator_image_name:
-    description: 'Coordinator Docker image name (overrides the compose default)'
-    required: false
-    default: consensys/linea-coordinator
-  linea_coordinator_jar:
-    description: 'Coordinator JAR filename to launch'
-    required: false
-    default: coordinator.jar
-  linea_coordinator_artifact_name:
-    description: 'Artifact name prefix for the coordinator Docker image'
-    required: false
-    default: linea-coordinator
   e2e-tests-with-ssh:
     description: Run end to end tests with ability to ssh into environment
     required: false
@@ -123,104 +91,65 @@ runs:
         path: ${{ github.workspace }}/${{ inputs.working-directory }}/tmp/artifacts
         merge-multiple: true
 
-    - name: Load Docker images from artifacts
+    - name: Load Docker image artifacts and select tags
+      id: load_images
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
-        LINEA_COORDINATOR_ARTIFACT_NAME: ${{ inputs.linea_coordinator_artifact_name }}
-        MARU_ARTIFACT_NAME: ${{ inputs.maru_artifact_name }}
-      run: |
-        set -euo pipefail
-        for service in coordinator postman transaction-exclusion-api prover maru; do
-          if [ "$service" = "maru" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${MARU_ARTIFACT_NAME}-docker-image.tar.gz"
-          elif [ "$service" = "coordinator" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
-          else
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-          fi
-
-          if [ -f "$artifact_path" ]; then
-            echo "Loading ${service} from build artifact ${artifact_path}..."
-            gunzip -c "$artifact_path" | docker load
-          else
-            echo "No artifact found for ${service}, skipping."
-          fi
-        done
-
-    - name: Set Docker image tags
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        LINEA_COORDINATOR_ARTIFACT_NAME: ${{ inputs.linea_coordinator_artifact_name }}
-        LINEA_COORDINATOR_IMAGE_NAME: ${{ inputs.linea_coordinator_image_name }}
-        LINEA_COORDINATOR_JAR: ${{ inputs.linea_coordinator_jar }}
+        IMAGE_TAG: ${{ inputs.image_tag }}
+        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
-        MARU_ARTIFACT_NAME: ${{ inputs.maru_artifact_name }}
-        MARU_IMAGE_NAME: ${{ inputs.maru_image_name }}
         MARU_TAG: ${{ inputs.maru_tag }}
-        MARU_JAR: ${{ inputs.maru_jar }}
-        BESU_PACKAGE_IMAGE_NAME: ${{ inputs.linea_besu_package_image_name }}
       run: |
         set -euo pipefail
-        for service in coordinator postman transaction-exclusion-api prover maru; do
-          if [ "$service" = "maru" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${MARU_ARTIFACT_NAME}-docker-image.tar.gz"
-            env_var="MARU_TAG"
-          elif [ "$service" = "coordinator" ]; then
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
-            env_var="LINEA_COORDINATOR_TAG"
-          else
-            artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-            env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
-          fi
+        artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
+        loaded_images="$(mktemp)"
+        shopt -s nullglob
+        artifacts=("$artifact_dir"/*.tar.gz)
 
-          if [ -f "$artifact_path" ]; then
-            echo "${env_var}=${{ inputs.image_tag }}" >> "$GITHUB_ENV"
-          elif [ -z "${!env_var:-}" ]; then
-            # Fall back to "develop" only when the job-level env var is unset or empty.
-            echo "${env_var}=develop" >> "$GITHUB_ENV"
-          else
-            # Propagate the caller-supplied tag to later steps (e.g. compose spin-up).
-            echo "${env_var}=${!env_var}" >> "$GITHUB_ENV"
+        for artifact in "${artifacts[@]}"; do
+          if ! repo_tags="$(
+            tar -xOzf "$artifact" manifest.json 2>/dev/null |
+              jq -er '.[].RepoTags[]?'
+          )"; then
+            echo "Skipping non-Docker artifact ${artifact}."
+            continue
           fi
+          echo "Loading Docker image artifact ${artifact}..."
+          printf '%s\n' "$repo_tags" >> "$loaded_images"
+          gunzip -c "$artifact" | docker load
         done
-        echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
-        echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
-        echo "MARU_IMAGE_NAME=${MARU_IMAGE_NAME}" >> "$GITHUB_ENV"
-        echo "MARU_JAR=${MARU_JAR}" >> "$GITHUB_ENV"
-        # Exported unconditionally (like the coordinator/maru image names above) so a caller can
-        # override the besu-package image name even when no tag/artifact is supplied.
-        echo "BESU_PACKAGE_IMAGE_NAME=${BESU_PACKAGE_IMAGE_NAME}" >> "$GITHUB_ENV"
 
-    - name: Load linea-besu-package Docker image
-      if: ${{ inputs.linea_besu_package_tag != '' }}
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
-        BESU_PACKAGE_ARTIFACT_FILENAME: ${{ inputs.linea_besu_package_artifact_filename }}
-      run: |
-        set -euo pipefail
-        artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/${BESU_PACKAGE_ARTIFACT_FILENAME}"
-        if [ -f "$artifact_path" ]; then
-          gunzip -c "$artifact_path" | docker load
-        else
-          echo "No artifact at ${artifact_path}; skipping docker load."
-        fi
-        # Propagate the tag to later steps (e.g. compose spin-up) regardless of artifact presence.
-        # BESU_PACKAGE_IMAGE_NAME is exported unconditionally in the earlier "Set Docker image tags" step.
-        echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
+        while read -r env_var image; do
+          image_ref="${image}:${IMAGE_TAG}"
+          if grep -Fqx "$image_ref" "$loaded_images"; then
+            selected_tag="$IMAGE_TAG"
+            if [ "$env_var" = "LINEA_BESU_PACKAGE_TAG" ]; then
+              echo "besu_package_loaded=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -n "${!env_var:-}" ]; then
+            selected_tag="${!env_var}"
+          else
+            selected_tag="develop"
+          fi
+          echo "${env_var}=${selected_tag}" >> "$GITHUB_ENV"
+        done <<'EOF'
+        LINEA_BESU_PACKAGE_TAG consensys/linea-besu-package
+        LINEA_COORDINATOR_TAG consensys/linea-coordinator
+        LINEA_POSTMAN_TAG consensys/linea-postman
+        LINEA_PROVER_TAG consensys/linea-prover
+        LINEA_TRANSACTION_EXCLUSION_API_TAG consensys/linea-transaction-exclusion-api
+        MARU_TAG consensys/maru
+        EOF
     
     - name: Pull all external-to-monorepo images with retry
       # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
-      # external-to-monorepo profile, so this pull would fetch ${BESU_PACKAGE_IMAGE_NAME}:${LINEA_BESU_PACKAGE_TAG}
-      # from the registry — failing on unpublished CI tags, or overwriting the image just loaded from
-      # the artifact. Genuinely-missing external images are still pulled by compose on spin-up.
-      if: ${{ inputs.linea_besu_package_tag == '' }}
+      # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite
+      # the image just loaded from the artifact. Missing external images are pulled on spin-up.
+      if: ${{ inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
       with:
         max_attempts: 10

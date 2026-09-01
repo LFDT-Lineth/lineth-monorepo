@@ -34,6 +34,9 @@ RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
 COPY --from=builder /libs/** libs/
 
+ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
+ENV LINETH_APP_JAR=$LINETH_APP_JAR
+
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF
