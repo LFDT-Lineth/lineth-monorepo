@@ -6,9 +6,14 @@ export function assertDeployerCanPay(
   balance: bigint,
   fees: FeeOverrides,
   gasBudget = 1n,
+  // Flat wei the deployment must send on top of gas, e.g. the deterministic
+  // proxy's funding transfer to the keyless signer. On a gas-free chain the
+  // gas term is 0, so without this an unfunded deployer would pass preflight
+  // and only fail mid-step, after an in-flight intent is already persisted.
+  flatWei = 0n,
 ): void {
   const pricePerGas = feeBudgetPricePerGas(fees);
-  const requiredBalance = pricePerGas * gasBudget;
+  const requiredBalance = pricePerGas * gasBudget + flatWei;
   if (requiredBalance === 0n || balance >= requiredBalance) return;
 
   const l2Hint = chain === "L2" ? " or set L2_DEPLOY_GAS_PRICE_WEI=0 for a gas-free Forge network" : "";

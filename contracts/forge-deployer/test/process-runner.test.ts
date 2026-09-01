@@ -47,6 +47,8 @@ function checkpoint(): DeploymentCheckpoint {
     chainIds: { l1: "31337", l2: "1337" },
     deployments: {},
     inFlightDeployments: {},
+    bootstrap: {},
+    inFlightBootstrap: {},
   } as DeploymentCheckpoint;
 }
 

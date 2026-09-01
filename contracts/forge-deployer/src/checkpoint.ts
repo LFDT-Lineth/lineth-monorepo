@@ -2,7 +2,7 @@ import { getAddress, isAddress, keccak256, toUtf8Bytes } from "ethers";
 
 import { ChainName, DeploymentStep, StepId } from "./address-plan";
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const DEPLOYMENT_PROFILE = "forge-dev-v1";
 
 export interface CheckpointIdentity {
@@ -55,6 +55,17 @@ export interface InFlightDeployment {
   expectedAddress: string;
 }
 
+// A custom bootstrap item whose broadcast may be unresolved (crash after
+// broadcast, before the completed record landed). Persisted before the child
+// may broadcast; a rerun that finds one fails closed, mirroring
+// InFlightDeployment. `nonce` is present only for sign items, which consume a
+// deployer nonce; presigned and script items do not.
+export interface InFlightBootstrapItem {
+  kind: "sign" | "presigned" | "script";
+  chain: ChainName;
+  nonce?: number;
+}
+
 // A completed custom bootstrap item. `address` is present only for items that
 // deploy a contract (sign create or presigned/script with expectAddress).
 export interface CompletedBootstrapItem {
@@ -73,6 +84,8 @@ export interface DeploymentCheckpoint extends CheckpointIdentity {
   completedSteps: StepId[];
   // Completed custom bootstrap items keyed by `bootstrap.<id>`.
   bootstrap: Record<string, CompletedBootstrapItem>;
+  // Broadcast-pending custom bootstrap items keyed by `bootstrap.<id>`.
+  inFlightBootstrap: Record<string, InFlightBootstrapItem>;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,6 +147,7 @@ export function createCheckpoint(input: CreateCheckpointInput): DeploymentCheckp
     inFlightDeployments: {},
     completedSteps: [],
     bootstrap: {},
+    inFlightBootstrap: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -177,6 +191,20 @@ export function assertNoInFlightDeployments(checkpoint: DeploymentCheckpoint): v
   );
 }
 
+export function assertNoInFlightBootstrapItems(checkpoint: DeploymentCheckpoint): void {
+  const unresolved = Object.entries(checkpoint.inFlightBootstrap).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )[0];
+  if (!unresolved) return;
+
+  const [key, item] = unresolved;
+  const atNonce = item.nonce !== undefined ? ` at nonce ${item.nonce}` : "";
+  throw new Error(
+    `checkpoint contains unresolved in-flight bootstrap item ${key}${atNonce}; ` +
+      "transaction broadcast is ambiguous and requires operator reconciliation",
+  );
+}
+
 export function parseCheckpoint(raw: string): DeploymentCheckpoint {
   const parsed: unknown = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object") throw new Error("checkpoint JSON must contain an object");
@@ -202,6 +230,24 @@ export function parseCheckpoint(raw: string): DeploymentCheckpoint {
   }
   if (!candidate.bootstrap || typeof candidate.bootstrap !== "object" || Array.isArray(candidate.bootstrap)) {
     throw new Error("checkpoint JSON has an invalid or missing bootstrap record");
+  }
+  if (
+    !candidate.inFlightBootstrap ||
+    typeof candidate.inFlightBootstrap !== "object" ||
+    Array.isArray(candidate.inFlightBootstrap)
+  ) {
+    throw new Error("checkpoint JSON has an invalid or missing in-flight bootstrap record");
+  }
+  for (const [key, intent] of Object.entries(candidate.inFlightBootstrap)) {
+    if (
+      typeof intent !== "object" ||
+      intent === null ||
+      (intent.kind !== "sign" && intent.kind !== "presigned" && intent.kind !== "script") ||
+      (intent.chain !== "l1" && intent.chain !== "l2") ||
+      (intent.nonce !== undefined && (!Number.isSafeInteger(intent.nonce) || intent.nonce < 0))
+    ) {
+      throw new Error(`checkpoint contains invalid in-flight bootstrap item ${key}`);
+    }
   }
   for (const [key, record] of Object.entries(candidate.bootstrap)) {
     if (

@@ -4,6 +4,7 @@ import test from "node:test";
 import { buildAddressPlan } from "../src/address-plan";
 import {
   assertCheckpointCompatible,
+  assertNoInFlightBootstrapItems,
   assertNoInFlightDeployments,
   createCheckpoint,
   DEPLOYMENT_PROFILE,
@@ -66,10 +67,11 @@ test("creates a versioned checkpoint with every expected address and no secrets"
   }).reduce((total, step) => total + step.deployments.length, 0);
 
   assert.equal(value.profile, DEPLOYMENT_PROFILE);
-  assert.equal(SCHEMA_VERSION, 3);
-  assert.equal(value.schemaVersion, 3);
+  assert.equal(SCHEMA_VERSION, 4);
+  assert.equal(value.schemaVersion, 4);
   assert.equal(value.artifactDigest, IMAGE_DIGEST);
   assert.deepEqual(value.inFlightDeployments, {});
+  assert.deepEqual(value.inFlightBootstrap, {});
   assert.equal(Object.keys(value.expectedDeployments).length, expectedDeploymentCount);
   assert.doesNotMatch(serialized, /private.?key|rpc.?url/i);
 });
@@ -151,6 +153,48 @@ test("round-trips completed bootstrap records and rejects malformed ones", () =>
   const missing = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
   delete (missing as Record<string, unknown>).bootstrap;
   assert.throws(() => parseCheckpoint(JSON.stringify(missing)), /missing bootstrap record/);
+});
+
+test("round-trips in-flight bootstrap intents and rejects malformed ones", () => {
+  const value = checkpoint();
+  value.inFlightBootstrap["bootstrap.fund-relayer"] = { kind: "sign", chain: "l2", nonce: 12 };
+  value.inFlightBootstrap["bootstrap.deploy-factory"] = { kind: "presigned", chain: "l2" };
+  value.inFlightBootstrap["bootstrap.run-migration"] = { kind: "script", chain: "l1" };
+  assert.deepEqual(parseCheckpoint(JSON.stringify(value)).inFlightBootstrap, value.inFlightBootstrap);
+
+  const mutations: Array<[label: string, intent: Record<string, unknown>]> = [
+    ["bad kind", { kind: "transfer", chain: "l2" }],
+    ["bad chain", { kind: "sign", chain: "l3" }],
+    ["negative nonce", { kind: "sign", chain: "l2", nonce: -1 }],
+    ["unsafe nonce", { kind: "sign", chain: "l2", nonce: Number.MAX_SAFE_INTEGER + 1 }],
+  ];
+  for (const [label, intent] of mutations) {
+    const malformed = checkpoint();
+    malformed.inFlightBootstrap["bootstrap.bad"] = intent as never;
+    assert.throws(() => parseCheckpoint(JSON.stringify(malformed)), /invalid in-flight bootstrap item/, label);
+  }
+
+  const missing = checkpoint() as Partial<ReturnType<typeof checkpoint>>;
+  delete (missing as Record<string, unknown>).inFlightBootstrap;
+  assert.throws(() => parseCheckpoint(JSON.stringify(missing)), /missing in-flight bootstrap record/);
+});
+
+test("fails closed when a bootstrap item broadcast may be unresolved", () => {
+  const value = checkpoint();
+  assert.doesNotThrow(() => assertNoInFlightBootstrapItems(value));
+
+  value.inFlightBootstrap["bootstrap.fund-relayer"] = { kind: "sign", chain: "l2", nonce: 12 };
+  assert.throws(
+    () => assertNoInFlightBootstrapItems(value),
+    /checkpoint contains unresolved in-flight bootstrap item bootstrap\.fund-relayer at nonce 12/,
+  );
+
+  const nonceless = checkpoint();
+  nonceless.inFlightBootstrap["bootstrap.run-migration"] = { kind: "script", chain: "l1" };
+  assert.throws(
+    () => assertNoInFlightBootstrapItems(nonceless),
+    /checkpoint contains unresolved in-flight bootstrap item bootstrap\.run-migration; transaction broadcast is ambiguous/,
+  );
 });
 
 test("serializes sufficient ConfigMap state and public addresses", () => {

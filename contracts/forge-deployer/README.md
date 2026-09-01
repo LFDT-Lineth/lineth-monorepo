@@ -57,7 +57,7 @@ the service account namespace and can be set with `POD_NAMESPACE` and
 
 In Kubernetes the Lineth chart creates the `lineth-contract-addresses`
 placeholder ConfigMap and the deployer updates it using resource-version
-guards. Its schema-version-3 `checkpoint.json` contains the exact deployment
+guards. Its schema-version-4 `checkpoint.json` contains the exact deployment
 image digest, chain IDs, signer addresses, starting nonces, deterministic
 expected addresses, the public deployment-configuration hash, the bootstrap
 manifest hash, completed custom bootstrap records, transaction hashes, and
@@ -112,7 +112,10 @@ and checkpoints the broadcast transaction hash.
 funding transfer itself is free, but the funding is still required: the
 pre-signed raw transaction hardcodes a 100 gwei gas price, so the signer must
 actually hold 0.01 ETH for the network to accept the broadcast regardless of
-the chain's configured gas price.
+the chain's configured gas price. The L2 funding preflight therefore includes
+`ARACHNID_FUNDING_WEI` in the required balance even when the selected gas price
+is zero, so an unfunded deployer fails at preflight — before any broadcast —
+rather than mid-step after an in-flight intent has been persisted.
 
 ## Custom bootstrap phase (optional)
 
@@ -184,6 +187,14 @@ Each completed item is durably recorded in the checkpoint under
 `bootstrap.<id>` (kind, chain, transaction hash, block number, chain ID, and
 the deployed address when one exists). Completed items are skipped on rerun, so
 re-running with the same manifest sends no further transactions.
+
+Like the core steps, an item persists a durable intent (under
+`inFlightBootstrap`) before it may broadcast, and the completed record
+atomically replaces that intent. A crash after broadcast but before the record
+lands leaves the item unresolved, and a rerun fails closed with an
+`in-flight bootstrap item` error rather than repeating the action — an operator
+must reconcile the transaction before continuing. This is the same fail-closed
+contract the core deployment steps use.
 
 The manifest content is hashed (`keccak256` over the normalized manifest) into
 the checkpoint identity as `bootstrapHash`. Changing the manifest against an

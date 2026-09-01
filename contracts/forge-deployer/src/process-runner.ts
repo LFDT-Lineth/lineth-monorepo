@@ -44,6 +44,19 @@ interface BootstrapRecordMessage {
   };
 }
 
+// A custom bootstrap item the child is about to broadcast, reported before any
+// on-chain action so the parent can persist an in-flight intent first.
+interface BootstrapIntentMessage {
+  type: "lineth-bootstrap-intent";
+  id: string;
+  intent: {
+    itemId: string;
+    kind: "sign" | "presigned" | "script";
+    chain: "l1" | "l2";
+    nonce?: number;
+  };
+}
+
 const INHERITED_CHILD_ENVIRONMENT = [
   "HOME",
   "HTTP_PROXY",
@@ -93,6 +106,20 @@ function isBootstrapRecordMessage(message: unknown): message is BootstrapRecordM
     typeof candidate.id === "string" &&
     !!candidate.record &&
     typeof candidate.record.itemId === "string"
+  );
+}
+
+function isBootstrapIntentMessage(message: unknown): message is BootstrapIntentMessage {
+  if (typeof message !== "object" || message === null) return false;
+  const candidate = message as Partial<BootstrapIntentMessage>;
+  return (
+    candidate.type === "lineth-bootstrap-intent" &&
+    typeof candidate.id === "string" &&
+    !!candidate.intent &&
+    typeof candidate.intent.itemId === "string" &&
+    (candidate.intent.kind === "sign" || candidate.intent.kind === "presigned" || candidate.intent.kind === "script") &&
+    (candidate.intent.chain === "l1" || candidate.intent.chain === "l2") &&
+    (candidate.intent.nonce === undefined || typeof candidate.intent.nonce === "number")
   );
 }
 
@@ -259,10 +286,10 @@ interface RunBootstrapScriptInput {
   pendingItemKeys: string[];
 }
 
-// Runs the custom bootstrap step child. Unlike runStepScript there is no
-// per-broadcast intent dance: bootstrap items may be plain transfers, keyless
-// broadcasts, or operator scripts, so the child reports each completed item via
-// a `lineth-bootstrap-record` message which the parent durably checkpoints.
+// Runs the custom bootstrap step child. Like runStepScript, the child reports
+// a `lineth-bootstrap-intent` before it may broadcast so the parent can persist
+// an in-flight record first (fail-closed on rerun); each completed item then
+// arrives via `lineth-bootstrap-record`, which atomically replaces the intent.
 export async function runBootstrapScript(input: RunBootstrapScriptInput): Promise<void> {
   await runChildScript({
     scriptPath: input.scriptPath,
@@ -270,8 +297,27 @@ export async function runBootstrapScript(input: RunBootstrapScriptInput): Promis
     sensitiveValues: input.sensitiveValues,
     errorContextLabel: "bootstrap step script",
     onMessage: async (message, child) => {
-      if (!isBootstrapRecordMessage(message)) return;
+      if (!isBootstrapIntentMessage(message) && !isBootstrapRecordMessage(message)) return;
       try {
+        if (isBootstrapIntentMessage(message)) {
+          const { id, intent } = message;
+          const key = `bootstrap.${intent.itemId}`;
+          if (!input.pendingItemKeys.includes(key)) {
+            throw new Error(`bootstrap step requested intent for unexpected or already-recorded item ${intent.itemId}`);
+          }
+          if (input.checkpoint.bootstrap[key] || input.checkpoint.inFlightBootstrap[key]) {
+            throw new Error(`bootstrap step requested intent for ${intent.itemId} twice`);
+          }
+          input.checkpoint.inFlightBootstrap[key] = {
+            kind: intent.kind,
+            chain: intent.chain,
+            ...(intent.nonce !== undefined ? { nonce: intent.nonce } : {}),
+          };
+          await input.store.save(input.checkpoint);
+          child.send({ type: "lineth-bootstrap-intent-ack", id });
+          return;
+        }
+
         const { id, record } = message;
         const key = `bootstrap.${record.itemId}`;
         if (!input.pendingItemKeys.includes(key)) {
@@ -279,6 +325,9 @@ export async function runBootstrapScript(input: RunBootstrapScriptInput): Promis
         }
         if (input.checkpoint.bootstrap[key]) {
           throw new Error(`bootstrap step emitted ${record.itemId} twice`);
+        }
+        if (!input.checkpoint.inFlightBootstrap[key]) {
+          throw new Error(`bootstrap step emitted ${record.itemId} without a durable bootstrap intent`);
         }
         const expectedChainId = input.checkpoint.chainIds[record.chain];
         if (record.chainId !== expectedChainId) {
@@ -294,11 +343,12 @@ export async function runBootstrapScript(input: RunBootstrapScriptInput): Promis
           chainId: record.chainId,
           ...(record.address ? { address: getAddress(record.address) } : {}),
         };
+        delete input.checkpoint.inFlightBootstrap[key];
         await input.store.save(input.checkpoint);
         child.send({ type: "lineth-bootstrap-record-ack", id });
       } catch (error) {
         child.send({
-          type: "lineth-bootstrap-record-ack",
+          type: isBootstrapIntentMessage(message) ? "lineth-bootstrap-intent-ack" : "lineth-bootstrap-record-ack",
           id: message.id,
           error: error instanceof Error ? error.message : "bootstrap checkpoint failed",
         });

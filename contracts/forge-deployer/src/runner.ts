@@ -13,6 +13,7 @@ import {
 import { bootstrapManifestHash, parseBootstrapManifest } from "./bootstrap-manifest";
 import {
   assertCheckpointCompatible,
+  assertNoInFlightBootstrapItems,
   assertNoInFlightDeployments,
   CheckpointIdentity,
   createCheckpoint,
@@ -27,7 +28,10 @@ import { assertDeployerCanPay } from "./funds";
 import { resolveGenesisTimestamp } from "./genesis";
 import { runBootstrapScript, runStepScript } from "./process-runner";
 import { CheckpointStore } from "./store";
-import { getDeterministicProxyCodeStatus } from "../../common/helpers/deterministicDeploymentProxy";
+import {
+  ARACHNID_FUNDING_WEI,
+  getDeterministicProxyCodeStatus,
+} from "../../common/helpers/deterministicDeploymentProxy";
 import {
   feeBudgetPricePerGas,
   resolveL2DeployFeeOverrides,
@@ -402,7 +406,9 @@ async function executeStep(
     } else {
       const fees = resolveL2DeployFeeOverrides();
       const balance = feeBudgetPricePerGas(fees) === 0n ? 0n : await context.l2Provider.getBalance(context.signers.l2);
-      assertDeployerCanPay("L2", context.signers.l2, balance, fees, PROFILE_DEPLOY_GAS_BUDGET);
+      // Include the deterministic proxy's funding transfer to the keyless
+      // signer, which a later L2 step must send even on a gas-free chain.
+      assertDeployerCanPay("L2", context.signers.l2, balance, fees, PROFILE_DEPLOY_GAS_BUDGET, ARACHNID_FUNDING_WEI);
     }
     fundingVerified[step.chain] = true;
   }
@@ -440,6 +446,7 @@ export async function runDeployment(config: DeployerConfig, store: CheckpointSto
   });
   assertPlanMatchesCheckpoint(checkpoint, plan);
   assertNoInFlightDeployments(checkpoint);
+  assertNoInFlightBootstrapItems(checkpoint);
 
   const fundingVerified = { l1: false, l2: false };
   for (const step of plan) {

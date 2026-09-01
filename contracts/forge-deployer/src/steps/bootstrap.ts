@@ -62,6 +62,29 @@ async function awaitBootstrapRecord(record: {
   );
 }
 
+// Persist a durable intent for one bootstrap item before it may broadcast, so a
+// crash after broadcast leaves the item in-flight and a rerun fails closed
+// instead of silently repeating the action. Mirrors the core steps'
+// awaitParentDeploymentIntent dance. `nonce` is included for sign items, which
+// consume a deployer nonce, to aid operator reconciliation.
+async function awaitBootstrapIntent(item: BootstrapItem, nonce?: number): Promise<void> {
+  await sendAndAwaitAck(
+    (id) => ({
+      type: "lineth-bootstrap-intent",
+      id,
+      intent: {
+        itemId: item.id,
+        kind: item.kind,
+        chain: item.chain,
+        ...(nonce !== undefined ? { nonce } : {}),
+      },
+    }),
+    "lineth-bootstrap-intent-ack",
+    () => `${process.pid}-bootstrap-intent-${recordSequence++}`,
+    "checkpoint parent disconnected before authorizing bootstrap broadcast",
+  );
+}
+
 async function runSignItem(item: SignBootstrapItem, nonce: number, context: BootstrapRunContext): Promise<void> {
   const fees =
     context.chain === "l2"
@@ -75,6 +98,7 @@ async function runSignItem(item: SignBootstrapItem, nonce: number, context: Boot
     ...(item.gasLimit !== undefined ? { gasLimit: BigInt(item.gasLimit) } : {}),
     ...fees,
   };
+  await awaitBootstrapIntent(item, nonce);
   const tx = await context.wallet.sendTransaction(request);
   const receipt = await tx.wait();
   if (!receipt || receipt.status !== 1) throw new Error(`bootstrap sign item ${item.id} tx ${tx.hash} failed`);
@@ -129,6 +153,7 @@ async function runPresignedItem(item: PresignedBootstrapItem, context: Bootstrap
       return;
     }
   }
+  await awaitBootstrapIntent(item);
   const tx = await context.provider.broadcastTransaction(item.rawTx);
   const receipt = await tx.wait();
   if (!receipt || receipt.status !== 1) throw new Error(`bootstrap presigned item ${item.id} tx ${tx.hash} failed`);
@@ -167,6 +192,7 @@ async function runScriptItem(item: ScriptBootstrapItem, nonce: number, context: 
     // Let operator scripts require libraries bundled into the image (ethers).
     ...(process.env.BOOTSTRAP_LIB_NODE_PATH ? { NODE_PATH: process.env.BOOTSTRAP_LIB_NODE_PATH } : {}),
   };
+  await awaitBootstrapIntent(item);
   await new Promise<void>((resolve, reject) => {
     const child = spawn(process.execPath, [scriptPath], { env: environment, stdio: ["ignore", "inherit", "inherit"] });
     child.once("error", reject);
