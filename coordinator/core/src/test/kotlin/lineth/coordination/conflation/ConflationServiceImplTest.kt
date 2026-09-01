@@ -92,14 +92,15 @@ class ConflationServiceImplTest {
     assertThat(conflationEvents).isEqualTo(
       listOf(
         BlocksConflation(
-          listOf(payload1, payload2),
-          ConflationCalculationResult(
+          blocks = listOf(payload1, payload2),
+          conflationResult = ConflationCalculationResult(
             startBlockNumber = 1u,
             endBlockNumber = 2u,
             conflationTrigger = ConflationTrigger.BLOCKS_LIMIT,
             // these are not counted in conflation, so will be 0
             tracesCounters = fakeTracesCountersV2(0u),
           ),
+          blockRlps = listOf(payloadCounters1.blockRLPEncoded, payloadCounters2.blockRLPEncoded),
         ),
       ),
     )

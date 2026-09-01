@@ -24,7 +24,7 @@ class ConflationServiceImpl(
 ) :
   ConflationService {
   private var listener: ConflationHandler = ConflationHandler { SafeFuture.completedFuture<Unit>(null) }
-  private val blocksInProgress: MutableList<Block> = mutableListOf()
+  private val blocksInProgress: MutableMap<ULong, Pair<Block, ByteArray>> = mutableMapOf()
 
   data class PayloadAndBlockCounters(
     val block: Block,
@@ -77,13 +77,15 @@ class ConflationServiceImpl(
     )
     batchSizeInBlocksHistogram.record(conflation.blocksRange.count().toDouble())
 
-    val blocksToConflate =
-      blocksInProgress
-        .filter { it.number in conflation.blocksRange }
-        .sortedBy { it.number }
-    blocksInProgress.removeAll(blocksToConflate)
+    val pairs = conflation.blocksRange.mapNotNull { blockNumber -> blocksInProgress.remove(blockNumber) }
 
-    return listener.handleConflatedBatch(BlocksConflation(blocksToConflate, conflation))
+    return listener.handleConflatedBatch(
+      BlocksConflation(
+        blocks = pairs.map { it.first },
+        conflationResult = conflation,
+        blockRlps = pairs.map { it.second },
+      ),
+    )
       .whenException { th ->
         log.error(
           "Conflation listener failed: batch={} errorMessage={}",
@@ -108,7 +110,7 @@ class ConflationServiceImpl(
       blocksInProgress.size,
     )
     blocksToConflate.add(PayloadAndBlockCounters(block, blockCounters))
-    blocksInProgress.add(block)
+    blocksInProgress[block.number] = Pair(block, blockCounters.blockRLPEncoded)
     log.trace("block {} added to conflation queue", block.number)
     sendBlocksInOrderToTracesCounter()
   }

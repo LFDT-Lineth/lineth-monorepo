@@ -106,6 +106,7 @@ class ZkProofCreationCoordinatorImplTest {
             conflationTrigger = ConflationTrigger.TRACES_LIMIT,
             tracesCounters = fakeTracesCountersV2(0u),
           ),
+          blockRlps = listOf(ByteArray(0), ByteArray(0)),
         ),
         traces =
         BlocksTracesConflated(

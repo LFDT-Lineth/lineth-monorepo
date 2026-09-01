@@ -7,15 +7,36 @@ import kotlin.time.Instant
 data class BlocksConflation(
   val blocks: List<Block>,
   val conflationResult: ConflationCalculationResult,
+  val blockRlps: List<ByteArray>,
 ) : BlockInterval {
   init {
     require(blocks.isSortedBy { it.number }) { "Blocks list must be sorted by blockNumber" }
+    require(blockRlps.size == blocks.size) {
+      "blockRlps.size (${blockRlps.size}) must equal blocks.size (${blocks.size})"
+    }
   }
 
   override val startBlockNumber: ULong
     get() = blocks.first().number
   override val endBlockNumber: ULong
     get() = blocks.last().number
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+    other as BlocksConflation
+    if (blocks != other.blocks) return false
+    if (conflationResult != other.conflationResult) return false
+    if (blockRlps.size != other.blockRlps.size) return false
+    return blockRlps.zip(other.blockRlps).all { (a, b) -> a.contentEquals(b) }
+  }
+
+  override fun hashCode(): Int {
+    var result = blocks.hashCode()
+    result = 31 * result + conflationResult.hashCode()
+    result = 31 * result + blockRlps.fold(0) { acc, ba -> 31 * acc + ba.contentHashCode() }
+    return result
+  }
 }
 
 data class Batch(
