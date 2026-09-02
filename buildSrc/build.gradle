@@ -43,5 +43,9 @@ gradlePlugin {
       id = "linea.solc-toolchain"
       implementationClass = "SolcToolchainPlugin"
     }
+    create("ConfigDocsPlugin") {
+      id = "linea.config-docs"
+      implementationClass = "ConfigDocsPlugin"
+    }
   }
 }

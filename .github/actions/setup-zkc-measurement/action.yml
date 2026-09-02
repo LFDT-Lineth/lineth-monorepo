@@ -1,0 +1,82 @@
+# Shared setup for the weekly zkc metrics measurement jobs.
+#
+# Each measurement runs in its own job so that its result survives the others failing, which means each
+# needs the same preamble: the tree under measurement, Go, and the pinned zkc tool. This factors that
+# out. The caller must have checked out the tooling first (a local action cannot run before checkout).
+#
+# Exports, via $GITHUB_ENV:
+#   MEASURE_DIR  the tree whose main.zkc / guest is measured
+#   RUN          the run directory the measurement writes its artifacts into
+#   ZKC          the pinned zkc tool path, to pass on as ZKC= (see arithmetization/src/test/Makefile)
+name: 'Setup zkc measurement'
+description: 'Check out the tree under measurement, install Go, and prepare the pinned zkc tool.'
+
+inputs:
+  monorepo-ref:
+    description: 'Monorepo commit/branch/tag to measure; empty measures the already checked-out tree.'
+    required: false
+    default: ''
+  zkc-ref:
+    description: 'zkc ref to build, ideally a full SHA so every job measures the same commit.'
+    required: true
+  cache-save:
+    description: >
+      When true, the Go module/build cache is saved on a miss. Default false: this action builds an
+      input-supplied ref, so the cache stays restore-only unless a caller explicitly opts in.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # The measured tree may predate this tooling entirely, so it is checked out beside it rather than
+    # over it: the renderer and the metrics file must stay at the ref the run was started from.
+    #
+    # CodeQL flags this as "checkout of untrusted code in a non-privileged context". It does not apply
+    # here: the workflow has no pull_request trigger, so there is no fork head to check out —
+    # monorepo-ref can only be set by someone dispatching the workflow, which already requires write
+    # access. The mitigation that matters is kept structural: the jobs that build and run the measured
+    # tree never mint the GitHub App token. Only the report job holds it, and it checks out the tooling
+    # ref alone. Do not add a measured checkout to that job. The measured jobs' Go module/build cache
+    # never saves (setup-go has no restore-only mode, so it is off entirely), and the Zig cache is
+    # restored through actions/cache/restore, which has no save phase: a dispatched run reads caches
+    # but has no step that can write into the refs/heads/main-scoped cache namespace.
+    - name: Checkout the monorepo commit under measurement
+      if: ${{ inputs.monorepo-ref != '' }}
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        ref: ${{ inputs.monorepo-ref }}
+        path: measured
+        submodules: false
+
+    - name: Resolve the tree under measurement
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.monorepo-ref }}" ]; then
+          echo "MEASURE_DIR=${GITHUB_WORKSPACE}/measured" >> "$GITHUB_ENV"
+        else
+          echo "MEASURE_DIR=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+        fi
+        echo "RUN=${RUNNER_TEMP}/wzm" >> "$GITHUB_ENV"
+        mkdir -p "${RUNNER_TEMP}/wzm"
+
+    # Only Go is needed here: building zkc and, in the report job, running the renderer. The guest ELF
+    # needs Zig and the riscv toolchain, which is why only `prepare` uses setup-arithmetization-riscv.
+    - name: Install Go
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      with:
+        go-version: '1.25.7'
+        cache-dependency-path: "**/*.sum"
+        cache: ${{ inputs.cache-save }}
+
+    - name: Prepare the pinned zkc tool
+      shell: bash
+      env:
+        ZKC_REF: ${{ inputs.zkc-ref }}
+      run: |
+        set -euo pipefail
+        make -C arithmetization prepare-zkc
+        zkc_bin=$(go -C arithmetization tool -n zkc)
+        echo "ZKC=${zkc_bin}" >> "$GITHUB_ENV"
+        go version -m "$zkc_bin" | awk '$1=="mod" || $2 ~ /^vcs\./'

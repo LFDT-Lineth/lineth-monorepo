@@ -3,7 +3,6 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,7 +10,7 @@ import (
 
 func TestBaseQuery_IsReduced_MarkAsReduced(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("bqCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("bqCol"), r0)
 	v := mod.NewVanishing(sys.Context.Childf("bqV"), col.View())
 
 	assert.False(t, v.IsReduced())
@@ -23,7 +22,7 @@ func TestBaseQuery_IsReduced_MarkAsReduced(t *testing.T) {
 
 func TestBaseQuery_Context(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("ctxCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("ctxCol"), r0)
 	ctx := sys.Context.Childf("ctxV")
 	v := mod.NewVanishing(ctx, col.View())
 	assert.Equal(t, ctx, v.Context())

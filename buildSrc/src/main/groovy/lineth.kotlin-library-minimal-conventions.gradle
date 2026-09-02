@@ -1,0 +1,4 @@
+plugins {
+  id 'lineth.kotlin-common-minimal-conventions'
+  id 'java-library'
+}

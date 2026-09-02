@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
@@ -7,6 +7,7 @@ dependencies {
   implementation project(':coordinator:core-interfaces')
   // Reused for GenericFileBasedProverClient and FileBasedProverConfig used by the file-based transport.
   implementation project(':coordinator:clients:prover-client:file-based-client')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
   implementation project(':coordinator:utilities')
   implementation project(':jvm-libs:generic:http-rest')
   implementation "io.vertx:vertx-web-client"

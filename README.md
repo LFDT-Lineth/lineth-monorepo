@@ -29,6 +29,10 @@ If you already have an understanding of the tech stack, use our [Get Started](do
 
 For developers looking to build services locally (such as, the coordinator), see our detailed [Local Development Guide](docs/local-development-guide.md).
 
+## Lineth community calls
+
+Find the details to join the monthly Lineth community call in the [Lineth calendar](https://zoom-lfx.platform.linuxfoundation.org/meetings/lineth?view=week).
+
 ## Agent Documentation
 
 For AI coding agents and developer tools:
@@ -46,6 +50,62 @@ Releases are driven by GitHub Actions workflows under `.github/workflows`. There
 ### Release tag and version
 
 Release tag of each component is in the format of `releases/[component]/v[semver]` and the semver version is computed from the relevant Git history commit messages [using Conventional Commits format](#commit-message-format) by using [git-cliff](https://github.com/orhun/git-cliff)
+
+### Preview a component's changelog and next version locally
+
+The workflows do **not** keep a per-component `cliff.toml`. A single [`cliff.template.toml`](cliff.template.toml) is rendered at run time by substituting the component's conventional-commit scopes into its `@@SCOPES@@` placeholder, then git-cliff is run with that component's `--include-path` filter. A commit therefore counts only when it is **both** in-scope **and** touches a component path (scope-and-path gating).
+
+Each component's scopes and include-path are declared in exactly one place — [`scripts/components.sh`](.github/actions/run-git-cliff-commands/scripts/components.sh) — and every workflow/action looks them up from there by `component-name`, rather than hardcoding them. To add a component or change its scopes/paths, edit `components.sh` only.
+
+You can reproduce exactly what a workflow computes using the dry-run targets in the [`run-git-cliff-commands`](.github/actions/run-git-cliff-commands/action.yml) action's `Makefile` — these drive the very same scripts CI runs, so the rendering, scope injection, and gating all match. Prerequisites: install git-cliff (`brew install git-cliff` or `cargo install git-cliff`), have GNU `make`, and fetch tags (`git fetch --tags`). Run everything **from the repo root**:
+
+```bash
+MK=.github/actions/run-git-cliff-commands/Makefile
+
+# Preview the NEXT bumped version + tag for a component
+# (prints tag=/version=/changed=; logs "nothing to bump" if no release is due).
+# SCOPES/INCLUDE_PATH default to COMPONENT's entry in scripts/components.sh.
+make -f "$MK" version-dry-run COMPONENT=coordinator
+
+# Preview the component's changelog for the next release.
+make -f "$MK" changelog-dry-run COMPONENT=coordinator
+
+# Preview the CHANGELOG.md exactly as a release would rewrite it — WITHOUT
+# writing the file or touching the remote (needs FOLDER_NAME, the directory
+# that holds the component's CHANGELOG.md).
+make -f "$MK" prepend-dry-run \
+  COMPONENT=coordinator \
+  FOLDER_NAME=coordinator
+```
+
+Pass `SCOPES`/`INCLUDE_PATH` explicitly to preview a value *before* committing it to `components.sh` (`INCLUDE_PATH` is one path per line, so for several paths use a multi-line value — bash/zsh `$'a\nb'` or a real newline-quoted string both work):
+
+```bash
+make -f "$MK" changelog-dry-run \
+  COMPONENT=linea-besu-package \
+  SCOPES='linea-besu|tracer|sequencer|deps|misc' \
+  INCLUDE_PATH=$'tracer/**\ntracer-constraints/**\nlinea-besu/plugins/linea-sequencer/**\nlinea-besu/besu/**\nlinea-besu/package/**\ngradle/libs.versions.toml'
+```
+
+`COMPONENT` is also the release tag-pattern component; `FOLDER_NAME` (only needed for `prepend-dry-run`) per component:
+
+| `COMPONENT` | `FOLDER_NAME` |
+|---|---|
+| `coordinator` | `coordinator` |
+| `maru` | `maru` |
+| `postman` | `postman` |
+| `prover` | `prover` |
+| `tx-exclusion-api` | `transaction-exclusion-api` |
+| `linea-besu-package` | `linea-besu/package` |
+| `linea` (milestone) | `.` |
+
+Notes:
+
+- The dry-run targets are read-only: they never modify tracked files or the git remote. `prepend-dry-run` renders on a throwaway copy of `CHANGELOG.md` and prints the result to stdout; the real file is left untouched.
+- Run `make -f "$MK" component-info COMPONENT=<name>` to print a component's resolved `scopes`/`include_path` without running git-cliff.
+- If a component has no qualifying commits, git-cliff reports "There is nothing to bump" and `changed=false` — meaning no release would be cut. This is the scope-and-path gating in action: a commit counts only when it is **both** in-scope **and** touches a component path.
+- The changelog/prepend previews render under the computed next-version header by default (`GENERATE_WITH_NEXT_TAG=true`); pass `GENERATE_WITH_NEXT_TAG=false` to preview under an `[unreleased]` header instead.
+- The Makefile runs the same scripts (and the same `components.sh` lookup) the workflows use, so the local result matches CI. Run `make -f "$MK" help` to list every target.
 
 ### Per-component release
 
@@ -101,7 +161,7 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
 
 ## Looking for the Lineth code?
 
-Linea's stack is made up of multiple repositories, these include:
+Lineth's stack is made up of multiple repositories. These include:
 
 - This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.

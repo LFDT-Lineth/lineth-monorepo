@@ -9,7 +9,7 @@ export const HASH_WITHOUT_ZERO_FIRST_BYTE = "0xf887bbc07b0e849fb625aafadf4cb6b65
 export const VALIDIUM_INITIALIZE_SIGNATURE =
   "initialize((bytes32,uint256,uint256,address,uint256,uint256,(address,bytes32)[],(uint8,bytes32)[],(uint8,bytes32)[],address,address,address))";
 
-export const LINEA_ROLLUP_INITIALIZE_SIGNATURE =
+export const LINETH_ROLLUP_INITIALIZE_SIGNATURE =
   "initialize((bytes32,uint256,uint256,address,uint256,uint256,(address,bytes32)[],(uint8,bytes32)[],(uint8,bytes32)[],address,address,address),address,address)";
 
 export const BLOCK_COINBASE = "0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e";

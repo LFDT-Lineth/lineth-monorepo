@@ -1,0 +1,55 @@
+fn check_j_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
+    var rd:Register
+    var imm20:u1
+    var imm10_1:u10
+    var imm11:u1
+    var imm19_12:u8
+    var imm:DoubleWord
+
+    imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
+
+    // J-type has no funct3; verify the raw opcode encodes the claimed compute_op.
+    // Mapping (see elf_to_json_gen decodeJTypeSemantic / jtypeOpForRd):
+    //   JAL -> JTYPE_JAL / JTYPE_JAL_WB
+    switch opcode {
+        case OPCODE_JAL: {
+            // JAL is never folded
+            if rd == 0 {
+                // rd=x0: base compute_op.
+                if compute_op != JTYPE_JAL {
+                    printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
+                }
+            } else if compute_op != JTYPE_JAL_WB { // rd≠x0: writeback variant.
+                printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        default: {
+            // Unrecognised J-type opcode → elf_to_json_gen maps to COMPUTE_INVALID.
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] invalid J-type opcode requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+            return
+        }
+    }
+
+    var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
+    imm = sgn_extension_u21_u64(imm21)
+
+    // Check that the decoded operands match the raw instruction parameters.
+    if rs1_decoded != 0 {
+        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
+        fail
+    }
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
+        fail
+    }
+    if imm_decoded != imm {
+        printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
+        fail
+    }
+}
+

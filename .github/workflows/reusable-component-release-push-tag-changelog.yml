@@ -12,9 +12,21 @@ on:
         required: true
         type: string
       include-path:
-        description: 'newline-separated string to represent the "git-cliff --include-path filter"'
-        required: true
+        description: >
+          newline-separated string to represent the "git-cliff --include-path filter".
+          Optional — defaults to component-name's entry in
+          .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
         type: string
+        default: ''
+      scopes:
+        description: >
+          Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or
+          'linea-besu|tracer|sequencer|deps|misc'). Optional — defaults to component-name's
+          entry in .github/actions/run-git-cliff-commands/scripts/components.sh.
+        required: false
+        type: string
+        default: ''
       release_tag_suffix:
         description: "Custom tag release tag suffix, i.e. releases/[component]/v[semver]-[suffix]"
         required: false
@@ -114,8 +126,14 @@ jobs:
           component-name: ${{ inputs.component-name }}
           folder-name: ${{ inputs.folder-name }}
           include-path: ${{ inputs.include-path }}
+          scopes: ${{ inputs.scopes }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           prepend-changelog: 'true'
+          # This workflow commits and pushes CHANGELOG.md below, so fast-forward to the
+          # latest push on this branch first to dodge a race with a concurrent writer.
+          # Safe here: this workflow is only reachable via workflow_dispatch release
+          # pipelines, so github.head_ref is always empty (never a pull_request/fork ref).
+          target-ref: ${{ github.head_ref || github.ref_name }}
           generate-changelog-with-next-tag-version: 'true'
 
       - name: Commit and push ${{ inputs.component-name }}/CHANGELOG.md

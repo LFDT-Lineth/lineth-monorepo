@@ -67,7 +67,7 @@ Build the native optimized executable:
 make build-release
 ```
 
-Build the Linea R5 zkVM executable:
+Build the Lineth R5 zkVM executable:
 
 ```bash
 make build-r5

@@ -1,0 +1,73 @@
+name: Tracer guest programs trace - l2-execution, Add in Zkc
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-guest-programs-trace.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/**'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
+      - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/workflows/arithmetization-guest-programs-trace.yml'
+  workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  binary-run-and-zkc-check:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
+          # Share caches for go.mod-pinned runs; custom ZKC refs must not write to shared caches.
+          cache-save: ${{ inputs.zkc-ref == '' }}
+
+      - name: Compile risc binary for simple zkc test program and check it
+        run: make -C arithmetization zkc-compile-and-check
+        env:
+          ZKC_MAIN: src/test/zkc/simple_add.zkc
+          ZKC_FILES: src/test/zkc/simple_add.zkc
+          ZKC_INPUT: src/test/zkc/simple_add.json
+
+      - name: Trace l2-execution guest program and check it
+        run: make -C riscv-guests/l2-execution trace
+        timeout-minutes: 45
+        env:
+          ZKC_REF: "" # Empty to avoid applying the optional module override again
+          INPUT: test/testdata/stateless_input.ssz
+          KECCAK_ACCEL: true
+          ZKC_TRACE_FLAGS: "--stats -vv"

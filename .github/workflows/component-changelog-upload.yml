@@ -67,45 +67,25 @@ jobs:
       matrix:
         component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
+          # scopes/include-path per component are the single source of truth in
+          # .github/actions/run-git-cliff-commands/scripts/components.sh — the
+          # run-git-cliff-commands action resolves them from component-name.
           - component: coordinator
             folder-name: coordinator
-            include-path: coordinator/**
           - component: maru
             folder-name: maru
-            include-path: maru/**
           - component: prover
             folder-name: prover
-            include-path: prover/**
           - component: postman
             folder-name: postman
-            include-path: postman/**
           - component: tx-exclusion-api
             folder-name: transaction-exclusion-api
-            include-path: transaction-exclusion-api/**
           - component: linea-besu-package
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
-            include-path: |
-              tracer/**
-              tracer-constraints/**
-              linea-besu/plugins/linea-sequencer/**
-              linea-besu/besu/**
-              linea-besu/package/**
-              gradle/libs.versions.toml
           - component: linea
             folder-name: .
             artifact-name: linea
-            include-path: |
-              coordinator/**
-              postman/**
-              prover/**
-              transaction-exclusion-api/**
-              tracer/**
-              tracer-constraints/**
-              linea-besu/plugins/linea-sequencer/**
-              linea-besu/besu/**
-              linea-besu/package/**
-              gradle/libs.versions.toml
 
     name: Generate ${{ matrix.component }} [Unreleased] changelog
     steps:
@@ -133,7 +113,6 @@ jobs:
         with:
           component-name: ${{ matrix.component }}
           folder-name: ${{ matrix.folder-name }}
-          include-path: ${{ matrix.include-path }}
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact

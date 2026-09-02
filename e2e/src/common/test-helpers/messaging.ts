@@ -52,7 +52,7 @@ export async function sendL1ToL2Message(context: TestContext, params: SendMessag
   const l1PublicClient = context.l1PublicClient();
 
   const dummyContract = context.l2Contracts.dummyContract(l2PublicClient);
-  const lineaRollup = context.l1Contracts.lineaRollup(l1WalletClient);
+  const linethRollup = context.l1Contracts.linethRollup(l1WalletClient);
 
   const calldata = generateCalldata(withCalldata);
   const destinationAddress = withCalldata ? dummyContract.address : DEFAULT_L2_DESTINATION_ADDRESS;
@@ -64,13 +64,13 @@ export async function sendL1ToL2Message(context: TestContext, params: SendMessag
   const { hash: txHash, receipt } = await sendTransactionWithRetry(
     l1PublicClient,
     (fees) =>
-      lineaRollup.write.sendMessage([destinationAddress, fee, calldata], {
+      linethRollup.write.sendMessage([destinationAddress, fee, calldata], {
         value,
         nonce,
         ...normalizedFees,
         ...fees,
       }),
-    { receiptTimeoutMs: timeoutMs, abi: lineaRollup.abi },
+    { receiptTimeoutMs: timeoutMs, abi: linethRollup.abi },
   );
 
   logger.debug(`sendMessage transaction sent. transactionHash=${txHash} status=${receipt.status}`);

@@ -5,7 +5,7 @@ import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 // RangeCheckCompilerScenario is a fixture for testing the rangecheck →
 // lookuptologderivsum → logderivativesum pipeline end-to-end.
 //
-// The rangecheck pass reduces a [wiop.RangeCheck] into an [wiop.LookupQuery]
+// The rangecheck pass reduces a [wiop.RangeCheck] into an [wiop.TableRelationQuery]
 // inclusion against a precomputed range column, which downstream passes
 // then reduce further. A test typically calls
 //

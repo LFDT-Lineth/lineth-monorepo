@@ -20,8 +20,34 @@ import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static org.hyperledger.besu.evm.internal.Words.*;
 
 import net.consensys.linea.zktracer.Fork;
+import net.consensys.linea.zktracer.module.mxp.MxpUtils;
+import net.consensys.linea.zktracer.types.Range;
+import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 public abstract class GasProjection {
+
+  /**
+   * Besu's {@code GasCalculator#memoryExpansionGasCost} is backed by a memory model limited to
+   * {@code Integer.MAX_VALUE} bytes (its backing store is a Java array), so for an access beyond
+   * that bound it short-circuits to a sentinel cost of {@code Long.MAX_VALUE} rather than the
+   * actual (still finite, still <i>much smaller than {@code Long.MAX_VALUE}</i>) EVM memory cost.
+   * The hub's own STP/MXP modules have no such limitation and compute the real cost, so relying on
+   * Besu's sentinel here would desynchronize the traced {@code GAS_COST} from the STP/MXP-derived
+   * columns. Recompute directly in that case.
+   */
+  static long memoryExpansionGasCost(GasCalculator gc, MessageFrame frame, long offset, long size) {
+    final Range range = Range.fromOffsetAndSize(offset, size);
+    if (range.besuOverflow()) {
+      final long preWords = frame.memoryWordSize();
+      final long postWords =
+          range.isEmpty()
+              ? preWords
+              : Math.max(clampedAdd(clampedAdd(range.offset(), range.size()), 31) / 32, preWords);
+      return MxpUtils.memoryCost(postWords) - MxpUtils.memoryCost(preWords);
+    }
+    return gc.memoryExpansionGasCost(frame, offset, size);
+  }
 
   long linearCost(long costPerUnit, long size, long unit) {
     checkArgument(
@@ -112,21 +138,22 @@ public abstract class GasProjection {
    * @return
    */
   public final long upfrontGasCost() {
-    return gasCostExcludingDeploymentCost() + deploymentCost();
+    return clampedAdd(gasCostExcludingDeploymentCost(), deploymentCost());
   }
 
   public final long gasCostExcludingDeploymentCost() {
-    return staticGas()
-        + expGas()
-        + memoryExpansion()
-        + accountAccess()
-        + accountCreation()
-        + transferValue()
-        + linearPerWord()
-        + linearPerByte()
-        + storageWarmth()
-        + sStoreValue()
-        + initCode();
+    long cost = staticGas();
+    cost = clampedAdd(cost, expGas());
+    cost = clampedAdd(cost, memoryExpansion());
+    cost = clampedAdd(cost, accountAccess());
+    cost = clampedAdd(cost, accountCreation());
+    cost = clampedAdd(cost, transferValue());
+    cost = clampedAdd(cost, linearPerWord());
+    cost = clampedAdd(cost, linearPerByte());
+    cost = clampedAdd(cost, storageWarmth());
+    cost = clampedAdd(cost, sStoreValue());
+    cost = clampedAdd(cost, initCode());
+    return cost;
   }
 
   public final boolean isMemoryExpansionFault(Fork fork) {
