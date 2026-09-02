@@ -698,7 +698,7 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
         case RTYPE_MULHSU_WB: {
             printf "RTYPE_MULHSU_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            result, _= mul64_su(v1, v2)
+            result, _ = mul64_su(v1, v2)
         }
         case RTYPE_MULHU_WB: {
             printf "RTYPE_MULHU_WB(c) "

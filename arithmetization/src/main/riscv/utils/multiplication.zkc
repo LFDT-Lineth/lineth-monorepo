@@ -32,10 +32,10 @@ fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
     var lhs_abs:u64 = absolute_value_double_word(lhs)
     var lhs_sign:u1 = sign_bit_of_double_word(lhs)
     // Perform unsigned multiplication
-     var tmp_hi:u64
-        var tmp_lo:u64
-        tmp_hi, tmp_lo = mul64_uu(lhs_abs, rhs)
-        var val:u128 = tmp_hi::tmp_lo
+    var tmp_hi:u64
+    var tmp_lo:u64
+    tmp_hi, tmp_lo = mul64_uu(lhs_abs, rhs)
+    var val:u128 = tmp_hi::tmp_lo
     // Apply sign
     if lhs_sign == 1 && val != 0 {
         hi::lo = (~val) + 1
@@ -52,7 +52,7 @@ fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
 fn div64_uu(lhs:u64, rhs:u64) -> (res:u64) {
     if rhs == 0 {
         printf "Division by zero"
-                    fail
+        fail
     } else {
         res, _ = divMod_64_uu(lhs, rhs)
     }
@@ -69,12 +69,12 @@ fn divMod_64_uu(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
 }
 
 fn div64_ss(lhs:u64, rhs:u64) -> (res:u64) {
-     if rhs == 0 {
-            printf "Division by zero"
-            fail
-        } else {
-            res, _ = divMod_64_ss(lhs, rhs)
-        }
+    if rhs == 0 {
+        printf "Division by zero"
+        fail
+    } else {
+        res, _ = divMod_64_ss(lhs, rhs)
+    }
 }
 
 fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
@@ -92,7 +92,6 @@ fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
     }
 }
 
-
 ///////////////////////////////////////////
 //////// same same but for 32-bit /////////
 ///////////////////////////////////////////
@@ -100,8 +99,8 @@ fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
 // 32-bit unsigned division.
 fn div32_uu(lhs:u32, rhs:u32) -> (res:u32) {
     if rhs == 0 {
-         printf "Division by zero"
-                    fail
+        printf "Division by zero"
+        fail
     } else {
         res, _ = divMod_32_uu(lhs, rhs)
     }
@@ -118,12 +117,12 @@ fn divMod_32_uu(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
 }
 
 fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
-     if rhs == 0 {
-            printf "Division by zero"
-                       fail
-        } else {
-            res, _ = divMod_32_ss(lhs, rhs)
-        }
+    if rhs == 0 {
+        printf "Division by zero"
+        fail
+    } else {
+        res, _ = divMod_32_ss(lhs, rhs)
+    }
 }
 
 fn divMod_32_ss(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
