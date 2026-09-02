@@ -161,6 +161,9 @@ func parseInput(argument string) (inputBytes, error) {
 }
 
 func parseHexInput(argument string) ([]byte, error) {
+	if !strings.HasPrefix(argument, "0x") && !strings.HasPrefix(argument, "0X") {
+		return nil, fmt.Errorf("expected 0x-prefixed input bytes, got %q", argument)
+	}
 	data, err := hex.DecodeString(argument[2:])
 	if err != nil {
 		return nil, fmt.Errorf("decoding hex input bytes: %w", err)
