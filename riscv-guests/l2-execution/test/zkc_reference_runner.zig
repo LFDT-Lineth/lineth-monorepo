@@ -196,6 +196,7 @@ fn effectiveZkcFlags() []const u8 {
     return "--fast";
 }
 
+// TODO : standardize the output to interface with the prover
 /// Find `guest_output = 0x<hex>` in zkc stdout/stderr; return lowercase hex without the `0x`.
 fn parseGuestOutputHex(alloc: std.mem.Allocator, text: []const u8) ?[]const u8 {
     const start = std.mem.indexOf(u8, text, guest_output_prefix) orelse return null;
