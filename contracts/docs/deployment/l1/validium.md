@@ -6,6 +6,8 @@
 
 The Validium contract is a permutation of LinethRollup that uses off-chain data availability. It shares the same base contract (same initial state root, block number, and genesis timestamp) but has its own operators and rate limits.
 
+> **Warning — forced transactions are not supported on validium yet.** The coordinator cannot process forced transactions on a validium chain ([#3868](https://github.com/LFDT-Lineth/lineth-monorepo/issues/3868)). The validium V2 contract still enforces forced-transaction inclusion at finalization, so if anyone submits a forced transaction on a validium chain, finalization will halt until coordinator support is added. Do not grant `FORCED_TRANSACTION_SENDER_ROLE` on a validium deployment until that support lands.
+
 Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input value | Description |
