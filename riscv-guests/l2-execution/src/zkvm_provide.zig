@@ -24,7 +24,6 @@
 
 const zesu_zkvm_stdlibs = @import("zesu_zkvm_stdlibs"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
-const linea_io = @import("linea_zkvm_io"); // zesu-zkvm's zkvm_io: default (stdout ecall) write_output
 const zesu_crypto_backend = @import("zesu_crypto_backend"); // zesu's own native crypto backend (modexp, RIPEMD-160 — see src/zesu_crypto_backend.zig)
 const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
 
@@ -57,27 +56,14 @@ comptime {
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });
     @export(&log, .{ .name = "zkvm_log" });
-    // write_output (zkvm-standards io-interface): the Lineth custom-opcode accelerator
-    // when -Dwrite-output-accel is set, otherwise zesu's default stdout `write` ecall.
-    // Both are the extern symbol `write_output` that zesu-zkvm's extern_io.zig resolves.
-    if (build_options.write_output_accel) {
-        @export(&lineth_accel.write_output, .{ .name = "write_output" });
-    } else {
-        @export(&write_output, .{ .name = "write_output" });
-    }
+    // write_output (zkvm-standards io-interface): the Lineth custom-opcode accelerator, under the
+    // extern name zesu-zkvm's extern_io.zig resolves. Its signature already IS the C ABI zesu
+    // declares, so it exports directly rather than through a shim like the precompiles above.
+    @export(&lineth_accel.write_output, .{ .name = "write_output" });
 }
 
 const OK: i32 = 0;
 const ERR: i32 = 1;
-
-// ── io — zkvm-standards io-interface ──────────────────────────────────────────
-// Default (non-accelerated) write_output: forward the C-ABI (ptr+len) to zesu's
-// zkvm_io slice API, which appends to public output via the Linux write ecall
-// (a7=64, fd=1). Mirrors zesu-zkvm's linea_host.zig. The -Dwrite-output-accel
-// build replaces this with lineth_accel.write_output (custom opcode) above.
-fn write_output(ptr: [*]const u8, len: usize) callconv(.c) void {
-    linea_io.write_output(ptr[0..len]);
-}
 
 // Pairing/MSM pair layouts — must byte-match the C-ABI struct layout zesu passes to these zkvm_*
 // symbols; forwarded straight to stdlibs_accel's `anytype` parameters.
@@ -159,11 +145,10 @@ fn bls12_map_fp2_to_g2(field_element: *const [96]u8, result: *[192]u8) callconv(
 // Not a precompile, but the same "statically-linked, define every extern locally" situation applies:
 // zesu's own root module (zesu/src/zkvm/root.zig) declares `extern fn zkvm_log(level, msg_ptr,
 // msg_len)`, and zesu-zkvm's reference implementation for THIS exact backend (linea_host.zig)
-// forwards it to `io.printStr(msg)` — the same Linux write ecall to fd=1 that `linea_zkvm_io`'s
-// `write_output` uses (see evm_execution_guest.zig's `guestMain`). The Linea zkVM captures ALL
-// stdout bytes as the program's single observable output, so a real call here would interleave with
-// (and corrupt) the guest's actual `write_output` commit. NO-OP for now; re-enable once ZkC exposes
-// logging that doesn't alias the output commitment.
+// forwards it to `io.printStr(msg)` — a Linux write ecall to fd=1. The Linea zkVM captures ALL
+// stdout bytes as observable program output, so a real call here would surface diagnostics as part
+// of the guest's own emissions. NO-OP for now; re-enable once ZkC exposes a logging channel of its
+// own.
 fn log(level: u8, msg_ptr: [*]const u8, msg_len: usize) callconv(.c) void {
     _ = level;
     _ = msg_ptr;

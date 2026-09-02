@@ -75,13 +75,12 @@ object ConfigDocMarkdownGenerator {
   }
 
   private fun appendTable(sb: StringBuilder, leaves: List<ConfigKey>) {
-    sb.appendLine("| Key | Type | Required | Default | Status | Description |")
+    sb.appendLine("| Key | Description | Type | Required | Default | Status |")
     sb.appendLine("| --- | --- | --- | --- | --- | --- |")
     for (key in leaves) {
       sb.appendLine(
-        "| `${key.path}` | `${key.type}` | ${if (key.required) "yes" else "no"} " +
-          "| ${key.default?.let { "`$it`" } ?: "-"} | ${if (key.deprecated) "deprecated" else "active"} " +
-          "| ${describe(key)} |",
+        "| `${key.path}` | ${describe(key)} | `${key.type}` | ${if (key.required) "yes" else "no"} " +
+          "| ${key.default?.let { "`$it`" } ?: "-"} | ${if (key.deprecated) "deprecated" else "active"} |",
       )
     }
   }
