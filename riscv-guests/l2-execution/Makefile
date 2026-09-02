@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test reference-test-zkc prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input require-expected-guest-output
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -30,14 +30,20 @@ ZIG_FETCH_FLAGS ?=
 NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-# Sample fixture input used by exec/debug
+# Sample fixture input used by exec/debug / zkc-smoke-*
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
-# -v/-vv/-vvv raise verbosity. "--fast" skips tracing, the runnability path used while the
-# interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
+# Golden guest_output hex file for zkc-smoke-exec / zkc-smoke-trace.
+EXPECTED_GUEST_OUTPUT ?= $(MAKEFILE_DIR)test/testdata/stateless_input.expected_guest_output
+
+# Flags forwarded to `zkc exec` by exec / zkc-smoke-exec. Quiet (no per-instruction printf) is zkc's
+# default unless -v/-vv/-vvv raise verbosity. "--fast" skips tracing, the runnability path used while
+# the interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
 # tracing enabled.
 ZKC_EXEC_FLAGS ?=
+
+# Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
+ZKC_TRACE_FLAGS ?= --stats
 
 # Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
@@ -49,6 +55,17 @@ OBJDUMP     ?= false
 # If true, build with the arithmetization keccak wrapper (prover-accelerated
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
+
+# Shared body for zkc-smoke-exec / zkc-smoke-trace: zig build zkc-smoke + runner smoke args.
+# $(1) = zkc makefile target (elf-exec | elf-trace)
+# $(2) = optional extra runner args (e.g. --zkc-flags "...")
+define zkc-smoke-run
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
+		--input "$(abspath $(INPUT))" \
+		--expect-guest-output "$(abspath $(EXPECTED_GUEST_OUTPUT))" \
+		--zkc-target "$(1)" \
+		$(2)
+endef
 
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
 fetch:
@@ -74,6 +91,14 @@ reference-test:
 reference-test-zkc:
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
+# Smoke golden checks via test/zkc_reference_runner.zig: one extended SSZ input under zkc, assert
+# guest_output matches EXPECTED_GUEST_OUTPUT. Shared recipe; only the zkc backend differs.
+zkc-smoke-exec: require-input require-expected-guest-output
+	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
+
+zkc-smoke-trace: require-input require-expected-guest-output
+	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
+
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
 	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
@@ -94,8 +119,13 @@ compile:
 	fi
 
 # Fail early on a missing/empty INPUT instead of building then erroring in the converter.
+# EXPECTED_GUEST_OUTPUT is only required for zkc-smoke-*; exec/trace still call require-input for INPUT.
 require-input:
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
+
+require-expected-guest-output:
+	@[ -n "$(EXPECTED_GUEST_OUTPUT)" ] && [ -f "$(EXPECTED_GUEST_OUTPUT)" ] || { \
+		echo "EXPECTED_GUEST_OUTPUT not found: '$(EXPECTED_GUEST_OUTPUT)'"; exit 1; }
 
 exec: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

@@ -366,6 +366,22 @@ pub fn build(b: *std.Build) void {
     linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
     b.installArtifact(zkc_reference_runner_exe);
 
+    // Smoke golden: one extended SSZ input under zkc, assert `guest_output`. Outside the EF-corpus
+    // lazy block — no fixtures dependency. Needs zkc+go on PATH (same as exec / reference-test-zkc).
+    // Makefile exposes zkc-smoke-exec / zkc-smoke-trace; both call this step with --zkc-target set.
+    const zkc_smoke_step = b.step(
+        "zkc-smoke",
+        "Run one extended SSZ input under zkc and check guest_output against a golden (pass --zkc-target elf-exec|elf-trace)",
+    );
+    const run_zkc_smoke = b.addRunArtifact(zkc_reference_runner_exe);
+    run_zkc_smoke.addArg("--install-prefix");
+    run_zkc_smoke.addArg(b.install_prefix);
+    run_zkc_smoke.addArg("--makefile");
+    run_zkc_smoke.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+    if (b.args) |extra| run_zkc_smoke.addArgs(extra);
+    run_zkc_smoke.step.dependOn(b.getInstallStep());
+    zkc_smoke_step.dependOn(&run_zkc_smoke.step);
+
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
     // output on stdout. See test/l2_execution_runner.zig's doc comment for why the SSZ/JSON toggle
