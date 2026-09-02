@@ -10,6 +10,7 @@ riscv-guests/
   Makefile             Top-level orchestrator — fans compile/test/… out to every guest in GUESTS
   build_common/        Shared build helpers (+ the shared standalone-ELF link: start.s, linker_script.ld)
   lineth-accelerators/ Shared library package: Lineth accelerator wrappers + C headers
+  guest-crypto/        Rust no_std staticlib: secp256k1 + BLS12-381/KZG precompile crypto (cargo, wrapped as a Zig package)
   l2-execution/        Vanilla EVM execution guest: build.zig + build.zig.zon + Makefile + src/ + test/
 ```
 
@@ -20,6 +21,7 @@ Within a guest, `src/` holds **only the production code that ships in the rv64im
 ## Required Toolchain
 
 - Zig `0.16.0`. Recorded in `.zigversion` and enforced by `build_common` (`requireZigVersion`).
+- Rust via `rustup`, for the `guest-crypto` staticlib (the exact nightly + `rust-src` are pinned in `guest-crypto/rust-toolchain.toml` and auto-install on first build).
 - Go, for converting compiled ELFs into the JSON input consumed by the ZKC interpreter.
 - `zkc` on `PATH`, for a guest's `exec` / `debug` / fixture targets.
 - Optional: `riscv64-unknown-elf-objdump` for compile-time disassembly output.
@@ -28,7 +30,9 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), **Consensys/zesu-zkvm** (its pure-Zig precompile backend `stdlibs_accel`, which the guest's in-guest crypto delegates to), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), the sibling **`guest-crypto`** package (the Rust staticlib backing the secp256k1/BLS12-381/KZG precompiles), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+
+`guest-crypto` is a `#![no_std]` Rust crate (`revm-precompile`'s arkworks backend for BLS12-381, `ark-bls12-381` for KZG, `k256` for secp256k1) built by cargo — its `build.zig` drives `cargo build` for both the rv64im guest archive (custom target `riscv64im-zkc.json`, `-Zbuild-std`) and the host archive the FFI tests link, so `zig build` / `zig build test` need no manual pre-step. The Rust toolchain is pinned in `guest-crypto/rust-toolchain.toml` (a nightly + `rust-src`); with `rustup` installed, the pinned toolchain auto-installs on first build.
 
 ## Native test dependencies
 
@@ -41,7 +45,7 @@ A guest's `make test` runs its logic on the **host**, where Zesu's `default.zig`
 | `libblst` | BLS12-381 + KZG point evaluation |
 | `libmcl` | BN254 |
 
-Expected under a single prefix — `/opt/homebrew` on macOS, `/usr/local` on Linux — overridable with `-Dcrypto-prefix=<prefix>`. Install them all via Zesu's helper (from a Zesu checkout): `make install-deps`. The freestanding guest ELF (`make compile`) needs **none** of these: its precompiles are either pure-Zig (zesu-zkvm's `stdlibs_accel`, compiled in) or a custom RISC-V opcode (keccak) the prover arithmetizes at execution.
+Expected under a single prefix — `/opt/homebrew` on macOS, `/usr/local` on Linux — overridable with `-Dcrypto-prefix=<prefix>`. Install them all via Zesu's helper (from a Zesu checkout): `make install-deps`. The freestanding guest ELF (`make compile`) needs **none** of these: its precompiles are compiled in — Zig `std.crypto` for the hashes and P-256, the `guest-crypto` Rust staticlib for secp256k1 and BLS12-381/KZG, zesu's own backends for modexp/RIPEMD-160/BLAKE2f — or a custom RISC-V opcode (keccak) the prover arithmetizes at execution; bn254 is a failure stub pending its prover-side accelerator.
 
 ## Development
 
@@ -87,7 +91,7 @@ Two workflows guard the guests.
 
 [`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2-execution exec ZKC_EXEC_FLAGS="--quiet --gogen --fast"` (the ELF → JSON → `zkc` path described below). Execution uses zkc's **generated-Go backend in fast mode** (`--gogen --fast`) rather than the tree-walking interpreter, because tracing is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json_gen`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above.
 
-The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. The interpreter-run workflow reuses that same action for the guest build (the freestanding ELF links none of the crypto) and adds Go plus a `zkc` install.
+The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), rustup (the guest-crypto toolchain pin auto-installs from there), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds, cargo artifacts, and Zig package fetches cached. The interpreter-run workflow reuses that same action for the guest build (the freestanding ELF links none of the crypto) and adds Go plus a `zkc` install.
 
 ## ZKC Interpreter Integration
 

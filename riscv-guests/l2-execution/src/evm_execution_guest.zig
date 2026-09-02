@@ -32,7 +32,7 @@ const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 /// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success;
 /// on failure, exits with `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero
 /// code per Readme.md §2.5 — after logging the failing error's name via `zkvm_log`.
-/// `read_input` is zesu-zkvm's `linea_zkvm_io` (the memory-mapped IN region); `write_output` is the
+/// `read_input` is `linea_zkvm_io` (the memory-mapped IN region); `write_output` is the
 /// Lineth accelerator's custom-opcode implementation of the zkvm-standards io-interface. Where the
 /// input lives and how the output surfaces is the proving system's concern, not the guest's.
 ///
@@ -93,8 +93,8 @@ comptime {
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers (zkvm_provide.zig): it DEFINES every zkvm_* symbol zesu
-        // references — keccak from the Lineth wrapper, the rest from zesu-zkvm's stdlibs_accel.
-        // Freestanding only — the native build uses Zesu's C backend and never references zkvm_*.
+        // references — see its manifest for where each comes from. Freestanding only — the native
+        // build uses Zesu's C backend and never references zkvm_*.
         _ = @import("zkvm_provide.zig");
     }
 }

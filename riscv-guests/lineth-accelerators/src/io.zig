@@ -5,7 +5,7 @@
 // output. Implemented as the Lineth custom opcode (custom-1); the prover's
 // RISC-V interpreter turns this into a write_output circuit call.
 //
-// Signature matches zesu's authoritative extern (zesu-zkvm zkvm/extern_io.zig):
+// Signature matches the extern zesu declares for the standard `write_output` name:
 //   @extern(*const fn ([*]const u8, usize) callconv(.c) void, .{ .name = "write_output" })
 pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
     // opcode format: opcode(0x2b = custom-1) | funct3(0b010) | funct7(0b0000000) | rd(unused) | rs1(input_offset) | rs2(input_size)
@@ -20,4 +20,3 @@ pub fn write_output(output: [*]const u8, size: usize) callconv(.c) void {
           // optimizer may drop/reorder the buffer's stores before the opcode reads them.
         : .{ .memory = true });
 }
-

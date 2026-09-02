@@ -13,16 +13,11 @@
             .hash = "N-V-__8AAP____94w9jBcI9yat7v2Mt9Lb-iJ5TOtfLo6-Ab",
             .lazy = true,
         },
-        // Consensys/zesu-zkvm — the Linea zkVM runtime. We consume only its pure-Zig precompile
-        // backend (linea/src/runtime/stdlibs_accel.zig, std-only) and delegate the guest's in-guest
-        // crypto to it instead of maintaining our own. Pinned to a commit; repoint to a release tag
-        // once one exists.
-        .zesu_zkvm = .{
-            .url = "https://github.com/Consensys/zesu-zkvm/archive/781e8ab5b86e2e08b111c8bee778f6fd777f8172.tar.gz",
-            .hash = "N-V-__8AALcFYQDEKjFlPv80maZPDDtCeu9sPCIH_vmRza1W",
-        },
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
         .build_common = .{ .path = "../build_common" },
+        // Rust staticlib providing the guest's secp256k1 / BLS12-381 / KZG precompile crypto
+        // (sibling path dependency; its build.zig drives cargo).
+        .guest_crypto = .{ .path = "../guest-crypto" },
         // Lineth zkVM accelerator wrappers (sibling path dependency).
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
