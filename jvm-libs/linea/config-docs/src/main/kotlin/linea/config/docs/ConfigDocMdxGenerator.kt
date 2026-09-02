@@ -78,15 +78,15 @@ object ConfigDocMdxGenerator {
   }
 
   private fun appendTable(sb: StringBuilder, leaves: List<ConfigKey>) {
-    sb.appendLine("| Key | Type | Required | Default | Status | Description |")
+    sb.appendLine("| Key | Description | Type | Required | Default | Status |")
     sb.appendLine("| --- | --- | --- | --- | --- | --- |")
     for (key in leaves) {
       sb.appendLine(
-        "| `${escapeInlineCode(key.path)}` | `${escapeInlineCode(key.type)}` " +
+        "| `${escapeInlineCode(key.path)}` | ${describe(key)} " +
+          "| `${escapeInlineCode(key.type)}` " +
           "| ${if (key.required) "yes" else "no"} " +
           "| ${key.default?.let { "`" + escapeInlineCode(it) + "`" } ?: "-"} " +
-          "| ${if (key.deprecated) "deprecated" else "active"} " +
-          "| ${describe(key)} |",
+          "| ${if (key.deprecated) "deprecated" else "active"} |",
       )
     }
   }
