@@ -108,8 +108,10 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
 
     private fun isTransientSchedulingOutcome(result: TransactionSelectionResult): Boolean =
       result == TransactionSelectionResult.SELECTION_CANCELLED ||
-        (result.penalize() &&
-          result.maybeInvalidReason().orElse(null) == EXECUTION_INTERRUPTED_REASON)
+        (
+          result.penalize() &&
+            result.maybeInvalidReason().orElse(null) == EXECUTION_INTERRUPTED_REASON
+          )
   }
 
   companion object {

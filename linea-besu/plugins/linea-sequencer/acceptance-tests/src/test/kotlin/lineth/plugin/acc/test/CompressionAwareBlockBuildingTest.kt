@@ -109,8 +109,14 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(smallTxHash))
     minerNode.verify(eth.expectNoTransactionReceipt(largeTxHash))
+    // Under Vert.x 5 (Besu 26.8.1) the first block build on a loaded CI runner can take several
+    // seconds before the selector's slow-path compression check records the rejection, so give the
+    // poll a budget comfortably above one block period. The RecordingTransactionSelectorPlugin keeps
+    // the substantive BLOCK_COMPRESSED_SIZE_OVERFLOW (it is not overwritten by later transient
+    // SELECTION_CANCELLED / EXECUTION_INTERRUPTED outcomes), so a longer window only adds patience,
+    // not false positives.
     await()
-      .atMost(4, TimeUnit.SECONDS)
+      .atMost(3L * getBlockPeriodSeconds(), TimeUnit.SECONDS)
       .pollInterval(50, TimeUnit.MILLISECONDS)
       .untilAsserted {
         assertThat(getRejectionReason(largeTxHash))

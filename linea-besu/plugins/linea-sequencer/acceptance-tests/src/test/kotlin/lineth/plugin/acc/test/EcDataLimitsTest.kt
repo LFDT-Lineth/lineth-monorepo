@@ -31,10 +31,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   }
 
   override fun getBlockPeriodSeconds(): Int =
-    // adding 2 more seconds to the block period, in order to avoid flakiness on the CI
-    // due to EcPairing sometimes taking all the selection time before all pending txs
-    // have been evaluated
-    BLOCK_PERIOD_SECONDS + 2
+    // Adding slack to the block period to avoid flakiness on the CI: EcPairing can take all the
+    // selection time before all pending txs have been evaluated, so the last tx can spill into the
+    // next block (assertTransactionsMinedInSameBlock then sees 2 blocks instead of 1). The Vert.x 5
+    // migration in Besu 26.8.1 slowed the node's HTTP/engine-API responses enough to eat the
+    // previous +2s margin, so widen it further.
+    BLOCK_PERIOD_SECONDS + 4
 
   /**
    * Tests the EcPairing limits, that are the number of times a certain circuit may be invoked in a
