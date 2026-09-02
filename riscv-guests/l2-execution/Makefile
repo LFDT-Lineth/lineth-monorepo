@@ -10,11 +10,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-<<<<<<< HEAD
-.PHONY: fetch test spec-test get-execution-specs-json-fixtures run-fixtures run-execution-specs-ssz-fixtures get-zkevm-json-fixtures run-zkevm-ssz-fixtures clean compile exec debug require-input
-=======
 .PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
->>>>>>> main
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -47,26 +43,6 @@ ZKC_EXEC_FLAGS ?=
 # Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
-<<<<<<< HEAD
-EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
-EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 0
-
-# Parameters for Lineth zkevm-fixtures release archives and selected temporary SSZ inputs.
-ZKEVM_FIXTURES_DIR                  := /tmp/zkevm-fixtures
-ZKEVM_FIXTURES_ARCHIVE_DIR          := $(ZKEVM_FIXTURES_DIR)/archives
-ZKEVM_FIXTURES_JSON_DIR             := $(ZKEVM_FIXTURES_DIR)/json
-ZKEVM_FIXTURES_SSZ_DIR              := $(ZKEVM_FIXTURES_DIR)/ssz
-ZKEVM_FIXTURES_CONVERTER_DIR        := $(ZKEVM_FIXTURES_DIR)/stateless-executor
-ZKEVM_FIXTURES_CONVERTER_BIN        := $(ZKEVM_FIXTURES_CONVERTER_DIR)/bin/zesu-convert
-ZKEVM_FIXTURES_EXTRACTED            := $(ZKEVM_FIXTURES_JSON_DIR)/.extracted
-ZKEVM_FIXTURES_RUN_FIXTURE_PATHS    ?= .
-ZKEVM_FIXTURES_RUN_SSZ_LIMIT        ?= 100
-ZKEVM_FIXTURES_CONVERTER_REPO       := https://github.com/Gabriel-Trintinalia/stateless-executor
-ZKEVM_FIXTURES_ARCHIVE_URLS         := \
-	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-1.tar.zst \
-	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-2.tar.zst
-=======
->>>>>>> main
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -96,62 +72,6 @@ reference-test:
 get-execution-specs-json-fixtures:
 	$(ZIG) build get-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
 
-<<<<<<< HEAD
-# Runs selected execution-spec fixtures through zkc; generated SSZ inputs can be inspected in $(EXECUTION_SPECS_SSZ_FIXTURES_DIR).
-run-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
-	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-fixtures \
-		JSON_FIXTURES_DIR="$(EXECUTION_SPECS_FIXTURES_DIR)" \
-		SSZ_FIXTURES_DIR="$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" \
-		RUN_FIXTURE_PATHS="$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" \
-		RUN_SSZ_LIMIT="$(EXECUTION_SPECS_RUN_SSZ_LIMIT)" \
-		FIXTURE_FORMAT="execution-specs"
-
-# Downloads and extracts Lineth zkevm-fixtures release JSON fixtures under $(ZKEVM_FIXTURES_JSON_DIR).
-get-zkevm-json-fixtures: $(ZKEVM_FIXTURES_EXTRACTED)
-	@set -eu; \
-	if [ ! -d "$(ZKEVM_FIXTURES_CONVERTER_DIR)/.git" ]; then \
-		rm -rf "$(ZKEVM_FIXTURES_CONVERTER_DIR)"; \
-		git clone "$(ZKEVM_FIXTURES_CONVERTER_REPO)" "$(ZKEVM_FIXTURES_CONVERTER_DIR)"; \
-	fi; \
-	cd "$(ZKEVM_FIXTURES_CONVERTER_DIR)" && $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
-
-$(ZKEVM_FIXTURES_EXTRACTED):
-	@set -eu; \
-	mkdir -p "$(ZKEVM_FIXTURES_ARCHIVE_DIR)"; \
-	rm -rf "$(ZKEVM_FIXTURES_JSON_DIR)"; \
-	mkdir -p "$(ZKEVM_FIXTURES_JSON_DIR)"; \
-	for url in $(ZKEVM_FIXTURES_ARCHIVE_URLS); do \
-		archive="$(ZKEVM_FIXTURES_ARCHIVE_DIR)/$$(basename "$$url")"; \
-		if [ ! -f "$$archive" ]; then \
-			echo "downloading $$url"; \
-			rm -f "$$archive.tmp"; \
-			curl -L --fail -o "$$archive.tmp" "$$url"; \
-			mv "$$archive.tmp" "$$archive"; \
-		fi; \
-		echo "extracting $$archive"; \
-		tar --zstd -xf "$$archive" -C "$(ZKEVM_FIXTURES_JSON_DIR)"; \
-	done; \
-	touch "$@"
-
-# Runs selected Lineth zkevm-fixtures release JSON fixtures through zkc; SSZ inputs are in $(ZKEVM_FIXTURES_SSZ_DIR).
-run-zkevm-ssz-fixtures: get-zkevm-json-fixtures
-	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-fixtures \
-		JSON_FIXTURES_DIR="$(ZKEVM_FIXTURES_JSON_DIR)" \
-		SSZ_FIXTURES_DIR="$(ZKEVM_FIXTURES_SSZ_DIR)" \
-		RUN_FIXTURE_PATHS="$(ZKEVM_FIXTURES_RUN_FIXTURE_PATHS)" \
-		RUN_SSZ_LIMIT="$(ZKEVM_FIXTURES_RUN_SSZ_LIMIT)" \
-		FIXTURE_FORMAT="zkevm-fixtures" \
-		ZESU_CONVERT_BIN="$(ZKEVM_FIXTURES_CONVERTER_BIN)"
-
-# Runs fixtures already present on disk. It is used for both execution-specs and zkevm-fixtures and is the main entrypoint for fixture execution.
-run-fixtures:
-	@[ -n "$(JSON_FIXTURES_DIR)" ] || { echo "JSON_FIXTURES_DIR is mandatory"; exit 1; }
-	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
-	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)" $(if $(strip $(ZESU_CONVERT_BIN)),--zesu-convert "$(ZESU_CONVERT_BIN)")
-
-=======
->>>>>>> main
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
 	rm -rf $(BUILD_CACHE_DIR)
