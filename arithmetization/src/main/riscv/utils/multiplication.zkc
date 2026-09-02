@@ -48,36 +48,26 @@ fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
 ///  Division and Remainder  //
 ///////////////////////////////
 
-// 64-bit unsigned division.
-fn div64_uu(lhs:u64, rhs:u64) -> (res:u64) {
-    if rhs == 0 {
-        printf "Division by zero"
-        fail
-    } else {
-        res, _ = divMod_64_uu(lhs, rhs)
-    }
-}
-
-// 64-bit unsigned div mod
+// 64-bit unsigned div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
 fn divMod_64_uu(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
     if rhs == 0 {
-        q = 0
+        q = NEGATIVE_ONE_AS_I64
         r = lhs
     } else {
         q, r = lhs /% rhs
     }
 }
 
-fn div64_ss(lhs:u64, rhs:u64) -> (res:u64) {
-    if rhs == 0 {
-        printf "Division by zero"
-        fail
-    } else {
-        res, _ = divMod_64_ss(lhs, rhs)
-    }
-}
-
+// 64-bit signed div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
 fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
+    // special care when dividing by 0, do NOT apply sign to the quotient, just return -1 and the dividend as remainder
+    if rhs == 0 {
+        q = NEGATIVE_ONE_AS_I64
+        r = lhs
+        return
+    }
+
+    // General case: compute unsigned division and apply sign to the result
     var q_u:u64
     var r_u:u64
     // compute unsigned remainder
@@ -96,36 +86,26 @@ fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
 //////// same same but for 32-bit /////////
 ///////////////////////////////////////////
 
-// 32-bit unsigned division.
-fn div32_uu(lhs:u32, rhs:u32) -> (res:u32) {
-    if rhs == 0 {
-        printf "Division by zero"
-        fail
-    } else {
-        res, _ = divMod_32_uu(lhs, rhs)
-    }
-}
-
-// 32-bit unsigned div mod
+// 32-bit unsigned div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
 fn divMod_32_uu(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
     if rhs == 0 {
-        q = 0
+        q = NEGATIVE_ONE_AS_I32
         r = lhs
     } else {
         q, r = lhs /% rhs
     }
 }
 
-fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
-    if rhs == 0 {
-        printf "Division by zero"
-        fail
-    } else {
-        res, _ = divMod_32_ss(lhs, rhs)
-    }
-}
-
+// 32-bit signed div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
 fn divMod_32_ss(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
+    // special care when dividing by 0, do NOT apply sign to the quotient, just return -1 and the dividend as remainder
+    if rhs == 0 {
+        q = NEGATIVE_ONE_AS_I32
+        r = lhs
+        return
+    }
+
+    // General case: compute unsigned division and apply sign to the result
     var q_u:u32
     var r_u:u32
     // compute unsigned remainder

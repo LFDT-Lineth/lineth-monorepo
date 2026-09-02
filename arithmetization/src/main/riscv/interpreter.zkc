@@ -189,14 +189,14 @@ include "../lib/io/write_output.zkc"
 // precompiles, …); anything not matched there eventually reaches the
 // `interpreter_c` default and behaves as a no-op.
 
-// -- PREDECODING PROOF SECTION -- 
+// -- PREDECODING PROOF SECTION --
 // fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, exec_end:Address, output_write_address:OutputAddress) -> ! {
-// -- PREDECODING PROOF SECTION END-- 
+// -- PREDECODING PROOF SECTION END--
 
-// -- NO PREDECODING PROOF SECTION -- 
+// -- NO PREDECODING PROOF SECTION --
 #[global]
 fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
-    // -- NO PREDECODING PROOF SECTION END-- 
+    // -- NO PREDECODING PROOF SECTION END--
 
     var new_output_write_address:OutputAddress
     var new_pc:Address
@@ -204,14 +204,14 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, b
     var rem:u2
     // determine index of predecoded program
     index::rem = pc - base
-    // -- PREDECODING PROOF SECTION -- 
+    // -- PREDECODING PROOF SECTION --
     // Execution must stay inside the span justified by predecoding, at 4-byte
     // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
     // if pc<base || pc >= exec_end || rem != 0 {
     //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
     //     fail
     // }
-    // -- PREDECODING PROOF SECTION END-- 
+    // -- PREDECODING PROOF SECTION END--
     printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
     // Execute current instruction
     new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
@@ -219,13 +219,13 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, b
     if new_pc != MAX_UINT_64 {
         // Execute next instruction
 
-        // -- PREDECODING PROOF SECTION -- 
+        // -- PREDECODING PROOF SECTION --
         // interpreter!(clock_cycle + 1, base, new_pc, exec_end, new_output_write_address)
-        // -- PREDECODING PROOF SECTION END-- 
+        // -- PREDECODING PROOF SECTION END--
 
-        // -- NO PREDECODING PROOF SECTION -- 
+        // -- NO PREDECODING PROOF SECTION --
         interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
-        // -- NO PREDECODING PROOF SECTION END-- 
+        // -- NO PREDECODING PROOF SECTION END--
     }
     // Termination
     done
@@ -711,17 +711,13 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                 result = OVERFLOW_DIVIDEND
             } else {
-                result = v2 == 0 ? NEGATIVE_ONE_AS_I64:div64_ss(v1, v2)
+                result, _ = divMod_64_ss(v1, v2)
             }
         }
         case RTYPE_DIVU_WB: {
             printf "RTYPE_DIVU_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            if v2 == 0 {
-                result = NEGATIVE_ONE_AS_I64
-            } else {
-                result = div64_uu(v1, v2)
-            }
+            result, _ = divMod_64_uu(v1, v2)
         }
         case RTYPE_REM_WB: {
             printf "RTYPE_REM_WB(c) "
@@ -790,24 +786,18 @@ fn interpreter_c<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
             v2_upper::v2_lower = v2
             printf "RTYPE_DIVW_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            if v2_lower == 0 {
-                result = NEGATIVE_ONE_AS_I64
-            } else {
-                word_wip = div32_ss(v1_lower, v2_lower)
-                result = sgn_extension_u32_u64(word_wip)
-            }
+
+            word_wip, _ = divMod_32_ss(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(word_wip)
+
         }
         case RTYPE_DIVUW_WB: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
             printf "RTYPE_DIVUW_WB(c) "
             print_r_operands(rd, rs1, rs2)
-            if v2_lower == 0 {
-                result = NEGATIVE_ONE_AS_I64
-            } else {
-                word_wip = div32_uu(v1_lower, v2_lower)
-                result = sgn_extension_u32_u64(word_wip)
-            }
+            word_wip, _ = divMod_32_uu(v1_lower, v2_lower)
+            result = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_REMW_WB: {
             v1_upper::v1_lower = v1
