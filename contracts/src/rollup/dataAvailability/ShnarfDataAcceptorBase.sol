@@ -5,26 +5,28 @@ import { IShnarfDataAcceptorBase } from "./interfaces/IShnarfDataAcceptorBase.so
 import { LinethRollupBase } from "../LinethRollupBase.sol";
 
 /**
- * @title Contract to manage shared functions for shnarf accepting and storing.
- * @author ConsenSys Software Inc.
+ * @title Contract to manage shared functions for dataRollingHash accepting and anchoring.
+ * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
 abstract contract ShnarfDataAcceptorBase is LinethRollupBase, IShnarfDataAcceptorBase {
-  /// @dev Value indicating a shnarf exists.
+  /// @dev Value indicating a dataRollingHash is anchored.
   uint256 internal constant SHNARF_EXISTS_DEFAULT_VALUE = 1;
 
   /**
-   * @notice Accepts and stores that a shnarf exists.
-   * @param _parentShnarf The parent shnarf.
-   * @param _shnarf The shnarf to indicate exists.
-   * @param _finalBlockHash The final L2 block hash in the data.
+   * @notice Accepts and anchors that a dataRollingHash exists.
+   * @dev Anchoring only stores the final dataRollingHash of a submission; intermediate chunk
+   *   folds are not persisted. A stream is continued across submissions by chaining from any
+   *   previously-anchored parent dataRollingHash.
+   * @param _parentDataRollingHash The parent dataRollingHash.
+   * @param _dataRollingHash The dataRollingHash to anchor.
    */
-  function _acceptShnarfData(bytes32 _parentShnarf, bytes32 _shnarf, bytes32 _finalBlockHash) internal virtual {
-    require(_blobShnarfExists[_parentShnarf] != 0, ParentShnarfNotSubmitted(_parentShnarf));
-    require(_blobShnarfExists[_shnarf] == 0, ShnarfAlreadySubmitted(_shnarf));
+  function _acceptShnarfData(bytes32 _parentDataRollingHash, bytes32 _dataRollingHash) internal virtual {
+    require(_blobShnarfExists[_parentDataRollingHash] != 0, ParentDataRollingHashNotAnchored(_parentDataRollingHash));
+    require(_blobShnarfExists[_dataRollingHash] == 0, DataRollingHashAlreadyAnchored(_dataRollingHash));
 
-    _blobShnarfExists[_shnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
+    _blobShnarfExists[_dataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
 
-    emit DataSubmittedV4(_parentShnarf, _shnarf, _finalBlockHash);
+    emit DataSubmittedV4(_parentDataRollingHash, _dataRollingHash);
   }
 }

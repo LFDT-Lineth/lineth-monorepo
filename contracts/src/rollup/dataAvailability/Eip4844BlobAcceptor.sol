@@ -14,49 +14,48 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
   /**
    * @notice Submit one or more EIP-4844 blobs.
    * @dev OPERATOR_ROLE is required to execute.
-   * @dev This should be a blob carrying transaction.
-   * @param _blobFinalBlockHashes The final L2 block hash for each blob being submitted.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _finalBlobShnarf The expected final shnarf post computation of all the blob shnarfs.
+   * @dev This should be a blob carrying transaction. Each carried blob's versioned hash
+   *   (via the EIP-4844 `blobhash` opcode) is folded into the dataRollingHash accumulator.
+   *   Chunk boundaries carry no block/conflation semantics, so no per-blob calldata is supplied.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
    */
   function submitBlobs(
-    bytes32[] calldata _blobFinalBlockHashes,
-    bytes32 _parentShnarf,
-    bytes32 _finalBlobShnarf
+    bytes32 _parentDataRollingHash,
+    bytes32 _finalDataRollingHash
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
-    _submitBlobs(_blobFinalBlockHashes, _parentShnarf, _finalBlobShnarf);
+    _submitBlobs(_parentDataRollingHash, _finalDataRollingHash);
   }
 
   /**
    * @notice Internal implementation of EIP-4844 blob submission.
-   * @param _blobFinalBlockHashes The final L2 block hash for each blob being submitted.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _finalBlobShnarf The expected final shnarf post computation of all the blob shnarfs.
+   * @dev Folds blobhash(i) for every blob carried by the transaction into the running
+   *   dataRollingHash, then anchors the final value. Only the final dataRollingHash of the
+   *   submission is persisted; a stream is continued across submissions by chaining from any
+   *   previously-anchored parent dataRollingHash.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
    */
-  function _submitBlobs(
-    bytes32[] calldata _blobFinalBlockHashes,
-    bytes32 _parentShnarf,
-    bytes32 _finalBlobShnarf
-  ) internal virtual {
-    uint256 blobCount = _blobFinalBlockHashes.length;
+  function _submitBlobs(bytes32 _parentDataRollingHash, bytes32 _finalDataRollingHash) internal virtual {
+    require(blobhash(0) != EMPTY_HASH, BlobSubmissionDataIsMissing());
 
-    require(blobCount != 0, BlobSubmissionDataIsMissing());
-    require(blobhash(blobCount) == EMPTY_HASH, BlobSubmissionDataEmpty(blobCount));
+    bytes32 computedDataRollingHash = _parentDataRollingHash;
 
-    bytes32 currentBlobHash;
-    bytes32 computedShnarf = _parentShnarf;
+    for (uint256 i; ; i++) {
+      bytes32 currentBlobHash = blobhash(i);
 
-    for (uint256 i; i < blobCount; i++) {
-      currentBlobHash = blobhash(i);
+      if (currentBlobHash == EMPTY_HASH) {
+        break;
+      }
 
-      require(currentBlobHash != EMPTY_HASH, EmptyBlobDataAtIndex(i));
-      require(_blobFinalBlockHashes[i] != EMPTY_HASH, FinalBlockHashIsZeroHash());
-
-      computedShnarf = _computeShnarf(computedShnarf, _blobFinalBlockHashes[i], currentBlobHash);
+      computedDataRollingHash = _computeDataRollingHash(computedDataRollingHash, currentBlobHash);
     }
 
-    require(_finalBlobShnarf == computedShnarf, FinalShnarfWrong(_finalBlobShnarf, computedShnarf));
+    require(
+      _finalDataRollingHash == computedDataRollingHash,
+      FinalDataRollingHashWrong(_finalDataRollingHash, computedDataRollingHash)
+    );
 
-    _acceptShnarfData(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[blobCount - 1]);
+    _acceptShnarfData(_parentDataRollingHash, _finalDataRollingHash);
   }
 }
