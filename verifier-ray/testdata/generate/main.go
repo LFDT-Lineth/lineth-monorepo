@@ -23,6 +23,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -644,6 +645,39 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}
 
+	// addPrecompiled is like add, but for a sys the caller has already run its
+	// own compiler pipeline on (mirroring buildMessageBusFixtureCase): it skips
+	// compileFullPipeline, which would be wrong here since the caller's
+	// pipeline order (e.g. grandproduct.Compile before localvanishing.Compile)
+	// does not match compileFullPipeline's rangecheck/lookup/logderivativesum
+	// ordering.
+	addPrecompiled := func(source, name string, sys *wiop.System, honest, invalid assignFn) error {
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
+		}
+		compiled, err := codegen.BuildCompiledSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
+		}
+
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
+		if err != nil {
+			return err
+		}
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
+		if invalid != nil {
+			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
+			if err != nil {
+				return err
+			}
+			tc.invalid = &invalidFixture
+		}
+
+		cases = append(cases, tc)
+		systems = append(systems, compiled)
+		return nil
+	}
+
 	for _, factory := range wioptest.VanishingScenarios() {
 		sc := factory()
 		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
@@ -761,7 +795,112 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil, nil, err
 	}
 
+	// Permutation end-to-end coverage: a real wiop.NewPermutation reduced by
+	// grandproduct.Compile directly (not via the message-bus path, which is the
+	// only other caller of grandproduct.Compile in this generator). This
+	// exercises CheckResultIsOne and grandproduct.RowLimitAction — the
+	// row-limit action was, until it was exported for the verifier-ray codegen,
+	// unreachable from any fixture, so AssertAllVerifierActionsHandled below is
+	// the first time this allowlist entry is actually exercised end-to-end.
+	//
+	// The invalid fixture is built by tampering the HONEST proof's transcript
+	// rather than re-running the prover on a mismatched A/B witness: a witness-
+	// level mismatch is always vanishing-self-consistent (the prover's Z column
+	// is always the honest running product OF WHATEVER witness it is given, so
+	// its own recurrence and row-0 boundary constraints still hold) and would
+	// only ever trip grandproduct.verify's cross-module ∏Z == Result check, never
+	// vanishing.verify's per-module quotient identity — but
+	// vanishing_test.zig's "invalid scenarios fail identity" test asserts EVERY
+	// scenario with an .invalid fixture fails with error.QuotientIdentityMismatch,
+	// since writeCompiledFixtures/writeVerifyFixtures share one fixtureCase.invalid
+	// across both vanishing.zig and verify.zig. So instead this flips the
+	// committed Z-endpoint cell for module A directly: that scalar is read both
+	// by the vanishing boundary constraint (pins the Z column's OOD claim to
+	// this transcript cell at the module's last row) and by grandproduct.verify
+	// (feeds ∏Z == Result), so one flip breaks both sub-verifiers — the same
+	// "tamper one already-produced cell" pattern the message-bus fixture below
+	// uses for its public-input flip.
+	{
+		sys, colA, colB := buildPermutationSystem()
+		honest := func(rt *wiop.Runtime) {
+			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
+			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 1)))
+		}
+		if err := addPrecompiled("Permutation", "GrandProductPermutation", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		honestFixture := cases[last].honest
+		// Round 2 ("result round") carries, in order: the shared GrandProduct
+		// Result cell (index 0, expected to equal one), then one Z-endpoint cell
+		// per module (index 1 for modA's z-m0-k0, index 2 for modB's z-m1-k0) —
+		// see the generated grandproduct/vanishing systems for this case. Index 1
+		// is modA's Z endpoint, the one this fixture flips.
+		const resultRoundIdx, zEndpointModAIdx = 2, 1
+		if len(honestFixture.view.rounds) <= resultRoundIdx ||
+			len(honestFixture.view.rounds[resultRoundIdx].cells) <= zEndpointModAIdx {
+			return nil, nil, fmt.Errorf("Permutation/GrandProductPermutation: result round has no Z-endpoint cell at index %d", zEndpointModAIdx)
+		}
+
+		invalidFixture := honestFixture
+		invalidRounds := append([]runtimeTraceRound(nil), honestFixture.view.rounds...)
+		invalidCells := append([]runtimeTraceCell(nil), honestFixture.view.rounds[resultRoundIdx].cells...)
+		invalidCells[zEndpointModAIdx] = flippedExtTraceCell(invalidCells[zEndpointModAIdx])
+		invalidRounds[resultRoundIdx] = runtimeTraceRound{
+			commitment:    honestFixture.view.rounds[resultRoundIdx].commitment,
+			cells:         invalidCells,
+			expectedCoins: honestFixture.view.rounds[resultRoundIdx].expectedCoins,
+		}
+		invalidFixture.view.rounds = invalidRounds
+		cases[last].invalid = &invalidFixture
+	}
+
 	return cases, systems, nil
+}
+
+// buildPermutationSystem builds a size-4 single-column permutation A ~ B,
+// reduced by grandproduct.Compile directly. Compile order: grandproduct's
+// Z-final endpoint is a scalar (ColumnPosition-based) local opening, so
+// localvanishing.Compile must run BEFORE global.Compile to lift it to a
+// multi-valued vanishing that global.Compile can discharge; pcscompiler.Compile
+// runs last so it sees every committed column and LagrangeEval opening the
+// earlier passes registered.
+func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+	sys := wiop.NewSystemf("permutation")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())},
+	)
+
+	grandproduct.Compile(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+	return sys, colA, colB
+}
+
+// flippedExtTraceCell returns an extension-field trace cell with a value
+// guaranteed to differ from cell's, for tampering a single committed cell in
+// a proof's rounds. Used for the grandproduct permutation fixture's invalid
+// proof: it flips the committed Z-endpoint cell that both the vanishing
+// boundary constraint (Z's OOD claim == this transcript cell, at the module's
+// last row) and grandproduct.verify (this cell feeds ∏Z == Result) read, so
+// ONE flip breaks both sub-verifiers' checks.
+func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
+	if cell.extValue == nil {
+		panic("flippedExtTraceCell: expected an extension-field trace cell")
+	}
+	one := elem(1)
+	var flipped field.Ext
+	field.AddByBase(&flipped, cell.extValue, &one)
+	return extTraceCell(flipped)
 }
 
 // buildLookupMultiColumnBenchSystem is a verifier-ray-local stress fixture for

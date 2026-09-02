@@ -51,6 +51,34 @@ func TestBuildRowLimitSystemExtractsCheck(t *testing.T) {
 	}
 }
 
+// TestBuildRowLimitSystemExtractsPermutationCheck reuses newSinglePermutation
+// (grandproduct_test.go) — a size-4 permutation A ~ B compiled through
+// grandproduct.Compile — to confirm BuildRowLimitSystem also picks up the
+// grandproduct.RowLimitAction that compilePermutations registers alongside
+// CheckResultIsOne/FinalProductCheck, and enforces it under
+// wiop.MaxPermutationRows rather than wiop.MaxLookupRows.
+func TestBuildRowLimitSystemExtractsPermutationCheck(t *testing.T) {
+	sys := newSinglePermutation(t)
+
+	rl, err := BuildRowLimitSystem(sys)
+	if err != nil {
+		t.Fatalf("BuildRowLimitSystem() error = %v", err)
+	}
+	if len(rl.Checks) != 1 {
+		t.Fatalf("expected exactly one check, got %d", len(rl.Checks))
+	}
+	check := rl.Checks[0]
+	if len(check.IncludedModules) != 1 || check.IncludedModules[0].Dynamic || check.IncludedModules[0].StaticSize != 4 {
+		t.Fatalf("expected one static A-side module of size 4, got %+v", check.IncludedModules)
+	}
+	if len(check.IncludingsModules) != 1 || check.IncludingsModules[0].Dynamic || check.IncludingsModules[0].StaticSize != 4 {
+		t.Fatalf("expected one static B-side module of size 4, got %+v", check.IncludingsModules)
+	}
+	if check.Limit != wiop.MaxPermutationRows {
+		t.Fatalf("expected limit %d, got %d", wiop.MaxPermutationRows, check.Limit)
+	}
+}
+
 func TestBuildRowLimitSystemNoLookups(t *testing.T) {
 	sys := wiop.NewSystemf("rl-empty")
 	sys.NewRound()
