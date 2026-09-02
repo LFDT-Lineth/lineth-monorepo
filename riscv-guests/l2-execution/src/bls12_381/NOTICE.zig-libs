@@ -1,0 +1,848 @@
+bls12_381 — provenance note
+============================
+
+Kept as a module-local NOTICE (same placement as the sibling `bip340`/
+`adaptor`/`musig2`/`slhdsa`/`falcon` modules — self-contained crypto
+modules not folded into the root `NOTICE`).
+
+Provenance
+----------
+
+bls12_381 — clean-room implementation of the BLS12-381 pairing-friendly
+elliptic curve, from public specifications and design references (no
+third-party SOURCE was ported into this module):
+
+1. **draft-irtf-cfrg-pairing-friendly-curves** (IETF CFRG draft) — the
+   BLS12-381 parameter family definition (the defining polynomials
+   `p(z)`, `r(z)`, `t(z)` for the BLS12 curve family and the specific
+   parameter `z = -0xd201000000010000` that BLS12-381 instantiates them
+   with). A public IETF draft/specification — not a copyrightable work
+   (merger doctrine, `CONVENTIONS.md` §5) — cited here for completeness,
+   not because attribution is a license condition.
+2. **The ZCash/IETF BLS12-381 point-serialization convention**
+   (originally specified by the ZCash project for BLS12-381 pairing
+   output/point encoding; the same convention was later carried into
+   `draft-irtf-cfrg-pairing-friendly-curves`' own serialization
+   appendix, `hash_to_curve`'s companion specs, and is what every
+   reference implementation cited below implements): the flag-bit
+   layout (`compression`/`infinity`/`sort` in the top 3 bits of the
+   first serialized byte), the compressed (48/96-byte) and uncompressed
+   (96/192-byte) point formats for `G1`/`G2`, and — the easy-to-miss
+   detail this module's `fp2.zig` documents prominently — that an `Fp2`
+   element `c0 + c1*u` serializes as `c1 || c0` (HIGH component first),
+   not `c0 || c1`.
+3. **EIP-2537** (Ethereum "Precompile for BLS12-381 curve operations") —
+   consulted for a SEPARATE, simpler wire convention (fixed-width
+   64/128-byte big-endian field-element padding, no flag bits) used by
+   that precompile — NOT the encoding this module implements (this
+   module follows convention (2) above throughout) — cited here only
+   because it independently corroborates the `p`/`r`/generator constant
+   VALUES this module embeds (cross-referenced, not used as the
+   authoritative source for any of them).
+4. **`ethereum/py_ecc`** (MIT license,
+   https://github.com/ethereum/py_ecc) — a DESIGN/FACT reference, not
+   ported source (`CONVENTIONS.md` §5): two of its files —
+   `py_ecc/optimized_bls12_381/optimized_curve.py` and
+   `py_ecc/bls12_381/bls12_381_curve.py` — were fetched (2026-07-14) and
+   found to AGREE byte-for-byte on `field_modulus`, `curve_order`, the
+   `G1`/`G2` curve constant `b`/`b2`, and the `G1`/`G2` generator point
+   coordinates. Those coordinate VALUES (decimal integers in the
+   Python source) were converted to hex and embedded in this module's
+   `g1.zig`/`g2.zig` as plain numeric constants — no Python (or any
+   other) SOURCE CODE, algorithm, or API shape was copied; only the
+   numeric FACTS (which are not independently copyrightable — a
+   mathematical constant is not an expression) were taken, and even
+   those were independently re-verified rather than trusted (see
+   "Verification performed" below).
+5. **`zkcrypto/bls12_381`** (Rust, MIT/Apache-2.0,
+   https://github.com/zkcrypto/bls12_381) and **`supranational/blst`**
+   (C/assembly, Apache-2.0, https://github.com/supranational/blst) —
+   named as the two most widely-deployed BLS12-381 reference
+   implementations for the FIELD-ARITHMETIC CONSTRUCTIONS this module
+   uses (`Fp2`'s Karatsuba 3-multiplication form, `Fp6`/`Fp12`'s
+   Devegili-et-al.-style tower multiplication/squaring/inversion, the
+   complex-method `Fp2.sqrt`). NEITHER repository's source code was
+   read line-by-line during EITHER pass (scaffold or crypto-core): the
+   crypto-core pass implemented every formula from the ACADEMIC
+   references below ((6), (8), (9)) and validated them against
+   independently-computed vectors (see "Verification performed"); the
+   zkcrypto constant names mentioned in two test comments
+   (`FROBENIUS_COEFF_*`) refer to published NUMERIC values compared as
+   numbers, not to consulted code.
+6. **Devegili, Ó hÉigeartaigh, Scott, Dahab, "Multiplication and
+   Squaring on Pairing-Friendly Fields"** (Cryptology ePrint 2006/471)
+   — the standard reference for `Fp6`/`Fp12` Karatsuba-style tower
+   arithmetic formulas, cited directly in `fp6.zig`/`fp12.zig`'s doc
+   comments. A public academic paper — cited for attribution courtesy,
+   not a license requirement.
+7. **Bowe, "Faster Subgroup Checks for BLS12-381"** (Cryptology ePrint
+   2019/814) — the untwist-Frobenius-twist subgroup-check/cofactor-
+   clearing technique named (not implemented) in `g1.zig`/`g2.zig`'s
+   `subgroupCheck`/`clearCofactor` doc comments as the eventual
+   fast-path alternative to the simple `scalarMul`-by-order/cofactor
+   forms actually implemented (the always-correct first version).
+8. **Adj & Rodriguez-Henriquez, "Square root computation over even
+   extension fields"** (Cryptology ePrint 2012/685, Algorithm 9) — the
+   "complex method" square root over `Fp2` for `p ≡ 3 (mod 4)` base
+   fields, implemented in `fp2.zig`'s `sqrt`. A public academic paper —
+   cited for attribution courtesy.
+9. **Bernstein & Lange, "Explicit-Formulas Database"** (EFD,
+   https://hyperelliptic.org/EFD/) — the `add-2007-bl` Jacobian
+   addition and `dbl-2009-l` doubling formulas (`shortw/jacobian-0`)
+   implemented in `g1.zig`/`g2.zig`. A public formula catalogue —
+   cited for attribution courtesy.
+
+10. **Miller, "Short Programs for Functions on Curves"** (unpublished
+    manuscript, 1986) — the original Miller-loop construction: the
+    double-and-add walk that accumulates a rational function's evaluation
+    along a scalar multiple of a curve point, the basis of every pairing
+    algorithm since. Cited in `pairing.zig`'s module doc comment and
+    `multiMillerLoop`'s doc comment.
+11. **Vercauteren, "Optimal Pairings"** (IEEE Transactions on Information
+    Theory 56(1), 2010) — the "optimal ate" pairing variant this module's
+    Part 2 names and is scaffolded around: for the BLS12 curve family,
+    the shortest known Miller-loop length for the embedding degree
+    `k=12`, keyed to the low-Hamming-weight seed
+    `x = -0xd201000000010000`. A public academic paper — cited for
+    attribution courtesy.
+12. **Costello, Lange, Naehrig, "Faster Pairing Computations on Curves
+    with High-Degree Twists"** (PKC 2010) — the D-type-twist line-
+    evaluation/untwisting formulas `multiMillerLoop`'s doc comment points
+    Fable at (BLS12-381's `G2` sextic twist is D-type, confirmed by
+    `g2.zig`'s own `b' = 4(1+u)` curve constant and the `u²=-1`
+    non-residue convention — using the M-type untwisting instead is a
+    well-known BLS12-381 implementation footgun). A public academic
+    paper — cited for attribution courtesy.
+13. **Scott, Benger, Charlemagne, Perez, Kachisa, "On the Final
+    Exponentiation for Calculating Pairings on Ordinary Elliptic
+    Curves"** (Cryptology ePrint 2008/490) — the standard easy-part/
+    hard-part split `pairing.zig`'s `finalExponentiation` implements:
+    the easy part (`f^((p^6-1)(p^2+1))`) is a fixed composition of
+    `Fp12` primitives (see `finalExpEasyPart`'s doc comment for the
+    exact identity); the hard part is entry 17's chain.
+14. **Fuentes-Castañeda, Knapp, Rodríguez-Henríquez, "Faster Hashing to
+    G2"** (Cryptology ePrint 2011/465) — the BLS12-family hard-part
+    addition chain the scaffold originally pointed at. EVALUATED and
+    NOT used: its chain computes `f^(3d)` (`d = (p^4-p^2+1)/r`) — a
+    fixed cube of the canonical pairing, bilinearity-equivalent but not
+    byte-equal to the IETF draft's `e(G1,G2)` test vector (both facts
+    verified numerically for this exact seed before deciding) — see
+    entry 17 for the exact-`d` identity implemented instead. A public
+    academic paper — cited for attribution courtesy.
+15. **`zkcrypto/bls12_381`/`supranational/blst`** (already named in
+    entry 5 above, same license/non-read-source status) — named in
+    `pairing.zig` as the most widely deployed implementations sharing
+    this module's Miller-loop conventions (negative-seed conjugation,
+    D-type line evaluation). Their source remains UNREAD; the Part-2
+    crypto-core pass validated its own construction against the IETF
+    draft's official test vector and py_ecc instead (see "Verification
+    performed (Part-2 crypto-core pass)" below).
+16. **`ethereum/py_ecc`** (already named in entry 4 above, same
+    MIT/design-reference status) — the `e(G1,G2)` KAT CROSS-CHECK
+    source: `py_ecc.bls12_381.pairing` (version 8.0.0, installed from
+    PyPI 2026-07-14) was run to compute `e(G1,G2)` independently; its
+    output equals the IETF draft's canonical vector up to exactly one
+    conjugation (py_ecc's Miller loop walks `|x|` without the
+    negative-seed adjustment — determined by READING
+    `bls12_381_pairing.py`, which is MIT-licensed and was consulted
+    here as a FACT source about py_ecc's own convention, not as a
+    design source for this module's already-written loop). The
+    basis conversion used for the comparison (py_ecc's flat
+    `Fp[w]/(w^12-2w^6+2)` -> this module's tower, via `u = w^6-1`) was
+    validated as a ring isomorphism on random products before use.
+17. **Hayashida, Hayasaka, Teruya, "Efficient Final Exponentiation via
+    Cyclotomic Structure for Pairings over Families of Elliptic
+    Curves"** (Cryptology ePrint 2020/875) — the EXACT-`d` hard-part
+    identity `finalExpHardPart` implements (BLS12 case):
+    `d = (p^4-p^2+1)/r = k*(x+p)*(x^2+p^2-1) + 1`, `k = (x-1)^2/3`.
+    Re-verified numerically as an exact integer identity for this
+    module's seed before implementation; `k` is comptime-derived from
+    the seed in code (no transcribed constant). A public academic
+    paper — cited for attribution courtesy.
+18. **draft-irtf-cfrg-pairing-friendly-curves-11, Appendix B** — the
+    PRIMARY `e(G1,G2)` KAT source: the official BLS12-381 optimal-ate
+    test vector (`e_0..e_11`), fetched 2026-07-14 from ietf.org and
+    mechanically reordered into this module's tower/wire layout (the
+    draft's input points were confirmed to be this module's own
+    generators). Matches this module's pairing output byte-for-byte.
+    Same not-copyrightable-parameter status as entry 1.
+
+19. **RFC 9380** ("Hashing to Elliptic Curves", IETF CFRG/CFRG-adjacent
+    RFC) — the hash-to-curve specification Part 3 (`hash_to_curve.zig`,
+    SCAFFOLDED 2026-07-14) implements: `expand_message_xmd` (§5.3.1),
+    `hash_to_field` (§5.2), the Simplified SWU map for `AB == 0` curves
+    (§6.6.2/§6.6.3), and the two BLS12-381 suite definitions
+    `BLS12381G1_XMD:SHA-256_SSWU_RO_`/`BLS12381G2_XMD:SHA-256_SSWU_RO_`
+    (§8.8.1/§8.8.2, including the `Z`/`A'`/`B'` SSWU parameters for both
+    `G1`'s and `G2`'s isogenous curves, embedded directly in
+    `hash_to_curve.zig` as small cited constants — see entry 20). A
+    public IETF RFC — not a copyrightable work (merger doctrine, same
+    status as entry 1's pairing-friendly-curves draft), cited here for
+    completeness. Fetched as raw text
+    (`https://www.rfc-editor.org/rfc/rfc9380.txt`, 2026-07-14) — every
+    numeric constant and test vector this pass embeds was extracted
+    programmatically from that raw text (not retyped from a rendered
+    page, and not trusted from memory) and cross-checked for the
+    expected byte length before being committed to source; see
+    "Verification performed (Part-3 scaffold pass)" below.
+20. **RFC 9380 Appendix E.2/E.3** (the 11-isogeny map for `G1`, the
+    3-isogeny map for `G2`) — the rational-map coefficient tables
+    `isogenyMap11`/`isogenyMap3` (`hash_to_curve.zig`) embed: 53 `Fp`
+    constants (E.2: `x_num` 12, monic `x_den` 10, `y_num` 16, monic
+    `y_den` 15) and 13 `Fp2` constants (E.3: 4 + 2 + 4 + 3). SOURCED by
+    the Part-3 crypto-core pass (2026-07-14) programmatically from the
+    RFC's raw text — a scratch Python parser split the `k_(i,j) = ...`
+    entries of the fetched `rfc9380.txt` (entry 19's copy), joined the
+    multi-line hex continuations mechanically, range-checked every
+    value against `p`, and emitted the Zig table literals directly (no
+    hand retyping of any value at any point). Verified independently —
+    see "Verification performed (Part-3 crypto-core pass)" below. Same
+    not-copyrightable-parameter status as entry 19.
+21. **RFC 9380 §7 + §8.8.1/§8.8.2 `h_eff`** — the suite-pinned
+    `clear_cofactor` scalars `hash_to_curve.zig` embeds
+    (`g1_h_eff_bytes` = `0xd201000000010001`, `g2_h_eff_bytes` = the
+    636-bit §8.8.2 value), both cited from the RFC's raw text. §7
+    defines `clear_cofactor(P) := h_eff * P` and — for suites whose
+    `h_eff` comes from a fast clearing method, which both BLS12-381
+    suites' do (Scott [WB19] §5 for `G1`, Budroni-Pintore [BP17] §4.1
+    for `G2`, per the RFC's own suite notes) — states that plain
+    multiplication by the cofactor `h` "does not generally give the
+    same result ... and MUST NOT be used". This CORRECTED the
+    scaffold's stated plan to reuse `g1`/`g2.Jacobian.clearCofactor`
+    (multiply-by-true-`h`) for RFC 9380's `clear_cofactor`; see the
+    verification section below for the empirical confirmation that the
+    two differ.
+
+No GPL/LGPL/AGPL source was consulted or copied anywhere in this module.
+`std.crypto.ff` (`Modulus`/`Fe`/`Uint` — MIT, part of Zig itself) is used
+via its public API for all Montgomery modular arithmetic underneath `Fp`/
+`Fr`; no new big-integer or modular-arithmetic primitive is implemented
+by this module.
+
+Verification performed
+-----------------------
+
+Every numeric constant this scaffold embeds was INDEPENDENTLY
+RE-DERIVED or cross-checked, not merely transcribed from a single
+source, before being committed to source:
+
+- **`p`, `r`**: both re-derived directly from the BLS12-381 defining
+  parameter `z = -0xd201000000010000` via the pairing-friendly-curves
+  family formulas `r(z) = z^4 - z^2 + 1` and `p(z) = (z-1)^2 * (z^4 -
+  z^2 + 1) / 3 + z`, and confirmed to equal the values fetched from
+  source (4) above, byte-for-byte.
+- **`G1`/`G2` generator coordinates**: fetched from source (4)'s TWO
+  independent files (which agreed with each other), then independently
+  confirmed ON-CURVE by direct modular arithmetic — `y^2 == x^3 + 4 (mod
+  p)` for `G1`, and `y^2 == x^3 + 4(1+u) (mod p)` in `Fp2` (using the
+  `u^2 = -1` non-residue convention this module documents throughout)
+  for `G2` — rather than trusted on citation alone.
+- **`G1`/`G2` compressed/uncompressed serialization bytes** (the KAT
+  vectors embedded in `g1.zig`/`g2.zig`'s tests): computed FROM the
+  above independently-verified generator coordinates by direct,
+  from-scratch application of the documented ZCash/IETF flag-bit
+  encoding rule (source (2) above) — NOT copied from any third-party
+  test suite. The resulting compressed `G1` generator bytes
+  (`97f1d3a7...`) match the well-known publicly-cited value for this
+  constant, corroborating both the generator coordinates and the
+  encoding-rule implementation independently.
+- **`h1` (`G1` cofactor)**: re-derived from `z` via `#E(Fp) = p + 1 -
+  (z+1)`, `h1 = #E(Fp) / r`, and confirmed the division is EXACT (zero
+  remainder) — not transcribed from any single source.
+- **`h2` (`G2` cofactor)** — **CORRECTED during the crypto-core pass
+  (2026-07-14): the scaffold's original derivation was WRONG.** The
+  scaffold computed `p^2 + 1 - t2` (`t2 = t^2 - 2p`, `t = z+1`) — but
+  that is the order of `E(Fp2)` (the ORIGINAL curve over `Fp2`), not of
+  the SEXTIC twist `E'` that `g2.zig` implements. `#E(Fp2)` is also
+  divisible by `r` (it contains `E(Fp) ⊇ G1`), so the scaffold's
+  exact-division cross-check passed despite describing the wrong
+  curve; the resulting value differed from the true `h2` in its last
+  16 bytes (`...4f83786ecdc4edc75b1ce38e1c72e38f` instead of
+  `...1616ec6e786f0c70cf1c38e31c7238e5`). The corrected value was
+  re-derived from the CM equation for the sextic twists —
+  `f^2 = (4p^2 - t2^2)/3`, `#E'(Fp2) = p^2 + 1 - (t2 - 3f)/2`
+  (the `(t2 + 3f)/2` sign gives the other sextic twist, whose order is
+  NOT divisible by `r` — cross-checked), `h2 = #E'(Fp2)/r` EXACT — and
+  verified two more independent ways: (a) it matches the h2 published
+  across BLS12-381 implementations (kilic/bls12-381 `bls12_381.go`,
+  paulmillr/noble-bls12-381 `math.ts`, and the
+  pairing-friendly-curves draft's parameter listing); (b) EMPIRICALLY,
+  for several independently-constructed non-subgroup points `P` on
+  `E'(Fp2)`, `[#E']P == O` and `[r]([h2]P) == O` hold with the
+  corrected value and BOTH FAIL with the scaffold's old value
+  (Lagrange's theorem rules the old value out as a multiple of any
+  point order). `g2.zig`'s tests enforce the behavioral consequence
+  (`clearCofactor` of a non-subgroup point passes `subgroupCheck`).
+
+All of the above re-derivation was performed with an independent
+Python scratch computation (not part of this repository, not itself a
+design reference — see `bip340`/`adaptor`'s precedent for this same
+"compute independently, don't just cite" pattern) during the
+scaffolding pass, 2026-07-14; the `h2` correction and the additional
+verification below during the crypto-core pass, same date.
+
+Verification performed (crypto-core pass, 2026-07-14)
+------------------------------------------------------
+
+The pass that filled in every arithmetic body added the following
+independently-computed test vectors and cross-checks (all wired into
+the module's tests):
+
+- **`G1`/`G2` scalar-multiplication cross-check vectors** (`[2]G`,
+  `[k]G`, `[2]G2`, `[k]G2` compressed, for
+  `k = 0x0123...cdef` — see `g1.zig`/`g2.zig`'s KAT comments): computed
+  with an independent from-scratch big-integer implementation using
+  TEXTBOOK AFFINE-coordinate formulas (chord-and-tangent with a modular
+  inverse per operation) — deliberately a different algorithm family
+  from the module's Jacobian/Montgomery arithmetic, so agreement is a
+  genuine cross-check rather than a shared-bug echo.
+- **`Fp6`/`Fp12` Frobenius coefficients**: computed PROGRAMMATICALLY in
+  the module (`γ_1 = ξ^((p-1)/3)`, `γ = ξ^((p-1)/6)` via `Fp2.pow` with
+  comptime-derived exponents — no transcribed table), then (a) verified
+  DEFINITIONALLY by tests asserting `frobenius(a) == a^p` computed with
+  nothing but `mul`/`square`, and (b) cross-checked against the same
+  values independently recomputed with Python big-integer
+  exponentiation — which also match the published
+  `FROBENIUS_COEFF_FP6_C1[1]`/`FROBENIUS_COEFF_FP12_C1[1]` constants in
+  zkcrypto/bls12_381 (constants compared as numbers; that source's CODE
+  remains unread, per the Provenance section).
+- **Quadratic-residue facts used by tests**: `x^3 + 4` is a QR mod `p`
+  for `x = 4` (and NOT for `x = 1..3`); `ξ = 1 + u` is a quadratic
+  non-residue in `Fp2` (`ξ^((p^2-1)/2) == -1`); the `G1` point with
+  `x = 4` and the `G2` point with `x = u` are on-curve but NOT in the
+  order-`r` subgroups (`[r]P != O`) — all computed independently with
+  Python big-integer arithmetic.
+- **`Fr.reduceWide` 64-byte vector**: `(2^512 - 1) mod r` computed
+  independently and embedded as a byte-exact KAT.
+
+Frobenius coefficients (resolution of "Deliberately NOT sourced")
+------------------------------------------------------------------
+
+The scaffold deliberately left the `Fp6`/`Fp12` Frobenius coefficients
+un-hardcoded. The crypto-core pass resolved this with the scaffold's
+recommended option (a): the coefficients are DERIVED IN CODE from the
+verified `p` (comptime-derived exponents + runtime `Fp2.pow`) — no
+hand-transcribed constant table exists anywhere in the module; the
+tests above pin the derived values byte-exactly.
+
+Verification performed (Part-2 crypto-core pass, 2026-07-14)
+-------------------------------------------------------------
+
+The pass that implemented the pairing added the following
+independently-computed checks (all beyond the module's own
+bilinearity property suite, which needs no external constant):
+
+- **The hard-part exponent identity** (entry 17): verified as an EXACT
+  integer equality (`k*(x+p)*(x^2+p^2-1) + 1 == (p^4-p^2+1)/r` for
+  `x = -0xd201000000010000`) with independent Python big-integer
+  arithmetic before implementation; the FCKRH chain (entry 14) was
+  likewise verified to equal `3d` — the reason it was NOT used. Also
+  verified numerically: `p^6 ≡ -1 (mod p^4-p^2+1)` (the
+  conjugation-as-inversion fact the chain relies on), and `3 | (x-1)^2`
+  (the comptime-enforced exactness of `k`).
+- **The `e(G1,G2)` KAT** (entries 16 and 18): the IETF draft's
+  Appendix B vector (primary, byte-for-byte) and py_ecc 8.0.0's
+  independently computed value (cross-check, equal up to exactly one
+  conjugation — the two projects' documented negative-seed-convention
+  difference; the c0 halves are byte-identical and the c1 halves
+  exactly negate mod p, both facts checked numerically). Two external
+  sources plus this module's from-scratch third implementation agreeing
+  (up to the documented convention) triangulate the value.
+- **The `w^3` line-normalization fact** (`lineEval`'s doc comment —
+  evaluating lines at the twisted image of `P` multiplies the Miller
+  value by `w^3` per line, which final exponentiation kills):
+  `(w^3)^((p^12-1)/r) = 1` follows from `(w^3)^(p^6-1) = -1` and
+  `2 | (p^2+1)`; the byte-exact KAT above confirms the end-to-end
+  normalization empirically.
+
+**Status: Part 1 COMPLETE (crypto-core pass done, 2026-07-14).** All
+field-tower and group arithmetic is implemented and KAT/property-tested.
+
+**Status: Part 2 COMPLETE (crypto-core pass done, 2026-07-14 — see
+entries 10-18 above for its design references).** The optimal ate
+Miller loop, the full final exponentiation, `Fp12.cyclotomicSquare`
+(Granger–Scott) and `Fp12.frobeniusMap` are implemented; the byte-exact
+`e(G1,G2)` KAT (IETF draft primary + py_ecc conjugate cross-check) and
+the full bilinearity property suite are wired and green.
+`zig build test-bls12_381` passes 112/112 in Debug AND ReleaseFast.
+See `SPEC.md`'s Status and Backlog.
+
+Verification performed (Part-3 scaffold pass, 2026-07-14)
+------------------------------------------------------------
+
+- **RFC 9380's own text, not memory or a rendered page, was the
+  source**: `rfc9380.txt` (entry 19) was fetched and every constant/
+  vector this pass embeds — the K.1 `expand_message_xmd` vectors, the
+  J.9.1/J.10.1 `u[0]`/`u[1]`/`P` values, and the `G1`/`G2` SSWU `Z`/
+  `A'`/`B'` parameters (§8.8.1/§8.8.2) — was extracted from that raw
+  text programmatically (a scratch Python parser, not part of this
+  repository, same "compute independently, don't just cite" precedent
+  as Parts 1-2's own verification), with every extracted field's byte
+  length cross-checked against its expected width (48 bytes per `Fp`
+  element, 96 for a `c0`/`c1` pair) before being embedded in
+  `hash_to_curve.zig`.
+- **`g1_iso_a`'s left-padding, caught and fixed by this cross-check**:
+  RFC 9380's own text gives `A' = 0x144698a3...` — 94 hex digits (47
+  bytes), one byte SHORTER than `Fp`'s 48-byte canonical width (a
+  leading zero byte the RFC's own decimal-free hex notation omits, not
+  an error in the RFC). Left-padded to `0x00144698a3...` (48 bytes)
+  before embedding; `g1_iso_b` needed no padding (already exactly 96
+  hex digits). Both re-verified structurally: `hexBytes(48, ...)` at
+  comptime rejects any non-96-hex-digit-length input outright (compile
+  error), so a hypothetical wrong-length transcription would have
+  failed the build, not silently produced a wrong value.
+- **The two REAL functions this pass adds
+  (`expandMessageXmd`/`hashToFieldFp`/`hashToFieldFp2`) are pinned
+  byte-exact against RFC 9380's own vectors, not merely believed
+  correct by inspection**: `expandMessageXmd` against Appendix K.1 (all
+  5 published messages, both published `len_in_bytes` values 0x20 and
+  0x80 — the latter exercising `ell=4`, a case neither `frost`'s nor
+  `voprf`'s existing fixed-`ell` `expand_message_xmd` implementations
+  ever needed); `hashToFieldFp` against Appendix J.9.1's `u[0]`/`u[1]`
+  (all 5 messages); `hashToFieldFp2` against Appendix J.10.1's
+  `u[0]`/`u[1]` (`c0`/`c1` both checked, all 5 messages). All of these
+  tests are RUN, not merely wired — `zig build test-bls12_381` reports
+  them passing (see `SPEC.md`'s Verification section for the exact
+  count).
+- **The `Fp` wide-reduction construction** (`reduceWideToFp`,
+  `hash_to_curve.zig`) was confirmed, not assumed, to be a valid
+  generalization of `scalar.zig`'s existing `Fr.reduceWide`: by reading
+  `std.crypto.ff`'s `Modulus(bits).reduce` signature directly
+  (`fn reduce(self: Self, x: anytype) Fe` — generic in the input
+  width), not by pattern-matching `Fr`'s code and hoping it transfers.
+
+**Status: Part 3 SCAFFOLDED (2026-07-14).**
+`expandMessageXmd`/`hashToFieldFp`/`hashToFieldFp2` were implemented
+and byte-exact-KAT-verified against RFC 9380's own vectors (see
+above); `sswuG1`/`isogenyMap11`/`sswuG2`/`isogenyMap3` were left as
+`@panic("TODO(fable): ...")` stubs for the crypto-core pass below.
+
+Verification performed (Part-3 crypto-core pass, 2026-07-14)
+-------------------------------------------------------------
+
+The pass that filled in the `map_to_curve` core (`sswuG1`/`sswuG2`,
+`isogenyMap11`/`isogenyMap3`, plus the new `Fp.inv0`/`Fp.sgn0`/
+`Fp2.inv0`/`Fp2.sgn0` helpers in `fp.zig`/`fp2.zig`) verified its
+constants and construction as follows:
+
+- **Isogeny coefficient tables (entries 20)**: parsed programmatically
+  from `rfc9380.txt` (never retyped), then validated by an INDEPENDENT
+  scratch Python implementation of the entire chain —
+  `expand_message_xmd` → `hash_to_field` → §6.6.2 SSWU → Appendix
+  E.2/E.3 `iso_map` (Horner over the parsed tables) → affine point add
+  → `h_eff` scalar multiplication — using plain Python big-integer
+  arithmetic and textbook affine group formulas (a different algorithm
+  family from this module's `std.crypto.ff`/Jacobian arithmetic, so
+  agreement is a genuine cross-check, same discipline as Parts 1-2).
+  That independent implementation reproduces RFC 9380's OWN J.9.1 and
+  J.10.1 vectors byte-exactly at every published stage (`u[0]`/`u[1]`,
+  `Q0`/`Q1`, final `P`) for all 5 messages in both groups, where the
+  J-vectors themselves were ALSO parsed from the raw text rather than
+  retyped. Additionally, for arbitrary non-vector inputs, the parsed
+  tables were confirmed to map points of `E1'`/`E2'` onto points of
+  `E`/`E'` (curve-membership preservation — a whole-table structural
+  check no single vector exercises). The module's own Zig tests then
+  pin the same `Q0`/`Q1`/`P` vectors byte-exactly.
+- **`h_eff` vs plain-cofactor divergence (entry 21)**: confirmed
+  empirically with the independent implementation — for the RFC's own
+  vector points `R = Q0 + Q1`, `[h1]R != [h_eff_G1]R` and
+  `[h2]R != [h_eff_G2]R` in every case (both land in the order-`r`
+  subgroup, but on DIFFERENT points), so using Part 1's
+  `clearCofactor` here would silently break RFC 9380 suite conformance
+  — exactly what §7's MUST NOT warns about. `hash_to_curve.zig`
+  multiplies by `h_eff` via `scalarMulBytes` instead.
+- **SSWU exceptional-branch totality**: verified numerically that
+  `g(B/(Z*A))` is a quadratic residue on both `E1'` and `E2'` (so the
+  `tv1 == 0` exceptional case never falls through to the gx2 branch),
+  that `-1/Z` is a QR in `Fp` (both `u = 0` and `Z u^2 = -1` reach the
+  G1 exceptional branch) but a non-residue in `Fp2` (only `u = 0`
+  reaches G2's), and that the mapped points remain on `E1'`/`E2'` in
+  all these cases; a Zig test pins the `u = 0` case for both groups.
+- **Suite parameters re-confirmed**: the scaffold's embedded
+  `A'`/`B'`/`Z` values for both suites were re-checked against the
+  RFC's §8.8.1/§8.8.2 raw text during this pass (byte-for-byte,
+  including `g1_iso_a`'s documented left-pad).
+
+**Status: Part 3 COMPLETE (crypto-core pass, 2026-07-14).** The full
+RFC 9380 chain is implemented and byte-exact against the RFC's own
+vectors at every published stage; on-curve + subgroup property tests
+cover non-vector messages. `zig build test-bls12_381` passes 128/128
+in Debug AND ReleaseFast (0 panics); `zig fmt --check
+modules/bls12_381/` is clean. See `SPEC.md`'s Status and Backlog.
+
+Part 4 (bls_sig.zig) — provenance and test-vector sourcing
+------------------------------------------------------------
+
+1. **draft-irtf-cfrg-bls-signature-05** (IETF CFRG draft) — the BLS
+   signature scheme specification this file implements: ciphersuite
+   IDs/DSTs (§4.2.3), `KeyGen` (§2.3), `SkToPk`/`KeyValidate`
+   (§2.4/§2.5), `CoreSign`/`CoreVerify` (§2.6/§2.7), `Aggregate`
+   (§2.8), the ProofOfPossession scheme's `CoreAggregateVerify`/
+   `AggregateVerify`/`FastAggregateVerify`/`PopProve`/`PopVerify`
+   (§3.3.x). Fetched 2026-07-14 from
+   https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.txt
+   — a public IETF draft/specification, not a copyrightable work
+   (merger doctrine, `CONVENTIONS.md` §5) — cited for completeness,
+   not because attribution is a license condition. Every pseudocode
+   quotation in `bls_sig.zig`'s doc comments was fetched from this
+   exact document on this date; no third-party SOURCE CODE was read
+   or ported.
+2. **`ethereum/bls12-381-tests`** (tag `v0.1.2`, JSON encoding,
+   CC0-1.0-licensed test vectors — no attribution obligation, cited
+   for provenance only) — the source of `bls_sig.zig`'s wired `sign`,
+   `verify`, `aggregate`, and `fastAggregateVerify` KATs. Downloaded
+   2026-07-14 from
+   https://github.com/ethereum/bls12-381-tests/releases/download/v0.1.2/bls_tests_json.tar.gz,
+   extracted, and read directly (not transcribed from memory or a
+   secondary source):
+   - `sign/sign_case_11b8c7cad5238946.json` — the `sign` KAT.
+   - `verify/verify_valid_case_195246ee3bd3b6ec.json` — the `verify`
+     accept-case KAT. (The upstream repo's paired
+     `verify_tampered_signature_case_195246ee3bd3b6ec.json` was
+     DELIBERATELY NOT used for the reject case — confirmed empirically
+     that its byte-flipped signature fails `g2.fromBytesCompressed`
+     itself with `error.NotOnCurve`, i.e. it tests deserialization
+     rejection, not `verify`'s pairing-equation rejection, since this
+     module's `verify` takes an already-decoded `Signature`, not raw
+     bytes. The reject case instead substitutes
+     `aggregate_0xabab...ab.json`'s first signature — a genuine,
+     on-curve, in-subgroup point for a different signer/message — to
+     isolate the equation check itself.)
+   - `aggregate/aggregate_0xabababababababababababababababababababababababababababababababab.json`
+     — the `aggregate` KAT (all three of its input signatures are also
+     reused, one as the `verify` reject case above).
+   - `fast_aggregate_verify/fast_aggregate_verify_valid_3d7576f3c0e3570a.json`
+     — the `fastAggregateVerify` KAT (its signature is the SAME value
+     the `aggregate` KAT above independently reproduces).
+   This is the same ciphersuite and the same test-case-category naming
+   (`sign`/`verify`/`aggregate`/`fast_aggregate_verify`/
+   `eth_aggregate_pubkeys`/`eth_fast_aggregate_verify`) as the
+   Ethereum `consensus-spec-tests` repository's
+   `general/phase0/bls/` suite the originating task pointed at;
+   that repository's actual vector files ship only inside a
+   release tarball (`general.tar.gz`, ~200MB) this pass did not
+   download, so `bls12-381-tests` — the smaller, directly fetched and
+   independently verified sibling/generator project (same
+   organization, same ciphersuite, matching category names) — was
+   used instead. This substitution is recorded here explicitly rather
+   than silently presented as "the consensus-spec-tests vectors."
+3. **EIP-2333** ("BLS12-381 Key Generation") — consulted ONLY to
+   establish that it is NOT directly reusable as a `KeyGen` test
+   vector source for this file's `-05`-draft `keyGen`: EIP-2333's
+   `derive_master_SK` pre-hashes the KDF salt on its first call
+   (`salt = H("BLS-SIG-KEYGEN-SALT-")`), which
+   draft-irtf-cfrg-bls-signature-05 §2.3's own text documents as the
+   OLDER, `-04`-compatible behavior — NOT `-05`'s (raw ASCII salt on
+   the first call, hashing only on retry). No EIP-2333 vector or
+   constant was transcribed into this module.
+
+Verification performed (Part-4 scaffold pass, 2026-07-14)
+------------------------------------------------------------
+
+`bls_sig.zig`'s scaffold-era REAL functions (wire codecs, `keyGen`,
+`skToPk`, `keyValidate`, `aggregate`, `aggregatePublicKeys`,
+`negatedG1Generator`) were exercised against: property tests needing no
+external constant (round-trip codecs, `keyGen` determinism/IKM-length
+precondition, `keyValidate` accepting a freshly-derived key and
+rejecting the identity and a known non-subgroup point, `aggregate`
+commutativity/associativity); AND the byte-exact `aggregate` KAT above
+(entry 2), which passed already at scaffold time since `aggregate`
+requires no pairing. The five security-critical cores were left as
+`@panic("TODO(fable): ...")` stubs with their tests wired but
+crashing — the state the crypto-core pass below started from.
+
+Verification performed (Part-4 crypto-core pass, 2026-07-14)
+------------------------------------------------------------
+
+The five pairing-based cores (`sign`, `verify`, `coreAggregateVerify`/
+`aggregateVerify`, `fastAggregateVerify`, `popProve`/`popVerify`) were
+implemented exactly per the scaffold's doc-comment constructions (no
+third-party source code read or ported — the draft text of entry 1 and
+this module's own Parts 1-3 are the only inputs) and verified against:
+
+- The wired byte-exact KATs of entry 2, now PASSING: `sign` reproduces
+  the published 96-byte signature exactly; `verify` accepts the valid
+  vector and rejects the substituted mismatched signature;
+  `fastAggregateVerify` accepts the published 3-pubkey vector.
+- Self-consistent round trips: `popProve`/`popVerify` (accept + a
+  wrong-key proof rejected) and end-to-end `keyGen` -> `skToPk` ->
+  `sign` -> `verify` -> `aggregate` -> `aggregateVerify` with
+  wrong-message/wrong-key/swapped-message tampering rejected.
+- Dedicated fail-closed security-check tests proving the mandatory
+  draft §2.7/§3.3.3 preconditions actually fire: the IDENTITY public
+  key is rejected by `verify`/`popVerify`/`aggregateVerify`
+  (KeyValidate), and an on-curve NON-SUBGROUP `G2` point (crafted via
+  `mapToCurveG2` WITHOUT cofactor clearing; its non-membership asserted
+  in the test) is rejected as a signature by `verify`/`popVerify`/
+  `aggregateVerify`/`fastAggregateVerify` (signature_subgroup_check) —
+  all returning `false`, never panicking.
+- An 8-signer aggregate (9 pairing terms) crossing
+  `coreAggregateVerify`'s stack-chunked Miller-accumulator boundary,
+  accept + cross-boundary tamper reject.
+
+`zig build test-bls12_381` reports 148/148 tests passing, 0 panics, in
+BOTH Debug and ReleaseFast; `zig fmt --check modules/bls12_381/` is
+clean.
+
+**Status: Part 4 COMPLETE (crypto-core pass, 2026-07-14).** See
+`SPEC.md`'s "Part 4 design" section and `bls_sig.zig`'s module doc
+comment for the settled design record.
+
+Part 5 (kzg.zig) — provenance and test-vector sourcing (SCAFFOLD PASS, 2026-07-14)
+------------------------------------------------------------------------------------
+
+1. **`consensus-specs` `specs/deneb/polynomial-commitments.md`** (Ethereum
+   Foundation, Apache-2.0/CC0-mixed license per the repo's own `LICENSE`
+   — a public spec, not a copyrightable work per the merger doctrine,
+   `CONVENTIONS.md` §5, same status as the pairing-friendly-curves draft
+   entry 1 above) — fetched 2026-07-14 from
+   `https://raw.githubusercontent.com/ethereum/consensus-specs/master/specs/deneb/polynomial-commitments.md`.
+   Every constant this pass embeds (`FIELD_ELEMENTS_PER_BLOB`,
+   `BYTES_PER_FIELD_ELEMENT`/`_COMMITMENT`/`_PROOF`/`_BLOB`,
+   `BLS_MODULUS`, `PRIMITIVE_ROOT_OF_UNITY`, `G1_POINT_AT_INFINITY`,
+   `FIAT_SHAMIR_PROTOCOL_DOMAIN`, `RANDOM_CHALLENGE_KZG_BATCH_DOMAIN`,
+   `NUM_G2_POINTS`/`KZG_SETUP_G2_LENGTH`) and every doc-comment
+   pseudocode quotation (`blob_to_kzg_commitment`, `verify_kzg_proof_impl`,
+   `verify_kzg_proof_batch`, `compute_kzg_proof_impl`,
+   `compute_quotient_eval_within_domain`, `compute_challenge`,
+   `evaluate_polynomial_in_evaluation_form`, `compute_roots_of_unity`,
+   the bit-reversal-permutation helpers) was extracted directly from this
+   fetched text, not from memory. `BLS_MODULUS`'s decimal literal
+   (`52435875175126190479447740508185965837690552500527637822603658699938581184513`)
+   was independently converted to hex and confirmed to equal
+   `scalar.r_bytes` (already independently re-derived and verified,
+   `scalar.zig`) byte-for-byte — see `kzg.zig`'s own wired test. The
+   `hash` primitive `compute_challenge`/`hash_to_bls_field` build on was
+   confirmed to be SHA-256 by additionally fetching
+   `specs/phase0/beacon-chain.md` (same repo, same fetch) and reading its
+   own "`def hash(data: bytes) -> Bytes32` is SHA256" glossary line
+   directly, rather than assumed from general Eth2 familiarity.
+2. **`ethereum/c-kzg-4844`** (Apache-2.0, `github.com/ethereum/c-kzg-4844`)
+   — TWO uses, both fetched 2026-07-14 from the `main` branch:
+   - **`src/trusted_setup.txt`** — the official Ethereum KZG ceremony
+     ("Summoning Ceremony") trusted setup, `@embedFile`d verbatim into
+     this module at `data/trusted_setup.txt` (807177 bytes; sha256
+     `d39b9f2d047cc9dca2de58f264b6a09448ccd34db967881a6713eacacf0f26b7`).
+     Structurally confirmed (line 1 = `4096`, line 2 = `65`, then 4096
+     96-hex-char `G1` lines, 65 192-hex-char `G2` lines, 4096 more
+     96-hex-char `G1` lines — `8259` lines total, matching) AND
+     semantically confirmed by this pass: the first `G1` monomial point
+     (`[s^0]G1`) decodes to the EXACT compressed bytes of THIS module's
+     own `g1.Affine.generator` (`97f1d3a7...`, `g1.zig`'s own
+     independently-verified generator KAT), and the first `G2` monomial
+     point likewise matches `g2.Affine.generator`'s compressed bytes
+     (`93e02b60...`, `g2.zig`'s own KAT) — i.e. the ceremony's monomial
+     basis at exponent 0 is confirmed to be exactly this module's own
+     curve generators, not merely assumed compatible. `loadTrustedSetup`
+     (`kzg.zig`) additionally validates EVERY one of the file's 8257
+     points on-curve AND subgroup-checked (REAL, Parts 1/2's own
+     primitives) before use — see `SPEC.md`'s Part 5 design section.
+     **Ceremony attribution**: this trusted setup is the output of the
+     public, multi-party "KZG Ceremony" (`ceremony.ethereum.org`,
+     run 2023) with contributions from thousands of independent
+     participants; its output is published/distributed as public domain
+     data by the Ethereum Foundation and the `c-kzg-4844` project (no
+     separate license file accompanies `trusted_setup.txt` itself in the
+     upstream repo; the repo's own top-level `LICENSE` is Apache-2.0).
+     Cited here for provenance, not because attribution is a license
+     condition of using published ceremony output.
+   - **`src/setup/setup.c`** — consulted (read directly, not ported) to
+     resolve an ambiguity the spec text alone does not settle: whether
+     `trusted_setup.txt`'s `G1` Lagrange points are stored pre-permuted
+     (bit-reversal order) or in natural order. Reading `load_trusted_setup`
+     directly showed the file is read into a plain array and ONLY THEN
+     bit-reversal-permuted in place (the `g1_values_lagrange_brp` field
+     name, and the `bit_reversal_permutation(...)` call immediately after
+     the read loop, not before) — confirming the FILE itself is natural-
+     order, a finding recorded in `TrustedSetup`'s own doc comment
+     (`kzg.zig`) and `SPEC.md`'s Part 5 design section, since it is
+     exactly the kind of easy-to-invert convention this module's own
+     history (the Part-1 `g2` cofactor, Part-3 `h_eff`) has been bitten
+     by before. `Apache-2.0`; this is a DESIGN-REFERENCE read (one
+     function, to resolve a file-format question), not ported source —
+     no code from `setup.c` appears in `kzg.zig`.
+   - **`tests/{blob_to_kzg_commitment,compute_kzg_proof,verify_kzg_proof,
+     verify_blob_kzg_proof}/kzg-mainnet/*/data.yaml`** — the KAT vectors
+     `kzg.zig`'s tests wire (see below). CC0-1.0-licensed test data (no
+     attribution obligation, cited for provenance only), fetched
+     2026-07-14 and read directly (not transcribed from memory or a
+     secondary source):
+     - `blob_to_kzg_commitment/kzg-mainnet/blob_to_kzg_commitment_case_valid_blob_1/data.yaml`
+     - `compute_kzg_proof/kzg-mainnet/compute_kzg_proof_case_valid_blob_1_0/data.yaml`
+     - `verify_kzg_proof/kzg-mainnet/verify_kzg_proof_case_correct_proof_1_0/data.yaml`
+     - `verify_kzg_proof/kzg-mainnet/verify_kzg_proof_case_incorrect_proof_0_0/data.yaml`
+     - `verify_blob_kzg_proof/kzg-mainnet/verify_blob_kzg_proof_case_correct_proof_1/data.yaml`
+     - `verify_blob_kzg_proof/kzg-mainnet/verify_blob_kzg_proof_case_incorrect_proof_1/data.yaml`
+     The FOUR "valid"/"correct" vectors above were confirmed, during this
+     pass, to all reference the EXACT SAME 131072-byte blob (the constant
+     polynomial `p(x) = 2`, byte-compared across all four fetched files)
+     — so `kzg.zig` embeds this one blob once
+     (`data/kzg_test_vectors/blob_constant_2.hex`, 262144 hex chars / sha256
+     `e9f27c2f13e7eabb5047782fee2442539a1c9ffbaa5c31bd41ea21297c528a94`)
+     and reuses it across all four KAT tests rather than embedding four
+     near-duplicate 128 KiB blobs. Its commitment
+     (`a572cbea904d67468808c8eb50a9450c9721db309128012543902d0ac358a62ae28f75bb8f1c7c42c39a8c5529bf0f4e`)
+     was additionally cross-checked, in this pass, against `g1.zig`'s OWN
+     pre-existing, independently-sourced `two_g_compressed_hex` KAT (the
+     compressed encoding of `[2] * G1_generator`, computed there by a
+     from-scratch Python affine-coordinates implementation with no KZG
+     involved) — both are byte-identical, an unplanned but genuine
+     cross-module confirmation (the constant-2 polynomial's KZG
+     commitment IS `[2] * G1_generator`, since the Lagrange basis sums to
+     the generator) wired as its own test in `kzg.zig`.
+   - The EIP-7594 (PeerDAS) `tests/{compute_cells,
+     compute_cells_and_kzg_proofs,compute_verify_cell_kzg_proof_batch_challenge,
+     recover_cells_and_kzg_proofs,verify_cell_kzg_proof_batch}/` categories
+     were NOT used — out of scope for Part 5 (`SPEC.md`'s Part 5 threat
+     model / out-of-scope note); EIP-4844 itself needs none of them.
+3. **`draft-irtf-cfrg-pairing-friendly-curves`/ZCash/IETF point-
+   serialization convention** (already named in entry 2 above) — `kzg.zig`
+   reuses `g1.zig`/`g2.zig`'s existing compressed-point codecs
+   (`fromBytesCompressed`/`toBytesCompressed`) unchanged; no new wire
+   format is introduced by Part 5.
+
+No GPL/LGPL/AGPL source was consulted or copied anywhere in this pass.
+
+Part 5 (kzg.zig) — CRYPTO-CORE PASS (2026-07-14)
+------------------------------------------------------------------------------------
+
+The formerly-stubbed crypto core (`g1Msm`, the `Fr` FFT and its
+primitive root of unity, `evaluatePolynomialInEvaluationForm`,
+`computeKzgProofImpl`, `verifyKzgProofImpl`/`verifyKzgProofBatchImpl`,
+`computeChallenge`) is now IMPLEMENTED. Provenance for this pass:
+
+1. **`consensus-specs` `specs/deneb/polynomial-commitments.md`** —
+   RE-fetched 2026-07-14 (same URL as scaffold entry 1; sha256 of the
+   fetched text
+   `1c7252d978ca09e73c0d7d48cc10756743fb3bd798ca1bf1965969ad8948d8ba`)
+   and re-read function-by-function during implementation rather than
+   trusting the scaffold's doc-comment quotations alone. Two details
+   confirmed directly against the text: `compute_challenge` uses a
+   16-byte big-endian `FIELD_ELEMENTS_PER_BLOB` width field, while
+   `verify_kzg_proof_batch`'s transcript uses 8-byte width AND count
+   fields (the spec genuinely differs between the two transcripts); and
+   the exact pairing-list signs of `verify_kzg_proof_impl` /
+   `verify_kzg_proof_batch`.
+2. **The primitive `2^32` root of unity in `Fr` is DERIVED, not
+   transcribed**: `7^((r-1)/2^32) mod r` at runtime, per the spec's own
+   `compute_roots_of_unity` formula (`PRIMITIVE_ROOT_OF_UNITY = 7`,
+   spec-cited), with the exponent comptime-derived from the
+   already-verified `scalar.r_bytes` (`root32_exponent_bytes`,
+   `kzg.zig`). No reference implementation's 32-byte root constant was
+   copied or even compared; the value's order is proven exactly `2^32`
+   by tests, and the derived 4096-element domain is pinned against the
+   REAL ceremony output by two monomial-vs-Lagrange commitment
+   cross-check tests (`kzg.zig`).
+3. **`ethereum/c-kzg-4844` `tests/` (CC0-1.0 test data)** — additional
+   KAT vectors fetched 2026-07-14 from the `main` branch (read
+   directly; sha256 of each fetched `data.yaml`):
+   - `blob_to_kzg_commitment/kzg-mainnet/blob_to_kzg_commitment_case_valid_blob_4/data.yaml`
+     (`cbb2b99859288e9b4d177c70c0011ffe69acf8fa7751ffe74f79b96797555f79`)
+     — the "random" blob #4 + its commitment. The blob is embedded at
+     `data/kzg_test_vectors/blob_random_4.hex` (262144 hex chars; sha256
+     `cdae0d24f86dd69ff8e034ac2fd82218eef5d14b6056251f8a23c68dc269e055`),
+     added because the scaffold's constant-2 blob is PERMUTATION-
+     INVARIANT and cannot detect bit-reversal/root-of-unity errors.
+   - `compute_kzg_proof/kzg-mainnet/compute_kzg_proof_case_valid_blob_4_2/data.yaml`
+     (`63d171f243203de27e607cec2f6cc0b2d0f060e75d29308f30d4c7418fdef1af`)
+   - `compute_kzg_proof/kzg-mainnet/compute_kzg_proof_case_valid_blob_4_5/data.yaml`
+     (`70028438c52222f12722afacf5364c0fabbbbdcfc49d346a3927bcf9629705d8`)
+   - `verify_kzg_proof/kzg-mainnet/verify_kzg_proof_case_correct_proof_4_2/data.yaml`
+     (`c564eb494049d3690cfcc6f699c04f3ceedc22f89b5dd97f19ef20397a3bc4e8`)
+   - `verify_kzg_proof/kzg-mainnet/verify_kzg_proof_case_incorrect_proof_4_2/data.yaml`
+     (`885b0730ec4772393f509c1c33c782b4894c1c4179b6aa10ce2d5d3a0fe86e42`)
+   - `compute_blob_kzg_proof/kzg-mainnet/compute_blob_kzg_proof_case_valid_blob_1/data.yaml`
+     (`2208dcc9af170a061d5f39f222e5b8c9809e431ce3daa31a61e1f12c27bfe5fe`)
+   - `compute_blob_kzg_proof/kzg-mainnet/compute_blob_kzg_proof_case_valid_blob_4/data.yaml`
+     (`6098ad6b41146e978e8f9967d6451463ab2415f10c888f76ea2459f35d457e42`)
+   - `verify_blob_kzg_proof/kzg-mainnet/verify_blob_kzg_proof_case_correct_proof_4/data.yaml`
+     (`4449e00ca5a87a096b0fd5b87e5c95d0bea165b9c2eadf993f818300957541b2`)
+   All `_4`-suffixed cases were confirmed during the fetch to reference
+   the byte-identical blob #4, so the ONE embedded blob serves five KAT
+   categories (same de-duplication reasoning as the scaffold's
+   constant-2 blob). The two-blob batch test composes tuples that are
+   each individually pinned byte-exact by the vectors above (c-kzg's
+   own batch cases only expose a boolean, and the batch challenge `r`
+   is unobservable in that boolean for both honest and tampered inputs
+   — the 8+8-byte transcript layout is therefore implemented from the
+   spec text (item 1) and cannot be pinned tighter by ANY black-box
+   vector).
+4. **Algorithm/design references (named, not read as source, same
+   status as `g1.zig`'s formula citations)**: the Bernstein–Lange
+   Explicit-Formulas Database `shortw/jacobian-0` `add-2007-bl` /
+   `madd-2007-bl` / `dbl-2009-l` formulas (the variable-time `G1`
+   helpers — the `add-2007-bl` and `dbl-2009-l` shapes were already in
+   `g1.zig` from Part 1; `madd-2007-bl` is its published `Z2 = 1`
+   specialization); Pippenger's bucket method for `g1Msm` (textbook
+   construction: windowed bucket accumulation + running-sum
+   aggregation); the standard iterative radix-2 Cooley-Tukey butterfly
+   network for the `Fr` NTT; and the Montgomery batch-inversion trick
+   for `batchInvInPlace`. No third-party CODE was consulted, read, or
+   ported for any of them.
+
+**Status: Part 5 COMPLETE (2026-07-14).** Trusted-setup loader (with
+process-wide memoization of the validated embedded setup — see
+`SPEC.md`'s "Part 5 design"), wire codecs/validation, and the full KZG
+crypto core are real; byte-exact against the `ethereum/c-kzg-4844`
+vectors listed above and in the scaffold entry, in Debug and
+ReleaseFast. See `SPEC.md`'s "Part 5 design" section and `kzg.zig`'s
+own module doc comment.
+
+Part 6 (threshold.zig) — SCAFFOLD + CRYPTO-CORE PASS (both 2026-07-14)
+------------------------------------------------------------------------------------
+
+`threshold.zig` — trusted-dealer threshold BLS (Shamir secret sharing +
+Feldman verifiable secret sharing + Lagrange-interpolation-in-the-
+exponent combining), min-pk ciphersuite, built entirely on top of this
+module's own Part 4 (`bls_sig.zig`) primitives. No external
+specification is implemented wholesale here (unlike Parts 1-5, which
+each pin a single named IETF/Ethereum spec): threshold BLS via Shamir +
+Feldman VSS is textbook/folklore cryptographic construction — Shamir
+("How to Share a Secret", CACM 1979) and Feldman ("A Practical Scheme
+for Non-interactive Verifiable Secret Sharing", FOCS 1987) are the
+named foundational references, cited for provenance/completeness (both
+public, decades-old, uncopyrightable mathematical constructions — no
+source of either was consulted or ported). The Lagrange-interpolation-
+at-zero combining step, and the overall "Shamir-share the exponent,
+Feldman-commit each coefficient, recombine linearly" shape, is the same
+construction the sibling `frost` module already implements for
+threshold Schnorr (RFC 9591 Appendix C, `frost.trustedDealerKeygen`/
+`frost.secretShareCombine`) — `threshold.zig`'s constructions are
+explicitly modeled after `frost.zig`'s ALREADY-REAL, KAT-validated
+Horner-evaluation and Lagrange-interpolation loops, ported
+conceptually (same algorithm shape, restated over this module's own
+`Fr`/`G1`/`G2` types rather than `Secp256k1`) — no `frost.zig` CODE was
+copied; `threshold.zig` does not `@import` `frost` and shares no types
+with it. The non-interactive one-round signing/combining structure this
+file exploits (no `frost`-style `SigningNonces`/binding-factor round
+needed, because `bls_sig.sign`'s `R = SK * Q` equation is linear in
+`SK`) is a well-known property of BLS in the threshold-signature
+literature (e.g. Boldyreva, "Threshold Signatures, Multisignatures and
+Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature
+Scheme", PKC 2003 — cited for provenance, not read as source for this
+pass; the property itself follows directly from Part 4's own already-
+implemented, already-cited `sign` equation).
+
+No GPL/LGPL/AGPL source was consulted or copied anywhere in this
+module.
+
+**Status: Part 6 COMPLETE (scaffold + crypto-core pass, both
+2026-07-14).** All functions are real: wire codecs, parameter
+validation, `groupPublicKey`, the thin-over-`bls_sig` `partialSign`/
+`verifyPartialSignature`, and the four genuinely cryptographic cores —
+`evalPolynomialAt` (Shamir evaluation via Horner), `feldman
+CommitCoefficient` (Feldman commit, `bls_sig.skToPk`'s construction),
+`derivePublicKeyShare` (Feldman evaluate-in-the-exponent, Horner over
+`G1`), and `combineSignatures`'s Lagrange-interpolation-in-the-exponent
+step (`frost.deriveInterpolatingValue`'s exact coefficient formula over
+this module's `Fr`). No external test vectors exist for the
+trusted-dealer split itself (the coefficients are caller randomness);
+the verification chain instead pins Part 6 transitively to REAL
+vectors: the keystone tests assert that combining `t` partials equals
+`bls_sig.sign(sk, msg)` BYTE-FOR-BYTE and verifies under the ordinary
+`bls_sig.verify` — and Part 4's `sign`/`verify` are themselves pinned
+to `ethereum/bls12-381-tests` v0.1.2 (see the Part 4 section above). A
+full Pedersen/GJKR-style distributed key generation (no single trusted
+dealer) is explicitly OUT OF SCOPE for this file — see `SPEC.md`'s
+"Part 6 design"/"Out of scope for Part 6". See `SPEC.md`'s "Part 6
+design" section and `threshold.zig`'s own module doc comment.

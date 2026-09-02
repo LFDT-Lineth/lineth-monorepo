@@ -64,6 +64,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const blake2f_impl_mod = b.createModule(.{
+        .root_source_file = zesu_guest.path("src/crypto/backends/blake2f_impl.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const zesu_crypto_backend_mod = b.createModule(.{
         .root_source_file = b.path("src/zesu_crypto_backend.zig"),
         .target = target,
@@ -71,6 +76,29 @@ pub fn build(b: *std.Build) void {
     });
     zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
+    zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
+
+    // Vendored pure-Zig BLS12-381 (zig-libs, MIT — src/bls12_381/) plus the EIP-2537/EIP-4844
+    // adapter (src/bls12_eip2537.zig) that maps the raw precompile encodings onto it. The
+    // vendored module's only declared dependency is `entropy` (backs Fr.random, unreachable
+    // from the precompile surface); we satisfy it with a fail-closed freestanding stub.
+    const bls12_381_mod = b.createModule(.{
+        .root_source_file = b.path("src/bls12_381/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const entropy_stub_mod = b.createModule(.{
+        .root_source_file = b.path("src/bls12_381/entropy.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    bls12_381_mod.addImport("entropy", entropy_stub_mod);
+    const bls12_eip2537_mod = b.createModule(.{
+        .root_source_file = b.path("src/bls12_eip2537.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    bls12_eip2537_mod.addImport("bls12_381", bls12_381_mod);
 
     // Expose the precompile providers (zkvm_provide.zig) as a standalone module so other packages
     // can link the SAME exported zkvm_* symbols this guest uses
@@ -82,6 +110,7 @@ pub fn build(b: *std.Build) void {
     provide_mod.addImport("zesu_zkvm_stdlibs", zesu_zkvm_stdlibs_mod);
     provide_mod.addImport("lineth_zkvm_accel", lineth_accel_mod);
     provide_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
+    provide_mod.addImport("bls12_eip2537", bls12_eip2537_mod);
     provide_mod.addOptions("build_options", guest_options);
 
     const linea_io_mod = b.createModule(.{
@@ -112,6 +141,7 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_zkvm_stdlibs", zesu_zkvm_stdlibs_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
+    guest_module.addImport("bls12_eip2537", bls12_eip2537_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
@@ -169,6 +199,32 @@ pub fn build(b: *std.Build) void {
         .optimize = host_optimize,
     }));
     test_step.dependOn(&b.addRunArtifact(stdlibs_tests).step);
+
+    // Native unit tests for the EIP-2537/EIP-4844 adapter (src/bls12_eip2537.zig): group ops,
+    // MSM, pairing, maps, and the freestanding KZG point-eval — against derivations and the
+    // vendored trusted setup itself (the vendored module's own byte-exact KATs — IETF draft,
+    // RFC 9380, ethereum/bls12-381-tests, c-kzg-4844 — live in src/bls12_381/*.zig and can be
+    // run separately with `zig test` if the vendored copy is ever bumped).
+    const bls12_381_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/bls12_381/root.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    const entropy_stub_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/bls12_381/entropy.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    bls12_381_native_mod.addImport("entropy", entropy_stub_native_mod);
+    const bls12_eip2537_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/bls12_eip2537.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    bls12_eip2537_tests.root_module.addImport("bls12_381", bls12_381_native_mod);
+    test_step.dependOn(&b.addRunArtifact(bls12_eip2537_tests).step);
 
     const l2_execution_ssz_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),
