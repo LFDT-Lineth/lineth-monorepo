@@ -17,14 +17,9 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
-    // write_output provider: default stdout `write` ecall (zesu zkvm_io) unless the
-    // Lineth write_output custom-op accelerator is opted in with -Dwrite-output-accel=true.
-    // Read by zkvm_provide.zig at comptime.
-    const write_output_accel = b.option(bool, "write-output-accel", "Use the Lineth write_output custom-opcode accelerator instead of the default stdout ecall (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
-    guest_options.addOption(bool, "write_output_accel", write_output_accel);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
@@ -42,9 +37,9 @@ pub fn build(b: *std.Build) void {
     //   • zesu_crypto_backend — zesu's own native crypto backend (the handful of its precompiles
     //     with no C-library dependency: modexp, RIPEMD-160), standing in for the two of those
     //     zesu_zkvm_stdlibs leaves as unconditional-failure stubs;
-    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak today): the only actually
-    //     prover-accelerated (custom opcode / circuit) source in this file — zkvm_* the prover
-    //     accelerates at execution rather than at link time, so the ELF stays fully resolved;
+    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak and the standards `write_output`):
+    //     the only actually prover-accelerated (custom opcode / circuit) source in this file —
+    //     accelerated at execution rather than at link time, so the ELF stays fully resolved;
     //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
     //     guest; `_in_start` is supplied by the linker script).
@@ -94,8 +89,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    // provide_mod's default (non-accelerated) write_output forwards to zesu's zkvm_io.
-    provide_mod.addImport("linea_zkvm_io", linea_io_mod);
 
     // The extended wire format's SSZ codec, built for the SAME riscv64/optimize pair as the guest
     // itself (mirrors the native l2_execution_ssz_mod below, for the test host). `l2_execution.zig`
