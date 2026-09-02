@@ -91,15 +91,15 @@ func TestRowLimitAction_RegisteredOnWitnessRound(t *testing.T) {
 
 	var proverHits, verifierHits int
 	for _, a := range r0.ProverActions {
-		if rl, ok := a.(*rowLimitAction); ok {
+		if rl, ok := a.(*RowLimitAction); ok {
 			proverHits++
-			assert.Same(t, q, rl.query, "the action must guard the permutation query")
-			assert.Equal(t, wiop.MaxPermutationRows, rl.limit,
+			assert.Same(t, q, rl.Query, "the action must guard the permutation query")
+			assert.Equal(t, wiop.MaxPermutationRows, rl.Limit,
 				"the per-side budget must be MaxPermutationRows, undivided by the packing arity or the permutation count")
 		}
 	}
 	for _, a := range r0.VerifierActions {
-		if _, ok := a.(*rowLimitAction); ok {
+		if _, ok := a.(*RowLimitAction); ok {
 			verifierHits++
 		}
 	}
@@ -114,7 +114,7 @@ func TestRowLimitAction_RegisteredOnWitnessRound(t *testing.T) {
 // before any action is registered — is what makes the runtime path reachable.
 func TestRowLimitAction_RejectsOverLimitASide(t *testing.T) {
 	_, _, q, rt := buildRowLimitSystem(t, 1<<58, 0) // A at the budget; B dynamic and tiny.
-	action := &rowLimitAction{query: q, limit: wiop.MaxPermutationRows}
+	action := &RowLimitAction{Query: q, Limit: wiop.MaxPermutationRows}
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit A side")
@@ -127,7 +127,7 @@ func TestRowLimitAction_RejectsOverLimitASide(t *testing.T) {
 // over-limit B side.
 func TestRowLimitAction_RejectsOverLimitBSide(t *testing.T) {
 	_, _, q, rt := buildRowLimitSystem(t, 0, 1<<58) // B at the budget; A dynamic and tiny.
-	action := &rowLimitAction{query: q, limit: wiop.MaxPermutationRows}
+	action := &RowLimitAction{Query: q, Limit: wiop.MaxPermutationRows}
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit B side")
@@ -139,7 +139,7 @@ func TestRowLimitAction_RejectsOverLimitBSide(t *testing.T) {
 // in-budget permutation: Check returns nil and Run does not panic.
 func TestRowLimitAction_AcceptsWithinLimit(t *testing.T) {
 	_, _, q, rt := buildRowLimitSystem(t, 4, 4)
-	action := &rowLimitAction{query: q, limit: wiop.MaxPermutationRows}
+	action := &RowLimitAction{Query: q, Limit: wiop.MaxPermutationRows}
 
 	require.NoError(t, action.Check(rt), "an in-budget permutation must pass the verifier check")
 	assert.NotPanics(t, func() { action.Run(rt) }, "an in-budget permutation must not panic the prover")
