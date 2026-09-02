@@ -422,7 +422,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
 			}
 
-			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
 		}
 
 	case air.LookupConstraint[koalabear.Element]:
