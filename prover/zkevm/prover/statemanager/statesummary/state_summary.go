@@ -810,9 +810,12 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 		),
 	)
 
+	// The old value is the zero-storage hash only when *every* limb matches it.
+	// Aggregating the per-limb flags with an OR would light up as soon as a
+	// single limb coincides, which happens for values that are not zero.
 	oldValueLimbExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
-		oldValueLimbExpressions = append(oldValueLimbExpressions, sym.Sub(1, ss.Storage.OldValueIsZero[i]))
+		oldValueLimbExpressions = append(oldValueLimbExpressions, ss.Storage.OldValueIsZero[i])
 	}
 
 	comp.InsertGlobal(
@@ -823,14 +826,15 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 			sym.Add(
 				ss.AccumulatorStatement.IsReadZero,
 				ss.AccumulatorStatement.IsInsert,
-				sym.Neg(sym.Sub(1, sym.Mul(oldValueLimbExpressions...))),
+				sym.Neg(sym.Mul(oldValueLimbExpressions...)),
 			),
 		),
 	)
 
+	// Same as above: the new value is zero only when every limb is zero.
 	zeroizationLibsExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
-		zeroizationLibsExpressions = append(zeroizationLibsExpressions, sym.Sub(1, ss.AccumulatorStatement.FinalHValIsZero[i]))
+		zeroizationLibsExpressions = append(zeroizationLibsExpressions, ss.AccumulatorStatement.FinalHValIsZero[i])
 	}
 
 	comp.InsertGlobal(
@@ -840,7 +844,7 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 			ss.IsStorage,
 			sym.Add(
 				ss.AccumulatorStatement.IsReadZero, ss.AccumulatorStatement.IsDelete,
-				sym.Neg(sym.Sub(1, sym.Mul(zeroizationLibsExpressions...))),
+				sym.Neg(sym.Mul(zeroizationLibsExpressions...)),
 			),
 		),
 	)
@@ -890,9 +894,11 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 		),
 	)
 
+	// The account is unchanged only when every limb of the initial and final
+	// hashes matches, mirroring STATE_SUMMARY_OLD_NEW_STORAGE_EQUAL above.
 	sameBitLimbExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
-		sameBitLimbExpressions = append(sameBitLimbExpressions, sym.Sub(1, ss.Account.InitialAndFinalAreSame[i]))
+		sameBitLimbExpressions = append(sameBitLimbExpressions, ss.Account.InitialAndFinalAreSame[i])
 	}
 
 	comp.InsertGlobal(
@@ -904,7 +910,7 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 			sym.Add(
 				ss.AccumulatorStatement.IsReadNonZero,
 				ss.AccumulatorStatement.IsReadZero,
-				sym.Neg(sym.Sub(1, sym.Mul(sameBitLimbExpressions...))),
+				sym.Neg(sym.Mul(sameBitLimbExpressions...)),
 			),
 		),
 	)
