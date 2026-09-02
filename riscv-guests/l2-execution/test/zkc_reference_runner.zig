@@ -7,25 +7,29 @@
 //!    zkc (exit 0 = valid; nonzero with `EXIT CODE = <n>` = reject). On a valid run, also requires
 //!    a parseable `guest_output = 0x…` line in zkc stdout (the write_output public output).
 //!
-//! 2. **Smoke** (`--input` + `--expect-guest-output`): run one already-extended SSZ input (no wrap)
-//!    and assert zkc's `guest_output` hex matches the golden. Used by CI for the committed sample
-//!    fixture (`test/testdata/stateless_input.ssz`).
+//! 2. **Smoke** (`--input`): run one already-extended SSZ input (no wrap). Host-computes the
+//!    expected wire output via native `runL2Execution` + `encodeOutput` (schema 0x0003 ‖
+//!    keccak256(public_inputs)), then asserts zkc's `guest_output` matches. Used by CI for the
+//!    committed sample fixture (`test/testdata/stateless_input.ssz`). No golden sidecar — the
+//!    preimage/hash relation is checked against the host path. (`zkvm_log` of the plain PI tuple is
+//!    still a no-op; when off-trace logging lands, smoke can also assert on the logged preimage.)
 
 const std = @import("std");
 const spec_runner = @import("spec_runner.zig");
 const vanilla_wrap = @import("vanilla_wrap");
+const l2_execution = @import("l2_execution");
+const l2_execution_ssz = @import("l2_execution_ssz");
 
 const usage =
-    \\zkc-reference-runner — run the guest ELF under zkc (corpus reference-test or smoke golden).
+    \\zkc-reference-runner — run the guest ELF under zkc (corpus reference-test or smoke).
     \\
     \\Corpus mode:
     \\  zkc-reference-runner --fixtures DIR --install-prefix DIR --makefile PATH [options]
     \\Smoke mode:
-    \\  zkc-reference-runner --input FILE.ssz --expect-guest-output HEX|FILE --install-prefix DIR --makefile PATH [options]
+    \\  zkc-reference-runner --input FILE.ssz --install-prefix DIR --makefile PATH [options]
     \\
     \\  --fixtures DIR             the blockchain_tests/ JSON tree (corpus mode)
     \\  --input FILE               already-extended SSZ input (smoke mode; skips wrap)
-    \\  --expect-guest-output X    golden guest_output hex (no 0x) or path to a file containing it
     \\  --install-prefix DIR       zig build install prefix; ELF (+ wrap in corpus mode) under DIR/bin/
     \\  --makefile PATH            arithmetization test Makefile (defines elf-exec / elf-trace)
     \\  --zkc-target NAME          makefile target: elf-exec (default) or elf-trace
@@ -211,25 +215,34 @@ fn parseGuestOutputHex(alloc: std.mem.Allocator, text: []const u8) ?[]const u8 {
     return out;
 }
 
-fn loadExpectedGuestOutput(init: std.process.Init, alloc: std.mem.Allocator, arg: []const u8) ![]const u8 {
-    // Path if the argument names a readable file; otherwise treat as raw hex.
-    const raw = std.Io.Dir.cwd().readFileAlloc(init.io, arg, alloc, .limited(4096)) catch {
-        return std.mem.trim(u8, arg, " \n\r\t");
-    };
-    return std.mem.trim(u8, raw, " \n\r\t");
+fn decodeHex(alloc: std.mem.Allocator, hex: []const u8) ![]u8 {
+    if (hex.len % 2 != 0) return error.InvalidHex;
+    const out = try alloc.alloc(u8, hex.len / 2);
+    _ = try std.fmt.hexToBytes(out, hex);
+    return out;
+}
+
+/// Host path: decode extended input → runL2Execution → encodeOutput (schema ‖ keccak256(PI)).
+fn nativeExpectedGuestOutput(alloc: std.mem.Allocator, raw_input: []const u8) ![l2_execution_ssz.OUTPUT_SIZE]u8 {
+    const decoded = try l2_execution_ssz.decodeInput(alloc, raw_input);
+    const result = try l2_execution.runL2Execution(alloc, decoded);
+    return l2_execution_ssz.encodeOutput(result.public_inputs);
 }
 
 fn runSmoke(
     init: std.process.Init,
     alloc: std.mem.Allocator,
     input_path: []const u8,
-    expect_arg: []const u8,
 ) !void {
-    const expected = try loadExpectedGuestOutput(init, alloc, expect_arg);
-    if (expected.len == 0 or expected.len % 2 != 0) {
-        std.debug.print("error: --expect-guest-output must be non-empty even-length hex (got {} chars)\n", .{expected.len});
-        std.process.exit(2);
-    }
+    const raw_input = std.Io.Dir.cwd().readFileAlloc(init.io, input_path, alloc, .limited(1 << 30)) catch |err| {
+        std.debug.print("error: cannot read '{s}': {s}\n", .{ input_path, @errorName(err) });
+        std.process.exit(1);
+    };
+
+    const expected = nativeExpectedGuestOutput(alloc, raw_input) catch |err| {
+        std.debug.print("FAIL smoke: native runL2Execution failed on '{s}': {s}\n", .{ input_path, @errorName(err) });
+        std.process.exit(1);
+    };
 
     // make/elf-to-json need a path that resolves from the caller's cwd; keep the user path as-is.
     const run = try runExtendedInputUnderZkc(init, alloc, input_path);
@@ -237,29 +250,24 @@ fn runSmoke(
         std.debug.print("FAIL smoke: zkc rejected input '{s}'\n", .{input_path});
         std.process.exit(1);
     }
-    const got = run.guest_output_hex orelse {
+    const got_hex = run.guest_output_hex orelse {
         std.debug.print("FAIL smoke: missing `{s}…` in zkc stdout\n", .{guest_output_prefix});
         std.process.exit(1);
     };
+    const got = decodeHex(alloc, got_hex) catch {
+        std.debug.print("FAIL smoke: invalid guest_output hex: {s}\n", .{got_hex});
+        std.process.exit(1);
+    };
 
-    // Case-insensitive compare (golden file may use either case).
-    if (got.len != expected.len) {
+    if (!std.mem.eql(u8, got, &expected)) {
+        const expected_hex = std.fmt.bytesToHex(&expected, .lower);
         std.debug.print(
-            "FAIL smoke: guest_output length mismatch: got {} hex chars, expected {}\n  got:      {s}\n  expected: {s}\n",
-            .{ got.len, expected.len, got, expected },
+            "FAIL smoke: guest_output mismatch (native encodeOutput vs zkc)\n  got:      0x{s}\n  expected: 0x{s}\n",
+            .{ got_hex, &expected_hex },
         );
         std.process.exit(1);
     }
-    for (got, expected) |g, e| {
-        if (g != std.ascii.toLower(e)) {
-            std.debug.print(
-                "FAIL smoke: guest_output mismatch\n  got:      {s}\n  expected: {s}\n",
-                .{ got, expected },
-            );
-            std.process.exit(1);
-        }
-    }
-    std.debug.print("OK smoke: guest_output = 0x{s}\n", .{got});
+    std.debug.print("OK smoke: guest_output matches native encodeOutput (0x{s})\n", .{got_hex});
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -269,7 +277,6 @@ pub fn main(init: std.process.Init) !void {
 
     var fixtures_dir: ?[]const u8 = null;
     var smoke_input: ?[]const u8 = null;
-    var expect_guest_output: ?[]const u8 = null;
     var install_prefix: ?[]const u8 = null;
     var makefile_arg: ?[]const u8 = null;
     var opts = spec_runner.Options{ .fixtures_dir = "" };
@@ -282,8 +289,6 @@ pub fn main(init: std.process.Init) !void {
             fixtures_dir = takeValue(args, &i, "--fixtures");
         } else if (std.mem.eql(u8, arg, "--input")) {
             smoke_input = takeValue(args, &i, "--input");
-        } else if (std.mem.eql(u8, arg, "--expect-guest-output")) {
-            expect_guest_output = takeValue(args, &i, "--expect-guest-output");
         } else if (std.mem.eql(u8, arg, "--install-prefix")) {
             install_prefix = takeValue(args, &i, "--install-prefix");
         } else if (std.mem.eql(u8, arg, "--makefile")) {
@@ -329,16 +334,14 @@ pub fn main(init: std.process.Init) !void {
     tmp_dir = try makeTempDir(io, gpa);
     defer cleanupTempDir(io, gpa, tmp_dir);
 
-    // Smoke mode: single extended input + golden guest_output.
-    if (smoke_input != null or expect_guest_output != null) {
-        const input = smoke_input orelse fatal("smoke mode requires --input");
-        const expect = expect_guest_output orelse fatal("smoke mode requires --expect-guest-output");
-        if (fixtures_dir != null) fatal("pass either --fixtures (corpus) or --input/--expect-guest-output (smoke), not both");
-        try runSmoke(init, gpa, input, expect);
+    // Smoke mode: single extended input; expected guest_output from native encodeOutput.
+    if (smoke_input) |input| {
+        if (fixtures_dir != null) fatal("pass either --fixtures (corpus) or --input (smoke), not both");
+        try runSmoke(init, gpa, input);
         return;
     }
 
-    opts.fixtures_dir = fixtures_dir orelse fatal("missing --fixtures (or use smoke mode: --input + --expect-guest-output)");
+    opts.fixtures_dir = fixtures_dir orelse fatal("missing --fixtures (or use smoke mode: --input)");
 
     std.debug.print("running {s}\n  over {s}\n", .{ ZkcAdapter.label, opts.single_file orelse opts.fixtures_dir });
 

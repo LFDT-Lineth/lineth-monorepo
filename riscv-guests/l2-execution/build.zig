@@ -362,16 +362,18 @@ pub fn build(b: *std.Build) void {
         }),
     });
     zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-    // Same native crypto link as l2-execution-wrap (shared vanilla_wrap decode chain).
+    zkc_reference_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+    zkc_reference_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    // Same native crypto link as l2-execution-wrap / l2-execution-runner (wrap + native smoke path).
     linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
     b.installArtifact(zkc_reference_runner_exe);
 
-    // Smoke golden: one extended SSZ input under zkc, assert `guest_output`. Outside the EF-corpus
-    // lazy block — no fixtures dependency. Needs zkc+go on PATH (same as exec / reference-test-zkc).
+    // Smoke: one extended SSZ input under zkc; guest_output checked against native encodeOutput.
+    // Outside the EF-corpus lazy block — no fixtures dependency. Needs zkc+go on PATH.
     // Makefile exposes zkc-smoke-exec / zkc-smoke-trace; both call this step with --zkc-target set.
     const zkc_smoke_step = b.step(
         "zkc-smoke",
-        "Run one extended SSZ input under zkc and check guest_output against a golden (pass --zkc-target elf-exec|elf-trace)",
+        "Run one extended SSZ input under zkc; assert guest_output == native encodeOutput (pass --zkc-target elf-exec|elf-trace)",
     );
     const run_zkc_smoke = b.addRunArtifact(zkc_reference_runner_exe);
     run_zkc_smoke.addArg("--install-prefix");

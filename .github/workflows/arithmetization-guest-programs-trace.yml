@@ -69,6 +69,5 @@ jobs:
         env:
           ZKC_REF: "" # Empty to avoid applying the optional module override again
           INPUT: test/testdata/stateless_input.ssz
-          EXPECTED_GUEST_OUTPUT: test/testdata/stateless_input.expected_guest_output
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"
