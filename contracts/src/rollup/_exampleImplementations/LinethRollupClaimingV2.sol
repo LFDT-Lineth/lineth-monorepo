@@ -24,11 +24,11 @@ contract LinethRollupClaimingV2 is LinethRollupBase, Eip4844BlobAcceptor, Callda
    * @param _initializationData The initial data used for contract initialization.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
+    bytes32 genesisDataRollingHash = EMPTY_HASH;
+    _blobShnarfExists[genesisDataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
+    bytes32 genesisPositionCommitment = _computePositionCommitment(genesisDataRollingHash, 0);
 
-    _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-
-    __LinethRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData, genesisPositionCommitment);
   }
 
   /**

@@ -10,30 +10,23 @@ import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
  */
 interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
   /**
-   * @notice Supporting data for compressed calldata submission including compressed data.
-   * @param blockHash The L2 final block hash for this submission, used in shnarf computation.
-   * @param compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded transaction data.
-   */
-  struct CompressedCalldataSubmissionV2 {
-    bytes32 blockHash;
-    bytes compressedData;
-  }
-
-  /**
    * @dev Thrown when submissionData is empty.
    */
   error EmptySubmissionData();
 
   /**
-   * @notice Submit blobs using compressed data via calldata.
+   * @notice Submit a compressed data chunk via calldata.
    * @dev OPERATOR_ROLE is required to execute.
-   * @param _submission The supporting data for compressed data submission including compressed data.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _expectedShnarf The expected shnarf post computation of all the submission.
+   * @dev The chunk hash binding the data is keccak256(_compressedData), folded into the
+   *   dataRollingHash accumulator. No per-submission block hash is carried: execution
+   *   continuity is a rollup-proof public-input field, not tied to submission.
+   * @param _compressedData The compressed transaction data for the chunk being submitted.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _expectedDataRollingHash The expected dataRollingHash after folding this chunk.
    */
   function submitDataAsCalldata(
-    CompressedCalldataSubmissionV2 calldata _submission,
-    bytes32 _parentShnarf,
-    bytes32 _expectedShnarf
+    bytes calldata _compressedData,
+    bytes32 _parentDataRollingHash,
+    bytes32 _expectedDataRollingHash
   ) external;
 }

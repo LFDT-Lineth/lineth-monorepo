@@ -36,15 +36,15 @@ import {
   calculateRollingHash,
   generateFinalizationData,
   generateRandomBytes,
-  generateKeccak256,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
-  generateParentShnarfData,
-  generateBlobParentShnarfData,
+  generateParentDataRollingHash,
+  generateBlobParentDataRollingHash,
   calculateLastFinalizedState,
   submitCalldataBeforeFinalization,
   proofDataToFinalizationParams,
+  getFinalizationStreamPosition,
   expectRevertWhenPaused,
 } from "../../common/helpers";
 import { AggregatedProofData } from "../../common/types";
@@ -149,7 +149,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         const finalizationData = await generateFinalizationData({
           ...proofDataToFinalizationParams({
             proofData,
-            shnarfDataGenerator: generateParentShnarfData,
+            shnarfDataGenerator: generateParentDataRollingHash,
             blobParentShnarfIndex: finalIndex,
             isMultiple: false,
           }),
@@ -202,7 +202,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         const finalizationData = await generateFinalizationData({
           ...proofDataToFinalizationParams({
             proofData,
-            shnarfDataGenerator: generateParentShnarfData,
+            shnarfDataGenerator: generateParentDataRollingHash,
             blobParentShnarfIndex: finalIndex,
             isMultiple: false,
           }),
@@ -216,19 +216,15 @@ describe("Lineth Rollup contract: Finalization", () => {
           calldataAggregatedProof1To155.l1RollingHash,
         );
 
-        finalizationData.finalBlockHash = generateRandomBytes(32);
-
-        const expectedMissingBlobShnarf = generateKeccak256(
-          ["bytes32", "bytes32", "bytes32"],
-          [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
-        );
+        // Point the end stream position at a dataRollingHash that was never anchored by a submission.
+        finalizationData.endDataRollingHash = generateRandomBytes(32);
 
         const finalizeCompressedCall = linethRollup
           .connect(operator)
           .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-        await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, "FinalShnarfNotSubmitted", [
-          expectedMissingBlobShnarf,
+        await expectRevertWithCustomError(linethRollup, finalizeCompressedCall, "FinalDataRollingHashNotAnchored", [
+          finalizationData.endDataRollingHash,
         ]);
       });
 
@@ -243,7 +239,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         const finalizationData = await generateFinalizationData({
           ...proofDataToFinalizationParams({
             proofData,
-            shnarfDataGenerator: generateParentShnarfData,
+            shnarfDataGenerator: generateParentDataRollingHash,
             blobParentShnarfIndex: finalIndex,
             isMultiple: false,
           }),
@@ -281,7 +277,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         const finalizationData = await generateFinalizationData({
           ...proofDataToFinalizationParams({
             proofData,
-            shnarfDataGenerator: generateParentShnarfData,
+            shnarfDataGenerator: generateParentDataRollingHash,
             blobParentShnarfIndex: finalIndex,
             isMultiple: false,
           }),
@@ -360,7 +356,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: finalIndex,
           isMultiple: false,
         }),
@@ -398,7 +394,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: calldataAggregatedProof1To155,
           blobParentShnarfIndex: finalIndex,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           isMultiple: false,
         },
       });
@@ -415,7 +411,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: finalIndex,
           isMultiple: false,
         }),
@@ -443,7 +439,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: finalIndex,
           isMultiple: false,
         }),
@@ -478,7 +474,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: finalIndex,
           isMultiple: false,
         }),
@@ -497,7 +493,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       ]);
     });
 
-    it("Should fail if shnarf does not exist when finalizing", async () => {
+    it("Should fail if end dataRollingHash is not anchored when finalizing", async () => {
       await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
@@ -508,11 +504,12 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
-        finalBlockHash: generateRandomBytes(32),
+        // Unanchored end stream position.
+        endDataRollingHash: generateRandomBytes(32),
       });
 
       await linethRollup.setRollingHash(
@@ -520,15 +517,12 @@ describe("Lineth Rollup contract: Finalization", () => {
         calldataAggregatedProof1To155.l1RollingHash,
       );
 
-      const expectedMissingShnarf = generateKeccak256(
-        ["bytes32", "bytes32", "bytes32"],
-        [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
-      );
-
       const finalizeCall = linethRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-      await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalShnarfNotSubmitted", [expectedMissingShnarf]);
+      await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalDataRollingHashNotAnchored", [
+        finalizationData.endDataRollingHash,
+      ]);
     });
 
     it("Should successfully finalize 1-81 and then 82-153 in two separate finalizations", async () => {
@@ -539,6 +533,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         maxGasLimit: MAX_GAS_LIMIT,
       });
 
+      const firstStream = getFinalizationStreamPosition(2, { isMultiple: true });
+
       await expectSuccessfulFinalize({
         context: {
           linethRollup,
@@ -547,7 +543,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: aggregatedProof1To81,
           blobParentShnarfIndex: 2,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           isMultiple: true,
         },
       });
@@ -564,8 +560,9 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: aggregatedProof82To153,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           isMultiple: true,
+          base: { dataRollingHash: firstStream!.endDataRollingHash, offset: 0n },
         },
       });
     });
@@ -590,7 +587,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: 2,
           isMultiple: true,
         }),
@@ -667,7 +664,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateParentShnarfData,
+          shnarfDataGenerator: generateParentDataRollingHash,
           blobParentShnarfIndex: 2,
           isMultiple: true,
         }),
@@ -719,7 +716,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
       });
@@ -744,7 +741,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
         overrides: {
@@ -767,7 +764,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
@@ -800,7 +797,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
@@ -843,7 +840,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         const finalizationData = await generateFinalizationData({
           ...proofDataToFinalizationParams({
             proofData,
-            shnarfDataGenerator: generateBlobParentShnarfData,
+            shnarfDataGenerator: generateBlobParentDataRollingHash,
             blobParentShnarfIndex: 4,
             isMultiple: false,
           }),
@@ -878,7 +875,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
@@ -916,7 +913,7 @@ describe("Lineth Rollup contract: Finalization", () => {
       const finalizationData = await generateFinalizationData({
         ...proofDataToFinalizationParams({
           proofData,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
@@ -958,6 +955,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
       }
 
+      const firstStream = getFinalizationStreamPosition(2, { isMultiple: true, isBlob: true });
+
       await expectSuccessfulFinalize({
         context: {
           linethRollup,
@@ -966,7 +965,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobMultipleAggregatedProof1To81,
           blobParentShnarfIndex: 2,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: true,
         },
       });
@@ -984,8 +983,9 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobMultipleAggregatedProof82To153,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: true,
+          base: { dataRollingHash: firstStream!.endDataRollingHash, offset: 0n },
         },
       });
     });
@@ -1008,6 +1008,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         await addressFilter.connect(securityCouncil).setFilteredStatus([filteredAddress], true);
       }
 
+      const firstStream = getFinalizationStreamPosition(2, { isMultiple: true, isBlob: true });
+
       // Finalize first 2 blobs
       await expectSuccessfulFinalize({
         context: {
@@ -1017,7 +1019,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobMultipleAggregatedProof1To81,
           blobParentShnarfIndex: 2,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: true,
         },
         overrides: {
@@ -1047,8 +1049,9 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobMultipleAggregatedProof82To153,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: true,
+          base: { dataRollingHash: firstStream!.endDataRollingHash, offset: 0n },
         },
       });
     });
@@ -1069,7 +1072,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
         overrides: {
@@ -1077,7 +1080,7 @@ describe("Lineth Rollup contract: Finalization", () => {
           parentBlockHash: HASH_ZERO,
         },
         expectedError: {
-          name: "StartingBlockHashDoesNotMatch",
+          name: "StartingRootHashDoesNotMatch",
         },
       });
     });

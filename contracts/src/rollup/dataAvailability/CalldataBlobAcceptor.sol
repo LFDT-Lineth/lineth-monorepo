@@ -6,45 +6,49 @@ import { LocalShnarfProvider } from "./LocalShnarfProvider.sol";
 import { ShnarfDataAcceptorBase } from "./ShnarfDataAcceptorBase.sol";
 
 /**
- * @title Contract to manage compressed data blobs submitted as calldata.
- * @author ConsenSys Software Inc.
+ * @title Contract to manage compressed data chunks submitted as calldata.
+ * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
 abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptorBase, IAcceptCalldataBlobs {
   /**
-   * @notice Submit blobs using compressed data via calldata.
+   * @notice Submit a compressed data chunk via calldata.
    * @dev OPERATOR_ROLE is required to execute.
-   * @param _submission The supporting data for compressed data submission including compressed data.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _expectedShnarf The expected shnarf post computation of the submission.
+   * @param _compressedData The compressed transaction data for the chunk being submitted.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _expectedDataRollingHash The expected dataRollingHash after folding this chunk.
    */
   function submitDataAsCalldata(
-    CompressedCalldataSubmissionV2 calldata _submission,
-    bytes32 _parentShnarf,
-    bytes32 _expectedShnarf
+    bytes calldata _compressedData,
+    bytes32 _parentDataRollingHash,
+    bytes32 _expectedDataRollingHash
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
-    _submitDataAsCalldata(_submission, _parentShnarf, _expectedShnarf);
+    _submitDataAsCalldata(_compressedData, _parentDataRollingHash, _expectedDataRollingHash);
   }
 
   /**
-   * @notice Internal implementation of calldata blob submission.
-   * @param _submission The supporting data for compressed data submission including compressed data.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _expectedShnarf The expected shnarf post computation of the submission.
+   * @notice Internal implementation of calldata chunk submission.
+   * @dev The chunk hash is keccak256(_compressedData), folded once into the dataRollingHash
+   *   accumulator. Execution continuity is not tied to submission (no per-chunk block hash).
+   * @param _compressedData The compressed transaction data for the chunk being submitted.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _expectedDataRollingHash The expected dataRollingHash after folding this chunk.
    */
   function _submitDataAsCalldata(
-    CompressedCalldataSubmissionV2 calldata _submission,
-    bytes32 _parentShnarf,
-    bytes32 _expectedShnarf
+    bytes calldata _compressedData,
+    bytes32 _parentDataRollingHash,
+    bytes32 _expectedDataRollingHash
   ) internal virtual {
-    require(_submission.compressedData.length != 0, EmptySubmissionData());
-    require(_submission.blockHash != EMPTY_HASH, FinalBlockHashIsZeroHash());
+    require(_compressedData.length != 0, EmptySubmissionData());
 
-    bytes32 dataHash = keccak256(_submission.compressedData);
-    bytes32 computedShnarf = _computeShnarf(_parentShnarf, _submission.blockHash, dataHash);
+    bytes32 chunkHash = keccak256(_compressedData);
+    bytes32 computedDataRollingHash = _computeDataRollingHash(_parentDataRollingHash, chunkHash);
 
-    require(_expectedShnarf == computedShnarf, FinalShnarfWrong(_expectedShnarf, computedShnarf));
+    require(
+      _expectedDataRollingHash == computedDataRollingHash,
+      FinalDataRollingHashWrong(_expectedDataRollingHash, computedDataRollingHash)
+    );
 
-    _acceptShnarfData(_parentShnarf, _expectedShnarf, _submission.blockHash);
+    _acceptShnarfData(_parentDataRollingHash, _expectedDataRollingHash);
   }
 }

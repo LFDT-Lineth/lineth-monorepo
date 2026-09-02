@@ -70,14 +70,22 @@ abstract contract LinethRollupBase is
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
   bytes32 private currentL2StoredL1RollingHash_DEPRECATED;
 
-  /// @notice Contains the most recent finalized shnarf.
+  /**
+   * @notice Commitment to the most recent finalized DA stream position.
+   * @dev Holds keccak256(endDataRollingHash || encodeOffset(endOffset)) — the sealed position
+   *   commitment from the blob-spanning spec. This occupies the same storage slot that previously
+   *   held the plain finalized shnarf, so no storage-layout shift occurs. The position preimage
+   *   (dataRollingHash, offset) is supplied as calldata by the next finalization.
+   */
   bytes32 public currentFinalizedShnarf;
 
   /**
    * @dev NB: THIS IS THE ONLY MAPPING BEING USED FOR DATA SUBMISSION TRACKING.
-   * @dev NB: This was shnarfFinalBlockNumbers and is replaced to indicate only that a shnarf exists with a value of 1.
+   * @dev NB: Keys are anchored dataRollingHash values (previously shnarfs). Only the final
+   *   dataRollingHash of each submission is anchored; intermediate chunk folds are not persisted.
+   *   Membership-only — execution continuity no longer travels with the DA accumulator.
    */
-  mapping(bytes32 shnarf => uint256 exists) internal _blobShnarfExists;
+  mapping(bytes32 dataRollingHash => uint256 exists) internal _blobShnarfExists;
 
   /**
    * @notice Hash of the L2 computed message number, its rolling hash,
@@ -126,11 +134,11 @@ abstract contract LinethRollupBase is
   /**
    * @notice Initializes LinethRollup and underlying service dependencies - used for new networks only.
    * @param _initializationData The initial data used for contract initialization.
-   * @param _genesisShnarf The initial computed genesis shnarf.
+   * @param _genesisPositionCommitment The initial sealed position commitment for the genesis DA stream position.
    */
   function __LinethRollup_init(
     BaseInitializationData calldata _initializationData,
-    bytes32 _genesisShnarf
+    bytes32 _genesisPositionCommitment
   ) internal virtual onlyInitializing {
     if (_initializationData.defaultVerifier == address(0)) {
       revert ZeroAddressNotAllowed();
@@ -162,7 +170,7 @@ abstract contract LinethRollupBase is
     currentL2BlockNumber = _initializationData.initialL2BlockNumber;
     blockHashes[_initializationData.initialL2BlockNumber] = _initializationData.initialBlockHash;
 
-    currentFinalizedShnarf = _genesisShnarf;
+    currentFinalizedShnarf = _genesisPositionCommitment;
     currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
       0,
       EMPTY_HASH,
@@ -192,7 +200,7 @@ abstract contract LinethRollupBase is
       emit VerifierKeysSet(_initializationData.verifierKeys);
     }
 
-    emit LineaRollupBaseInitialized(bytes8(bytes(CONTRACT_VERSION())), _initializationData, _genesisShnarf);
+    emit LineaRollupBaseInitialized(bytes8(bytes(CONTRACT_VERSION())), _initializationData, _genesisPositionCommitment);
   }
 
   /**
@@ -358,8 +366,51 @@ abstract contract LinethRollupBase is
   }
 
   /**
-   * @notice Internal function to compute the shnarf using the new block-hash-centric formula.
-   * @dev Using assembly this way is cheaper gas wise.
+   * @notice Internal function to compute the 2-input dataRollingHash fold.
+   * @dev keccak256(parentDataRollingHash || chunkHash) — the pure DA accumulator from the
+   *   blob-spanning spec. Using assembly this way is cheaper gas wise.
+   * @param _parentDataRollingHash The dataRollingHash of the parent stream position.
+   * @param _chunkHash The chunk hash: blobhash(i) (EIP-4844 versioned hash) for blobs,
+   *   keccak256(compressedData) for calldata.
+   * @return dataRollingHash The computed dataRollingHash.
+   */
+  function _computeDataRollingHash(
+    bytes32 _parentDataRollingHash,
+    bytes32 _chunkHash
+  ) internal pure returns (bytes32 dataRollingHash) {
+    assembly {
+      let mPtr := mload(0x40)
+      mstore(mPtr, _parentDataRollingHash)
+      mstore(add(mPtr, 0x20), _chunkHash)
+      dataRollingHash := keccak256(mPtr, 0x40)
+    }
+  }
+
+  /**
+   * @notice Internal function to compute the sealed position commitment for a stream position.
+   * @dev keccak256(dataRollingHash || encodeOffset(offset)), where the offset is abi-encoded as a
+   *   uint256 (32-byte big-endian). Stored in the `currentFinalizedShnarf` slot at finalization and
+   *   opened by the next finalization supplying the (dataRollingHash, offset) preimage as calldata.
+   * @param _dataRollingHash The dataRollingHash of the stream position.
+   * @param _offset The byte offset within the last-folded chunk.
+   * @return positionCommitment The computed position commitment.
+   */
+  function _computePositionCommitment(
+    bytes32 _dataRollingHash,
+    uint256 _offset
+  ) internal pure returns (bytes32 positionCommitment) {
+    assembly {
+      let mPtr := mload(0x40)
+      mstore(mPtr, _dataRollingHash)
+      mstore(add(mPtr, 0x20), _offset)
+      positionCommitment := keccak256(mPtr, 0x40)
+    }
+  }
+
+  /**
+   * @notice Computes the legacy 3-input block-hash-centric shnarf.
+   * @dev Retained solely for the one-way migration bridge (converting the last finalized 3-arg
+   *   shnarf into the initial dataRollingHash position commitment). New finalizations never call this.
    * @param _parentShnarf The shnarf of the parent data item.
    * @param _finalBlockHash The L2 final block hash for this data item.
    * @param _dataHash The data hash: blobhash(i) for EIP-4844 blobs, keccak256(compressedData) for calldata.
@@ -380,34 +431,6 @@ abstract contract LinethRollupBase is
   }
 
   /**
-   * @notice Computes a legacy shnarf for compatibility with pre-block-hash data utilities.
-   * @dev Block-hash-based finalization never calls this overload.
-   * @param _parentShnarf The shnarf of the parent data item.
-   * @param _snarkHash The SNARK-friendly hash for compressed data used in public input.
-   * @param _finalStateRootHash The final state root hash of the data being submitted.
-   * @param _dataEvaluationPoint The data evaluation point.
-   * @param _dataEvaluationClaim The data evaluation claim.
-   * @return shnarf The computed shnarf.
-   */
-  function _computeShnarf(
-    bytes32 _parentShnarf,
-    bytes32 _snarkHash,
-    bytes32 _finalStateRootHash,
-    bytes32 _dataEvaluationPoint,
-    bytes32 _dataEvaluationClaim
-  ) internal pure returns (bytes32 shnarf) {
-    assembly {
-      let mPtr := mload(0x40)
-      mstore(mPtr, _parentShnarf)
-      mstore(add(mPtr, 0x20), _snarkHash)
-      mstore(add(mPtr, 0x40), _finalStateRootHash)
-      mstore(add(mPtr, 0x60), _dataEvaluationPoint)
-      mstore(add(mPtr, 0x80), _dataEvaluationClaim)
-      shnarf := keccak256(mPtr, 0xA0)
-    }
-  }
-
-  /**
    * @notice Finalize compressed blocks with proof.
    * @dev OPERATOR_ROLE is required to execute.
    * @param _aggregatedProof The aggregated proof.
@@ -417,7 +440,7 @@ abstract contract LinethRollupBase is
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV5 calldata _finalizationData
+    FinalizationDataV6 calldata _finalizationData
   ) external virtual whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE) {
     if (_aggregatedProof.length == 0) {
       revert ProofIsEmpty();
@@ -441,14 +464,20 @@ abstract contract LinethRollupBase is
 
     _validateVerifierKeys(_finalizationData.verifierKeys);
 
-    /// @dev currentFinalizedShnarf is updated in _finalizeBlocks and lastFinalizedShnarf MUST be set beforehand for the transition.
-    bytes32 lastFinalizedShnarf = currentFinalizedShnarf;
+    /// @dev currentFinalizedShnarf (the position commitment) is updated in _finalizeBlocks and the
+    ///   previous value MUST be captured beforehand to open the position commitment.
+    bytes32 lastFinalizedPositionCommitment = currentFinalizedShnarf;
 
     _verifyProof(
       _computePublicInput(
         _finalizationData,
-        lastFinalizedShnarf,
-        _finalizeBlocks(_finalizationData, lastFinalizedBlockNumber, finalForcedTransactionRollingHash),
+        lastFinalizedPositionCommitment,
+        _finalizeBlocks(
+          _finalizationData,
+          lastFinalizedBlockNumber,
+          finalForcedTransactionRollingHash,
+          lastFinalizedPositionCommitment
+        ),
         finalForcedTransactionRollingHash,
         IPlonkVerifier(verifier).getChainConfiguration()
       ),
@@ -460,17 +489,21 @@ abstract contract LinethRollupBase is
   /**
    * @notice Internal function to finalize compressed blocks.
    * @dev If blockHashes[lastFinalizedBlock] is EMPTY_HASH, validates the legacy parent state root.
-   *   All finalized data uses the new block-hash-centric shnarf formula, making migration one-way.
+   *   DA linkage uses the blob-spanning position-commitment model: the stored position commitment is
+   *   opened by the calldata-supplied previous stream position, DA continuity and anchoring are
+   *   asserted, and execution rooting is checked explicitly against the block-hash chain.
    * @param _finalizationData The full finalization data.
    * @param _lastFinalizedBlock The last finalized block number.
    * @param _finalForcedTransactionRollingHash The rolling hash for the final forced transaction.
-   * @return finalShnarf The final computed shnarf in finalizing.
+   * @param _lastFinalizedPositionCommitment The previously-stored position commitment to open.
+   * @return positionCommitment The sealed position commitment for the finalized end stream position.
    */
   function _finalizeBlocks(
-    FinalizationDataV5 calldata _finalizationData,
+    FinalizationDataV6 calldata _finalizationData,
     uint256 _lastFinalizedBlock,
-    bytes32 _finalForcedTransactionRollingHash
-  ) internal returns (bytes32 finalShnarf) {
+    bytes32 _finalForcedTransactionRollingHash,
+    bytes32 _lastFinalizedPositionCommitment
+  ) internal returns (bytes32 positionCommitment) {
     _validateL2ComputedRollingHash(_finalizationData.l1RollingHashMessageNumber, _finalizationData.l1RollingHash);
 
     _validateFilteredAddresses(_finalizationData.filteredAddresses);
@@ -529,21 +562,40 @@ abstract contract LinethRollupBase is
       );
     } else {
       // NEW PATH: parent committed under block-hash model.
-      // Soft continuity check: caller must declare the parent block hash they are building from.
-      // The on-chain blockHashes mapping is authoritative; this guards against callers accidentally
-      // submitting finalization data that starts from a different parent than they intended.
+      // Execution-rooting continuity check: the caller declares the parent block hash they build from;
+      // the on-chain blockHashes mapping is authoritative.
       require(parentBlockHash == _finalizationData.parentBlockHash, StartingBlockHashDoesNotMatch());
     }
 
     require(_finalizationData.finalBlockHash != EMPTY_HASH, FinalizationBlockHashIsZeroHash());
 
-    finalShnarf = _computeShnarf(
-      _finalizationData.shnarfData.parentShnarf,
-      _finalizationData.finalBlockHash,
-      _finalizationData.finalBlobHash
+    // Open the stored position commitment with the calldata-supplied previous stream position.
+    bytes32 openedCommitment = _computePositionCommitment(
+      _finalizationData.prevDataRollingHash,
+      _finalizationData.prevOffset
+    );
+    require(
+      openedCommitment == _lastFinalizedPositionCommitment,
+      PositionCommitmentMismatch(_lastFinalizedPositionCommitment, openedCommitment)
     );
 
-    require(shnarfProvider.blobShnarfExists(finalShnarf) != 0, FinalShnarfNotSubmitted(finalShnarf));
+    // DA continuity: the range must start from the previously-finalized dataRollingHash.
+    require(
+      _finalizationData.parentDataRollingHash == _finalizationData.prevDataRollingHash,
+      DataRollingHashNotContinuous(_finalizationData.prevDataRollingHash, _finalizationData.parentDataRollingHash)
+    );
+
+    // Position continuity: continue the previous offset, or fresh-start at a chunk boundary (offset 0).
+    require(
+      _finalizationData.startOffset == _finalizationData.prevOffset || _finalizationData.startOffset == 0,
+      StartOffsetNotContinuous(_finalizationData.prevOffset, _finalizationData.startOffset)
+    );
+
+    // DA anchoring: the end dataRollingHash must have been anchored by a prior submission.
+    require(
+      shnarfProvider.blobShnarfExists(_finalizationData.endDataRollingHash) != 0,
+      FinalDataRollingHashNotAnchored(_finalizationData.endDataRollingHash)
+    );
 
     _addL2MerkleRoots(_finalizationData.l2MerkleRoots, _finalizationData.l2MerkleTreesDepth);
     _anchorL2MessagingBlocks(_finalizationData.l2MessagingBlocksOffsets, _lastFinalizedBlock);
@@ -552,7 +604,8 @@ abstract contract LinethRollupBase is
     blockHashes[_finalizationData.endBlockNumber] = _finalizationData.finalBlockHash;
 
     currentL2BlockNumber = _finalizationData.endBlockNumber;
-    currentFinalizedShnarf = finalShnarf;
+    positionCommitment = _computePositionCommitment(_finalizationData.endDataRollingHash, _finalizationData.endOffset);
+    currentFinalizedShnarf = positionCommitment;
     currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
       _finalizationData.l1RollingHashMessageNumber,
       _finalizationData.l1RollingHash,
@@ -572,7 +625,8 @@ abstract contract LinethRollupBase is
       emit DataFinalizedV4(
         ++_lastFinalizedBlock,
         _finalizationData.endBlockNumber,
-        finalShnarf,
+        _finalizationData.endDataRollingHash,
+        _finalizationData.endOffset,
         parentBlockHash,
         _finalizationData.finalBlockHash
       );
@@ -629,13 +683,21 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Compute the public input.
-   * @dev Using assembly this way is cheaper gas wise.
-   * @dev NB: the dynamic sized fields are placed last in _finalizationData on purpose to optimise hashing ranges.
-   * @dev Computing the public input as the following:
+   * @dev Binds the full 20-field blob-spanning public-input surface (rollup_spec §2.4), with the
+   *   sealed position commitment standing in for the old shnarf pair. The dataRollingHash stream
+   *   positions, the execution block-hash pair, and the L1/L2 rolling-hash, FTX, and Merkle fields
+   *   are all committed so the proof is bound to exactly the state transition the contract checked.
+   * @dev Computing the public input as:
    * keccak256(
    *  abi.encode(
-   *     _lastFinalizedShnarf,
-   *     _finalShnarf,
+   *     _lastFinalizedPositionCommitment,          // parent position commitment (prevDataRollingHash || prevOffset)
+   *     _positionCommitment,                       // end position commitment (endDataRollingHash || endOffset)
+   *     _finalizationData.parentDataRollingHash,
+   *     _finalizationData.endDataRollingHash,
+   *     _finalizationData.startOffset,
+   *     _finalizationData.endOffset,
+   *     _finalizationData.parentBlockHash,
+   *     _finalizationData.finalBlockHash,
    *     _finalizationData.finalTimestamp,
    *     _finalizationData.endBlockNumber,
    *     _finalizationData.lastFinalizedL1RollingHash,
@@ -653,117 +715,72 @@ abstract contract LinethRollupBase is
    *     keccak256(abi.encodePacked(_finalizationData.verifierKeys))
    *   )
    * )
-   * FinalizationDataV5 fixed-field calldata offsets (relative to _finalizationData):
-   * 0x000   parentStateRootHash
-   * 0x020   parentBlockHash
-   * 0x040   endBlockNumber
-   * 0x060   shnarfData.parentShnarf
-   * 0x080   shnarfData.snarkHash
-   * 0x0a0   shnarfData.finalStateRootHash
-   * 0x0c0   shnarfData.dataEvaluationPoint
-   * 0x0e0   shnarfData.dataEvaluationClaim
-   * 0x100   lastFinalizedTimestamp
-   * 0x120   finalTimestamp
-   * 0x140   lastFinalizedL1RollingHash
-   * 0x160   l1RollingHash
-   * 0x180   lastFinalizedL1RollingHashMessageNumber
-   * 0x1a0   l1RollingHashMessageNumber
-   * 0x1c0   l2MerkleTreesDepth
-   * 0x1e0   lastFinalizedForcedTransactionNumber
-   * 0x200   finalForcedTransactionNumber
-   * 0x220   lastFinalizedForcedTransactionRollingHash
-   * 0x240   finalBlockHash
-   * 0x260   finalBlobHash
-   * 0x280   offset → l2MerkleRoots
-   * 0x2a0   offset → filteredAddresses
-   * 0x2c0   offset → verifierKeys
-   * 0x2e0   offset → l2MessagingBlocksOffsets
    * @param _finalizationData The full finalization data.
-   * @param _lastFinalizedShnarf The last finalized shnarf.
-   * @param _finalShnarf The final shnarf in the finalization.
+   * @param _lastFinalizedPositionCommitment The previously-stored position commitment being opened.
+   * @param _positionCommitment The sealed position commitment for the finalized end stream position.
    * @param _finalForcedTransactionRollingHash The final processed forced transactions's rolling hash.
    * @param _verifierChainConfiguration The verifier chain configuration.
    * @return publicInput The computed public input.
    */
   function _computePublicInput(
-    FinalizationDataV5 calldata _finalizationData,
-    bytes32 _lastFinalizedShnarf,
-    bytes32 _finalShnarf,
+    FinalizationDataV6 calldata _finalizationData,
+    bytes32 _lastFinalizedPositionCommitment,
+    bytes32 _positionCommitment,
     bytes32 _finalForcedTransactionRollingHash,
     bytes32 _verifierChainConfiguration
   ) private pure returns (uint256 publicInput) {
-    bytes32 hashedFilteredAddresses = keccak256(abi.encodePacked(_finalizationData.filteredAddresses));
-    bytes32 hashedVerifierKeys = keccak256(abi.encodePacked(_finalizationData.verifierKeys));
-
+    // For a `calldata` struct reference, the base points at the struct's leading offset word, so
+    // struct field N sits at calldata offset (N+1)*0x20 from the base. FinalizationDataV6 has 19
+    // fixed fields (field indices 0..18) at base-relative offsets 0x20..0x260; the four dynamic
+    // offset pointers (l2MerkleRoots, filteredAddresses, verifierKeys, l2MessagingBlocksOffsets)
+    // follow at base-relative 0x280, 0x2a0, 0x2c0, 0x2e0.
     assembly {
       let mPtr := mload(0x40)
+      let fd := _finalizationData
+      mstore(mPtr, _lastFinalizedPositionCommitment) // 0
+      mstore(add(mPtr, 0x20), _positionCommitment) // 1
+      calldatacopy(add(mPtr, 0x40), add(fd, 0x220), 0x20) // 2: parentDataRollingHash (field 16)
+      calldatacopy(add(mPtr, 0x60), add(fd, 0x240), 0x20) // 3: endDataRollingHash (field 17)
+      calldatacopy(add(mPtr, 0x80), add(fd, 0x260), 0x20) // 4: startOffset (field 18)
+      calldatacopy(add(mPtr, 0xa0), add(fd, 0x280), 0x20) // 5: endOffset (field 19)
+      calldatacopy(add(mPtr, 0xc0), add(fd, 0x40), 0x20) // 6: parentBlockHash (field 1)
+      calldatacopy(add(mPtr, 0xe0), add(fd, 0x1c0), 0x20) // 7: finalBlockHash (field 13)
+      calldatacopy(add(mPtr, 0x100), add(fd, 0xa0), 0x20) // 8: finalTimestamp (field 4)
+      calldatacopy(add(mPtr, 0x120), add(fd, 0x60), 0x20) // 9: endBlockNumber (field 2)
+      calldatacopy(add(mPtr, 0x140), add(fd, 0xc0), 0x20) // 10: lastFinalizedL1RollingHash (field 5)
+      calldatacopy(add(mPtr, 0x160), add(fd, 0xe0), 0x20) // 11: l1RollingHash (field 6)
+      calldatacopy(add(mPtr, 0x180), add(fd, 0x100), 0x20) // 12: lastFinalizedL1RollingHashMessageNumber (field 7)
+      calldatacopy(add(mPtr, 0x1a0), add(fd, 0x120), 0x20) // 13: l1RollingHashMessageNumber (field 8)
+      calldatacopy(add(mPtr, 0x1c0), add(fd, 0x1a0), 0x20) // 14: lastFinalizedForcedTransactionRollingHash (field 12)
+      mstore(add(mPtr, 0x1e0), _finalForcedTransactionRollingHash) // 15
+      calldatacopy(add(mPtr, 0x200), add(fd, 0x160), 0x20) // 16: lastFinalizedForcedTransactionNumber (field 10)
+      calldatacopy(add(mPtr, 0x220), add(fd, 0x180), 0x20) // 17: finalForcedTransactionNumber (field 11)
+      calldatacopy(add(mPtr, 0x240), add(fd, 0x140), 0x20) // 18: l2MerkleTreesDepth (field 9)
 
-      /**
-       * _lastFinalizedShnarf
-       * _finalShnarf
-       */
-      mstore(mPtr, _lastFinalizedShnarf)
-      mstore(add(mPtr, 0x20), _finalShnarf)
+      // 19: keccak256(abi.encodePacked(l2MerkleRoots)) — offset pointer at fd+0x280.
+      let rootsLenLoc := add(fd, calldataload(add(fd, 0x280)))
+      let rootsLen := calldataload(rootsLenLoc)
+      let rootsPtr := add(mPtr, 0x2e0)
+      calldatacopy(rootsPtr, add(rootsLenLoc, 0x20), mul(rootsLen, 0x20))
+      mstore(add(mPtr, 0x260), keccak256(rootsPtr, mul(rootsLen, 0x20)))
 
-      /**
-       * _finalizationData.finalTimestamp (offset 0x120 in V5)
-       */
-      calldatacopy(add(mPtr, 0x40), add(_finalizationData, 0x120), 0x20)
+      mstore(add(mPtr, 0x280), _verifierChainConfiguration) // 20
 
-      /**
-       * _finalizationData.endBlockNumber (offset 0x40 in V5)
-       */
-      calldatacopy(add(mPtr, 0x60), add(_finalizationData, 0x40), 0x20)
+      // 21: keccak256(abi.encodePacked(filteredAddresses)) — offset pointer at fd+0x2a0.
+      let filtLenLoc := add(fd, calldataload(add(fd, 0x2a0)))
+      let filtLen := calldataload(filtLenLoc)
+      let filtPtr := add(mPtr, 0x2e0)
+      calldatacopy(filtPtr, add(filtLenLoc, 0x20), mul(filtLen, 0x20))
+      mstore(add(mPtr, 0x2a0), keccak256(filtPtr, mul(filtLen, 0x20)))
 
-      /**
-       * _finalizationData.lastFinalizedL1RollingHash (0x140)
-       * _finalizationData.l1RollingHash (0x160)
-       */
-      calldatacopy(add(mPtr, 0x80), add(_finalizationData, 0x140), 0x40)
+      // 22: keccak256(abi.encodePacked(verifierKeys)) — offset pointer at fd+0x2c0.
+      let vkLenLoc := add(fd, calldataload(add(fd, 0x2c0)))
+      let vkLen := calldataload(vkLenLoc)
+      let vkPtr := add(mPtr, 0x2e0)
+      calldatacopy(vkPtr, add(vkLenLoc, 0x20), mul(vkLen, 0x20))
+      mstore(add(mPtr, 0x2c0), keccak256(vkPtr, mul(vkLen, 0x20)))
 
-      /**
-       * _finalizationData.lastFinalizedL1RollingHashMessageNumber (0x180)
-       * _finalizationData.l1RollingHashMessageNumber (0x1a0)
-       */
-      calldatacopy(add(mPtr, 0xC0), add(_finalizationData, 0x180), 0x40)
-
-      /**
-       * _finalizationData.lastFinalizedForcedTransactionRollingHash (0x220)
-       */
-      calldatacopy(add(mPtr, 0x100), add(_finalizationData, 0x220), 0x20)
-
-      /**
-       * _finalForcedTransactionRollingHash (parameter)
-       */
-      mstore(add(mPtr, 0x120), _finalForcedTransactionRollingHash)
-
-      /**
-       * _finalizationData.lastFinalizedForcedTransactionNumber (0x1e0)
-       * _finalizationData.finalForcedTransactionNumber (0x200)
-       */
-      calldatacopy(add(mPtr, 0x140), add(_finalizationData, 0x1e0), 0x40)
-
-      /**
-       * _finalizationData.l2MerkleTreesDepth (0x1c0)
-       */
-      calldatacopy(add(mPtr, 0x180), add(_finalizationData, 0x1c0), 0x20)
-
-      /**
-       * @dev Hash l2MerkleRoots. Temp space starts at mPtr+0x240 (past the 17-field 0x220-byte hash input).
-       * The dynamic array offset pointer is at _finalizationData+0x280.
-       */
-      let mPtrMerkleRoot := add(mPtr, 0x240)
-      let merkleRootsLengthLocation := add(_finalizationData, calldataload(add(_finalizationData, 0x280)))
-      let merkleRootsLen := calldataload(merkleRootsLengthLocation)
-      calldatacopy(mPtrMerkleRoot, add(merkleRootsLengthLocation, 0x20), mul(merkleRootsLen, 0x20))
-      let l2MerkleRootsHash := keccak256(mPtrMerkleRoot, mul(merkleRootsLen, 0x20))
-
-      mstore(add(mPtr, 0x1a0), l2MerkleRootsHash)
-      mstore(add(mPtr, 0x1c0), _verifierChainConfiguration)
-      mstore(add(mPtr, 0x1e0), hashedFilteredAddresses)
-      mstore(add(mPtr, 0x200), hashedVerifierKeys)
-
-      publicInput := mod(keccak256(mPtr, 0x220), MODULO_R)
+      publicInput := mod(keccak256(mPtr, 0x2e0), MODULO_R)
     }
   }
 

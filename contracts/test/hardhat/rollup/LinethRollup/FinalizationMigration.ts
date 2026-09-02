@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 
 import { OPERATOR_ROLE } from "../../common/constants";
 import { deployUpgradableFromFactory } from "../../common/deployment";
-import { generateRandomBytes } from "../../common/helpers";
+import { generateRandomBytes, computePositionCommitment, computeDataRollingHash } from "../../common/helpers";
 
 const EMPTY_HASH = ethers.ZeroHash;
 const INITIAL_BLOCK_NUMBER = 100n;
@@ -51,25 +51,28 @@ describe("LinethRollup finalization migration", () => {
       },
     )) as unknown as TestLinethRollup;
 
+    // Seed the legacy parent: block-hash slot empty (old state-root model) + the legacy state root.
     await linethRollup.setBlockHash(INITIAL_BLOCK_NUMBER, EMPTY_HASH);
     await linethRollup.setStateRootHash(INITIAL_BLOCK_NUMBER, LEGACY_PARENT_STATE_ROOT);
+
+    // Seed the finalized-state hash so the V6 FinalizationStateIncorrect check passes.
+    // Matches the 5-field tuple supplied by createFinalizationData: messageNumber 0, empty rolling hash,
+    // forced-tx number 0, empty forced-tx rolling hash, lastFinalizedTimestamp 1.
+    await linethRollup.setLastFinalizedState(0, EMPTY_HASH, 0, EMPTY_HASH, 1n);
+
+    // Genesis position commitment: the stored commitment that migration opens with prev=(0,0).
+    await linethRollup.setLastFinalizedShnarf(computePositionCommitment(EMPTY_HASH, 0n));
 
     return { linethRollup, operator, initializationData };
   }
 
   async function createFinalizationData(linethRollup: TestLinethRollup, overrides: Record<string, unknown> = {}) {
-    const parentShnarf = await linethRollup.currentFinalizedShnarf();
+    const endDataRollingHash = computeDataRollingHash(EMPTY_HASH, generateRandomBytes(32));
+
     const finalizationData = {
       parentStateRootHash: LEGACY_PARENT_STATE_ROOT,
       parentBlockHash: EMPTY_HASH,
       endBlockNumber: 200n,
-      shnarfData: {
-        parentShnarf,
-        snarkHash: EMPTY_HASH,
-        finalStateRootHash: EMPTY_HASH,
-        dataEvaluationPoint: EMPTY_HASH,
-        dataEvaluationClaim: EMPTY_HASH,
-      },
       lastFinalizedTimestamp: 1n,
       finalTimestamp: BigInt((await time.latest()) - 10),
       lastFinalizedL1RollingHash: EMPTY_HASH,
@@ -81,7 +84,12 @@ describe("LinethRollup finalization migration", () => {
       finalForcedTransactionNumber: 0n,
       lastFinalizedForcedTransactionRollingHash: EMPTY_HASH,
       finalBlockHash: generateRandomBytes(32),
-      finalBlobHash: generateRandomBytes(32),
+      prevDataRollingHash: EMPTY_HASH,
+      prevOffset: 0n,
+      parentDataRollingHash: EMPTY_HASH,
+      endDataRollingHash,
+      startOffset: 0n,
+      endOffset: 0n,
       l2MerkleRoots: [],
       filteredAddresses: [],
       verifierKeys: [],
@@ -89,15 +97,8 @@ describe("LinethRollup finalization migration", () => {
       ...overrides,
     };
 
-    const finalShnarf = ethers.solidityPackedKeccak256(
-      ["bytes32", "bytes32", "bytes32"],
-      [
-        finalizationData.shnarfData.parentShnarf,
-        finalizationData.finalBlockHash as string,
-        finalizationData.finalBlobHash as string,
-      ],
-    );
-    await linethRollup.setupParentShnarf(finalShnarf);
+    // Anchor the end dataRollingHash so the FinalDataRollingHashNotAnchored check passes.
+    await linethRollup.setupParentShnarf(finalizationData.endDataRollingHash);
 
     return finalizationData;
   }
@@ -110,6 +111,10 @@ describe("LinethRollup finalization migration", () => {
 
     expect(await linethRollup.blockHashes(finalizationData.endBlockNumber)).to.equal(finalizationData.finalBlockHash);
     expect(await linethRollup.stateRootHashes(finalizationData.endBlockNumber)).to.equal(EMPTY_HASH);
+    // The position commitment is sealed for the finalized end stream position.
+    expect(await linethRollup.currentFinalizedShnarf()).to.equal(
+      computePositionCommitment(finalizationData.endDataRollingHash, 0n),
+    );
   });
 
   it("rejects a nonzero declared parent block hash during migration", async () => {
@@ -157,29 +162,30 @@ describe("LinethRollup finalization migration", () => {
     ).to.be.revertedWithCustomError(linethRollup, "FinalizationBlockHashIsZeroHash");
   });
 
-  it("rejects a legacy-format shnarf during migration", async () => {
+  it("rejects an unanchored end dataRollingHash", async () => {
     const { linethRollup, operator } = await loadFixture(deployFixture);
+    // Build the data without anchoring, then point the end stream position at a hash never submitted.
     const finalizationData = await createFinalizationData(linethRollup);
-    const newShnarf = ethers.solidityPackedKeccak256(
-      ["bytes32", "bytes32", "bytes32"],
-      [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
-    );
-    const legacyShnarf = ethers.solidityPackedKeccak256(
-      ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-      [
-        finalizationData.shnarfData.parentShnarf,
-        finalizationData.shnarfData.snarkHash,
-        finalizationData.shnarfData.finalStateRootHash,
-        finalizationData.shnarfData.dataEvaluationPoint,
-        finalizationData.shnarfData.dataEvaluationClaim,
-      ],
-    );
-    await linethRollup.setShnarfFinalBlockNumber(newShnarf, 0);
-    await linethRollup.setupParentShnarf(legacyShnarf);
+    const unanchoredEnd = generateRandomBytes(32);
+    finalizationData.endDataRollingHash = unanchoredEnd;
 
     await expect(linethRollup.connect(operator).finalizeBlocks(PROOF, 0, finalizationData))
-      .to.be.revertedWithCustomError(linethRollup, "FinalShnarfNotSubmitted")
-      .withArgs(newShnarf);
+      .to.be.revertedWithCustomError(linethRollup, "FinalDataRollingHashNotAnchored")
+      .withArgs(unanchoredEnd);
+  });
+
+  it("rejects a position commitment that does not match the stored commitment", async () => {
+    const { linethRollup, operator } = await loadFixture(deployFixture);
+    const finalizationData = await createFinalizationData(linethRollup, {
+      // Wrong prev position: the stored commitment is commit(0,0), this opens a different one.
+      prevDataRollingHash: generateRandomBytes(32),
+    });
+    // Keep parent == prev so the DA-continuity check isn't what fires.
+    finalizationData.parentDataRollingHash = finalizationData.prevDataRollingHash;
+
+    await expect(
+      linethRollup.connect(operator).finalizeBlocks(PROOF, 0, finalizationData),
+    ).to.be.revertedWithCustomError(linethRollup, "PositionCommitmentMismatch");
   });
 
   it("uses the migrated final block hash as the next round parent", async () => {
@@ -187,25 +193,26 @@ describe("LinethRollup finalization migration", () => {
     const migrationData = await createFinalizationData(linethRollup);
     await linethRollup.connect(operator).finalizeBlocks(PROOF, 0, migrationData);
 
-    const nextFinalBlockHash = generateRandomBytes(32);
-    const nextFinalBlobHash = generateRandomBytes(32);
+    const migrationEnd = migrationData.endDataRollingHash;
+    const nextEndDataRollingHash = computeDataRollingHash(migrationEnd, generateRandomBytes(32));
     const nextFinalizationData = await createFinalizationData(linethRollup, {
       parentStateRootHash: EMPTY_HASH,
       parentBlockHash: migrationData.finalBlockHash,
       endBlockNumber: 300n,
-      shnarfData: {
-        ...migrationData.shnarfData,
-        parentShnarf: await linethRollup.currentFinalizedShnarf(),
-      },
+      prevDataRollingHash: migrationEnd,
+      parentDataRollingHash: migrationEnd,
+      endDataRollingHash: nextEndDataRollingHash,
       lastFinalizedTimestamp: migrationData.finalTimestamp,
       finalTimestamp: migrationData.finalTimestamp + 1n,
-      finalBlockHash: nextFinalBlockHash,
-      finalBlobHash: nextFinalBlobHash,
+      finalBlockHash: generateRandomBytes(32),
     });
 
     await linethRollup.connect(operator).finalizeBlocks(PROOF, 0, nextFinalizationData);
 
-    expect(await linethRollup.blockHashes(nextFinalizationData.endBlockNumber)).to.equal(nextFinalBlockHash);
+    expect(await linethRollup.blockHashes(nextFinalizationData.endBlockNumber)).to.equal(
+      nextFinalizationData.finalBlockHash,
+    );
+    expect(await linethRollup.currentFinalizedShnarf()).to.equal(computePositionCommitment(nextEndDataRollingHash, 0n));
   });
 
   it("rejects an incorrect parent block hash after migration", async () => {
@@ -213,18 +220,17 @@ describe("LinethRollup finalization migration", () => {
     const migrationData = await createFinalizationData(linethRollup);
     await linethRollup.connect(operator).finalizeBlocks(PROOF, 0, migrationData);
 
+    const migrationEnd = migrationData.endDataRollingHash;
     const nextFinalizationData = await createFinalizationData(linethRollup, {
       parentStateRootHash: EMPTY_HASH,
       parentBlockHash: generateRandomBytes(32),
       endBlockNumber: 300n,
-      shnarfData: {
-        ...migrationData.shnarfData,
-        parentShnarf: await linethRollup.currentFinalizedShnarf(),
-      },
+      prevDataRollingHash: migrationEnd,
+      parentDataRollingHash: migrationEnd,
+      endDataRollingHash: computeDataRollingHash(migrationEnd, generateRandomBytes(32)),
       lastFinalizedTimestamp: migrationData.finalTimestamp,
       finalTimestamp: migrationData.finalTimestamp + 1n,
       finalBlockHash: generateRandomBytes(32),
-      finalBlobHash: generateRandomBytes(32),
     });
 
     await expect(

@@ -6,18 +6,18 @@ import { TestLinethRollup } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
 import { getAccountsFixture, deployLinethRollupFixture } from "./../helpers";
-import { GENERAL_PAUSE_TYPE, HASH_ZERO, OPERATOR_ROLE, EMPTY_CALLDATA, MAX_GAS_LIMIT } from "../../common/constants";
+import { GENERAL_PAUSE_TYPE, OPERATOR_ROLE, EMPTY_CALLDATA, MAX_GAS_LIMIT } from "../../common/constants";
 import {
   generateRandomBytes,
   generateCallDataSubmission,
-  generateCallDataSubmissionWithShnarfs,
-  generateParentAndExpectedShnarfForIndex,
+  generateCallDataSubmissionWithHashes,
+  generateParentAndExpectedDataRollingHashForIndex,
   expectEvent,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
   expectRevertWhenPaused,
-  computeShnarfV2,
+  computeDataRollingHash,
 } from "../../common/helpers";
 
 describe("Lineth Rollup contract: Calldata Submission", () => {
@@ -37,34 +37,28 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
   });
 
   const [DATA_ONE] = generateCallDataSubmission(0, 1);
-  const { parentShnarf: PARENT_ONE, expectedShnarf: EXPECTED_ONE } = generateParentAndExpectedShnarfForIndex(0);
+  const { parentDataRollingHash: PARENT_ONE, expectedDataRollingHash: EXPECTED_ONE } =
+    generateParentAndExpectedDataRollingHashForIndex(0);
 
   it("Fails when the compressed data is empty", async () => {
-    const [submissionData] = generateCallDataSubmission(0, 1);
-    submissionData.compressedData = EMPTY_CALLDATA;
-
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(EMPTY_CALLDATA, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
     await expectRevertWithCustomError(linethRollup, submitDataCall, "EmptySubmissionData");
   });
 
-  it("Should fail when the parent shnarf does not exist", async () => {
+  it("Should fail when the parent dataRollingHash is not anchored", async () => {
     const [submissionData] = generateCallDataSubmission(0, 1);
-    const nonExistingParentShnarf = generateRandomBytes(32);
-    const wrongExpectedShnarf = computeShnarfV2(
-      nonExistingParentShnarf,
-      submissionData.blockHash,
-      ethers.keccak256(submissionData.compressedData),
-    );
+    const nonExistingParent = generateRandomBytes(32);
+    const wrongExpected = computeDataRollingHash(nonExistingParent, ethers.keccak256(submissionData.compressedData));
 
     const asyncCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData, nonExistingParentShnarf, wrongExpectedShnarf, {
+      .submitDataAsCalldata(submissionData.compressedData, nonExistingParent, wrongExpected, {
         gasLimit: MAX_GAS_LIMIT,
       });
 
-    await expectRevertWithCustomError(linethRollup, asyncCall, "ParentShnarfNotSubmitted", [nonExistingParentShnarf]);
+    await expectRevertWithCustomError(linethRollup, asyncCall, "ParentDataRollingHashNotAnchored", [nonExistingParent]);
   });
 
   it("Should succesfully submit 1 compressed data chunk setting values", async () => {
@@ -73,23 +67,23 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
     await expect(
       linethRollup
         .connect(operator)
-        .submitDataAsCalldata(submissionData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT }),
+        .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT }),
     ).to.not.be.reverted;
 
-    const blobShnarfExists = await linethRollup.blobShnarfExists(EXPECTED_ONE);
-    expect(blobShnarfExists).to.equal(1n);
+    const dataRollingHashExists = await linethRollup.blobShnarfExists(EXPECTED_ONE);
+    expect(dataRollingHashExists).to.equal(1n);
   });
 
   it("Should successfully submit 2 compressed data chunks in two transactions", async () => {
-    const submissions = generateCallDataSubmissionWithShnarfs(0, 2);
+    const submissions = generateCallDataSubmissionWithHashes(0, 2);
 
     await expect(
       linethRollup
         .connect(operator)
         .submitDataAsCalldata(
-          { blockHash: submissions[0].blockHash, compressedData: submissions[0].compressedData },
-          submissions[0].parentShnarf,
-          submissions[0].expectedShnarf,
+          submissions[0].compressedData,
+          submissions[0].parentDataRollingHash,
+          submissions[0].expectedDataRollingHash,
           { gasLimit: MAX_GAS_LIMIT },
         ),
     ).to.not.be.reverted;
@@ -98,17 +92,17 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
       linethRollup
         .connect(operator)
         .submitDataAsCalldata(
-          { blockHash: submissions[1].blockHash, compressedData: submissions[1].compressedData },
-          submissions[1].parentShnarf,
-          submissions[1].expectedShnarf,
+          submissions[1].compressedData,
+          submissions[1].parentDataRollingHash,
+          submissions[1].expectedDataRollingHash,
           {
             gasLimit: MAX_GAS_LIMIT,
           },
         ),
     ).to.not.be.reverted;
 
-    const blobShnarfExists = await linethRollup.blobShnarfExists(submissions[0].expectedShnarf);
-    expect(blobShnarfExists).to.equal(1n);
+    const dataRollingHashExists = await linethRollup.blobShnarfExists(submissions[0].expectedDataRollingHash);
+    expect(dataRollingHashExists).to.equal(1n);
   });
 
   it("Should emit an event while submitting 1 compressed data chunk", async () => {
@@ -116,60 +110,60 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
-    const eventArgs = [PARENT_ONE, EXPECTED_ONE, submissionData.blockHash];
+      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+    const eventArgs = [PARENT_ONE, EXPECTED_ONE];
 
     await expectEvent(linethRollup, submitDataCall, "DataSubmittedV4", eventArgs);
   });
 
-  it("Should fail if the block hash yields a wrong expected shnarf", async () => {
+  it("Should fail if the compressed data yields a wrong expected dataRollingHash", async () => {
     const [submissionData] = generateCallDataSubmission(0, 1);
-    submissionData.blockHash = HASH_ZERO;
-
-    const actualShnarf = computeShnarfV2(PARENT_ONE, HASH_ZERO, ethers.keccak256(submissionData.compressedData));
+    const wrongCompressedData = generateRandomBytes(64);
+    const wrongExpected = computeDataRollingHash(PARENT_ONE, ethers.keccak256(wrongCompressedData));
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, wrongExpected, { gasLimit: MAX_GAS_LIMIT });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalShnarfWrong", [EXPECTED_ONE, actualShnarf]);
+    const actualDataRollingHash = computeDataRollingHash(PARENT_ONE, ethers.keccak256(submissionData.compressedData));
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalDataRollingHashWrong", [
+      wrongExpected,
+      actualDataRollingHash,
+    ]);
   });
 
-  it("Should fail to submit where expected shnarf is wrong", async () => {
-    const submissions = generateCallDataSubmissionWithShnarfs(0, 2);
+  it("Should fail to submit where expected dataRollingHash is wrong", async () => {
+    const submissions = generateCallDataSubmissionWithHashes(0, 2);
 
     await expect(
       linethRollup
         .connect(operator)
         .submitDataAsCalldata(
-          { blockHash: submissions[0].blockHash, compressedData: submissions[0].compressedData },
-          submissions[0].parentShnarf,
-          submissions[0].expectedShnarf,
+          submissions[0].compressedData,
+          submissions[0].parentDataRollingHash,
+          submissions[0].expectedDataRollingHash,
           { gasLimit: MAX_GAS_LIMIT },
         ),
     ).to.not.be.reverted;
 
-    const wrongComputedShnarf = generateRandomBytes(32);
+    const wrongComputed = generateRandomBytes(32);
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(
-        { blockHash: submissions[1].blockHash, compressedData: submissions[1].compressedData },
-        submissions[1].parentShnarf,
-        wrongComputedShnarf,
-        { gasLimit: MAX_GAS_LIMIT },
-      );
+      .submitDataAsCalldata(submissions[1].compressedData, submissions[1].parentDataRollingHash, wrongComputed, {
+        gasLimit: MAX_GAS_LIMIT,
+      });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalShnarfWrong", [
-      wrongComputedShnarf,
-      submissions[1].expectedShnarf,
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalDataRollingHashWrong", [
+      wrongComputed,
+      submissions[1].expectedDataRollingHash,
     ]);
   });
 
   it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
     const submitDataCall = linethRollup
       .connect(nonAuthorizedAccount)
-      .submitDataAsCalldata(DATA_ONE, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
   });
@@ -185,35 +179,35 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
 
       const submitDataCall = linethRollup
         .connect(operator)
-        .submitDataAsCalldata(DATA_ONE, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+        .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
       await expectRevertWhenPaused(linethRollup, submitDataCall, pauseType);
     });
   });
 
-  it("Should revert with ShnarfAlreadySubmitted when submitting same compressed data twice in 2 separate transactions", async () => {
+  it("Should revert with DataRollingHashAlreadyAnchored when submitting same compressed data twice in 2 separate transactions", async () => {
     await linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "ShnarfAlreadySubmitted", [EXPECTED_ONE]);
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [EXPECTED_ONE]);
   });
 
-  it("Should revert with ShnarfAlreadySubmitted when submitting same data twice", async () => {
+  it("Should revert with DataRollingHashAlreadyAnchored when submitting same data twice", async () => {
     await linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     const [dataOneCopy] = generateCallDataSubmission(0, 1);
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(dataOneCopy, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(dataOneCopy.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "ShnarfAlreadySubmitted", [EXPECTED_ONE]);
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [EXPECTED_ONE]);
   });
 });

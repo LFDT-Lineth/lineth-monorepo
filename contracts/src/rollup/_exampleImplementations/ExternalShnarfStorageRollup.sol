@@ -22,20 +22,17 @@ contract ExternalShnarfStorageRollup is LinethRollupBase {
    * @param _initializationData The initial data used for proof verification.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    __LinethRollup_init(
-      _initializationData,
-      _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH)
-    );
+    __LinethRollup_init(_initializationData, _computePositionCommitment(EMPTY_HASH, 0));
   }
 
   /**
-   * @notice Returns if the shnarf exists.
+   * @notice Returns if the dataRollingHash has been anchored.
    * @dev Value > 0 means that it exists. Default is 1.
-   * @param _shnarf The shnarf being checked for existence.
-   * @return shnarfExists The shnarf's existence value.
+   * @param _dataRollingHash The dataRollingHash being checked for existence.
+   * @return dataRollingHashExists The dataRollingHash's existence value.
    */
-  function blobShnarfExists(bytes32 _shnarf) public view returns (uint256 shnarfExists) {
-    shnarfExists = shnarfProvider.blobShnarfExists(_shnarf);
+  function blobShnarfExists(bytes32 _dataRollingHash) public view returns (uint256 dataRollingHashExists) {
+    dataRollingHashExists = shnarfProvider.blobShnarfExists(_dataRollingHash);
   }
 
   /**

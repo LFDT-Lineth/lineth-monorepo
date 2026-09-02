@@ -42,12 +42,15 @@ contract LinethRollup is
     BaseInitializationData calldata _initializationData,
     address _livenessRecoveryOperator,
     address _yieldManager
-  ) external onlyInitializedVersion(0) reinitializer(10) {
-    bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
+  ) external onlyInitializedVersion(0) reinitializer(11) {
+    // Genesis DA stream position: the genesis dataRollingHash is the empty accumulator
+    // (no chunks folded yet), and the genesis offset is 0 (fresh start). The sealed genesis
+    // position commitment is keccak256(genesisDataRollingHash || 0).
+    bytes32 genesisDataRollingHash = EMPTY_HASH;
+    _blobShnarfExists[genesisDataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
+    bytes32 genesisPositionCommitment = _computePositionCommitment(genesisDataRollingHash, 0);
 
-    _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-
-    __LinethRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData, genesisPositionCommitment);
     __LivenessRecovery_init(_livenessRecoveryOperator);
     __LinethRollupYieldExtension_init(_yieldManager);
   }
@@ -98,5 +101,37 @@ contract LinethRollup is
    */
   function reinitializeLineaRollupV10() external reinitializer(10) {
     emit LineaRollupVersionChanged(bytes8("8.0"), bytes8("9.0"));
+  }
+
+  /**
+   * @notice Bridges the last finalized 3-arg shnarf into the blob-spanning dataRollingHash model.
+   * @dev This function is a reinitializer and can only be called once per version. Should be called
+   *   using an upgradeAndCall transaction to the ProxyAdmin for live-chain (in-place) upgrades.
+   * @dev Path-selection rule for the (previously undesigned) 3-arg-shnarf -> 2-arg-dataRollingHash
+   *   transition: the slot that held the plain finalized shnarf is reinterpreted as the previous
+   *   end dataRollingHash, and is resealed as the initial position commitment with offset 0
+   *   (fresh-start). The previous shnarf value is captured BEFORE it is overwritten so the bridge
+   *   is one-way. After this, the first post-upgrade finalization supplies
+   *   (prevDataRollingHash = bridged value, prevOffset = 0) and takes the fresh-start branch
+   *   (startOffset == 0), anchoring new dataRollingHashes from the bridged parent.
+   * @dev The caller MUST supply the exact current value of `currentFinalizedShnarf` so the bridge
+   *   reverts if the live state has drifted from what governance approved.
+   * @param _currentFinalizedShnarf The current finalized 3-arg shnarf value to bridge.
+   */
+  function reinitializeLineaRollupV11(bytes32 _currentFinalizedShnarf) external reinitializer(11) nonReentrant {
+    require(_currentFinalizedShnarf != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
+    require(
+      currentFinalizedShnarf == _currentFinalizedShnarf,
+      BridgedShnarfMismatch(_currentFinalizedShnarf, currentFinalizedShnarf)
+    );
+
+    // Reinterpret the last finalized shnarf as the previous end dataRollingHash and anchor it so
+    // post-upgrade submissions can chain from it.
+    _blobShnarfExists[_currentFinalizedShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
+
+    // Seal the bridged position (offset 0 == fresh start) into the position-commitment slot.
+    currentFinalizedShnarf = _computePositionCommitment(_currentFinalizedShnarf, 0);
+
+    emit LineaRollupVersionChanged(bytes8("9.0"), bytes8("10.0"));
   }
 }

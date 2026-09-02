@@ -47,11 +47,11 @@ import {
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
-  generateBlobParentShnarfData,
+  generateBlobParentDataRollingHash,
   calculateLastFinalizedState,
   expectNoEvent,
   expectEventDirectFromReceiptData,
-  computeGenesisShnarf,
+  computePositionCommitment,
 } from "../common/helpers";
 import { LinethRollupInitializationData, PauseTypeRole } from "../common/types";
 
@@ -244,12 +244,19 @@ describe("Lineth Rollup contract", () => {
 
       const receipt = await linethRollup.deploymentTransaction()?.wait();
 
+      // Locate the init event by topic rather than a fixed log index; the number of preceding
+      // RoleGranted/initialization logs changes as init logic evolves.
+      const initTopic = linethRollup.interface.getEvent("LineaRollupBaseInitialized")!.topicHash;
+      const initLogIndex = receipt!.logs.findIndex((log) => log.topics[0] === initTopic);
+      expect(initLogIndex, "LineaRollupBaseInitialized log present").to.be.greaterThanOrEqual(0);
+
       await expectEventDirectFromReceiptData(
         linethRollup,
         receipt!,
         "LineaRollupBaseInitialized",
-        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
-        38,
+        // Genesis position commitment is keccak256(EMPTY_HASH || 0): the empty accumulator at offset 0.
+        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computePositionCommitment(HASH_ZERO, 0n)],
+        initLogIndex,
       );
 
       expect(await linethRollup.blockHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
@@ -319,7 +326,7 @@ describe("Lineth Rollup contract", () => {
       const initData = { ...createDefaultInitData(), roleAddresses };
       const initializeCall = linethRollup.initialize(initData, FALLBACK_OPERATOR_ADDRESS, yieldManager);
 
-      await expectRevertWithCustomError(linethRollup, initializeCall, "InitializedVersionWrong", [0, 10]);
+      await expectRevertWithCustomError(linethRollup, initializeCall, "InitializedVersionWrong", [0, 11]);
     });
   });
 
@@ -854,7 +861,7 @@ describe("Lineth Rollup contract", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
       });

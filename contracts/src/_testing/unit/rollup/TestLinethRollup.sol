@@ -24,8 +24,8 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
     _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
   }
 
-  function setupParentShnarf(bytes32 _shnarf) external {
-    _blobShnarfExists[_shnarf] = 1;
+  function setupParentShnarf(bytes32 _dataRollingHash) external {
+    _blobShnarfExists[_dataRollingHash] = 1;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
@@ -40,12 +40,20 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
     blockHashes[_blockNumber] = _blockHash;
   }
 
-  function setLastFinalizedShnarf(bytes32 _lastFinalizedShnarf) external {
-    currentFinalizedShnarf = _lastFinalizedShnarf;
+  function setLastFinalizedShnarf(bytes32 _lastFinalizedPositionCommitment) external {
+    currentFinalizedShnarf = _lastFinalizedPositionCommitment;
   }
 
-  function setShnarfFinalBlockNumber(bytes32 _shnarf, uint256 _finalBlockNumber) external {
-    _blobShnarfExists[_shnarf] = _finalBlockNumber;
+  function setShnarfFinalBlockNumber(bytes32 _dataRollingHash, uint256 _value) external {
+    _blobShnarfExists[_dataRollingHash] = _value;
+  }
+
+  function computePositionCommitment(bytes32 _dataRollingHash, uint256 _offset) external pure returns (bytes32) {
+    return _computePositionCommitment(_dataRollingHash, _offset);
+  }
+
+  function computeDataRollingHash(bytes32 _parentDataRollingHash, bytes32 _chunkHash) external pure returns (bytes32) {
+    return _computeDataRollingHash(_parentDataRollingHash, _chunkHash);
   }
 
   function setLastFinalizedStateV6(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {

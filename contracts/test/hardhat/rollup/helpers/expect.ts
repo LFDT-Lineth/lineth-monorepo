@@ -7,7 +7,6 @@ import { FailedFinalizeParams, SucceedFinalizeParams, SucceedFinalizeParamsCallF
 import { TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants";
 import {
   calculateLastFinalizedState,
-  computeShnarfV2,
   expectEvent,
   expectEventDirectFromReceiptData,
   expectRevertWithCustomError,
@@ -31,12 +30,6 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
     .connect(operator)
     .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-  const expectedFinalShnarf = computeShnarfV2(
-    finalizationData.shnarfData.parentShnarf,
-    finalizationData.finalBlockHash,
-    finalizationData.finalBlobHash,
-  );
-
   await expectEvent(linethRollup, finalizeCompressedCall, "FinalizedStateUpdated", [
     finalizationData.endBlockNumber,
     finalizationData.finalTimestamp,
@@ -47,7 +40,8 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
   await expectEvent(linethRollup, finalizeCompressedCall, "DataFinalizedV4", [
     BigInt(proofData.lastFinalizedBlockNumber) + 1n,
     finalizationData.endBlockNumber,
-    expectedFinalShnarf,
+    finalizationData.endDataRollingHash,
+    finalizationData.endOffset,
     finalizationData.parentBlockHash,
     finalizationData.finalBlockHash,
   ]);
@@ -93,7 +87,7 @@ export async function expectFailedCustomErrorFinalize(params: FailedFinalizePara
 export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFinalizeParamsCallForwardingProxy) {
   const { context, proofConfig, overrides = {} } = params;
   const { upgradedContract, callforwarderAddress } = context;
-  const { proofData, blobParentShnarfIndex, shnarfDataGenerator, isMultiple } = proofConfig;
+  const { proofData } = proofConfig;
 
   const finalizationData = await generateFinalizationData({
     ...proofDataToFinalizationParams(proofConfig),
@@ -102,16 +96,8 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
 
   await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
 
-  const shnarfData = shnarfDataGenerator(blobParentShnarfIndex, isMultiple);
-  const expectedFinalShnarf = computeShnarfV2(
-    shnarfData.parentShnarf,
-    finalizationData.finalBlockHash,
-    finalizationData.finalBlobHash,
-  );
-  const blobShnarfExists = await upgradedContract.blobShnarfExists(expectedFinalShnarf);
-  expect(blobShnarfExists).to.equal(1n);
-
-  await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
+  const dataRollingHashExists = await upgradedContract.blobShnarfExists(finalizationData.endDataRollingHash);
+  expect(dataRollingHashExists).to.equal(1n);
 
   const txData = [
     proofData.aggregatedProof,
@@ -120,13 +106,6 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.parentStateRootHash,
       finalizationData.parentBlockHash,
       BigInt(finalizationData.endBlockNumber),
-      [
-        shnarfData.parentShnarf,
-        shnarfData.snarkHash,
-        shnarfData.finalStateRootHash,
-        shnarfData.dataEvaluationPoint,
-        shnarfData.dataEvaluationClaim,
-      ],
       finalizationData.lastFinalizedTimestamp,
       finalizationData.finalTimestamp,
       finalizationData.lastFinalizedL1RollingHash,
@@ -138,7 +117,12 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.finalForcedTransactionNumber,
       finalizationData.lastFinalizedForcedTransactionRollingHash,
       finalizationData.finalBlockHash,
-      finalizationData.finalBlobHash,
+      finalizationData.prevDataRollingHash,
+      finalizationData.prevOffset,
+      finalizationData.parentDataRollingHash,
+      finalizationData.endDataRollingHash,
+      finalizationData.startOffset,
+      finalizationData.endOffset,
       finalizationData.l2MerkleRoots,
       finalizationData.filteredAddresses,
       finalizationData.verifierKeys,
@@ -146,16 +130,12 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     ],
   ];
 
-  const encodedCall = ethers.concat([
-    "0x8da8b592",
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      [
-        "bytes",
-        "uint256",
-        "tuple(bytes32,bytes32,uint256,tuple(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32,bytes32,bytes32[],address[],bytes32[],bytes)",
-      ],
-      txData,
-    ),
+  // Encode via the contract interface so the selector always matches the current FinalizationDataV6
+  // struct (the V5->V6 struct change altered the function selector).
+  const encodedCall = upgradedContract.interface.encodeFunctionData("finalizeBlocks", [
+    txData[0],
+    txData[1],
+    txData[2],
   ]);
 
   const { maxFeePerGas, maxPriorityFeePerGas } = await ethers.provider.getFeeData();
@@ -203,7 +183,8 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     [
       BigInt(proofData.lastFinalizedBlockNumber) + 1n,
       finalizationData.endBlockNumber,
-      expectedFinalShnarf,
+      finalizationData.endDataRollingHash,
+      finalizationData.endOffset,
       finalizationData.parentBlockHash,
       finalizationData.finalBlockHash,
     ],

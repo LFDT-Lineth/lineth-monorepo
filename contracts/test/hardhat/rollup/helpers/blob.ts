@@ -78,8 +78,8 @@ export type SubmitBlobsContext = {
   linethRollup: TestLinethRollup;
   blobSubmission: BlobSubmission[];
   compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
+  parentDataRollingHash: string;
+  finalDataRollingHash: string;
   operatorHDSigner?: HDNodeWallet;
   gasLimit?: number;
   targetAddress?: string;
@@ -91,21 +91,18 @@ export type SubmitBlobsContext = {
 export async function submitBlobsAndGetReceipt(context: SubmitBlobsContext): Promise<TransactionReceipt | null> {
   const {
     linethRollup,
-    blobSubmission,
     compressedBlobs,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
     operatorHDSigner,
     gasLimit,
     targetAddress,
   } = context;
 
-  const blobFinalBlockHashes = blobSubmission.map((blob) => blob.finalBlockHash);
   const linethRollupAddress = await linethRollup.getAddress();
   const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
-    blobFinalBlockHashes,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
   ]);
 
   const transaction = await buildBlobTransaction({
@@ -138,19 +135,19 @@ export async function sendBlobTransaction(
   const {
     blobDataSubmission: blobSubmission,
     compressedBlobs,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
   } = generateBlobDataSubmission(startIndex, finalIndex, isMultiple);
 
   const receipt = await submitBlobsAndGetReceipt({
     linethRollup,
     blobSubmission,
     compressedBlobs,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
   });
 
-  const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalBlockHash];
+  const expectedEventArgs = [parentDataRollingHash, finalDataRollingHash];
   expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV4", expectedEventArgs);
 }
 
@@ -162,18 +159,13 @@ export async function sendVersionedBlobTransactionFromFile(
 ) {
   const versionedLinethRollupAddress = await versionedLinethRollup.getAddress();
 
-  const {
-    blobDataSubmission: blobSubmission,
-    compressedBlobs,
-    parentShnarf,
-    finalShnarf,
-  } = generateBlobDataSubmissionFromFile(path.resolve(__dirname, `../../_testData/${versionFolderName}`, filePath));
+  const { compressedBlobs, parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmissionFromFile(
+    path.resolve(__dirname, `../../_testData/${versionFolderName}`, filePath),
+  );
 
-  const blobFinalBlockHashes = blobSubmission.map((blob) => blob.finalBlockHash);
   const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
-    blobFinalBlockHashes,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
   ]);
 
   const transaction = await buildBlobTransaction({
@@ -183,7 +175,7 @@ export async function sendVersionedBlobTransactionFromFile(
   });
 
   const receipt = await signAndBroadcastBlobTransaction(transaction);
-  const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalBlockHash];
+  const expectedEventArgs = [parentDataRollingHash, finalDataRollingHash];
 
   expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV4", expectedEventArgs);
 }
@@ -194,18 +186,15 @@ export async function sendBlobTransactionViaCallForwarder(
   finalIndex: number,
   callforwarderAddress: string,
 ) {
-  const {
-    blobDataSubmission: blobSubmission,
-    compressedBlobs,
-    parentShnarf,
-    finalShnarf,
-  } = generateBlobDataSubmission(startIndex, finalIndex, false);
+  const { compressedBlobs, parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(
+    startIndex,
+    finalIndex,
+    false,
+  );
 
-  const blobFinalBlockHashes = blobSubmission.map((blob) => blob.finalBlockHash);
   const encodedCall = linethRollupUpgraded.interface.encodeFunctionData("submitBlobs", [
-    blobFinalBlockHashes,
-    parentShnarf,
-    finalShnarf,
+    parentDataRollingHash,
+    finalDataRollingHash,
   ]);
 
   const transaction = await buildBlobTransaction({
@@ -216,7 +205,7 @@ export async function sendBlobTransactionViaCallForwarder(
   });
 
   const receipt = await signAndBroadcastBlobTransaction(transaction);
-  const expectedEventArgs = [parentShnarf, finalShnarf, blobSubmission[blobSubmission.length - 1].finalBlockHash];
+  const expectedEventArgs = [parentDataRollingHash, finalDataRollingHash];
 
   expectEventDirectFromReceiptData(
     linethRollupUpgraded as BaseContract,
