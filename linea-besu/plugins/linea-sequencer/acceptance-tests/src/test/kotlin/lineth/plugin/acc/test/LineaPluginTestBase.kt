@@ -449,6 +449,46 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     assertThat(blockNumbers.size).isEqualTo(1)
   }
 
+  /**
+   * Asserts that all [fittingHashes] were mined together in one block, and that [overflowHash] was
+   * mined in a strictly later block. This is the ordering-based form of the limit tests: what
+   * matters is that the fitting transactions were accepted together and the overflowing one came
+   * after — not the exact block numbers, which can shift by a block under block-build timing jitter
+   * (e.g. the Vert.x 5 migration in Besu 26.8.1 slowed selection enough that an exact
+   * single-block-vs-next-block layout is no longer guaranteed on a loaded CI runner).
+   */
+  protected fun assertFittingTransactionsMinedBeforeOverflow(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+  ) {
+    val receiptProcessor = createReceiptProcessor(web3j)
+
+    fun blockNumberOf(hash: String): Long =
+      try {
+        val receipt = receiptProcessor.waitForTransactionReceipt(hash)
+        assertThat(receipt).isNotNull
+        receipt.blockNumber.toLong()
+      } catch (e: IOException) {
+        throw RuntimeException(e)
+      } catch (e: TransactionException) {
+        throw RuntimeException(e)
+      }
+
+    val fittingBlocks = fittingHashes.map(::blockNumberOf).toSet()
+    assertThat(fittingBlocks)
+      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .hasSize(1)
+
+    val overflowBlock = blockNumberOf(overflowHash)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting block " +
+          "${fittingBlocks.single()}, got $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+  }
+
   protected fun assertTransactionNotInThePool(hash: String) {
     minerNode.verify(
       TxPoolConditions(TxPoolTransactions())

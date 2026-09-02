@@ -104,17 +104,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
+    // mined together, and the last one (which exceeds the limit) was mined in a strictly later
+    // block. This asserts ordering rather than an exact one-block-vs-next-block layout, which is not
+    // guaranteed under block-build timing jitter (see assertFittingTransactionsMinedBeforeOverflow).
+    assertFittingTransactionsMinedBeforeOverflow(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
-    )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
+      txHashes[nTransactions - 1]!!,
     )
 
     asserLogsContain(target)
@@ -197,17 +194,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
+    // mined together, and the last one (which exceeds the limit) was mined in a strictly later
+    // block. This asserts ordering rather than an exact one-block-vs-next-block layout, which is not
+    // guaranteed under block-build timing jitter (see assertFittingTransactionsMinedBeforeOverflow).
+    assertFittingTransactionsMinedBeforeOverflow(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
-    )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
+      txHashes[nTransactions - 1]!!,
     )
 
     asserLogsContain(target)
@@ -285,17 +279,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
+    // mined together, and the last one (which exceeds the limit) was mined in a strictly later
+    // block. This asserts ordering rather than an exact one-block-vs-next-block layout, which is not
+    // guaranteed under block-build timing jitter (see assertFittingTransactionsMinedBeforeOverflow).
+    assertFittingTransactionsMinedBeforeOverflow(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
-    )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
+      txHashes[nTransactions - 1]!!,
     )
 
     asserLogsContain(target)
@@ -375,17 +366,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
+    // mined together, and the last one (which exceeds the limit) was mined in a strictly later
+    // block. This asserts ordering rather than an exact one-block-vs-next-block layout, which is not
+    // guaranteed under block-build timing jitter (see assertFittingTransactionsMinedBeforeOverflow).
+    assertFittingTransactionsMinedBeforeOverflow(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
-    )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
+      txHashes[nTransactions - 1]!!,
     )
 
     asserLogsContain(target)
