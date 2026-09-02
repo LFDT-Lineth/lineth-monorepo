@@ -89,6 +89,10 @@ type Module struct {
 	IsForConsistency ifaces.Column
 	IsEmptyKeccak    [common.NbLimbU256]ifaces.Column
 	CptIsEmptyKeccak [common.NbLimbU256]wizard.ProverAction
+
+	// IsEmptyCodeHash lights-up when all the limbs of CodeHash match emptyKeccak.
+	IsEmptyCodeHash    ifaces.Column
+	CptIsEmptyCodeHash wizard.ProverAction
 }
 
 // NewModule registers and committing all the columns and queries in the POSEIDON2_code_hash module
@@ -115,24 +119,33 @@ func NewModule(comp *wizard.CompiledIOP, inputs Inputs) (mh Module) {
 
 	mh.IsForConsistency = comp.InsertCommit(inputs.Round, POSEIDON2_CODE_HASH_IS_FOR_CONSISTENCY, inputs.Size, true)
 
+	isEmptyKeccakLimbs := make([]any, 0, common.NbLimbU256)
+
 	for i := range common.NbLimbU256 {
 
 		// IsEmptyKeccak[i] = 1 if CodeHash[i] = emptyKeccak[i]
 		mh.IsEmptyKeccak[i], mh.CptIsEmptyKeccak[i] = dedicated.IsZero(comp,
 			sym.Sub(mh.CodeHash[i], emptyKeccak[i])).GetColumnAndProverAction()
 
-		comp.InsertGlobal(
-			0,
-			ifaces.QueryIDf("POSEIDON2_CODE_HASH_CPT_IF_FOR_CONSISTENCY_%d", i),
-			sym.Sub(
-				mh.IsForConsistency,
-				sym.Mul(
-					sym.Sub(1, mh.IsEmptyKeccak[i]),
-					mh.IsHashEnd,
-				),
-			),
-		)
+		isEmptyKeccakLimbs = append(isEmptyKeccakLimbs, mh.IsEmptyKeccak[i])
 	}
+
+	// IsEmptyKeccak[i] is boolean, so all the limbs match iff their sum reaches
+	// common.NbLimbU256. Summing keeps the query below at degree 2.
+	mh.IsEmptyCodeHash, mh.CptIsEmptyCodeHash = dedicated.IsZero(comp,
+		sym.Sub(sym.Add(isEmptyKeccakLimbs...), common.NbLimbU256)).GetColumnAndProverAction()
+
+	comp.InsertGlobal(
+		0,
+		ifaces.QueryID("POSEIDON2_CODE_HASH_CPT_IF_FOR_CONSISTENCY"),
+		sym.Sub(
+			mh.IsForConsistency,
+			sym.Mul(
+				sym.Sub(1, mh.IsEmptyCodeHash),
+				mh.IsHashEnd,
+			),
+		),
+	)
 
 	mh.checkConsistency(comp)
 
