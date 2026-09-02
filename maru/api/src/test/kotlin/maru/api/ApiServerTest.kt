@@ -127,7 +127,7 @@ class ApiServerTest {
       override fun getBeaconBlockByBlockRoot(blockRoot: String): SealedBeaconBlock {
         if (blockRoot ==
           SEALED_BEACON_BLOCK.beaconBlock.beaconBlockHeader
-            .hash()
+            .beaconBlockIdHash()
             .encodeHex()
         ) {
           return SEALED_BEACON_BLOCK

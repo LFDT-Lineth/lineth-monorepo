@@ -71,16 +71,16 @@ class InMemoryBeaconChain(
     private var newBeaconState: BeaconState? = null
 
     override fun putBeaconState(beaconState: BeaconState): BeaconChain.Updater {
-      beaconStateByBlockRoot[ByteArrayWrapper(beaconState.beaconBlockHeader.hash)] = beaconState
+      beaconStateByBlockRoot[ByteArrayWrapper(beaconState.beaconBlockHeader.beaconBlockIdHash)] = beaconState
       beaconStateByBlockNumber[beaconState.beaconBlockHeader.number] = beaconState
       newBeaconState = beaconState
       return this
     }
 
     override fun putSealedBeaconBlock(sealedBeaconBlock: SealedBeaconBlock): BeaconChain.Updater {
-      sealedBeaconBlockByBlockRoot[ByteArrayWrapper(sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash)] =
-        sealedBeaconBlock
-      sealedBeaconBlockByBlockNumber[sealedBeaconBlock.beaconBlock.beaconBlockHeader.number] = sealedBeaconBlock
+      val beaconBlockHeader = sealedBeaconBlock.beaconBlock.beaconBlockHeader
+      sealedBeaconBlockByBlockRoot[ByteArrayWrapper(beaconBlockHeader.beaconBlockIdHash)] = sealedBeaconBlock
+      sealedBeaconBlockByBlockNumber[beaconBlockHeader.number] = sealedBeaconBlock
       return this
     }
 

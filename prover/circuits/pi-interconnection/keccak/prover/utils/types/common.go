@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 func DecodeQuotedHexString(b []byte) ([]byte, error) {

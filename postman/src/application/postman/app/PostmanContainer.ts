@@ -14,8 +14,8 @@ import {
   ViemL2MessageServiceClient,
   ViemLineaGasProvider,
   ViemLineaProvider,
-  ViemLineaRollupClient,
-  ViemLineaRollupLogClient,
+  ViemLinethRollupClient,
+  ViemLinethRollupLogClient,
   ViemL2MessageServiceLogClient,
   ViemProvider,
   ViemTransactionSigner,
@@ -43,7 +43,7 @@ type SharedInfrastructure = {
   messageRepository: TypeOrmMessageRepository;
   calldataDecoder: ViemCalldataDecoder;
   errorParser: ViemErrorParser;
-  lineaRollupClient: ViemLineaRollupClient;
+  linethRollupClient: ViemLinethRollupClient;
   l2MessageServiceClient: ViemL2MessageServiceClient;
   l1Provider: ViemProvider;
   l2Provider: ViemProvider;
@@ -83,7 +83,7 @@ async function buildSharedInfrastructure(
     new WinstonLogger("L2GasProvider", loggerOptions),
   );
 
-  const lineaRollupClient = new ViemLineaRollupClient(
+  const linethRollupClient = new ViemLinethRollupClient(
     l1.publicClient,
     l1.walletClient,
     l1Config.messageServiceContractAddress,
@@ -105,7 +105,7 @@ async function buildSharedInfrastructure(
     messageRepository: new TypeOrmMessageRepository(db),
     calldataDecoder: new ViemCalldataDecoder(new WinstonLogger("ViemCalldataDecoder", loggerOptions)),
     errorParser: new ViemErrorParser(),
-    lineaRollupClient,
+    linethRollupClient,
     l2MessageServiceClient,
     l1Provider: new ViemProvider(l1.publicClient, new WinstonLogger("L1Provider", loggerOptions)),
     l2Provider: new ViemProvider(l2.publicClient, new WinstonLogger("L2Provider", loggerOptions)),
@@ -163,7 +163,7 @@ function buildL1ToL2Deps(
   const transactionSizeCalculator = new L2ClaimTransactionSizeCalculator(l2MessageServiceClient, transactionSigner);
 
   const deps: L1ToL2Deps = {
-    l1LogClient: new ViemLineaRollupLogClient(l1.publicClient, l1Config.messageServiceContractAddress),
+    l1LogClient: new ViemLinethRollupLogClient(l1.publicClient, l1Config.messageServiceContractAddress),
     l1Provider,
     l2MessageServiceClient,
     l2Provider: new ViemLineaProvider(l2.publicClient, new WinstonLogger("L2LineaProvider", loggerOptions)),
@@ -199,7 +199,7 @@ function buildL2ToL1Deps(
     messageRepository,
     calldataDecoder,
     errorParser,
-    lineaRollupClient,
+    linethRollupClient,
     l1Provider,
     l2Provider,
     l1GasProvider,
@@ -228,7 +228,7 @@ function buildL2ToL1Deps(
   const l1ReceiptPoller = new ViemReceiptPoller(l1Provider, new WinstonLogger("L1ReceiptPoller", loggerOptions));
 
   const transactionValidationService = new EthereumTransactionValidationService(
-    lineaRollupClient,
+    linethRollupClient,
     l1GasProvider,
     {
       profitMargin: l1Config.claiming.profitMargin,
@@ -242,7 +242,7 @@ function buildL2ToL1Deps(
   const deps: L2ToL1Deps = {
     l2LogClient: new ViemL2MessageServiceLogClient(l2.publicClient, l2Config.messageServiceContractAddress),
     l2Provider,
-    lineaRollupClient,
+    linethRollupClient,
     l1Provider,
     l1NonceManager,
     l1TransactionRetrier,

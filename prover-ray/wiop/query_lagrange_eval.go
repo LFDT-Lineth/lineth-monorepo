@@ -6,6 +6,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -58,7 +59,7 @@ func (le *LagrangeEval) Round() *Round {
 
 // IsAlreadyAssigned implements [AssignableQuery]. Reports whether all
 // EvaluationClaims cells already hold a runtime assignment.
-func (le *LagrangeEval) IsAlreadyAssigned(rt Runtime) bool {
+func (le *LagrangeEval) IsAlreadyAssigned(rt *Runtime) bool {
 	for _, claim := range le.EvaluationClaims {
 		if !rt.HasCellValue(claim) {
 			return false
@@ -70,7 +71,7 @@ func (le *LagrangeEval) IsAlreadyAssigned(rt Runtime) bool {
 // SelfAssign implements [AssignableQuery]. Evaluates each polynomial at the
 // EvaluationPoint and writes the results into the corresponding
 // EvaluationClaims cells.
-func (le *LagrangeEval) SelfAssign(rt Runtime) {
+func (le *LagrangeEval) SelfAssign(rt *Runtime) {
 	evals := le.evalPolynomials(rt)
 	for i, claim := range le.EvaluationClaims {
 		rt.AssignCell(claim, evals[i])
@@ -84,7 +85,7 @@ func (le *LagrangeEval) SelfAssign(rt Runtime) {
 // Precondition: every polynomial column must be assigned in rt. The method
 // returns a descriptive error for the first misassigned column or failing
 // claim rather than panicking, so callers can surface the problem cleanly.
-func (le *LagrangeEval) Check(rt Runtime) error {
+func (le *LagrangeEval) Check(rt *Runtime) error {
 
 	// Verify that all polynomial columns have been assigned in the runtime.
 	for i, pv := range le.Polynomials {
@@ -120,25 +121,31 @@ func (le *LagrangeEval) Check(rt Runtime) error {
 // evalPolynomials evaluates each polynomial in le.Polynomials at the
 // EvaluationPoint, applying the cyclic-shift adjustment for each [ColumnView].
 // It is the shared kernel used by both [Check] and [SelfAssign].
-func (le *LagrangeEval) evalPolynomials(rt Runtime) []field.Gen {
+//
+// Each polynomial is an independent O(n) barycentric evaluation writing its
+// own results slot, so the batch is chunked across CPUs.
+func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
 	results := make([]field.Gen, len(le.Polynomials))
-	for i, pv := range le.Polynomials {
-		// Adjust the evaluation point for the column view's cyclic shift.
-		// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
-		// so we evaluate the original column data at ω^k · z instead.
-		z := evalPoint.Value
-		if k := pv.ShiftingOffset; k != 0 {
-			var (
-				n      = pv.Column.Module.RuntimeSize(rt)
-				omega  = field.RootOfUnityBy(n)
-				omegaK field.Element
-			)
-			omegaK.ExpInt64(omega, int64(k))
-			z = z.Mul(field.ElemFromBase(omegaK))
+	parallel.Execute(len(le.Polynomials), func(start, end int) {
+		for i := start; i < end; i++ {
+			pv := le.Polynomials[i]
+			// Adjust the evaluation point for the column view's cyclic shift.
+			// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
+			// so we evaluate the original column data at ω^k · z instead.
+			z := evalPoint.Value
+			if k := pv.ShiftingOffset; k != 0 {
+				var (
+					n      = pv.Column.Module.RuntimeSize(rt)
+					omega  = field.RootOfUnityBy(n)
+					omegaK field.Element
+				)
+				omegaK.ExpInt64(omega, int64(k))
+				z = z.Mul(field.ElemFromBase(omegaK))
+			}
+			results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
 		}
-		results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
-	}
+	})
 	return results
 }
 
@@ -250,7 +257,7 @@ func (sys *System) newLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 // barycentric sum directly from Plain[0], treating padding and data rows
 // separately with a single shared batch of denominator inverses. This avoids
 // materialising the full n-length padded data vector.
-func evalLagrangePadded(cv *ConcreteVector, m *Module, rt Runtime, z field.Gen) field.Gen {
+func evalLagrangePadded(cv *ConcreteVector, m *Module, rt *Runtime, z field.Gen) field.Gen {
 	data := cv.Plain
 	if m.Padding == PaddingDirectionNone {
 		return polynomials.EvalLagrange(data, z)

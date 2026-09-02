@@ -4,6 +4,27 @@ include "../../riscv/ram/read.zkc"
 // read_and_pad_64 is used by the keccak implementation to extract data
 // from ram; it is used when building the u64's of the final block;
 // it incorporates keccak-specific padding
+
+const ONE_U64:u64 = 1
+const ONE_U56:u56 = 1
+const ONE_U48:u48 = 1
+const ONE_U40:u40 = 1
+const ONE_U32:u32 = 1
+const ONE_U24:u24 = 1
+const ONE_U16:u16 = 1
+const ONE_U8:u8 = 1
+
+const FINAL_RIGHT_PADDING:u64 = 0x80_00_00_00_00_00_00_00
+
+const ONE_ZEROS_ONE_U64:u64 = 0x80_00_00_00_00_00_00_01
+const ONE_ZEROS_ONE_U56:u56 = 0x80_00_00_00_00_00_01
+const ONE_ZEROS_ONE_U48:u48 = 0x80_00_00_00_00_01
+const ONE_ZEROS_ONE_U40:u40 = 0x80_00_00_00_01
+const ONE_ZEROS_ONE_U32:u32 = 0x80_00_00_01
+const ONE_ZEROS_ONE_U24:u24 = 0x80_00_01
+const ONE_ZEROS_ONE_U16:u16 = 0x80_01
+const ONE_ZEROS_ONE_U8:u8 = 0x81
+
 fn read_and_pad_64<ram>(address:Address, n_bytes:u3, final_word_in_block:u1) -> (value:u64) {
 
     switch n_bytes {
@@ -38,23 +59,8 @@ fn read_and_pad_64<ram>(address:Address, n_bytes:u3, final_word_in_block:u1) -> 
     return
 }
 
-const ONE_U64:u64 = 1
-const ONE_U56:u56 = 1
-const ONE_U48:u48 = 1
-const ONE_U40:u40 = 1
-const ONE_U32:u32 = 1
-const ONE_U24:u24 = 1
-const ONE_U16:u16 = 1
-const ONE_U8:u8 = 1
-
-const FINAL_RIGHT_PADDING:u64 = 0x80_00_00_00_00_00_00_00
-
-const ONE_ZEROS_ONE_U64:u64 = 0x80_00_00_00_00_00_00_01
-const ONE_ZEROS_ONE_U56:u56 = 0x80_00_00_00_00_00_01
-const ONE_ZEROS_ONE_U48:u48 = 0x80_00_00_00_00_01
-const ONE_ZEROS_ONE_U40:u40 = 0x80_00_00_00_01
-const ONE_ZEROS_ONE_U32:u32 = 0x80_00_00_01
-const ONE_ZEROS_ONE_U24:u24 = 0x80_00_01
-const ONE_ZEROS_ONE_U16:u16 = 0x80_01
-const ONE_ZEROS_ONE_U8:u8 = 0x81
-
+// rotate left by n bits
+fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
+    var shift:u7 = 64 - (n as u7)
+    res = (word << n) | (word >> shift)
+}

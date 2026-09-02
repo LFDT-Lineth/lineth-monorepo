@@ -305,10 +305,9 @@ Decorators allow you to extend a Viem client (public or wallet) with additional 
 Extend a Viem public client with Linea public actions for L1 or L2. You can optionally pass an object with custom contract addresses:
 
 - **publicActionsL1 parameters:**
-  - `lineaRollupAddress` (Address): Custom Linea rollup contract address on L1
+  - `rollupAddress` (Address): Custom L1 rollup contract address
   - `l2MessageServiceAddress` (Address): Custom L2 message service contract address
 - **publicActionsL2 parameters:**
-  - `lineaRollupAddress` (Address): Custom Linea rollup contract address on L2
   - `l2MessageServiceAddress` (Address): Custom L2 message service contract address
 
 **Default usage:**
@@ -325,7 +324,7 @@ const l2Client = createPublicClient({ chain: lineaSepolia, transport: http() }).
 ```ts
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(
   publicActionsL1({
-    lineaRollupAddress: '0xYourCustomL1Rollup',
+    rollupAddress: '0xYourCustomL1Rollup',
     l2MessageServiceAddress: '0xYourCustomL2MessageService',
   })
 );
@@ -336,7 +335,7 @@ const l1Client = createPublicClient({ chain: sepolia, transport: http() }).exten
 Extend a Viem wallet client with Linea wallet actions for L1 or L2. You can optionally pass an object with custom contract addresses:
 
 - **walletActionsL1 parameters:**
-  - `lineaRollupAddress` (Address): Custom Linea rollup contract address on L1
+  - `rollupAddress` (Address): Custom L1 rollup contract address
   - `l2MessageServiceAddress` (Address): Custom L2 message service contract address
   - `l1TokenBridgeAddress` (Address): Custom L1 token bridge contract address
   - `l2TokenBridgeAddress` (Address): Custom L2 token bridge contract address
@@ -358,7 +357,7 @@ const l2Wallet = createWalletClient({ chain: lineaSepolia, transport: http() }).
 ```ts
 const l1Wallet = createWalletClient({ chain: sepolia, transport: http() }).extend(
   walletActionsL1({
-    lineaRollupAddress: '0xYourCustomL1Rollup',
+    rollupAddress: '0xYourCustomL1Rollup',
     l2MessageServiceAddress: '0xYourCustomL2MessageService',
     l1TokenBridgeAddress: '0xYourCustomL1TokenBridge',
     l2TokenBridgeAddress: '0xYourCustomL2TokenBridge',

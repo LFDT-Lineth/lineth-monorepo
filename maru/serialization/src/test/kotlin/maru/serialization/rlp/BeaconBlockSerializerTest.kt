@@ -10,30 +10,33 @@ package maru.serialization.rlp
 
 import maru.core.BeaconBlock
 import maru.core.BeaconBlockBody
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.ext.DataGenerators
 import maru.core.ext.DataGenerators.randomExecutionPayload
-import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 import kotlin.random.nextULong
 
 class BeaconBlockSerializerTest {
+  private val validatorSerializer = ValidatorSerDe()
+  private val beaconBlockHeaderRLPSerializer = BeaconBlockHeaderRLPSerializer(validatorSerializer)
   private val blockHeaderSerializer =
     BeaconBlockHeaderSerDe(
-      validatorSerializer = ValidatorSerDe(),
-      hasher = Hashing::keccak,
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockHeaderRLPSerializer = beaconBlockHeaderRLPSerializer,
+      validatorSerializer = validatorSerializer,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
   private val blockBodySerializer =
+    BeaconBlockBodySerDe(
+      sealSerializer = SealSerDe(),
+      executionPayloadSerializer = ExecutionPayloadSerDe(),
+    )
+  private val blockSerializer =
     BeaconBlockSerDe(
+      beaconBlockRLPSerializer = BeaconBlockRLPSerializer(beaconBlockHeaderRLPSerializer, blockBodySerializer),
       beaconBlockHeaderSerializer = blockHeaderSerializer,
-      beaconBlockBodySerializer = BeaconBlockBodySerDe(
-        sealSerializer = SealSerDe(),
-        executionPayloadSerializer = ExecutionPayloadSerDe(),
-      ),
+      beaconBlockBodySerializer = blockBodySerializer,
     )
 
   @Test
@@ -52,8 +55,8 @@ class BeaconBlockSerializerTest {
         beaconBlockHeader = beaconBLockHeader,
         beaconBlockBody = beaconBlockBody,
       )
-    val serializedData = blockBodySerializer.serialize(testValue)
-    val deserializedValue = blockBodySerializer.deserialize(serializedData)
+    val serializedData = blockSerializer.serialize(testValue)
+    val deserializedValue = blockSerializer.deserialize(serializedData)
 
     assertThat(deserializedValue).isEqualTo(testValue)
   }

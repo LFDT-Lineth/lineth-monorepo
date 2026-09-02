@@ -22,6 +22,7 @@ import io.libp2p.pubsub.gossip.GossipScoreParams
 import io.libp2p.pubsub.gossip.GossipTopicsScoreParams
 import io.libp2p.pubsub.gossip.builders.GossipParamsBuilder
 import io.libp2p.pubsub.gossip.builders.GossipRouterBuilder
+import io.libp2p.security.noise.NoiseXXSecureChannel
 import io.libp2p.security.secio.SecIoSecureChannel
 import io.libp2p.transport.tcp.TcpTransport
 import maru.config.P2PConfig
@@ -162,6 +163,8 @@ class Libp2pNetworkFactory(
         gossipNetwork,
         /* listenPorts = */
         listOf(port.toInt()),
+        /* quicEnabled = */
+        false,
       )
     return TekuLibP2PNetwork(p2pNetwork, host, maruPeerManager)
   }
@@ -212,6 +215,7 @@ class Libp2pNetworkFactory(
         factory = { privateKey }
       }
       secureChannels {
+        add { localKey, muxerProtocols -> NoiseXXSecureChannel(localKey, muxerProtocols) }
         add { localKey, muxerProtocols -> SecIoSecureChannel(localKey, muxerProtocols) }
       }
       connectionHandlers {
@@ -220,6 +224,7 @@ class Libp2pNetworkFactory(
         }
       }
       muxers {
+        add(StreamMuxerProtocol.getYamux())
         add(StreamMuxerProtocol.Mplex)
       }
     }

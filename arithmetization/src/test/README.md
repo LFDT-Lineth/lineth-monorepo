@@ -13,7 +13,7 @@ The executable, the JSON and the disassembled file live in `asm/bin/` for assemb
 - `cargo (>= 1.88.0)` — for Rust programs
 - nightly `rustc (>= rustc 1.88.0)` — for Rust programs
 - `go (>= 1.26.1)` — to convert ELF to JSON
-- `zkc` — to execute/debug the JSON (`make install-zkc` from the arithmetization Makefile)
+- `zkc` — pinned as a Go tool in the arithmetization module; no separate installation is needed
 
 ACT4 tests can be built either with Docker or directly on the host.
 
@@ -89,7 +89,7 @@ Useful shell function (add to `~/.zshrc` or `~/.bashrc`):
 riscv-test() {
     local makefile="path/to/lineth-monorepo/arithmetization/src/test/Makefile"
     case "$1" in
-        elf-exec|elf-debug|elf-to-json|install-zkc|clean-all|linker-script|vector-exec|zkc-exec|zkc-debug|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
+        elf-exec|elf-debug|elf-to-json|clean-all|linker-script|vector-exec|zkc-exec|zkc-debug|keccak-rust-build|keccak-rust-json|keccak-rust-exec|keccak-zig-build|keccak-zig-json|keccak-zig-exec|blake-rust-build|blake-rust-json|blake-rust-exec|act4-build|act4-exec)
             # targets that do NOT require TEST argument
             make -f "$makefile" "$1" "${@:2}"
             ;;
@@ -189,7 +189,6 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 | `make elf-exec BIN_EXT=foo`                              | Convert and execute an already compiled ELF (`JSON_EXT=foo.json` by default)           |
 | `make elf-debug BIN_EXT=foo`                             | Convert and debug an already compiled ELF (`JSON_EXT=foo.json` by default)             |
 | `make elf-to-json BIN_EXT=foo`                           | Convert an already compiled ELF to JSON (`JSON_EXT=foo.json` by default)               |
-| `make install-zkc`                                       | Invoke `../../../Makefile install-zkc` to install zkc if not already installed         |
 | `make zkc-exec JSON=foo.json`                            | Execute an existing JSON input (`ZKC`, `ZKC_MAIN`, `ZKC_EXEC_FLAGS` overridable)      |
 | `make zkc-debug JSON=foo.json`                           | Debug an existing JSON input (`ZKC`, `ZKC_MAIN` overridable)                         |
 | `make clean TEST=foo.<ext>`                              | Remove binary and JSON for this test                                                   |
@@ -216,7 +215,7 @@ riscv-test compile <name>.<ext> VERIFY_ELF=true
 |------------------------------|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `TEST`                       | `""`                                                                                   | Source file path with extension, relative to the corresponding `src/` folder                                                                  |
 | `JSON`                       | `$(BIN).json` when `TEST` is set                                                       | JSON input path for `zkc-exec` and `zkc-debug`                                                                                                |
-| `ZKC`                        | `zkc`                                                                                  | `zkc` binary used by `zkc-exec` and `zkc-debug`                                                                                               |
+| `ZKC`                        | `go -C <arithmetization> tool zkc`                                                      | Command used by `zkc-exec` and `zkc-debug`; overridable for comparison benchmarks                                                             |
 | `ZKC_MAIN`                   | `../main/riscv/main.zkc`                                                               | Program passed to `zkc exec` / `zkc debug`                                                                                                    |
 | `ZKC_EXEC_FLAGS`             | `--fast -q`                                                                            | Flags passed to `zkc exec` within `zkc-exec` and `elf-exec`                                                                                   |
 | `BIN_EXT`                    | `""`                                                                                   | Already compiled ELF used by `elf-to-json`, `elf-exec` and `elf-debug`                                                                        |
@@ -258,11 +257,13 @@ In `batched` mode, the Makefile writes the selected vectors as one big-endian `I
 `main.go` converts an ELF and optional input bytes into the JSON consumed by `zkc`:
 
 ```bash
-go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset>
+go run main.go <elfFile> <inBytes|@hexFile|@sszFile> <inBytesOffset>
 ```
 
 Use inline `0x...` for small inputs and `@path/to/in_bytes` for a file containing one `0x...` blob.
 Both forms are interpreted as big-endian `IN_BYTES` and reversed before being written to RAM.
+Use `@path/to/input.ssz` for raw SSZ input; the helper writes the `[u64 LE length]` prefix at `IN_ORIGIN`
+and the SSZ payload at `IN_ORIGIN + 8` as separate blobs.
 
 ## JSON input format
 
@@ -279,6 +280,7 @@ The ELF-to-JSON helper writes sparse memory blobs in this shape:
 Use `_` to read fields inside one packed value and `____` to read separate blobs or array items.
 `zkc` ignores `_` in JSON input strings, so these separators are only for inspection.
 For `IN_BYTES`, pass hex in big-endian order; the ELF-to-JSON helper writes the reversed bytes into `blobs_data`.
+For `.ssz` input files, the helper writes the length prefix and raw payload without reversing the payload.
 
 ## Target ISA
 
@@ -334,12 +336,12 @@ The `build/` directory contains ACT4 intermediate and debug artifacts: signature
 The `elfs/` directory contains the final self-checking ELFs run by `make act4-exec`.
 The `logs/` directory contains one JSON input per test generated by `act4-build`, non-empty JSON conversion stderr in `.json.err`, and non-empty zkc stderr in `.err` for failing tests.
 Add `export ELF2JSON_WRITE_SECTIONS=true` to your shell startup file (e.g. `~/.bashrc` or `~/.zshrc`) to also write `.sections` files next to the ELF files, listing the sparse blobs included in the generated JSON input with their indexes, offsets, sizes and names.
-`act4-exec` runs `zkc exec -q`, so stdout is suppressed and a test passes when zkc exits with code 0 and stderr is empty. A summary of ACT4 results is written in `results.txt`.
+`act4-exec` runs `go tool zkc exec -q`, so stdout is suppressed and a test passes when zkc exits with code 0 and stderr is empty. A summary of ACT4 results is written in `results.txt`.
 
 To rerun one generated ACT4 test through zkc:
 
 ```bash
-zkc exec -q act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
+go tool zkc exec -q act4/bin/logs/<test-name>.json ../../main/riscv/main.zkc
 ```
 
 ## Default memory layout

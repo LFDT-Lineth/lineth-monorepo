@@ -27,6 +27,7 @@
 - Local setup: `docs/get-started.md`, `docs/local-development-guide.md`
 - Architecture: `docs/architecture-description.md`
 - Engineering guidelines: `docs/development-guidelines.md`
+- Docker image builds (CI and local simulation): `scripts/docker/README.md`
 - Security and audits: `docs/security.md`, `docs/audits.md`
 - Package-specific agent rules: `*/AGENTS.md` (`contracts/`, `coordinator/`, `prover/`, `tracer/`, `ts-libs/sdk/`, `linea-besu/plugins/`, `transaction-exclusion-api/`, `e2e/`)
 
@@ -178,7 +179,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 
 ### Style
 
-- **Formatter:** Prettier 3.8.1 — `prettier.config.mjs`
+- **Formatter:** Prettier 3.8.4 — `prettier.config.mjs`
 - **Linter (TS/JS):** ESLint 9.39.4 flat config — `ts-libs/eslint-config/`
 - **Linter (Solidity):** Solhint 6.2.1 + Prettier plugin
 - **Linter (Kotlin/Java):** Spotless with ktlint + Google Java Format
@@ -204,8 +205,8 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 |---------|-----------|---------|
 | TS/JS files | kebab-case | `message-service.ts` |
 | React components | PascalCase | `ResultsPanel.tsx` |
-| Solidity files | PascalCase | `LineaRollup.sol` |
-| Solidity interfaces | `I` prefix + PascalCase | `ILineaRollup.sol` |
+| Solidity files | PascalCase | `LinethRollup.sol` |
+| Solidity interfaces | `I` prefix + PascalCase | `ILinethRollup.sol` |
 | Kotlin files | PascalCase | `CoordinatorApp.kt` |
 | Go files | snake_case | `blob_compressor.go` |
 | Branch names | `type/issue#-short-description` | `feature/123-add-login-button` |
@@ -223,7 +224,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 |------|----------|-------|
 | Contracts (Hardhat) | Hardhat + ethers.js | `pnpm -F contracts run test` |
 | Contracts (Foundry) | Forge | `test/foundry/*` |
-| TypeScript packages | Jest 30.3.0 + ts-jest | `pnpm -F <pkg> run test` |
+| TypeScript packages | Jest 30.4.2 + ts-jest | `pnpm -F <pkg> run test` |
 | Coordinator | JUnit 5 + Mockito + WireMock | `./gradlew :coordinator:app:test` |
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
 | E2E (protocol) | Jest | `pnpm -F e2e run test:local` |
@@ -346,7 +347,7 @@ These require human approval and follow the release process:
 | Name | Type | Stack | Purpose |
 |------|------|-------|---------|
 | `contracts` | Smart contracts | Solidity 0.8.33, Hardhat, Foundry | Core protocol contracts (rollup, messaging, bridge, tokens) |
-| `coordinator` | Backend service | Kotlin 2.3.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
+| `coordinator` | Backend service | Kotlin 2.4.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
 | `prover` | Backend service | Go 1.25.7 | ZK proof generation (gnark, gnark-crypto) |
 | `postman` | Backend service | TypeScript, Express, TypeORM | Bridge message execution service |
 | `ts-libs/sdk/sdk-core` | Library | TypeScript, tsup | Core SDK utilities and types |

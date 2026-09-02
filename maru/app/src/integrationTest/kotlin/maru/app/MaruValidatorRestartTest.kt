@@ -10,7 +10,7 @@ package maru.app
 
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import maru.test.util.NetworkUtil.findFreePorts
+import maru.p2p.testutils.NetworkUtil.findFreePorts
 import org.apache.logging.log4j.LogManager
 import org.awaitility.kotlin.await
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount

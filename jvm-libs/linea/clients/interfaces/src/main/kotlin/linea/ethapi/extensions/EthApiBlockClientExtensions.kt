@@ -6,7 +6,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun EthApiBlockClient.getBlockParameterNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
   return when (blockParameter) {
-    is BlockParameter.BlockNumber -> SafeFuture.completedFuture(blockParameter.getNumber())
+    is BlockParameter.BlockNumber -> SafeFuture.completedFuture(blockParameter.number)
     BlockParameter.Tag.EARLIEST -> SafeFuture.completedFuture(0UL)
     is BlockParameter.BlockHash ->
       throw UnsupportedOperationException(

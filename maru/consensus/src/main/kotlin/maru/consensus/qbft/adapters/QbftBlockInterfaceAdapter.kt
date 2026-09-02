@@ -11,9 +11,8 @@ package maru.consensus.qbft.adapters
 import maru.consensus.state.StateTransition
 import maru.core.BeaconBlock
 import maru.core.EMPTY_HASH
-import maru.core.HashUtil
 import maru.core.Validator
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlock
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlockInterface
 import org.hyperledger.besu.datatypes.Address
@@ -23,6 +22,7 @@ import org.hyperledger.besu.datatypes.Address
  */
 class QbftBlockInterfaceAdapter(
   private val stateTransition: StateTransition,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : QbftBlockInterface {
   override fun replaceRoundForCommitBlock(
     proposalBlock: QbftBlock,
@@ -60,7 +60,7 @@ class QbftBlockInterfaceAdapter(
       postState.beaconBlockHeader.copy(
         stateRoot = EMPTY_HASH,
       )
-    val stateRoot = HashUtil.stateRoot(postState.copy(beaconBlockHeader = stateRootHeader))
+    val stateRoot = blockHashing.stateRoot(postState.copy(beaconBlockHeader = stateRootHeader))
     val finalBlockHeader = stateRootHeader.copy(stateRoot = stateRoot)
     return QbftBlockAdapter(BeaconBlock(finalBlockHeader, beaconBlockBody))
   }

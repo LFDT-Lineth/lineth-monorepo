@@ -8,6 +8,13 @@
  */
 package maru.core.ext
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ConsensusConfig
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.core.BeaconBlock
 import maru.core.BeaconBlockBody
 import maru.core.BeaconBlockHeader
@@ -15,13 +22,11 @@ import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.GENESIS_EXECUTION_PAYLOAD
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
-import maru.serialization.rlp.RLPSerializers
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.crypto.SECP256K1
 import org.hyperledger.besu.datatypes.Address
@@ -61,7 +66,7 @@ object DataGenerators {
         parentRoot = EMPTY_HASH,
         stateRoot = EMPTY_HASH,
         bodyRoot = EMPTY_HASH,
-        headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+        beaconBlockIdHashFunction = HashUtil::headerHash,
       )
 
     val tmpGenesisStateRoot =
@@ -93,7 +98,7 @@ object DataGenerators {
         parentRoot = Random.nextBytes(32),
         stateRoot = Random.nextBytes(32),
         bodyRoot = Random.nextBytes(32),
-        headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+        beaconBlockIdHashFunction = HashUtil::headerHash,
       )
     return BeaconState(
       beaconBlockHeader = beaconBlockHeader,
@@ -140,7 +145,7 @@ object DataGenerators {
       parentRoot = Random.nextBytes(32),
       stateRoot = Random.nextBytes(32),
       bodyRoot = Random.nextBytes(32),
-      headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
 
   fun randomExecutionPayload(numberOfTransactions: Int = 5): ExecutionPayload {
@@ -178,6 +183,24 @@ object DataGenerators {
       transactions = transactions,
     )
   }
+
+  // Single-fork schedule wrapping the given config, matching the fork config every non-fork-transition test needs.
+  fun testForkAwareBlockHashing(
+    chainId: UInt = 1u,
+    consensusConfig: ConsensusConfig,
+  ): ForkAwareBlockHashing =
+    ForkAwareBlockHashing(ForksSchedule(chainId, listOf(ForkSpec(0UL, 1u, consensusConfig))))
+
+  fun testForkAwareBlockHashing(
+    chainId: UInt = 1u,
+    validatorSet: Set<Validator> = emptySet(),
+    clFork: ClFork = ClFork.QBFT_PHASE0,
+    elFork: ElFork = ElFork.Prague,
+  ): ForkAwareBlockHashing =
+    testForkAwareBlockHashing(
+      chainId = chainId,
+      consensusConfig = QbftConsensusConfig(validatorSet = validatorSet, fork = ChainFork(clFork, elFork)),
+    )
 
   fun randomValidator(): Validator = Validator(Random.nextBytes(20))
 

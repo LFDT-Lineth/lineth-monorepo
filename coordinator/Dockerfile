@@ -34,13 +34,16 @@ RUN mkdir -p logs /tmp/prover/request /tmp/prover/response
 
 COPY --from=builder /libs/** libs/
 
+ARG LINETH_APP_JAR=/opt/consensys/linea/coordinator/libs/coordinator.jar
+ENV LINETH_APP_JAR=$LINETH_APP_JAR
+
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION
 LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.name="coordinator" \
-	org.label-schema.description="Coordinator for Linea" \
+	org.label-schema.description="Coordinator for Lineth" \
 	org.label-schema.url="https://consensys.io/" \
 	org.label-schema.vcs-ref=$VCS_REF \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \

@@ -50,7 +50,7 @@ func (v *Vanishing) Round() *Round {
 // zero. For a vector expression, verifies every non-cancelled row is zero.
 // CancelledPositions are normalised: negative indices count from the end of the
 // domain (−1 = last row).
-func (v *Vanishing) Check(rt Runtime) error {
+func (v *Vanishing) Check(rt *Runtime) error {
 	if !v.Expression.IsMultiValued() {
 		val := v.Expression.EvaluateSingle(rt)
 		if !val.Value.IsZero() {

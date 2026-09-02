@@ -10,7 +10,11 @@ const EmbeddedInputType = enum {
 };
 
 pub fn build(b: *std.Build) void {
-    const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
+    common.requireZigVersion();
+
+    const r5 = b.option(bool, "r5", "Build for the Lineth R5 zkVM target") orelse false;
+    // Allow disabling the Lineth zkVM accelerator wrappers for testing purposes. We only have them for the R5 target, so they are disabled by default unless the r5 option is set.
+    const disable_accelerators = (b.option(bool, "disable-accelerators", "Disable Lineth zkVM accelerator wrappers") orelse false) or !r5;
     const verifier_profiling = b.option(
         bool,
         "verifier-profiling",
@@ -24,6 +28,8 @@ pub fn build(b: *std.Build) void {
     // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
+    const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
+    const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -38,12 +44,24 @@ pub fn build(b: *std.Build) void {
         b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Omit debug symbols") orelse (r5 or optimize == .ReleaseSmall);
 
+    // Lineth zkVM accelerator - zkvm_exit and precompile accelerators etc.
+    const lineth_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+
     const verifier_mod = b.addModule("verifier_ray", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
         .strip = strip,
     });
+    // conditionally import the Lineth zkVM accelerator module for supported target and when requested
+    if (!disable_accelerators) {
+        verifier_mod.addImport("lineth_accelerators", lineth_mod);
+    }
+    // add option for comptime configuration of R5/accelerator-specific code paths in the verifier module
+    const r5_options = b.addOptions();
+    r5_options.addOption(bool, "is_r5_zkvm", r5);
+    r5_options.addOption(bool, "disable_accelerators", disable_accelerators);
+    verifier_mod.addOptions("r5_config", r5_options);
     const profiling_opts = b.addOptions();
     profiling_opts.addOption(bool, "is_enabled", verifier_profiling);
     profiling_opts.addOption(bool, "is_r5_marks", r5_marks_arg);
@@ -56,6 +74,29 @@ pub fn build(b: *std.Build) void {
     });
     const test_vanishing_mod = b.addModule("test_vanishing", .{
         .root_source_file = b.path("testdata/generated/vanishing.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    const test_fri_vectors_mod = b.addModule("test_fri_vectors", .{
+        .root_source_file = b.path("testdata/generated/fri.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const test_pcs_vectors_mod = b.addModule("test_pcs_vectors", .{
+        .root_source_file = b.path("testdata/generated/pcs.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    // The full-pipeline verify fixtures (PCS-enabled), exposed to tests so the
+    // integration tests can drive verifier.verify against real proofs.
+    const test_verify_mod = b.addModule("test_verify", .{
+        .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -89,6 +130,8 @@ pub fn build(b: *std.Build) void {
     });
 
     if (r5) {
+        // unconditional import for zkvm_exit
+        main_mod.addImport("lineth_accelerators", lineth_mod);
         // Link the statically-linked rv64im ELF with the shared entry stub (start.s) + rv64im memory
         // layout + dead-section GC
         common.installGuestElf(b, main_mod, "verifier-ray");
@@ -108,12 +151,19 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("test/all.zig"),
                 .target = target,
                 .optimize = optimize,
+                // proof_image_test.zig mmaps a Go-produced image at a fixed
+                // address, which needs open/mmap from libc.
+                .link_libc = true,
                 .imports = &.{
                     .{ .name = "verifier_ray", .module = verifier_mod },
                     .{ .name = "test_vectors", .module = test_vectors_mod },
                     .{ .name = "test_vanishing", .module = test_vanishing_mod },
+                    .{ .name = "test_fri_vectors", .module = test_fri_vectors_mod },
+                    .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
+                    .{ .name = "test_verify", .module = test_verify_mod },
                 },
             }),
+            .filters = test_filters,
         });
 
         const run_unit_tests = b.addRunArtifact(unit_tests);

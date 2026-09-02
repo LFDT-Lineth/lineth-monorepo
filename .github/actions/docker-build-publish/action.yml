@@ -35,6 +35,10 @@ inputs:
     description: 'Docker build contexts (multiline)'
     required: false
     default: ''
+  provenance:
+    description: 'Buildx provenance attestation setting (e.g. "false"). Leave empty for the buildx default.'
+    required: false
+    default: ''
   requires_qemu:
     description: 'Whether QEMU setup is required for multi-arch builds'
     required: false
@@ -55,125 +59,67 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Set tags
-      id: set-tags
-      shell: bash
-      env:
-        IMAGE_NAME: ${{ inputs.image_name }}
-        IMAGE_TAGS: ${{ inputs.image_tags }}
-        DEVELOP_TAG: ${{ inputs.develop_tag }}
-      run: |
-        set -euo pipefail
-
-        # Parse image_tags (comma-separated). The first non-empty entry is the
-        # "primary" tag — used for the local build/load and `docker save`. All
-        # entries get pushed when push_image=true. Optionally append develop_tag
-        # when running on main.
-        TAGS_RAW=()
-        if [[ -n "${IMAGE_TAGS}" ]]; then
-          IFS=',' read -ra PARSED <<< "${IMAGE_TAGS}"
-          for t in "${PARSED[@]}"; do
-            # Trim surrounding whitespace.
-            t="${t#"${t%%[![:space:]]*}"}"
-            t="${t%"${t##*[![:space:]]}"}"
-            [[ -n "${t}" ]] && TAGS_RAW+=("${t}")
-          done
-        fi
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ -n "${DEVELOP_TAG}" ]]; then
-          TAGS_RAW+=("${DEVELOP_TAG}")
-        fi
-
-        if [[ ${#TAGS_RAW[@]} -eq 0 ]]; then
-          echo "::error::image_tags is empty — this usually means the upstream version-tag job was cancelled or failed. Failing early to avoid an invalid Docker tag."
-          exit 1
-        fi
-
-        PRIMARY_TAG="${TAGS_RAW[0]}"
-
-        # De-duplicate while preserving first-occurrence order.
-        declare -A SEEN=()
-        TAGS=""
-        for t in "${TAGS_RAW[@]}"; do
-          if [[ -z "${SEEN[$t]:-}" ]]; then
-            SEEN[$t]=1
-            TAGS+="${TAGS:+,}${IMAGE_NAME}:${t}"
-          fi
-        done
-
-        echo "primary_tag=${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
-        echo "primary_image=${IMAGE_NAME}:${PRIMARY_TAG}" >> "$GITHUB_OUTPUT"
-        echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
-
     - name: Set up QEMU
       if: ${{ inputs.requires_qemu == 'true' }}
-      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       with:
         platforms: 'arm64,arm'
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-    - name: Configure cache
-      id: cache-config
+    # The actual build is delegated to scripts/docker/build-image.sh so that CI
+    # and `make docker-build-<image>` run the exact same buildx invocation.
+    # See scripts/docker/README.md.
+    - name: Build image
       shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
+        RAW_IMAGE_TAGS: ${{ inputs.image_tags }}
+        DEVELOP_TAG: ${{ inputs.develop_tag }}
+        IS_MAIN_REF: ${{ github.ref == 'refs/heads/main' }}
+        PUSH_IMAGE: ${{ inputs.push_image }}
+        DOCKERFILE_PATH: ${{ inputs.dockerfile_path }}
+        DOCKER_CONTEXT: ${{ inputs.docker_context }}
+        BUILD_ARGS: ${{ inputs.build_args }}
+        BUILD_CONTEXTS: ${{ inputs.build_contexts }}
+        BUILD_SECRETS: ${{ inputs.build_secrets }}
+        PUSH_PLATFORMS: ${{ inputs.push_platforms }}
+        PROVENANCE: ${{ inputs.provenance }}
+        SAVE_ARTIFACT: ${{ inputs.save_artifact }}
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        # Runs that have no registry credentials: fork PRs, and dependabot, whose
+        # token is read-only. all-tools.yml used to carry the dependabot half of
+        # this rule in its own cache-to expression.
+        SKIP_REGISTRY_CACHE: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == true) || github.actor == 'dependabot[bot]' }}
       run: |
-        if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
-          echo "cache_from_test=" >> $GITHUB_OUTPUT
-          echo "cache_from_push=" >> $GITHUB_OUTPUT
-          echo "cache_to_push=" >> $GITHUB_OUTPUT
-        else
-          echo "cache_from_test=type=registry,ref=${{ inputs.image_name }}:buildcache-amd64" >> $GITHUB_OUTPUT
-          echo "cache_from_push<<EOF" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,platform=linux/amd64" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,platform=linux/arm64" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "cache_to_push<<EOF" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-amd64,mode=max,platform=linux/amd64" >> $GITHUB_OUTPUT
-          echo "type=registry,ref=${{ inputs.image_name }}:buildcache-arm64,mode=max,platform=linux/arm64" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+        set -euo pipefail
+
+        # develop_tag is only added on main; all other tag handling (trimming,
+        # de-duplication, primary-tag selection, empty check) lives in the script.
+        IMAGE_TAGS="${RAW_IMAGE_TAGS}"
+        if [[ "${IS_MAIN_REF}" == "true" && -n "${DEVELOP_TAG}" ]]; then
+          IMAGE_TAGS="${IMAGE_TAGS:+${IMAGE_TAGS},}${DEVELOP_TAG}"
+        fi
+        export IMAGE_TAGS
+
+        ARGS=()
+        if [[ "${PUSH_IMAGE}" == "true" ]]; then
+          ARGS+=(--push --platforms "${PUSH_PLATFORMS}")
+        fi
+        if [[ "${SAVE_ARTIFACT}" == "true" ]]; then
+          ARGS+=(--save-to "${ARTIFACT_NAME}-docker-image.tar.gz")
+        fi
+        if [[ "${SKIP_REGISTRY_CACHE}" == "true" ]]; then
+          ARGS+=(--no-registry-cache)
         fi
 
-    # Build for testing (when push_image is false)
-    - name: Build for testing
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-      if: ${{ inputs.push_image == 'false' }}
-      with:
-        context: ${{ inputs.docker_context }}
-        build-contexts: ${{ inputs.build_contexts }}
-        file: ${{ inputs.dockerfile_path }}
-        platforms: linux/amd64
-        load: true
-        push: false
-        tags: ${{ steps.set-tags.outputs.primary_image }}
-        secrets: ${{ inputs.build_secrets }}
-        build-args: ${{ inputs.build_args }}
-        cache-from: ${{ steps.cache-config.outputs.cache_from_test }}
-
-    - name: Save Docker image as artifact
-      if: ${{ inputs.save_artifact == 'true' }}
-      shell: bash
-      run: |
-        docker save ${{ steps.set-tags.outputs.primary_image }} | gzip > ${{ inputs.artifact_name }}-docker-image.tar.gz
+        "${GITHUB_WORKSPACE}/scripts/docker/build-image.sh" "${ARGS[@]+"${ARGS[@]}"}"
 
     - name: Upload Docker image artifact
       if: ${{ inputs.save_artifact == 'true' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.artifact_name }}
         path: ${{ inputs.artifact_name }}-docker-image.tar.gz
 
-    # Build & push
-    - name: Build & push
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-      if: ${{ inputs.push_image == 'true' }}
-      with:
-        context: ${{ inputs.docker_context }}
-        build-contexts: ${{ inputs.build_contexts }}
-        file: ${{ inputs.dockerfile_path }}
-        platforms: ${{ inputs.push_platforms }}
-        push: true
-        tags: ${{ steps.set-tags.outputs.tags }}
-        secrets: ${{ inputs.build_secrets }}
-        build-args: ${{ inputs.build_args }}
-        cache-from: ${{ steps.cache-config.outputs.cache_from_push }}
-        cache-to: ${{ steps.cache-config.outputs.cache_to_push }}

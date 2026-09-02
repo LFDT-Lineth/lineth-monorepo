@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Execute process in parallel the work function

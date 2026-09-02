@@ -26,6 +26,7 @@ import maru.core.Protocol
 import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import maru.p2p.P2PNetwork
+import maru.serialization.rlp.ForkAwareBlockHashing
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -39,6 +40,7 @@ class QbftFollowerFactory(
   private val allowEmptyBlocks: Boolean,
   private val finalizationStateProvider: FinalizationProvider,
   private val payloadValidationEnabled: Boolean,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): Protocol {
     val qbftConsensusConfig = (forkSpec.configuration as QbftConsensusConfig)
@@ -88,6 +90,7 @@ class QbftFollowerFactory(
         stateTransition = stateTransition,
         executionLayerManager = if (payloadValidationEnabled) elManager else null,
         allowEmptyBlocks = allowEmptyBlocks,
+        blockHashing = blockHashing,
       )
 
     val sealsVerifier = QuorumOfSealsVerifier(validatorProvider, SCEP256SealVerifier())

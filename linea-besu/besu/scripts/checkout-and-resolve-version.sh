@@ -10,6 +10,10 @@ SHORT_COMMIT=${BESU_COMMIT:0:7}
 echo "SHORT_COMMIT=$SHORT_COMMIT"
 
 if [ ! -d "$BESU_DIR/.git" ]; then
+  if [ -e "$BESU_DIR" ]; then
+    echo "$BESU_DIR exists but isn't a git checkout (stale/partial state) -- removing before clone"
+    rm -rf "$BESU_DIR"
+  fi
   echo "Cloning https://github.com/besu-eth/besu into $BESU_DIR"
   mkdir -p "$(dirname "$BESU_DIR")"
   # Partial clone: skip trees + blobs on the initial fetch so we only download the

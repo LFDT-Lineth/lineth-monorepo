@@ -1,8 +1,8 @@
 package main
 
 // Examples, from the repository root:
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --intervals 10 --size 10
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536
+//   go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup --intervals 10 --size 10
+//   go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func main() {
 		lengths := parseInputLengthList(cfg.singleInputLengths)
 		fmt.Printf(
 			"| %-11s | %-29s | %-28s | %-7s |\n",
-			"input bytes", "KECCAK_ACCEL=false real (s)", "KECCAK_ACCEL=true real (s)", "speedup",
+			"input bytes", "KECCAK_ACCEL=false time (s)", "KECCAK_ACCEL=true time (s)", "speedup",
 		)
 		fmt.Println("| ----------- | ----------------------------- | ---------------------------- | ------- |")
 		for _, length := range lengths {
@@ -62,7 +62,7 @@ func main() {
 	fmt.Printf(
 		"| %-31s | %-29s | %-28s | %-7s |\n",
 		fmt.Sprintf("batched range (%d-byte inputs)", batchedInputBytes),
-		"KECCAK_ACCEL=false real (s)", "KECCAK_ACCEL=true real (s)", "speedup",
+		"KECCAK_ACCEL=false time (s)", "KECCAK_ACCEL=true time (s)", "speedup",
 	)
 	fmt.Println("| ------------------------------- | ----------------------------- | ---------------------------- | ------- |")
 
@@ -202,13 +202,13 @@ func runCommand(makefileDir string, args []string) float64 {
 		os.Exit(1)
 	}
 
-	realTime, ok := parseRealTime(stderr.String())
+	userTime, ok := parseUserTime(stderr.String())
 	if !ok {
 		fmt.Fprintf(os.Stderr, "could not parse /usr/bin/time output for: %s\n", strings.Join(args, " "))
 		fmt.Fprint(os.Stderr, stderr.String())
 		os.Exit(1)
 	}
-	return realTime
+	return userTime
 }
 
 func parseInputLengthList(arg string) []int {
@@ -255,8 +255,8 @@ func writeSingleInputVector(inputBytes int) (string, func()) {
 	}
 }
 
-func parseRealTime(timeOutput string) (float64, bool) {
-	// Extract the real time
+func parseUserTime(timeOutput string) (float64, bool) {
+	// Extract the user time
 	timings := make(map[string]float64)
 	for _, line := range strings.Split(timeOutput, "\n") {
 		match := timeRE.FindStringSubmatch(strings.TrimSpace(line))
@@ -270,8 +270,8 @@ func parseRealTime(timeOutput string) (float64, bool) {
 		timings[match[1]] = value
 	}
 
-	realTime, ok := timings["real"]
-	return realTime, ok
+	userTime, ok := timings["user"]
+	return userTime, ok
 }
 
 func printBatchedRow(selector string, falseTime, trueTime float64) {

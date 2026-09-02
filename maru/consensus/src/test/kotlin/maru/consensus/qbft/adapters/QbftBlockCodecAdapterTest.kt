@@ -14,13 +14,17 @@ import org.hyperledger.besu.ethereum.rlp.RLP
 import org.junit.jupiter.api.Test
 
 class QbftBlockCodecAdapterTest {
+  // Decoding a proposal block must inject a fork-aware header hash function, so the codec is fed the
+  // node's fork-aware serializer (PHASE0 fork at timestamp 0 → round-inclusive test identity).
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
+
   @Test
   fun `can encode and decode same value`() {
     val beaconBlock = DataGenerators.randomBeaconBlock(
       10U,
     )
     val testValue = QbftBlockAdapter(beaconBlock)
-    val qbftBlockCodecAdapter = QbftBlockCodecAdapter
+    val qbftBlockCodecAdapter = QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer)
 
     val encodedData = RLP.encode { rlpOutput -> qbftBlockCodecAdapter.writeTo(testValue, rlpOutput) }
     val decodedValue = qbftBlockCodecAdapter.readFrom(RLP.input(encodedData))

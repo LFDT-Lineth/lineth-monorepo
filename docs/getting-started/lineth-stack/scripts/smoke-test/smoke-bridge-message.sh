@@ -12,6 +12,8 @@ LINETH_LOG_CONTEXT="bridge-smoke"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -20,20 +22,6 @@ log() { lineth_info "$*"; }
 die() { lineth_die "$*"; }
 
 lineth_banner "bridge smoke · L1 to L2 message"
-
-require_address() {
-  label="$1"
-  value="$2"
-  echo "$value" | grep -qE '^0x[a-fA-F0-9]{40}$' || die "$label missing or invalid"
-}
-
-require_uint() {
-  label="$1"
-  value="$2"
-  case "$value" in
-    ''|*[!0-9]*) die "$label must be a non-negative integer" ;;
-  esac
-}
 
 rpc_l2() {
   method="$1"
@@ -48,17 +36,10 @@ rpc_result_hex() {
 }
 
 cast_to_dec() {
-  docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" to-dec "$1"
+  docker run --rm --entrypoint cast "$(lineth_foundry_image)" to-dec "$1"
 }
 
-psql_value() {
-  docker exec postman-pg psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postman}" -At -F '|' -c "$1" \
-    | tr -d '\r'
-}
-
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 [ -s "$(lineth_accounts_file addresses-precomputed.json)" ] || die "addresses-precomputed.json missing. Boot the stack first."
 [ -s "$(lineth_deployments_file addresses.json)" ] || die "addresses.json missing; deploy-contracts has not completed."
@@ -80,15 +61,15 @@ ADDR="$(lineth_deployments_file addresses.json)"
 [ -s "$PRE" ] || die "addresses-precomputed.json missing"
 [ -s "$ADDR" ] || die "addresses.json missing; deploy-contracts has not completed"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
 L2_MESSAGE_SERVICE="$(lineth_json_section_addr "$ADDR" l2 L2MessageService)"
 L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
 L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 
-require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
-require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
-require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
+lineth_require_address "L1 LinethRollupV8" "$LINETH_ROLLUP"
+lineth_require_address "L2 L2MessageService" "$L2_MESSAGE_SERVICE"
+lineth_require_address "L1 deployer" "$L1_DEPLOYER_ADDRESS"
 
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
 
@@ -108,20 +89,19 @@ L1_MESSAGE_FEE_WEI="${L1_MESSAGE_FEE_WEI:-0}"
 CALLDATA="${CALLDATA:-0x}"
 BRIDGE_SMOKE_TIMEOUT_SECONDS="${BRIDGE_SMOKE_TIMEOUT_SECONDS:-360}"
 BRIDGE_SMOKE_POLL_SECONDS="${BRIDGE_SMOKE_POLL_SECONDS:-5}"
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 MESSAGE_CLAIMED_TOPIC="0xa4c827e719e911e8f19393ccdb85b5102f08f0910604d340ba38390b7ff2ab0e"
 
-require_address "RECIPIENT" "$RECIPIENT"
-require_uint "L1_MESSAGE_VALUE_WEI" "$L1_MESSAGE_VALUE_WEI"
-require_uint "L1_MESSAGE_FEE_WEI" "$L1_MESSAGE_FEE_WEI"
-require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
-require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
+lineth_require_address "RECIPIENT" "$RECIPIENT"
+lineth_require_uint "L1_MESSAGE_VALUE_WEI" "$L1_MESSAGE_VALUE_WEI"
+lineth_require_uint "L1_MESSAGE_FEE_WEI" "$L1_MESSAGE_FEE_WEI"
+lineth_require_uint "BRIDGE_SMOKE_TIMEOUT_SECONDS" "$BRIDGE_SMOKE_TIMEOUT_SECONDS"
+lineth_require_uint "BRIDGE_SMOKE_POLL_SECONDS" "$BRIDGE_SMOKE_POLL_SECONDS"
 echo "$CALLDATA" | grep -qE '^0x([a-fA-F0-9]{2})*$' || die "CALLDATA must be hex bytes"
 
 TOTAL_VALUE_WEI=$((L1_MESSAGE_VALUE_WEI + L1_MESSAGE_FEE_WEI))
 
 section "preflight"
-log "LineaRollupV8: $(lineth_l1_address_link "$LINEA_ROLLUP")"
+log "LinethRollupV8: $(lineth_l1_address_link "$LINETH_ROLLUP")"
 log "L2MessageService: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/address/$L2_MESSAGE_SERVICE"
 [ -n "$L1_TOKEN_BRIDGE" ] && log "L1 TokenBridge: $(lineth_l1_address_link "$L1_TOKEN_BRIDGE")"
 [ -n "$L2_TOKEN_BRIDGE" ] && log "L2 TokenBridge: http://localhost:$HOST_PORT_L2_BLOCKSCOUT_FRONTEND/address/$L2_TOKEN_BRIDGE"
@@ -130,8 +110,8 @@ log "recipient: $RECIPIENT"
 log "valueWei: $L1_MESSAGE_VALUE_WEI"
 log "feeWei: $L1_MESSAGE_FEE_WEI"
 
-START_MESSAGE_ID="$(psql_value "select coalesce(max(id),0) from message;")"
-require_uint "postman max message id" "$START_MESSAGE_ID"
+START_MESSAGE_ID="$(lineth_psql_value "select coalesce(max(id),0) from message;")"
+lineth_require_uint "postman max message id" "$START_MESSAGE_ID"
 
 BALANCE_BEFORE_HEX="$(rpc_l2 eth_getBalance "[\"$RECIPIENT\",\"latest\"]" | rpc_result_hex)"
 [ -n "$BALANCE_BEFORE_HEX" ] || die "could not read recipient L2 balance before send"
@@ -141,16 +121,16 @@ section "send L1 message"
 SEND_RECEIPT="$(
   docker run --rm \
     --entrypoint sh \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     -e L1_RPC_URL="$L1_CONTAINER_RPC_URL" \
     -e L1_DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
-    -e LINEA_ROLLUP="$LINEA_ROLLUP" \
+    -e LINETH_ROLLUP="$LINETH_ROLLUP" \
     -e RECIPIENT="$RECIPIENT" \
     -e L1_MESSAGE_FEE_WEI="$L1_MESSAGE_FEE_WEI" \
     -e TOTAL_VALUE_WEI="$TOTAL_VALUE_WEI" \
     -e CALLDATA="$CALLDATA" \
-    "$FOUNDRY_IMAGE" \
-    -lc 'cast send "$LINEA_ROLLUP" "sendMessage(address,uint256,bytes)" "$RECIPIENT" "$L1_MESSAGE_FEE_WEI" "$CALLDATA" --value "$TOTAL_VALUE_WEI" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json'
+    "$(lineth_foundry_image)" \
+    -lc 'cast send "$LINETH_ROLLUP" "sendMessage(address,uint256,bytes)" "$RECIPIENT" "$L1_MESSAGE_FEE_WEI" "$CALLDATA" --value "$TOTAL_VALUE_WEI" --rpc-url "$L1_RPC_URL" --private-key "$L1_DEPLOYER_PRIVATE_KEY" --json'
 )"
 
 L1_TX_HASH="$(printf '%s\n' "$SEND_RECEIPT" | lineth_json_stdin_string_field transactionHash)"
@@ -165,7 +145,7 @@ section "wait for Postman claim"
 DEADLINE=$(( $(date +%s) + BRIDGE_SMOKE_TIMEOUT_SECONDS ))
 ROW=""
 while [ "$(date +%s)" -le "$DEADLINE" ]; do
-  ROW="$(psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value,message_nonce,coalesce(compressed_transaction_size::text,''),coalesce(is_for_sponsorship::text,'') from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(destination)=lower('$RECIPIENT') and value='$L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
+  ROW="$(lineth_psql_value "select id,status,message_hash,coalesce(claim_tx_hash,''),message_sender,destination,value,message_nonce,coalesce(compressed_transaction_size::text,''),coalesce(is_for_sponsorship::text,'') from message where id > $START_MESSAGE_ID and direction='L1_TO_L2' and lower(destination)=lower('$RECIPIENT') and value='$L1_MESSAGE_VALUE_WEI' order by id desc limit 1;")"
   if [ -n "$ROW" ]; then
     STATUS="$(printf '%s' "$ROW" | cut -d '|' -f 2)"
     CLAIM_TX_HASH="$(printf '%s' "$ROW" | cut -d '|' -f 4)"

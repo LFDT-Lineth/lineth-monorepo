@@ -50,7 +50,12 @@ export class LidoGovernanceMonitorBootstrap {
       config.http.timeoutMs,
     );
 
-    const anthropicClient = new Anthropic({ apiKey: config.anthropic.apiKey });
+    // Route Claude calls through the LiteLLM proxy when a base URL is configured
+    // otherwise the SDK targets Anthropic directly.
+    const anthropicClient = new Anthropic({
+      apiKey: config.anthropic.apiKey,
+      ...(config.anthropic.baseUrl ? { baseURL: config.anthropic.baseUrl } : {}),
+    });
     const aiClient = new ClaudeAIClient(
       createLidoGovernanceMonitorLogger("ClaudeAIClient"),
       anthropicClient,

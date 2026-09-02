@@ -106,7 +106,7 @@ jobs:
       docker_tag_with_suffix: ${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
@@ -121,17 +121,10 @@ jobs:
           fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
-      - name: Set up QEMU
-        if: ${{ !inputs.skip_docker_image_build_and_push }}
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
-
-      - name: set up docker buildx
-        if: ${{ !inputs.skip_docker_image_build_and_push }}
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-
+      # QEMU and buildx are set up by the shared docker-build-publish action.
       - name: Login to Docker Hub
         if: ${{ !inputs.skip_docker_image_build_and_push && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -144,26 +137,21 @@ jobs:
             echo "Building docker image (with fleet): consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
           fi
 
+      # VERSION, VCS_REF and BUILD_DATE build args are injected by the shared
+      # action (see scripts/docker/README.md), so they are not repeated here.
       - name: build and push the combined manifest (if Besu fleet plugin is included)
         if: ${{ !inputs.skip_docker_image_build_and_push && inputs.with_besu_fleet_plugin }}
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
-        env:
-          DOCKER_BUILD_SUMMARY: false
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: linea-besu/package/linea-besu/.
-          platforms: linux/arm64,linux/amd64
-          provenance: false
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-            VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
-          push: true
-          tags: |
-            consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-            ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package-with-fleet:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
-            ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package-with-fleet:develop' || '' }}
+          image_name: consensys/linea-besu-package-with-fleet
+          image_tags: ${{ inputs.image_tag_suffix != '' && format('{0},{1}', steps.build-plugins-and-assemble.outputs.dockertag, steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || steps.build-plugins-and-assemble.outputs.dockertag }}
+          develop_tag: develop
+          push_image: 'true'
+          dockerfile_path: linea-besu/package/linea-besu/Dockerfile
+          docker_context: linea-besu/package/linea-besu
+          push_platforms: linux/arm64,linux/amd64
+          provenance: 'false'
+          requires_qemu: 'true'
 
       - name: Calculate the checksum of Besu fleet plugin
         id: besu-fleet-plugin-checksum
@@ -179,24 +167,17 @@ jobs:
 
       - name: build and push the combined manifest (without Besu fleet plugin)
         if: ${{ !inputs.skip_docker_image_build_and_push }}
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
-        env:
-          DOCKER_BUILD_SUMMARY: false
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: linea-besu/package/linea-besu/.
-          platforms: linux/arm64,linux/amd64
-          provenance: false
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-            VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
-          push: true
-          tags: |
-            consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-            ${{ inputs.image_tag_suffix != '' && format('consensys/linea-besu-package:{0}', steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || ''}}
-            ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package:develop' || '' }}
+          image_name: consensys/linea-besu-package
+          image_tags: ${{ inputs.image_tag_suffix != '' && format('{0},{1}', steps.build-plugins-and-assemble.outputs.dockertag, steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || steps.build-plugins-and-assemble.outputs.dockertag }}
+          develop_tag: develop
+          push_image: 'true'
+          dockerfile_path: linea-besu/package/linea-besu/Dockerfile
+          docker_context: linea-besu/package/linea-besu
+          push_platforms: linux/arm64,linux/amd64
+          provenance: 'false'
+          requires_qemu: 'true'
 
       ### update the release notes with docker hashes
       - name: create the release notes and then the release
@@ -259,7 +240,7 @@ jobs:
               exit 1
             fi
           fi
-      
+
       - name: Append Changelog input to release note
         id: append_change_log_input
         if: ${{ inputs.changelog != '' }}
@@ -276,7 +257,7 @@ jobs:
 
       - name: release - publish artifacts and release notes
         id: release_publish
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
         with:
           name: Linea Besu ${{ inputs.release_version && format('v{0}', inputs.release_version) }}
           tag_name: ${{ inputs.release_tag }}
@@ -288,3 +269,4 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             release/linea-besu-package-${{ steps.build-plugins-and-assemble.outputs.dockertag }}.tar.gz
+

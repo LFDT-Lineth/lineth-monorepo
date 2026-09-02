@@ -26,7 +26,8 @@ The script calls `ClaudeAIClient` directly - no DB, no state machine. Exits 0 re
 
 ### Prerequisites
 
-- `ANTHROPIC_API_KEY` set in env
+- `ANTHROPIC_API_KEY` set in env (a LiteLLM virtual key, or a direct Anthropic key for local runs)
+- `ANTHROPIC_BASE_URL` set to the LiteLLM proxy to route the eval through LiteLLM; leave unset to call Anthropic directly
 - Golden set labels reviewed and updated in `scripts/eval/golden-set.json` before running
 
 ### Run
@@ -39,7 +40,8 @@ ANTHROPIC_API_KEY=sk-ant-xxx pnpm exec tsx scripts/run-eval.ts
 With overrides:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-xxx \
+ANTHROPIC_API_KEY=sk-litellm-xxx \
+ANTHROPIC_BASE_URL=https://example.com \
 RISK_THRESHOLD=50 \
 CLAUDE_MODEL=claude-sonnet-4-20250514 \
 pnpm exec tsx scripts/run-eval.ts

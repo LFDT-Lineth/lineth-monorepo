@@ -13,6 +13,7 @@ import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.ethGetBlockByNumber
 import linea.testing.besu.startWithRetry
 import maru.config.SyncingConfig
+import maru.p2p.testutils.NetworkUtil.findStablePort
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
@@ -50,6 +51,7 @@ class MaruFollowerTest {
   private fun setupMaruHelper(
     syncingConfig: SyncingConfig = MaruFactory.defaultSyncingConfig,
     payloadValidationEnabled: Boolean = true,
+    validatorP2pPort: UInt = 0u,
   ) {
     // Create and start validator Maru app first
     val validatorMaruApp =
@@ -58,6 +60,7 @@ class MaruFollowerTest {
         engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
         dataDir = validatorStack.tmpDir,
         syncingConfig = syncingConfig,
+        p2pPort = validatorP2pPort,
       )
     validatorStack.setMaruApp(validatorMaruApp)
     validatorStack.maruApp.start().get()
@@ -199,7 +202,11 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks after Validator stack goes down`() {
-    setupMaruHelper()
+    // Use a port below the OS ephemeral range (32768+ Linux, 49152+ macOS) so the kernel
+    // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
+    // gap safe
+    val validatorP2pPort = findStablePort()
+    setupMaruHelper(validatorP2pPort = validatorP2pPort)
 
     val blocksToProduce = 5
     repeat(blocksToProduce) {
@@ -212,12 +219,12 @@ class MaruFollowerTest {
       }
     }
 
-    val validatorP2pPort = validatorStack.p2pPort
     // This is here mainly to wait until block propagation is complete
     checkValidatorAndFollowerBlocks(blocksToProduce)
 
     validatorStack.maruApp.stop().get()
     validatorStack.maruApp.close()
+
     validatorStack.setMaruApp(
       maruFactory.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),

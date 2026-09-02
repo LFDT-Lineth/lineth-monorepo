@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 func leftAlign(x uint64, nBytes int) field.Element {

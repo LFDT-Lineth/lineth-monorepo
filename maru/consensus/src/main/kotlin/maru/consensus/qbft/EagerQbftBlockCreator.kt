@@ -48,7 +48,7 @@ class EagerQbftBlockCreator(
     val beaconBlockHeader = parentHeader.toBeaconBlockHeader()
     val parentBeaconBlock =
       beaconChain
-        .getSealedBeaconBlock(beaconBlockHeader.hash)
+        .getSealedBeaconBlock(beaconBlockHeader.beaconBlockIdHash)
         ?.beaconBlock
         ?: throw IllegalStateException("Parent block not found in the database")
     val finalizedState = finalizationStateProvider(parentBeaconBlock.beaconBlockBody)

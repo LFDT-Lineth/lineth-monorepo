@@ -12,7 +12,7 @@ import (
 // newLagrangeSelector builds a single-round system with one sized, unpadded
 // module of the given size and returns a LagrangeSelector at position pos
 // together with a fresh runtime.
-func newLagrangeSelector(t *testing.T, size, pos int) (*wiop.LagrangeSelector, wiop.Runtime) {
+func newLagrangeSelector(t *testing.T, size, pos int) (*wiop.LagrangeSelector, *wiop.Runtime) {
 	t.Helper()
 	sys := wiop.NewSystemf("ls")
 	sys.NewRound()
@@ -154,7 +154,7 @@ func TestLagrangeSelector_DynamicModule(t *testing.T) {
 	sys := wiop.NewSystemf("ls-dyn")
 	r0 := sys.NewRound()
 	dyn := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
-	col := dyn.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
 
 	// Position −1: always the last row, regardless of runtime size.
 	ls := wiop.NewLagrangeSelector(dyn, -1)
@@ -194,7 +194,7 @@ func TestLagrangeSelector_InExpression(t *testing.T) {
 	sys := wiop.NewSystemf("ls-expr")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	ls := wiop.NewLagrangeSelector(mod, pos)
 
 	expr := wiop.Mul(col.View(), ls)
@@ -226,11 +226,11 @@ func TestLagrangeSelector_InVanishing(t *testing.T) {
 	const size = 8
 	const pos = 3
 
-	build := func(rowPosVal uint64) (*wiop.Vanishing, wiop.Runtime) {
+	build := func(rowPosVal uint64) (*wiop.Vanishing, *wiop.Runtime) {
 		sys := wiop.NewSystemf("ls-vanish")
 		r0 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		ls := wiop.NewLagrangeSelector(mod, pos)
 
 		// Lifted local predicate "col == 0 at row pos": col · L_pos must vanish.

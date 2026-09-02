@@ -16,11 +16,11 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: changes
         with:
           filters: |
@@ -96,10 +96,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
@@ -113,21 +113,28 @@ jobs:
         if: matrix.language == 'java-kotlin'
         uses: ./.github/actions/setup-tracer-environment
 
+      # Kotlin 2.4.0 (bumped in #3454) isn't supported yet by CodeQL's Kotlin
+      # extractor: github/codeql#21938. Non-blocking until upstream adds support;
+      # remove continue-on-error from this and the next two steps once it does.
       - name: Autobuild
         if: matrix.language != 'actions'
-        uses: github/codeql-action/autobuild@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
+        uses: github/codeql-action/autobuild@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         with:
           category: "/language:${{matrix.language}}"
           output: sarif-results
 
       - name: Upload CodeQL Results
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codeql-results-${{ matrix.language }}
           path: sarif-results
           retention-days: 1
+

@@ -21,8 +21,9 @@ import {
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
 } from "../common/constants";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
+import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
 import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 
@@ -38,13 +39,7 @@ async function main() {
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
-  let walletNonce;
-
-  if (!process.env.L2_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L2_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE");
 
   const l2MessageServiceContractImplementationName = "L2MessageServiceImplementation";
 
@@ -56,14 +51,12 @@ async function main() {
       wallet,
       {
         nonce: walletNonce,
-        maxFeePerGas: 7_200_000_000_000n,
-        maxPriorityFeePerGas: 7_000_000_000_000n,
+        ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
       },
     ),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 1,
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     }),
   ]);
 
@@ -114,8 +107,7 @@ async function main() {
     proxyAdminAddress,
     initializer,
     {
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     },
   );
 }

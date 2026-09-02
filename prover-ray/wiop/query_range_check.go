@@ -21,12 +21,14 @@ type RangeCheck struct {
 func (rc *RangeCheck) Round() *Round { return rc.Handle.Round() }
 
 // Check implements [Query]. Verifies that every row of Handle lies in [0, B).
-func (rc *RangeCheck) Check(rt Runtime) error {
+func (rc *RangeCheck) Check(rt *Runtime) error {
 	m := rc.Handle.Module
-	n := m.Size()
+	// RuntimeSize, not Size: Size() is 0 for a dynamic module, which would empty
+	// the loop and make the check vacuous.
+	n := m.RuntimeSize(rt)
 	cv := rt.GetColumnAssignment(rc.Handle)
 	for row := range n {
-		elem := cv.ElementAt(m, row)
+		elem := cv.ElementAtN(m.Padding, n, row)
 		if !elem.IsBase() {
 			return fmt.Errorf(
 				"wiop: RangeCheck(%s).Check: extension-field value at row %d",

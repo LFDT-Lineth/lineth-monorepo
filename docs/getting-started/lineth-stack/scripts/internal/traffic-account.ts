@@ -4,7 +4,9 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { Contract, JsonRpcProvider, Wallet, isAddress } from "ethers";
 
-import { LOCAL_L2_POLICY_DEFAULTS, envValue, parseDecimalWei, readDotEnvContents } from "./sepolia-policy";
+import { envValue, parseDecimalWei, readDotEnvContents } from "./lib/env";
+import { ensureDir, writeFileAtomic } from "./lib/fs";
+import { LOCAL_L2_POLICY_DEFAULTS } from "./sepolia-policy";
 
 export type TrafficAccountMode = "ensure" | "require-existing";
 export type TrafficAccountSource = "env" | "artifact" | "generated";
@@ -116,11 +118,8 @@ async function withTrafficAccountLock<T>(demoTrafficEnvPath: string, run: () => 
 }
 
 function writeTrafficEnvAtomic(demoTrafficEnvPath: string, privateKey: string) {
-  fs.mkdirSync(path.dirname(demoTrafficEnvPath), { recursive: true });
-  const tmpPath = `${demoTrafficEnvPath}.${process.pid}.tmp`;
-  fs.writeFileSync(tmpPath, `L2_TRAFFIC_PRIVATE_KEY=${privateKey}\n`, { mode: 0o600 });
-  fs.renameSync(tmpPath, demoTrafficEnvPath);
-  fs.chmodSync(demoTrafficEnvPath, 0o600);
+  ensureDir(path.dirname(demoTrafficEnvPath));
+  writeFileAtomic(demoTrafficEnvPath, `L2_TRAFFIC_PRIVATE_KEY=${privateKey}\n`, 0o600);
 }
 
 async function resolveTrafficPrivateKey(
@@ -221,14 +220,21 @@ export async function ensureTrafficAccount(
     }
   }
 
-  return {
+  const result: TrafficAccountResult = {
     address,
     source,
     ethBalanceWei,
-    ethTopUpTx,
-    erc20BalanceWei,
-    erc20TopUpTx,
   };
+  if (ethTopUpTx !== undefined) {
+    result.ethTopUpTx = ethTopUpTx;
+  }
+  if (erc20BalanceWei !== undefined) {
+    result.erc20BalanceWei = erc20BalanceWei;
+  }
+  if (erc20TopUpTx !== undefined) {
+    result.erc20TopUpTx = erc20TopUpTx;
+  }
+  return result;
 }
 
 export function formatTrafficAccountOutput(result: TrafficAccountResult): string {
@@ -332,7 +338,7 @@ function buildConfigFromEnv(mode: TrafficAccountMode, env: Record<string, string
       }
     : undefined;
 
-  return {
+  const config: TrafficAccountConfig = {
     mode,
     env,
     runtimeKeysPath: envValue("RUNTIME_KEYS_ENV", env, "/accounts/runtime-keys.env"),
@@ -349,9 +355,12 @@ function buildConfigFromEnv(mode: TrafficAccountMode, env: Record<string, string
       "L2_TRAFFIC_ETH_TOP_UP_WEI",
       envValue("L2_TRAFFIC_ETH_TOP_UP_WEI", env, "1000000000000000000"),
     ),
-    erc20,
     log: (message) => console.error(message),
   };
+  if (erc20 !== undefined) {
+    config.erc20 = erc20;
+  }
+  return config;
 }
 
 async function main() {

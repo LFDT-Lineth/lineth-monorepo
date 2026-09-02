@@ -3,7 +3,9 @@ import * as path from "node:path";
 
 import { encryptKeystoreJson, Wallet } from "ethers";
 
-export type EnvMap = Record<string, string | undefined>;
+import { type EnvMap, envNumber, envValue, readDotEnvFile, requiredEnvValue } from "./lib/env";
+import { sanitizeExternalError } from "./lib/errors";
+import { ensureDir, writeFileAtomic } from "./lib/fs";
 
 export type L1Mode = "sepolia" | "local";
 export type L1Context = "host" | "container";
@@ -25,12 +27,10 @@ export type L1DeployerConfig = L1Config & {
   passwordFilePath?: string;
 };
 
-function sanitizeExternalError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/https?:\/\/[^\s)"']+/g, "<redacted-url>")
-    .replace(/0x[a-fA-F0-9]{64}/g, "<redacted-hex>");
-}
+type DeployerWallet = {
+  address: string;
+  privateKey: string;
+};
 
 export type ResolveL1DeployerOptions = {
   stackDir?: string;
@@ -45,50 +45,9 @@ export const LOCAL_L1_HOST_RPC_URL = `http://localhost:${DEFAULT_LOCAL_L1_HOST_R
 export const LOCAL_L1_DEPLOYER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-const DEFAULT_DEPLOYER_KEYSTORE_PASSWORD = "linea-local-dev-deployer";
+const DEFAULT_DEPLOYER_KEYSTORE_PASSWORD = "lineth-local-dev-deployer";
 const DEFAULT_DEPLOYER_KEYSTORE_FILE = "l1-deployer.json";
 const DEFAULT_DEPLOYER_PASSWORD_FILE = "password.txt";
-
-export function readDotEnvContents(contents: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const line of contents.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const index = trimmed.indexOf("=");
-    if (index === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, index).trim();
-    let value = trimmed.slice(index + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
-  }
-  return result;
-}
-
-export function readDotEnvFile(envPath: string): Record<string, string> {
-  if (!fs.existsSync(envPath)) {
-    throw new Error(`${envPath} is missing; copy .env.example to .env first`);
-  }
-  return readDotEnvContents(fs.readFileSync(envPath, "utf8"));
-}
-
-export function envValue(name: string, env: EnvMap, fallback = ""): string {
-  const raw = env[name];
-  return raw === undefined || raw === "" ? fallback : raw;
-}
-
-export function requiredEnvValue(name: string, env: EnvMap): string {
-  const value = envValue(name, env);
-  if (!value) {
-    throw new Error(`${name} must be set in .env`);
-  }
-  return value;
-}
 
 export function l1Mode(env: EnvMap): L1Mode {
   const raw = envValue("L1_MODE", env, "sepolia");
@@ -116,17 +75,6 @@ function defaultStackDir(): string {
 
 function defaultAccountsDir(stackDir: string): string {
   return normalizeDir(process.env.LINETH_ACCOUNTS_DIR ?? path.join(stackDir, "artifacts", "accounts"));
-}
-
-function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function writeFileMode(file: string, contents: string, mode: number) {
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, contents, { mode });
-  fs.renameSync(tmp, file);
-  fs.chmodSync(file, mode);
 }
 
 function pathInside(child: string, parent: string): boolean {
@@ -180,23 +128,15 @@ function resolveGeneratedPassword(env: EnvMap, stackDir: string, accountsDir: st
   return DEFAULT_DEPLOYER_KEYSTORE_PASSWORD;
 }
 
-function envNumber(name: string, env: EnvMap, fallback: number): number {
-  const raw = envValue(name, env, fallback.toString());
-  if (!/^[0-9]+$/.test(raw)) {
-    throw new Error(`${name} must be an integer value`);
-  }
-  return Number(raw);
-}
-
-async function decryptWallet(keystorePath: string, password: string): Promise<Wallet> {
+async function decryptWallet(keystorePath: string, password: string): Promise<DeployerWallet> {
   try {
-    return (await Wallet.fromEncryptedJson(fs.readFileSync(keystorePath, "utf8"), password)) as Wallet;
+    return await Wallet.fromEncryptedJson(fs.readFileSync(keystorePath, "utf8"), password);
   } catch (_error) {
     throw new Error(`Could not decrypt L1 deployer keystore at ${keystorePath}`);
   }
 }
 
-function walletFromPrivateKey(privateKey: string, label: string): Wallet {
+function walletFromPrivateKey(privateKey: string, label: string): DeployerWallet {
   try {
     return new Wallet(privateKey);
   } catch (_error) {
@@ -209,7 +149,7 @@ async function createGeneratedKeystore(
   passwordFilePath: string,
   password: string,
   env: EnvMap,
-): Promise<Wallet> {
+): Promise<DeployerWallet> {
   ensureDir(path.dirname(keystorePath));
   const wallet = Wallet.createRandom();
   const encrypted = await encryptKeystoreJson({ address: wallet.address, privateKey: wallet.privateKey }, password, {
@@ -219,23 +159,23 @@ async function createGeneratedKeystore(
       p: envNumber("LINETH_DEPLOYER_KEYSTORE_SCRYPT_P", env, 1),
     },
   });
-  writeFileMode(keystorePath, `${encrypted}\n`, 0o600);
+  writeFileAtomic(keystorePath, `${encrypted}\n`, 0o600);
   if (!fs.existsSync(passwordFilePath)) {
-    writeFileMode(passwordFilePath, `${password}\n`, 0o600);
+    writeFileAtomic(passwordFilePath, `${password}\n`, 0o600);
   }
-  return wallet as Wallet;
+  return wallet;
 }
 
 function buildResolved(params: {
   mode: L1Mode;
   rpcUrl: string;
-  wallet: Wallet;
+  wallet: DeployerWallet;
   source: L1DeployerSource;
   created: boolean;
   keystorePath?: string;
   passwordFilePath?: string;
 }): L1DeployerConfig {
-  return {
+  const resolved: L1DeployerConfig = {
     mode: params.mode,
     rpcUrl: params.rpcUrl,
     deployerPrivateKey: params.wallet.privateKey,
@@ -243,9 +183,14 @@ function buildResolved(params: {
     address: params.wallet.address,
     source: params.source,
     created: params.created,
-    keystorePath: params.keystorePath,
-    passwordFilePath: params.passwordFilePath,
   };
+  if (params.keystorePath !== undefined) {
+    resolved.keystorePath = params.keystorePath;
+  }
+  if (params.passwordFilePath !== undefined) {
+    resolved.passwordFilePath = params.passwordFilePath;
+  }
+  return resolved;
 }
 
 export async function resolveL1DeployerConfig(
@@ -351,18 +296,28 @@ export function emitShellEnv(config: L1DeployerConfig): string {
 async function cli() {
   const [, , command, ...args] = process.argv;
   if (command !== "emit-shell-env") {
-    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container>");
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
   }
   const contextIndex = args.indexOf("--context");
   const context = contextIndex === -1 ? undefined : args[contextIndex + 1];
   if (context !== "host" && context !== "container") {
-    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container>");
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
+  }
+  const outputFileIndex = args.indexOf("--output-file");
+  const outputFile = outputFileIndex === -1 ? undefined : args[outputFileIndex + 1];
+  if (outputFileIndex !== -1 && !outputFile) {
+    throw new Error("usage: deployer-wallet.ts emit-shell-env --context <host|container> [--output-file <path>]");
   }
   const stackDir = defaultStackDir();
   const envPath = path.join(stackDir, ".env");
   const fileEnv = fs.existsSync(envPath) ? readDotEnvFile(envPath) : {};
   const resolved = await resolveL1DeployerConfig({ ...fileEnv, ...process.env }, context, { stackDir });
-  process.stdout.write(emitShellEnv(resolved));
+  const shellEnv = emitShellEnv(resolved);
+  if (outputFile) {
+    fs.writeFileSync(outputFile, shellEnv, { mode: 0o600 });
+  } else {
+    process.stdout.write(shellEnv);
+  }
 }
 
 if (require.main === module) {

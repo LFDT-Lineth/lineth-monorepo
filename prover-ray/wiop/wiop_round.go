@@ -42,12 +42,12 @@ type Round struct {
 	VerifierActions []VerifierAction
 	// PreSamplingHooks holds prover-side actions registered to fire BEFORE
 	// any [CoinField] in this round is sampled. They run during
-	// [Runtime.AdvanceRound] *after* the previous round's columns and cells
+	// [Runtime.AdvanceRound] *after* the previous round's commitment and cells
 	// have been absorbed into the Fiat–Shamir state but *before* this
 	// round's coins are derived. Hooks run in declaration order.
 	//
 	// The canonical use is shared-randomness seeding in sharded protocols:
-	// a hook reads a precomputed seed from public columns and calls
+	// a hook reads a precomputed seed and calls
 	// [Runtime.SetFSState] so this round's coins derive deterministically
 	// from that seed instead of from this shard's local transcript. For any
 	// non-seeding use case, prefer [ProverActions] — running before coin
@@ -56,6 +56,13 @@ type Round struct {
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
+	// HasCommitment indicates whether a coded Merkle commitment is to be expected
+	// in the runtime for this round. It is set by the PCS compiler on every round
+	// it commits, which is every round owning at least one column, so it doubles
+	// as a marker that the PCS pass has run. A round owning no column keeps it
+	// false even in a PCS-compiled protocol — the opening round the PCS appends
+	// being one such round.
+	HasCommitment bool
 }
 
 // RegisterAction appends a to the round's action list. Actions are run by the
@@ -121,6 +128,15 @@ func (r *Round) Next() (*Round, bool) {
 	return r.system.Rounds[r.ID+1], true
 }
 
+// EnsureNext returns the round immediately following this one, allocating one
+// via [System.NewRound] if this is currently the last round.
+func (r *Round) EnsureNext() *Round {
+	if next, ok := r.Next(); ok {
+		return next
+	}
+	return r.system.NewRound()
+}
+
 // NewCoinField declares a new random-coin challenge in this round, registers
 // it, and returns it. Coins are always extension-field elements.
 //
@@ -170,7 +186,7 @@ func (r *Round) NewCell(ctx *ContextFrame, isExtension bool) *Cell {
 // [Cell.Assigner]. assigner must only depend on data available in this round.
 //
 // Panics if ctx or assigner is nil.
-func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(Runtime) field.Gen) *Cell {
+func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(*Runtime) field.Gen) *Cell {
 	if assigner == nil {
 		panic("wiop: Round.NewLazyCell requires a non-nil assigner")
 	}

@@ -32,26 +32,27 @@ class RecordingEngineProxy(
   private val javalin =
     Javalin
       .create { config ->
-        config.showJavalinBanner = false
-      }.post("/*") { ctx ->
-        val body = ctx.bodyAsBytes()
-        val bodyStr = ctx.body()
+        config.startup.showJavalinBanner = false
+        config.routes.post("/*") { ctx ->
+          val body = ctx.bodyAsBytes()
+          val bodyStr = ctx.body()
 
-        val method = METHOD_REGEX.find(bodyStr)?.groupValues?.get(1) ?: "unknown"
-        if (method.startsWith("engine_")) {
-          calls.add(EngineApiCall(method, System.currentTimeMillis()))
-        }
+          val method = METHOD_REGEX.find(bodyStr)?.groupValues?.get(1) ?: "unknown"
+          if (method.startsWith("engine_")) {
+            calls.add(EngineApiCall(method, System.currentTimeMillis()))
+          }
 
-        val proxyRequest =
-          Request
-            .Builder()
-            .url(targetUrl)
-            .post(body.toRequestBody("application/json".toMediaType()))
-            .build()
+          val proxyRequest =
+            Request
+              .Builder()
+              .url(targetUrl)
+              .post(body.toRequestBody("application/json".toMediaType()))
+              .build()
 
-        httpClient.newCall(proxyRequest).execute().use { response ->
-          ctx.status(response.code)
-          response.body?.bytes()?.let { ctx.result(it) }
+          httpClient.newCall(proxyRequest).execute().use { response ->
+            ctx.status(response.code)
+            response.body?.bytes()?.let { ctx.result(it) }
+          }
         }
       }
 

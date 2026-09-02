@@ -13,6 +13,7 @@ import maru.consensus.ValidatorProvider
 import maru.consensus.state.FinalizationProvider
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.consensus.common.bft.blockcreation.ProposerSelector
@@ -28,6 +29,7 @@ class QbftBlockCreatorFactory(
   private val prevRandaoProvider: PrevRandaoProvider<ULong>,
   private val feeRecipient: ByteArray,
   private val eagerQbftBlockCreatorConfig: EagerQbftBlockCreator.Config,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : QbftBlockCreatorFactory {
   private val log: Logger = LogManager.getLogger(this.javaClass)
   private var hasCreatedFirstBlockCreator = false
@@ -40,6 +42,7 @@ class QbftBlockCreatorFactory(
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = round,
+        blockHashing = blockHashing,
       )
     val blockNumber = beaconChain.getLatestBeaconState().beaconBlockHeader.number + 1u
     val blockCreator = createBlockCreator(round, blockNumber, delayedQbftBlockCreator)

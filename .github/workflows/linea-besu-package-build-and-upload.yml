@@ -37,7 +37,7 @@ jobs:
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble
@@ -48,9 +48,7 @@ jobs:
           fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
-      - name: set up docker buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-
+      # buildx is set up by the shared docker-build-publish action.
       - name: set docker build args
         run: |
           echo "Building docker tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
@@ -58,48 +56,59 @@ jobs:
 
       - name: compute docker tags
         id: docker-tags
+        env:
+          PRIMARY_IMAGE: consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+          FLEET_IMAGE: consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+          WITH_FLEET: ${{ inputs.with_besu_fleet_plugin }}
         run: |
-          TAGS="consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
-          SAVE_TAGS="$TAGS"
-          if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-            FLEET_TAG="consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
-            TAGS="${TAGS}${NEWLINE}${FLEET_TAG}"
+          set -euo pipefail
+          # A single build is published under both names, so the fleet name is
+          # applied to the loaded image rather than built a second time.
+          SAVE_TAGS="${PRIMARY_IMAGE}"
+          FLEET_TAG=""
+          if [[ "${WITH_FLEET}" == "true" ]]; then
+            FLEET_TAG="${FLEET_IMAGE}"
             SAVE_TAGS="${SAVE_TAGS} ${FLEET_TAG}"
           fi
           {
-            echo "tags<<EOF"
-            echo "$TAGS"
-            echo "EOF"
+            echo "primary_image=${PRIMARY_IMAGE}"
+            echo "fleet_tag=${FLEET_TAG}"
+            echo "save_tags=${SAVE_TAGS}"
           } >> "$GITHUB_OUTPUT"
-          echo "save_tags=$SAVE_TAGS" >> "$GITHUB_OUTPUT"
-        env:
-          NEWLINE: "\n"
 
-      - name: build the combined manifest
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
-        env:
-          DOCKER_BUILD_SUMMARY: false
+      # VERSION, VCS_REF and BUILD_DATE build args are injected by the shared
+      # action (see scripts/docker/README.md), so they are not repeated here.
+      - name: build the image
+        uses: ./.github/actions/docker-build-publish
         with:
-          context: linea-besu/package/linea-besu/.
-          platforms: linux/amd64
-          provenance: false
-          build-args: |
-            VERSION=${{ steps.build-plugins-and-assemble.outputs.dockertag }}
-            VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.build-plugins-and-assemble.outputs.build_date }}
-          load: true
-          push: false
-          tags: ${{ steps.docker-tags.outputs.tags }}
+          image_name: consensys/linea-besu-package
+          image_tags: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
+          push_image: 'false'
+          dockerfile_path: linea-besu/package/linea-besu/Dockerfile
+          docker_context: linea-besu/package/linea-besu
+          provenance: 'false'
 
       - name: Save Docker image as artifact
+        env:
+          PRIMARY_IMAGE: ${{ steps.docker-tags.outputs.primary_image }}
+          FLEET_TAG: ${{ steps.docker-tags.outputs.fleet_tag }}
+          SAVE_TAGS: ${{ steps.docker-tags.outputs.save_tags }}
         run: |
+          set -euo pipefail
+          if [[ -n "${FLEET_TAG}" ]]; then
+            docker tag "${PRIMARY_IMAGE}" "${FLEET_TAG}"
+          fi
           docker images
-          docker save ${{ steps.docker-tags.outputs.save_tags }} | gzip > linea-besu-package-images.tar.gz
+          # SAVE_TAGS is a space-separated list of image references, so it is
+          # intentionally unquoted here.
+          # shellcheck disable=SC2086
+          docker save ${SAVE_TAGS} | gzip > linea-besu-package-images.tar.gz
         shell: bash
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linea-besu-package
           path: linea-besu-package-images.tar.gz
           retention-days: 1
+

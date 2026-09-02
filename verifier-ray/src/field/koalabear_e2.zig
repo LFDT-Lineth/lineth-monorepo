@@ -31,34 +31,4 @@ pub const E2 = extern struct {
     pub fn sub(self: E2, rhs: E2) E2 {
         return .{ .a0 = self.a0.sub(rhs.a0), .a1 = self.a1.sub(rhs.a1) };
     }
-
-    pub fn mul(self: E2, rhs: E2) E2 {
-        const c0 = self.a0.mul(rhs.a0).add(self.a1.mul(rhs.a1).mul(base.Element.init(3)));
-        const c1 = self.a0.mul(rhs.a1).add(self.a1.mul(rhs.a0));
-        return .{ .a0 = c0, .a1 = c1 };
-    }
-
-    pub fn mulByBase(self: E2, rhs: base.Element) E2 {
-        return .{ .a0 = self.a0.mul(rhs), .a1 = self.a1.mul(rhs) };
-    }
-
-    /// Multiply by the non-residue (u+1) of the cubic extension: result = (a0 + 3*a1) + (a0 + a1)*u
-    pub fn mulByNonResidue(self: E2) E2 {
-        const three = base.Element.init(3);
-        return .{
-            .a0 = self.a0.add(self.a1.mul(three)),
-            .a1 = self.a0.add(self.a1),
-        };
-    }
-
-    /// Invert in F_p[u]/(u^2 - 3): norm = a0^2 - 3*a1^2
-    pub fn inverse(self: E2) E2 {
-        const three = base.Element.init(3);
-        const norm = self.a0.mul(self.a0).sub(self.a1.mul(self.a1).mul(three));
-        const norm_inv = norm.inverse();
-        return .{
-            .a0 = self.a0.mul(norm_inv),
-            .a1 = self.a1.neg().mul(norm_inv),
-        };
-    }
 };

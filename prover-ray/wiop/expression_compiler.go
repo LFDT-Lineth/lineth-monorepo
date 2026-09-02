@@ -237,7 +237,7 @@ func compileExpr(root *ArithmeticOperation) *compiledProgram {
 //   - A leaf's ConcreteVector.Plain is a non-empty slice; Plain[0] is the
 //     column data this compiler operates on. This assumption should be revisited
 //     once the Runtime / ConcreteVector contract is finalised.
-func (p *compiledProgram) evaluateVector(rt Runtime) field.Vec {
+func (p *compiledProgram) evaluateVector(rt *Runtime) field.Vec {
 	// ------------------------------------------------------------------
 	// Evaluate all leaves up-front to determine the vector length and to
 	// avoid re-evaluating leaves inside the main execution loop.

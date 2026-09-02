@@ -3,8 +3,8 @@ package smt
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/types"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // ProvedClaim is the composition of a proof with the claim it proves.

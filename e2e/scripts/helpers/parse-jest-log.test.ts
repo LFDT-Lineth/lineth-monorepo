@@ -28,7 +28,7 @@ timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 Test contract deploye
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 Poseidon2 contract deployed. address=0xfcc2155b495b6bf6701eb322d3a97b7817898306
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 LineaSequencerUptimeFeed contract deployed. address=0x7917abb0cdbf3d3c4057d6a2808ee85ec16260c1
 timestamp=2026-04-01T06:24:27.711Z level=info | message=L2 SparseMerkleProof contract deployed. address=0x670365526a9971e4a225c38538c5d7ac248e4087
-timestamp=2026-04-01T06:24:27.711Z level=info | message=LineaRollup funded with 500 ETH on L1
+timestamp=2026-04-01T06:24:27.711Z level=info | message=LinethRollup funded with 500 ETH on L1
 timestamp=2026-04-01T06:24:27.711Z level=info | message=Generating L2 traffic...
 timestamp=2026-04-01T06:24:39.797Z level=info | message=L2 traffic generation started.
 PASS src/common/test-helpers/deny-list.spec.ts

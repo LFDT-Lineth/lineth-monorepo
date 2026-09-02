@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/sirupsen/logrus"
 )
 
 // Module is a group of columns sharing the same domain size and padding
@@ -30,6 +33,9 @@ type Module struct {
 	// RangeChecks holds all [RangeCheck] queries registered on this module
 	// via [Module.NewRangeCheck], in declaration order.
 	RangeChecks []*RangeCheck
+	// NonNatives holds all [NonNative] queries registered on this module via
+	// [Module.NewNonNative], in declaration order.
+	NonNatives []*NonNative
 	// size is zero when the module has not yet been sized. Use [Module.Size]
 	// and [Module.SetSize] rather than accessing this field directly.
 	size int
@@ -54,9 +60,22 @@ func (m *Module) System() *System { return m.system }
 func (m *Module) IsDynamic() bool { return m.isDynamic }
 
 // Size returns the declared domain size of the module. Returns 0 if the module
-// has not yet been sized. For dynamic modules this always returns 0; use
-// [Module.RuntimeSize] to obtain the size for a specific Runtime.
-func (m *Module) Size() int { return m.size }
+// has not yet been sized.
+//
+// Panics if the module is dynamic: a dynamic module has no compile-time size,
+// and silently returning 0 turns size-driven loops into no-ops (which is how
+// [RangeCheck.Check] was made vacuous on dynamic modules). Use
+// [Module.RuntimeSize] to obtain the size for a specific Runtime, and guard
+// with [Module.IsDynamic] when a static size is genuinely optional.
+func (m *Module) Size() int {
+	if m.isDynamic {
+		panic(fmt.Sprintf(
+			"wiop: Size() called on dynamic module %q; its size is per-Runtime, use Module.RuntimeSize(rt)",
+			m.Context.Path(),
+		))
+	}
+	return m.size
+}
 
 // IsSized reports whether a domain size has been fixed for this module.
 // Dynamic modules always return false here; they are sized per-Runtime.
@@ -66,7 +85,7 @@ func (m *Module) IsSized() bool { return m.size > 0 }
 // For static modules it delegates to [Module.Size] (panics if not yet sized).
 // For dynamic modules it reads the size registered via [WithModuleSize]
 // (panics if no size was provided for this Runtime).
-func (m *Module) RuntimeSize(rt Runtime) int {
+func (m *Module) RuntimeSize(rt *Runtime) int {
 	if !m.isDynamic {
 		return m.Size()
 	}
@@ -86,6 +105,11 @@ func (m *Module) SetSize(size int) {
 	if size <= 0 {
 		panic(fmt.Sprintf("wiop: Module.SetSize requires a positive size, got %d", size))
 	}
+	if !utils.IsPowerOfTwo(size) {
+		origSize := size
+		size = utils.NextPowerOfTwo(size)
+		logrus.Warnf("wiop: Module.SetSize requires a power-of-two size, got %d; rounding up to %d for %v", origSize, size, m.Context.Path())
+	}
 	if m.IsSized() {
 		panic(fmt.Sprintf("wiop: module %q is already sized to %d; cannot resize to %d",
 			m.Context.Path(), m.size, size))
@@ -96,7 +120,7 @@ func (m *Module) SetSize(size int) {
 // newColumn is the shared constructor used by [Module.NewColumn] and
 // [Module.NewExtensionColumn]. It creates the column, appends it to both the
 // module's and the round's column lists, and returns it.
-func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Round) *Column {
+func (m *Module) newColumn(ctx *ContextFrame, isExt bool, r *Round) *Column {
 	if ctx == nil {
 		panic("wiop: NewColumn requires a non-nil ContextFrame")
 	}
@@ -106,7 +130,6 @@ func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Rou
 	ctx.ID = newColumnID(m.index, len(m.Columns))
 	col := &Column{
 		Context:     ctx,
-		Visibility:  vis,
 		IsExtension: isExt,
 		Annotations: make(Annotations),
 		Module:      m,
@@ -121,11 +144,11 @@ func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Rou
 // round, registers it with both the module and the round, and returns it.
 //
 // Panics if ctx or r is nil.
-func (m *Module) NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column {
+func (m *Module) NewColumn(ctx *ContextFrame, r *Round) *Column {
 	if r == nil {
 		panic("wiop: Module.NewColumn requires a non-nil Round")
 	}
-	return m.newColumn(ctx, vis, false, r)
+	return m.newColumn(ctx, false, r)
 }
 
 // NewExtensionColumn declares a new extension-field column in this module for
@@ -134,11 +157,11 @@ func (m *Module) NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column 
 // coset) rather than the standard domain.
 //
 // Panics if ctx or r is nil.
-func (m *Module) NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column {
+func (m *Module) NewExtensionColumn(ctx *ContextFrame, r *Round) *Column {
 	if r == nil {
 		panic("wiop: Module.NewExtensionColumn requires a non-nil Round")
 	}
-	return m.newColumn(ctx, vis, true, r)
+	return m.newColumn(ctx, true, r)
 }
 
 // NewPrecomputedColumn declares a new precomputed column in this module,
@@ -150,7 +173,7 @@ func (m *Module) NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round)
 // base-field columns.
 //
 // Panics if ctx or assignment is nil, or if the module has no owning System.
-func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignment *ConcreteVector) *Column {
+func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, assignment *ConcreteVector) *Column {
 	if ctx == nil {
 		panic("wiop: Module.NewPrecomputedColumn requires a non-nil ContextFrame")
 	}
@@ -176,7 +199,6 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 	pr := m.system.PrecomputedRound
 	col := &Column{
 		Context:     ctx,
-		Visibility:  vis,
 		IsExtension: false,
 		Annotations: make(Annotations),
 		Module:      m,
@@ -199,9 +221,6 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 type Column struct {
 	// Context identifies this column in the protocol hierarchy.
 	Context *ContextFrame
-	// Visibility controls how this column participates in queries and whether
-	// the verifier can observe it.
-	Visibility Visibility
 	// IsExtension indicates that this column is evaluated over an extended
 	// domain rather than the standard domain.
 	IsExtension bool
@@ -324,7 +343,11 @@ func (cv *ColumnView) DegreeFactor() int { return 1 }
 // EvaluateVector implements [Expression]. Returns a full-sized concrete vector
 // (length == module size) where logical row i holds the column value at
 // physical row (i + ShiftingOffset) mod n, accounting for the module's padding.
-func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
+//
+// The padded column is materialized with bulk copies and fills rather than
+// per-row [ConcreteVector.ElementAtN] indexing, and a non-zero shift is
+// applied as a two-piece rotation.
+func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	concrete := rt.GetColumnAssignment(cv.Column)
 	m := cv.Column.Module
 	n := m.RuntimeSize(rt)
@@ -332,17 +355,13 @@ func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 	var result field.Vec
 	if cv.Column.IsExtension {
 		dst := make([]field.Ext, n)
-		for i := range n {
-			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAtN(m.Padding, n, phys).Ext
-		}
+		materializeExt(dst, concrete, m.Padding, n)
+		rotateLeft(dst, cv.ShiftingOffset, n)
 		result = field.VecFromExt(dst)
 	} else {
 		dst := make([]field.Element, n)
-		for i := range n {
-			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAtN(m.Padding, n, phys).AsBase()
-		}
+		materializeBase(dst, concrete, m.Padding, n)
+		rotateLeft(dst, cv.ShiftingOffset, n)
 		result = field.VecFromBase(dst)
 	}
 
@@ -353,16 +372,175 @@ func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 	}
 }
 
+// materializeBase writes the padding-expanded base-field column into dst
+// (length n): the plain assignment placed per the padding direction, with the
+// gap filled by the padding constant. Follows the same index mapping as
+// [ConcreteVector.ElementAtN].
+func materializeBase(dst []field.Element, cv *ConcreteVector, padding PaddingDirection, n int) {
+	plain := cv.Plain.AsBase()
+	switch {
+	case padding == PaddingDirectionLeft && len(plain) < n:
+		gap := n - len(plain)
+		field.VecFillBase(dst[:gap], cv.Padding)
+		copy(dst[gap:], plain)
+	case padding == PaddingDirectionLeft: // plain over-full: keep the tail
+		copy(dst, plain[len(plain)-n:])
+	default: // None or Right: plain-first, fill any tail gap
+		copied := copy(dst, plain)
+		field.VecFillBase(dst[copied:], cv.Padding)
+	}
+}
+
+// materializeExt is the extension-field variant of [materializeBase]. The
+// plain assignment may still be base-typed (a base-assigned column declared as
+// extension); its values and the padding constant are lifted on copy.
+func materializeExt(dst []field.Ext, cv *ConcreteVector, padding PaddingDirection, n int) {
+	if cv.Plain.IsBase() {
+		plain := cv.Plain.AsBase()
+		pad := field.Lift(cv.Padding)
+		switch {
+		case padding == PaddingDirectionLeft && len(plain) < n:
+			gap := n - len(plain)
+			field.VecFillExt(dst[:gap], pad)
+			for i, x := range plain {
+				dst[gap+i] = field.Lift(x)
+			}
+		case padding == PaddingDirectionLeft:
+			for i, x := range plain[len(plain)-n:] {
+				dst[i] = field.Lift(x)
+			}
+		default:
+			copied := len(plain)
+			if copied > n {
+				copied = n
+			}
+			for i, x := range plain[:copied] {
+				dst[i] = field.Lift(x)
+			}
+			field.VecFillExt(dst[copied:], pad)
+		}
+		return
+	}
+	plain := cv.Plain.AsExt()
+	switch {
+	case padding == PaddingDirectionLeft && len(plain) < n:
+		gap := n - len(plain)
+		field.VecFillExt(dst[:gap], field.Lift(cv.Padding))
+		copy(dst[gap:], plain)
+	case padding == PaddingDirectionLeft:
+		copy(dst, plain[len(plain)-n:])
+	default:
+		copied := copy(dst, plain)
+		field.VecFillExt(dst[copied:], field.Lift(cv.Padding))
+	}
+}
+
+// rotateLeft rotates v in place so that v[i] takes the value previously at
+// (i + offset) mod n. offset may be negative or exceed n. No-op when the
+// normalized offset is zero.
+func rotateLeft[E any](v []E, offset, n int) {
+	s := ((offset % n) + n) % n
+	if s == 0 {
+		return
+	}
+	tmp := make([]E, s)
+	copy(tmp, v[:s])
+	copy(v, v[s:])
+	copy(v[n-s:], tmp)
+}
+
+// EvaluateVectorAsExt is like EvaluateVector but always returns a length-n
+// []field.Ext. Base-field columns are lifted; extension columns are copied
+// as-is. If the evaluated vector is shorter than n, the remainder is filled
+// with the lifted padding value.
+func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
+	cvData := cv.EvaluateVector(rt)
+	out := make([]field.Ext, n)
+	plain := cvData.Plain
+	if plain.IsBase() {
+		base := plain.AsBase()
+		copyLen := len(base)
+		if copyLen > n {
+			copyLen = n
+		}
+		for i := 0; i < copyLen; i++ {
+			out[i] = field.Lift(base[i])
+		}
+		if copyLen < n {
+			pad := field.Lift(cvData.Padding)
+			for i := copyLen; i < n; i++ {
+				out[i] = pad
+			}
+		}
+		return out
+	}
+	ext := plain.AsExt()
+	copyLen := len(ext)
+	if copyLen > n {
+		copyLen = n
+	}
+	copy(out[:copyLen], ext[:copyLen])
+	if copyLen < n {
+		pad := field.Lift(cvData.Padding)
+		for i := copyLen; i < n; i++ {
+			out[i] = pad
+		}
+	}
+	return out
+}
+
+// EvaluateRLCAsExt computes the random linear combination
+//
+//	out[i] = cvs[0][i] + α·cvs[1][i] + α²·cvs[2][i] + …
+//
+// column-wise with Horner's method, folding from the last column down
+// (acc = acc·α + cvs[k]). Only the initial column is lifted to the extension
+// field; the remaining columns are consumed un-lifted, so a base-field column
+// costs one base addition per row on top of the single extension
+// multiplication per column per row. Panics if cvs is empty.
+//
+// The fold is parallelized over row chunks: rows are independent, and each
+// worker runs the full per-column fold on its own range, so the accumulator
+// chunk stays cache-resident across columns.
+func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []field.Ext {
+	if len(cvs) == 0 {
+		panic("wiop: EvaluateRLCAsExt called with no columns")
+	}
+
+	// Evaluate every column once, up front: EvaluateVector may touch shared
+	// runtime state, so it stays out of the parallel section.
+	plains := make([]field.Vec, len(cvs))
+	for k, cv := range cvs {
+		plains[k] = cv.EvaluateVector(rt).Plain
+	}
+
+	acc := make([]field.Ext, n)
+	parallel.Execute(n, func(start, stop int) {
+		last := plains[len(plains)-1]
+		if last.IsBase() {
+			for i, x := range last.AsBase()[start:stop] {
+				acc[start+i] = field.Lift(x)
+			}
+		} else {
+			copy(acc[start:stop], last.AsExt()[start:stop])
+		}
+		for k := len(plains) - 2; k >= 0; k-- {
+			if plains[k].IsBase() {
+				field.VecScaleAddExtBase(acc[start:stop], alpha, plains[k].AsBase()[start:stop])
+			} else {
+				field.VecScaleAddExtExt(acc[start:stop], alpha, plains[k].AsExt()[start:stop])
+			}
+		}
+	})
+	return acc
+}
+
 // EvaluateSingle implements [Expression]. Panics unconditionally: a column
 // view is vector-valued and produces no scalar. Check IsMultiValued() before
 // calling EvaluateSingle.
-func (cv *ColumnView) EvaluateSingle(_ Runtime) ConcreteField {
+func (cv *ColumnView) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")
 }
-
-// Visibility implements [Expression]. Delegates to the parent column's
-// declared visibility.
-func (cv *ColumnView) Visibility() Visibility { return cv.Column.Visibility }
 
 // ColumnPosition represents the evaluation of a [Column] at a single fixed
 // row index. It implements [FieldPromise] (and thereby [Expression]),
@@ -448,21 +626,17 @@ func (cp *ColumnPosition) Size() int {
 	panic("wiop: Size() cannot be called on a FieldPromise")
 }
 
-// Visibility implements [Expression]. Delegates to the parent column's
-// declared visibility.
-func (cp *ColumnPosition) Visibility() Visibility { return cp.Column.Visibility }
-
 // EvaluateVector implements [Expression]. Panics unconditionally: a column
 // position is scalar and produces no vector. Check IsMultiValued() before
 // calling.
-func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
+func (cp *ColumnPosition) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression]. Returns the value of the parent
 // column at Position in the given runtime. Negative Position values are
 // resolved from the end of the domain (see [ColumnPosition.Position]).
-func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
+func (cp *ColumnPosition) EvaluateSingle(rt *Runtime) ConcreteField {
 	m := cp.Column.Module
 	n := m.RuntimeSize(rt)
 	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, n, cp.resolvedRow(n))
@@ -503,7 +677,7 @@ func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
 	result := col.Round().NewLazyCell(
 		ctx.Childf("result"),
 		col.IsExtension,
-		func(rt Runtime) field.Gen {
+		func(rt *Runtime) field.Gen {
 			m := col.Module
 			n := m.RuntimeSize(rt)
 			// Negative Position values are resolved from the end at runtime;

@@ -29,7 +29,7 @@ func assertSweepCatches(t *testing.T, sys *wiop.System, assign func(*wiop.Runtim
 		assign(rt)
 		wioptest.RunProver(rt)
 	}
-	verify := func(rt wiop.Runtime) error { return wioptest.RunVerifier(rt) }
+	verify := func(rt *wiop.Runtime) error { return wioptest.RunVerifier(rt) }
 
 	report := wioptest.SweepMutations(sys, prepare, verify, nil, 0)
 	require.NotEmpty(t, report,

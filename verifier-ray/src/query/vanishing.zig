@@ -8,6 +8,8 @@ pub const Error = error{
     InvalidClaimCount,
     QuotientIdentityMismatch,
     LagrangeSelectorInDomain,
+    LagrangeSelectorPositionOutOfRange,
+    CellRefOutOfRange,
 };
 
 pub const ModuleSize = union(enum) {
@@ -42,7 +44,15 @@ pub const ExprNode = union(enum) {
     coin_value: usize,
     constant: field.Element,
     op: ExprOp,
-    lagrange_selector: usize,
+    // i32, not usize (matching Vanishing.cancelled_positions' own type): a
+    // LagrangeSelector position may be end-relative (negative — -1 is the
+    // module's last row, mirroring prover-ray wiop.LagrangeSelector's own
+    // convention). Codegen resolves a STATIC module's negative position into
+    // [0, size) at codegen time (the size is already known there); a DYNAMIC
+    // module's position is left negative and resolved here at verify time
+    // against the runtime size, since the size isn't known until then. See
+    // evalLagrangeSelector / normalizePosition.
+    lagrange_selector: i32,
 };
 
 pub const Vanishing = struct {
@@ -141,7 +151,7 @@ fn powModuleSize(r: ext.Ext, comptime static_n: usize, dynamic_n: usize) ext.Ext
     if (static_n != 0) {
         return r.powComptime(static_n);
     }
-    return r.pow(@as(u256, dynamic_n));
+    return r.pow(@as(u64, dynamic_n));
 }
 
 fn verifyBucket(
@@ -152,6 +162,15 @@ fn verifyBucket(
     merge_coin: ext.Ext,
     ctx: EvalCtx,
 ) Error!void {
+    // A real (non-synthetic) arithmetization module's bucket can carry many
+    // thousands of vanishing constraints (e.g. a wide opcode-decode module),
+    // comfortably exceeding Zig's default 1000-backwards-branch comptime
+    // budget for the `inline for` below. Mirrors the same raised quota already
+    // used by `query/pcs.zig`'s comptime-heavy loops.
+    comptime {
+        @setEvalBranchQuota(2_000_000);
+    }
+
     // r^n = Z_H(r) + 1, recovered from the annihilator carried in ctx.
     const r_pow_n = ctx.annihilator.add(ext.Ext.one());
     var quotient = ext.Ext.zero();
@@ -193,9 +212,33 @@ const EvalCtx = struct {
     dynamic_n: usize,
 };
 
+// evalExpr/evalOp evaluate a single node of a module's expression tree,
+// identified by a RUNTIME expr_index/op rather than a comptime one.
+//
+// module.expressions is built by codegen (see codegen/vanishing.go's
+// appendExpr) as a post-order flattening of each vanishing constraint's
+// expression tree: every operand is appended, and therefore assigned its
+// index, strictly before the node that references it. So op.operands[i] is
+// always < the node's own index, and recursion here always makes progress
+// toward index 0 (the array's leaves) — there is no cycle.
+//
+// expr_index/op used to be `comptime` parameters. That made Zig monomorphize
+// a distinct evalExpr/evalOp instantiation per unique node ever evaluated —
+// for a real (non-synthetic) RISC-V arithmetization module with thousands of
+// expression nodes, that blew up into a stack overflow (observed as a SIGSEGV
+// inside verifyModule) well before any actual recursion depth problem: the
+// per-tree depth is shallow in practice (a few dozen levels for real modules),
+// but the sheer number of monomorphized node-specific function bodies bloated
+// the generated code and its stack frames. Keeping module/static_n comptime
+// (there are only ~100 modules total, and static_n legitimately folds
+// static-size exponentiation/root-of-unity work at compile time) while making
+// expr_index/op ordinary runtime values gives exactly one evalExpr/evalOp
+// instantiation per module, with recursion depth bounded by that module's
+// actual (shallow) expression-tree depth — eliminating the blowup without
+// changing any evaluation semantics or error behavior.
 fn evalExpr(
     comptime module: Module,
-    comptime expr_index: usize,
+    expr_index: usize,
     comptime static_n: usize,
     ctx: EvalCtx,
     input: CheckInput,
@@ -203,7 +246,7 @@ fn evalExpr(
     const node = module.expressions[expr_index];
     return switch (node) {
         .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
-        .cell_value => |ref| input.ctx.rounds[ref.round].cells[ref.index].toExt(),
+        .cell_value => |ref| (try input.ctx.cell(ref.round, ref.index)).toExt(),
         .coin_value => |coin_index| input.ctx.all_coins[coin_index],
         .constant => |value| ext.Ext.lift(value),
         .op => |op| try evalOp(module, op, static_n, ctx, input),
@@ -213,7 +256,7 @@ fn evalExpr(
 
 fn evalOp(
     comptime module: Module,
-    comptime op: ExprOp,
+    op: ExprOp,
     comptime static_n: usize,
     ctx: EvalCtx,
     input: CheckInput,
@@ -241,19 +284,39 @@ fn evalOp(
 // mirrors prover-ray wiop.LagrangeSelector.EvaluateOutOfDomain, the reference
 // used by global.Verifier.
 //
-// position is comptime-known (it lives in the comptime expression DAG), so for
-// static modules (static_n != 0) omega^position folds to a comptime field
-// constant via staticRootPower — no runtime exponentiation. Dynamic modules
-// (static_n == 0) derive the n-th root of unity from ctx.dynamic_n and take the
-// runtime pow. Everything else (the annihilator, the r - omega^position
-// denominator, the division) depends on the runtime eval coin r and stays
-// runtime in both cases.
-fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
+// position comes from the node's runtime expression payload (module.expressions
+// is looked up by a runtime expr_index — see evalExpr) and may be end-relative
+// (negative — -1 is the module's last row, mirroring prover-ray
+// wiop.LagrangeSelector's own convention), the same shape cancellationAtPoint's
+// `positions` already handles via normalizePosition. For a STATIC module
+// (static_n != 0), codegen has already resolved a negative position into
+// [0, static_n) (the module size is known at codegen time), so
+// normalizePosition is a no-op there in practice, but is still used for
+// consistency with cancellationAtPoint. static_n itself stays comptime (it's
+// part of the comptime System), so staticRootPower's root-of-unity lookup
+// still folds at compile time; only the exponent (position-derived) is
+// runtime now, same cost as the already-runtime dynamic-module path below. A
+// DYNAMIC module's size is only known at verify time, so its position is
+// normalized into [0, ctx.dynamic_n) here at runtime before the runtime pow.
+// Everything else (the annihilator, the r - omega^position denominator, the
+// division) depends on the runtime eval coin r and stays runtime in both cases.
+fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
+    // Bounds-check before normalizing. For a DYNAMIC module n comes from the
+    // proof-supplied module_sizes, so a hostile size can push a codegen-baked
+    // position out of [-n, n): a position < -n would underflow
+    // normalizePosition's usize subtraction, and a position >= n would be
+    // silently reduced mod n by the root-of-unity exponentiation, evaluating a
+    // DIFFERENT selector than the constraint declares. Mirrors the Go
+    // reference (wiop.LagrangeSelector.resolvedRow), which rejects positions
+    // outside [-n, n).
+    const n = if (static_n != 0) static_n else ctx.dynamic_n;
+    if (!validPosition(position, n)) return error.LagrangeSelectorPositionOutOfRange;
+
     const omega_pos = if (static_n != 0)
-        comptime staticRootPower(static_n, position)
+        staticRootPower(static_n, normalizePosition(position, static_n, 0))
     else blk: {
         const omega = field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize;
-        break :blk omega.powComptime(position);
+        break :blk omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
     };
 
     // numerator = omega^position * (r^n - 1).
@@ -266,7 +329,6 @@ fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx:
     // out-of-domain contract.
     const r_minus_omega = ctx.coin.sub(ext.Ext.lift(omega_pos));
     if (r_minus_omega.isZero()) return error.LagrangeSelectorInDomain;
-    const n = if (static_n != 0) static_n else ctx.dynamic_n;
     const denominator = r_minus_omega.mulByBase(field.Element.init(@as(u64, n)));
 
     return numerator.div(denominator);
@@ -283,6 +345,16 @@ fn cancellationAtPoint(
     var result = ext.Ext.one();
 
     inline for (positions) |position| {
+        // Same runtime bounds check as evalLagrangeSelector, for the same
+        // reason: on the dynamic path n is proof-supplied, so a hostile size
+        // can push a codegen-baked position out of [-n, n) (usize underflow
+        // when position < -n, silent mod-n reduction when position >= n). The
+        // static path normalizes at comptime against the trusted static_n, so
+        // an out-of-range position there is a codegen bug caught at compile
+        // time, not a proof-dependent condition.
+        if (static_n == 0 and !validPosition(position, ctx.dynamic_n)) {
+            return error.LagrangeSelectorPositionOutOfRange;
+        }
         // Cancellation polynomial for openings already enforced elsewhere:
         // C(r) = product_{k in cancelled} (r - omega_n^norm(k)).
         const root = if (static_n != 0)
@@ -296,12 +368,27 @@ fn cancellationAtPoint(
     return result;
 }
 
-fn staticRootPower(comptime n: usize, comptime k: usize) field.Element {
+fn staticRootPower(comptime n: usize, k: usize) field.Element {
     const omega = field.rootOfUnityBy(n) catch unreachable;
-    return omega.powComptime(k);
+    return omega.pow(@as(u64, k));
 }
 
-fn normalizePosition(comptime position: i32, comptime static_n: usize, dynamic_n: usize) usize {
+// Whether an (end-relative) selector position is addressable in a module of
+// size n, i.e. lands in [-n, n). Callers must check this before
+// normalizePosition, whose negative branch underflows for position < -n.
+// The magnitude is widened through i64 so that position == minInt(i32) cannot
+// overflow the negation.
+fn validPosition(position: i32, n: usize) bool {
+    if (position >= 0) {
+        return @as(usize, @intCast(position)) < n;
+    }
+    const magnitude: usize = @intCast(-@as(i64, position));
+    return magnitude <= n;
+}
+
+// Resolves an end-relative position into [0, n). Precondition: position is in
+// [-n, n) — see validPosition; the subtraction below underflows otherwise.
+fn normalizePosition(position: i32, comptime static_n: usize, dynamic_n: usize) usize {
     const n = if (static_n != 0) static_n else dynamic_n;
     if (position < 0) return n - @as(usize, @intCast(-position));
     return @as(usize, @intCast(position));

@@ -2,7 +2,7 @@ package symbolic
 
 import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Add constructs a symbolic expression representing the sum of its inputs.

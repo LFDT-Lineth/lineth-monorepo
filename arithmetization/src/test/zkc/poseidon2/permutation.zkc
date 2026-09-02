@@ -1,0 +1,33 @@
+// ===================================================================
+// Unit test for the Poseidon2 permutation
+// (arithmetization/src/main/lib/poseidon2).
+//
+// The driver loads STATE_WIDTH field elements from `in_state`, applies
+// the permutation in place, and checks the result against `expected`,
+// failing on any mismatch. Accepting traces carry the correct expected
+// output; rejecting traces carry a wrong one.
+//
+// This is a native-field test and is therefore KoalaBear-specific (the
+// round constants are KoalaBear); run it with --field KOALABEAR_16.
+// ===================================================================
+
+include "../../../main/lib/poseidon2/poseidon2.zkc"
+
+// Inputs are 32-bit words reduced into the field via `as 𝔽`, so values >= the
+// KoalaBear modulus exercise the reduction path.
+pub input in_state(address:u5) -> (word:u32)
+pub input expected(address:u5) -> (word:u32)
+
+fn main<poseidon2_state>() {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
+        write_to_state(i, in_state[i] as 𝔽)
+    }
+
+    permutation()
+
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
+        if read_from_state(i) != (expected[i] as 𝔽) {
+            fail
+        }
+    }
+}

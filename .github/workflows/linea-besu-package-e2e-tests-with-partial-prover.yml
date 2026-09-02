@@ -30,13 +30,13 @@ jobs:
     name: Build docker images from source and upload (if needed) for e2e tests
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Tracer Environment (for linea-besu-package build)
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         uses: ./.github/actions/setup-tracer-environment
 
-      - name: Build linea-besu-package from source 
+      - name: Build linea-besu-package from source
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         shell: bash
         run: cd linea-besu/package && make build
@@ -51,7 +51,7 @@ jobs:
           sudo apt update
           sudo apt-get install --no-install-recommends --assume-yes tree
           tree .
-      
+
       - name: Save linea-besu-package docker image as artifact
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         run: |
@@ -61,7 +61,7 @@ jobs:
 
       - name: Upload linea-besu-package docker image artifact
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linea-besu-package
           path: linea-besu-package-image.tar.gz
@@ -69,12 +69,12 @@ jobs:
 
       - name: Install Go (for prover build)
         if: ${{ inputs.linea_besu_package_image_tag != '' &&  inputs.prover_image_tag == '' }}
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
 
-      - name: Build prover from source 
+      - name: Build prover from source
         if: ${{ inputs.prover_image_tag == '' }}
         shell: bash
         run: cd linea-besu/package && make build-prover
@@ -90,12 +90,12 @@ jobs:
 
       - name: Upload prover docker image artifact
         if: ${{ inputs.prover_image_tag == '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linea-prover
           path: linea-prover-image.tar.gz
           retention-days: 1
-  
+
   run-e2e-tests-with-partial-prover:
     needs: [build-and-upload-images]
     uses: ./.github/workflows/partial-prover-run-e2e-tests-in-parallel.yml
@@ -103,4 +103,5 @@ jobs:
       linea_besu_package_image_tag: ${{ inputs.linea_besu_package_image_tag }}
       prover_image_tag: ${{ inputs.prover_image_tag }}
       shomei_image_tag: ${{ inputs.shomei_image_tag }}
+
 

@@ -76,12 +76,12 @@ func RunProver(rt *wiop.Runtime) {
 	// multiplicity-assignment task on the group's witness round, which is
 	// the runtime's starting round.
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 	for rt.CurrentRound().ID < len(sys.Rounds)-1 {
 		rt.AdvanceRound()
 		for _, a := range rt.CurrentRound().ProverActions {
-			a.Run(*rt)
+			a.Run(rt)
 		}
 	}
 }
@@ -90,7 +90,7 @@ func RunProver(rt *wiop.Runtime) {
 // populated rt and returns the first error encountered, or nil. Separating it
 // from [RunProver] lets a test tamper with a committed value between proving
 // and verifying — the basis of transcript-level mutation testing.
-func RunVerifier(rt wiop.Runtime) error {
+func RunVerifier(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
 			if err := va.Check(rt); err != nil {
@@ -105,5 +105,5 @@ func RunVerifier(rt wiop.Runtime) error {
 // returning the first verification error or nil.
 func RunAndVerify(rt *wiop.Runtime) error {
 	RunProver(rt)
-	return RunVerifier(*rt)
+	return RunVerifier(rt)
 }

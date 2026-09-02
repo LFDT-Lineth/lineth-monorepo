@@ -10,6 +10,7 @@ package testutils
 
 import maru.consensus.qbft.adapters.QbftBlockCodecAdapter
 import maru.core.SealedBeaconBlock
+import maru.core.ext.DataGenerators
 import maru.p2p.GossipMessageType
 import maru.p2p.Message
 import maru.p2p.P2PNetwork
@@ -43,6 +44,10 @@ class SpyingP2PNetwork(
   }
 
   private val log = LogManager.getLogger(this.javaClass)
+
+  // Decoding QBFT proposal/round-change blocks must inject a fork-aware header hash function (PHASE0 at ts 0).
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
+  private val qbftBlockCodec = QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer)
   val emittedQbftMessages = CopyOnWriteArrayList<BftMessage<*>>()
   val emittedBlockMessages = CopyOnWriteArrayList<SealedBeaconBlock>()
 
@@ -50,8 +55,8 @@ class SpyingP2PNetwork(
     when (message) {
       is CommitMessageData -> message.decode()
       is PrepareMessageData -> message.decode()
-      is ProposalMessageData -> message.decode(QbftBlockCodecAdapter)
-      is RoundChangeMessageData -> message.decode(QbftBlockCodecAdapter)
+      is ProposalMessageData -> message.decode(qbftBlockCodec)
+      is RoundChangeMessageData -> message.decode(qbftBlockCodec)
       else -> throw IllegalArgumentException("Unknown message $message, don't know how to decode!")
     }
 

@@ -10,11 +10,7 @@ data class GasPriceCaps(
 ) {
   override fun toString(): String {
     return "maxPriorityFeePerGasCap=${maxPriorityFeePerGasCap.toGWei()} GWei," +
-      if (maxBaseFeePerGasCap != null) {
-        " maxBaseFeePerGasCap=${maxBaseFeePerGasCap.toGWei()} GWei,"
-      } else {
-        ""
-      } +
+      " maxBaseFeePerGasCap=${maxBaseFeePerGasCap?.toGWei()?.let { "$it GWei" }} " +
       " maxFeePerGasCap=${maxFeePerGasCap.toGWei()} GWei," +
       " maxFeePerBlobGasCap=${maxFeePerBlobGasCap.toGWei()} GWei"
   }

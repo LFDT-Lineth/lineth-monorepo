@@ -14,15 +14,14 @@ import maru.core.BeaconBlockHeader
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.GENESIS_EXECUTION_PAYLOAD
-import maru.core.HashUtil
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.database.BeaconChain
-import maru.serialization.rlp.RLPSerializers
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
 
 class BeaconChainInitialization(
   private val beaconChain: BeaconChain,
+  private val blockHashing: ForkAwareBlockHashing,
   private val genesisTimestamp: ULong = 0UL,
 ) {
   private fun initializeDb(validatorSet: Set<Validator>) {
@@ -38,7 +37,7 @@ class BeaconChainInitialization(
         parentRoot = EMPTY_HASH,
         stateRoot = EMPTY_HASH,
         bodyRoot = EMPTY_HASH,
-        headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
     val sortedValidators = validatorSet.toSortedSet()
@@ -47,7 +46,7 @@ class BeaconChainInitialization(
         beaconBlockHeader = beaconBlockHeader,
         validators = sortedValidators,
       )
-    val stateRootHash = HashUtil.stateRoot(tmpGenesisStateRoot)
+    val stateRootHash = blockHashing.stateRoot(tmpGenesisStateRoot)
 
     val genesisBlockHeader = beaconBlockHeader.copy(stateRoot = stateRootHash)
     val genesisBlock = BeaconBlock(genesisBlockHeader, beaconBlockBody)

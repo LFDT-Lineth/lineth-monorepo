@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-library'
   id 'java-test-fixtures'
 }
@@ -12,9 +12,9 @@ dependencies {
   implementation project(":jvm-libs:generic:extensions:futures")
   implementation project(":jvm-libs:generic:extensions:kotlin")
   implementation project(":jvm-libs:generic:serialization:jackson")
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  api "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  api "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
   api "io.vertx:vertx-micrometer-metrics"
 
@@ -23,7 +23,6 @@ dependencies {
   api "io.vertx:vertx-lang-kotlin"
 
   testImplementation "io.vertx:vertx-junit5"
-  testImplementation "io.vertx:vertx-micrometer-metrics"
   testImplementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
   testImplementation "io.rest-assured:rest-assured:${libs.versions.restassured.get()}"
   testImplementation "io.rest-assured:json-schema-validator:${libs.versions.restassured.get()}"

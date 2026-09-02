@@ -40,7 +40,7 @@ class StatusHandlerTest {
         Version.V1,
         Status(
           forkIdHash,
-          localBeaconState.beaconBlockHeader.hash,
+          localBeaconState.beaconBlockHeader.beaconBlockIdHash,
           localBeaconState.beaconBlockHeader.number,
         ),
       )
@@ -60,7 +60,7 @@ class StatusHandlerTest {
           Version.V1,
           Status(
             forkIdHash,
-            remoteBeaconState.beaconBlockHeader.hash,
+            remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
             remoteBeaconState.beaconBlockHeader.number,
           ),
         ),
@@ -83,7 +83,7 @@ class StatusHandlerTest {
     val payload =
       Status(
         forkIdHash = forkIdHash,
-        latestStateRoot = remoteBeaconState.beaconBlockHeader.hash,
+        latestStateRoot = remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = remoteBeaconState.beaconBlockHeader.number,
       )
 
@@ -123,7 +123,7 @@ class StatusHandlerTest {
     val payload =
       Status(
         forkIdHash = otherForkIdHash,
-        latestStateRoot = remoteBeaconState.beaconBlockHeader.hash,
+        latestStateRoot = remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = remoteBeaconState.beaconBlockHeader.number,
       )
 
@@ -168,7 +168,7 @@ class StatusHandlerTest {
           Version.V1,
           Status(
             Random.nextBytes(32),
-            remoteBeaconState.beaconBlockHeader.hash,
+            remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
             remoteBeaconState.beaconBlockHeader.number,
           ),
         ),
@@ -200,7 +200,7 @@ class StatusHandlerTest {
     val payload =
       Status(
         forkIdHash = wrongForkIdHash,
-        latestStateRoot = remoteBeaconState.beaconBlockHeader.hash,
+        latestStateRoot = remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = remoteBeaconState.beaconBlockHeader.number,
       )
 
@@ -245,7 +245,7 @@ class StatusHandlerTest {
           Version.V1,
           Status(
             Random.nextBytes(32),
-            remoteBeaconState.beaconBlockHeader.hash,
+            remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
             remoteBeaconState.beaconBlockHeader.number,
           ),
         ),
@@ -274,7 +274,7 @@ class StatusHandlerTest {
         Version.V1,
         Status(
           forkIdHash,
-          localBeaconState.beaconBlockHeader.hash,
+          localBeaconState.beaconBlockHeader.beaconBlockIdHash,
           localBeaconState.beaconBlockHeader.number,
         ),
       )
@@ -294,7 +294,7 @@ class StatusHandlerTest {
           Version.V1,
           Status(
             forkIdHash,
-            remoteBeaconState.beaconBlockHeader.hash,
+            remoteBeaconState.beaconBlockHeader.beaconBlockIdHash,
             remoteBeaconState.beaconBlockHeader.number,
           ),
         ),

@@ -47,7 +47,7 @@ print_deploy_progress() {
   esac
 
   docker logs --tail 180 deploy-contracts 2>&1 \
-      | grep -E '\[deploy-contracts\] =====|\[deploy-contracts\] (L1 deployer balance|L1 deployer required minimum|L2_GENESIS|Compiling contracts|L1_NONCE|verify |Forwarding |Captured |Funding |wrote |ERROR:|Done|addresses\.json)|^contract=.* (pending:|deployed:)|insufficient funds|Cannot fund|balance too low' \
+      | grep -E '\[deploy-contracts\] =====|\[deploy-contracts\] (L1 deployer balance|L1 deployer required minimum|L2_GENESIS|Compiling contracts|L1_NONCE|verify |Forwarding |Captured |Funding |wrote |ERROR:|Done|addresses\.json)|^contract=.* (pending:|deployed:)|insufficient funds|Cannot fund|balance too low|could not coalesce error|already known|eth_sendRawTransaction|UNKNOWN_ERROR' \
     | tail -25 \
     | awk 'length($0) > 260 { $0 = substr($0, 1, 260) "..." } { print }' \
     | lineth_indent || true
@@ -140,7 +140,7 @@ else
 
     if [ -f "$DEPLOYMENTS_DIR/addresses.json" ]; then
       echo "addresses.json: present"
-      sed -nE "s/.*\"LineaRollupV8\":[[:space:]]*\"(0x[a-fA-F0-9]{40})\".*/L1 LineaRollupV8: \1/p" "$DEPLOYMENTS_DIR/addresses.json" | head -1
+      sed -nE "s/.*\"LinethRollupV8\":[[:space:]]*\"(0x[a-fA-F0-9]{40})\".*/L1 LinethRollupV8: \1/p" "$DEPLOYMENTS_DIR/addresses.json" | head -1
       sed -nE "s/.*\"TokenBridge\":[[:space:]]*\"(0x[a-fA-F0-9]{40})\".*/TokenBridge: \1/p" "$DEPLOYMENTS_DIR/addresses.json" | head -2
       sed -nE "s/.*\"ERC20Example\":[[:space:]]*\"(0x[a-fA-F0-9]{40})\".*/ERC20Example: \1/p" "$DEPLOYMENTS_DIR/addresses.json" | head -2
     else
@@ -266,12 +266,12 @@ check_contract_code "L2" "$L2_RPC_URL" "ERC20Example" "$L2_ERC20_ADDRESS"
 
 section "l1 data availability vs finalization"
 lineth_kv "L1 mode" "$L1_MODE"
-LINEA_ROLLUP_ADDRESS="$(lineth_artifact_section_addr addresses.json l1 LineaRollupV8)"
+LINETH_ROLLUP_ADDRESS="$(lineth_artifact_section_addr addresses.json l1 LinethRollupV8)"
 
-if [ -n "$LINEA_ROLLUP_ADDRESS" ]; then
-  lineth_kv "LineaRollupV8" "$LINEA_ROLLUP_ADDRESS"
+if [ -n "$LINETH_ROLLUP_ADDRESS" ]; then
+  lineth_kv "LinethRollupV8" "$LINETH_ROLLUP_ADDRESS"
 else
-  lineth_warn "LineaRollupV8 unavailable until addresses.json exists"
+  lineth_warn "LinethRollupV8 unavailable until addresses.json exists"
 fi
 
 latest_blob_tx=""
@@ -315,12 +315,12 @@ if [ "$L1_MODE" = "local" ] && [ -n "$L1_RPC_URL" ]; then
     lineth_warn "local L1 eth_chainId unavailable at $L1_RPC_URL"
   fi
 fi
-if [ -n "$L1_RPC_URL" ] && [ -n "$LINEA_ROLLUP_ADDRESS" ]; then
-  check_contract_code "L1" "$L1_RPC_URL" "LineaRollupV8" "$LINEA_ROLLUP_ADDRESS"
+if [ -n "$L1_RPC_URL" ] && [ -n "$LINETH_ROLLUP_ADDRESS" ]; then
+  check_contract_code "L1" "$L1_RPC_URL" "LinethRollupV8" "$LINETH_ROLLUP_ADDRESS"
   check_contract_code "L1" "$L1_RPC_URL" "TokenBridge" "$L1_TOKEN_BRIDGE_ADDRESS"
   check_contract_code "L1" "$L1_RPC_URL" "ERC20Example" "$L1_ERC20_ADDRESS"
 
-  l2_finalized_resp="$(lineth_rpc_json "$L1_RPC_URL" eth_call "[{\"to\":\"$LINEA_ROLLUP_ADDRESS\",\"data\":\"0x695378f5\"},\"latest\"]")"
+  l2_finalized_resp="$(lineth_rpc_json "$L1_RPC_URL" eth_call "[{\"to\":\"$LINETH_ROLLUP_ADDRESS\",\"data\":\"0x695378f5\"},\"latest\"]")"
   l2_finalized_hex="$(printf '%s\n' "$l2_finalized_resp" | lineth_json_stdin_string_field result)"
   if [ -n "$l2_finalized_hex" ] && [ "$l2_finalized_hex" != "0x" ]; then
     rollup_current_l2_block_dec="$(lineth_hex_to_dec_small "$l2_finalized_hex")"
@@ -365,7 +365,7 @@ if [ -n "$L1_RPC_URL" ] && [ -n "$LINEA_ROLLUP_ADDRESS" ]; then
     fi
   fi
 else
-  lineth_info "Sepolia rollup state check skipped: L1_RPC_URL or LineaRollupV8 unavailable"
+  lineth_info "Sepolia rollup state check skipped: L1_RPC_URL or LinethRollupV8 unavailable"
 fi
 
 if [ "$STATE_MISMATCH" -ne 0 ]; then
@@ -373,7 +373,7 @@ if [ "$STATE_MISMATCH" -ne 0 ]; then
   lineth_error "Local L2 state and preserved Sepolia artifact state do not belong together."
   lineth_info "Stop debugging this boot; reset with:"
   lineth_info "./scripts/reset.sh"
-elif [ -n "$LINEA_ROLLUP_ADDRESS" ] || [ -n "$ADDRESSES_L2_CHAIN_ID" ]; then
+elif [ -n "$LINETH_ROLLUP_ADDRESS" ] || [ -n "$ADDRESSES_L2_CHAIN_ID" ]; then
   section "state mismatch action"
   lineth_ok "no local/L1 state mismatch detected"
 else

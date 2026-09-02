@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	fiatshamir "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	poseidon2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -25,6 +26,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
@@ -33,6 +35,13 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
+	// Shrink the FRI query count to 1 for fixtures: the production default (229)
+	// would emit ~229 Merkle branches per opening, ballooning verify.zig to
+	// hundreds of MB and making Zig compilation intractable. One query exercises
+	// the same code paths byte-faithfully (the verifier derives the query count
+	// from the emitted System params, which reflect this override).
+	pcscompiler.SetFRINumQueriesForTest(1)
+
 	var out bytes.Buffer
 	writeHeader(&out)
 	writeFieldCases(&out)
@@ -110,12 +119,8 @@ func writeHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "pub const PoseidonMdCase = struct { message: []const u32, expected: [8]u32 };")
 	fmt.Fprintln(out, "pub const FiatShamirCase = struct { base_updates: []const u32, ext_updates: []const [6]u32, random_field: [8]u32, random_ext: [6]u32 };")
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "pub const prover_visibility_oracle: u8 = %d;\n", int(wiop.VisibilityOracle))
-	fmt.Fprintf(out, "pub const prover_visibility_public: u8 = %d;\n", int(wiop.VisibilityPublic))
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
-	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };")
+	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell, expected_coins: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCase = struct { rounds: []const RuntimeTraceRound };")
 	fmt.Fprintln(out)
 }
@@ -390,20 +395,13 @@ type runtimeTraceCase struct {
 
 // runtimeTraceRound is the verifier-visible transcript input for one WIOP
 // round. expectedCoins are the extension-field coins that prover-ray derives for
-// the next round after absorbing this round's columns and cells.
+// the next round after absorbing this round's commitment (if any) and cells.
+// prover-ray columns never travel raw: every committed round is represented by
+// a single Merkle root, and non-committed rounds carry none at all.
 type runtimeTraceRound struct {
-	columns       []runtimeTraceColumn
+	commitment    *field.Octuplet
 	cells         []runtimeTraceCell
 	expectedCoins []field.Ext
-}
-
-// runtimeTraceColumn records one verifier-visible column assignment. prover-ray
-// may have internal columns in the source protocol, but they are intentionally
-// not exported to verifier-ray traces.
-type runtimeTraceColumn struct {
-	commitments      []field.Octuplet
-	publicBaseValues []field.Element
-	publicExtValues  []field.Ext
 }
 
 // runtimeTraceCell records a scalar value opened in the round. Unlike internal
@@ -431,57 +429,43 @@ func writeRuntimeTraceCases(out *bytes.Buffer) {
 }
 
 // buildRuntimeTraceCases constructs a small prover-ray WIOP runtime at the
-// verifier boundary. Oracle columns are represented by their commitment values
-// rather than raw witness assignments, and expected coins are sampled through
-// Runtime.AdvanceRound so the fixture stays coupled to prover-ray round logic.
+// verifier boundary. Columns never travel in the transcript: a committed round
+// is represented solely by its Merkle root (set directly on rt.Commitments here,
+// bypassing the PCS compiler since this fixture only exercises AdvanceRound's
+// absorption order), and expected coins are sampled through Runtime.AdvanceRound
+// so the fixture stays coupled to prover-ray round logic.
 func buildRuntimeTraceCases() []runtimeTraceCase {
 	sys := wiop.NewSystemf("runtime-trace")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	r2 := sys.NewRound()
-	commitmentMod := sys.NewSizedModule(sys.Context.Childf("commitments"), len(field.Octuplet{}), wiop.PaddingDirectionNone)
-	valueMod := sys.NewSizedModule(sys.Context.Childf("values"), 4, wiop.PaddingDirectionNone)
 
-	r0OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r0-oracle-commitment"), wiop.VisibilityOracle, r0)
-	r0PublicExt := valueMod.NewExtensionColumn(sys.Context.Childf("r0-public-ext"), wiop.VisibilityPublic, r0)
-	// Keep an unassigned internal column in the prover-ray protocol. It is not a
-	// verifier-visible transcript message and is intentionally not exported.
-	commitmentMod.NewColumn(sys.Context.Childf("r0-internal-unassigned"), wiop.VisibilityInternal, r0)
+	r0.HasCommitment = true
+	r1.HasCommitment = true
+
 	r0BaseCell := r0.NewCell(sys.Context.Childf("r0-base-cell"), false)
 	r0ExtCell := r0.NewCell(sys.Context.Childf("r0-ext-cell"), true)
 
 	r1CoinA := r1.NewCoinField(sys.Context.Childf("r1-coin-a"))
 	r1CoinB := r1.NewCoinField(sys.Context.Childf("r1-coin-b"))
-	r1OracleCommitmentColumn := commitmentMod.NewColumn(sys.Context.Childf("r1-oracle-commitment"), wiop.VisibilityOracle, r1)
-	r1PublicBase := valueMod.NewColumn(sys.Context.Childf("r1-public-base"), wiop.VisibilityPublic, r1)
 	r1BaseCell := r1.NewCell(sys.Context.Childf("r1-base-cell"), false)
 
 	r2Coin := r2.NewCoinField(sys.Context.Childf("r2-coin"))
 
-	r0OracleBaseValues := elems(3, 1, 4, 1)
-	r0OracleCommitment := commitmentFromElements(r0OracleBaseValues)
-	r0PublicExtValues := []field.Ext{
-		field.UintsToExt(5, 9, 2, 6, 5, 3),
-		field.UintsToExt(5, 8, 9, 7, 9, 3),
-		field.UintsToExt(2, 3, 8, 4, 6, 2),
-		field.UintsToExt(6, 4, 3, 3, 8, 3),
-	}
+	r0Commitment := commitmentFromElements(elems(3, 1, 4, 1))
 	r0BaseCellValue := elem(23)
 	r0ExtCellValue := field.UintsToExt(10, 20, 30, 40, 50, 60)
 
-	r1OracleExtValues := []field.Ext{
+	r1Commitment := commitmentFromExts([]field.Ext{
 		field.UintsToExt(101, 102, 103, 104, 105, 106),
 		field.UintsToExt(201, 202, 203, 204, 205, 206),
 		field.UintsToExt(301, 302, 303, 304, 305, 306),
 		field.UintsToExt(401, 402, 403, 404, 405, 406),
-	}
-	r1OracleCommitment := commitmentFromExts(r1OracleExtValues)
-	r1PublicBaseValues := elems(11, 22, 33, 44)
+	})
 	r1BaseCellValue := elem(77)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(r0OracleCommitmentColumn, concreteBase(r0OracleCommitment[:]))
-	rt.AssignColumn(r0PublicExt, concreteExt(r0PublicExtValues))
+	rt.Commitments[r0.ID] = r0Commitment
 	rt.AssignCell(r0BaseCell, field.ElemFromBase(r0BaseCellValue))
 	rt.AssignCell(r0ExtCell, field.ElemFromExt(r0ExtCellValue))
 	rt.AdvanceRound()
@@ -490,8 +474,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 		rt.GetCoinValue(r1CoinB).AsExt(),
 	}
 
-	rt.AssignColumn(r1OracleCommitmentColumn, concreteBase(r1OracleCommitment[:]))
-	rt.AssignColumn(r1PublicBase, concreteBase(r1PublicBaseValues))
+	rt.Commitments[r1.ID] = r1Commitment
 	rt.AssignCell(r1BaseCell, field.ElemFromBase(r1BaseCellValue))
 	rt.AdvanceRound()
 	r2Coins := []field.Ext{rt.GetCoinValue(r2Coin).AsExt()}
@@ -499,10 +482,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 	return []runtimeTraceCase{{
 		rounds: []runtimeTraceRound{
 			{
-				columns: []runtimeTraceColumn{
-					{commitments: []field.Octuplet{r0OracleCommitment}},
-					{publicExtValues: r0PublicExtValues},
-				},
+				commitment: &r0Commitment,
 				cells: []runtimeTraceCell{
 					baseTraceCell(r0BaseCellValue),
 					extTraceCell(r0ExtCellValue),
@@ -510,10 +490,7 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 				expectedCoins: r1Coins,
 			},
 			{
-				columns: []runtimeTraceColumn{
-					{commitments: []field.Octuplet{r1OracleCommitment}},
-					{publicBaseValues: r1PublicBaseValues},
-				},
+				commitment: &r1Commitment,
 				cells: []runtimeTraceCell{
 					baseTraceCell(r1BaseCellValue),
 				},
@@ -525,11 +502,9 @@ func buildRuntimeTraceCases() []runtimeTraceCase {
 
 func writeRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound) {
 	fmt.Fprintln(out, "        .{")
-	fmt.Fprintln(out, "            .columns = &.{")
-	for _, column := range round.columns {
-		writeTraceColumn(out, column, "                ")
+	if round.commitment != nil {
+		fmt.Fprintf(out, "            .commitment = %s,\n", oct8(*round.commitment))
 	}
-	fmt.Fprintln(out, "            },")
 	fmt.Fprintln(out, "            .cells = &.{")
 	for _, cell := range round.cells {
 		writeTraceCell(out, cell, "                ")
@@ -548,13 +523,21 @@ func extTraceCell(value field.Ext) runtimeTraceCell {
 }
 
 type fixtureCase struct {
-	name    string
-	honest  vanishingProofView
-	invalid *vanishingProofView
+	name string
+	// pcs is the compile-time PCS System baked once for this case; every proof
+	// of this case (honest, invalid, alt) verifies against it.
+	pcs     *codegen.PcsSystem
+	honest  proofFixture
+	invalid *proofFixture
+	// alt is a second honest proof of the same compiled protocol at a
+	// different dynamic-module size, verified against the same baked
+	// PcsSystem.
+	alt *proofFixture
 }
 
 type vanishingProofView struct {
 	rounds         []runtimeTraceRound
+	publicInputs   []runtimeTraceCell
 	witnessClaims  []field.Ext
 	quotientClaims []field.Ext
 	moduleSizes    []int
@@ -562,12 +545,39 @@ type vanishingProofView struct {
 
 type assignFn func(rt *wiop.Runtime)
 
+// proofFixture is everything a verify.zig fixture needs from one proving run:
+// the vanishing proof view and the FRI opening proof. The PCS entry claims are
+// NOT here: verify.zig's verifier now reconstructs them itself from
+// rounds[*].cells (already carried by view), so there is nothing left for this
+// fixture to precompute for them.
+type proofFixture struct {
+	view    vanishingProofView
+	opening fri.OpeningProof
+}
+
+// buildProofFixture runs the prover for one assignment and extracts the
+// fixture data that proof yields. label names the proof (e.g. "honest",
+// "invalid", "alt") for error messages.
+func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label string) (proofFixture, error) {
+	rt := runProver(sys, assign)
+	if rt.PCSOpeningProof == nil {
+		return proofFixture{}, fmt.Errorf("pcs %s/%s: %s runtime has no PCSOpeningProof", source, name, label)
+	}
+	return proofFixture{
+		view:    extractVanishingProofView(sys, rt),
+		opening: *rt.PCSOpeningProof,
+	}, nil
+}
+
 func compileFullPipeline(sys *wiop.System) {
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
+	// PCS runs last, after the earlier passes have registered their columns and
+	// LagrangeEval openings.
+	pcscompiler.Compile(sys)
 }
 
 func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
@@ -576,30 +586,61 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		compileFullPipeline(sys)
-		routing, err := codegen.BuildCoinRouting(sys)
-		if err != nil {
-			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		// Fail closed on any verifier action the codegen does not know how to emit.
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
-		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
+		compiled, err := codegen.BuildCompiledSystem(sys)
 		if err != nil {
-			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
 		}
-		if len(vanishingSystem.Modules) == 0 {
+		if len(compiled.Vanishing.Modules) == 0 {
 			return nil
 		}
-		honestRt := runProver(sys, honest)
-		logDeriv, err := codegen.BuildLogDerivSystem(sys)
+
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
 		if err != nil {
-			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
+			return err
 		}
-		honestProof := extractVanishingProofView(sys, honestRt)
-		var invalidProof *vanishingProofView
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
 		if invalid != nil {
-			proof := extractVanishingProofView(sys, runProver(sys, invalid))
-			invalidProof = &proof
+			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
+			if err != nil {
+				return err
+			}
+			tc.invalid = &invalidFixture
 		}
-		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
+
+		cases = append(cases, tc)
+		systems = append(systems, compiled)
+		return nil
+	}
+
+	// addMultiSize emits one baked PcsSystem plus two honest proofs at different
+	// runtime sizes.
+	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
+		compileFullPipeline(sys)
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
+		}
+		compiled, err := codegen.BuildCompiledSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
+		}
+
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
+		if err != nil {
+			return err
+		}
+		altFixture, err := buildProofFixture(sys, alt, source, name, "alt")
+		if err != nil {
+			return err
+		}
+
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, alt: &altFixture}
+
+		cases = append(cases, tc)
+		systems = append(systems, compiled)
 		return nil
 	}
 
@@ -609,12 +650,20 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 	}
-	for _, factory := range wioptest.LocalVanishingScenarios() {
-		sc := factory()
-		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
-			return nil, nil, err
-		}
+
+	// Multi-size committed-dynamic coverage for one baked PcsSystem.
+	if err := addMultiSizeDynFib(addMultiSize); err != nil {
+		return nil, nil, err
 	}
+	// Two independent committed dynamic modules against one baked PcsSystem.
+	if err := addMultiSizeTwoDynModules(addMultiSize); err != nil {
+		return nil, nil, err
+	}
+	// LocalVanishing is intentionally NOT generated: at the verifier level every
+	// LocalVanishing scenario reduces to a vanishing System whose shape (module
+	// count, dynamic modules, batch count, empty logderiv) is a strict subset of
+	// the Vanishing set above. The local-vanishing *compiler* is exercised by
+	// prover-ray's own tests; the verifier sees nothing new here.
 	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := factory()
 		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
@@ -627,11 +676,57 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 	}
+	// Keep one RangeCheck scenario for the 3-module / 4-batch verifier shape
+	// that Lookup does not produce.
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
+		if sc.Name != "DistinctBounds" {
+			continue
+		}
 		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
+	}
+
+	// Public-input end-to-end coverage. The honest fixture carries the opened cell
+	// only in `public_inputs`, never in the proof rounds; the failing fixture
+	// keeps the proof identical and tampers JUST the public-input statement.
+	{
+		sys, col := buildPublicInputSystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 30, 40))) }
+		if err := add("PublicInput", "OpenedCellPublicInput", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		if len(cases[last].honest.view.publicInputs) == 0 {
+			return nil, nil, fmt.Errorf("public input fixture produced no public inputs")
+		}
+
+		invalid := cases[last].honest
+		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
+		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
+		cases[last].invalid = &invalid
+	}
+	// Dynamic-module twin of the public-input scenario. The opened cell is still
+	// carried only in `public_inputs`, but the module size now round-trips
+	// through the proof at runtime (4, from the witness column length).
+	{
+		sys, col := buildDynamicPublicInputSystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(30, 20, 10, 40))) }
+		if err := add("PublicInput", "OpenedCellPublicInputDynamic", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		if len(cases[last].honest.view.publicInputs) == 0 {
+			return nil, nil, fmt.Errorf("dynamic public input fixture produced no public inputs")
+		}
+
+		invalid := cases[last].honest
+		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
+		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
+		cases[last].invalid = &invalid
 	}
 
 	// LagrangeSelector boundary scenario. It is constructed here rather than in
@@ -692,8 +787,8 @@ func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
 	for i := range tCols {
-		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
-		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), r0)
+		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), r0)
 		tTableView[i] = tCols[i].View()
 		sTableView[i] = sCols[i].View()
 	}
@@ -731,7 +826,7 @@ func buildLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("lagrange-sel")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	selector := wiop.NewLagrangeSelector(mod, 1)
 	value := wiop.NewConstantField(elem(99))
 	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
@@ -752,18 +847,49 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	sys := wiop.NewSystemf("lagrange-sel-dyn")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	selector := wiop.NewLagrangeSelector(mod, 1)
 	value := wiop.NewConstantField(elem(99))
 	mod.NewVanishing(sys.Context.Childf("boundary"), wiop.Mul(selector, wiop.Sub(col.View(), value)))
 	return sys, col
 }
 
+// buildPublicInputSystem mirrors prover-ray's basic public-input flow: open one
+// oracle column position into a cell, register that cell as a public input, and
+// let the local-vanishing compiler turn the opening equality into a verifier
+// check. The verifier fixture then proves two properties end-to-end:
+//  1. the opened cell is omitted from the proof rounds and carried separately in
+//     the flat public-input vector;
+//  2. tampering only that public-input vector is rejected.
+func buildPublicInputSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("public-input")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	cell := col.At(2).Open(sys.Context.Childf("public"))
+	sys.RegisterPublicInputs("PublicInput", cell)
+	return sys, col
+}
+
+// buildDynamicPublicInputSystem is the dynamic-module twin of
+// buildPublicInputSystem: same opened-cell-as-public-input flow, but the
+// containing module size is inferred from the runtime witness assignment and
+// round-trips through the proof's module_sizes.
+func buildDynamicPublicInputSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("public-input-dyn")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	cell := col.At(0).Open(sys.Context.Childf("public"))
+	sys.RegisterPublicInputs("PublicInput", cell)
+	return sys, col
+}
+
 // runProver creates a runtime for sys, applies assign, advances all rounds
 // running every prover action, and returns the completed runtime.
-func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
+func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
 	rt := wiop.NewRuntime(sys)
-	assign(&rt)
+	assign(rt)
 	for _, action := range rt.CurrentRound().ProverActions {
 		action.Run(rt)
 	}
@@ -778,8 +904,10 @@ func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
 
 // extractVanishingProofView reads witness/quotient claims and round trace data
 // from an already-completed runtime.
-func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProofView {
+func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
+	publicInputs := extractPublicInputs(sys, rt)
+	publicInputByID := publicInputIndex(sys)
 
 	var witnessClaims []field.Ext
 	var quotientClaims []field.Ext
@@ -796,15 +924,95 @@ func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProof
 
 	rounds := make([]runtimeTraceRound, 0, len(sys.Rounds)-1)
 	for i := 0; i < len(sys.Rounds)-1; i++ {
-		rounds = append(rounds, runtimeTraceRoundFromRuntime(rt, sys.Rounds[i]))
+		rounds = append(rounds, runtimeTraceRoundFromRuntime(rt, sys.Rounds[i], publicInputByID))
 	}
 
 	return vanishingProofView{
 		rounds:         rounds,
+		publicInputs:   publicInputs,
 		witnessClaims:  witnessClaims,
 		quotientClaims: quotientClaims,
-		moduleSizes:    dynamicModuleSizes(verifiers, rt),
+		moduleSizes:    codegen.DynamicModuleSizes(sys, rt),
 	}
+}
+
+// addMultiSizeDynFib constructs the dyn-fib protocol (a single committed dynamic
+// column with the Fibonacci recurrence A[i] − A[i−1] − A[i−2] = 0) and registers
+// it via `reg` (addMultiSize) with two honest witnesses of DIFFERENT lengths
+// (8 and 16). Rows 0 and 1 are auto-cancelled by the back-shifts, so any
+// Fibonacci prefix is valid. This exercises verifying two dynamic sizes against
+// one baked PcsSystem.
+func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+	sys := wiop.NewSystemf("dyn-fib-multisize")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	mod.NewVanishing(
+		sys.Context.Childf("fib"),
+		wiop.Sub(
+			wiop.Sub(col.View(), col.View().Shift(-1)),
+			col.View().Shift(-2),
+		),
+	)
+
+	honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(8)) }
+	alt := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(16)) }
+	return reg("MultiSize", "DynamicFibonacciMultiSize", sys, honest, alt)
+}
+
+// fibVector builds a length-n Fibonacci column (rows 0 and 1 = 1), used as an
+// honest witness for the committed-dynamic Fibonacci recurrence.
+func fibVector(n int) *wiop.ConcreteVector {
+	vals := make([]uint64, n)
+	vals[0], vals[1] = 1, 1
+	for i := 2; i < n; i++ {
+		vals[i] = vals[i-1] + vals[i-2]
+	}
+	elems := make([]field.Element, n)
+	for i, v := range vals {
+		elems[i].SetUint64(v)
+	}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
+
+// addMultiSizeTwoDynModules builds a protocol with TWO independent committed
+// dynamic modules (each a Fibonacci column), proven at two size configurations
+// against ONE baked PcsSystem. The alt witness resizes BOTH modules to different
+// lengths than honest, so the verifier must (a) absorb each module's size into
+// the transcript in sys.Modules order, (b) index module_sizes[i] per dynamic
+// module correctly, and (c) reconstruct two independently-sized layouts that
+// coexist in the shared column schedule. Single-module scenarios cannot catch a
+// swapped module index or a cross-module absorption-order bug — this one does.
+func addMultiSizeTwoDynModules(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+	sys := wiop.NewSystemf("dyn-fib-two-modules")
+	r0 := sys.NewRound()
+
+	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), r0)
+	modA.NewVanishing(
+		sys.Context.Childf("fibA"),
+		wiop.Sub(wiop.Sub(colA.View(), colA.View().Shift(-1)), colA.View().Shift(-2)),
+	)
+
+	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), r0)
+	modB.NewVanishing(
+		sys.Context.Childf("fibB"),
+		wiop.Sub(wiop.Sub(colB.View(), colB.View().Shift(-1)), colB.View().Shift(-2)),
+	)
+
+	// honest: A at 8, B at 16. alt: A at 16, B at 8 — both modules change size AND
+	// their relative sizes swap, so an off-by-one module index would derive wrong
+	// coins and reject an honest proof.
+	honest := func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, fibVector(8))
+		rt.AssignColumn(colB, fibVector(16))
+	}
+	alt := func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, fibVector(16))
+		rt.AssignColumn(colB, fibVector(8))
+	}
+	return reg("MultiSize", "DynamicFibonacciTwoModules", sys, honest, alt)
 }
 
 func globalVerifiers(sys *wiop.System) []*global.Verifier {
@@ -819,39 +1027,46 @@ func globalVerifiers(sys *wiop.System) []*global.Verifier {
 	return verifiers
 }
 
-func dynamicModuleSizes(verifiers []*global.Verifier, rt wiop.Runtime) []int {
-	indices := map[*wiop.Module]int{}
-	for _, verifier := range verifiers {
-		module := verifier.Module
-		if !module.IsDynamic() {
-			continue
-		}
-		if _, ok := indices[module]; !ok {
-			indices[module] = len(indices)
-		}
-	}
-	out := make([]int, len(indices))
-	for module, idx := range indices {
-		out[idx] = module.RuntimeSize(rt)
+func publicInputIndex(sys *wiop.System) map[wiop.ObjectID]int {
+	out := make(map[wiop.ObjectID]int, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		out[cell.Context.ID] = i
 	}
 	return out
 }
 
-func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTraceRound {
-	var trace runtimeTraceRound
-	for _, col := range round.Columns {
-		if col.Visibility < wiop.VisibilityOracle || !rt.HasColumnAssignment(col) {
-			continue
-		}
-		vec := rt.GetColumnAssignment(col).Plain
-		if vec.IsBase() {
-			trace.columns = append(trace.columns, runtimeTraceColumn{publicBaseValues: append([]field.Element(nil), vec.AsBase()...)})
+func extractPublicInputs(sys *wiop.System, rt *wiop.Runtime) []runtimeTraceCell {
+	out := make([]runtimeTraceCell, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		value := rt.GetCellValue(cell)
+		if value.IsBase() {
+			out[i] = baseTraceCell(value.AsBase())
 		} else {
-			trace.columns = append(trace.columns, runtimeTraceColumn{publicExtValues: append([]field.Ext(nil), vec.AsExt()...)})
+			out[i] = extTraceCell(value.AsExt())
 		}
+	}
+	return out
+}
+
+func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round, publicInputByID map[wiop.ObjectID]int) runtimeTraceRound {
+	var trace runtimeTraceRound
+	// A committed (interactive PCS) round carries its Merkle root as the sole
+	// verifier-visible message for that round, absorbed by AdvanceRound in place
+	// of the round's columns (which never travel raw). Columns themselves are
+	// never part of the trace — see prover-ray's wiop_prove_verify.go Proof
+	// comment: binding them is the commitment scheme's job, not the transcript's.
+	if round.HasCommitment {
+		root, ok := rt.Commitments[round.ID]
+		if !ok {
+			panic(fmt.Sprintf("round %d HasCommitment but no root in runtime", round.ID))
+		}
+		trace.commitment = &root
 	}
 	for _, cell := range round.Cells {
 		if !rt.HasCellValue(cell) {
+			continue
+		}
+		if _, isPI := publicInputByID[cell.Context.ID]; isPI {
 			continue
 		}
 		value := rt.GetCellValue(cell)
@@ -868,11 +1083,13 @@ func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem
 	var out bytes.Buffer
 	writeCompiledHeader(&out)
 	opts := codegen.CompiledSystemZigOptions{
-		EmitHeader:      false,
-		ProtocolImport:  "verifier_ray.protocol",
-		FieldImport:     "verifier_ray.field.koalabear",
-		VanishingImport: "verifier_ray.query.vanishing",
-		LogDerivImport:  "verifier_ray.query.logderivativesum",
+		EmitHeader:         false,
+		ProtocolImport:     "verifier_ray.protocol",
+		FieldImport:        "verifier_ray.field.koalabear",
+		VanishingImport:    "verifier_ray.query.vanishing",
+		LogDerivImport:     "verifier_ray.query.logderivativesum",
+		GrandProductImport: "verifier_ray.query.grandproduct",
+		RowLimitImport:     "verifier_ray.query.rowlimit",
 	}
 	for i := range cases {
 		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
@@ -898,12 +1115,13 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
+	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
-	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };")
-	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
-	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
+	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };")
+	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, public_inputs: []const RuntimeTraceCell, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
+	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, public_input: protocol.public_input.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, rowlimit: rowlimit.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
 }
 
@@ -911,13 +1129,14 @@ func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintf(out, "const scenario_%d = Scenario{\n", idx)
 	fmt.Fprintf(out, "    .name = \"%s\",\n", codegen.ZigString(tc.name))
 	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
+	fmt.Fprintf(out, "    .public_input = system_%d_public_input,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintf(out, "    .logderiv = system_%d_logderiv,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
-	writeVanishingProofView(out, tc.honest, "        ")
+	writeVanishingProofView(out, tc.honest.view, "        ")
 	if tc.invalid != nil {
 		fmt.Fprintln(out, "    .invalid =")
-		writeVanishingProofView(out, *tc.invalid, "        ")
+		writeVanishingProofView(out, tc.invalid.view, "        ")
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
@@ -938,6 +1157,11 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 		writeTraceRound(out, round, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
+	fmt.Fprintf(out, "%s    .public_inputs = &.{\n", indent)
+	for _, input := range proof.publicInputs {
+		writeTraceCell(out, input, indent+"        ")
+	}
+	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .witness_claims = &%s,\n", indent, extSlice(proof.witnessClaims))
 	fmt.Fprintf(out, "%s    .quotient_claims = &%s,\n", indent, extSlice(proof.quotientClaims))
 	fmt.Fprintf(out, "%s    .module_sizes = &%s,\n", indent, codegen.IntSlice(proof.moduleSizes))
@@ -946,30 +1170,15 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 
 func writeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
 	fmt.Fprintf(out, "%s.{\n", indent)
-	fmt.Fprintf(out, "%s    .columns = &.{\n", indent)
-	for _, column := range round.columns {
-		writeTraceColumn(out, column, indent+"        ")
+	if round.commitment != nil {
+		fmt.Fprintf(out, "%s    .commitment = %s,\n", indent, oct8(*round.commitment))
 	}
-	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .cells = &.{\n", indent)
 	for _, cell := range round.cells {
 		writeTraceCell(out, cell, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s},\n", indent)
-}
-
-func writeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
-	switch {
-	case column.commitments != nil:
-		fmt.Fprintf(out, "%s.{ .oracle = &%s },\n", indent, commitmentSlice(column.commitments))
-	case column.publicBaseValues != nil:
-		fmt.Fprintf(out, "%s.{ .public_base = &%s },\n", indent, elemSlice(column.publicBaseValues))
-	case column.publicExtValues != nil:
-		fmt.Fprintf(out, "%s.{ .public_ext = &%s },\n", indent, extSlice(column.publicExtValues))
-	default:
-		panic("runtime trace column has no data variant")
-	}
 }
 
 func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
@@ -983,15 +1192,32 @@ func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	}
 }
 
-func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
+func writeVerifyFixtures(allCases []fixtureCase, allSystems []codegen.CompiledSystem) error {
+	// verify.zig drives the mandatory-PCS verifier.verify: every case needs a PCS
+	// System. Exclude cases without one (protocols with committed dynamic-module
+	// columns — see the add() closure); they are covered by vanishing.zig's direct
+	// path. Filter to a contiguous slice so all downstream indices (system_i,
+	// verify_case_i, case_count, the switches) stay aligned.
+	var cases []fixtureCase
+	var systems []codegen.CompiledSystem
+	for i := range allCases {
+		if allCases[i].pcs == nil {
+			continue
+		}
+		cases = append(cases, allCases[i])
+		systems = append(systems, allSystems[i])
+	}
+
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
 	opts := codegen.CompiledSystemZigOptions{
-		EmitHeader:      false,
-		ProtocolImport:  "protocol",
-		FieldImport:     "field",
-		VanishingImport: "vanishing",
-		LogDerivImport:  "logderivativesum",
+		EmitHeader:         false,
+		ProtocolImport:     "protocol",
+		FieldImport:        "field",
+		VanishingImport:    "vanishing",
+		LogDerivImport:     "logderivativesum",
+		GrandProductImport: "grandproduct",
+		RowLimitImport:     "rowlimit",
 	}
 
 	for i := range cases {
@@ -1021,8 +1247,13 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const ext = verifier_ray.field.koalabear_ext;")
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const commitment = verifier_ray.crypto.commitment;")
+	fmt.Fprintln(out, "const merkle = verifier_ray.crypto.merkle;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const grandproduct = verifier_ray.query.grandproduct;")
+	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
+	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
+	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCase = struct {")
@@ -1048,33 +1279,29 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 }
 
 func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
+	// The compile-time PCS system for this case (mandatory). Its
+	// batch_roots/maps/zeta are what verifier.Systems.pcs points at; each proof
+	// carries only its own runtime opening.
+	pcsName := writePcsSystemZig(out, fmt.Sprintf("verify_case_%d", idx), tc.pcs)
+
 	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
 	if tc.invalid != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
 	}
+	// The alt (second-size) honest proof, verified against the SAME System's .pcs.
+	if tc.alt != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
+	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
-		idx, idx, idx,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }
 
-func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
-	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.witnessClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.quotientClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
+func writeVerifyProof(out *bytes.Buffer, prefix string, fixture proofFixture) {
+	proof := fixture.view
 	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
 	fmt.Fprintln(out)
 
@@ -1083,59 +1310,52 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	}
 
 	fmt.Fprintf(out, "const %s_rounds = [_]protocol.RoundMessage{\n", prefix)
-	for roundIdx := range proof.rounds {
-		fmt.Fprintf(out, "    .{ .columns = &%s_round_%d_columns, .cells = &%s_round_%d_cells },\n", prefix, roundIdx, prefix, roundIdx)
+	for roundIdx, round := range proof.rounds {
+		if round.commitment != nil {
+			fmt.Fprintf(out, "    .{ .commitment = %s, .cells = &%s_round_%d_cells },\n", commitmentValueLiteral(*round.commitment), prefix, roundIdx)
+		} else {
+			fmt.Fprintf(out, "    .{ .cells = &%s_round_%d_cells },\n", prefix, roundIdx)
+		}
 	}
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
+	// The PCS opening: just the FRI opening proof. No entry_claims — the
+	// verifier reconstructs those from rounds[*].cells (emitted above) via the
+	// compiled pcs.System's claim_cells table — and no witness/quotient_claims,
+	// which are derived by the verifier from entry_claims via the claim maps.
+	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(fixture.opening))
+	fmt.Fprintln(out)
+
 	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
 	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
-	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
-	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
 	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
+	fmt.Fprintf(out, "    .pcs_opening = %s_pcs_opening,\n", prefix)
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_public_inputs = [_]protocol.Scalar{\n", prefix)
+	for _, cell := range proof.publicInputs {
+		switch {
+		case cell.baseValue != nil:
+			fmt.Fprintf(out, "    .{ .base = %s },\n", fieldValueLiteral(*cell.baseValue))
+		case cell.extValue != nil:
+			fmt.Fprintf(out, "    .{ .ext = %s },\n", extValueLiteral(*cell.extValue))
+		default:
+			panic("runtime trace cell has no data variant")
+		}
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_input = verifier.VerifyInput{\n", prefix)
+	fmt.Fprintf(out, "    .proof = %s_proof,\n", prefix)
+	fmt.Fprintf(out, "    .public_inputs = &%s_public_inputs,\n", prefix)
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
 
 func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round runtimeTraceRound) {
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicBaseValues {
-				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicExtValues {
-				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		}
-	}
-
-	fmt.Fprintf(out, "const %s_round_%d_columns = [_]protocol.ColumnMessage{\n", prefix, roundIdx)
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.commitments != nil:
-			for _, value := range column.commitments {
-				fmt.Fprintf(out, "    .{ .oracle_commitment = %s },\n", commitmentValueLiteral(value))
-			}
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .base = &%s_round_%d_column_%d_base } },\n", prefix, roundIdx, columnIdx)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .ext = &%s_round_%d_column_%d_ext } },\n", prefix, roundIdx, columnIdx)
-		default:
-			panic("runtime trace column has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
 	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
 	for _, cell := range round.cells {
 		switch {
@@ -1190,15 +1410,16 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 }
 
-// writeVerifyInputSwitch emits the getInput accessor, which returns the proof
-// data for a fixture case. The proof is kept separate from VerifyCase (see
-// writeVerifyHeader) so callers that only need the spec/systems don't pull in
-// the proof, and so the input can be supplied independently at runtime.
+// writeVerifyInputSwitch emits the getInput accessor, which returns the full
+// verifier input (proof + separate public-input vector) for a fixture case. The
+// input is kept separate from VerifyCase (see writeVerifyHeader) so callers that
+// only need the spec/systems don't pull it in, and so it can be supplied
+// independently at runtime.
 func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.VerifyInput {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
-		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
+		fmt.Fprintf(out, "        %d => verify_case_%d_input,\n", i, i)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
@@ -1206,19 +1427,60 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 }
 
 // writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
-// the failing (invalid) proof data for a fixture case. Not every case defines a
-// failing input, so cases without one produce a comptime error when requested.
+// the failing verifier input for a fixture case. Not every case defines one, so
+// cases without one produce a comptime error when requested.
 func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.VerifyInput {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.invalid != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_input,\n", i, i)
 		} else {
 			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// hasFailing lets a comptime sweep skip getInputFailing for cases that have
+	// no failing input (calling it there is a @compileError).
+	fmt.Fprintln(out, "pub fn hasFailing(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalid != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// getInputAlt returns a case's SECOND-size honest verifier input (multi-size
+	// cases
+	// only); hasAlt gates it. The alt verifier input is checked against the SAME
+	// case systems (verify_case_i_systems.pcs) as the primary proof — the
+	// runtime-size-reconstructed-layout property: one baked System, two sizes.
+	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.alt != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_alt_input,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no alt input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	fmt.Fprintln(out, "pub fn hasAlt(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.alt != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 }
@@ -1278,10 +1540,6 @@ func elems(values ...uint64) []field.Element {
 
 func concreteBase(values []field.Element) *wiop.ConcreteVector {
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(values)}
-}
-
-func concreteExt(values []field.Ext) *wiop.ConcreteVector {
-	return &wiop.ConcreteVector{Plain: field.VecFromExt(values)}
 }
 
 func octuplet(values ...uint64) field.Octuplet {
@@ -1349,14 +1607,6 @@ func extSlice(values []field.Ext) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
 		parts[i] = ext6(value)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
-}
-
-func commitmentSlice(values []field.Octuplet) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = oct8(value)
 	}
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }

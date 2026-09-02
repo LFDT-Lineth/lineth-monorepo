@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 type cfg struct {
@@ -87,70 +86,6 @@ func MustOpenCsvFile(fName string) *CsvTrace {
 
 // FmtCsv is a utility function that can be used in order to print a set of column
 // in a csv format so that debugging and testcase generation are simpler.
-func FmtCsv(w io.Writer, run *wizard.ProverRuntime, cols []ifaces.Column, options []Option) error {
-
-	var (
-		header       = []string{}
-		assignment   = [][]field.Element{}
-		cfg          = cfg{}
-		foundNonZero = false
-		filterCol    []field.Element
-	)
-
-	for _, op := range options {
-		op(&cfg)
-	}
-
-	if cfg.renameCols != nil && len(cfg.renameCols) != len(cols) {
-		utils.Panic("provided %v columns, but also provided %v name replacements", len(cols), len(cfg.renameCols))
-	}
-
-	for i := range cols {
-		if cfg.renameCols != nil {
-			header = append(header, cfg.renameCols[i])
-		} else {
-			header = append(header, string(cols[i].GetColID()))
-		}
-		assignment = append(assignment, cols[i].GetColAssignment(run).IntoRegVecSaveAlloc())
-	}
-
-	fmt.Fprintf(w, "%v\n", strings.Join(header, ","))
-
-	if cfg.filterOn != nil {
-		filterCol = cfg.filterOn.GetColAssignment(run).IntoRegVecSaveAlloc()
-	}
-
-	for r := range assignment[0] {
-
-		var (
-			fmtVals   = []string{}
-			allZeroes = true
-		)
-
-		for c := range assignment {
-
-			if !assignment[c][r].IsZero() {
-				allZeroes = false
-			}
-
-			fmtVals = append(fmtVals, fmtFieldElement(cfg.inHex, assignment[c][r]))
-		}
-
-		if !allZeroes {
-			foundNonZero = true
-		}
-
-		if filterCol != nil && filterCol[r].IsZero() {
-			continue
-		}
-
-		if !cfg.skipPrePaddingZero || !allZeroes || foundNonZero {
-			fmt.Fprintf(w, "%v\n", strings.Join(fmtVals, ","))
-		}
-	}
-
-	return nil
-}
 
 func NewCsvTrace(r io.Reader, opts ...Option) (*CsvTrace, error) {
 	cfg := &cfg{}
@@ -272,32 +207,4 @@ func (c *CsvTrace) Len() int {
 
 func (c *CsvTrace) LenPadded() int {
 	return utils.NextPowerOfTwo(c.nbRows)
-}
-
-// WritesExplicit format value-provided columns into a csv file. Unlike [FmtCsv]
-// it does not need the columns to be registered as the assignmet of a wizard.
-// It is suitable for test-case generation.
-func WriteExplicit(w io.Writer, names []string, cols [][]field.Element, inHex bool) {
-
-	fmt.Fprintf(w, "%v\n", strings.Join(names, ","))
-
-	for i := range cols[0] {
-
-		row := []string{}
-		for j := range cols {
-			row = append(row, fmtFieldElement(inHex, cols[j][i]))
-		}
-
-		fmt.Fprintf(w, "%v\n", strings.Join(row, ","))
-	}
-
-}
-
-func fmtFieldElement(inHex bool, x field.Element) string {
-
-	if inHex || (x.IsUint64() && x.Uint64() < 1<<10) {
-		return x.String()
-	}
-
-	return "0x" + x.Text(16)
 }

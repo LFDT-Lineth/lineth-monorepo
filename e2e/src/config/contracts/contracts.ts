@@ -5,7 +5,7 @@ import {
   DummyContractAbi,
   ForcedTransactionGatewayAbi,
   L2MessageServiceV1Abi,
-  LineaRollupV8Abi,
+  LinethRollupV8Abi,
   LineaSequencerUptimeFeedAbi,
   OpcodeTesterAbi,
   ProxyAdminAbi,
@@ -26,8 +26,8 @@ function createContractGetter<const TAbi extends Abi>(abi: TAbi) {
   ) => getContract({ abi, address, client });
 }
 
-export const getLineaRollupContract = createContractGetter(LineaRollupV8Abi);
-export const getLineaRollupProxyAdminContract = createContractGetter(ProxyAdminAbi);
+export const getLinethRollupContract = createContractGetter(LinethRollupV8Abi);
+export const getLinethRollupProxyAdminContract = createContractGetter(ProxyAdminAbi);
 export const getTestERC20Contract = createContractGetter(TestERC20Abi);
 export const getTokenBridgeContract = createContractGetter(TokenBridgeV1_1Abi);
 export const getDummyContract = createContractGetter(DummyContractAbi);

@@ -4,9 +4,9 @@ import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import linea.SearchDirection
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.ethapi.cursor.BinarySearchCursor
 import linea.ethapi.cursor.ConsecutiveSearchCursor
 import linea.ethapi.extensions.getAbsoluteBlockNumbers

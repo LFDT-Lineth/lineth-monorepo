@@ -32,7 +32,7 @@ jobs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
@@ -49,7 +49,7 @@ jobs:
           chmod -R a+rw tmp/local/
 
       - name: Pull all external-to-monorepo images with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -59,7 +59,7 @@ jobs:
             make docker-pull-images-external-to-monorepo
 
       - name: Spin up fresh environment with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -109,3 +109,4 @@ jobs:
           if-no-files-found: error
           path: |
             docker_logs/**/*
+

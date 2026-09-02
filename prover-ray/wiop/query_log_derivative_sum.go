@@ -70,21 +70,21 @@ func (rr *LogDerivativeSum) Round() *Round {
 
 // IsAlreadyAssigned implements [AssignableQuery]. Reports whether the Result
 // cell already holds a runtime assignment.
-func (rr *LogDerivativeSum) IsAlreadyAssigned(rt Runtime) bool {
+func (rr *LogDerivativeSum) IsAlreadyAssigned(rt *Runtime) bool {
 	return rt.HasCellAssignment(rr.Result)
 }
 
 // SelfAssign implements [AssignableQuery]. Computes the filter-aware rational
 // reduction from the runtime column assignments and writes the result into
 // Result.
-func (rr *LogDerivativeSum) SelfAssign(rt Runtime) {
+func (rr *LogDerivativeSum) SelfAssign(rt *Runtime) {
 	rt.AssignCell(rr.Result, rr.reduce(rt))
 }
 
 // Check implements [Query]. Verifies that the Result cell holds the correct
 // aggregated value ∑_k ∑_row Filter_k[row] · Num_k[row] / Den_k[row].
 // Returns an error if the claimed Result cell does not match.
-func (rr *LogDerivativeSum) Check(rt Runtime) error {
+func (rr *LogDerivativeSum) Check(rt *Runtime) error {
 	acc := rr.reduce(rt)
 	got := rt.GetCellValue(rr.Result)
 	diff := acc.Sub(got)
@@ -103,7 +103,7 @@ func (rr *LogDerivativeSum) Check(rt Runtime) error {
 // Rows where Filter_k[row] is zero are skipped — neither the inversion of
 // Den_k[row] nor the multiplication by Num_k[row] is performed. Panics on a
 // zero denominator only when the corresponding filter value is non-zero.
-func (rr *LogDerivativeSum) reduce(rt Runtime) field.Gen {
+func (rr *LogDerivativeSum) reduce(rt *Runtime) field.Gen {
 	acc := field.ElemZero()
 
 	for _, f := range rr.Fractions {

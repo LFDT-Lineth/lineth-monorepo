@@ -84,3 +84,75 @@ func TestBitDecomposeHeterogeneousLimbs(t *testing.T) {
 	proof := wizard.Prove(comp, prove)
 	require.NoError(t, wizard.Verify(comp, proof), "recombination constraints must hold")
 }
+
+// TestBitDecomposeRejectsMismatchedBits is the soundness counterpart to the
+// happy-path test: it asserts that the bit-recombination constraint binds the
+// committed packed limbs to the decomposed bits unconditionally.
+//
+// Previously the recombination was multiplied by a committed, otherwise
+// unconstrained IsPackedLimbNotZero gate; a prover could zero that gate to make
+// the identity vacuous and assign bits unrelated to the packed value. For the
+// Merkle gadget that decouples the committed accumulator position from the path
+// actually walked (false (non-)membership / state-root forgery). Here the
+// prover commits one position (committedPos) but assigns boolean bits that
+// decompose a different value (pathPos); verification must reject.
+func TestBitDecomposeRejectsMismatchedBits(t *testing.T) {
+
+	const (
+		size    = 8
+		numBits = 32
+	)
+
+	const (
+		committedPos = uint64(5) // value pinned in the packed limbs
+		pathPos      = uint64(2) // value the malicious bits decompose to
+	)
+	require.NotEqual(t, committedPos, pathPos)
+
+	limbCols := make([][]field.Element, common.NbElemForHasingU64)
+	for i := range limbCols {
+		limbCols[i] = make([]field.Element, size)
+	}
+	for row := 0; row < size; row++ {
+		ls := limbsOf(committedPos)
+		for i := range ls {
+			limbCols[i][row] = field.NewElement(ls[i])
+		}
+	}
+
+	var bd *BitDecomposed
+
+	define := func(b *wizard.Builder) {
+		packed := make([]ifaces.Column, common.NbElemForHasingU64)
+		for i := range packed {
+			packed[i] = b.RegisterCommit(ifaces.ColIDf("POS_%v", i), size)
+		}
+		bd = BitDecompose(b.CompiledIOP, packed, numBits)
+	}
+
+	prove := func(run *wizard.ProverRuntime) {
+		for i := range limbCols {
+			run.AssignColumn(ifaces.ColIDf("POS_%v", i), sv.NewRegular(limbCols[i]))
+		}
+
+		// Adversarial: assign boolean bits that decompose pathPos rather than
+		// the committed committedPos. This is exactly what the removed gate used
+		// to permit.
+		for j := range bd.Bits {
+			col := make([]field.Element, size)
+			for row := 0; row < size; row++ {
+				if pathPos>>j&1 == 1 {
+					col[row] = field.One()
+				} else {
+					col[row] = field.Zero()
+				}
+			}
+			run.AssignColumn(bd.Bits[j].GetColID(), sv.NewRegular(col))
+		}
+	}
+
+	comp := wizard.Compile(define, dummy.Compile)
+	proof := wizard.Prove(comp, prove)
+	require.Error(t, wizard.Verify(comp, proof),
+		"recombination must reject bits that do not match the committed packed position")
+}

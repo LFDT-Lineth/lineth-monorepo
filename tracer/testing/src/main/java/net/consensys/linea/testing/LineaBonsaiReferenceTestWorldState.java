@@ -25,11 +25,11 @@ import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldState;
 import org.hyperledger.besu.ethereum.referencetests.BonsaiReferenceTestWorldStateStorage;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestWorldState;
-import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.BonsaiCachedMerkleTrieLoader;
-import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.CodeCache;
-import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.NoOpBonsaiCachedWorldStorageManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiPreImageProxy;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.accumulator.preload.BonsaiCachedMerkleTrieLoader;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.cache.NoOpBonsaiWorldStateCacheManager;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.code.PathBasedCodeCache;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.trielog.TrieLogAddedEvent;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.trielog.TrieLogManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
@@ -55,7 +55,7 @@ public class LineaBonsaiReferenceTestWorldState extends BonsaiReferenceTestWorld
   protected LineaBonsaiReferenceTestWorldState(
       final BonsaiReferenceTestWorldStateStorage worldStateKeyValueStorage,
       final BonsaiCachedMerkleTrieLoader bonsaiCachedMerkleTrieLoader,
-      final NoOpBonsaiCachedWorldStorageManager cachedWorldStorageManager,
+      final NoOpBonsaiWorldStateCacheManager cachedWorldStorageManager,
       final TrieLogManager trieLogManager,
       final BonsaiPreImageProxy preImageProxy,
       final EvmConfiguration evmConfiguration,
@@ -121,8 +121,8 @@ public class LineaBonsaiReferenceTestWorldState extends BonsaiReferenceTestWorld
         new BonsaiReferenceTestWorldStateStorage(bonsaiWorldStateKeyValueStorage, preImageProxy);
 
     final var noOpCachedWorldStorageManager =
-        new NoOpBonsaiCachedWorldStorageManager(
-            bonsaiWorldStateKeyValueStorage, evmConfiguration, new CodeCache());
+        new NoOpBonsaiWorldStateCacheManager(
+            bonsaiWorldStateKeyValueStorage, evmConfiguration, new PathBasedCodeCache());
 
     final var worldState =
         new LineaBonsaiReferenceTestWorldState(

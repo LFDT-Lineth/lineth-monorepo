@@ -15,6 +15,7 @@ import maru.core.BeaconBlockHeader
 import maru.core.Seal
 import maru.core.Validator
 import maru.crypto.SecpCrypto
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.SignatureAlgorithm
@@ -39,7 +40,9 @@ class SCEP256SealVerifier(
     beaconBlockHeader: BeaconBlockHeader,
   ): Result<Validator, SealVerifier.SealValidationError> {
     val signature = signatureAlgorithm.decodeSignature(Bytes.wrap(seal.signature))
-    val blockHash = beaconBlockHeader.hash
+    // Commit seals are signed over the round-inclusive hash (Besu QBFT parity), never the chain-identity
+    // header.beaconBlockIdHash, which becomes round-independent from QBFT_PHASE1 onward.
+    val blockHash = HashUtil.headerHash(beaconBlockHeader)
     val publicKey = signatureAlgorithm.recoverPublicKeyFromSignature(Bytes32.wrap(blockHash), signature)
     return if (publicKey.isEmpty) {
       Err(

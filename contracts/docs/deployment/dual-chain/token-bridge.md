@@ -77,7 +77,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
 | L2_MESSAGE_SERVICE_ADDRESS    | registry\|env  | address   | L2 Message Service address. Read from the address registry on stable networks; env var used as fallback or on unregistered networks. |
-| LINEA_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from the address registry on stable networks; env var used as fallback.   |
+| LINETH_ROLLUP_ADDRESS         | registry\|env    | address       | L1 Rollup address. Read from the address registry on stable networks; env var used as fallback.   |
 | REMOTE_CHAIN_ID       | true      |   uint256     | ChainID of the remote (target) network |
 | REMOTE_SENDER_ADDRESS | registry\|env | address | Remote sender address (the TokenBridge on the other chain). Read from registry if present; env var used as fallback. |
 | BRIDGED_TOKEN_ADDRESS | registry\|env | address | BridgedToken beacon address. Read from registry on stable networks; env var used as fallback (deploy BridgedToken first). |
@@ -96,7 +96,7 @@ pnpm exec hardhat deploy --network linea_sepolia --tags TokenBridge
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> BRIDGED_TOKEN_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags TokenBridge
+VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> DEPLOYER_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> DEPLOY_TOKEN_BRIDGE_ON_L1=true L1_SECURITY_COUNCIL=<address> L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINETH_ROLLUP_ADDRESS=<address> REMOTE_SENDER_ADDRESS=<address> BRIDGED_TOKEN_ADDRESS=<address> pnpm exec hardhat deploy --network linea_sepolia --tags TokenBridge
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

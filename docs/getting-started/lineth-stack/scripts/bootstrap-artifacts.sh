@@ -163,6 +163,9 @@ lineth_ok "generated files ready"
 
 lineth_section "Generate runtime wallets and keystores"
 lineth_info "generating/reusing runtime wallets, encrypted keystores, and Web3Signer key files"
+# The pnpm download cache is an external volume (see docker-compose.yml) so
+# resets keep it; compose requires external volumes to exist before use.
+docker volume create lineth-stack-contracts-pnpm-store >/dev/null
 # shellcheck disable=SC2086
 COMPOSE_PROGRESS=plain $COMPOSE run --rm --no-deps account-setup
 

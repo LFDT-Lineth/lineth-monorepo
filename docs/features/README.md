@@ -1,8 +1,8 @@
-# Linea Feature Documentation
+# Lineth Feature Documentation
 
 > Last updated: 2026-02-19
 
-This directory contains per-feature documentation for all major Linea system components. Each document covers architecture, key contracts/services, interfaces, test coverage, and configuration.
+This directory contains per-feature documentation for all major Lineth system components. Each document covers architecture, key contracts/services, interfaces, test coverage, and configuration.
 
 For high-level system architecture see [`docs/architecture-description.md`](../architecture-description.md).
 For technical deep dives by component see [`docs/tech/`](../tech/README.md).
@@ -33,7 +33,7 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 
 | Feature | Document | Key Contracts / Services |
 |---------|----------|--------------------------|
-| [Rollup](rollup.md) | Data submission, shnarf chaining, ZK finalization | `LineaRollup.sol`, `Validium.sol`, `PlonkVerifier*.sol` |
+| [Rollup](rollup.md) | Data submission, shnarf chaining, ZK finalization | `LinethRollup.sol`, `Validium.sol`, `PlonkVerifier*.sol` |
 | [Messaging](messaging.md) | L1/L2 message send, anchor, claim | `L1MessageService.sol`, `L2MessageService.sol`, Postman |
 | [Token Bridge](token-bridge.md) | ERC20 bridging, BridgedToken | `TokenBridge.sol`, `BridgedToken.sol` |
 

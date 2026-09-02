@@ -12,6 +12,7 @@ import {
   bytecode as yulBasedOpcodeTestingBytecode,
 } from "./static-artifacts/YulBasedOpcodeTesting.json";
 import { deployContractFromArtifacts } from "../common/helpers/deployments";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -34,8 +35,7 @@ async function deployyulBasedOpcodeTesting(wallet: ethers.Wallet): Promise<strin
     wallet,
     {
       nonce: walletNonce,
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     },
   );
 
@@ -55,8 +55,7 @@ async function deployOpcodeTester(wallet: ethers.Wallet, yulBasedOpcodeTestingAd
     yulBasedOpcodeTestingAddress,
     {
       nonce: walletNonce,
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
+      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
     },
   );
 }

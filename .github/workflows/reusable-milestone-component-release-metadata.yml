@@ -34,26 +34,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # scopes/include-path per component are the single source of truth in
+        # .github/actions/run-git-cliff-commands/scripts/components.sh — the
+        # run-git-cliff-commands action resolves them from component-name.
         component-name: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package ]
-        include:
-          - component-name: coordinator
-            include-path: coordinator/**
-          - component-name: maru
-            include-path: maru/**
-          - component-name: prover
-            include-path: prover/**
-          - component-name: postman
-            include-path: postman/**
-          - component-name: tx-exclusion-api
-            include-path: transaction-exclusion-api/**
-          - component-name: linea-besu-package
-            include-path: |
-              tracer/**
-              tracer-constraints/**
-              linea-besu/plugins/linea-sequencer/**
-              linea-besu/besu/**
-              linea-besu/package/**
-              gradle/libs.versions.toml
     outputs:
       coordinator: ${{ steps.changelog-outputs.outputs.coordinator }}
       maru: ${{ steps.changelog-outputs.outputs.maru }}
@@ -63,15 +47,16 @@ jobs:
       linea-besu-package: ${{ steps.changelog-outputs.outputs.linea-besu-package }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
+          # No ref override: defaults to github.sha, the immutable commit
+          # selected at dispatch time.
           fetch-depth: 0
           fetch-tags: true
           submodules: false
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -80,7 +65,6 @@ jobs:
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: ${{ matrix.component-name }}
-          include-path: ${{ matrix.include-path }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
 
@@ -105,3 +89,4 @@ jobs:
             printf '%s\n' "$JSON_OUTPUTS"
             echo "__JSON_EOF__"
           } >> "$GITHUB_OUTPUT"
+

@@ -6,16 +6,13 @@ import (
 	"iter"
 	"math/rand/v2"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/exit"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
-
-const conversionError = "smartvector holds field extensions, but a base element was requested"
 
 // SmartVector is an abstraction over vectors of field elements that can be
 // optimized for structured vectors. For instance, if we have a vector of
@@ -36,7 +33,6 @@ type SmartVector interface {
 	// Get returns an entry of the SmartVector at particular position
 	GetBase(int) (field.Element, error)
 	Get(int) field.Element
-	GetExt(int) fext.Element
 	// SubVector returns a subvector of the [SmartVector]. It mirrors slice[Start:Stop]
 	SubVector(int, int) SmartVector
 	// RotateRight cyclically rotates the SmartVector
@@ -44,7 +40,6 @@ type SmartVector interface {
 	// WriteInSlice writes the SmartVector into a slice. The slice must be just
 	// as large as [Len] otherwise the function will panic
 	WriteInSlice([]field.Element)
-	WriteInSliceExt([]fext.Element)
 	// Pretty returns a prettified version of the vector, useful for debugging.
 	Pretty() string
 	// DeepCopy returns a deep-copy of the SmartVector which can be freely
@@ -54,7 +49,6 @@ type SmartVector interface {
 	// implementation minimizes then number of copies
 	IntoRegVecSaveAlloc() []field.Element
 	IntoRegVecSaveAllocBase() ([]field.Element, error)
-	IntoRegVecSaveAllocExt() []fext.Element
 
 	// IterateCompact returns an iterator over the elements of the smartvectors,
 	// the iterator will iterate depending on the type of smartvectors:
@@ -122,26 +116,12 @@ func IntoRegVec(s SmartVector) []field.Element {
 	return res
 }
 
-func IntoRegVecExt(s SmartVector) []fext.Element {
-	res := make([]fext.Element, s.Len())
-	s.WriteInSliceExt(res)
-	return res
-}
-
 // IntoGnarkAssignment converts a smart-vector into a gnark assignment
 func IntoGnarkAssignment(sv SmartVector) []frontend.Variable {
 	res := make([]frontend.Variable, sv.Len())
-	_, err := sv.GetBase(0)
-	if err == nil {
-		for i := range res {
-			elem, _ := sv.GetBase(i)
-			res[i] = elem
-		}
-	} else {
-		for i := range res {
-			elem := sv.GetExt(i)
-			res[i] = elem
-		}
+	for i := range res {
+		elem, _ := sv.GetBase(i)
+		res[i] = elem
 	}
 	return res
 }
@@ -248,7 +228,7 @@ func PaddingOrientationOf(v SmartVector) (int, error) {
 func Window(v SmartVector) []field.Element {
 	res, err := WindowBase(v)
 	if err != nil {
-		panic(conversionError)
+		panic(err)
 	}
 	return res
 }
@@ -263,31 +243,6 @@ func WindowBase(v SmartVector) ([]field.Element, error) {
 		return *w, nil
 	case *Rotated:
 		return w.IntoRegVecSaveAllocBase()
-	default:
-		panic(fmt.Sprintf("unexpected type %T", v))
-	}
-}
-
-func WindowExt(v SmartVector) []fext.Element {
-	switch w := v.(type) {
-	case *Constant:
-		return []fext.Element{}
-	case *PaddedCircularWindow:
-		temp := make([]fext.Element, len(w.Window_))
-		for i := 0; i < len(w.Window_); i++ {
-			elem := w.Window_[i]
-			temp[i].SetFromBase(&elem)
-		}
-		return temp
-	case *Regular:
-		temp := make([]fext.Element, len(*w))
-		for i := 0; i < len(*w); i++ {
-			elem, _ := w.GetBase(i)
-			temp[i].SetFromBase(&elem)
-		}
-		return temp
-	case *Rotated:
-		return w.IntoRegVecSaveAllocExt()
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}

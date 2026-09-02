@@ -50,22 +50,17 @@ type Expression interface {
 	// EvaluateVector evaluates this expression against the given runtime and
 	// returns the resulting vector.
 	// Precondition: IsMultiValued() must be true; panics otherwise.
-	EvaluateVector(Runtime) ConcreteVector
+	EvaluateVector(*Runtime) ConcreteVector
 	// EvaluateSingle evaluates this expression against the given runtime and
 	// returns the resulting scalar.
 	// Precondition: IsMultiValued() must be false; panics otherwise.
-	EvaluateSingle(Runtime) ConcreteField
+	EvaluateSingle(*Runtime) ConcreteField
 	// Module returns the Module whose columns appear in this expression, or
 	// nil if the expression contains no column reference. An expression may
 	// reference columns from at most one module; mixing columns from different
 	// modules is undefined behaviour and callers are expected to validate this
 	// before constructing composite expressions.
 	Module() *Module
-	// Visibility returns the most restrictive [Visibility] level of any leaf
-	// in this expression. The ordering from least to most restrictive is:
-	// Public < Oracle < Internal. A result of VisibilityInternal means the
-	// expression cannot appear in any active query.
-	Visibility() Visibility
 }
 
 // VectorPromise is the sub-interface of [Expression] satisfied by all
@@ -301,7 +296,7 @@ func (a *ArithmeticOperation) IsSized() bool {
 //
 // On the first call the expression subtree is compiled into a [compiledProgram]
 // and cached. Subsequent calls reuse the compiled program directly.
-func (a *ArithmeticOperation) EvaluateVector(rt Runtime) ConcreteVector {
+func (a *ArithmeticOperation) EvaluateVector(rt *Runtime) ConcreteVector {
 	if !a.IsMultiValued() {
 		panic("wiop: EvaluateVector() called on a scalar ArithmeticOperation; check IsMultiValued() first")
 	}
@@ -312,7 +307,7 @@ func (a *ArithmeticOperation) EvaluateVector(rt Runtime) ConcreteVector {
 
 // EvaluateSingle implements [Expression].
 // Panics if IsMultiValued() is true.
-func (a *ArithmeticOperation) EvaluateSingle(rt Runtime) ConcreteField {
+func (a *ArithmeticOperation) EvaluateSingle(rt *Runtime) ConcreteField {
 	if a.IsMultiValued() {
 		panic("wiop: EvaluateSingle() called on a vector ArithmeticOperation; check IsMultiValued() first")
 	}
@@ -355,20 +350,6 @@ func (a *ArithmeticOperation) Module() *Module {
 	return nil
 }
 
-// Visibility implements [Expression]. Returns the most restrictive visibility
-// level among all operands: the minimum of their Visibility values (Internal
-// < Oracle < Public). This reflects that an expression involving any internal
-// leaf cannot appear in an active query.
-func (a *ArithmeticOperation) Visibility() Visibility {
-	best := VisibilityPublic
-	for _, o := range a.Operands {
-		if v := o.Visibility(); v < best {
-			best = v
-		}
-	}
-	return best
-}
-
 // Constant is a fixed-value expression. Its behaviour is determined by whether
 // module is nil:
 //
@@ -380,7 +361,7 @@ func (a *ArithmeticOperation) Visibility() Visibility {
 //     IsMultiValued() == true; EvaluateVector returns Value repeated
 //     Module.Size() times; EvaluateSingle panics.
 //
-// A Constant is never extension-field and is always [VisibilityPublic].
+// A Constant is never extension-field.
 //
 // Constructors:
 //
@@ -417,9 +398,6 @@ func (c *Constant) IsExtension() bool { return false }
 // IsMultiValued implements [Expression]. Returns true iff the constant is
 // bound to a module (vector semantics).
 func (c *Constant) IsMultiValued() bool { return c.module != nil }
-
-// Visibility implements [Expression]. Always returns [VisibilityPublic].
-func (c *Constant) Visibility() Visibility { return VisibilityPublic }
 
 // Degree implements [Expression]. Returns 0 for scalar constants. For vector
 // constants returns Module.Size()-1; panics if the module is unsized.
@@ -472,7 +450,7 @@ func (c *Constant) Size() int {
 // Plain slice contains a single [field.Vec] with Value repeated
 // Module.Size() times, and whose Padding is Value. Panics if scalar; check
 // [Constant.IsMultiValued] first.
-func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
+func (c *Constant) EvaluateVector(rt *Runtime) ConcreteVector {
 	if c.module == nil {
 		panic("wiop: EvaluateVector() cannot be called on a scalar Constant; check IsMultiValued() first")
 	}
@@ -490,7 +468,7 @@ func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
 
 // EvaluateSingle implements [Expression]. Returns a [ConcreteField] wrapping
 // Value. Panics if vector; check [Constant.IsMultiValued] first.
-func (c *Constant) EvaluateSingle(_ Runtime) ConcreteField {
+func (c *Constant) EvaluateSingle(_ *Runtime) ConcreteField {
 	if c.module != nil {
 		panic("wiop: EvaluateSingle() cannot be called on a vector Constant; check IsMultiValued() first")
 	}
@@ -498,4 +476,43 @@ func (c *Constant) EvaluateSingle(_ Runtime) ConcreteField {
 		Value:   field.ElemFromBase(c.Value),
 		promise: c,
 	}
+}
+
+// EvaluateAsExtVec evaluates expr against the runtime and returns a length-n
+// extension-field slice. Scalar expressions are broadcast to every position;
+// vector results shorter than n are extended with the padding value.
+func EvaluateAsExtVec(rt *Runtime, expr Expression, n int) []field.Ext {
+	out := make([]field.Ext, n)
+
+	if !expr.IsMultiValued() {
+		ext := expr.EvaluateSingle(rt).Value.AsExt()
+		for i := range out {
+			out[i] = ext
+		}
+		return out
+	}
+
+	cv := expr.EvaluateVector(rt)
+	plain := cv.Plain
+	if plain.IsBase() {
+		base := plain.AsBase()
+		copyLen := min(len(base), n)
+		for i := 0; i < copyLen; i++ {
+			out[i] = field.Lift(base[i])
+		}
+		pad := field.Lift(cv.Padding)
+		for i := copyLen; i < n; i++ {
+			out[i] = pad
+		}
+		return out
+	}
+
+	ext := plain.AsExt()
+	copyLen := min(len(ext), n)
+	copy(out[:copyLen], ext[:copyLen])
+	pad := field.Lift(cv.Padding)
+	for i := copyLen; i < n; i++ {
+		out[i] = pad
+	}
+	return out
 }

@@ -1,4 +1,4 @@
-# Customizing Linea Rollup, Messaging, and Bridging Components
+# Customizing Lineth Rollup, Messaging, and Bridging Components
 
 This guide explains how to customize core rollup, messaging, and bridging functionality by overriding virtual functions in the Lineth protocol contracts. Several examples are provided to help you get started. Please note, these are just illustrative samples.
 
@@ -8,9 +8,9 @@ This guide explains how to customize core rollup, messaging, and bridging functi
 
 To modify the ABI version returned, the `CONTRACT_VERSION()` must be overriden with your specific string value. The default is the base version.
 
-## 🧱 Customizing Linea Rollup Behavior
+## 🧱 Customizing Lineth Rollup Behavior
 
-To modify the behavior of the rollup mechanism itself (e.g. blob submission for finalization), you can override virtual functions in `LineaRollup.sol`.
+To modify the behavior of the rollup mechanism itself (e.g. blob submission for finalization), you can override virtual functions in `LinethRollup.sol`.
 
 ## ✉️ Customizing Message Sending Behavior
 
@@ -43,6 +43,6 @@ These sample files serve as a foundation for creating fully custom Ether bridgin
 
 ---
 
-By leveraging inheritance and Solidity's `virtual`/`override` keywords, you can safely extend and adapt Linea's modular bridge and rollup system.
+By leveraging inheritance and Solidity's `virtual`/`override` keywords, you can safely extend and adapt Lineth's modular bridge and rollup system.
 
-Additionally, it is worth noting that all the inherited contracts now contain an additional 50 storage slots of padded space for future Linea expansion without breaking the underlying inheritors layouts.
+Additionally, it is worth noting that all the inherited contracts now contain an additional 50 storage slots of padded space for future Lineth expansion without breaking the underlying inheritors layouts.

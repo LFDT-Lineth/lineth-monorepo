@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,8 +19,8 @@ func TestCompile_Completeness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -30,12 +31,17 @@ func TestCompile_Completeness(t *testing.T) {
 // compiled verifier. This is the core soundness property of the compiler: a
 // cheating prover cannot produce a quotient that satisfies the identity check.
 func TestCompile_Soundness(t *testing.T) {
+
 	for _, build := range wioptest.VanishingScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must reject an invalid witness")
 		})
 	}
@@ -71,7 +77,7 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 			sys := wiop.NewSystemf("gl-ls-lin")
 			r0 := sys.NewRound()
 			mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
-			col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+			col := mod.NewColumn(sys.Context.Childf("col"), r0)
 			ls := wiop.NewLagrangeSelector(mod, pos)
 			// col · L_pos == 0 on every row  ⇔  col[pos] == 0.
 			mod.NewVanishingManual(sys.Context.Childf("v"), wiop.Mul(col.View(), ls))
@@ -80,12 +86,12 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		}
 
 		sys, col := build()
-		proof := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 0)) })
-		require.NoError(t, sys.Verify(proof), "honest: col[pos]=0 must verify")
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 0)) })
+		require.NoError(t, sys.Verify(proof, pub), "honest: col[pos]=0 must verify")
 
 		sys, col = build()
-		proof = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 5)) })
-		assert.Error(t, sys.Verify(proof), "invalid: col[pos]=5 must be rejected")
+		proof, pub = sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, colVec(size, pos, 5)) })
+		assert.Error(t, sys.Verify(proof, pub), "invalid: col[pos]=5 must be rejected")
 	})
 
 	t.Run("quadratic", func(t *testing.T) {
@@ -95,8 +101,8 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 			sys := wiop.NewSystemf("gl-ls-quad")
 			r0 := sys.NewRound()
 			mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
-			a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-			b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+			a := mod.NewColumn(sys.Context.Childf("a"), r0)
+			b := mod.NewColumn(sys.Context.Childf("b"), r0)
 			ls := wiop.NewLagrangeSelector(mod, pos)
 			mod.NewVanishingManual(sys.Context.Childf("v"), wiop.Mul(wiop.Mul(a.View(), b.View()), ls))
 			global.Compile(sys)
@@ -104,17 +110,17 @@ func TestCompile_GlobalConstraintWithLagrangeSelector(t *testing.T) {
 		}
 
 		sys, a, b := build()
-		proof := sys.Prove(func(rt *wiop.Runtime) {
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 			rt.AssignColumn(a, colVec(size, pos, 0)) // a[pos]=0 → product 0 at pos
 			rt.AssignColumn(b, colVec(size, pos, 5))
 		})
-		require.NoError(t, sys.Verify(proof), "honest: (a·b)[pos]=0 must verify")
+		require.NoError(t, sys.Verify(proof, pub), "honest: (a·b)[pos]=0 must verify")
 
 		sys, a, b = build()
-		proof = sys.Prove(func(rt *wiop.Runtime) {
+		proof, pub = sys.Prove(func(rt *wiop.Runtime) {
 			rt.AssignColumn(a, colVec(size, pos, 3)) // a[pos]·b[pos]=15 ≠ 0
 			rt.AssignColumn(b, colVec(size, pos, 5))
 		})
-		assert.Error(t, sys.Verify(proof), "invalid: (a·b)[pos]=15 must be rejected")
+		assert.Error(t, sys.Verify(proof, pub), "invalid: (a·b)[pos]=15 must be rejected")
 	})
 }

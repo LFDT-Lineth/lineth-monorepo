@@ -9,7 +9,7 @@ import (
 // execution.
 type ProverAction interface {
 	// Run executes the action against the given [Runtime].
-	Run(Runtime)
+	Run(*Runtime)
 }
 
 // VerifierAction represents a verifier-side check to be performed during
@@ -17,7 +17,7 @@ type ProverAction interface {
 type VerifierAction interface {
 	// Check executes the verification step against the given [Runtime] and
 	// returns an error if the check fails.
-	Check(Runtime) error
+	Check(*Runtime) error
 }
 
 // Planner is an optional extension of [ProverAction] for actions that

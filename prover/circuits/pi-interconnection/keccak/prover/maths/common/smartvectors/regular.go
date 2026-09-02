@@ -5,12 +5,10 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field/fext"
-
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/mempool"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // It's normal vector in a nutshell
@@ -29,10 +27,6 @@ func (r *Regular) Len() int { return len(*r) }
 
 // Returns a particular element of the vector
 func (r *Regular) GetBase(n int) (field.Element, error) { return (*r)[n], nil }
-
-func (r *Regular) GetExt(n int) fext.Element {
-	return *new(fext.Element).SetFromBase(&(*r)[n])
-}
 
 func (r *Regular) Get(n int) field.Element {
 	res, err := r.GetBase(n)
@@ -79,14 +73,6 @@ func (r *Regular) RotateRight(offset int) SmartVector {
 func (r *Regular) WriteInSlice(s []field.Element) {
 	assertHasLength(len(s), len(*r))
 	copy(s, *r)
-}
-
-func (r *Regular) WriteInSliceExt(s []fext.Element) {
-	assertHasLength(len(s), len(*r))
-	for i := 0; i < len(s); i++ {
-		elem, _ := r.GetBase(i)
-		s[i].SetFromBase(&elem)
-	}
 }
 
 func (r *Regular) Pretty() string {
@@ -165,22 +151,13 @@ func (r *Regular) DeepCopy() SmartVector {
 func (r *Regular) IntoRegVecSaveAlloc() []field.Element {
 	res, err := r.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(err)
 	}
 	return res
 }
 
 func (r *Regular) IntoRegVecSaveAllocBase() ([]field.Element, error) {
 	return (*r)[:], nil
-}
-
-func (r *Regular) IntoRegVecSaveAllocExt() []fext.Element {
-	temp := make([]fext.Element, r.Len())
-	for i := 0; i < r.Len(); i++ {
-		elem, _ := r.GetBase(i)
-		temp[i].SetFromBase(&elem)
-	}
-	return temp
 }
 
 func (r *Regular) GetPtr(n int) *field.Element {

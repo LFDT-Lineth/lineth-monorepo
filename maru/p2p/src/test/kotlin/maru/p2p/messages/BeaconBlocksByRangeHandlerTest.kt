@@ -17,6 +17,7 @@ import maru.p2p.RequestMessageAdapter
 import maru.p2p.RpcMessageType
 import maru.p2p.Version
 import maru.p2p.messages.BeaconBlocksByRangeHandler.Companion.MAX_BLOCKS_PER_REQUEST
+import maru.serialization.rlp.RLPSerializers
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -145,7 +146,10 @@ class BeaconBlocksByRangeHandlerTest {
   fun `handles and returns subset of requested blocks for request with blocks that would exceed the size limit`() {
     handler = BeaconBlocksByRangeHandler(
       beaconChain = beaconChain,
-      blockRetrievalStrategy = SizeLimitBlockRetrievalStrategy(sizeLimit = 9000),
+      blockRetrievalStrategy = SizeLimitBlockRetrievalStrategy(
+        sealedBeaconBlockSerializer = RLPSerializers.SealedBeaconBlockCompressorRLPSerializer,
+        sizeLimit = 9000,
+      ),
     )
 
     val request = BeaconBlocksByRangeRequest(startBlockNumber = 0UL, count = 10UL)

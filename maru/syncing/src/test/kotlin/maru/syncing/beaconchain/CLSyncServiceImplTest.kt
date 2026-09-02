@@ -37,7 +37,6 @@ import maru.p2p.P2PNetworkImpl
 import maru.p2p.PeerLookup
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
-import maru.serialization.rlp.RLPSerializers
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory.Config
 import net.consensys.linea.metrics.Counter
 import net.consensys.linea.metrics.MetricsFacade
@@ -82,23 +81,25 @@ class CLSyncServiceImplTest {
         .decodeHex()
     private val backoffDelay = 1.seconds
 
-    fun createForkIdHashProvider(beaconChain: BeaconChain): ForkPeeringManager {
-      val consensusConfig: ConsensusConfig =
-        QbftConsensusConfig(
-          validatorSet = setOf(
-            Validator(ByteArray(20) { 0 }),
-            Validator(ByteArray(20) { 1 }),
-          ),
-          fork = ChainFork(ClFork.QBFT_PHASE0, elFork = ElFork.Prague),
-        )
+    private val consensusConfig: ConsensusConfig =
+      QbftConsensusConfig(
+        validatorSet = setOf(
+          Validator(ByteArray(20) { 0 }),
+          Validator(ByteArray(20) { 1 }),
+        ),
+        fork = ChainFork(ClFork.QBFT_PHASE0, elFork = ElFork.Prague),
+      )
 
-      return ForkIdManagerFactory.createForkIdHashManager(
+    private val blockHashing =
+      DataGenerators.testForkAwareBlockHashing(chainId = CHAIN_ID, consensusConfig = consensusConfig)
+
+    fun createForkIdHashProvider(beaconChain: BeaconChain): ForkPeeringManager =
+      ForkIdManagerFactory.createForkIdHashManager(
         chainId = CHAIN_ID,
         beaconChain = beaconChain,
         elFork = ElFork.Prague,
         consensusConfig = consensusConfig,
       )
-    }
   }
 
   private val synced = AtomicBoolean(false)
@@ -170,6 +171,7 @@ class CLSyncServiceImplTest {
       besuMetrics = TestMetricsSystemAdapter,
       metricsFacade = TestMetricsFacade,
       pipelineConfig = defaultPipelineConfig,
+      blockHashing = blockHashing,
     )
 
     try {
@@ -253,6 +255,7 @@ class CLSyncServiceImplTest {
         besuMetrics = TestMetricsSystemAdapter,
         metricsFacade = metricsFacade,
         pipelineConfig = defaultPipelineConfig,
+        blockHashing = blockHashing,
       )
 
     syncToTarget(BEACON_CHAIN_2_HEAD, restartClSyncService)
@@ -424,7 +427,7 @@ class CLSyncServiceImplTest {
           staticPeers = emptyList(),
         ),
         chainId = CHAIN_ID,
-        serDe = RLPSerializers.SealedBeaconBlockSerializer,
+        blockHashing = blockHashing,
         metricsFacade = TestMetricsFacade,
         statusManager = statusManager,
         beaconChain = beaconChain,
@@ -459,8 +462,9 @@ class CLSyncServiceImplTest {
           timestamp = genesisTimestamp + i,
           proposer = validators.first().address,
           validators = validators,
+          blockHashing = blockHashing,
         )
-      val seal = signatureAlgorithm.sign(Bytes32.wrap(beaconBlock.beaconBlockHeader.hash), keypair)
+      val seal = signatureAlgorithm.sign(Bytes32.wrap(beaconBlock.beaconBlockHeader.beaconBlockIdHash), keypair)
       val sealedBlock =
         SealedBeaconBlock(
           beaconBlock = beaconBlock,
