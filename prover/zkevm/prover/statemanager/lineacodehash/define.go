@@ -90,10 +90,7 @@ type Module struct {
 	IsEmptyKeccak    [common.NbLimbU256]ifaces.Column
 	CptIsEmptyKeccak [common.NbLimbU256]wizard.ProverAction
 
-	// IsEmptyCodeHash lights-up when *every* limb of the imported keccak code-hash
-	// matches the empty codehash. IsEmptyKeccak only compares a single limb, so it
-	// cannot be used on its own to tell the empty codehash apart from a codehash
-	// that happens to coincide with it on a few limbs.
+	// IsEmptyCodeHash lights-up when all the limbs of CodeHash match emptyKeccak.
 	IsEmptyCodeHash    ifaces.Column
 	CptIsEmptyCodeHash wizard.ProverAction
 }
@@ -133,10 +130,8 @@ func NewModule(comp *wizard.CompiledIOP, inputs Inputs) (mh Module) {
 		isEmptyKeccakLimbs = append(isEmptyKeccakLimbs, mh.IsEmptyKeccak[i])
 	}
 
-	// IsEmptyCodeHash = 1 if all the limbs of CodeHash match emptyKeccak. Every
-	// IsEmptyKeccak[i] is boolean by construction, so the limbs all match if and
-	// only if their sum reaches common.NbLimbU256. Comparing the sum keeps the
-	// query below at degree 2 where multiplying the flags would make it degree 17.
+	// IsEmptyKeccak[i] is boolean, so all the limbs match iff their sum reaches
+	// common.NbLimbU256. Summing keeps the query below at degree 2.
 	mh.IsEmptyCodeHash, mh.CptIsEmptyCodeHash = dedicated.IsZero(comp,
 		sym.Sub(sym.Add(isEmptyKeccakLimbs...), common.NbLimbU256)).GetColumnAndProverAction()
 

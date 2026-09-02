@@ -810,9 +810,7 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 		),
 	)
 
-	// The old value is the zero-storage hash only when *every* limb matches it.
-	// Aggregating the per-limb flags with an OR would light up as soon as a
-	// single limb coincides, which happens for values that are not zero.
+	// The old value is the zero-storage hash only if every limb matches.
 	oldValueLimbExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
 		oldValueLimbExpressions = append(oldValueLimbExpressions, ss.Storage.OldValueIsZero[i])
@@ -831,7 +829,7 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 		),
 	)
 
-	// Same as above: the new value is zero only when every limb is zero.
+	// The new value is zero only if every limb is zero.
 	zeroizationLibsExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
 		zeroizationLibsExpressions = append(zeroizationLibsExpressions, ss.AccumulatorStatement.FinalHValIsZero[i])
@@ -894,8 +892,7 @@ func (ss *Module) csAccumulatorStatementFlags(comp *wizard.CompiledIOP) {
 		),
 	)
 
-	// The account is unchanged only when every limb of the initial and final
-	// hashes matches, mirroring STATE_SUMMARY_OLD_NEW_STORAGE_EQUAL above.
+	// The account is unchanged only if every limb matches.
 	sameBitLimbExpressions := make([]any, 0, poseidon2.BlockSize)
 	for i := range poseidon2.BlockSize {
 		sameBitLimbExpressions = append(sameBitLimbExpressions, ss.Account.InitialAndFinalAreSame[i])

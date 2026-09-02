@@ -251,9 +251,7 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 				continue
 			}
 
-			// The code-hash is the empty one only if *all* of its limbs match the
-			// empty keccak: stopping at the first matching limb would misclassify
-			// the code-hashes that merely coincide with it on a few limbs.
+			// The code-hash is the empty one only if all of its limbs match.
 			currIsEmptyKeccak := true
 			for k := range common.NbLimbU256 {
 				if codeHash[k][j] != emptyKeccak[k] {
@@ -298,8 +296,7 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 		mh.CptIsEmptyKeccak[i].Run(run)
 	}
 
-	// assign isEmptyCodeHash; it reads the isEmptyKeccak columns so it has to run
-	// after the loop above.
+	// reads the isEmptyKeccak columns, hence after the loop above
 	mh.CptIsEmptyCodeHash.Run(run)
 
 	for i := range poseidon2.BlockSize {
