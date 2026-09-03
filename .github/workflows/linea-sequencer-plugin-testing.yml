@@ -1,4 +1,4 @@
-name: linea-sequencer-plugin-testing
+name: "linea-sequencer-plugin-testing"
 
 permissions:
   contents: read
