@@ -36,6 +36,7 @@ import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt32
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.hyperledger.besu.consensus.clique.CliqueExtraData
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration
@@ -72,6 +73,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 /** Base class for plugin tests. */
 abstract class LineaPluginTestBase : AcceptanceTestBase() {
@@ -498,6 +500,32 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
   protected fun getTxPoolContent(): List<Map<String, String>> {
     return minerNode.execute(TxPoolTransactions().txPoolContents)
+  }
+
+  /**
+   * Waits until every hash in [hashes] is present in the txpool.
+   *
+   * `eth_sendRawTransaction` returning a hash only means the transaction was accepted for
+   * processing; with `noLocalPriority(true)` it still has to make its way through the layered
+   * txpool before block building can select it. Starting a build before that has happened lets a
+   * subset of a batch be selected, splitting transactions that the test expects in one block across
+   * two. This is a condition-based wait (no fixed sleep): it returns as soon as the pool has caught
+   * up, and only spends the full budget when something is genuinely wrong.
+   */
+  protected fun awaitTransactionsInPool(hashes: List<String>) {
+    val expected = hashes.map { it.lowercase() }.toSet()
+    await()
+      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted {
+        val inPool = getTxPoolContent().mapNotNull { it["hash"]?.lowercase() }.toSet()
+        assertThat(inPool)
+          .withFailMessage {
+            "Expected all ${expected.size} transactions to be in the txpool, missing: " +
+              (expected - inPool)
+          }
+          .containsAll(expected)
+      }
   }
 
   private fun createReceiptProcessor(web3j: Web3j): TransactionReceiptProcessor {

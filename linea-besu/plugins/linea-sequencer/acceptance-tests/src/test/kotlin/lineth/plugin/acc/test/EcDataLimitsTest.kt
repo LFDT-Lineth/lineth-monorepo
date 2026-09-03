@@ -99,6 +99,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nonce] = resp.transactionHash
     }
 
+    // eth_sendRawTransaction returning does not mean the tx is selectable yet: with
+    // noLocalPriority(true) it still has to traverse the layered txpool. Building before the whole
+    // batch is in the pool lets a subset be selected, splitting the fitting txs across two blocks
+    // (the CI-only failure). Wait for the condition, not for a duration.
+    awaitTransactionsInPool(txHashes.filterNotNull())
+
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
     buildNewBlockAndWait()
@@ -192,6 +198,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nonce] = resp.transactionHash
     }
 
+    // eth_sendRawTransaction returning does not mean the tx is selectable yet: with
+    // noLocalPriority(true) it still has to traverse the layered txpool. Building before the whole
+    // batch is in the pool lets a subset be selected, splitting the fitting txs across two blocks
+    // (the CI-only failure). Wait for the condition, not for a duration.
+    awaitTransactionsInPool(txHashes.filterNotNull())
+
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
     buildNewBlockAndWait()
@@ -279,6 +291,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       // Store the transaction hash
       txHashes[nonce] = resp.transactionHash
     }
+
+    // eth_sendRawTransaction returning does not mean the tx is selectable yet: with
+    // noLocalPriority(true) it still has to traverse the layered txpool. Building before the whole
+    // batch is in the pool lets a subset be selected, splitting the fitting txs across two blocks
+    // (the CI-only failure). Wait for the condition, not for a duration.
+    awaitTransactionsInPool(txHashes.filterNotNull())
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
@@ -370,6 +388,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       resp.transactionHash
     }
       .reversed()
+
+    // eth_sendRawTransaction returning does not mean the tx is selectable yet: with
+    // noLocalPriority(true) it still has to traverse the layered txpool. Building before the whole
+    // batch is in the pool lets a subset be selected, splitting the fitting txs across two blocks
+    // (the CI-only failure). Wait for the condition, not for a duration.
+    awaitTransactionsInPool(txHashes.filterNotNull())
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
