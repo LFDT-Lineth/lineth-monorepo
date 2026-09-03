@@ -15,9 +15,9 @@
         },
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
         .build_common = .{ .path = "../build_common" },
-        // Rust staticlib providing the guest's secp256k1 / BLS12-381 / KZG precompile crypto
-        // (sibling path dependency; its build.zig drives cargo).
-        .guest_crypto = .{ .path = "../guest-crypto" },
+        // SPIKE: Constantine (Nim→C) precompile backend, exposing the guest_crypto lazy-path
+        // contract over the constantine+compiler_rt merged archive (sibling spike package).
+        .guest_crypto = .{ .path = "../../spikes/constantine-precompiles" },
         // Lineth zkVM accelerator wrappers (sibling path dependency).
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
