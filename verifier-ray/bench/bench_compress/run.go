@@ -11,18 +11,19 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 const (
-	elfToJSON      = "../../../arithmetization/src/test/scripts/elf_to_json_gen/main.go"
-	zkcMain        = "../../../arithmetization/src/main/riscv/main.zkc"
-	r5Bin          = "zig-out/bin/bench-compress"
-	r5JSON         = "zig-out/bin/bench-compress.json"
-	traceTailLimit = 40
-	defaultOutput  = "bench/bench-compress.csv"
+	arithmetizationDir = "../../../arithmetization"
+	zkcMain            = "../../../arithmetization/src/main/riscv/main.zkc"
+	r5Bin              = "zig-out/bin/bench-compress"
+	r5JSON             = "zig-out/bin/bench-compress.json"
+	traceTailLimit     = 40
+	defaultOutput      = "bench/bench-compress.csv"
 	// n must match const N in main.zig — update both together.
 	n = 10
 )
@@ -78,7 +79,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	cmd := exec.Command("go", "run", elfToJSON, r5Bin, "0x00", "0x08800000")
+	r5BinAbsolute, err := filepath.Abs(r5Bin)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	cmd := exec.Command("go", "-C", arithmetizationDir, "tool", "elf_to_json", r5BinAbsolute, "0x00", "0x08800000")
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
