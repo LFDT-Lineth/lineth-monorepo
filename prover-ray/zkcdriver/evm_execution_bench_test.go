@@ -47,7 +47,7 @@ func BenchmarkEvmExecutionTrace(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, filteredInputs); err != nil {
+		if _, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, false); err != nil {
 			b.Fatalf("trace: %v", err)
 		}
 	}
@@ -82,7 +82,7 @@ func BenchmarkEvmExecutionProveVerify(b *testing.B) {
 		ZkcFilePath: evmArithmetizationZKC,
 		InputStr:    string(inputBytes),
 	}
-	inputs, _, err := parseTestCase(tc, binf)
+	inputs, _, err := parseTestCase(tc, binf, false)
 	if err != nil {
 		b.Fatalf("trace + constraint check: %v", err)
 	}
