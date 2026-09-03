@@ -2,7 +2,7 @@ name: "Maru config docs"
 
 # Generates the committed Maru config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/maru/ to Consensys/doc.linea.
+# docs/stack/reference/_generated/maru/ to Consensys-Incorporated/doc.linea.
 #
 # Publishing is release-gated: automatic publishing fires only when a
 # `releases/maru/*` tag is cut, so doc.linea always reflects a released
@@ -55,7 +55,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Maru config docs to Consensys/doc.linea"
+        description: "Publish generated Maru config docs to Consensys-Incorporated/doc.linea"
         required: false
         type: boolean
         default: false
