@@ -96,7 +96,7 @@ func compileZkc(srcPath string) (bin []byte, err error) {
 		return nil, fmt.Errorf("reading %s: %w", srcPath, err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, codegen.DEFAULT_MAX_STATIC_HEIGHT, *src)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("%s: zkc compile errors", srcPath)
 	}
@@ -104,7 +104,7 @@ func compileZkc(srcPath string) (bin []byte, err error) {
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("%s: ast compile errors", srcPath)
 	}
-	binFile := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binFile := constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	return binFile.MarshalBinary()
 }
 

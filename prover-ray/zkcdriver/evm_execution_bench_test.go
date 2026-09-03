@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
@@ -43,11 +42,11 @@ func BenchmarkEvmExecutionTrace(b *testing.B) {
 	if rawErr != nil {
 		b.Fatalf("parse JSON inputs: %v", rawErr)
 	}
-	filteredInputs := vm.FilterInputs(binf.Program(), rawInputs)
+	filteredInputs, _ := vm.FilterInputs(binf.TracingProgram(), rawInputs)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, false); err != nil {
+		if _, err := traceZkc(binf, vm.DEFAULT_TRACE_CONFIG, filteredInputs, false); err != nil {
 			b.Fatalf("trace: %v", err)
 		}
 	}
