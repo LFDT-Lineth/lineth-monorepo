@@ -11,8 +11,8 @@
 //!     accelerated, and grows as the prover implements more.
 //!   • Zig std.crypto — keccak256 (unless -Dkeccak-accel selects the wrapper), SHA-256, and
 //!     secp256r1 (P-256) verification.
-//!   • The guest-crypto Rust staticlib (`guest_crypto`) — secp256k1 ecrecover/verify, the EIP-2537
-//!     BLS12-381 operations, and EIP-4844 KZG point evaluation.
+//!   • The guest_crypto Constantine backend — secp256k1 ecrecover/verify, the EIP-2537
+//!     BLS12-381 operations, bn254 (EIP-196/197), and EIP-4844 KZG point evaluation.
 //!   • zesu's own native crypto backend (`zesu_crypto_backend`) — modexp/RIPEMD-160/BLAKE2f. These
 //!     have no C-library dependency, so — unlike the rest of zesu's native backend — they
 //!     cross-compile straight to riscv64.
@@ -24,7 +24,7 @@
 const std = @import("std");
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
 const zesu_crypto_backend = @import("zesu_crypto_backend"); // zesu's own native crypto backend (modexp, RIPEMD-160, BLAKE2f — see src/zesu_crypto_backend.zig)
-const guest_crypto = @import("guest_crypto"); // Rust staticlib bindings (secp256k1, BLS12-381, KZG — see src/guest_crypto.zig)
+const guest_crypto = @import("guest_crypto"); // Constantine backend bindings (secp256k1, BLS12-381, bn254, KZG — see src/guest_crypto.zig)
 const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either

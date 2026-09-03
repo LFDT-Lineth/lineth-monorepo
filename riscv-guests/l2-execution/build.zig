@@ -32,8 +32,8 @@ pub fn build(b: *std.Build) void {
     // rather than performing a final link. The shared entry stub + memory layout + compiler_rt/GC
     // plumbing live in build_common.installGuestElf; here we wire the guest's root module:
     //   • zesu executor + SSZ modules — the execution logic;
-    //   • guest_crypto — the guest-crypto Rust staticlib (secp256k1, BLS12-381, KZG): the Zig
-    //     bindings module plus the rv64im archive, both from the sibling guest-crypto package;
+    //   • guest_crypto — the precompile crypto staticlib (secp256k1, BLS12-381, KZG, bn254): the
+    //     Zig bindings module plus the rv64im archive, both from the guest_crypto package;
     //   • zesu_crypto_backend — zesu's own native crypto backend (the handful of its precompiles
     //     with no C-library dependency: modexp, RIPEMD-160, BLAKE2f);
     //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak and the standards `write_output`):
@@ -45,8 +45,8 @@ pub fn build(b: *std.Build) void {
     const zesu_guest = b.dependency("zesu", .{ .target = target, .optimize = optimize });
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
-    // The guest-crypto Rust staticlib: one archive per side (rv64im for the guest ELF and the
-    // exposed zkvm_provide module, host for the FFI unit test), built by cargo via the package's
+    // The guest_crypto staticlib: one archive per side (rv64im for the guest ELF and the
+    // exposed zkvm_provide module, host for the FFI unit test), produced by the package's
     // own build.zig, plus the Zig bindings module over its C ABI.
     const guest_crypto_dep = b.dependency("guest_crypto", .{});
     const guest_crypto_riscv_a = guest_crypto_dep.namedLazyPath("riscv_staticlib");
@@ -169,7 +169,7 @@ pub fn build(b: *std.Build) void {
     // FFI tests for the guest-crypto staticlib (test/guest_crypto_test.zig): official EIP-2537
     // vectors, the EIP-4844 point-evaluation KAT, ecrecover round-trips against a textbook signing
     // oracle, and the [s]₂ trusted-setup pin (test/data/trusted_setup.txt) — all driven through the
-    // same src/guest_crypto.zig bindings the guest uses, linked against the crate's host archive.
+    // same src/guest_crypto.zig bindings the guest uses, linked against the host archive.
     const guest_crypto_native_mod = b.createModule(.{
         .root_source_file = b.path("src/guest_crypto.zig"),
         .target = native_target,

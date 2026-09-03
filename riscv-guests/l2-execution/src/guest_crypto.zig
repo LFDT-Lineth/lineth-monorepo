@@ -1,19 +1,19 @@
-//! SPIKE (constantine backend): Zig bindings to Constantine's `ctt_eth_evm_*` EVM precompile
-//! functions, replacing the Rust guest-crypto staticlib behind the same `guest_crypto` module
-//! interface consumed by zkvm_provide.zig. This file is the ONLY guest-source change for the
-//! swap; build.zig.zon re-points the `guest_crypto` dependency at the Constantine package.
+//! Zig bindings to Constantine's `ctt_eth_evm_*` EVM precompile functions, exposing the
+//! `guest_crypto` module interface consumed by zkvm_provide.zig. The `guest_crypto` dependency
+//! in build.zig.zon resolves to the Constantine package.
 //!
 //! ABI note: the guest's zkvm_* seam uses the RAW unpadded EIP encodings (Fp = 48 bytes,
 //! G1 = 96, G2 = 192). Constantine's ctt_eth_evm_* take the PADDED EIP-2537 byte layout
-//! (Fp padded to 64, G1 = 128, G2 = 256) and write padded outputs, so each wrapper zero-pads
-//! every 48-byte limb to 64 on the way in and strips the padding on the way out. The pairing/
-//! MSM inputs are repacked record-by-record.
+//! (Fp padded to 64, G1 = 128, G2 = 256) and write padded outputs, so each BLS12-381 wrapper
+//! zero-pads every 48-byte limb to 64 on the way in and strips the padding on the way out; the
+//! pairing/MSM inputs are repacked record-by-record. BN254's seam encoding already matches the
+//! EIP-196/197 layout, so those wrappers pass buffers through unchanged.
 //!
-//! Deliberate stubs (footprint spike, not full parity):
+//! Deliberate stubs (not full parity):
 //!   • ecrecover / secp256k1Verify — Constantine's ecrecover takes the EIP 128-byte input and
 //!     returns the keccak'd ADDRESS, not the raw 64-byte pubkey this seam uses; stubbed ERR.
 //!   • kzgPointEvalVerify — ctt_eth_evm_kzg_point_evaluation needs a ctt_eth_kzg_context built
-//!     from the full 4096-point trusted setup (file-loaded); stubbed false for the measurement.
+//!     from the full 4096-point trusted setup (file-loaded); stubbed false.
 
 const std = @import("std");
 
