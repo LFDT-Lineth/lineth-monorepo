@@ -362,9 +362,30 @@ pub fn build(b: *std.Build) void {
         }),
     });
     zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-    // Same native crypto link as l2-execution-wrap (shared vanilla_wrap decode chain).
+    zkc_reference_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+    zkc_reference_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    // Same native crypto link as l2-execution-wrap / l2-execution-runner (wrap + native smoke path).
     linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
     b.installArtifact(zkc_reference_runner_exe);
+
+    // Smoke: testdata .ssz under zkc; guest_output checked against native encodeOutput.
+    // Outside the EF-corpus lazy block — no fixtures dependency. Needs zkc+go on PATH.
+    // Makefile exposes zkc-smoke-exec / zkc-smoke-trace; both call this step with --zkc-target
+    // and `--match <INPUT basename>` (default: stateless_input.ssz).
+    const zkc_smoke_step = b.step(
+        "zkc-smoke",
+        "Run testdata .ssz under zkc; assert guest_output == native encodeOutput (pass --match and --zkc-target)",
+    );
+    const run_zkc_smoke = b.addRunArtifact(zkc_reference_runner_exe);
+    run_zkc_smoke.addArg("--fixtures");
+    run_zkc_smoke.addDirectoryArg(b.path("test/testdata"));
+    run_zkc_smoke.addArg("--install-prefix");
+    run_zkc_smoke.addArg(b.install_prefix);
+    run_zkc_smoke.addArg("--makefile");
+    run_zkc_smoke.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+    if (b.args) |extra| run_zkc_smoke.addArgs(extra);
+    run_zkc_smoke.step.dependOn(b.getInstallStep());
+    zkc_smoke_step.dependOn(&run_zkc_smoke.step);
 
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
