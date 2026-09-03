@@ -442,7 +442,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         ),
       )
 
-      val nPairsPerTransaction = 8
+      val nPairsPerTransaction = 16
 
       /*
       This test case produces PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1
