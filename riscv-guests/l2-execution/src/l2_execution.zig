@@ -49,7 +49,15 @@ const BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0: [32]u8 = .{
     0xbd, 0x80, 0xa1, 0xcf, 0x8d, 0xb7, 0x2e, 0x6c,
 };
 
-/// Storage layout of L2MessageService (see the Python reference implementation's docstring for provenance).
+/// Storage layout of the L2MessageService contract: `lastAnchoredL1MessageNumber` at the fixed
+/// slot below, `l1RollingHashes` (a mapping keyed by message number) at the mapping base slot
+/// below. Solidity assigns storage slots by state-variable declaration order across the whole
+/// inheritance chain — a property of the contract's compiled bytecode, independent of chain id or
+/// deployment address, so the same slots hold on every deployment of the same contract version.
+/// These two numbers are extracted from the compiled storage layout of
+/// contracts/src/messaging/l2/L2MessageService.sol; if that layout ever changes (including a
+/// `__gap` slot in an ancestor), they must be re-extracted, or these reads return wrong values and
+/// the L1 finalization check fails.
 const LAST_ANCHORED_L1_MESSAGE_NUMBER_SLOT: u64 = 280;
 const L1_ROLLING_HASHES_MAPPING_BASE_SLOT: u64 = 281;
 
@@ -124,7 +132,7 @@ fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
 
 // ─── Witness-backed MPT state reads (mirrors state_transition.py's L2State) ───────────────────────
 //
-// Semantics (must match the Python reference implementation exactly — see Readme.md's state_transition.py docstrings):
+// Semantics must match Readme.md's specification exactly (state_transition.py is its reference implementation):
 //   - account/slot proven absent from the trie  -> `null` / `0` (NOT an error);
 //   - a witness node needed to resolve the path is missing from the pool -> `error.InvalidProof`
 //     propagates (guest rejection). `verifyAccountIndexed`/`verifyStorageIndexed` already draw this
@@ -133,7 +141,8 @@ fn hashAddressList(alloc: std.mem.Allocator, values: []const [20]u8) ![32]u8 {
 //     This is DELIBERATELY NOT `zesu_db.WitnessDatabase`: its `basic()`/`storage()` catch
 //     `error.InvalidProof` and silently treat it as absence (a leniency WitnessDatabase needs for
 //     precompile addresses that have no witness proof during live EVM execution) — that would mask a
-//     genuinely incomplete witness here, where the Python spec's `_mpt_lookup` raises instead.
+//     genuinely incomplete witness here, where the Python reference implementation's `_mpt_lookup`
+//     raises instead.
 
 /// Account at `address` proven against `state_root`, or `null` if proven absent.
 fn readAccount(state_root: [32]u8, address: [20]u8, node_index: *const mpt.NodeIndex) !?mpt.AccountState {
@@ -287,6 +296,14 @@ fn validateForcedTransactions(
 /// conflation-level linking, the empty-`executionRequests` policy, forced transactions, L2->L1
 /// messages, and the L1->L2 bridge rolling-hash reads.
 pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
+    return runL2ExecutionWithEngine(execution, alloc, in);
+}
+
+/// Same as `runL2Execution`, but with the per-block execution step taken as a comptime `Engine`
+/// parameter instead of being fixed to the `execution` module. This is the seam at which a test DSL
+/// binds a stub engine, driving the conflation logic below end to end with declared per-block
+/// results in place of real EVM execution.
+pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
     zesu_allocator.set(alloc);
 
     if (in.payloads.len == 0) return error.EmptyPayloads;
@@ -348,16 +365,17 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         // UNLESS this genuinely is genesis (block 0), which has no parent to prove — theoretically
         // supported (some Lineth deployment could start a range there), but constrained to the
         // standard Ethereum convention (parent_hash == zero) so the exemption can't be (ab)used to
-        // skip the header check for anything other than a real genesis block. This guards against a
-        // real gap: `execution.zig`'s `pre_state_root` derivation (`rlp_decode.findPreStateRoot(...)
-        // orelse ep.state_root`) falls back to the payload's OWN claimed (post-execution) state_root
-        // as its pre-state root whenever no witness header matches — self-referential, and
-        // completely disconnected from the real state behind `payload.parent_hash`. Combined with a
-        // no-op block, that lets a forged witness pick an arbitrary starting trie and forge whatever
-        // it reads from it (e.g. the first payload's `readL1L2BridgeState` reads, below, which land
-        // straight in the public output). Requiring this to resolve forces `execution.zig`'s own
-        // header-chain verification to run for real (never silently skipped) and ties
-        // `payload.block_number` to the real parent's real number — closing the
+        // skip the header check for anything other than a real genesis block. `execution.zig`'s own
+        // `pre_state_root` derivation enforces this same resolution for itself outside genuine
+        // genesis, returning `error.MissingParentHeaderWitness` when `rlp_decode.findPreStateRoot`
+        // finds no match — an unresolved fallback to the payload's OWN claimed (post-execution)
+        // state_root would otherwise stand in as its pre-state root, self-referential and completely
+        // disconnected from the real state behind `payload.parent_hash`. Combined with a no-op block,
+        // that would let a forged witness pick an arbitrary starting trie and forge whatever it reads
+        // from it (e.g. the first payload's `readL1L2BridgeState` reads, below, which land straight in
+        // the public output). Checking it here too, before any per-block execution runs, forces
+        // `execution.zig`'s own header-chain verification to run for real (never silently skipped) and
+        // ties `payload.block_number` to the real parent's real number — closing the
         // block-number-contiguity gap noted below as a side effect, since `findPreStateRoot` only
         // matches a header that's part of the hash-chain verified back to `payload.parent_hash`.
         if (payload.block_number == 0) {
@@ -394,7 +412,7 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         // Reuses the SAME combined `node_index` built above (not a fresh per-payload one — see
         // `executeStatelessInputWithLogs`'s doc comment): it's a superset of `si.witness.nodes`
         // alone, so every proof this payload's execution needs is already indexed.
-        const result = try execution.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
+        const result = try Engine.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
         if (idx == 0) range_pre_state_root = result.pre_state_root;
         range_post_state_root = result.post_state_root;
         last_payload = payload;
@@ -465,3 +483,30 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         .filtered_addresses = try filtered_addresses.toOwnedSlice(alloc),
     };
 }
+
+// ─── Exposed for unit tests only ───────────────────────────────────────────────────────────────
+
+pub const test_api = if (@import("builtin").is_test) struct {
+    pub const u64ToSlot32Fn = u64ToSlot32;
+    pub const mappingSlotFn = mappingSlot;
+    pub const chainConfigHashFn = chainConfigHash;
+    pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
+    pub const hashDigestListFn = hashDigestList;
+    pub const hashAddressListFn = hashAddressList;
+    pub const readAccountFn = readAccount;
+    pub const readStorageFn = readStorage;
+    pub const readL1L2BridgeStateFn = readL1L2BridgeState;
+    pub const extractL2L1MessagesFn = extractL2L1Messages;
+    pub const validateForcedTransactionsFn = validateForcedTransactions;
+    pub const recoverSenderFn = tx_signing.recoverSender;
+    pub const Acceptance = ForcedTransactionAcceptance;
+    /// The real per-block execution seam, exposed so test code can run it directly against the
+    /// same inputs a stub engine receives — this module's own import of it is the only reachable
+    /// path without a build-graph module double-claim.
+    pub const executeStatelessInputWithLogsFn = execution.executeStatelessInputWithLogs;
+    /// Same seam, without the final check against the payload's own declared commitments — for
+    /// test code that needs to discover a block's real outcome after altering its conditions,
+    /// rather than verify a claim against it. See `execution.computeStatelessInputWithLogs`.
+    pub const computeStatelessInputWithLogsFn = execution.computeStatelessInputWithLogs;
+    pub const ComputedBlock = execution.ComputedBlock;
+} else struct {};

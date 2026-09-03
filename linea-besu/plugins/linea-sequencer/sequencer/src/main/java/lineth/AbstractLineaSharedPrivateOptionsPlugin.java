@@ -171,7 +171,8 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     return new LineaTracerConfiguration(
         tracerLineLimitConfig.moduleLimitsFilePath(),
         tracerLineLimitConfig.moduleLimitsMap(),
-        tracerSharedConfig.isLimitless());
+        tracerSharedConfig.isLimitless(),
+        tracerLineLimitConfig.tracingEndTimestamp());
   }
 
   public LineaRejectedTxReportingConfiguration rejectedTxReportingConfiguration() {

@@ -747,7 +747,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Forced transactions handling settings; omit the section to disable the feature.",
+        "description": "Forced transactions handling settings; omit the section to disable the feature. Ignored on validium deployments: the coordinator does not support forced transactions there yet and disables them with a warning.",
         "example": null,
         "deprecated": false,
         "replacement": null

@@ -3,7 +3,7 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug prepare-zkc zkc-exec zkc-trace zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
 
 # set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
 .DEFAULT_GOAL := exec
@@ -34,13 +34,12 @@ include $(ARITHMETIZATION_DIR)/../riscv-guests/build_common/Makefile
 
 # Path to the zkc main used to execute/debug the JSON.
 ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
-# zkc binary (override for CI benchmarks, e.g. ZKC=/tmp/zkc-base).
-ZKC             ?= zkc
+# zkc command (override for CI comparison benchmarks, e.g. ZKC=/tmp/zkc-base).
+ZKC             ?= go -C $(ARITHMETIZATION_DIR) tool zkc
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
 
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
-# 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
 ZKC_EXEC_FLAGS ?=--fast
 
@@ -80,9 +79,9 @@ OBJDUMP        ?= false
 #####################################################################
 
 # Default target (make)
-exec: compile install-zkc zkc-exec
+exec: compile zkc-exec
 
-debug: compile zkc-debug
+debug: compile install-zkc zkc-debug
 
 compile: require-src
 # Print all variables for debugging purposes
@@ -132,31 +131,32 @@ compile: require-src
 # Note: we use opt-level=2 to remove unused code.
 
 # Convert and execute an already compiled external ELF
-elf-exec: elf-to-json install-zkc
-	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT)
+elf-exec: elf-to-json prepare-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-exec JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 # Convert and trace an already compiled external ELF
-elf-trace: elf-to-json install-zkc
-	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-trace JSON=$(JSON_EXT)
+elf-trace: elf-to-json prepare-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-trace ZKC_REF= JSON=$(JSON_EXT)
 
 # Convert and debug an already compiled external ELF
-elf-debug: elf-to-json
-	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)	
+elf-debug: elf-to-json prepare-zkc
+	$(MAKE) -C $(MAKEFILE_DIR) --no-print-directory zkc-debug JSON=$(JSON_EXT) ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
-install-zkc:
-	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
+
+prepare-zkc:
+	$(MAKE) -C $(ARITHMETIZATION_DIR) prepare-zkc
 
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
-zkc-exec: require-json
+zkc-exec: prepare-zkc require-json
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+
+zkc-debug: prepare-zkc require-json
+	$(ZKC) debug $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
 
 # Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
 # Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
-zkc-trace: require-json
+zkc-trace: prepare-zkc require-json
 	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
-
-zkc-debug: require-json
-	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
 clean: require-test
 	rm -f $(BIN) $(JSON) $(BIN).objdump $(VECTOR_SUBSET_FILE)
@@ -242,12 +242,12 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 		echo "generated $$n vector JSON(s) in $(VECTOR_JSON_DIR)"; \
 	fi
 
-vector-exec: require-vector-json-mode install-zkc
+vector-exec: require-vector-json-mode prepare-zkc
 	@if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		[ -f $(VECTOR_JSON_FILE) ] || { echo "VECTOR_JSON_FILE not found: $(VECTOR_JSON_FILE). Run vector-json first"; exit 1; }; \
 		echo "RUN   $(VECTOR_JSON_FILE)"; \
 		err="$(VECTOR_JSON_FILE).err"; \
-		$(MAKE) --no-print-directory zkc-exec JSON=$(VECTOR_JSON_FILE) > /dev/null 2> "$$err"; \
+		$(MAKE) --no-print-directory zkc-exec ZKC_REF= JSON=$(VECTOR_JSON_FILE) > /dev/null 2> "$$err"; \
 		status=$$?; \
 		if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
 			echo "PASS"; \
@@ -265,7 +265,7 @@ vector-exec: require-vector-json-mode install-zkc
 			i=$$((i + 1)); \
 			echo "RUN   case $$i  $$json"; \
 			err="$$json.err"; \
-			$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$err"; \
+			$(MAKE) --no-print-directory zkc-exec ZKC_REF= JSON="$$json" > /dev/null 2> "$$err"; \
 			status=$$?; \
 			if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
 				echo "PASS"; \
@@ -442,7 +442,7 @@ act4-build:
 	echo "generated $$count ACT4 JSON input(s) in $(ACT4_LOGS)"
 
 # Run the ACT4 self-checking JSON inputs generated by act4-build.
-act4-exec: install-zkc act4-build
+act4-exec: prepare-zkc act4-build
 	@rm -f "$(ACT4_LOGS)"/*.err "$(ACT4_LOGS)"/*.out "$(ACT4_LOGS)"/*.full; \
 	> "$(ACT4_RESULTS)"; \
 	count=0; pass=0; fail=0; \
@@ -451,7 +451,7 @@ act4-exec: install-zkc act4-build
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
 		echo "RUN   $$name  $$json"; \
-		$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$base.err"; \
+		$(MAKE) --no-print-directory zkc-exec ZKC_REF= JSON="$$json" > /dev/null 2> "$$base.err"; \
 		status=$$?; \
 		if [ "$$status" -eq 0 ] && [ ! -s "$$base.err" ]; then \
 			echo "PASS"; \

@@ -18,11 +18,7 @@ jobs:
 
       - name: Split and list profiles
         id: list-profiles
-        run: |
-          files=$(ls linea-besu/package/linea-besu/profiles/* | xargs -n 1 basename | sed 's/\.[^.]*$//')
-          files_json=$(echo "$files" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "files=$files_json" >> "$GITHUB_OUTPUT"
-          echo "Files: $files_json"
+        run: scripts/docker/list-besu-profiles.sh linea-besu/package/linea-besu/profiles
 
   test-profile:
     timeout-minutes: 4

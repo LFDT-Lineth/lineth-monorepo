@@ -30,6 +30,8 @@
 - *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
 - *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
+- *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
+- *(coordinator)* Support finalization on validium chains (#3910)
 
 ### 🐛 Bug Fixes
 
@@ -79,6 +81,7 @@
 - *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
+- *(prover)* Empty-codehash check (#3913)
 
 ### 🚜 Refactor
 
@@ -89,6 +92,7 @@
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
 - *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 - *(coordinator)* Restructure chain params in L2 execution proof request (#3848)
+- *(coordinator)* Extract ForcedTransactionsApp from ConflationAppV1, make invalidity proof service injectable (#3856)
 
 ### ⚡ Performance
 
@@ -149,3 +153,4 @@
 - *(misc)* Docker image build streamlining (#3790)
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 - *(misc)* Enrich R5 request/response samples (#3806)
+- *(misc)* Increase timeout to avoid CI flakiness (#3926)

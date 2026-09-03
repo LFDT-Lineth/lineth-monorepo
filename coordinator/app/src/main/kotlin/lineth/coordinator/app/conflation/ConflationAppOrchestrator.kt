@@ -26,6 +26,7 @@ import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
+import kotlin.compareTo
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -56,12 +57,20 @@ class ConflationAppOrchestrator(
   private val log = LogManager.getLogger(ConflationAppOrchestrator::class.java)
 
   private val forcedTransactionsApp: ForcedTransactionsApp = run {
-    if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
+    // Forced transactions are rollup-only for now; see ConflationAppHelper.forcedTransactionsEnabled.
+    val ftxConfig = configs.forcedTransactions
+    if (!ConflationAppHelper.forcedTransactionsEnabled(ftxConfig, configs.l1Submission.dataAvailability)) {
+      // If we get here with forced transactions enabled in config, the chain must be running in validium mode.
+      if (ftxConfig?.disabled == false) {
+        log.warn(
+          "Forced transactions are enabled in config but the coordinator does not support them on validium " +
+            "chains yet; disabling. Storing a forced transaction on a validium V2 contract halts finalization.",
+        )
+      }
       ForcedTransactionsApp.createDisabled()
     } else {
-      val ftxConfig = configs.forcedTransactions
       val l1EthClient = createEthApiClient(
-        rpcUrl = ftxConfig.l1Endpoint.toString(),
+        rpcUrl = ftxConfig!!.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.ftx"),
         vertx = vertx,
         requestRetryConfig = ftxConfig.l1RequestRetries,
