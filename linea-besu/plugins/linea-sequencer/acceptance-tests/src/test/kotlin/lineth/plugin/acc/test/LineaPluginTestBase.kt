@@ -140,6 +140,17 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
   protected open fun getBlockPeriodSeconds(): Int = BLOCK_PERIOD_SECONDS
 
+  /**
+   * Milliseconds Besu may spend selecting transactions for one block.
+   *
+   * Besu picks between the PoA and PoS variants of this budget via `protocolSpec.isPoS()` (see
+   * `MiningConfiguration.getBlockTxsSelectionMaxTime`), so both are configured from this value.
+   * When the budget is exhausted mid-batch Besu returns `BLOCK_SELECTION_TIMEOUT` and seals the
+   * block with whatever it had evaluated so far, splitting a batch a test expects in one block.
+   * Tests whose transactions are expensive to evaluate (e.g. EcPairing) should override this.
+   */
+  protected open fun getBlockTxsSelectionMaxTimeMillis(): Int = getBlockPeriodSeconds() * 1000
+
   @AfterEach
   protected open fun stop() {
     cluster.stop()
@@ -171,9 +182,17 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
         // enable mining
         // allow for a single iteration to take all the slot time
         // set plugin max selection time to 5% of slot time
+        //
+        // Note both PoA and PoS budgets are set: Besu picks between them via
+        // protocolSpec.isPoS() (see MiningConfiguration.getBlockTxsSelectionMaxTime). These tests
+        // run a clique-to-PoS genesis and build blocks through the engine API, so the PoS value is
+        // the one that actually applies; the PoA value is kept for the pre-merge phase.
         ImmutableMiningConfiguration.builder()
           .poaBlockTxsSelectionMaxTime(
-            PositiveNumber.fromInt(getBlockPeriodSeconds() * 1000),
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
+          )
+          .posBlockTxsSelectionMaxTime(
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
           )
           .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
           .mutableInitValues(

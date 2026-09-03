@@ -30,12 +30,16 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .build()
   }
 
-  override fun getBlockPeriodSeconds(): Int =
-    // Adding slack to the block period to avoid flakiness on the CI: EcPairing can take all the
-    // selection time before all pending txs have been evaluated, so the last tx can spill into the
-    // next block. The Vert.x 5 migration in Besu 26.8.1 slowed the node's HTTP/engine-API responses
-    // enough to eat the previous +2s margin, so widen it further.
-    BLOCK_PERIOD_SECONDS + 4
+  override fun getBlockTxsSelectionMaxTimeMillis(): Int =
+    // The whole fitting batch must be evaluated inside ONE block's transaction selection budget,
+    // otherwise Besu returns BLOCK_SELECTION_TIMEOUT mid-batch, seals the block with the subset it
+    // managed to evaluate, and the rest spills into the next block (the `got [3, 4]` failure).
+    //
+    // EcPairing transactions are very expensive to trace: individual transactions here have been
+    // measured at 1-5 s, and the batch has 8 of them, so the default (one block period) is far too
+    // small. This only widens how long Besu may spend selecting; it does not change the block
+    // period or add any fixed wait to the test.
+    120_000
 
   /**
    * Tests the EcPairing limits, that are the number of times a certain circuit may be invoked in a
@@ -107,7 +111,13 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
-    buildNewBlockAndWait()
+    //
+    // An explicit build window is required. The no-arg overload gives Besu only one block period,
+    // after which engine_getPayload interrupts whatever is still being evaluated
+    // (INVALID_PENALIZED(EXECUTION_INTERRUPTED)) and seals the block with the subset evaluated so
+    // far, splitting the fitting batch across two blocks. EcPairing transactions have been measured
+    // at 1-5 s each here, so the batch needs a window that can accommodate all of them.
+    buildNewBlockAndWait(BATCH_BLOCK_BUILDING_TIME_MS)
     // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
     // production is off) so it gets mined for the assertion below.
     buildNewBlockAndWait()
@@ -206,7 +216,13 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
-    buildNewBlockAndWait()
+    //
+    // An explicit build window is required. The no-arg overload gives Besu only one block period,
+    // after which engine_getPayload interrupts whatever is still being evaluated
+    // (INVALID_PENALIZED(EXECUTION_INTERRUPTED)) and seals the block with the subset evaluated so
+    // far, splitting the fitting batch across two blocks. EcPairing transactions have been measured
+    // at 1-5 s each here, so the batch needs a window that can accommodate all of them.
+    buildNewBlockAndWait(BATCH_BLOCK_BUILDING_TIME_MS)
     // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
     // production is off) so it gets mined for the assertion below.
     buildNewBlockAndWait()
@@ -300,7 +316,13 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
-    buildNewBlockAndWait()
+    //
+    // An explicit build window is required. The no-arg overload gives Besu only one block period,
+    // after which engine_getPayload interrupts whatever is still being evaluated
+    // (INVALID_PENALIZED(EXECUTION_INTERRUPTED)) and seals the block with the subset evaluated so
+    // far, splitting the fitting batch across two blocks. EcPairing transactions have been measured
+    // at 1-5 s each here, so the batch needs a window that can accommodate all of them.
+    buildNewBlockAndWait(BATCH_BLOCK_BUILDING_TIME_MS)
     // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
     // production is off) so it gets mined for the assertion below.
     buildNewBlockAndWait()
@@ -397,7 +419,13 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
     // Build the block explicitly now that every tx in the batch has been submitted: all of them
     // are evaluated together for this single block-build attempt.
-    buildNewBlockAndWait()
+    //
+    // An explicit build window is required. The no-arg overload gives Besu only one block period,
+    // after which engine_getPayload interrupts whatever is still being evaluated
+    // (INVALID_PENALIZED(EXECUTION_INTERRUPTED)) and seals the block with the subset evaluated so
+    // far, splitting the fitting batch across two blocks. EcPairing transactions have been measured
+    // at 1-5 s each here, so the batch needs a window that can accommodate all of them.
+    buildNewBlockAndWait(BATCH_BLOCK_BUILDING_TIME_MS)
     // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
     // production is off) so it gets mined for the assertion below.
     buildNewBlockAndWait()
@@ -416,6 +444,16 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   }
 
   companion object {
+    /**
+     * Build window granted to the block that must contain the whole fitting batch.
+     *
+     * EcPairing transactions are expensive to trace (measured at 1-5 s each here), so the default
+     * one-block-period window is not enough: engine_getPayload would interrupt evaluation mid-batch
+     * and seal a partial block. This stays below the `3 * blockPeriod` budget that
+     * `buildNewBlockAndWait` allows for the block to appear.
+     */
+    const val BATCH_BLOCK_BUILDING_TIME_MS = 20_000L
+
     @JvmStatic
     fun ecPairingLimitsTestSource(): Stream<Arguments> {
       val moduleLimits = ModuleLineCountValidator.createLimitModules(getResourcePath("/moduleLimits.toml"))
@@ -478,7 +516,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         ),
       )
 
-      val nPairsPerTransaction = 16
+      // Keep this small: each pairing adds EVM + tracing work to a single transaction's evaluation,
+      // and the whole fitting batch has to be evaluated within one block build. At 16 pairings a
+      // single transaction took 1.3-3.0 s to evaluate, so the batch overran the build window, was
+      // interrupted mid-batch, and the fitting transactions ended up split across two blocks on
+      // slower runners.
+      val nPairsPerTransaction = 8
 
       /*
       This test case produces PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1
