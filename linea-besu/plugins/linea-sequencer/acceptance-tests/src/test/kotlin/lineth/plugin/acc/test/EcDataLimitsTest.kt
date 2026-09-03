@@ -33,9 +33,8 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   override fun getBlockPeriodSeconds(): Int =
     // Adding slack to the block period to avoid flakiness on the CI: EcPairing can take all the
     // selection time before all pending txs have been evaluated, so the last tx can spill into the
-    // next block (assertTransactionsMinedInSameBlock then sees 2 blocks instead of 1). The Vert.x 5
-    // migration in Besu 26.8.1 slowed the node's HTTP/engine-API responses enough to eat the
-    // previous +2s margin, so widen it further.
+    // next block. The Vert.x 5 migration in Besu 26.8.1 slowed the node's HTTP/engine-API responses
+    // enough to eat the previous +2s margin, so widen it further.
     BLOCK_PERIOD_SECONDS + 4
 
   /**
@@ -69,6 +68,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
+    // Stop background block production before submitting the batch: the background scheduler
+    // builds a block on a fixed tick independent of this submission loop, so a tick landing
+    // mid-loop can split the "fitting" transactions across two blocks. This was observed as
+    // CI-only flakiness once Vert.x 5 (Besu 26.8.1) made the loop's RPC round-trips slower and
+    // more variable, widening the window in which a tick can land mid-loop. Building the block
+    // explicitly after every tx is submitted removes that race without touching any wait/timeout.
+    buildBlocksInBackground = false
+
     val txHashes = Array<String?>(nTransactions) { null }
     for (i in 0 until nTransactions) {
       // With decreasing nonce we force the transactions to be included in the same block
@@ -92,17 +99,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nonce] = resp.transactionHash
     }
 
-    // Transfer used as sentry to ensure a new block is mined
-    val transferTxHash = accountTransactions
-      .createTransfer(
-        accounts.primaryBenefactor,
-        accounts.secondaryBenefactor,
-        1,
-        BigInteger.ONE, // nonce is 1 as primary benefactor also deploys the contract
-      )
-      .execute(minerNode.nodeRequests())
-    // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
+    // Build the block explicitly now that every tx in the batch has been submitted: all of them
+    // are evaluated together for this single block-build attempt.
+    buildNewBlockAndWait()
+    // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
+    // production is off) so it gets mined for the assertion below.
+    buildNewBlockAndWait()
 
     // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
     // mined together, and the last one (which exceeds the limit) was mined in a strictly later
@@ -164,6 +166,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
+    // Stop background block production before submitting the batch: the background scheduler
+    // builds a block on a fixed tick independent of this submission loop, so a tick landing
+    // mid-loop can split the "fitting" transactions across two blocks. This was observed as
+    // CI-only flakiness once Vert.x 5 (Besu 26.8.1) made the loop's RPC round-trips slower and
+    // more variable, widening the window in which a tick can land mid-loop. Building the block
+    // explicitly after every tx is submitted removes that race without touching any wait/timeout.
+    buildBlocksInBackground = false
+
     val txHashes = Array<String?>(nTransactions) { null }
     for (i in 0 until nTransactions) {
       // With decreasing nonce we force the transactions to be included in the same block
@@ -182,17 +192,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nonce] = resp.transactionHash
     }
 
-    // Transfer used as sentry to ensure a new block is mined
-    val transferTxHash = accountTransactions
-      .createTransfer(
-        accounts.primaryBenefactor,
-        accounts.secondaryBenefactor,
-        1,
-        BigInteger.ONE, // nonce is 1 as primary benefactor also deploys the contract
-      )
-      .execute(minerNode.nodeRequests())
-    // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
+    // Build the block explicitly now that every tx in the batch has been submitted: all of them
+    // are evaluated together for this single block-build attempt.
+    buildNewBlockAndWait()
+    // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
+    // production is off) so it gets mined for the assertion below.
+    buildNewBlockAndWait()
 
     // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
     // mined together, and the last one (which exceeds the limit) was mined in a strictly later
@@ -249,6 +254,14 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
 
+    // Stop background block production before submitting the batch: the background scheduler
+    // builds a block on a fixed tick independent of this submission loop, so a tick landing
+    // mid-loop can split the "fitting" transactions across two blocks. This was observed as
+    // CI-only flakiness once Vert.x 5 (Besu 26.8.1) made the loop's RPC round-trips slower and
+    // more variable, widening the window in which a tick can land mid-loop. Building the block
+    // explicitly after every tx is submitted removes that race without touching any wait/timeout.
+    buildBlocksInBackground = false
+
     val txHashes = Array<String?>(nTransactions) { null }
     for (i in 0 until nTransactions) {
       // With decreasing nonce we force the transactions to be included in the same block
@@ -267,17 +280,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nonce] = resp.transactionHash
     }
 
-    // Transfer used as sentry to ensure a new block is mined
-    val transferTxHash = accountTransactions
-      .createTransfer(
-        accounts.primaryBenefactor,
-        accounts.secondaryBenefactor,
-        1,
-        BigInteger.ONE, // nonce is 1 as primary benefactor also deploys the contract
-      )
-      .execute(minerNode.nodeRequests())
-    // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
+    // Build the block explicitly now that every tx in the batch has been submitted: all of them
+    // are evaluated together for this single block-build attempt.
+    buildNewBlockAndWait()
+    // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
+    // production is off) so it gets mined for the assertion below.
+    buildNewBlockAndWait()
 
     // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
     // mined together, and the last one (which exceeds the limit) was mined in a strictly later
@@ -335,6 +343,15 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
+
+    // Stop background block production before submitting the batch: the background scheduler
+    // builds a block on a fixed tick independent of this submission loop, so a tick landing
+    // mid-loop can split the "fitting" transactions across two blocks. This was observed as
+    // CI-only flakiness once Vert.x 5 (Besu 26.8.1) made the loop's RPC round-trips slower and
+    // more variable, widening the window in which a tick can land mid-loop. Building the block
+    // explicitly after every tx is submitted removes that race without touching any wait/timeout.
+    buildBlocksInBackground = false
+
     // send first tx (nonce=0) last one, so they will stay ready in the pool,
     // but will not be included in a block due to the nonce gap, doing this before
     // to avoid timing issues caused by slow tx sending calls that could cause flakiness
@@ -354,17 +371,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     }
       .reversed()
 
-    // Transfer used as sentry to ensure a new block is mined
-    val transferTxHash = accountTransactions
-      .createTransfer(
-        accounts.primaryBenefactor,
-        accounts.secondaryBenefactor,
-        1,
-        BigInteger.ONE, // nonce is 1 as primary benefactor also deploys the contract
-      )
-      .execute(minerNode.nodeRequests())
-    // Wait for the sentry to be mined
-    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
+    // Build the block explicitly now that every tx in the batch has been submitted: all of them
+    // are evaluated together for this single block-build attempt.
+    buildNewBlockAndWait()
+    // The overflow tx doesn't fit and stays pending; build a second block explicitly (background
+    // production is off) so it gets mined for the assertion below.
+    buildNewBlockAndWait()
 
     // Assert the limit's ordering semantics: all but the last transaction (the ones that fit) were
     // mined together, and the last one (which exceeds the limit) was mined in a strictly later
