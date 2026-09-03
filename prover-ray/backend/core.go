@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 
-	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -23,10 +25,11 @@ const wiopSystemName = "lineth-riscv"
 // safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
-	cfg    Config
-	sys    *wiop.System
-	driver *zkcdriver.ZkCDriver
-	elf    zkc_r5.GuestProgramSections // guest ELF sections + entry point, extracted once in New; reused per job
+	cfg     Config
+	sys     *wiop.System
+	driver  *zkcdriver.ZkCDriver
+	program elfmapping.Program
+	decoded predecoding.DecodedProgram
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -48,9 +51,13 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer elfFile.Close()
 
-	parsedELF, err := zkc_r5.LoadGuestElf(elfFile)
+	program, err := elfmapping.Load(elfFile)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
+	}
+	decoded, err := predecoding.Predecode(program)
+	if err != nil {
+		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
 	}
 
 	sys := wiop.NewSystemf(wiopSystemName)
@@ -71,10 +78,11 @@ func New(cfg Config) (*Core, error) {
 	//   wiop.Materialize(sys)
 
 	return &Core{
-		cfg:    cfg,
-		sys:    sys,
-		driver: driver,
-		elf:    parsedELF,
+		cfg:     cfg,
+		sys:     sys,
+		driver:  driver,
+		program: program,
+		decoded: decoded,
 	}, nil
 }
 
@@ -103,17 +111,26 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 }
 
 // buildInputs converts a Job's Payload into the guest and memory inputs ZkC
-// expects. ELF memory blobs are pre-extracted in [New] and reused across calls;
-// only the per-job guest input data section differs.
+// expects. ELF mapping and predecoding are cached by [New]; only the per-job
+// guest input data differs.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
 	}
-	dataSections, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, decodePayload(job))
+	dataBlobs, err := elfmapping.NewData(
+		elfmapping.DefaultInputOrigin,
+		decodePayload(job),
+		elfmapping.WithLengthPrefix(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("building data section: %w", err)
 	}
-	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
+	inputs, err := elfmapping.EncodeInputs(c.program, dataBlobs)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(inputs, c.decoded.EncodeInputs())
+	return inputs, nil
 }
 
 func sanityCheckJobs(job Job) error {

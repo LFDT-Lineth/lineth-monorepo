@@ -41,7 +41,7 @@ type ZkCDriver struct {
 	// Configuration options for tracing (e.g. whether or not to use
 	// parallelisation, what batch size to use, etc).  Generally speaking this
 	// should be left to the provided defaults.
-	TracingConfig constraints.TraceConfig `serde:"omit"`
+	TracingConfig vm.TraceConfig `serde:"omit"`
 	// Metadata embedded in the zkevm.bin file, as needed to check
 	// compatibility.  Guaranteed non-nil.
 	Metadata typed.Map `serde:"omit"`
@@ -63,7 +63,7 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	// Construct the driver
 	return &ZkCDriver{
 		BinaryFile:    binf,
-		TracingConfig: constraints.DEFAULT_TRACE_CONFIG,
+		TracingConfig: vm.DEFAULT_TRACE_CONFIG,
 		Settings:      &settings,
 		Metadata:      metadata,
 	}
@@ -118,8 +118,8 @@ func (a *ZkCDriver) AssignWithPreRead(
 		errs []error
 		// filter the inputs so that we only pass the inputs that are actually
 		// used by the zkc program.
-		inputs = vm.FilterInputs(a.BinaryFile.Program(), preRead.Inputs)
-		errT   = preRead.Err
+		inputs, _ = vm.FilterInputs(a.BinaryFile.RawProgram(), preRead.Inputs)
+		errT      = preRead.Err
 	)
 	logrus.Infof("[bootstrapper] trace available (pre-read): %v", time.Since(assignStart))
 
@@ -138,7 +138,7 @@ func (a *ZkCDriver) AssignWithPreRead(
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	_, _, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
