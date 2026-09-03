@@ -31,6 +31,7 @@
 - *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
+- *(coordinator)* Support finalization on validium chains (#3910)
 
 ### 🐛 Bug Fixes
 
