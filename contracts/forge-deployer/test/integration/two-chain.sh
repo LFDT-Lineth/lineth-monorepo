@@ -106,7 +106,12 @@ get_code() {
 }
 
 deployer_container() {
+  # Run as the host user so the bind-mounted checkpoint dir (created on the host
+  # by this script) is writable by the deployer process. The image otherwise runs
+  # as the `node` user (UID 1000), which the runner's host UID does not match, so
+  # writes to /checkpoint fail with EACCES on self-hosted Linux runners.
   docker run "$@" --network "$NETWORK" \
+    --user "$(id -u):$(id -g)" \
     -v "$CHECKPOINT_DIR:/checkpoint" \
     -e "L1_RPC_URL=http://${L1_CONTAINER}:8545" \
     -e "L2_RPC_URL=http://${L2_CONTAINER}:8545" \
