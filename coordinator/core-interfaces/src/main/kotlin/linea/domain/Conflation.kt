@@ -75,7 +75,7 @@ data class BlockCounters(
   val blockRLPEncoded: ByteArray,
   val numOfTransactions: UInt = 0u,
   val gasUsed: ULong = 0uL,
-  val coinbase: String = "",
+  val coinbase: String,
 ) {
   override fun toString(): String {
     return "BlockCounters(blockNumber=$blockNumber, " +
