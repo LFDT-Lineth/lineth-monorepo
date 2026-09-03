@@ -84,26 +84,36 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
     override fun evaluateTransactionPostProcessing(
       evaluationContext: TransactionEvaluationContext,
       processingResult: TransactionProcessingResult,
-    ): TransactionSelectionResult = TransactionSelectionResult.SELECTED
+    ): TransactionSelectionResult {
+      // Reaching post-processing means this pass evaluated the transaction all the way through
+      // without any selector rejecting it, i.e. it is being selected for the block. Drop any
+      // rejection recorded by an earlier pass: block building runs many selection passes over the
+      // node's lifetime, and a transaction that is ultimately selected must not keep reporting a
+      // stale rejection from a pass that was cancelled, timed out, or otherwise abandoned.
+      //
+      // This is the authoritative positive signal, and is what makes the recording self-correcting.
+      // Enumerating every transient not-selected outcome in onTransactionNotSelected cannot be made
+      // complete (Besu keeps adding/wrapping them); observing "it was selected" can.
+      rejections.remove(evaluationContext.pendingTransaction.transaction.hash)
+      return TransactionSelectionResult.SELECTED
+    }
 
     override fun onTransactionNotSelected(
       evaluationContext: TransactionEvaluationContext,
       transactionSelectionResult: TransactionSelectionResult,
     ) {
       val txHash = evaluationContext.pendingTransaction.transaction.hash
-      // Block building is retried, and a retry can produce scheduling/transient outcomes that are
-      // not real rejections: SELECTION_CANCELLED when a build is superseded, and a penalized
-      // EXECUTION_INTERRUPTED when the build's time budget runs out mid-evaluation. A transaction
-      // that is later selected (e.g. the small tx in the test) must not report these as its
-      // rejection reason, and they must not overwrite a substantive rejection (e.g.
-      // BLOCK_COMPRESSED_SIZE_OVERFLOW). Keep the first non-transient outcome.
-      rejections.merge(txHash, transactionSelectionResult) { existing, new ->
-        if (isTransientSchedulingOutcome(new) && !isTransientSchedulingOutcome(existing)) {
-          existing
-        } else {
-          new
-        }
+      // Only substantive rejections are worth recording. Transient/scheduling outcomes
+      // (SELECTION_CANCELLED, the *_TIMEOUT family, a penalized EXECUTION_INTERRUPTED) say
+      // "block building gave up", not "this transaction was rejected on its merits", and Besu
+      // itself warns they are not reliable: handleTransactionSelected reports
+      // BLOCK_SELECTION_TIMEOUT for a transaction that already passed every check when the timeout
+      // fires before commit.
+      if (isTransientSchedulingOutcome(transactionSelectionResult)) {
+        return
       }
+      // A substantive rejection always wins, including over one recorded by an earlier pass.
+      rejections[txHash] = transactionSelectionResult
     }
 
     private fun isTransientSchedulingOutcome(result: TransactionSelectionResult): Boolean =
