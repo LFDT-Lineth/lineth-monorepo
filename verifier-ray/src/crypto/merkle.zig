@@ -16,7 +16,17 @@ pub const Error = error{
     LevelSizeTooLarge,
     LevelSizeAbsent,
     IndexOutOfRange,
+    InvalidCap,
+    InvalidFrontier,
 };
+
+/// Selects the shared prefix for a binary Merkle tree. At least one path step
+/// remains below the frontier so a query still carries the leaf and its
+/// conjugate value.
+pub fn capDepth(num_queries: usize, height: usize) usize {
+    if (num_queries <= 1 or height <= 1) return 0;
+    return @min(@bitSizeOf(usize) - @clz(num_queries - 1), height - 1);
+}
 
 /// A Merkle opening for one running-layer leaf. Unlike a conventional Merkle
 /// proof, the branch carries the leaf itself: a FRI query reads the leaf
@@ -58,6 +68,58 @@ pub const Branch = struct {
         // caller has already bounded `idx < 2^siblings.len`, but defense-in-depth.
         if (curr_pos != 0) return Error.IndexOutOfRange;
         return ancestor;
+    }
+
+    /// Authenticates the suffix of this branch against an already-authenticated
+    /// frontier. The frontier depth is inferred from its power-of-two length.
+    pub fn authenticateToCap(self: Branch, idx: usize, frontier: []const poseidon2.Digest) Error!void {
+        _ = try frontierDepth(frontier);
+        if (self.siblings.len == 0 or idx >> @intCast(self.siblings.len) >= frontier.len) {
+            return Error.InvalidFrontier;
+        }
+        var ancestor = self.leaf;
+        var curr_pos = idx;
+        var i = self.siblings.len;
+        while (i != 0) {
+            i -= 1;
+            const sibling = self.siblings[i];
+            const left = if (curr_pos & 1 != 0) sibling else ancestor;
+            const right = if (curr_pos & 1 != 0) ancestor else sibling;
+            ancestor = hashNode(left, right, null);
+            curr_pos >>= 1;
+        }
+        if (!poseidon2.eql(ancestor, frontier[curr_pos])) return Error.InvalidCap;
+    }
+};
+
+/// A separately authenticated Merkle frontier. Depth zero is represented by
+/// an empty proof cap; its root is supplied by the caller.
+pub const MerkleCap = struct {
+    nodes: []const poseidon2.Digest,
+    aux: []const ?poseidon2.Digest,
+
+    pub fn validate(self: MerkleCap, depth: usize) Error!void {
+        if (depth == 0) {
+            if (self.nodes.len != 0 or self.aux.len != 0) return Error.InvalidCap;
+            return;
+        }
+        if (depth >= @bitSizeOf(usize)) return Error.InvalidCap;
+        const count = @as(usize, 1) << @intCast(depth);
+        if (self.nodes.len != count or self.aux.len != count - 1) return Error.InvalidCap;
+    }
+
+    fn recoverNode(self: MerkleCap, depth: usize, node_depth: usize, index: usize) Error!poseidon2.Digest {
+        if (node_depth == depth) return self.nodes[index];
+        const left = try self.recoverNode(depth, node_depth + 1, index * 2);
+        const right = try self.recoverNode(depth, node_depth + 1, index * 2 + 1);
+        const heap_index = (@as(usize, 1) << @intCast(node_depth)) - 1 + index;
+        return hashNode(left, right, self.aux[heap_index]);
+    }
+
+    pub fn authenticate(self: MerkleCap, depth: usize, root: poseidon2.Digest) Error!void {
+        try self.validate(depth);
+        if (depth == 0) return;
+        if (!poseidon2.eql(try self.recoverNode(depth, 0, 0), root)) return Error.InvalidCap;
     }
 };
 
@@ -167,6 +229,29 @@ pub const InputTreeOpening = struct {
         return step.ancestor;
     }
 
+    /// Authenticates the portion of a sparse row-opening branch below an
+    /// already-authenticated input-tree frontier.
+    pub fn authenticateToCap(self: InputTreeOpening, idx: usize, frontier: []const poseidon2.Digest) Error!void {
+        const depth = try frontierDepth(frontier);
+        const height = self.leaves.len;
+        if (height == 0 or self.siblings.len != height - 1 - depth or depth >= height) {
+            return Error.InvalidFrontier;
+        }
+        const bottom = self.leaves[height - 1] orelse return Error.MissingBottomLevel;
+        for (self.leaves[0..depth]) |pair| {
+            if (pair != null) return Error.InvalidCap;
+        }
+        var step = foldOneLevel(hashRowOpening(bottom[0]), hashRowOpening(bottom[1]), null, idx);
+        var i = height - 1;
+        while (i > depth) {
+            i -= 1;
+            step = foldOneLevel(step.ancestor, self.siblings[i - depth], self.leaves[i], step.curr_pos);
+        }
+        if (step.curr_pos >= frontier.len or !poseidon2.eql(step.ancestor, frontier[step.curr_pos])) {
+            return Error.InvalidCap;
+        }
+    }
+
     /// Resolves `level_size` to its index into `leaves`. Mirrors prover-ray's
     /// `levelIndex`: the bottom level keeps its own (unshifted) depth; every
     /// other level's pair attaches one depth shallower than its size.
@@ -210,4 +295,9 @@ fn foldOneLevel(ancestor: poseidon2.Digest, sibling: poseidon2.Digest, aux: ?Row
 
 fn isPowerOfTwo(value: usize) bool {
     return value != 0 and (value & (value - 1)) == 0;
+}
+
+fn frontierDepth(frontier: []const poseidon2.Digest) Error!usize {
+    if (!isPowerOfTwo(frontier.len)) return Error.InvalidFrontier;
+    return @ctz(frontier.len);
 }

@@ -136,6 +136,17 @@ test "a Go-encoded image reads as a verifier.VerifyInput" {
     // (see verifier.zig's `verify`) — already covered by this test's own
     // round-cell assertions above.
     const queries = proof.pcs_opening.proof.input_queries;
+    const input_caps = proof.pcs_opening.proof.input_caps;
+    try std.testing.expectEqual(@as(usize, 1), input_caps.len);
+    try std.testing.expectEqual(@as(usize, 1), input_caps[0].nodes.len);
+    try expectDigest(input_caps[0].nodes[0], 60);
+    try std.testing.expectEqual(@as(usize, 1), input_caps[0].tables.len);
+    try std.testing.expectEqual(@as(u8, 5), input_caps[0].tables[0].size_log2);
+    try std.testing.expectEqual(@as(usize, 1), input_caps[0].tables[0].rows.len);
+    try std.testing.expectEqual(@as(usize, 2), input_caps[0].tables[0].rows[0].base.len);
+    try std.testing.expectEqual(@as(u32, 68), input_caps[0].tables[0].rows[0].base[0].value);
+    try expectExt(input_caps[0].tables[0].rows[0].ext[0], 70);
+
     try std.testing.expectEqual(@as(usize, 1), queries.len);
     try std.testing.expectEqual(@as(usize, 1), queries[0].len);
 
@@ -158,6 +169,12 @@ test "a Go-encoded image reads as a verifier.VerifyInput" {
     const fri_proof = proof.pcs_opening.proof.fri_proof;
     try std.testing.expectEqual(@as(usize, 1), fri_proof.round_roots.len);
     try expectDigest(fri_proof.round_roots[0], 110);
+    try std.testing.expectEqual(@as(usize, 1), fri_proof.round_caps.len);
+    try std.testing.expectEqual(@as(usize, 1), fri_proof.round_caps[0].nodes.len);
+    try expectDigest(fri_proof.round_caps[0].nodes[0], 150);
+    try std.testing.expectEqual(@as(usize, 2), fri_proof.round_caps[0].aux.len);
+    try expectDigest(fri_proof.round_caps[0].aux[0] orelse return error.MissingAux, 160);
+    try std.testing.expect(fri_proof.round_caps[0].aux[1] == null);
     try std.testing.expectEqual(@as(usize, 1), fri_proof.final_poly.len);
     try expectExt(fri_proof.final_poly[0], 120);
 

@@ -48,22 +48,31 @@ const (
 	SizeInputTreeOpen = 32
 	// SizeBranch is merkle.Branch.
 	SizeBranch = 48
+	// SizeOptDigest is ?poseidon2.Digest: a digest payload, presence flag, and
+	// padding. Merkle-cap auxiliary nodes use this representation.
+	SizeOptDigest = 36
+	// SizeMerkleCap is merkle.MerkleCap: nodes and optional auxiliary nodes.
+	SizeMerkleCap = 32
+	// SizeInputCap is pcs.InputCap: frontier nodes and revealed tables.
+	SizeInputCap = 32
+	// SizeInputCapTable is pcs.InputCapTable. Zig places its slice header before
+	// the one-byte size descriptor because slices have the greater alignment.
+	SizeInputCapTable = 24
 
 	// SizeFriProof is fri.Proof.
-	SizeFriProof = 48
+	SizeFriProof = 64
 	// SizeOpeningProof is pcs.OpeningProof.
-	SizeOpeningProof = 64
+	SizeOpeningProof = 96
 	// SizePcsOpening is verifier.PcsOpening. It carries only the FRI opening
-	// proof now -- no entry_claims field, since the verifier reconstructs those
-	// claimed evaluations itself from rounds[*].cells rather than trusting a
-	// second, separately-serialized copy.
-	SizePcsOpening = 64
+	// proof and its authenticated Merkle caps; entry_claims are reconstructed
+	// from rounds[*].cells by the verifier.
+	SizePcsOpening = 96
 	// SizeProof is verifier.Proof.
-	SizeProof = 96
+	SizeProof = 128
 	// SizeVerifyInput is verifier.VerifyInput, the image ROOT: the proof plus the
 	// flat public-input statement. This is what the loaders cast the input region
 	// to, so it — not Proof — is what must sit at offset 0.
-	SizeVerifyInput = 112
+	SizeVerifyInput = 144
 )
 
 // Field offsets, in bytes from the start of the containing type.
@@ -74,7 +83,7 @@ const (
 // layout.
 const (
 	OffVerifyInputProof        = 0
-	OffVerifyInputPublicInputs = 96
+	OffVerifyInputPublicInputs = 128
 
 	OffProofRounds      = 0
 	OffProofModuleSizes = 16
@@ -84,11 +93,13 @@ const (
 	OffPcsOpeningProof = 0
 
 	OffOpeningProofInputQueries = 0
-	OffOpeningProofFriProof     = 16
+	OffOpeningProofInputCaps    = 16
+	OffOpeningProofFriProof     = 32
 
 	OffFriProofRoundRoots     = 0
-	OffFriProofFinalPoly      = 16
-	OffFriProofRunningQueries = 32
+	OffFriProofRoundCaps      = 16
+	OffFriProofFinalPoly      = 32
+	OffFriProofRunningQueries = 48
 
 	OffRoundMessageCells      = 0
 	OffRoundMessageCommitment = 16
@@ -114,6 +125,18 @@ const (
 
 	OffBranchSiblings = 0
 	OffBranchLeaf     = 16
+
+	OffMerkleCapNodes = 0
+	OffMerkleCapAux   = 16
+
+	OffInputCapNodes  = 0
+	OffInputCapTables = 16
+
+	OffInputCapTableRows     = 0
+	OffInputCapTableSizeLog2 = 16
+
+	OffOptDigestPayload = 0
+	OffOptDigestFlag    = 32
 )
 
 // Discriminant values. A tagged union's discriminant is its variant's position

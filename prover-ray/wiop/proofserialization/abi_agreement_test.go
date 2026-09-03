@@ -46,11 +46,15 @@ func TestABIAgreement(t *testing.T) {
 		"base.Element":            ps.SizeElement,
 		"ext.Ext":                 ps.SizeExt,
 		"poseidon2.Digest":        ps.SizeDigest,
+		"?poseidon2.Digest":       ps.SizeOptDigest,
 		"protocol.RoundMessage":   ps.SizeRoundMessage,
 		"merkle.RowOpening":       ps.SizeRowOpening,
 		"merkle.RowPair":          ps.SizeRowPair,
 		"merkle.InputTreeOpening": ps.SizeInputTreeOpen,
 		"merkle.Branch":           ps.SizeBranch,
+		"merkle.MerkleCap":        ps.SizeMerkleCap,
+		"pcs.InputCap":            ps.SizeInputCap,
+		"pcs.InputCapTable":       ps.SizeInputCapTable,
 		"fri.Proof":               ps.SizeFriProof,
 		"pcs.OpeningProof":        ps.SizeOpeningProof,
 		"verifier.PcsOpening":     ps.SizePcsOpening,
@@ -79,11 +83,22 @@ func TestABIAgreement(t *testing.T) {
 		{"merkle.Branch", "siblings"}: ps.OffBranchSiblings,
 		{"merkle.Branch", "leaf"}:     ps.OffBranchLeaf,
 
+		{"merkle.MerkleCap", "nodes"}: ps.OffMerkleCapNodes,
+		{"merkle.MerkleCap", "aux"}:   ps.OffMerkleCapAux,
+
+		{"pcs.InputCap", "nodes"}:  ps.OffInputCapNodes,
+		{"pcs.InputCap", "tables"}: ps.OffInputCapTables,
+
+		{"pcs.InputCapTable", "rows"}:      ps.OffInputCapTableRows,
+		{"pcs.InputCapTable", "size_log2"}: ps.OffInputCapTableSizeLog2,
+
 		{"fri.Proof", "round_roots"}:     ps.OffFriProofRoundRoots,
+		{"fri.Proof", "round_caps"}:      ps.OffFriProofRoundCaps,
 		{"fri.Proof", "final_poly"}:      ps.OffFriProofFinalPoly,
 		{"fri.Proof", "running_queries"}: ps.OffFriProofRunningQueries,
 
 		{"pcs.OpeningProof", "input_queries"}: ps.OffOpeningProofInputQueries,
+		{"pcs.OpeningProof", "input_caps"}:    ps.OffOpeningProofInputCaps,
 		{"pcs.OpeningProof", "fri_proof"}:     ps.OffOpeningProofFriProof,
 
 		{"verifier.PcsOpening", "proof"}: ps.OffPcsOpeningProof,
@@ -198,6 +213,20 @@ func verifierRayFixture() ps.VerifyInput {
 		},
 		ModuleSizes: []uint64{8, 16},
 		PcsOpening: ps.OpeningProof{
+			InputCaps: []ps.InputCap{
+				{
+					Nodes: []ps.Digest{{60, 61, 62, 63, 64, 65, 66, 67}},
+					Tables: []ps.InputCapTable{
+						{
+							SizeLog2: 5,
+							Rows: []ps.RowOpening{{
+								Base: []ps.Element{68, 69},
+								Ext:  []ps.Ext{{70, 71, 72, 73, 74, 75}},
+							}},
+						},
+					},
+				},
+			},
 			InputQueries: [][]ps.InputTreeOpening{
 				{
 					{
@@ -214,7 +243,13 @@ func verifierRayFixture() ps.VerifyInput {
 			},
 			FriProof: ps.FriProof{
 				RoundRoots: []ps.Digest{{110, 111, 112, 113, 114, 115, 116, 117}},
-				FinalPoly:  []ps.Ext{{120, 121, 122, 123, 124, 125}},
+				RoundCaps: []ps.MerkleCap{
+					{
+						Nodes: []ps.Digest{{150, 151, 152, 153, 154, 155, 156, 157}},
+						Aux:   []*ps.Digest{&ps.Digest{160, 161, 162, 163, 164, 165, 166, 167}, nil},
+					},
+				},
+				FinalPoly: []ps.Ext{{120, 121, 122, 123, 124, 125}},
 				RunningQueries: [][]ps.Branch{
 					{
 						{
