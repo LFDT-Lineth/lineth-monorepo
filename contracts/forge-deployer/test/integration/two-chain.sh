@@ -21,6 +21,7 @@ INTENT_POLL_ITERATIONS=200 # INTENT_POLL_TIMEOUT_S / INTENT_POLL_INTERVAL_S
 
 NETWORK=""
 CHECKPOINT_DIR=""
+CHECKPOINT_VOL=""
 L1_CONTAINER=""
 L2_CONTAINER=""
 DEPLOYER_CONTAINER=""
@@ -35,11 +36,15 @@ cleanup_scenario() {
   if [[ -n "$NETWORK" ]]; then
     docker network rm "$NETWORK" >/dev/null 2>&1 || true
   fi
+  if [[ -n "$CHECKPOINT_VOL" ]]; then
+    docker volume rm "$CHECKPOINT_VOL" >/dev/null 2>&1 || true
+  fi
   if [[ -n "$CHECKPOINT_DIR" && -d "$CHECKPOINT_DIR" && "$(basename "$CHECKPOINT_DIR")" == tmp.* ]]; then
     rm -rf "$CHECKPOINT_DIR"
   fi
   NETWORK=""
   CHECKPOINT_DIR=""
+  CHECKPOINT_VOL=""
   L1_CONTAINER=""
   L2_CONTAINER=""
   DEPLOYER_CONTAINER=""
@@ -71,9 +76,11 @@ start_scenario() {
   unset BOOTSTRAP_MANIFEST_FILE BOOTSTRAP_SCRIPTS_DIR
   NETWORK="forge-deployer-${label}-$$"
   CHECKPOINT_DIR="$(mktemp -d)"
+  CHECKPOINT_VOL="forge-deployer-${label}-ckpt-$$"
   L1_CONTAINER="forge-deployer-${label}-l1-$$"
   L2_CONTAINER="forge-deployer-${label}-l2-$$"
   DEPLOYER_CONTAINER="forge-deployer-${label}-runner-$$"
+  docker volume create "$CHECKPOINT_VOL" >/dev/null
 
   docker network create "$NETWORK" >/dev/null
   docker run -d --name "$L1_CONTAINER" --network "$NETWORK" --entrypoint anvil "$FOUNDRY_IMAGE" \
@@ -87,7 +94,6 @@ start_scenario() {
   L2_ADDRESS="$(docker run --rm --entrypoint cast "$FOUNDRY_IMAGE" wallet address "$L2_KEY")"
   INITIAL_L1_NONCE="$(get_nonce latest "$L1_CONTAINER" "$L1_ADDRESS")"
   INITIAL_L2_NONCE="$(get_nonce latest "$L2_CONTAINER" "$L2_ADDRESS")"
-  chmod 0777 "$CHECKPOINT_DIR"
 }
 
 get_nonce() {
@@ -105,17 +111,43 @@ get_code() {
     code --rpc-url "http://${container}:8545" "$address"
 }
 
+# The deployer reads/writes its checkpoint in a NAMED volume, not a bind mount.
+# On the Kubernetes self-hosted runners the Docker daemon runs rootless / in a
+# sidecar with its own user namespace, so a bind-mounted host dir is not writable
+# by the image's non-root `node` user (neither `chmod 0777` nor `--user "$(id
+# -u)"` survives the uid-remap). A named volume is container-owned, so `node`
+# can write it regardless of the host daemon's mapping. The published image still
+# runs as the non-root `node` user; this changes only how the test shares state.
+#
+# The host never touches the volume's filesystem directly (checkpoint files are
+# written 0o600). Instead the host keeps a staging dir (CHECKPOINT_DIR) and syncs
+# it with the volume via tar streams through the daemon, which runs as root and
+# is therefore immune to both the uid-remap and the 0o600 mode.
+
+# push_checkpoint: replace the volume's contents with the host staging dir. The
+# volume is cleared first so an empty staging dir reproduces checkpoint loss.
+# The volume root is chmod 0777 so `node` can create checkpoint.json.tmp, and the
+# staged files are made world-readable so `node` can read bootstrap fixtures.
+push_checkpoint() {
+  tar -C "$CHECKPOINT_DIR" -cf - . | docker run --rm -i \
+    -v "$CHECKPOINT_VOL:/checkpoint" \
+    --entrypoint sh "$DEPLOYER_IMAGE" -c \
+    'find /checkpoint -mindepth 1 -delete 2>/dev/null || true; tar -C /checkpoint -xf -; chmod 0777 /checkpoint; chmod -R a+rX /checkpoint'
+}
+
+# pull_checkpoint: copy the volume's contents into the host staging dir. The tar
+# stream is extracted on the HOST with ownership and permissions stripped, so the
+# staged copies are host-owned and readable (not root-owned 0o600) and jq/cmp/cp
+# work. Tolerates an empty volume. Used after each run and on each poll iteration.
+pull_checkpoint() {
+  docker run --rm -v "$CHECKPOINT_VOL:/checkpoint:ro" \
+    --entrypoint sh "$DEPLOYER_IMAGE" -c 'tar -C /checkpoint -cf - .' \
+    | tar -C "$CHECKPOINT_DIR" --no-same-owner --no-same-permissions -xf - 2>/dev/null || true
+}
+
 deployer_container() {
-  # Run the deployer as root for this test only. The checkpoint dir is a host
-  # path created by mktemp and bind-mounted in; on the Kubernetes self-hosted
-  # runners the Docker daemon runs rootless / in a sidecar with its own user
-  # namespace, so neither `chmod 0777` nor `--user "$(id -u)"` makes that host
-  # dir writable by the image's non-root `node` user. Root (CAP_DAC_OVERRIDE)
-  # bypasses the uid-remap so the checkpoint write succeeds. This is a test
-  # harness; the published image still runs as the non-root `node` user.
   docker run "$@" --network "$NETWORK" \
-    --user 0:0 \
-    -v "$CHECKPOINT_DIR:/checkpoint" \
+    -v "$CHECKPOINT_VOL:/checkpoint" \
     -e "L1_RPC_URL=http://${L1_CONTAINER}:8545" \
     -e "L2_RPC_URL=http://${L2_CONTAINER}:8545" \
     -e "L1_DEPLOYER_PRIVATE_KEY=$L1_KEY" \
@@ -133,10 +165,13 @@ deployer_container() {
 }
 
 run_deployer() {
+  push_checkpoint
   deployer_container --rm
+  pull_checkpoint
 }
 
 start_named_deployer() {
+  push_checkpoint
   deployer_container -d --name "$DEPLOYER_CONTAINER" >/dev/null
 }
 
@@ -160,6 +195,10 @@ wait_for_intent_and_pending_nonce() {
   local expected_pending_nonce="$4"
   local intent_address=""
   for _ in $(seq 1 "$INTENT_POLL_ITERATIONS"); do
+    # The detached deployer writes the checkpoint live in the volume; refresh the
+    # host staging copy each poll. Writes are atomic (tmp + rename), so a pull
+    # snapshots either the old or the new complete file, never a partial one.
+    pull_checkpoint
     if [[ -s "$CHECKPOINT_DIR/checkpoint.json" ]]; then
       intent_address="$(
         jq -r --arg chain "$chain" \
@@ -257,6 +296,9 @@ verify_l1_broadcast_crash() {
   docker kill "$DEPLOYER_CONTAINER" >/dev/null
   docker rm "$DEPLOYER_CONTAINER" >/dev/null
   DEPLOYER_CONTAINER=""
+  # Snapshot the crashed deployer's final checkpoint state from the volume; the
+  # last pull in the poll loop predates the kill.
+  pull_checkpoint
 
   cp "$CHECKPOINT_DIR/checkpoint.json" "$CHECKPOINT_DIR/checkpoint.after-crash.json"
   assert_unresolved_rerun "$expected_l1_pending" "$INITIAL_L2_NONCE"
@@ -280,6 +322,9 @@ verify_l2_broadcast_crash() {
   docker kill "$DEPLOYER_CONTAINER" >/dev/null
   docker rm "$DEPLOYER_CONTAINER" >/dev/null
   DEPLOYER_CONTAINER=""
+  # Snapshot the crashed deployer's final checkpoint state from the volume; the
+  # last pull in the poll loop predates the kill.
+  pull_checkpoint
 
   test "$(get_nonce latest "$L1_CONTAINER" "$L1_ADDRESS")" -eq "$expected_l1_prefix"
   jq -e '.completedSteps == ["l1-rollup"] and (.deployments | length) == 5' \
@@ -305,8 +350,8 @@ verify_custom_bootstrap() {
   start_scenario bootstrap
 
   # Operator-supplied bootstrap inputs are real files shipped under
-  # test/fixtures/bootstrap/ and copied into the checkpoint mount exactly as an
-  # operator would mount them, rather than being constructed inline here.
+  # test/fixtures/bootstrap/ and staged into the checkpoint staging dir exactly as
+  # an operator would mount them; push_checkpoint seeds them into the volume.
   local fixtures_dir
   fixtures_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../fixtures/bootstrap" && pwd)"
   # Bytecode/salt/factory used by the fixture manifest and its create2 script.
@@ -317,7 +362,6 @@ verify_custom_bootstrap() {
   mkdir -p "$CHECKPOINT_DIR/bootstrap"
   cp "$fixtures_dir/manifest.json" "$CHECKPOINT_DIR/manifest.json"
   cp "$fixtures_dir/deploy-via-create2.js" "$CHECKPOINT_DIR/bootstrap/deploy-via-create2.js"
-  chmod -R 0777 "$CHECKPOINT_DIR/bootstrap"
 
   BOOTSTRAP_MANIFEST_FILE="/checkpoint/manifest.json"
   BOOTSTRAP_SCRIPTS_DIR="/checkpoint/bootstrap"
