@@ -206,15 +206,33 @@ object CalculatorsFactory {
   }
 
   fun createForRiscV(
-    lastBlockNumber: ULong,
+    lastConflatedBlockNumber: ULong,
+    lastConflatedTimestamp: Instant,
     blocksPerBatch: UInt,
     metricsFacade: MetricsFacade,
     safeBlockNumberProvider: ConflationSafeBlockNumberProvider,
-    extraSyncCalculators: List<ConflationTriggerCalculator> = emptyList(),
+    timestampBasedHardForks: List<Instant>,
+    extraSyncCalculators: List<ConflationTriggerCalculator>,
+    aggregationTargetEndBlockNumbers: Set<ULong>,
+    log: Logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java),
   ): RiscVConflationCalculators {
+    val syncCalculators = createConflationTriggerCalculators(
+      tracesCountersLimit = null,
+      blocksLimit = blocksPerBatch,
+      timestampBasedHardForks = timestampBasedHardForks,
+      compressedBlobCalculator = null,
+      lastConflatedTimestamp = lastConflatedTimestamp,
+      aggregationTargetEndBlockNumbers = ConcurrentSkipListSet(aggregationTargetEndBlockNumbers),
+      logger = log,
+      metricsFacade = metricsFacade,
+    ).also {
+      it.filterIsInstance<ConflationTriggerCalculatorByHardForkTimestamp>().forEach { calculator ->
+        log.info("Added timestamp-based hard fork calculator={} ", calculator)
+      }
+    }
     val conflationCalculator = GlobalBlockConflationCalculator(
-      lastBlockNumber = lastBlockNumber,
-      syncCalculators = listOf(ConflationTriggerCalculatorByBlockLimit(blocksPerBatch)) + extraSyncCalculators,
+      lastBlockNumber = lastConflatedBlockNumber,
+      syncCalculators = syncCalculators + listOf(ConflationTriggerCalculatorByCoinbase()) + extraSyncCalculators,
       deferredTriggerConflationCalculators = emptyList(),
       emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
     )
@@ -230,26 +248,31 @@ object CalculatorsFactory {
   }
 
   private fun createConflationTriggerCalculators(
-    tracesCountersLimit: TracesCounters,
+    tracesCountersLimit: TracesCounters?,
     blocksLimit: UInt?,
     timestampBasedHardForks: List<Instant> = emptyList(),
-    compressedBlobCalculator: ConflationTriggerCalculatorByDataCompressed,
+    compressedBlobCalculator: ConflationTriggerCalculatorByDataCompressed?,
     lastConflatedTimestamp: Instant,
     aggregationTargetEndBlockNumbers: MutableSet<ULong>,
     logger: Logger,
     metricsFacade: MetricsFacade,
   ): List<ConflationTriggerCalculator> {
-    val calculators: MutableList<ConflationTriggerCalculator> =
-      mutableListOf(
+    val calculators: MutableList<ConflationTriggerCalculator> = mutableListOf(
+      ConflationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = aggregationTargetEndBlockNumbers),
+    )
+    if (tracesCountersLimit != null) {
+      calculators.add(
         ConflationTriggerCalculatorByExecutionTraces(
           tracesCountersLimit = tracesCountersLimit,
           emptyTracesCounters = tracesCountersLimit.emptyTracesCounters,
           metricsFacade = metricsFacade,
           log = logger,
         ),
-        ConflationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = aggregationTargetEndBlockNumbers),
-        compressedBlobCalculator,
       )
+    }
+    if (compressedBlobCalculator != null) {
+      calculators.add(compressedBlobCalculator)
+    }
     if (blocksLimit != null) {
       calculators.add(ConflationTriggerCalculatorByBlockLimit(blockLimit = blocksLimit))
     }

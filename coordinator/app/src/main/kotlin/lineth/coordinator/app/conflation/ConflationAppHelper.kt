@@ -85,6 +85,17 @@ object ConflationAppHelper {
       }
   }
 
+  /**
+   * Returns the block number of the last block processed by the RISC-V proof pipeline
+   */
+  fun getLastRiscVProcessedBlocks(
+    lastFinalizedBlock: ULong,
+    l2EthClient: EthApiClient,
+  ): SafeFuture<LastProcessedBlocks> {
+    return l2EthClient.ethGetBlockByNumberTxHashes(lastFinalizedBlock.toBlockParameter())
+      .thenApply { LastProcessedBlocks(lastConflatedBlock = it, lastAggregatedBlock = it) }
+  }
+
   fun cleanupDbDataAfterBlockNumbers(
     lastProcessedBlockNumber: ULong,
     lastConsecutiveAggregatedBlockNumber: ULong,

@@ -5,12 +5,9 @@ import linea.LongRunningService
 import linea.domain.Batch
 import linea.domain.Block
 import linea.domain.BlockCounters
-import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
 import linea.web3j.createWeb3jHttpService
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
@@ -23,8 +20,8 @@ import lineth.coordination.proofcreation.BatchProofHandlerImpl
 import lineth.coordination.riscv.execution.ExecutionProofGeneratingCoordinator
 import lineth.coordination.riscv.execution.L2ExecutionProofHandler
 import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
-import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.BlockCreationMonitor
+import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
 import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -39,7 +36,6 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -52,12 +48,14 @@ import kotlin.time.Instant
  */
 class ConflationAppV2(
   private val vertx: Vertx,
-  private val lastFinalizedBlock: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val metricsFacade: MetricsFacade,
+  private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
+  private val targetCheckpointPauseController: TargetCheckpointPauseController,
+  private val lastProcessedBlocks: LastProcessedBlocks,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppV2::class.java)
@@ -71,32 +69,6 @@ class ConflationAppV2(
       "riscvProversConfig must be set to use ConflationAppV2"
     }
   }
-
-  private val lastProvenBlockNumberProvider =
-    BatchesRepoBasedLastProvenBlockNumberProvider(
-      startingBlockNumberExclusive = lastFinalizedBlock.toLong(),
-      latestL1FinalizedBlock = lastFinalizedBlock.toLong(),
-      batchesRepository = batchesRepository,
-    )
-
-  private val provenBlockNumberMonitor = object : VertxPeriodicPollingService(
-    vertx = vertx,
-    pollingIntervalMs = 1.seconds.inWholeMilliseconds,
-    log = log,
-    name = "ProvenBlockNumberMonitor",
-    timerSchedule = TimerSchedule.FIXED_DELAY,
-  ) {
-    override fun action(): SafeFuture<*> {
-      return lastProvenBlockNumberProvider.getLastProvenBlockNumber()
-    }
-  }
-
-  private val targetCheckpointPauseController =
-    object : TargetCheckpointPauseController {
-      override fun shouldPauseConflation() = false
-      override fun importBlock(block: Block) = Unit
-      override fun signalResumeFromApi() = false
-    }
 
   private val l2EthClient: EthApiClient = createEthApiClient(
     rpcUrl = configs.conflation.l2Endpoint.toString(),
@@ -120,11 +92,17 @@ class ConflationAppV2(
     }
 
     val riscvCalculators = CalculatorsFactory.createForRiscV(
-      lastBlockNumber = lastFinalizedBlock,
+      lastConflatedBlockNumber = lastProcessedBlocks.lastConflatedBlock.number,
+      lastConflatedTimestamp = maxOf(
+        configs.conflation.riscvStartingBlockTimestampInclusive!!,
+        Instant.fromEpochSeconds(lastProcessedBlocks.lastConflatedBlock.timestamp.toLong()),
+      ),
       blocksPerBatch = blocksPerBatch,
       metricsFacade = metricsFacade,
       safeBlockNumberProvider = forcedTransactionsApp.conflationSafeBlockNumberProvider,
       extraSyncCalculators = listOf(forcedTransactionsApp.conflationCalculator),
+      timestampBasedHardForks = configs.conflation.proofAggregation.timestampBasedHardForks,
+      aggregationTargetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks?.toSet() ?: emptySet(),
     )
     val conflationCalculator = riscvCalculators.conflationCalculator
     val conflationService = riscvCalculators.conflationService
@@ -198,78 +176,59 @@ class ConflationAppV2(
       }.thenApply { }
   }
 
-  /**
-   * Returns the block number of the last block processed by the RISC-V proof pipeline,
-   * or null if no RISC-V blocks have been processed yet (cold start).
-   *
-   * Stubbed to null until the RISC-V proof repository is implemented.
-   */
-  private fun getLastRiscVConflatedBlock(): SafeFuture<ULong?> = SafeFuture.completedFuture(null)
-
-  private fun resolveStartingPoint(): SafeFuture<BlockCreationMonitor.StartingPoint> {
+  private fun resolveStartingPoint(): BlockCreationMonitor.StartingPoint {
     val cutover = configs.conflation.riscvStartingBlockTimestampInclusive!!
-    return getLastRiscVConflatedBlock().thenCompose { riscvLastBlock ->
-      val candidateBlock = maxOf(lastFinalizedBlock, riscvLastBlock ?: lastFinalizedBlock)
-      l2EthClient
-        .ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(candidateBlock.toLong()))
-        .thenApply { block ->
-          val blockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong())
-          if (blockTimestamp < cutover) {
-            log.info(
-              "Cold start: no RISC-V progress found. " +
-                "Will wait for cutover timestamp {}. candidateBlock={} blockTimestamp={}",
-              cutover,
-              candidateBlock,
-              blockTimestamp,
-            )
-            BlockCreationMonitor.StartingPoint.ByTimestampInclusive(cutover)
-          } else {
-            log.info(
-              "Resuming RISC-V conflation from block {}. blockTimestamp={} cutover={}",
-              candidateBlock,
-              blockTimestamp,
-              cutover,
-            )
-            BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(candidateBlock.toLong())
-          }
-        }
+    val candidateBlock = lastProcessedBlocks.lastConflatedBlock
+    val blockTimestamp = Instant.fromEpochSeconds(candidateBlock.timestamp.toLong())
+
+    return if (blockTimestamp < cutover) {
+      log.info(
+        "Cold start: no RISC-V progress found. " +
+          "Will wait for cutover timestamp {}. candidateBlock={} blockTimestamp={}",
+        cutover,
+        candidateBlock,
+        blockTimestamp,
+      )
+      BlockCreationMonitor.StartingPoint.ByTimestampInclusive(cutover)
+    } else {
+      log.info(
+        "Resuming RISC-V conflation from block {}. blockTimestamp={} cutover={}",
+        candidateBlock,
+        blockTimestamp,
+        cutover,
+      )
+      BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(candidateBlock.number.toLong())
     }
   }
 
   override fun start(): CompletableFuture<Unit> {
-    return resolveStartingPoint()
-      .thenCompose { startingPoint ->
-        val monitor =
-          BlockCreationMonitor(
-            vertx = vertx,
-            ethApi = l2EthClient,
-            startingPoint = startingPoint,
-            blockCreationListener = blockCreationListener,
-            lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
-            config =
-            BlockCreationMonitor.Config(
-              pollingInterval = configs.conflation.blocksPollingInterval,
-              blocksToFinalization = 0L,
-              blocksFetchLimit = configs.conflation.l2FetchBlocksLimit.toLong(),
-            ),
-            targetCheckpointPauseController = targetCheckpointPauseController,
-          )
-        blockCreationMonitor = monitor
-        val coordinatorStart = executionPipeline.executionProofCoordinator.start().toSafeFuture()
-        val provenMonitorStart = provenBlockNumberMonitor.start().toSafeFuture()
-        SafeFuture.allOf(coordinatorStart, provenMonitorStart)
-          .thenCompose { monitor.start() }
-          .thenPeek { log.info("ConflationAppV2 started with startingPoint={}", startingPoint) }
-      }
+    val startingPoint = resolveStartingPoint()
+    blockCreationMonitor =
+      BlockCreationMonitor(
+        vertx = vertx,
+        ethApi = l2EthClient,
+        startingPoint = startingPoint,
+        blockCreationListener = blockCreationListener,
+        lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
+        config =
+        BlockCreationMonitor.Config(
+          pollingInterval = configs.conflation.blocksPollingInterval,
+          blocksToFinalization = 0L,
+          blocksFetchLimit = configs.conflation.l2FetchBlocksLimit.toLong(),
+        ),
+        targetCheckpointPauseController = targetCheckpointPauseController,
+      )
+    return executionPipeline.executionProofCoordinator.start()
+      .thenCompose { blockCreationMonitor!!.start() }
+      .thenPeek { log.info("ConflationAppV2 started with startingPoint={}", startingPoint) }
   }
 
   override fun stop(): CompletableFuture<Unit> {
-    val monitorStop = blockCreationMonitor
-      ?.let { SafeFuture.allOf(it.stop()).thenApply { log.info("ConflationAppV2 stopped") } }
+    val monitorStop = blockCreationMonitor?.let { SafeFuture.allOf(it.stop()) }
       ?: SafeFuture.completedFuture(Unit)
     val coordinatorStop = executionPipeline.executionProofCoordinator.stop().toSafeFuture()
-    val provenMonitorStop = provenBlockNumberMonitor.stop().toSafeFuture()
-    return SafeFuture.allOf(monitorStop, coordinatorStop, provenMonitorStop).thenApply { }
+    return SafeFuture.allOf(monitorStop, coordinatorStop)
+      .thenApply { log.info("ConflationAppV2 stopped") }
   }
 
   private data class ExecutionPipeline(
