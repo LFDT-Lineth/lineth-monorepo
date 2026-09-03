@@ -16,8 +16,7 @@
 //!   • zesu's own native crypto backend (`zesu_crypto_backend`) — modexp/RIPEMD-160/BLAKE2f. These
 //!     have no C-library dependency, so — unlike the rest of zesu's native backend — they
 //!     cross-compile straight to riscv64.
-//!   • Local failure stubs — the bn254 ops reject every call until the prover ships its bn254
-//!     accelerator, making the three bn254 precompiles hard precompile failures.
+//!   • bn254 — Constantine's ctt_eth_evm_bn254_* (EIP-196/197); real computation on this spike.
 //!
 //! Only the freestanding RISC-V guest references these (pulled in by evm_execution_guest.zig for
 //! `builtin.cpu.arch == .riscv64`); the native host build uses Zesu's C-backed crypto instead.
@@ -31,7 +30,7 @@ const build_options = @import("build_options"); // keccak_accel: standard zig ke
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
 // the Lineth wrapper (prover-accelerated) or the standard zig keccak, selected at build time by
 // -Dkeccak-accel; modexp/ripemd160/blake2f come from zesu_crypto_backend; secp256k1 and the
-// BLS12-381/KZG family come from guest_crypto; bn254 is a failure stub.
+// BLS12-381/KZG and bn254 come from guest_crypto.
 comptime {
     if (build_options.keccak_accel) {
         @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
@@ -121,25 +120,15 @@ fn verifyP256(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8) !bo
 fn modexp(base: [*]const u8, base_len: usize, exp: [*]const u8, exp_len: usize, modulus: [*]const u8, mod_len: usize, output: [*]u8) callconv(.c) i32 {
     return if (zesu_crypto_backend.modexp(base[0..base_len], exp[0..exp_len], modulus[0..mod_len], output[0..mod_len])) OK else ERR;
 }
-// bn254: failure stubs — every call rejects (precompile failure) until the prover ships its bn254
-// accelerator.
+// bn254 via Constantine's ctt_eth_evm_bn254_* (EIP-196/197 raw layout, no repacking).
 fn bn254_g1_add(p1: *const [64]u8, p2: *const [64]u8, result: *[64]u8) callconv(.c) i32 {
-    _ = p1;
-    _ = p2;
-    _ = result;
-    return ERR;
+    return if (guest_crypto.bn254G1Add(p1, p2, result)) OK else ERR;
 }
 fn bn254_g1_mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) callconv(.c) i32 {
-    _ = point;
-    _ = scalar;
-    _ = result;
-    return ERR;
+    return if (guest_crypto.bn254G1Mul(point, scalar, result)) OK else ERR;
 }
 fn bn254_pairing(pairs: [*]const Bn254PairingPair, num_pairs: usize, verified: *bool) callconv(.c) i32 {
-    _ = pairs;
-    _ = num_pairs;
-    verified.* = false;
-    return ERR;
+    return if (guest_crypto.bn254PairingCheck(pairs[0..num_pairs], verified)) OK else ERR;
 }
 fn blake2f(rounds: u32, h: *[64]u8, m: *const [128]u8, t: *const [16]u8, f: u8) callconv(.c) i32 {
     return if (zesu_crypto_backend.blake2f(rounds, h, m, t, f)) OK else ERR;

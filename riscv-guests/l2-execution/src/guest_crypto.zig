@@ -24,6 +24,9 @@ extern fn ctt_eth_evm_bls12381_g2msm(r: [*]u8, r_len: usize, inputs: [*]const u8
 extern fn ctt_eth_evm_bls12381_pairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bls12381_map_fp_to_g1(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bls12381_map_fp2_to_g2(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+extern fn ctt_eth_evm_bn254_g1add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+extern fn ctt_eth_evm_bn254_g1mul(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+extern fn ctt_eth_evm_bn254_ecpairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 // Defined in the constantine package's ctt_stubs_rv64.o (ABI mismatch, see header).
 extern fn guest_crypto_secp256k1_ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) c_int;
 extern fn guest_crypto_secp256k1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) c_int;
@@ -143,6 +146,32 @@ pub fn mapFp2ToG2(field_element: *const [96]u8, result: *[192]u8) bool {
     var out: [256]u8 = undefined;
     if (ctt_eth_evm_bls12381_map_fp2_to_g2(&out, 256, &in, 128) != OK) return false;
     unpadLimbs(result, &out, 4);
+    return true;
+}
+
+// ── BN254 (alt_bn128): unpadded EIP-196/197 raw layout, 32-byte big-endian coords ───────────────
+// Unlike BLS12-381, the seam's encodings ARE the EIP encodings (G1 = 64 bytes, pairing record =
+// 192 bytes), so these wrappers pass the buffers through with no repacking.
+pub fn bn254G1Add(p1: *const [64]u8, p2: *const [64]u8, result: *[64]u8) bool {
+    var in: [128]u8 = undefined;
+    @memcpy(in[0..64], p1);
+    @memcpy(in[64..128], p2);
+    return ctt_eth_evm_bn254_g1add(result, 64, &in, 128) == OK;
+}
+
+pub fn bn254G1Mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) bool {
+    var in: [96]u8 = undefined;
+    @memcpy(in[0..64], point);
+    @memcpy(in[64..96], scalar);
+    return ctt_eth_evm_bn254_g1mul(result, 64, &in, 96) == OK;
+}
+
+pub fn bn254PairingCheck(pairs: anytype, verified: *bool) bool {
+    const n = pairs.len;
+    const raw = pairBytes(pairs, 64 + 128); // g1 = 64, g2 = 128
+    var out: [32]u8 = undefined;
+    if (ctt_eth_evm_bn254_ecpairingcheck(&out, 32, raw, n * 192) != OK) return false;
+    verified.* = (out[31] == 1); // 32-byte big-endian 0/1
     return true;
 }
 
