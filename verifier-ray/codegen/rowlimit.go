@@ -124,7 +124,7 @@ func BuildRowLimitSystem(sys *wiop.System) (RowLimitSystem, error) {
 				out.Checks = append(out.Checks, RowLimitCheck{
 					IncludedModules:   includedModules,
 					IncludingsModules: includingsModules,
-					Limit:             wiop.MaxPermutationRows,
+					Limit:             a.Limit,
 				})
 			}
 		}

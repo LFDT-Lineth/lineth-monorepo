@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 )
 
@@ -76,6 +77,45 @@ func TestBuildRowLimitSystemExtractsPermutationCheck(t *testing.T) {
 	}
 	if check.Limit != wiop.MaxPermutationRows {
 		t.Fatalf("expected limit %d, got %d", wiop.MaxPermutationRows, check.Limit)
+	}
+}
+
+// TestBuildRowLimitSystemPreservesPermutationActionLimit registers a
+// grandproduct.RowLimitAction with a deliberately smaller limit than
+// wiop.MaxPermutationRows and confirms BuildRowLimitSystem carries that
+// action-specific limit through verbatim rather than clamping it to the
+// MaxPermutationRows constant. This is the regression the reviewer flagged:
+// the Go verifier checks a.Query against a.Limit, so the generated Zig
+// verifier must enforce exactly a.Limit, not the larger constant.
+func TestBuildRowLimitSystemPreservesPermutationActionLimit(t *testing.T) {
+	sys := wiop.NewSystemf("rl-perm-custom-limit")
+	r0 := sys.NewRound()
+	sys.NewRound() // coin round for beta
+	resultRound := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	q := sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())},
+	)
+
+	// A manually registered action carrying a limit far below
+	// wiop.MaxPermutationRows: codegen must reproduce it, not the constant.
+	const customLimit = uint64(1) << 20
+	resultRound.RegisterVerifierAction(&grandproduct.RowLimitAction{Query: q, Limit: customLimit})
+
+	rl, err := BuildRowLimitSystem(sys)
+	if err != nil {
+		t.Fatalf("BuildRowLimitSystem() error = %v", err)
+	}
+	if len(rl.Checks) != 1 {
+		t.Fatalf("expected exactly one check, got %d", len(rl.Checks))
+	}
+	if got := rl.Checks[0].Limit; got != customLimit {
+		t.Fatalf("expected the action's own limit %d to be preserved, got %d (must not be clamped to MaxPermutationRows=%d)", customLimit, got, wiop.MaxPermutationRows)
 	}
 }
 
