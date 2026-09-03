@@ -43,8 +43,9 @@ pub const Options = struct {
     single_file: ?[]const u8 = null,
     /// Only run test cases whose `network` equals this (case-insensitive), e.g. "Amsterdam".
     fork_filter: ?[]const u8 = null,
-    /// Only run fixture files whose relative path contains this substring, e.g.
-    /// "block_access_lists" (the most useful narrowing for this Amsterdam-only corpus).
+    /// Only run fixture files whose relative path matches this `--match` pattern.
+    /// A pattern containing `*` or `?` is a glob (against the relative path or its basename);
+    /// otherwise it is a substring, e.g. `block_access_lists`.
     path_match: ?[]const u8 = null,
     /// Stop after this many blocks have been attempted (dev speed).
     limit: ?u64 = null,
@@ -113,7 +114,7 @@ pub fn run(comptime Adapter: type, init: std.process.Init, opts: Options) !Stats
 
     for (paths.items) |rel_path| {
         if (opts.limit) |lim| if (stats.blocks >= lim) break;
-        if (opts.path_match) |m| if (std.mem.indexOf(u8, rel_path, m) == null) continue;
+        if (opts.path_match) |m| if (!pathMatches(rel_path, m)) continue;
         const full = try std.Io.Dir.path.join(gpa, &.{ opts.fixtures_dir, rel_path });
         defer gpa.free(full);
 
@@ -123,6 +124,43 @@ pub fn run(comptime Adapter: type, init: std.process.Init, opts: Options) !Stats
     }
 
     return stats;
+}
+
+/// `--match` filter: glob if the pattern contains `*` or `?`, otherwise substring.
+/// Globs are tried against the relative path and its basename so `*.ssz` and
+/// `stateless_input.ssz` both work.
+pub fn pathMatches(rel_path: []const u8, pattern: []const u8) bool {
+    if (isGlobPattern(pattern)) {
+        return globMatch(rel_path, pattern) or globMatch(std.fs.path.basename(rel_path), pattern);
+    }
+    return std.mem.indexOf(u8, rel_path, pattern) != null;
+}
+
+fn isGlobPattern(pattern: []const u8) bool {
+    return std.mem.indexOfAny(u8, pattern, "*?") != null;
+}
+
+fn globMatch(s: []const u8, pattern: []const u8) bool {
+    var si: usize = 0;
+    var pi: usize = 0;
+    var star_p: ?usize = null;
+    var star_s: usize = 0;
+    while (si < s.len) {
+        if (pi < pattern.len and (pattern[pi] == '?' or pattern[pi] == s[si])) {
+            si += 1;
+            pi += 1;
+        } else if (pi < pattern.len and pattern[pi] == '*') {
+            star_p = pi;
+            star_s = si;
+            pi += 1;
+        } else if (star_p) |sp| {
+            pi = sp + 1;
+            star_s += 1;
+            si = star_s;
+        } else return false;
+    }
+    while (pi < pattern.len and pattern[pi] == '*') pi += 1;
+    return pi == pattern.len;
 }
 
 fn processFile(

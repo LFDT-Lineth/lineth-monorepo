@@ -53,12 +53,13 @@ OBJDUMP     ?= false
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
 
-# Shared body for zkc-smoke-exec / zkc-smoke-trace: zig build zkc-smoke + runner smoke args.
+# Shared body for zkc-smoke-exec / zkc-smoke-trace: zig build zkc-smoke + runner args.
+# `--fixtures` is wired in build.zig to test/testdata; `--match` selects among the .ssz files there.
 # $(1) = zkc makefile target (elf-exec | elf-trace)
 # $(2) = optional extra runner args (e.g. --zkc-flags "...")
 define zkc-smoke-run
 	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
-		--input "$(abspath $(INPUT))" \
+		--match "$(notdir $(abspath $(INPUT)))" \
 		--zkc-target "$(1)" \
 		$(2)
 endef
@@ -87,8 +88,7 @@ reference-test:
 reference-test-zkc:
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
-# Smoke: one extended SSZ input under zkc; guest_output checked against native encodeOutput
-# (runL2Execution → keccak256(public_inputs)). Shared recipe; only the zkc backend differs.
+# Smoke: testdata .ssz matching INPUT's basename, under zkc; guest_output vs native encodeOutput.
 zkc-smoke-exec: require-input
 	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
 

@@ -129,11 +129,11 @@ const usage =
     \\EF zkevm stateless fixtures. The only allowed disagreement is a fixture-valid block whose
     \\EIP-7685 execution requests the extended guest rejects by Lineth policy.
     \\
-    \\usage: extended-vanilla-runner [--fixtures DIR] [--file FILE] [--fork NAME] [--match SUBSTR] [--limit N] [-x] [--report-only]
+    \\usage: extended-vanilla-runner [--fixtures DIR] [--file FILE] [--fork NAME] [--match PATTERN] [--limit N] [-x] [--report-only]
     \\  --fixtures DIR   directory of blockchain_tests JSON fixtures (passed by `zig build extended-vanilla`)
     \\  --file FILE      run a single fixture file instead of the whole directory
     \\  --fork NAME      only run test cases whose network == NAME (case-insensitive), e.g. Amsterdam
-    \\  --match SUBSTR   only run fixture files whose path contains SUBSTR, e.g. eip7928_block_level_access_lists
+    \\  --match PATTERN  only run fixture files whose path matches PATTERN (substring, or glob if it contains * or ?)
     \\  --limit N        stop after N blocks (dev speed)
     \\  -x               stop on the first disagreeing block
     \\  --report-only    print the summary but always exit 0 (otherwise: exit 1 if any block disagrees)

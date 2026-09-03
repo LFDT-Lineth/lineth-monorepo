@@ -1,19 +1,12 @@
 //! `zkc-reference-runner` — runs the guest ELF under zkc and checks the result.
 //!
-//! Two modes:
-//!
-//! 1. **Corpus reference-test** (`--fixtures`): EF zkevm corpus walk (same ground truth / wrap /
-//!    skip semantics as `extended-vanilla-runner`). Validity is the guest exit ecall surfaced by
-//!    zkc (exit 0 = valid; nonzero with `EXIT CODE = <n>` = reject). On a valid run, also requires
-//!    a parseable `guest_output = 0x…` line in zkc stdout (the write_output public output).
-//!
-//! 2. **Smoke** (`--input`): run one already-extended SSZ input (no wrap). Host-computes the
-//!    expected wire output via native `runL2Execution` + `encodeOutput` (schema 0x0003 ‖
-//!    keccak256(public_inputs)), then asserts zkc's `guest_output` matches. Used by CI for the
-//!    committed sample fixture (`test/testdata/stateless_input.ssz`). No golden sidecar — the
-//!    preimage/hash relation is checked against the host path. Host encodeOutput runs on a
-//!    sibling thread overlapping the zkc subprocess. (`zkvm_log` of the plain PI tuple is
-//!    still a no-op; when off-trace logging lands, smoke can also assert on the logged preimage.)
+//! Walks `--fixtures` (or `--file`) the same way `extended-vanilla-runner` does. JSON files are
+//! EF zkevm fixtures: wrap + validity vs the fixture ground truth (exit 0 = valid; nonzero with
+//! `EXIT CODE = <n>` = reject). On a valid run, also requires a parseable `guest_output = 0x…`
+//! line in zkc stdout. Already-extended `.ssz` files skip wrap; host `runL2Execution` +
+//! `encodeOutput` (schema 0x0003 ‖ keccak256(public_inputs)) is the expected wire output, overlapped
+//! with the zkc subprocess. Narrow with `--match` (substring, or glob if the pattern contains
+//! `*` / `?`). CI smoke is `--fixtures test/testdata --match stateless_input.ssz`.
 
 const std = @import("std");
 const spec_runner = @import("spec_runner.zig");
@@ -22,22 +15,19 @@ const l2_execution = @import("l2_execution");
 const l2_execution_ssz = @import("l2_execution_ssz");
 
 const usage =
-    \\zkc-reference-runner — run the guest ELF under zkc (corpus reference-test or smoke).
+    \\zkc-reference-runner — run the guest ELF under zkc.
     \\
-    \\Corpus mode:
     \\  zkc-reference-runner --fixtures DIR --install-prefix DIR --makefile PATH [options]
-    \\Smoke mode:
-    \\  zkc-reference-runner --input FILE.ssz --install-prefix DIR --makefile PATH [options]
     \\
-    \\  --fixtures DIR             the blockchain_tests/ JSON tree (corpus mode)
-    \\  --input FILE               already-extended SSZ input (smoke mode; skips wrap)
-    \\  --install-prefix DIR       zig build install prefix; ELF (+ wrap in corpus mode) under DIR/bin/
+    \\  --fixtures DIR             JSON corpus and/or already-extended .ssz files
+    \\  --install-prefix DIR       zig build install prefix; ELF (+ wrap for JSON) under DIR/bin/
     \\  --makefile PATH            arithmetization test Makefile (defines elf-exec / elf-trace)
     \\  --zkc-target NAME          makefile target: elf-exec (default) or elf-trace
     \\  --zkc-flags S              flags for zkc (default: --fast for elf-exec; --stats for elf-trace)
-    \\  --file FILE                run a single fixture file instead of walking the tree
-    \\  --fork NAME                only fixtures declaring "network": "NAME" (case-insensitive)
-    \\  --match SUBSTR             only fixture files whose path contains SUBSTR
+    \\  --file FILE                run a single .json fixture or already-extended .ssz
+    \\  --fork NAME                only JSON fixtures declaring "network": "NAME" (case-insensitive)
+    \\  --match PATTERN            only files whose path matches PATTERN (substring, or glob if it
+    \\                            contains * or ?), e.g. stateless_input.ssz or *_empty_block*
     \\  --limit N                  stop after N blocks (dev speed)
     \\  -x                         stop on the first disagreeing block
     \\  --report-only              print the summary but always exit 0
@@ -249,53 +239,111 @@ fn nativeExpectedGuestOutputThread(raw_input: []const u8, out: *NativeResult) vo
     };
 }
 
-fn runSmoke(
+/// Already-extended `.ssz` under `--fixtures` (or a single `--file`). No wrap; expected
+/// `guest_output` is native encodeOutput. Host work overlaps the zkc subprocess.
+fn runExtendedSszFixtures(
     init: std.process.Init,
-    alloc: std.mem.Allocator,
-    input_path: []const u8,
+    opts: spec_runner.Options,
+    stats: *spec_runner.Stats,
 ) !void {
+    const io = init.io;
+    const gpa = init.gpa;
+
+    if (opts.single_file) |path| {
+        if (!std.mem.endsWith(u8, path, ".ssz")) return;
+        stats.files += 1;
+        stats.blocks += 1;
+        if (try runOneExtendedSsz(init, gpa, path)) stats.passed += 1 else stats.failed += 1;
+        return;
+    }
+
+    var dir = std.Io.Dir.cwd().openDir(io, opts.fixtures_dir, .{ .iterate = true }) catch |err| {
+        std.debug.print("error: cannot open fixtures dir '{s}': {}\n", .{ opts.fixtures_dir, err });
+        return error.FixturesDirOpenFailed;
+    };
+    defer dir.close(io);
+
+    var walker = try dir.walk(gpa);
+    defer walker.deinit();
+
+    var paths = std.ArrayList([]u8).empty;
+    defer {
+        for (paths.items) |p| gpa.free(p);
+        paths.deinit(gpa);
+    }
+    while (try walker.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        if (!std.mem.endsWith(u8, entry.path, ".ssz")) continue;
+        try paths.append(gpa, try gpa.dupe(u8, entry.path));
+    }
+    std.mem.sort([]u8, paths.items, {}, struct {
+        fn lessThan(_: void, a: []u8, b: []u8) bool {
+            return std.mem.lessThan(u8, a, b);
+        }
+    }.lessThan);
+
+    for (paths.items) |rel_path| {
+        if (opts.limit) |lim| if (stats.blocks >= lim) break;
+        if (opts.path_match) |m| if (!spec_runner.pathMatches(rel_path, m)) continue;
+        const full = try std.Io.Dir.path.join(gpa, &.{ opts.fixtures_dir, rel_path });
+        defer gpa.free(full);
+
+        stats.files += 1;
+        stats.blocks += 1;
+        const failed_before = stats.failed;
+        if (try runOneExtendedSsz(init, gpa, full)) stats.passed += 1 else stats.failed += 1;
+        if (opts.stop_on_fail and stats.failed > failed_before) break;
+    }
+}
+
+fn runOneExtendedSsz(init: std.process.Init, alloc: std.mem.Allocator, input_path: []const u8) !bool {
     const raw_input = std.Io.Dir.cwd().readFileAlloc(init.io, input_path, alloc, .limited(1 << 30)) catch |err| {
-        std.debug.print("error: cannot read '{s}': {s}\n", .{ input_path, @errorName(err) });
-        std.process.exit(1);
+        std.debug.print("FAIL {s}: cannot read: {s}\n", .{ input_path, @errorName(err) });
+        return false;
     };
 
-    // Overlap host encodeOutput with the zkc subprocess (compile + elf-to-json + exec/trace).
     var native_result = NativeResult{};
     const native_thread = std.Thread.spawn(.{}, nativeExpectedGuestOutputThread, .{ raw_input, &native_result }) catch |err| {
-        std.debug.print("FAIL smoke: cannot spawn native runL2Execution thread: {s}\n", .{@errorName(err)});
-        std.process.exit(1);
+        std.debug.print("FAIL {s}: cannot spawn native runL2Execution thread: {s}\n", .{ input_path, @errorName(err) });
+        return false;
     };
 
-    // make/elf-to-json need a path that resolves from the caller's cwd; keep the user path as-is.
     const run = try runExtendedInputUnderZkc(init, alloc, input_path);
     native_thread.join();
-    if (native_result.err) |err| {
-        std.debug.print("FAIL smoke: native runL2Execution failed on '{s}': {s}\n", .{ input_path, @errorName(err) });
-        std.process.exit(1);
+
+    const native_ok = native_result.err == null;
+    const zkc_valid = run.outcome == .valid;
+    if (!native_ok and !zkc_valid) {
+        std.debug.print("OK {s}: native and zkc both reject\n", .{input_path});
+        return true;
     }
-    const expected = native_result.output;
-    if (run.outcome != .valid) {
-        std.debug.print("FAIL smoke: zkc rejected input '{s}'\n", .{input_path});
-        std.process.exit(1);
+    if (native_result.err) |err| {
+        std.debug.print("FAIL {s}: native runL2Execution failed: {s}\n", .{ input_path, @errorName(err) });
+        return false;
+    }
+    if (!zkc_valid) {
+        std.debug.print("FAIL {s}: zkc rejected input\n", .{input_path});
+        return false;
     }
     const got_hex = run.guest_output_hex orelse {
-        std.debug.print("FAIL smoke: missing `{s}…` in zkc stdout\n", .{guest_output_prefix});
-        std.process.exit(1);
+        std.debug.print("FAIL {s}: missing `{s}…` in zkc stdout\n", .{ input_path, guest_output_prefix });
+        return false;
     };
     const got = decodeHex(alloc, got_hex) catch {
-        std.debug.print("FAIL smoke: invalid guest_output hex: {s}\n", .{got_hex});
-        std.process.exit(1);
+        std.debug.print("FAIL {s}: invalid guest_output hex: {s}\n", .{ input_path, got_hex });
+        return false;
     };
 
-    if (!std.mem.eql(u8, got, &expected)) {
-        const expected_hex = std.fmt.bytesToHex(&expected, .lower);
+    if (!std.mem.eql(u8, got, &native_result.output)) {
+        const expected_hex = std.fmt.bytesToHex(&native_result.output, .lower);
         std.debug.print(
-            "FAIL smoke: guest_output mismatch (native encodeOutput vs zkc)\n  got:      0x{s}\n  expected: 0x{s}\n",
-            .{ got_hex, &expected_hex },
+            "FAIL {s}: guest_output mismatch (native encodeOutput vs zkc)\n  got:      0x{s}\n  expected: 0x{s}\n",
+            .{ input_path, got_hex, &expected_hex },
         );
-        std.process.exit(1);
+        return false;
     }
-    std.debug.print("OK smoke: guest_output matches native encodeOutput (0x{s})\n", .{got_hex});
+    std.debug.print("OK {s}: guest_output matches native encodeOutput (0x{s})\n", .{ input_path, got_hex });
+    return true;
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -304,7 +352,6 @@ pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     var fixtures_dir: ?[]const u8 = null;
-    var smoke_input: ?[]const u8 = null;
     var install_prefix: ?[]const u8 = null;
     var makefile_arg: ?[]const u8 = null;
     var opts = spec_runner.Options{ .fixtures_dir = "" };
@@ -315,8 +362,6 @@ pub fn main(init: std.process.Init) !void {
         const arg = args[i];
         if (std.mem.eql(u8, arg, "--fixtures")) {
             fixtures_dir = takeValue(args, &i, "--fixtures");
-        } else if (std.mem.eql(u8, arg, "--input")) {
-            smoke_input = takeValue(args, &i, "--input");
         } else if (std.mem.eql(u8, arg, "--install-prefix")) {
             install_prefix = takeValue(args, &i, "--install-prefix");
         } else if (std.mem.eql(u8, arg, "--makefile")) {
@@ -362,18 +407,25 @@ pub fn main(init: std.process.Init) !void {
     tmp_dir = try makeTempDir(io, gpa);
     defer cleanupTempDir(io, gpa, tmp_dir);
 
-    // Smoke mode: single extended input; expected guest_output from native encodeOutput.
-    if (smoke_input) |input| {
-        if (fixtures_dir != null) fatal("pass either --fixtures (corpus) or --input (smoke), not both");
-        try runSmoke(init, gpa, input);
-        return;
-    }
-
-    opts.fixtures_dir = fixtures_dir orelse fatal("missing --fixtures (or use smoke mode: --input)");
+    const single_ssz = if (opts.single_file) |p| std.mem.endsWith(u8, p, ".ssz") else false;
+    opts.fixtures_dir = fixtures_dir orelse blk: {
+        if (opts.single_file == null) fatal("missing --fixtures");
+        break :blk "";
+    };
 
     std.debug.print("running {s}\n  over {s}\n", .{ ZkcAdapter.label, opts.single_file orelse opts.fixtures_dir });
 
-    const stats = try spec_runner.run(ZkcAdapter, init, opts);
+    var stats = spec_runner.Stats{};
+    if (single_ssz) {
+        try runExtendedSszFixtures(init, opts, &stats);
+    } else {
+        stats = try spec_runner.run(ZkcAdapter, init, opts);
+        if (opts.single_file == null) try runExtendedSszFixtures(init, opts, &stats);
+    }
+    if (stats.files == 0) {
+        std.debug.print("error: no matching fixtures under '{s}'\n", .{opts.single_file orelse opts.fixtures_dir});
+        std.process.exit(2);
+    }
 
     const total = stats.total();
     const pct: u64 = if (total > 0) 100 * stats.passed / total else 0;

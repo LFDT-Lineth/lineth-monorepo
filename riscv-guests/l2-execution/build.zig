@@ -368,14 +368,17 @@ pub fn build(b: *std.Build) void {
     linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
     b.installArtifact(zkc_reference_runner_exe);
 
-    // Smoke: one extended SSZ input under zkc; guest_output checked against native encodeOutput.
+    // Smoke: testdata .ssz under zkc; guest_output checked against native encodeOutput.
     // Outside the EF-corpus lazy block — no fixtures dependency. Needs zkc+go on PATH.
-    // Makefile exposes zkc-smoke-exec / zkc-smoke-trace; both call this step with --zkc-target set.
+    // Makefile exposes zkc-smoke-exec / zkc-smoke-trace; both call this step with --zkc-target
+    // and `--match <INPUT basename>` (default: stateless_input.ssz).
     const zkc_smoke_step = b.step(
         "zkc-smoke",
-        "Run one extended SSZ input under zkc; assert guest_output == native encodeOutput (pass --zkc-target elf-exec|elf-trace)",
+        "Run testdata .ssz under zkc; assert guest_output == native encodeOutput (pass --match and --zkc-target)",
     );
     const run_zkc_smoke = b.addRunArtifact(zkc_reference_runner_exe);
+    run_zkc_smoke.addArg("--fixtures");
+    run_zkc_smoke.addDirectoryArg(b.path("test/testdata"));
     run_zkc_smoke.addArg("--install-prefix");
     run_zkc_smoke.addArg(b.install_prefix);
     run_zkc_smoke.addArg("--makefile");
