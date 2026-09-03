@@ -100,7 +100,7 @@ Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator servi
 
 ### `forced-transactions`
 
-Forced transactions handling settings; omit the section to disable the feature.
+Forced transactions handling settings; omit the section to disable the feature. Ignored on validium deployments: the coordinator does not support forced transactions there yet and disables them with a warning.
 
 | Key | Description | Type | Required | Default | Status |
 | --- | --- | --- | --- | --- | --- |

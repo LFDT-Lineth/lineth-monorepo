@@ -8,6 +8,8 @@ import io.vertx.sqlclient.SqlClient
 import linea.DisabledService
 import linea.LongRunningService
 import linea.clients.StateManagerV1JsonRpcClient
+import linea.contract.l1.FinalizedStateDataClientReadOnly
+import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
@@ -18,6 +20,7 @@ import linea.persistence.db.PersistenceRetryer
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.api.Api
+import lineth.coordinator.app.conflation.ConflationAppHelper
 import lineth.coordinator.app.conflation.ConflationAppV1
 import lineth.coordinator.app.conflation.ConflationAppV2
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
@@ -28,6 +31,7 @@ import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
+import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.coordinator.config.v2.isEnabled
 import lineth.coordinator.config.v2.logPretty
 import lineth.coordinator.extensions.CoordinatorContext
@@ -85,13 +89,12 @@ class CoordinatorApp(
         configs.smartContractErrors.size,
         configs.smartContractErrors,
       )
-      configs.l1Submission?.dynamicGasPriceCap?.let { dgc ->
-        log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
-        log.trace(
-          "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
-          dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
-        )
-      }
+      val dgc = configs.l1Submission.dynamicGasPriceCap
+      log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
+      log.trace(
+        "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
+        dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
+      )
 
       Vertx.vertx(vertxConfig)
     }
@@ -144,7 +147,7 @@ class CoordinatorApp(
         BlobsPostgresDao(
           config =
           BlobsPostgresDao.Config(
-            maxBlobsToReturn = configs.l1Submission?.blob?.dbMaxBlobsToReturn ?: 50u,
+            maxBlobsToReturn = configs.l1Submission.blob.dbMaxBlobsToReturn,
           ),
           connection = sqlClient,
         ),
@@ -162,8 +165,13 @@ class CoordinatorApp(
         persistenceRetryer = persistenceRetryer,
       ),
     )
+
+  // The data-availability mode decides which L1 contract client the read path uses.
+  private val dataAvailability: L1SubmissionConfig.DataAvailability = configs.l1Submission.dataAvailability
+
+  // Must agree with the forcedTransactionsApp wiring below; see ConflationAppHelper.forcedTransactionsEnabled.
   private val forcedTransactionsDao = run {
-    if (configs.forcedTransactions?.disabled ?: true) {
+    if (!ConflationAppHelper.forcedTransactionsEnabled(configs.forcedTransactions, dataAvailability)) {
       DisabledForcedTransactionsDao()
     } else {
       RetryingPostgresForcedTransactionsDao(
@@ -187,30 +195,45 @@ class CoordinatorApp(
     ),
   ).ethChainId().get()
 
-  private val linethRollupClientForFinalizationMonitor = run {
+  // The finalization monitor reads the L1 contract, so its client must match the deployed contract
+  // flavour: a rollup client pointed at a validium contract fails version detection and the
+  // coordinator cannot start.
+  private val finalizationMonitorClient: FinalizedStateDataClientReadOnly = run {
     val web3j = createWeb3jHttpClient(
       rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
     )
-    Web3JLinethRollupSmartContractClientReadOnly(
-      contractAddress = configs.protocol.l1.contractAddress,
-      web3j = web3j,
-      ethLogsSearcher = EthLogsSearcherImpl(
-        vertx = vertx,
-        ethApiClient = createEthApiClient(
-          web3jClient = web3j,
-          requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
-          vertx = vertx,
-        ),
-      ),
-      finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
-        ?: BlockParameter.Tag.EARLIEST,
-    )
+    when (dataAvailability) {
+      L1SubmissionConfig.DataAvailability.ROLLUP ->
+        Web3JLinethRollupSmartContractClientReadOnly(
+          contractAddress = configs.protocol.l1.contractAddress,
+          web3j = web3j,
+          ethLogsSearcher = EthLogsSearcherImpl(
+            vertx = vertx,
+            ethApiClient = createEthApiClient(
+              web3jClient = web3j,
+              requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+              vertx = vertx,
+            ),
+          ),
+          finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+            ?: BlockParameter.Tag.EARLIEST,
+        )
+
+      L1SubmissionConfig.DataAvailability.VALIDIUM ->
+        // No logs searcher / l1FinalizationMonitor.l1RequestRetries here: the validium client has no
+        // event search yet. When getFinalizedStateData's V2 branch adds the FinalizedStateUpdated
+        // search, the searcher + those retries must be wired in here too.
+        Web3JLineaValidiumSmartContractClientReadOnly(
+          contractAddress = configs.protocol.l1.contractAddress,
+          web3j = web3j,
+        )
+    }
   }
 
   private val lastFinalizedBlock: ULong = L1BasedLastFinalizedBlockProvider(
     vertx,
-    linethRollupSmartContractClient = linethRollupClientForFinalizationMonitor,
+    lineaSmartContractClient = finalizationMonitorClient,
     consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
   ).getLastFinalizedBlock().get()
 
@@ -244,10 +267,18 @@ class CoordinatorApp(
   )
 
   private val forcedTransactionsApp: ForcedTransactionsApp = run {
-    if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
+    // Forced transactions are rollup-only for now; see ConflationAppHelper.forcedTransactionsEnabled.
+    val ftxConfig = configs.forcedTransactions
+    if (ftxConfig == null || !ConflationAppHelper.forcedTransactionsEnabled(ftxConfig, dataAvailability)) {
+      // If we get here with forced transactions enabled in config, the chain must be running in validium mode.
+      if (ftxConfig?.disabled == false) {
+        log.warn(
+          "Forced transactions are enabled in config but the coordinator does not support them on validium " +
+            "chains yet; disabling. Storing a forced transaction on a validium V2 contract halts finalization.",
+        )
+      }
       ForcedTransactionsApp.createDisabled()
     } else {
-      val ftxConfig = configs.forcedTransactions
       val l1EthClient = createEthApiClient(
         rpcUrl = ftxConfig.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.ftx"),
@@ -384,7 +415,7 @@ class CoordinatorApp(
     configs = configs,
     vertx = vertx,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-    finalizedStateDataProvider = linethRollupClientForFinalizationMonitor,
+    finalizedStateDataProvider = finalizationMonitorClient,
     lastFinalizedBlock = lastFinalizedBlock,
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,
@@ -404,7 +435,7 @@ class CoordinatorApp(
     if (configs.l1Submission.isEnabled()) {
       L1RelayingAppV1(
         configs = configs,
-        l1SubmissionConfig = configs.l1Submission!!,
+        l1SubmissionConfig = configs.l1Submission,
         vertx = vertx,
         l1ChainId = l1ChainId,
         lastFinalizedBlock = lastFinalizedBlock,
