@@ -11,7 +11,8 @@
 //!    expected wire output via native `runL2Execution` + `encodeOutput` (schema 0x0003 ‖
 //!    keccak256(public_inputs)), then asserts zkc's `guest_output` matches. Used by CI for the
 //!    committed sample fixture (`test/testdata/stateless_input.ssz`). No golden sidecar — the
-//!    preimage/hash relation is checked against the host path. (`zkvm_log` of the plain PI tuple is
+//!    preimage/hash relation is checked against the host path. Host encodeOutput runs on a
+//!    sibling thread overlapping the zkc subprocess. (`zkvm_log` of the plain PI tuple is
 //!    still a no-op; when off-trace logging lands, smoke can also assert on the logged preimage.)
 
 const std = @import("std");
@@ -230,6 +231,24 @@ fn nativeExpectedGuestOutput(alloc: std.mem.Allocator, raw_input: []const u8) ![
     return l2_execution_ssz.encodeOutput(result.public_inputs);
 }
 
+const NativeResult = struct {
+    err: ?anyerror = null,
+    output: [l2_execution_ssz.OUTPUT_SIZE]u8 = undefined,
+};
+
+/// Own arena: do not share `init.gpa` with the main thread (GPA is not thread-safe).
+/// `runL2Execution` also installs this allocator on zesu's process-wide singleton
+/// (`zesu_allocator.set`). Safe here because the sibling work is a zkc *subprocess*,
+/// not another in-process zesu call.
+fn nativeExpectedGuestOutputThread(raw_input: []const u8, out: *NativeResult) void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    out.output = nativeExpectedGuestOutput(arena.allocator(), raw_input) catch |err| {
+        out.err = err;
+        return;
+    };
+}
+
 fn runSmoke(
     init: std.process.Init,
     alloc: std.mem.Allocator,
@@ -240,13 +259,21 @@ fn runSmoke(
         std.process.exit(1);
     };
 
-    const expected = nativeExpectedGuestOutput(alloc, raw_input) catch |err| {
-        std.debug.print("FAIL smoke: native runL2Execution failed on '{s}': {s}\n", .{ input_path, @errorName(err) });
+    // Overlap host encodeOutput with the zkc subprocess (compile + elf-to-json + exec/trace).
+    var native_result = NativeResult{};
+    const native_thread = std.Thread.spawn(.{}, nativeExpectedGuestOutputThread, .{ raw_input, &native_result }) catch |err| {
+        std.debug.print("FAIL smoke: cannot spawn native runL2Execution thread: {s}\n", .{@errorName(err)});
         std.process.exit(1);
     };
 
     // make/elf-to-json need a path that resolves from the caller's cwd; keep the user path as-is.
     const run = try runExtendedInputUnderZkc(init, alloc, input_path);
+    native_thread.join();
+    if (native_result.err) |err| {
+        std.debug.print("FAIL smoke: native runL2Execution failed on '{s}': {s}\n", .{ input_path, @errorName(err) });
+        std.process.exit(1);
+    }
+    const expected = native_result.output;
     if (run.outcome != .valid) {
         std.debug.print("FAIL smoke: zkc rejected input '{s}'\n", .{input_path});
         std.process.exit(1);
