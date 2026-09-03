@@ -107,7 +107,7 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
     }
 
     private fun isTransientSchedulingOutcome(result: TransactionSelectionResult): Boolean =
-      result == TransactionSelectionResult.SELECTION_CANCELLED ||
+      result in TRANSIENT_SCHEDULING_RESULTS ||
         (
           result.penalize() &&
             result.maybeInvalidReason().orElse(null) == EXECUTION_INTERRUPTED_REASON
@@ -121,5 +121,24 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
      * Besu's internal (non-plugin-api) module.
      */
     private const val EXECUTION_INTERRUPTED_REASON: String = "EXECUTION_INTERRUPTED"
+
+    /**
+     * Outcomes that mean "block building ran out of time / was superseded", not "this transaction
+     * was rejected on its merits".
+     *
+     * Besu wraps the underlying reason when a build times out, e.g. it reports
+     * `BLOCK_SELECTION_TIMEOUT (original result INVALID_PENALIZED(EXECUTION_INTERRUPTED))`. The
+     * wrapper does not carry `penalize()` or the invalid reason, so matching on those alone misses
+     * it; the wrapper results have to be listed explicitly.
+     */
+    private val TRANSIENT_SCHEDULING_RESULTS: Set<TransactionSelectionResult> = setOf(
+      TransactionSelectionResult.SELECTION_CANCELLED,
+      TransactionSelectionResult.BLOCK_SELECTION_TIMEOUT,
+      TransactionSelectionResult.BLOCK_SELECTION_TIMEOUT_INVALID_TX,
+      TransactionSelectionResult.PLUGIN_SELECTION_TIMEOUT,
+      TransactionSelectionResult.PLUGIN_SELECTION_TIMEOUT_INVALID_TX,
+      TransactionSelectionResult.TX_EVALUATION_TOO_LONG,
+      TransactionSelectionResult.INVALID_TX_EVALUATION_TOO_LONG,
+    )
   }
 }
