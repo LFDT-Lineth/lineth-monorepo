@@ -106,12 +106,15 @@ get_code() {
 }
 
 deployer_container() {
-  # Run as the host user so the bind-mounted checkpoint dir (created on the host
-  # by this script) is writable by the deployer process. The image otherwise runs
-  # as the `node` user (UID 1000), which the runner's host UID does not match, so
-  # writes to /checkpoint fail with EACCES on self-hosted Linux runners.
+  # Run the deployer as root for this test only. The checkpoint dir is a host
+  # path created by mktemp and bind-mounted in; on the Kubernetes self-hosted
+  # runners the Docker daemon runs rootless / in a sidecar with its own user
+  # namespace, so neither `chmod 0777` nor `--user "$(id -u)"` makes that host
+  # dir writable by the image's non-root `node` user. Root (CAP_DAC_OVERRIDE)
+  # bypasses the uid-remap so the checkpoint write succeeds. This is a test
+  # harness; the published image still runs as the non-root `node` user.
   docker run "$@" --network "$NETWORK" \
-    --user "$(id -u):$(id -g)" \
+    --user 0:0 \
     -v "$CHECKPOINT_DIR:/checkpoint" \
     -e "L1_RPC_URL=http://${L1_CONTAINER}:8545" \
     -e "L2_RPC_URL=http://${L2_CONTAINER}:8545" \
