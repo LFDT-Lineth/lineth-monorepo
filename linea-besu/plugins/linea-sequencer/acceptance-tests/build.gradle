@@ -100,7 +100,11 @@ tasks.register('acceptanceTests', Test) {
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
-  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : Math.max(1, Runtime.runtime.availableProcessors() - 2)
+  // Each fork runs a full in-process Besu node, which is CPU-heavy. Using every core on CI
+  // over-subscribes the runner and amplifies block-build timing jitter under Vert.x 5 (Besu
+  // 26.8.1), which is what makes the block-membership assertions in these tests flaky. Capping
+  // CI forks at half the cores leaves headroom and reduces that variance.
+  maxParallelForks = isCiServer ? Math.max(1, Runtime.runtime.availableProcessors().intdiv(2)) : Math.max(1, Runtime.runtime.availableProcessors() - 2)
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
 }
 
