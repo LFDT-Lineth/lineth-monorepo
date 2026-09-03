@@ -30,6 +30,7 @@
 - *(coordinator)* Update rollup proof domain types for flexible-blobs spec (#3801)
 - *(misc)* Rename guestProgramId to programVk in coordinator Kotlin (#3816)
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
+- *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
 
 ### 🐛 Bug Fixes
 
@@ -79,6 +80,7 @@
 - *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
+- *(prover)* Empty-codehash check (#3913)
 
 ### 🚜 Refactor
 
