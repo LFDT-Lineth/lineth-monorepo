@@ -11,7 +11,6 @@ package lineth.rpc.methods;
 
 import static lineth.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static lineth.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
-import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity.create;
 import static org.hyperledger.besu.plugin.services.TransactionSimulationService.SimulationParameters.ALLOW_FUTURE_NONCE;
 
@@ -20,7 +19,6 @@ import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.time.Instant;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,19 +29,16 @@ import lineth.config.LineaTracerConfiguration;
 import lineth.config.LineaTransactionPoolValidatorConfiguration;
 import lineth.sequencer.modulelimit.ModuleLimitsValidationResult;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
+import lineth.sequencer.tracing.LineaTracerFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.LineCountingTracer;
-import net.consensys.linea.zktracer.ZkCounter;
-import net.consensys.linea.zktracer.ZkTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.StateOverrideMap;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
@@ -54,6 +49,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.transaction.CallParameter;
 import org.hyperledger.besu.ethereum.transaction.ImmutableCallParameter;
+import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -95,8 +91,7 @@ public class LineaEstimateGas {
   private LineaTransactionPoolValidatorConfiguration txValidatorConf;
   private LineaProfitabilityConfiguration profitabilityConf;
   private TransactionProfitabilityCalculator txProfitabilityCalculator;
-  private LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
-  private LineaTracerConfiguration tracerConfiguration;
+  private LineaTracerFactory tracerFactory;
   private ModuleLineCountValidator moduleLineCountValidator;
 
   public LineaEstimateGas(
@@ -122,8 +117,9 @@ public class LineaEstimateGas {
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
     this.txProfitabilityCalculator = transactionProfitabilityCalculator;
-    this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
-    this.tracerConfiguration = tracerConfiguration;
+    this.tracerFactory =
+        LineaTracerFactory.fromBlockchainService(
+            blockchainService, tracerConfiguration, l1L2BridgeConfiguration);
     this.moduleLineCountValidator =
         new ModuleLineCountValidator(tracerConfiguration.moduleLimitsMap());
     this.worldStateService = worldStateService;
@@ -266,22 +262,30 @@ public class LineaEstimateGas {
       final long logId) {
 
     final var pendingBlockHeader = transactionSimulationService.simulatePendingBlockHeader();
-    final var lineCountingTracer = createLineCountingTracer(pendingBlockHeader, blockchainService);
+    final var lineCountingTracer = tracerFactory.create(pendingBlockHeader.getTimestamp());
+    lineCountingTracer.ifPresent(tracer -> initializeTracer(tracer, pendingBlockHeader));
+    final OperationTracer operationTracer =
+        lineCountingTracer
+            .<OperationTracer>map(tracer -> tracer)
+            .orElse(OperationTracer.NO_TRACING);
 
     final var maybeSimulationResults =
         transactionSimulationService.simulate(
             callParameter,
             maybeStateOverrides,
             pendingBlockHeader,
-            lineCountingTracer,
+            operationTracer,
             EnumSet.of(ALLOW_FUTURE_NONCE));
 
-    ModuleLimitsValidationResult moduleLimit =
-        moduleLineCountValidator.validate(lineCountingTracer.getModulesLineCount());
-
-    if (moduleLimit.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
-      handleModuleOverLimit(moduleLimit);
-    }
+    lineCountingTracer.ifPresent(
+        tracer -> {
+          ModuleLimitsValidationResult moduleLimitResult =
+              moduleLineCountValidator.validate(tracer.getModulesLineCount());
+          if (moduleLimitResult.getResult()
+              != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
+            handleModuleOverLimit(moduleLimitResult);
+          }
+        });
 
     maybeSimulationResults.ifPresentOrElse(
         r -> {
@@ -436,22 +440,12 @@ public class LineaEstimateGas {
         .orElse(0L);
   }
 
-  private LineCountingTracer createLineCountingTracer(
-      final ProcessableBlockHeader pendingBlockHeader, final BlockchainService blockchainService) {
-    final Fork forkId =
-        fromMainnetHardforkIdToTracerFork(
-            (HardforkId.MainnetHardforkId)
-                blockchainService.getNextBlockHardforkId(
-                    blockchainService.getChainHeadHeader(), Instant.now().getEpochSecond()));
-
-    final var lineCountingTracer =
-        tracerConfiguration.isLimitless()
-            ? new ZkCounter(l1L2BridgeConfiguration, forkId)
-            : new ZkTracer(forkId, l1L2BridgeConfiguration, blockchainService.getChainId().get());
+  private void initializeTracer(
+      final LineCountingTracer lineCountingTracer,
+      final ProcessableBlockHeader pendingBlockHeader) {
     lineCountingTracer.traceStartConflation(1L);
     lineCountingTracer.traceStartBlock(
         worldStateService.getWorldView(), pendingBlockHeader, pendingBlockHeader.getCoinbase());
-    return lineCountingTracer;
   }
 
   private void handleModuleOverLimit(ModuleLimitsValidationResult moduleLimitResult) {
