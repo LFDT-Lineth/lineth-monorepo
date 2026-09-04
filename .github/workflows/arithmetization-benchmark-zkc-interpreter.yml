@@ -178,7 +178,7 @@ jobs:
           # Helper binaries used by the timing loop and the summary step.
           go build -o /tmp/bench/cache_thrasher       "$TEST_DIR/scripts/cache_thrasher/main.go"
           go build -o /tmp/bench/render_bench_summary "$TEST_DIR/scripts/render_bench_summary/main.go"
-          # Build guest JSON on each worktree so elf_to_json_gen output matches that
+          # Build guest JSON on each worktree so elf_to_json output matches that
           # branch's main.zkc inputs (e.g. pre-decoded instruction tables on optim only).
           variants=(base opt)
           if [[ "${OPTIM_ONLY:-false}" == "true" ]]; then

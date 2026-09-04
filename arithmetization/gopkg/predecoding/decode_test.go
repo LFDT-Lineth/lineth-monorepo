@@ -1,15 +1,157 @@
-package main
+package predecoding
 
 import (
 	"bytes"
-	"debug/elf"
 	"encoding/binary"
 	"encoding/hex"
-	"os"
-	"path/filepath"
-	"strings"
+	"math"
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
+
+func TestPredecodeRejectsMissingExecutableBlob(t *testing.T) {
+	_, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{{
+		Address: 0x1000,
+		Data:    []byte{1, 2, 3, 4},
+	}}})
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("no executable blobs")) {
+		t.Fatalf("Predecode() error = %v, want missing executable blob error", err)
+	}
+}
+
+func TestPredecodeHonorsExplicitRecordLimit(t *testing.T) {
+	program := elfmapping.Program{Blobs: []elfmapping.Blob{{
+		Address:    0x1000,
+		Data:       make([]byte, 8),
+		Executable: true,
+	}}}
+	_, err := Predecode(program, WithMaxDecodedRecords(1))
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("2 records (cap 1)")) {
+		t.Fatalf("Predecode() error = %v, want record cap error", err)
+	}
+	_, err = Predecode(program, WithMaxDecodedRecords(0))
+	if err == nil || !bytes.Contains([]byte(err.Error()), []byte("cap 0")) {
+		t.Fatalf("Predecode() zero-cap error = %v, want record cap error", err)
+	}
+}
+
+func TestPredecodeDenseExecutableSpan(t *testing.T) {
+	first := make([]byte, 4)
+	second := make([]byte, 4)
+	binary.LittleEndian.PutUint32(first, encodeIType(opcodeOPIMM, 0, 1, 0, 1))
+	binary.LittleEndian.PutUint32(second, encodeIType(opcodeOPIMM, 0, 2, 0, 2))
+	decoded, err := Predecode(elfmapping.Program{Blobs: []elfmapping.Blob{
+		{Address: 0x1008, Data: second, Executable: true},
+		{Address: 0x1000, Data: first, Executable: true},
+	}})
+	if err != nil {
+		t.Fatalf("Predecode() error = %v", err)
+	}
+	if decoded.InstructionBase != 0x1000 {
+		t.Errorf("InstructionBase = %#x, want 0x1000", decoded.InstructionBase)
+	}
+	ops := decodeComputeOpsFromHex(hex.EncodeToString(decoded.Decoded), 3)
+	want := []uint32{computeITypeBase + itypeOpAddiWB, computeInvalid, computeITypeBase + itypeOpAddiWB}
+	for i := range want {
+		if ops[i] != want[i] {
+			t.Errorf("compute op %d = %d, want %d", i, ops[i], want[i])
+		}
+	}
+}
+
+func TestPredecodeRejectsInvalidExecutableRanges(t *testing.T) {
+	tests := []struct {
+		name    string
+		blobs   []elfmapping.Blob
+		wantErr string
+	}{
+		{
+			name: "overlap",
+			blobs: []elfmapping.Blob{
+				{Address: 0x1000, Data: make([]byte, 4), Executable: true},
+				{Address: 0x1002, Data: make([]byte, 4), Executable: true},
+			},
+			wantErr: "overlaps",
+		},
+		{
+			name: "blob overflow",
+			blobs: []elfmapping.Blob{{
+				Address: math.MaxUint64, Data: []byte{1}, Executable: true,
+			}},
+			wantErr: "overflows address space",
+		},
+		{
+			name: "alignment overflow",
+			blobs: []elfmapping.Blob{{
+				Address: math.MaxUint64 - 4, Data: []byte{1, 2}, Executable: true,
+			}},
+			wantErr: "aligning executable span",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Predecode(elfmapping.Program{Blobs: test.blobs})
+			if err == nil || !bytes.Contains([]byte(err.Error()), []byte(test.wantErr)) {
+				t.Fatalf("Predecode() error = %v, want containing %q", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestDecodedProgramEncodeInputsReturnsFreshBytes(t *testing.T) {
+	program := DecodedProgram{InstructionBase: 0x11223344, Decoded: []byte{1, 2, 3}}
+	first := program.EncodeInputs()
+	second := program.EncodeInputs()
+	if got := binary.BigEndian.Uint64(first[InstructionBaseInput]); got != program.InstructionBase {
+		t.Errorf("instruction base = %#x, want %#x", got, program.InstructionBase)
+	}
+	first[DecodedInput][0] = 0xff
+	if second[DecodedInput][0] != 1 || program.Decoded[0] != 1 {
+		t.Fatal("EncodeInputs() returned bytes alias cached decoded program")
+	}
+}
+
+type memoryBlob struct {
+	offset     uint64
+	data       []byte
+	name       string
+	executable bool
+}
+
+func buildDecodedProgram(blobs []memoryBlob) (uint64, uint64, string) {
+	program := elfmapping.Program{Blobs: make([]elfmapping.Blob, len(blobs))}
+	for i, blob := range blobs {
+		program.Blobs[i] = elfmapping.Blob{
+			Address: blob.offset, Data: blob.data, Name: blob.name,
+			Executable: blob.executable,
+		}
+	}
+	decoded, err := Predecode(program)
+	if err != nil {
+		panic(err)
+	}
+	_, _, records, err := executableImage(program.Blobs, DefaultMaxDecodedRecords)
+	if err != nil {
+		panic(err)
+	}
+	return decoded.InstructionBase, records, hex.EncodeToString(decoded.Decoded)
+}
+
+func collectExecutableImage(blobs []memoryBlob) (uint64, []byte, uint64) {
+	program := make([]elfmapping.Blob, len(blobs))
+	for i, blob := range blobs {
+		program[i] = elfmapping.Blob{
+			Address: blob.offset, Data: blob.data, Name: blob.name,
+			Executable: blob.executable,
+		}
+	}
+	base, image, records, err := executableImage(program, DefaultMaxDecodedRecords)
+	if err != nil {
+		panic(err)
+	}
+	return base, image, records
+}
 
 func encodeIType(opcode, funct3, rd, rs1, imm12 uint32) uint32 {
 	return (imm12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
@@ -152,65 +294,6 @@ func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
 	if !bytes.Equal(image, textCode) {
 		t.Fatalf("image = %x, want %x", image, textCode)
 	}
-}
-
-// buildSyntheticELF builds a minimal little-endian RISC-V ELF64 image in memory
-// containing a single executable `.text` section (holding code, mapped at base)
-// plus a `.shstrtab`, suitable for feeding to elf.NewFile in tests.
-func buildSyntheticELF(t *testing.T, base uint64, code []byte) []byte {
-	t.Helper()
-	const (
-		ehSize  = 64 // Elf64_Ehdr
-		shSize  = 64 // Elf64_Shdr
-		numSecs = 3  // NULL, .text, .shstrtab
-	)
-
-	// Section-header string table: index 0 is the empty name.
-	shstrtab := []byte{0}
-	textNameOff := len(shstrtab)
-	shstrtab = append(shstrtab, ".text\x00"...)
-	shstrNameOff := len(shstrtab)
-	shstrtab = append(shstrtab, ".shstrtab\x00"...)
-
-	// Layout: [ehdr][code][shstrtab][section headers].
-	textOff := ehSize
-	shstrOff := textOff + len(code)
-	shoff := shstrOff + len(shstrtab)
-	buf := make([]byte, shoff+numSecs*shSize)
-
-	le := binary.LittleEndian
-	copy(buf, []byte{0x7f, 'E', 'L', 'F'})
-	buf[4] = 2 // ELFCLASS64
-	buf[5] = 1 // ELFDATA2LSB
-	buf[6] = 1 // EV_CURRENT
-	le.PutUint16(buf[16:], uint16(elf.ET_EXEC))
-	le.PutUint16(buf[18:], uint16(elf.EM_RISCV))
-	le.PutUint32(buf[20:], 1) // e_version
-	le.PutUint64(buf[24:], base)
-	le.PutUint64(buf[40:], uint64(shoff))
-	le.PutUint16(buf[52:], ehSize)
-	le.PutUint16(buf[58:], shSize)
-	le.PutUint16(buf[60:], numSecs)
-	le.PutUint16(buf[62:], 2) // e_shstrndx
-
-	copy(buf[textOff:], code)
-	copy(buf[shstrOff:], shstrtab)
-
-	writeShdr := func(idx int, name, typ uint32, flags, addr, off, size uint64) {
-		o := shoff + idx*shSize
-		le.PutUint32(buf[o:], name)
-		le.PutUint32(buf[o+4:], typ)
-		le.PutUint64(buf[o+8:], flags)
-		le.PutUint64(buf[o+16:], addr)
-		le.PutUint64(buf[o+24:], off)
-		le.PutUint64(buf[o+32:], size)
-	}
-	writeShdr(0, 0, uint32(elf.SHT_NULL), 0, 0, 0, 0)
-	writeShdr(1, uint32(textNameOff), uint32(elf.SHT_PROGBITS),
-		uint64(elf.SHF_ALLOC|elf.SHF_EXECINSTR), base, uint64(textOff), uint64(len(code)))
-	writeShdr(2, uint32(shstrNameOff), uint32(elf.SHT_STRTAB), 0, 0, uint64(shstrOff), uint64(len(shstrtab)))
-
-	return buf
 }
 
 func TestDecodeITypeSemantic(t *testing.T) {
@@ -541,7 +624,7 @@ type bitReader struct {
 
 func (r *bitReader) readBits(width int) uint64 {
 	var val uint64
-	for i := 0; i < width; i++ {
+	for range width {
 		bit := (r.buf[r.pos/8] >> uint(7-(r.pos%8))) & 1
 		val = (val << 1) | uint64(bit)
 		r.pos++
@@ -556,7 +639,7 @@ func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
 	}
 	r := &bitReader{buf: data}
 	ops := make([]uint32, nRecords)
-	for i := uint64(0); i < nRecords; i++ {
+	for i := range nRecords {
 		ops[i] = uint32(r.readBits(8))
 		r.readBits(64)
 		r.readBits(5)
@@ -570,7 +653,7 @@ func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
 	t.Helper()
 	nRecords := uint64(len(image) / 4)
 	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
-	for i := uint64(0); i < nRecords; i++ {
+	for i := range nRecords {
 		instr := binary.LittleEndian.Uint32(image[i*4:])
 		got := classifyInstruction(instr)
 		want := ops[i]
@@ -639,89 +722,4 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		decodedBits.writeBits(uint64(rd), 5)
 	}
 	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
-}
-
-func TestClassifyRoundTripELF(t *testing.T) {
-	var elfPaths []string
-	if path := strings.TrimSpace(os.Getenv("ELF2JSON_ROUNDTRIP_ELF")); path != "" {
-		elfPaths = append(elfPaths, path)
-	}
-	for _, root := range []string{
-		"../../bin",
-		"../../../riscv-guests/l2-execution/zig-out/bin",
-	} {
-		matches, _ := filepath.Glob(filepath.Join(root, "*.elf"))
-		elfPaths = append(elfPaths, matches...)
-	}
-	if len(elfPaths) == 0 {
-		t.Skip("no ELF fixtures found; set ELF2JSON_ROUNDTRIP_ELF or build a guest ELF")
-	}
-	for _, elfPath := range elfPaths {
-		elfPath := elfPath
-		t.Run(filepath.Base(elfPath), func(t *testing.T) {
-			f, err := elf.Open(elfPath)
-			if err != nil {
-				t.Fatalf("elf.Open(%q): %v", elfPath, err)
-			}
-			defer f.Close()
-			blobs := extractProgramBlobs(f.Progs, f.Sections)
-			_, image, nRecords := collectExecutableImage(blobs)
-			_, _, decodedHex := buildDecodedProgram(blobs)
-			if uint64(len(image)/4) != nRecords {
-				t.Fatalf("image records %d != nRecords %d", len(image)/4, nRecords)
-			}
-			assertClassifyRoundTrip(t, image, decodedHex)
-		})
-	}
-}
-
-func captureStdout(fn func()) string {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	fn()
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
-	return buf.String()
-}
-
-func TestPrintJsonPredecodingProof(t *testing.T) {
-	blobs := []memoryBlob{
-		{offset: 0x00800000, data: []byte{0, 0, 0, 0}, executable: true, name: ".text"},
-		{offset: 0x08800000, data: []byte{1, 2}, executable: false, name: "in_bytes"},
-	}
-
-	t.Run("default omits blobs_executable", func(t *testing.T) {
-		out := captureStdout(func() {
-			printJson(blobs, 0x00800000, 0x00800000, "ab", false)
-		})
-		if strings.Contains(out, `"blobs_executable"`) {
-			t.Fatalf("expected blobs_executable omitted, got:\n%s", out)
-		}
-		if !strings.Contains(out, `"instruction_base"`) || !strings.Contains(out, `"decoded"`) {
-			t.Fatalf("expected decode tables present, got:\n%s", out)
-		}
-	})
-
-	t.Run("proof mode includes blobs_executable", func(t *testing.T) {
-		out := captureStdout(func() {
-			printJson(blobs, 0x00800000, 0x00800000, "ab", true)
-		})
-		if !strings.Contains(out, `"blobs_executable": "0x`) {
-			t.Fatalf("expected blobs_executable present, got:\n%s", out)
-		}
-	})
-}
-
-func TestPredecodingProofFromEnv(t *testing.T) {
-	t.Setenv("ELF2JSON_PREDECODING_PROOF", "")
-	if predecodingProofFromEnv() {
-		t.Fatal("expected false for unset env")
-	}
-	t.Setenv("ELF2JSON_PREDECODING_PROOF", "true")
-	if !predecodingProofFromEnv() {
-		t.Fatal("expected true")
-	}
 }

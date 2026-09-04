@@ -24,7 +24,7 @@ ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../..)
 #  * the linker script
 #  * the ELF→ZKC-JSON conversion
 #     - ELF_TO_JSON
-#     - ELF_TO_JSON_GEN
+#     - ELF_TO_JSON_CMD
 #     - elf-to-json
 #     - LINKER_SCRIPT
 #     - IN_BYTES
@@ -180,14 +180,10 @@ VECTOR_N_VECTORS               ?=
 VECTOR_JSON_MODE               ?= per-vector
 VECTOR_JSON_FILE               ?= $(JSON)
 VECTOR_JSON_DIR                ?= $(dir $(JSON))vector_json
-VECTOR_SUBSET_FILE             ?= $(BIN).all
+VECTOR_SUBSET_FILE             ?= $(BIN).selected.hex
 
 vector-build: require-src
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile compile TEST=$(TEST)
-	@elf_to_json_bin="$(MAKEFILE_DIR)bin/elf_to_json_gen"; \
-	mkdir -p "$(MAKEFILE_DIR)bin"; \
-	echo "building $$elf_to_json_bin..."; \
-	go build -o "$$elf_to_json_bin" $(ELF_TO_JSON_GEN)
 
 vector-json: require-src require-vector-file require-vector-build-artifacts require-vector-json-mode
 # VECTOR_FILE must contain one `IN_BYTES` value per line
@@ -226,18 +222,16 @@ vector-json: require-src require-vector-file require-vector-build-artifacts requ
 	else \
 		awk -v start="$$vector_start" -v end="$$vector_end" 'NR >= start + 1 && NR <= end + 1' "$(VECTOR_FILE)" > $(VECTOR_SUBSET_FILE); \
 	fi
-	@elf_to_json_bin="$(MAKEFILE_DIR)bin/elf_to_json_gen"; \
-	[ -x "$$elf_to_json_bin" ] || { echo "ELF-to-JSON helper not found. Run vector-build first"; exit 1; }; \
-	if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
+	@if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		echo "rendering ZKC JSON to $(VECTOR_JSON_FILE)"; \
-		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) @$(VECTOR_SUBSET_FILE) $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) $(ELF_TO_JSON_CMD) "$(abspath $(BIN))" "@$(abspath $(VECTOR_SUBSET_FILE))" $(IN_ORIGIN) > $(VECTOR_JSON_FILE) || exit $$?; \
 	elif [ "$(VECTOR_JSON_MODE)" = "per-vector" ]; then \
 		mkdir -p $(VECTOR_JSON_DIR); \
 		rm -f $(VECTOR_JSON_DIR)/*.json; \
 		echo "rendering one ZKC JSON per vector under $(VECTOR_JSON_DIR)"; \
 		n=0; while IFS= read -r in_bytes; do \
 			n=$$((n + 1)); idx=$$(printf '%03d' $$n); \
-			ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" $(BIN) "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
+			ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) $(ELF_TO_JSON_CMD) "$(abspath $(BIN))" "$$in_bytes" $(IN_ORIGIN) > "$(VECTOR_JSON_DIR)/$$idx.json" || exit $$?; \
 		done < $(VECTOR_SUBSET_FILE); \
 		echo "generated $$n vector JSON(s) in $(VECTOR_JSON_DIR)"; \
 	fi
@@ -426,16 +420,12 @@ act4-build:
 		exit 2; \
 	fi; \
 	rm -f "$(ACT4_LOGS)"/*.json "$(ACT4_LOGS)"/*.json.err "$(ACT4_LOGS)"/*.err "$(ACT4_LOGS)"/*.out "$(ACT4_LOGS)"/*.full || exit $$?; \
-	elf_to_json_bin="$(MAKEFILE_DIR)bin/elf_to_json_gen"; \
-	mkdir -p "$(MAKEFILE_DIR)bin" || exit $$?; \
-	echo "building $$elf_to_json_bin..."; \
-	go build -o "$$elf_to_json_bin" $(ELF_TO_JSON_GEN) || exit $$?; \
 	count=0; \
 	for elf in $$(find "$(ACT4_ELF_DIR)" -name '*.elf' | sort); do \
 		name=$$(basename "$$elf" .elf); \
 		base="$(ACT4_LOGS)/$$name"; \
 		count=$$((count + 1)); \
-		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) "$$elf_to_json_bin" "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
+		ELF2JSON_PREDECODING_PROOF=$(PREDECODING_PROOF) $(ELF_TO_JSON_CMD) "$$elf" "" 0 > "$$base.json" 2> "$$base.json.err" || exit $$?; \
 		[ -s "$$base.json.err" ] || rm -f "$$base.json.err"; \
 	done; \
 	if [ "$$count" -eq 0 ]; then echo "error: no ACT4 ELFs found in $(ACT4_ELF_DIR)" >&2; exit 1; fi; \

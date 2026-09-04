@@ -9,7 +9,7 @@ fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
 
     // Verify the raw funct3 field actually encodes the claimed store compute_op.
-    // Mapping (see elf_to_json_gen decodeSTypeSemantic):
+    // Mapping (see the Go predecoding package):
     //   STORE8=0b000, STORE16=0b001, STORE32=0b010, STORE64=0b011
     switch funct3 {
         case FUNCT3_SB: {
@@ -37,7 +37,7 @@ fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
             }
         }
         default: {
-            // Unrecognised store funct3 → elf_to_json_gen maps to COMPUTE_INVALID.
+            // Unrecognised store funct3 maps to COMPUTE_INVALID.
             if compute_op != COMPUTE_INVALID {
                 printf "[ERROR] invalid S-type funct3 requires COMPUTE_INVALID (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
                 fail
