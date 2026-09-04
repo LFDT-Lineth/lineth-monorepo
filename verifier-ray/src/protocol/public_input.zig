@@ -118,6 +118,10 @@ fn maxRoundCellCount(comptime spec: Spec) usize {
 }
 
 fn validateSpec(comptime spec: Spec) void {
+    // The statement_index uniqueness scan below is O(refs.len^2); the
+    // shared-randomness contribution alone contributes 328 refs, which pushes
+    // some cases past the compiler's default 1000-backwards-branch quota.
+    @setEvalBranchQuota(1_000_000);
     for (spec.refs, 0..) |ref, i| {
         if (ref.statement_index >= spec.refs.len)
             @compileError("public_input spec: refs statement_index out of range");
