@@ -1,5 +1,4 @@
 package lineth.conflation.calculators
-
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.blob.BlobCompressor
 import linea.domain.Blob
@@ -9,6 +8,7 @@ import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.kotlin.ByteArrayExt
 import lineth.conflation.SafeBlockProvider
+import lineth.conflation.ZERO_COINBASE
 import lineth.coordination.blob.FakeBlobCompressor
 import lineth.metrics.LineaMetricsCategory
 import net.consensys.FakeFixedClock
@@ -253,6 +253,7 @@ class GlobalBlobAwareConflationCalculatorTest {
           blockRLPEncoded = ByteArray(11),
           numOfTransactions = 1u,
           gasUsed = 10uL,
+          coinbase = ZERO_COINBASE,
         )
       }
     blockCounters.forEach {
@@ -290,6 +291,7 @@ class GlobalBlobAwareConflationCalculatorTest {
           blockRLPEncoded = ByteArray(11),
           numOfTransactions = 1u,
           gasUsed = 10uL,
+          coinbase = ZERO_COINBASE,
         )
       }
     blockCounters.forEach {
@@ -340,6 +342,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockRLPEncoded = ByteArray(11),
         numOfTransactions = 1u,
         gasUsed = 10uL,
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -349,6 +352,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockRLPEncoded = ByteArray(12),
         numOfTransactions = 1u,
         gasUsed = 10uL,
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -358,6 +362,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockRLPEncoded = ByteArray(83),
         numOfTransactions = 1u,
         gasUsed = 10uL,
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -367,6 +372,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockRLPEncoded = ByteArray(44),
         numOfTransactions = 1u,
         gasUsed = 10uL,
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -433,6 +439,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -440,6 +447,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -447,6 +455,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(90u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     // over sized block
     val block4Counters =
@@ -455,6 +464,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(200u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 0 bytes up to this point (fake compression, limit 100)
     val block5Counters =
@@ -463,6 +473,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 15 bytes up to this point (fake compression, limit 100)
     val block6Counters =
@@ -471,6 +482,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(61),
+        coinbase = ZERO_COINBASE,
       )
     // block 7 does not fit on top of 6, so it should emit conflation and blob events
     val block7Counters =
@@ -479,6 +491,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -535,6 +548,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -542,6 +556,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -549,6 +564,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -556,6 +572,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -563,6 +580,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 65 bytes up to this point (fake compression, limit 100)
     // block 6 does not fit, so it should emit conflation and blob events
@@ -572,6 +590,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(30u),
         blockRLPEncoded = ByteArray(61),
+        coinbase = ZERO_COINBASE,
       )
     // block 7 does not fit on top of 6, so it should emit conflation and blob events
     val block7Counters =
@@ -580,6 +599,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -642,6 +662,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -649,6 +670,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -656,6 +678,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -663,6 +686,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -670,6 +694,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered
     val block6Counters =
@@ -678,6 +703,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(60u),
         blockRLPEncoded = ByteArray(16),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 71 bytes up to this point (fake compression, limit 100)
     // block 7 does not fit, so it should emit conflation and blob events
@@ -687,6 +713,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -731,6 +758,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(50u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered
     val block2Counters =
@@ -739,6 +767,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(100u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered
     val block3Counters =
@@ -747,6 +776,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(90u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered
     val block4Counters =
@@ -755,6 +785,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(100u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered
     val block5Counters =
@@ -763,6 +794,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(50u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit will be triggered and blob batch limit will be triggered
     // as well since there are three pending batches now in the blob aware
@@ -773,6 +805,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(60u),
         blockRLPEncoded = ByteArray(16),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -841,6 +874,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -848,6 +882,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -855,6 +890,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -862,6 +898,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -869,6 +906,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // over-sized block traces limit will be triggered
     val block6Counters =
@@ -877,6 +915,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(200u),
         blockRLPEncoded = ByteArray(16),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 71 bytes up to this point (fake compression, limit 100)
     // block 7 does not fit, so it should emit conflation and blob events
@@ -886,6 +925,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -930,6 +970,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -937,6 +978,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -944,6 +986,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -951,6 +994,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -958,6 +1002,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // traces limit and data limit will be triggered
     // blob size is 55 bytes up to this point (fake compression, limit 100)
@@ -968,6 +1013,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(60u),
         blockRLPEncoded = ByteArray(61),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 61 bytes up to this point (fake compression, limit 100)
     // block 7 does not fit, so it should emit conflation and blob events
@@ -977,6 +1023,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -1025,6 +1072,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -1032,6 +1080,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -1039,6 +1088,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -1046,6 +1096,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -1053,6 +1104,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // over-sized traces limit and data limit will be triggered
     // blob size is 55 bytes up to this point (fake compression, limit 100)
@@ -1063,6 +1115,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(200u),
         blockRLPEncoded = ByteArray(61),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 61 bytes up to this point (fake compression, limit 100)
     // block 7 does not fit, so it should emit conflation and blob events
@@ -1072,6 +1125,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -1120,6 +1174,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -1127,6 +1182,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -1134,6 +1190,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -1141,6 +1198,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(14),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -1148,6 +1206,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block4Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(15),
+        coinbase = ZERO_COINBASE,
       )
     // over-sized block traces limit and data limit will be triggered
     // blob size is 55 bytes up to this point (fake compression, limit 100)
@@ -1158,6 +1217,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block5Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(200u),
         blockRLPEncoded = ByteArray(61),
+        coinbase = ZERO_COINBASE,
       )
     // blob size is 61 bytes up to this point (fake compression, limit 100)
     // block 7 does not fit, so it should emit conflation and blob events
@@ -1167,6 +1227,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block6Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(71),
+        coinbase = ZERO_COINBASE,
       )
 
     calculator.newBlock(block1Counters)
@@ -1229,6 +1290,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(11),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -1236,6 +1298,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(12),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -1243,6 +1306,7 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
         tracesCounters = fakeTracesCountersV2(90u),
         blockRLPEncoded = ByteArray(13),
+        coinbase = ZERO_COINBASE,
       )
 
     whenever(blobCompressor.canAppendBlock(block3Counters.blockRLPEncoded))

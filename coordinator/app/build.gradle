@@ -60,6 +60,7 @@ dependencies {
   implementation project(':coordinator:clients:shomei-client')
   implementation project(':coordinator:clients:traces-generator-api-client')
   implementation project(':coordinator:clients:prover-client:file-based-client')
+  implementation project(':coordinator:clients:prover-client:riscv-client')
   implementation project(':coordinator:clients:smart-contract-client')
   implementation project(':coordinator:clients:forced-transactions-client')
   implementation project(':coordinator:ethereum:finalization-monitor')

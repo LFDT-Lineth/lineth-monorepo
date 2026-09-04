@@ -918,6 +918,7 @@ class ForcedTransactionsAppTest {
         blockTimestamp = Clock.System.now(),
         tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
         blockRLPEncoded = ByteArray(0),
+        coinbase = "0x0000000000000000000000000000000000000000",
       )
       calculators.blockConflationCalculator.newBlock(blockCounters)
     }
@@ -1091,6 +1092,7 @@ class ForcedTransactionsAppTest {
     blockTimestamp = Clock.System.now(),
     tracesCounters = TracesCountersV5.EMPTY_TRACES_COUNT,
     blockRLPEncoded = ByteArray(0),
+    coinbase = "0x0000000000000000000000000000000000000000",
   )
 
   private fun EthApiBlockClient.blockTimestamp(blockParameter: BlockParameter): Instant =

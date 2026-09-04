@@ -1,11 +1,11 @@
 package lineth.conflation.calculators
-
 import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.kotlin.ByteArrayExt
 import lineth.conflation.SafeBlockProvider
+import lineth.conflation.ZERO_COINBASE
 import lineth.coordination.blob.FakeBlobCompressor
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
@@ -110,6 +110,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(101u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -117,6 +118,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -141,6 +143,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(60u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -148,6 +151,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(50u),
         blockRLPEncoded = ByteArray(20),
+        coinbase = ZERO_COINBASE,
       )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -172,6 +176,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(50u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -179,6 +184,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(50u),
         blockRLPEncoded = ByteArray(20),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -186,6 +192,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(20),
+        coinbase = ZERO_COINBASE,
       )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -211,6 +218,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(500),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -218,6 +226,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(20u),
         blockRLPEncoded = ByteArray(480),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -225,6 +234,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(20u),
         blockRLPEncoded = ByteArray(21),
+        coinbase = ZERO_COINBASE,
       )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -249,6 +259,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 9.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block2Counters =
       BlockCounters(
@@ -256,6 +267,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 10.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block3Counters =
       BlockCounters(
@@ -263,6 +275,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 19.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -270,6 +283,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 30.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     val block5Counters =
       BlockCounters(
@@ -277,6 +291,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 31.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(10),
+        coinbase = ZERO_COINBASE,
       )
     globalCalculator.newBlock(block1Counters) // first conflation as earlier than first hark-fork time
     globalCalculator.newBlock(block2Counters) // second conflation as earlier than second hark-fork time
@@ -312,6 +327,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(101u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
     // block with data in size limit
     val block2Counters =
@@ -320,6 +336,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(20u),
         blockRLPEncoded = ByteArray(1_000),
+        coinbase = ZERO_COINBASE,
       )
 
     val block3Counters =
@@ -328,6 +345,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(30u),
         blockRLPEncoded = ByteArray(300),
+        coinbase = ZERO_COINBASE,
       )
     val block4Counters =
       BlockCounters(
@@ -335,6 +353,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now(),
         tracesCounters = fakeTracesCountersV2(70u),
         blockRLPEncoded = ByteArray(400),
+        coinbase = ZERO_COINBASE,
       )
     // will trigger traces overflow
     val block5Counters =
@@ -343,6 +362,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 9.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
     val block6Counters =
       BlockCounters(
@@ -350,6 +370,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 19.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
     val block7Counters =
       BlockCounters(
@@ -357,6 +378,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 30.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
     val block8Counters =
       BlockCounters(
@@ -364,6 +386,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 31.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
     val block9Counters =
       BlockCounters(
@@ -371,6 +394,7 @@ class GlobalBlockConflationCalculatorIntTest {
         blockTimestamp = fakeClock.now() + 32.seconds,
         tracesCounters = fakeTracesCountersV2(10u),
         blockRLPEncoded = ByteArray(100),
+        coinbase = ZERO_COINBASE,
       )
 
     globalCalculator.newBlock(block1Counters)

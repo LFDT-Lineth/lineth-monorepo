@@ -1,0 +1,3 @@
+package lineth.conflation
+
+const val ZERO_COINBASE = "0x0000000000000000000000000000000000000000"
