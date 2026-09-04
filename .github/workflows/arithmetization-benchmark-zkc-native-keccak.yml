@@ -24,15 +24,23 @@ on:
       - main
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
+      - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/build_common/**'
+     - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-benchmark-zkc-native-keccak.yml'
+     - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
       zkc_base_ref:
@@ -77,6 +85,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Build two zkc binaries (base + opt) via go install
         run: |
