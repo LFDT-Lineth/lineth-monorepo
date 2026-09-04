@@ -619,8 +619,14 @@ public class BesuExecutionTools {
                     DefaultBlockParameter.valueOf(BigInteger.valueOf(startBlockNumber - 1))))
             .getStateRoot();
     final MerkelProofResponse[] merkelProofHolder = new MerkelProofResponse[1];
+    // Ignore IOException too: the Shomei node is started on a background thread (shomeiThread)
+    // and its Vert.x HTTP server binds asynchronously, so rollupGetZkEVMStateMerkleProofV0 throws a
+    // checked ConnectException (an IOException) while it is still coming up. Vert.x 5 (Besu
+    // 26.8.1) widened that bind window enough that the first poll lands in it; without ignoring
+    // IOException the await fails the test on the first poll instead of retrying.
     Awaitility.await("Shomei syncs block range " + startBlockNumber + "-" + endBlockNumber)
         .ignoreExceptionsInstanceOf(AssertionError.class)
+        .ignoreExceptionsInstanceOf(IOException.class)
         .atMost(60, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
         .untilAsserted(

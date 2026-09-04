@@ -115,8 +115,6 @@ public class TracerReadinessPlugin extends AbstractLineaOptionsPlugin {
               }
             });
 
-    // Start the Vertx HTTP server. Vert.x 5 removed the listen(port, Handler) callback overloads;
-    // listen(port) returns a Future<HttpServer>, so the result is observed via onComplete.
     server = vertx.createHttpServer(httpServerOptions(configuration)).requestHandler(router);
     server
         .listen(configuration.serverPort())
