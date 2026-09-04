@@ -140,7 +140,18 @@ pub fn build(b: *std.Build) void {
     const native_target = b.resolveTargetQuery(.{});
     const native_crypto = resolveNativeCrypto(b, native_target);
     const zesu_native = b.dependency("zesu", .{ .target = native_target, .optimize = host_optimize });
-    const native_imports = zesuImports(zesu_native);
+    var native_imports = zesuImports(zesu_native);
+    // Override ssz_decode with a local module that handles both v0.4.1 (EF fixtures, off_npr=16)
+    // and v0.8.0 (Linea mainnet fixtures, off_npr=20 with inline chain_id). The upstream zesu
+    // package only handles v0.4.1; v0.8.0 was introduced in stateless-executor ≥ zkevm@v0.8.0.
+    const ssz_decode_v8 = b.createModule(.{
+        .root_source_file = b.path("test/ssz_decode_v8.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    ssz_decode_v8.addImport("input", native_imports.input);
+    ssz_decode_v8.addImport("rlp_decode", native_imports.rlp_decode);
+    native_imports.ssz_decode = ssz_decode_v8;
 
     const guest_mod = b.createModule(.{
         .root_source_file = b.path(source),
@@ -374,6 +385,31 @@ pub fn build(b: *std.Build) void {
     const run_l2_execution_runner = b.addRunArtifact(l2_execution_runner_exe);
     if (b.args) |extra| run_l2_execution_runner.addArgs(extra);
     run_l2_execution_runner_step.dependOn(&run_l2_execution_runner.step);
+
+    // ── `mainnet-runner` native host tool ────────────────────────────────────────────────────────────
+    // Runs Linea mainnet zkevm SSZ fixtures (schema 0x0002, L2ExecutionProofPrivateInput) through
+    // the extended l2-execution guest on the host, expecting all to succeed. Fixtures are downloaded
+    // externally (the `fetch-mainnet-fixtures` Makefile target) and passed via `--fixtures DIR`.
+    // The same approach as `extended-vanilla` (reference-test): the guest runs as native code on the
+    // host — no riscv64 compilation and no ZkC required.
+    const mainnet_runner_exe = b.addExecutable(.{
+        .name = "mainnet-runner",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/mainnet_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    mainnet_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+    mainnet_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    mainnet_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    linkNativeZesuCrypto(mainnet_runner_exe, native_target, native_crypto);
+    b.installArtifact(mainnet_runner_exe);
+
+    const mainnet_test_step = b.step("mainnet-test", "Run Linea mainnet zkevm SSZ fixtures through the extended l2-execution guest (pass --fixtures DIR via --)");
+    const run_mainnet = b.addRunArtifact(mainnet_runner_exe);
+    if (b.args) |extra| run_mainnet.addArgs(extra);
+    mainnet_test_step.dependOn(&run_mainnet.step);
 
     // The SSZ fixture comes from the execution-spec-tests zkevm dependency (lazy: only fetched when
     // this test is built). An empty-block vector → no transactions → no secp256k1/curve precompiles,
