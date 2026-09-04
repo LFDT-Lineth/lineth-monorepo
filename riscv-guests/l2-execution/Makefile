@@ -123,6 +123,7 @@ $(MAINNET_FIXTURES_EXTRACTED):
 		rm -rf "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
 		git clone "$(MAINNET_FIXTURES_CONVERTER_REPO)" "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
 	fi; \
+	mkdir -p "$(MAINNET_FIXTURES_DIR)/go-tmp"; \
 	cd "$(MAINNET_FIXTURES_CONVERTER_DIR)" && TMPDIR="$(MAINNET_FIXTURES_DIR)/go-tmp" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert; \
 	rm -rf "$(MAINNET_FIXTURES_SSZ_DIR)"; \
 	mkdir -p "$(MAINNET_FIXTURES_SSZ_DIR)"; \
