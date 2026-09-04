@@ -530,6 +530,20 @@ type fixtureCase struct {
 	pcs     *codegen.PcsSystem
 	honest  proofFixture
 	invalid *proofFixture
+	// invalidVerify is a SELF-CONSISTENT failing proof, consumed ONLY by
+	// verify.zig (never vanishing.zig). Unlike invalid — which breaks the
+	// vanishing quotient identity and is shared with vanishing_test.zig's
+	// "every .invalid fails with QuotientIdentityMismatch" sweep — an
+	// invalidVerify proof is PCS- and vanishing-valid and fails specifically
+	// in a later sub-verifier (e.g. grandproduct.verify). It exists so a
+	// sub-verifier wired into verifier.Systems (such as .grandproduct) is
+	// exercised as the actual point of rejection, which a PCS-stage rejection
+	// (the shared .invalid path) cannot demonstrate.
+	invalidVerify *proofFixture
+	// invalidVerifyError is the exact error verify.zig must return for
+	// invalidVerify (e.g. "FinalProductMismatch"), so the regression pins the
+	// sub-verifier that fires rather than accepting any rejection.
+	invalidVerifyError string
 	// alt is a second honest proof of the same compiled protocol at a
 	// different dynamic-module size, verified against the same baked
 	// PcsSystem.
@@ -803,23 +817,29 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	// unreachable from any fixture, so AssertAllVerifierActionsHandled below is
 	// the first time this allowlist entry is actually exercised end-to-end.
 	//
-	// The invalid fixture is built by tampering the HONEST proof's transcript
-	// rather than re-running the prover on a mismatched A/B witness: a witness-
-	// level mismatch is always vanishing-self-consistent (the prover's Z column
-	// is always the honest running product OF WHATEVER witness it is given, so
-	// its own recurrence and row-0 boundary constraints still hold) and would
-	// only ever trip grandproduct.verify's cross-module ∏Z == Result check, never
-	// vanishing.verify's per-module quotient identity — but
-	// vanishing_test.zig's "invalid scenarios fail identity" test asserts EVERY
-	// scenario with an .invalid fixture fails with error.QuotientIdentityMismatch,
-	// since writeCompiledFixtures/writeVerifyFixtures share one fixtureCase.invalid
-	// across both vanishing.zig and verify.zig. So instead this flips the
-	// committed Z-endpoint cell for module A directly: that scalar is read both
-	// by the vanishing boundary constraint (pins the Z column's OOD claim to
-	// this transcript cell at the module's last row) and by grandproduct.verify
-	// (feeds ∏Z == Result), so one flip breaks both sub-verifiers — the same
-	// "tamper one already-produced cell" pattern the message-bus fixture below
-	// uses for its public-input flip.
+	// This case carries TWO failing fixtures, exercising two distinct rejection
+	// paths:
+	//
+	// 1. invalid (shared with vanishing.zig): built by tampering the HONEST
+	//    proof's transcript — flipping the committed Z-endpoint cell for
+	//    module A. That scalar is read both by the vanishing boundary
+	//    constraint (pins the Z column's OOD claim to this transcript cell at
+	//    the module's last row) and by grandproduct.verify (feeds
+	//    ∏Z == Result), so one flip breaks the vanishing quotient identity —
+	//    satisfying vanishing_test.zig's "every .invalid fails with
+	//    QuotientIdentityMismatch" sweep. (In the full verifier this same
+	//    proof is rejected at the PCS stage, before grandproduct.verify runs,
+	//    so it does NOT exercise the .grandproduct wiring end-to-end.)
+	//
+	// 2. invalidVerify (verify.zig only): a SELF-CONSISTENT proof produced by
+	//    re-running the prover on a mismatched A/B witness ([1,2,3,4] vs
+	//    [4,3,2,2] — not a permutation). The prover's Z column is always the
+	//    honest running product OF WHATEVER witness it is given, so its own
+	//    recurrence and row-0 boundary constraints still hold: the proof is
+	//    PCS-valid and vanishing-valid, and is rejected specifically by
+	//    grandproduct.verify's Result == 1 boundary (error.ResultMismatch).
+	//    This is the fixture that actually exercises the .grandproduct system
+	//    end-to-end, closing the coverage gap the shared .invalid path leaves.
 	{
 		sys, colA, colB := buildPermutationSystem()
 		honest := func(rt *wiop.Runtime) {
@@ -854,6 +874,22 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 		invalidFixture.view.rounds = invalidRounds
 		cases[last].invalid = &invalidFixture
+
+		// Self-consistent grandproduct-failing proof: re-run the prover on a
+		// mismatched A/B witness. colB is colA rotated by one EXCEPT for the
+		// last element (2 instead of 1), so the two sides are not a
+		// permutation of each other and the grand product does not cancel to
+		// 1. PCS and vanishing still pass; only grandproduct.verify rejects.
+		mismatched := func(rt *wiop.Runtime) {
+			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
+			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 2)))
+		}
+		invalidVerifyFixture, err := buildProofFixture(sys, mismatched, "Permutation", "GrandProductPermutation", "invalid-verify")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].invalidVerify = &invalidVerifyFixture
+		cases[last].invalidVerifyError = "ResultMismatch"
 	}
 
 	return cases, systems, nil
@@ -1427,6 +1463,13 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.invalid != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
 	}
+	// Self-consistent sub-verifier-failing proof (verify.zig only). Distinct
+	// from _failing (the vanishing-breaking, PCS-rejected .invalid): this one
+	// is PCS- and vanishing-valid and fails specifically in a later
+	// sub-verifier, so it exercises that sub-verifier's wiring end-to-end.
+	if tc.invalidVerify != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing_verify", idx), *tc.invalidVerify)
+	}
 	// The alt (second-size) honest proof, verified against the SAME System's .pcs.
 	if tc.alt != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
@@ -1591,6 +1634,53 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalid != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// getInputFailingVerify returns a case's SELF-CONSISTENT failing input: a
+	// proof that is PCS- and vanishing-valid and is rejected specifically by a
+	// later sub-verifier (e.g. grandproduct.verify). Unlike getInputFailing
+	// (which shares the vanishing-breaking .invalid fixture and is rejected at
+	// the PCS stage), this input reaches the targeted sub-verifier, so the
+	// caller can assert the EXACT error that sub-verifier returns.
+	fmt.Fprintln(out, "pub fn getInputFailingVerify(comptime index: usize) verifier.VerifyInput {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalidVerify != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_verify_input,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// hasFailingVerify gates getInputFailingVerify for cases without one.
+	fmt.Fprintln(out, "pub fn hasFailingVerify(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalidVerify != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// failingVerifyError is the exact error name verifier.verify must return
+	// for the self-consistent failing input, pinning which sub-verifier fires.
+	fmt.Fprintln(out, "pub fn failingVerifyError(comptime index: usize) []const u8 {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalidVerify != nil {
+			fmt.Fprintf(out, "        %d => \"%s\",\n", i, codegen.ZigString(tc.invalidVerifyError))
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
