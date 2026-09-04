@@ -26,7 +26,7 @@ func TestRisc5InstructionCoverageGuest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
-	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap)
+	outputs, err := traceZkc(binf, vm.DEFAULT_TRACE_CONFIG, inputsMap, true)
 	if err != nil {
 		t.Fatalf("failed to trace/check guest: %v", err)
 	}
