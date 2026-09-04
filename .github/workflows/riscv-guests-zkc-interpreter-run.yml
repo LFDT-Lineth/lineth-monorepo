@@ -72,11 +72,11 @@ jobs:
         with:
           submodules: false
 
-      # Pinned Zig (from .zigversion) + rustup (for the guest-crypto staticlib cargo builds) +
-      # zig-pkg/.zig-cache caches that make the zesu graph build a near-no-op. This action also
-      # builds native crypto libs (blst/mcl/…) that the FREESTANDING guest ELF does not link (its
-      # precompiles are compiled in from Zig/Rust sources or a custom op) — that work is cached and
-      # harmless; we reuse the action for the toolchain pins + caching, so do not "optimize" it away.
+      # Pinned Zig (from .zigversion) + zig-pkg/.zig-cache caches that make the zesu graph build
+      # a near-no-op. This action also builds native crypto libs (blst/mcl/…) that the FREESTANDING
+      # guest ELF does not link (its precompiles are compiled in from Zig/Constantine sources or a
+      # custom op) — that work is cached and harmless; we reuse the action for the toolchain pins +
+      # caching, so do not "optimize" it away.
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
 

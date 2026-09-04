@@ -18,6 +18,12 @@ extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
+// The guest's allocator, file-scope so the Constantine archive's C `malloc`/`free` shim (the
+// guest_crypto package's stub object) resolves the same FixedBufferAllocator by symbol.
+// std.mem.Allocator has no guaranteed in-memory layout, so the export is an extern struct of
+// its two words (ptr, vtable); the stub object pointer-casts it back.
+export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
+
 // This is the Rollup's extended l2-execution zkVM guest: it decodes the extended
 // `L2ExecutionProofPrivateInput` SSZ envelope, runs `l2_execution.runL2Execution` (the
 // Linea/Rollup-specific layer over per-block stateless execution — conflation, forced
@@ -45,6 +51,7 @@ fn guestMain() callconv(.c) noreturn {
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
+    guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;

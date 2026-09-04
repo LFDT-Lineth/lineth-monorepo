@@ -20,26 +20,6 @@ runs:
         version: ${{ steps.zigversion.outputs.version }}
         dependency-hash-paths: riscv-guests/*/build.zig.zon
 
-    # The guest-crypto Rust staticlib is built by cargo inside `zig build`; rustup auto-installs
-    # the toolchain + components pinned in riscv-guests/guest-crypto/rust-toolchain.toml.
-    - name: Install rustup
-      shell: bash
-      run: |
-        if ! command -v rustup >/dev/null 2>&1; then
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
-        fi
-        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
-    - name: Cache cargo registry and guest-crypto build
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-      with:
-        path: |
-          ~/.cargo/registry
-          riscv-guests/guest-crypto/target
-        key: guest-crypto-cargo-${{ hashFiles('riscv-guests/guest-crypto/Cargo.lock', 'riscv-guests/guest-crypto/rust-toolchain.toml') }}
-        restore-keys: |
-          guest-crypto-cargo-
-
     # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
     # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
     # Cache /usr/local's result directly so a hit skips straight to a no-op inside that target.
@@ -57,6 +37,13 @@ runs:
     - name: Install native crypto deps (blst, mcl)
       shell: bash
       run: make -C riscv-guests install-native-crypto-deps
+
+    # The guest-crypto-ctt package compiles constantine (Nim→C→rv64im) inside `zig build`;
+    # it needs nim and clang (riscv64 backend). The rv64im objects are freestanding —
+    # headers come from the constantine fork's standalone include dir — so no libc sysroot.
+    - name: Install constantine build deps (nim, clang)
+      shell: bash
+      run: make -C riscv-guests install-constantine-deps
 
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches

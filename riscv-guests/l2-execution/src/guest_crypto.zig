@@ -9,11 +9,12 @@
 //! pairing/MSM inputs are repacked record-by-record. BN254's seam encoding already matches the
 //! EIP-196/197 layout, so those wrappers pass buffers through unchanged.
 //!
-//! Deliberate stubs (not full parity):
-//!   • ecrecover / secp256k1Verify — Constantine's ecrecover takes the EIP 128-byte input and
-//!     returns the keccak'd ADDRESS, not the raw 64-byte pubkey this seam uses; stubbed ERR.
-//!   • kzgPointEvalVerify — ctt_eth_evm_kzg_point_evaluation needs a ctt_eth_kzg_context built
-//!     from the full 4096-point trusted setup (file-loaded); stubbed false.
+//! secp256k1 (ecrecover / verify) is pure Zig via std.crypto.ecc.Secp256k1 — Constantine's
+//! ecrecover takes the EIP 128-byte input and returns the keccak'd ADDRESS, not the raw
+//! 64-byte pubkey this seam uses, so the seam is served without the ctt FFI.
+//!
+//! KZG point evaluation runs against a ctt_eth_kzg_context built from the 4096-point
+//! trusted setup baked into the ELF at compile time (there is no filesystem in-guest).
 
 const std = @import("std");
 
@@ -27,18 +28,66 @@ extern fn ctt_eth_evm_bls12381_map_fp2_to_g2(r: [*]u8, r_len: usize, inputs: [*]
 extern fn ctt_eth_evm_bn254_g1add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bn254_g1mul(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bn254_ecpairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
-// Defined in the constantine package's ctt_stubs_rv64.o (ABI mismatch, see header).
-extern fn guest_crypto_secp256k1_ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) c_int;
-extern fn guest_crypto_secp256k1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) c_int;
 
 const OK: c_int = 0; // cttEVM_Success
 
+// ── secp256k1 (pure Zig, std.crypto.ecc.Secp256k1) ─────────────────────────────────────────────
+const Secp256k1 = std.crypto.ecc.Secp256k1;
+const EcdsaK1 = std.crypto.sign.ecdsa.Ecdsa(Secp256k1, std.crypto.hash.sha2.Sha256);
+
+/// ECDSA public-key recovery over a 32-byte pre-hash (the EVM precompile form). sig is compact
+/// r‖s (32+32, big-endian); recid selects the y parity (0/1, or Ethereum's 27/28). output is the
+/// uncompressed point without the 0x04 prefix (x‖y, 64 bytes).
 pub fn ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) bool {
-    return guest_crypto_secp256k1_ecrecover(msg, sig, recid, output) == OK;
+    const recid_norm: u8 = switch (recid) {
+        0, 1 => recid,
+        27, 28 => recid - 27,
+        else => return false,
+    };
+    const K1S = Secp256k1.scalar;
+    const r_bytes: [32]u8 = sig[0..32].*;
+    const s_bytes: [32]u8 = sig[32..64].*;
+    const r = K1S.Scalar.fromBytes(r_bytes, .big) catch return false;
+    const s = K1S.Scalar.fromBytes(s_bytes, .big) catch return false;
+    if (r.isZero() or s.isZero()) return false;
+
+    // R = the curve point with x = r (canonical, so x < n < q) and the parity recid selects.
+    const x = Secp256k1.Fe.fromBytes(r_bytes, .big) catch return false;
+    const y = Secp256k1.recoverY(x, (recid_norm & 1) == 1) catch return false;
+    const R = Secp256k1.fromAffineCoordinates(.{ .x = x, .y = y }) catch return false;
+    R.rejectIdentity() catch return false;
+
+    // Q = r⁻¹·(s·R − z·G); z is the hash reduced mod n (fromBytes64 reduces, matching the
+    // ECDSA convention of a field reduction of the message representative).
+    var msg64: [64]u8 = undefined;
+    @memcpy(msg64[32..64], msg);
+    @memset(msg64[0..32], 0);
+    const z = K1S.Scalar.fromBytes64(msg64, .big);
+    const r_inv = r.invert();
+    const s_r = s.mul(r_inv).toBytes(.big);
+    const neg_z_r = z.neg().mul(r_inv).toBytes(.big);
+    const q = Secp256k1.mulDoubleBasePublic(R, s_r, Secp256k1.basePoint, neg_z_r, .big) catch return false;
+    const affine = q.affineCoordinates();
+    output[0..32].* = affine.x.toBytes(.big);
+    output[32..64].* = affine.y.toBytes(.big);
+    return true;
 }
 
+/// ECDSA verification over a 32-byte pre-hash; pubkey is x‖y (64 bytes, no 0x04 prefix).
 pub fn secp256k1Verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) void {
-    _ = guest_crypto_secp256k1_verify(msg, sig, pubkey, verified);
+    var sec1: [65]u8 = undefined;
+    sec1[0] = 0x04;
+    @memcpy(sec1[1..65], pubkey);
+    const pk = EcdsaK1.PublicKey.fromSec1(&sec1) catch {
+        verified.* = false;
+        return;
+    };
+    const signature = EcdsaK1.Signature.fromBytes(sig.*);
+    signature.verifyPrehashed(msg.*, pk) catch {
+        verified.* = false;
+        return;
+    };
+    verified.* = true;
 }
 
 // ── raw↔padded helpers ────────────────────────────────────────────────────────────────────────
@@ -117,6 +166,12 @@ pub fn g2Msm(pairs: anytype, result: *[192]u8) bool {
 pub fn pairingCheck(pairs: anytype, verified: *bool) bool {
     // raw record = 96 (g1) + 192 (g2) = 288; ctt record = 128 + 256 = 384
     const n = pairs.len;
+    // Seam contract: an empty pairing product is trivially verified (multiplicative identity);
+    // ctt rejects N == 0, so the wrapper answers before calling in.
+    if (n == 0) {
+        verified.* = true;
+        return true;
+    }
     const raw = pairBytes(pairs, 96 + 192);
     var in: [1024 * 384]u8 = undefined;
     if (n > 1024) return false;
@@ -168,6 +223,11 @@ pub fn bn254G1Mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) 
 
 pub fn bn254PairingCheck(pairs: anytype, verified: *bool) bool {
     const n = pairs.len;
+    // Same empty-input contract as pairingCheck.
+    if (n == 0) {
+        verified.* = true;
+        return true;
+    }
     const raw = pairBytes(pairs, 64 + 128); // g1 = 64, g2 = 128
     var out: [32]u8 = undefined;
     if (ctt_eth_evm_bn254_ecpairingcheck(&out, 32, raw, n * 192) != OK) return false;
@@ -181,11 +241,43 @@ pub fn kzgPointEvalVerify(
     y: *const [32]u8,
     proof: *const [48]u8,
 ) bool {
-    _ = commitment;
-    _ = z;
-    _ = y;
-    _ = proof;
-    return false; // stubbed: ctt KZG needs a full trusted-setup context (file-loaded)
+    const ctx = kzgContext() orelse return false;
+    var in: [192]u8 = undefined;
+    // versioned_hash = 0x01 ‖ sha256(commitment)[1:] (EIP-4844 kzg_to_versioned_hash)
+    std.crypto.hash.sha2.Sha256.hash(commitment, in[0..32], .{});
+    in[0] = 0x01;
+    @memcpy(in[32..64], z);
+    @memcpy(in[64..96], y);
+    @memcpy(in[96..144], commitment);
+    @memcpy(in[144..192], proof);
+    var out: [64]u8 = undefined;
+    return ctt_eth_evm_kzg_point_evaluation(ctx, &out, 64, &in, 192) == OK;
+}
+
+const CttKzgContext = opaque {};
+
+extern fn ctt_eth_kzg_context_new_embedded(ctx: *?*CttKzgContext) c_int;
+extern fn ctt_eth_evm_kzg_point_evaluation(
+    ctx: ?*const CttKzgContext,
+    r: [*]u8,
+    r_len: usize,
+    inputs: [*]const u8,
+    inputs_len: usize,
+) c_int;
+
+var kzg_ctx: ?*CttKzgContext = null;
+var kzg_ctx_failed = false;
+
+/// Lazily build the KZG trusted-setup context once from the SRS baked into the ELF.
+/// The guest is single-threaded, so a plain global suffices.
+fn kzgContext() ?*CttKzgContext {
+    if (kzg_ctx) |c| return c;
+    if (kzg_ctx_failed) return null;
+    if (ctt_eth_kzg_context_new_embedded(&kzg_ctx) != 0) { // tsSuccess == 0
+        kzg_ctx_failed = true;
+        return null;
+    }
+    return kzg_ctx;
 }
 
 fn pairBytes(pairs: anytype, comptime stride: usize) [*]const u8 {

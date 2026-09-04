@@ -167,8 +167,7 @@ pub fn build(b: *std.Build) void {
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
     // FFI tests for the guest-crypto staticlib (test/guest_crypto_test.zig): official EIP-2537
-    // vectors, the EIP-4844 point-evaluation KAT, ecrecover round-trips against a textbook signing
-    // oracle, and the [s]₂ trusted-setup pin (test/data/trusted_setup.txt) — all driven through the
+    // vectors and ecrecover round-trips against a textbook signing oracle — all driven through the
     // same src/guest_crypto.zig bindings the guest uses, linked against the host archive.
     const guest_crypto_native_mod = b.createModule(.{
         .root_source_file = b.path("src/guest_crypto.zig"),

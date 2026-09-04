@@ -16,7 +16,7 @@
 //!   • zesu's own native crypto backend (`zesu_crypto_backend`) — modexp/RIPEMD-160/BLAKE2f. These
 //!     have no C-library dependency, so — unlike the rest of zesu's native backend — they
 //!     cross-compile straight to riscv64.
-//!   • bn254 — Constantine's ctt_eth_evm_bn254_* (EIP-196/197); real computation on this spike.
+//!   • bn254 — Constantine's ctt_eth_evm_bn254_* (EIP-196/197).
 //!
 //! Only the freestanding RISC-V guest references these (pulled in by evm_execution_guest.zig for
 //! `builtin.cpu.arch == .riscv64`); the native host build uses Zesu's C-backed crypto instead.

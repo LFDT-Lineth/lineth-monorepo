@@ -18,7 +18,7 @@ ZIG    ?= zig
 # Mirrors the CI `zig fmt --check` invocation (riscv-guests-host-tests.yml) and scales with GUESTS.
 FMT_PATHS := build_common/build.zig $(foreach g,$(GUESTS),$(g)/build.zig $(g)/src $(g)/test)
 
-.PHONY: compile test fetch clean fmt fmt-check help install-native-crypto-deps
+.PHONY: compile test fetch clean fmt fmt-check help install-native-crypto-deps install-constantine-deps
 
 # Each common target fans out to every guest's own Makefile.
 compile test fetch clean:
@@ -81,6 +81,21 @@ install-native-crypto-deps:
 		$$sudo cp -r /tmp/mcl-src/include/mcl "$$prefix/include/"; \
 	fi
 
+# Toolchain the guest-crypto-ctt package's build.zig shells out to: Nim + nimble (Nim→C and
+# the fork's rv64 freestanding task) and an LLVM clang with the riscv64 backend. The rv64im
+# objects are freestanding: header declarations come from the Constantine fork's standalone
+# include dir, so no libc sysroot is needed.
+install-constantine-deps:
+	@set -eu; \
+	if [ "$$(uname -s)" = "Darwin" ]; then \
+		command -v brew >/dev/null 2>&1 || { echo "Homebrew not found: https://brew.sh"; exit 1; }; \
+		brew install nim llvm || true; \
+	else \
+		sudo=$$(command -v sudo >/dev/null 2>&1 && echo sudo || echo ""); \
+		$$sudo apt-get update -qq; \
+		$$sudo apt-get install -y --no-install-recommends nim clang git python3; \
+	fi
+
 # Formatting spans build_common + all guests, so it lives here (not fanned out). `fmt` rewrites in
 # place; `fmt-check` only verifies — the same gate CI runs.
 fmt:
@@ -99,4 +114,5 @@ help:
 	@echo "  make fmt         # format build_common + all guest sources in place (zig fmt)"
 	@echo "  make fmt-check   # verify formatting without writing (the CI gate)"
 	@echo "  make install-native-crypto-deps  # install blst/mcl for native host-tool builds"
+	@echo "  make install-constantine-deps    # install nim/nimble/clang for the guest-crypto-ctt build"
 	@echo ""
