@@ -6,6 +6,7 @@ const shared_randomness = verifier_ray.query.shared_randomness;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const multiset_hashing = verifier_ray.crypto.multiset_hashing;
 const field = verifier_ray.field.koalabear;
+const ext = verifier_ray.field.koalabear_ext;
 
 // Hand-built cases pinning the shared-randomness contribution check directly
 // via ScalarRef/round lookups into a runtime ctx, mirroring grandproduct_test.zig
@@ -138,6 +139,26 @@ test "shared randomness rejects a tampered claimed contribution limb past the fi
     var rounds_buf: [3]protocol.RoundMessage = undefined;
     try std.testing.expectError(
         error.ContributionMismatch,
+        shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
+    );
+}
+
+test "shared randomness rejects an extension-field-encoded contribution limb" {
+    const com0 = octuplet(1);
+    const com1 = octuplet(100);
+    var contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+
+    // Re-encode limb 5 as an extension scalar carrying the SAME numeric value
+    // (lift of the honest base limb). The value is correct, so a verifier that
+    // lifts via toExt() would wrongly accept it; the protocol requires these
+    // cells to be base-field (prover-ray's contributionCell panics on
+    // extension cells), so this must be rejected as ContributionNotBaseField.
+    const honest_limb = contribution[5].base;
+    contribution[5] = .{ .ext = ext.Ext.lift(honest_limb) };
+
+    var rounds_buf: [3]protocol.RoundMessage = undefined;
+    try std.testing.expectError(
+        error.ContributionNotBaseField,
         shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
     );
 }

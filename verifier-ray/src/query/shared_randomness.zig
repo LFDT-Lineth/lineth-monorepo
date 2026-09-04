@@ -1,11 +1,11 @@
 const protocol = @import("../protocol/root.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
 const multiset_hashing = @import("../crypto/multiset_hashing.zig");
-const ext = @import("../field/koalabear_ext.zig");
 
 pub const Error = error{
     MissingRoundCommitment,
     ContributionMismatch,
+    ContributionNotBaseField,
 } || protocol.CellError;
 
 /// ScalarRef locates a cell in ctx.rounds by its (round, index) coordinates.
@@ -71,7 +71,16 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     const contribution = multiset_hashing.hash(digest);
 
     inline for (system.contribution_refs, 0..) |ref, i| {
-        const claimed = (try ctx.cell(ref.round, ref.index)).toExt();
-        if (!claimed.eql(ext.Ext.lift(contribution[i]))) return error.ContributionMismatch;
+        // The contribution limbs are base-field by protocol contract:
+        // prover-ray's messagebus.contributionCell panics on an extension
+        // cell, and the sibling gammaDigest path likewise rejects
+        // ext-encoded cells. Reject an ext-encoded limb here too rather than
+        // lifting it via toExt(), which would erase the base/ext distinction
+        // and accept an encoding the protocol is meant to forbid.
+        const claimed = switch (try ctx.cell(ref.round, ref.index)) {
+            .base => |b| b,
+            .ext => return error.ContributionNotBaseField,
+        };
+        if (!claimed.eql(contribution[i])) return error.ContributionMismatch;
     }
 }
