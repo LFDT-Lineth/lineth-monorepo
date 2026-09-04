@@ -20,6 +20,11 @@ ARITHMETIZATION_TESTING_MAKEFILE ?= $(MAKEFILE_DIR)../../arithmetization/src/tes
 ZIG ?= zig
 GO  ?= go
 
+# GNU tar (Linux) warns about macOS LIBARCHIVE.xattr PAX extension headers in archives
+# created on macOS; --warning=no-unknown-keyword silences them. BSD tar (macOS) handles
+# these natively and does not support that flag, so we only pass it on Linux.
+TAR_EXTRA_FLAGS := $(if $(filter Linux,$(shell uname -s)),--warning=no-unknown-keyword,)
+
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
@@ -112,7 +117,7 @@ $(MAINNET_FIXTURES_EXTRACTED):
 			mv "$$archive.tmp" "$$archive"; \
 		fi; \
 		echo "extracting $$archive"; \
-		tar --zstd --warning=no-unknown-keyword -xf "$$archive" -C "$(MAINNET_FIXTURES_JSON_DIR)"; \
+		tar --zstd $(TAR_EXTRA_FLAGS) -xf "$$archive" -C "$(MAINNET_FIXTURES_JSON_DIR)"; \
 	done; \
 	if [ ! -d "$(MAINNET_FIXTURES_CONVERTER_DIR)/.git" ]; then \
 		rm -rf "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
