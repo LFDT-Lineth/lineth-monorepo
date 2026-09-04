@@ -55,19 +55,11 @@ func run() error {
 		VanishingImport:    `@import("verifier_ray").query.vanishing`,
 		LogDerivImport:     `@import("verifier_ray").query.logderivativesum`,
 		GrandProductImport: `@import("verifier_ray").query.grandproduct`,
-		RowLimitImport:     `@import("verifier_ray").query.rowlimit`,
-		// TODO(shared-randomness): when this branch is rebased onto the
-		// shared-randomness work (split/3832-3, which adds
-		// CompiledSystemZigOptions.SharedRandomnessImport and exports
-		// query.shared_randomness from src/lib.zig), set it here alongside the
-		// other query imports:
-		//   SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
-		// With EmitHeader: true the shared_randomness writer emits
-		// `const shared_randomness = <SharedRandomnessImport>;`, so leaving the
-		// field empty would render invalid Zig.
-		WritePcs:  true,
-		PcsImport: `@import("verifier_ray").query.pcs`,
-		FriImport: `@import("verifier_ray").query.fri`,
+		RowLimitImport:         `@import("verifier_ray").query.rowlimit`,
+		SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
+		WritePcs:               true,
+		PcsImport:              `@import("verifier_ray").query.pcs`,
+		FriImport:              `@import("verifier_ray").query.fri`,
 	}); err != nil {
 		return fmt.Errorf("WriteCompiledSystemZig: %w", err)
 	}
@@ -75,7 +67,7 @@ func run() error {
 	// Step 2: stitch the sub-verifier systems just written into a single
 	// verifier.Systems value, the top-level struct verifier.verify expects.
 	fmt.Fprintf(&systemBuf,
-		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .pcs = pcs_system_0 };\n",
+		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\n",
 	)
 
 	generatedDir := "../../testdata/generated"
