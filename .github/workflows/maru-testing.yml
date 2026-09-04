@@ -1,4 +1,4 @@
-name: maru-testing
+name: "maru-testing"
 
 permissions:
   contents: read
