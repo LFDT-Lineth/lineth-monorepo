@@ -8,6 +8,7 @@ const MAX_UINT_32_AS_U64:u64 = 0xffffffff
 
 const OVERFLOW_DIVIDEND:u64 = 0x8000000000000000
 const NEGATIVE_ONE_AS_I64:u64 = 0xffffffffffffffff
+const NEGATIVE_ONE_AS_I32:u32 = 0xffffffff
 const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 
 // Syscalls
@@ -421,7 +422,7 @@ const J_TYPE:Type = 6
 // treat them as such — advance PC by 4, do nothing else.
 const MISC_MEM_TYPE:Type = 7
 
-// -- PREDECODING PROOF SECTION -- 
+// -- PREDECODING PROOF SECTION --
 // static instruction_type_from_opcode(opcode:Opcode) -> (instruction_type:Type) {
 //     UNDEFINED_TYPE, // 0b0000000
 //     UNDEFINED_TYPE, // 0b0000001
@@ -552,4 +553,4 @@ const MISC_MEM_TYPE:Type = 7
 //     UNDEFINED_TYPE, // 0b1111110
 //     UNDEFINED_TYPE, // 0b1111111
 // }
-// -- PREDECODING PROOF SECTION END-- 
+// -- PREDECODING PROOF SECTION END--
