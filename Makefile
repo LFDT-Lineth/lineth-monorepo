@@ -20,6 +20,38 @@ clean-environment:
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
 
+RISCV_COMPOSE_FILE ?= docker/compose-riscv.yml
+RISCV_COMPOSE_PROJECT ?= linea-riscv-dev
+RISCV_COMPOSE = COMPOSE_PROFILES=l1,l2,riscv docker compose \
+	--project-name $(RISCV_COMPOSE_PROJECT) \
+	--file $(RISCV_COMPOSE_FILE)
+
+.PHONY: clean-riscv-environment start-env-with-riscv
+
+clean-riscv-environment:
+	$(RISCV_COMPOSE) down --volumes --remove-orphans
+	rm -rf tmp/riscv
+
+start-env-with-riscv:
+	$(MAKE) clean-riscv-environment
+	mkdir -p \
+		tmp/riscv/prover/riscv/execution/requests \
+		tmp/riscv/prover/riscv/execution/responses
+	chmod -R a+rwX tmp/riscv/prover
+	$(MAKE) seed-deny-list
+	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
+		l1-cl-node \
+		maru \
+		postgres
+	$(MAKE) deploy-contracts \
+		L1_CONTRACT_VERSION=9 \
+		LINETH_PROTOCOL_CONTRACTS_ONLY=true \
+		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
+		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
+		riscv-proof-responder \
+		coordinator
+
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
 # Also drop any stale lockfile from a crashed previous run, otherwise every
