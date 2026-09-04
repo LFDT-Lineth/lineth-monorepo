@@ -48,8 +48,9 @@ EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixt
 # Parameters for Linea mainnet zkevm fixture archives.
 # Archives (JSON) are cached under MAINNET_FIXTURES_ARCHIVE_DIR and only re-downloaded when absent.
 # Converted SSZ inputs live under MAINNET_FIXTURES_SSZ_DIR, produced by zesu-convert.
-# Override MAINNET_FIXTURES_DIR to keep downloads outside /tmp.
-MAINNET_FIXTURES_DIR              ?= /tmp/zkevm-fixtures-mainnet
+# Default is /var/tmp (persists across reboots, on the real disk — both archives are ~1.5 GB each,
+# which exceeds the typical 3–4 GB tmpfs on /tmp). Override MAINNET_FIXTURES_DIR to change location.
+MAINNET_FIXTURES_DIR              ?= /var/tmp/zkevm-fixtures-mainnet
 MAINNET_FIXTURES_ARCHIVE_DIR      := $(MAINNET_FIXTURES_DIR)/archives
 MAINNET_FIXTURES_JSON_DIR         := $(MAINNET_FIXTURES_DIR)/json
 MAINNET_FIXTURES_SSZ_DIR          := $(MAINNET_FIXTURES_DIR)/ssz
@@ -111,13 +112,13 @@ $(MAINNET_FIXTURES_EXTRACTED):
 			mv "$$archive.tmp" "$$archive"; \
 		fi; \
 		echo "extracting $$archive"; \
-		tar --zstd -xf "$$archive" -C "$(MAINNET_FIXTURES_JSON_DIR)"; \
+		tar --zstd --warning=no-unknown-keyword -xf "$$archive" -C "$(MAINNET_FIXTURES_JSON_DIR)"; \
 	done; \
 	if [ ! -d "$(MAINNET_FIXTURES_CONVERTER_DIR)/.git" ]; then \
 		rm -rf "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
 		git clone "$(MAINNET_FIXTURES_CONVERTER_REPO)" "$(MAINNET_FIXTURES_CONVERTER_DIR)"; \
 	fi; \
-	cd "$(MAINNET_FIXTURES_CONVERTER_DIR)" && $(GO) build -o bin/zesu-convert ./cmd/zesu-convert; \
+	cd "$(MAINNET_FIXTURES_CONVERTER_DIR)" && TMPDIR="$(MAINNET_FIXTURES_DIR)/go-tmp" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert; \
 	rm -rf "$(MAINNET_FIXTURES_SSZ_DIR)"; \
 	mkdir -p "$(MAINNET_FIXTURES_SSZ_DIR)"; \
 	find "$(MAINNET_FIXTURES_JSON_DIR)" -name "rpc_block_*.json" | while read json; do \

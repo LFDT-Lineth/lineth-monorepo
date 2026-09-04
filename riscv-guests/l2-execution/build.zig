@@ -140,7 +140,18 @@ pub fn build(b: *std.Build) void {
     const native_target = b.resolveTargetQuery(.{});
     const native_crypto = resolveNativeCrypto(b, native_target);
     const zesu_native = b.dependency("zesu", .{ .target = native_target, .optimize = host_optimize });
-    const native_imports = zesuImports(zesu_native);
+    var native_imports = zesuImports(zesu_native);
+    // Override ssz_decode with a local module that handles both v0.4.1 (EF fixtures, off_npr=16)
+    // and v0.8.0 (Linea mainnet fixtures, off_npr=20 with inline chain_id). The upstream zesu
+    // package only handles v0.4.1; v0.8.0 was introduced in stateless-executor ≥ zkevm@v0.8.0.
+    const ssz_decode_v8 = b.createModule(.{
+        .root_source_file = b.path("test/ssz_decode_v8.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    ssz_decode_v8.addImport("input", native_imports.input);
+    ssz_decode_v8.addImport("rlp_decode", native_imports.rlp_decode);
+    native_imports.ssz_decode = ssz_decode_v8;
 
     const guest_mod = b.createModule(.{
         .root_source_file = b.path(source),
