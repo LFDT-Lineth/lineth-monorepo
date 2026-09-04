@@ -130,7 +130,7 @@ $(MAINNET_FIXTURES_EXTRACTED):
 	find "$(MAINNET_FIXTURES_JSON_DIR)" -name "rpc_block_*.json" | while read json; do \
 		stem=$$(basename "$$json" .json); \
 		subdir=$$(dirname "$$json"); \
-		rel=$$(realpath --relative-to="$(MAINNET_FIXTURES_JSON_DIR)" "$$subdir"); \
+		rel="$${subdir#$(MAINNET_FIXTURES_JSON_DIR)/}"; \
 		mkdir -p "$(MAINNET_FIXTURES_SSZ_DIR)/$$rel"; \
 		"$(MAINNET_FIXTURES_CONVERTER_BIN)" "$$json" "$(MAINNET_FIXTURES_SSZ_DIR)/$$rel/$$stem.ssz"; \
 	done; \
