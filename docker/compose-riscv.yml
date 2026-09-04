@@ -1,0 +1,174 @@
+volumes:
+  local-dev:
+    name: "linea-riscv-local-dev"
+
+networks:
+  linea:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.42.24.0/24
+  l1network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.42.23.0/24
+
+services:
+  l1-el-node:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-el-node
+    container_name: linea-riscv-l1-el-node
+    ports: !override
+      - "8445:8545"
+    networks:
+      l1network:
+        ipv4_address: 10.42.23.201
+
+  l1-cl-node:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-cl-node
+    container_name: linea-riscv-l1-cl-node
+    command:
+      - --config-file=/config/config-file.yaml
+      - --ee-endpoint=http://l1-el-node:8551
+    ports: !override []
+    networks:
+      l1network:
+        ipv4_address: 10.42.23.202
+
+  l1-node-genesis-generator:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-node-genesis-generator
+    container_name: linea-riscv-l1-node-genesis-generator
+
+  l2-genesis-initialization:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-genesis-initialization
+    container_name: linea-riscv-l2-genesis-initialization
+
+  maru:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: maru
+    container_name: linea-riscv-maru
+    environment:
+      LINETH_USE_MARU_OVERRIDE_CONFIG: "true"
+    ports: !override []
+    volumes:
+      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
+    networks:
+      l1network:
+      linea:
+        ipv4_address: 10.42.24.210
+
+  sequencer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: sequencer
+    container_name: linea-riscv-sequencer
+    command:
+      - --config-file=/var/lib/besu/sequencer.config.toml
+      - --node-private-key-file=/var/lib/besu/key
+      - --plugin-linea-node-type=SEQUENCER
+      - --plugin-linea-liveness-enabled=false
+      - >-
+        --plugins=LineaEstimateGasEndpointPlugin,LineaExtraDataPlugin,
+        LineaTransactionPoolValidatorPlugin,LineaBundleEndpointsPlugin,
+        LineaSetExtraDataEndpointPlugin,LineaTransactionSelectorPlugin
+    ports: !override
+      - "8545:8545"
+    networks:
+      l1network:
+      linea:
+        ipv4_address: 10.42.24.101
+
+  postgres:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: postgres
+    container_name: linea-riscv-postgres
+    ports: !override []
+
+  riscv-proof-responder:
+    container_name: linea-riscv-proof-responder
+    image: busybox:latest
+    profiles: ["riscv"]
+    entrypoint: ["/bin/sh", "/opt/linea/proof-responder.sh"]
+    environment:
+      R5_L2_EXECUTION_PROGRAM_VK: ${R5_L2_EXECUTION_PROGRAM_VK:-0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f}
+    volumes:
+      - ./config/riscv/proof-responder.sh:/opt/linea/proof-responder.sh:ro
+      - ../tmp/riscv/prover/riscv:/data/prover/riscv
+    networks:
+      - linea
+
+  coordinator:
+    container_name: linea-riscv-coordinator
+    hostname: coordinator
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-local}
+    platform: linux/amd64
+    profiles: ["l2"]
+    depends_on:
+      l2-genesis-initialization:
+        condition: service_completed_successfully
+      l1-el-node:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      sequencer:
+        condition: service_healthy
+    ports:
+      - "9545:9545"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
+          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    restart: on-failure
+    environment:
+      dev_LINETH_COORDINATOR_DISABLED: "false"
+      CONFIG_OVERRIDE_OPTS: ""
+    command:
+      - sh
+      - -c
+      - |
+        exec java \
+          -Xmx768m \
+          -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json \
+          -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml \
+          -jar "$${LINETH_APP_JAR:-/opt/consensys/linea/coordinator/libs/coordinator.jar}" \
+          --traces-limits-v5 config/traces-limits-v5.toml \
+          --smart-contract-errors config/smart-contract-errors.toml \
+          --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml \
+          config/coordinator-config.toml \
+          config/coordinator-config-riscv.toml
+    volumes:
+      - ./config/coordinator/coordinator-config-v2.toml:/opt/consensys/linea/coordinator/config/coordinator-config.toml:ro
+      - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro
+      - ./config/common/traces-limits-v5.toml:/opt/consensys/linea/coordinator/config/traces-limits-v5.toml:ro
+      - ./config/common/smart-contract-errors.toml:/opt/consensys/linea/coordinator/config/smart-contract-errors.toml:ro
+      - ./config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
+      - ./config/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro
+      - ./config/coordinator/log4j2-dev.xml:/var/lib/coordinator/log4j2-dev.xml:ro
+      - ../tmp/riscv:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1100M
+        reservations:
+          memory: 512M
+    networks:
+      l1network:
+        ipv4_address: 10.42.23.106
+      linea:
+        ipv4_address: 10.42.24.106
