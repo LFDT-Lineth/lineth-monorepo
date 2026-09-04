@@ -126,8 +126,7 @@ public class EngineAPIService {
     ArrayNode expectedBlobVersionedHashes = mapper.createArrayNode();
     try (final Response getPayloadResponse = getPayloadRequest.execute()) {
       assertThat(getPayloadResponse.code()).isEqualTo(200);
-      final JsonNode result =
-          mapper.readTree(getPayloadResponse.body().string()).get("result");
+      final JsonNode result = mapper.readTree(getPayloadResponse.body().string()).get("result");
       executionPayload =
           (fork == Fork.PARIS) ? (ObjectNode) result : (ObjectNode) result.get("executionPayload");
       newBlockHash = executionPayload.get("blockHash").asText();
