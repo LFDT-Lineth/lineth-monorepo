@@ -1,0 +1,20 @@
+.{
+    .name = .guest_crypto_ctt,
+    .version = "0.0.0",
+    .fingerprint = 0x2b75fa46e7118444,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Consensys fork of mratsim/constantine carrying the standalone (bare-metal
+        // zkVM guest) shims + rv64 freestanding build natively. The pinned hash is
+        // the cache key for the rv64 nimble task in build.zig.
+        .constantine = .{
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#a132035d2d0ff906ecd60fb93b7a5a635a59d522",
+            .hash = "N-V-__8AAPLr6AaWuznPa29HeM1n_Fo2D-T8Wuiwa7Wq8P1f",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "c_allocator.zig",
+    },
+}

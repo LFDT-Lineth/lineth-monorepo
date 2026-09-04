@@ -18,6 +18,12 @@ extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 
+// The guest's allocator, file-scope so the Constantine archive's C `malloc`/`free` shim (the
+// guest_crypto package's stub object) resolves the same FixedBufferAllocator by symbol.
+// std.mem.Allocator has no guaranteed in-memory layout, so the export is an extern struct of
+// its two words (ptr, vtable); the stub object pointer-casts it back.
+export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
+
 // This is the Rollup's extended l2-execution zkVM guest: it decodes the extended
 // `L2ExecutionProofPrivateInput` SSZ envelope, runs `l2_execution.runL2Execution` (the
 // Linea/Rollup-specific layer over per-block stateless execution — conflation, forced
@@ -32,7 +38,7 @@ const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
 /// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success;
 /// on failure, exits with `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero
 /// code per Readme.md §2.5 — after logging the failing error's name via `zkvm_log`.
-/// `read_input` is zesu-zkvm's `linea_zkvm_io` (the memory-mapped IN region); `write_output` is the
+/// `read_input` is `linea_zkvm_io` (the memory-mapped IN region); `write_output` is the
 /// Lineth accelerator's custom-opcode implementation of the zkvm-standards io-interface. Where the
 /// input lives and how the output surfaces is the proving system's concern, not the guest's.
 ///
@@ -45,6 +51,7 @@ fn guestMain() callconv(.c) noreturn {
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
     var fba = std.heap.FixedBufferAllocator.init(heap);
     const allocator = fba.allocator();
+    guest_allocator = .{ .ptr = allocator.ptr, .vtable = @ptrCast(allocator.vtable) };
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
@@ -93,8 +100,8 @@ comptime {
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers (zkvm_provide.zig): it DEFINES every zkvm_* symbol zesu
-        // references — keccak from the Lineth wrapper, the rest from zesu-zkvm's stdlibs_accel.
-        // Freestanding only — the native build uses Zesu's C backend and never references zkvm_*.
+        // references — see its manifest for where each comes from. Freestanding only — the native
+        // build uses Zesu's C backend and never references zkvm_*.
         _ = @import("zkvm_provide.zig");
     }
 }

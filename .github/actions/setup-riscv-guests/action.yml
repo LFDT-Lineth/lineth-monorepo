@@ -38,6 +38,13 @@ runs:
       shell: bash
       run: make -C riscv-guests install-native-crypto-deps
 
+    # The guest-crypto-ctt package compiles constantine (Nim→C→rv64im) inside `zig build`;
+    # it needs nim and clang (riscv64 backend). The rv64im objects are freestanding —
+    # headers come from the constantine fork's standalone include dir — so no libc sysroot.
+    - name: Install constantine build deps (nim, clang)
+      shell: bash
+      run: make -C riscv-guests install-constantine-deps
+
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5

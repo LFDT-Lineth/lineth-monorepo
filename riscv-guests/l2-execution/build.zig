@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     //`-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
-    // Keccak provider: standard zig keccak (zesu stdlibs_accel) by default; the
+    // Keccak provider: standard zig keccak (std.crypto) by default; the
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
@@ -32,26 +32,30 @@ pub fn build(b: *std.Build) void {
     // rather than performing a final link. The shared entry stub + memory layout + compiler_rt/GC
     // plumbing live in build_common.installGuestElf; here we wire the guest's root module:
     //   • zesu executor + SSZ modules — the execution logic;
-    //   • zesu_zkvm_stdlibs — zesu-zkvm's stdlibs_accel: in-guest software precompiles that
-    //     zkvm_provide.zig exports as the zkvm_* symbols zesu references;
+    //   • guest_crypto — the precompile crypto staticlib (secp256k1, BLS12-381, KZG, bn254): the
+    //     Zig bindings module plus the rv64im archive, both from the guest_crypto package;
     //   • zesu_crypto_backend — zesu's own native crypto backend (the handful of its precompiles
-    //     with no C-library dependency: modexp, RIPEMD-160), standing in for the two of those
-    //     zesu_zkvm_stdlibs leaves as unconditional-failure stubs;
+    //     with no C-library dependency: modexp, RIPEMD-160, BLAKE2f);
     //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak and the standards `write_output`):
     //     the only actually prover-accelerated (custom opcode / circuit) source in this file —
     //     accelerated at execution rather than at link time, so the ELF stays fully resolved;
-    //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
+    //   • linea_zkvm_io — the local zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
     //     guest; `_in_start` is supplied by the linker script).
     const zesu_guest = b.dependency("zesu", .{ .target = target, .optimize = optimize });
-    const zesu_zkvm = b.dependency("zesu_zkvm", .{});
-    const zesu_zkvm_stdlibs_src = zesu_zkvm.path("linea/src/runtime/stdlibs_accel.zig"); // also imported by the native stdlibs test below
-    const zesu_zkvm_stdlibs_mod = b.createModule(.{
-        .root_source_file = zesu_zkvm_stdlibs_src,
+    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+
+    // The guest_crypto staticlib: one archive per side (rv64im for the guest ELF and the
+    // exposed zkvm_provide module, host for the FFI unit test), produced by the package's
+    // own build.zig, plus the Zig bindings module over its C ABI.
+    const guest_crypto_dep = b.dependency("guest_crypto", .{});
+    const guest_crypto_riscv_a = guest_crypto_dep.namedLazyPath("riscv_staticlib");
+    const guest_crypto_host_a = guest_crypto_dep.namedLazyPath("host_staticlib");
+    const guest_crypto_mod = b.createModule(.{
+        .root_source_file = b.path("src/guest_crypto.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
     const modexp_impl_mod = b.createModule(.{
         .root_source_file = zesu_guest.path("src/crypto/backends/modexp_impl.zig"),
@@ -64,6 +68,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const blake2f_impl_mod = b.createModule(.{
+        .root_source_file = zesu_guest.path("src/crypto/backends/blake2f_impl.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
     const zesu_crypto_backend_mod = b.createModule(.{
         .root_source_file = b.path("src/zesu_crypto_backend.zig"),
         .target = target,
@@ -71,21 +80,24 @@ pub fn build(b: *std.Build) void {
     });
     zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
+    zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
 
     // Expose the precompile providers (zkvm_provide.zig) as a standalone module so other packages
-    // can link the SAME exported zkvm_* symbols this guest uses
+    // can link the SAME exported zkvm_* symbols this guest uses. The guest-crypto archive rides on
+    // the module, so consumers' final links resolve the guest_crypto_* externs without extra wiring.
     const provide_mod = b.addModule("zkvm_provide", .{
         .root_source_file = b.path("src/zkvm_provide.zig"),
         .target = target,
         .optimize = optimize,
     });
-    provide_mod.addImport("zesu_zkvm_stdlibs", zesu_zkvm_stdlibs_mod);
     provide_mod.addImport("lineth_zkvm_accel", lineth_accel_mod);
     provide_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
+    provide_mod.addImport("guest_crypto", guest_crypto_mod);
+    provide_mod.addObjectFile(guest_crypto_riscv_a);
     provide_mod.addOptions("build_options", guest_options);
 
     const linea_io_mod = b.createModule(.{
-        .root_source_file = zesu_zkvm.path("linea/src/zkvm_io.zig"),
+        .root_source_file = b.path("src/zkvm_io.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -109,9 +121,10 @@ pub fn build(b: *std.Build) void {
     });
     guest_module.code_model = .medium;
     addExecutionImports(guest_module, zesuImports(zesu_guest));
-    guest_module.addImport("zesu_zkvm_stdlibs", zesu_zkvm_stdlibs_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
+    guest_module.addImport("guest_crypto", guest_crypto_mod);
+    guest_module.addObjectFile(guest_crypto_riscv_a);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
@@ -153,22 +166,24 @@ pub fn build(b: *std.Build) void {
     const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
-    // Integration smoke test for the delegated precompiles: verifies zesu-zkvm's stdlibs_accel
-    // imports and that its ecrecover round-trips (the in-guest precompiles delegate to it). std +
-    // the dependency only — no fixtures, no native crypto libs.
-    const stdlibs_tests = b.addTest(.{
+    // FFI tests for the guest-crypto staticlib (test/guest_crypto_test.zig): official EIP-2537
+    // vectors and ecrecover round-trips against a textbook signing oracle — all driven through the
+    // same src/guest_crypto.zig bindings the guest uses, linked against the host archive.
+    const guest_crypto_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/guest_crypto.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    const guest_crypto_tests = b.addTest(.{
         .root_module = b.createModule(.{
-            .root_source_file = b.path("test/stdlibs_accel_test.zig"),
+            .root_source_file = b.path("test/guest_crypto_test.zig"),
             .target = native_target,
             .optimize = host_optimize,
         }),
     });
-    stdlibs_tests.root_module.addImport("zesu_zkvm_stdlibs", b.createModule(.{
-        .root_source_file = zesu_zkvm_stdlibs_src,
-        .target = native_target,
-        .optimize = host_optimize,
-    }));
-    test_step.dependOn(&b.addRunArtifact(stdlibs_tests).step);
+    guest_crypto_tests.root_module.addImport("guest_crypto", guest_crypto_native_mod);
+    guest_crypto_tests.root_module.addObjectFile(guest_crypto_host_a);
+    test_step.dependOn(&b.addRunArtifact(guest_crypto_tests).step);
 
     const l2_execution_ssz_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),

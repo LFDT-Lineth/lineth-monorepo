@@ -28,7 +28,7 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), **Consensys/zesu-zkvm** (its pure-Zig precompile backend `stdlibs_accel`, which the guest's in-guest crypto delegates to), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), the **`guest_crypto`** package (the Constantine staticlib backing the BLS12-381/BN254 precompiles — secp256k1 and the hashes are pure Zig `std.crypto`), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
 
 ## Native test dependencies
 
@@ -41,7 +41,7 @@ A guest's `make test` runs its logic on the **host**, where Zesu's `default.zig`
 | `libblst` | BLS12-381 + KZG point evaluation |
 | `libmcl` | BN254 |
 
-Expected under a single prefix — `/opt/homebrew` on macOS, `/usr/local` on Linux — overridable with `-Dcrypto-prefix=<prefix>`. Install them all via Zesu's helper (from a Zesu checkout): `make install-deps`. The freestanding guest ELF (`make compile`) needs **none** of these: its precompiles are either pure-Zig (zesu-zkvm's `stdlibs_accel`, compiled in) or a custom RISC-V opcode (keccak) the prover arithmetizes at execution.
+Expected under a single prefix — `/opt/homebrew` on macOS, `/usr/local` on Linux — overridable with `-Dcrypto-prefix=<prefix>`. Install them all via Zesu's helper (from a Zesu checkout): `make install-deps`. The freestanding guest ELF (`make compile`) needs **none** of these: its precompiles are compiled in — Zig `std.crypto` for the hashes, P-256, and secp256k1, the `guest_crypto` Constantine staticlib for BLS12-381 and BN254, zesu's own backends for modexp/RIPEMD-160/BLAKE2f — or a custom RISC-V opcode (keccak) the prover arithmetizes at execution.
 
 ## Development
 
