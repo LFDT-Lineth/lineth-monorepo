@@ -337,6 +337,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
     l2_execution_wrap_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    // zkevm_fixture is reached by relative import from the wrap root (mirroring spec_runner.zig's
+    // own usage), so it needs no named-module wiring here.
     linkNativeZesuCrypto(l2_execution_wrap_exe, native_target, native_crypto);
     b.installArtifact(l2_execution_wrap_exe);
 
@@ -347,6 +349,22 @@ pub fn build(b: *std.Build) void {
     const run_l2_execution_wrap = b.addRunArtifact(l2_execution_wrap_exe);
     if (b.args) |extra| run_l2_execution_wrap.addArgs(extra);
     run_l2_execution_wrap_step.dependOn(&run_l2_execution_wrap.step);
+
+    // ── `zkc-reference-runner` native host tool ───────────────────────────────────────────────────
+    // The ZkC twin of extended-vanilla-runner: drives the EF corpus through the compiled guest ELF
+    // under zkc, not in-process. See test/zkc_reference_runner.zig's header.
+    const zkc_reference_runner_exe = b.addExecutable(.{
+        .name = "zkc-reference-runner",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/zkc_reference_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    // Same native crypto link as l2-execution-wrap (shared vanilla_wrap decode chain).
+    linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
+    b.installArtifact(zkc_reference_runner_exe);
 
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
@@ -544,6 +562,24 @@ pub fn build(b: *std.Build) void {
         run_extended_vanilla.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
         if (b.args) |extra| run_extended_vanilla.addArgs(extra);
         extended_vanilla_step.dependOn(&run_extended_vanilla.step);
+
+        // ── zkc corpus run (reference-test-zkc) ───────────────────────────────────────────────────
+        // Needs the guest ELF + wrap tool installed (hence the install-step dependency) and zkc/go
+        // on PATH. Pass-through extra args after `--`, e.g. `-- --match bal_empty_block --limit 5`.
+        const reference_test_zkc_step = b.step(
+            "reference-test-zkc",
+            "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)",
+        );
+        const run_zkc_reference = b.addRunArtifact(zkc_reference_runner_exe);
+        run_zkc_reference.addArg("--fixtures");
+        run_zkc_reference.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
+        run_zkc_reference.addArg("--install-prefix");
+        run_zkc_reference.addArg(b.install_prefix);
+        run_zkc_reference.addArg("--makefile");
+        run_zkc_reference.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+        if (b.args) |extra| run_zkc_reference.addArgs(extra);
+        run_zkc_reference.step.dependOn(b.getInstallStep());
+        reference_test_zkc_step.dependOn(&run_zkc_reference.step);
 
         const fixtures_parent = std.fs.path.dirname(execution_specs_fixtures_link) orelse ".";
         const mkdir_fixtures_parent = b.addSystemCommand(&.{ "mkdir", "-p", fixtures_parent });

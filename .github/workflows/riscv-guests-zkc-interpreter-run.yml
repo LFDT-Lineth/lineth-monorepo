@@ -2,9 +2,9 @@
 #
 # Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
 # custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
-# under zkc via the existing `exec` entry point. Execution uses zkc's generated-Go backend in fast
-# mode (--gogen --fast): this gate only needs to prove the guest runs, and skipping tracing keeps it
-# cheap. Tracing and constraint checking are measured by arithmetization-weekly-zkc-metrics.yml.
+# under zkc via the existing `exec` entry point. Execution runs in fast mode (--fast): this gate only
+# needs to prove the guest runs, and skipping tracing keeps it cheap. Tracing and constraint checking
+# are measured by arithmetization-weekly-zkc-metrics.yml.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
@@ -48,10 +48,18 @@ on:
         description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
+      reference-args:
+        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); default runs the whole corpus'
+        required: false
+        type: string
   workflow_call:
     inputs:
       zkc-ref:
         description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        required: false
+        type: string
+      reference-args:
+        description: 'Extra args for reference-test-zkc (e.g. "--match bal_ --limit 200"); default runs the whole corpus'
         required: false
         type: string
 
@@ -63,7 +71,7 @@ jobs:
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
+    # Fast-mode execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -99,5 +107,36 @@ jobs:
       # ZKC_REF is step-scoped above, so elf-exec does not apply the override a second time.
       #
       # TODO: gogen is disabled until it start supporting native arithmetic
-      - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
+      - name: Run l2-execution guest under zkc (fast, accel keccak)
         run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+
+  # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
+  # scope with reference-args.
+  zkc-reference-test:
+    name: l2-execution zkc reference-test (manual)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup RISC-V guests environment (Zig + caches)
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.25.7'
+          cache-dependency-path: "**/*.sum"
+
+      # Apply an optional zkc override up front. With no override, go.mod's pinned tool is used.
+      - name: Prepare zkc interpreter CLI
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref }}
+        run: make -C arithmetization prepare-zkc
+
+      - name: Run zkc reference-test
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast" REFERENCE_ARGS="${{ inputs.reference-args }}"
+
