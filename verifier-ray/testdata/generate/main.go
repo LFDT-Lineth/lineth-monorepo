@@ -23,6 +23,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -529,6 +530,20 @@ type fixtureCase struct {
 	pcs     *codegen.PcsSystem
 	honest  proofFixture
 	invalid *proofFixture
+	// invalidVerify is a SELF-CONSISTENT failing proof, consumed ONLY by
+	// verify.zig (never vanishing.zig). Unlike invalid — which breaks the
+	// vanishing quotient identity and is shared with vanishing_test.zig's
+	// "every .invalid fails with QuotientIdentityMismatch" sweep — an
+	// invalidVerify proof is PCS- and vanishing-valid and fails specifically
+	// in a later sub-verifier (e.g. grandproduct.verify). It exists so a
+	// sub-verifier wired into verifier.Systems (such as .grandproduct) is
+	// exercised as the actual point of rejection, which a PCS-stage rejection
+	// (the shared .invalid path) cannot demonstrate.
+	invalidVerify *proofFixture
+	// invalidVerifyError is the exact error verify.zig must return for
+	// invalidVerify (e.g. "FinalProductMismatch"), so the regression pins the
+	// sub-verifier that fires rather than accepting any rejection.
+	invalidVerifyError string
 	// alt is a second honest proof of the same compiled protocol at a
 	// different dynamic-module size, verified against the same baked
 	// PcsSystem.
@@ -638,6 +653,39 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 
 		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture, alt: &altFixture}
+
+		cases = append(cases, tc)
+		systems = append(systems, compiled)
+		return nil
+	}
+
+	// addPrecompiled is like add, but for a sys the caller has already run its
+	// own compiler pipeline on (mirroring buildMessageBusFixtureCase): it skips
+	// compileFullPipeline, which would be wrong here since the caller's
+	// pipeline order (e.g. grandproduct.Compile before localvanishing.Compile)
+	// does not match compileFullPipeline's rangecheck/lookup/logderivativesum
+	// ordering.
+	addPrecompiled := func(source, name string, sys *wiop.System, honest, invalid assignFn) error {
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
+		}
+		compiled, err := codegen.BuildCompiledSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build compiled system %s/%s: %w", source, name, err)
+		}
+
+		honestFixture, err := buildProofFixture(sys, honest, source, name, "honest")
+		if err != nil {
+			return err
+		}
+		tc := fixtureCase{name: name, pcs: compiled.Pcs, honest: honestFixture}
+		if invalid != nil {
+			invalidFixture, err := buildProofFixture(sys, invalid, source, name, "invalid")
+			if err != nil {
+				return err
+			}
+			tc.invalid = &invalidFixture
+		}
 
 		cases = append(cases, tc)
 		systems = append(systems, compiled)
@@ -761,7 +809,134 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil, nil, err
 	}
 
+	// Permutation end-to-end coverage: a real wiop.NewPermutation reduced by
+	// grandproduct.Compile directly (not via the message-bus path, which is the
+	// only other caller of grandproduct.Compile in this generator). This
+	// exercises CheckResultIsOne and grandproduct.RowLimitAction — the
+	// row-limit action was, until it was exported for the verifier-ray codegen,
+	// unreachable from any fixture, so AssertAllVerifierActionsHandled below is
+	// the first time this allowlist entry is actually exercised end-to-end.
+	//
+	// This case carries TWO failing fixtures, exercising two distinct rejection
+	// paths:
+	//
+	// 1. invalid (shared with vanishing.zig): built by tampering the HONEST
+	//    proof's transcript — flipping the committed Z-endpoint cell for
+	//    module A. That scalar is read both by the vanishing boundary
+	//    constraint (pins the Z column's OOD claim to this transcript cell at
+	//    the module's last row) and by grandproduct.verify (feeds
+	//    ∏Z == Result), so one flip breaks the vanishing quotient identity —
+	//    satisfying vanishing_test.zig's "every .invalid fails with
+	//    QuotientIdentityMismatch" sweep. (In the full verifier this same
+	//    proof is rejected at the PCS stage, before grandproduct.verify runs,
+	//    so it does NOT exercise the .grandproduct wiring end-to-end.)
+	//
+	// 2. invalidVerify (verify.zig only): a SELF-CONSISTENT proof produced by
+	//    re-running the prover on a mismatched A/B witness ([1,2,3,4] vs
+	//    [4,3,2,2] — not a permutation). The prover's Z column is always the
+	//    honest running product OF WHATEVER witness it is given, so its own
+	//    recurrence and row-0 boundary constraints still hold: the proof is
+	//    PCS-valid and vanishing-valid, and is rejected specifically by
+	//    grandproduct.verify's Result == 1 boundary (error.ResultMismatch).
+	//    This is the fixture that actually exercises the .grandproduct system
+	//    end-to-end, closing the coverage gap the shared .invalid path leaves.
+	{
+		sys, colA, colB := buildPermutationSystem()
+		honest := func(rt *wiop.Runtime) {
+			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
+			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 1)))
+		}
+		if err := addPrecompiled("Permutation", "GrandProductPermutation", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		honestFixture := cases[last].honest
+		// Round 2 ("result round") carries, in order: the shared GrandProduct
+		// Result cell (index 0, expected to equal one), then one Z-endpoint cell
+		// per module (index 1 for modA's z-m0-k0, index 2 for modB's z-m1-k0) —
+		// see the generated grandproduct/vanishing systems for this case. Index 1
+		// is modA's Z endpoint, the one this fixture flips.
+		const resultRoundIdx, zEndpointModAIdx = 2, 1
+		if len(honestFixture.view.rounds) <= resultRoundIdx ||
+			len(honestFixture.view.rounds[resultRoundIdx].cells) <= zEndpointModAIdx {
+			return nil, nil, fmt.Errorf("Permutation/GrandProductPermutation: result round has no Z-endpoint cell at index %d", zEndpointModAIdx)
+		}
+
+		invalidFixture := honestFixture
+		invalidRounds := append([]runtimeTraceRound(nil), honestFixture.view.rounds...)
+		invalidCells := append([]runtimeTraceCell(nil), honestFixture.view.rounds[resultRoundIdx].cells...)
+		invalidCells[zEndpointModAIdx] = flippedExtTraceCell(invalidCells[zEndpointModAIdx])
+		invalidRounds[resultRoundIdx] = runtimeTraceRound{
+			commitment:    honestFixture.view.rounds[resultRoundIdx].commitment,
+			cells:         invalidCells,
+			expectedCoins: honestFixture.view.rounds[resultRoundIdx].expectedCoins,
+		}
+		invalidFixture.view.rounds = invalidRounds
+		cases[last].invalid = &invalidFixture
+
+		// Self-consistent grandproduct-failing proof: re-run the prover on a
+		// mismatched A/B witness. colB is colA rotated by one EXCEPT for the
+		// last element (2 instead of 1), so the two sides are not a
+		// permutation of each other and the grand product does not cancel to
+		// 1. PCS and vanishing still pass; only grandproduct.verify rejects.
+		mismatched := func(rt *wiop.Runtime) {
+			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
+			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 2)))
+		}
+		invalidVerifyFixture, err := buildProofFixture(sys, mismatched, "Permutation", "GrandProductPermutation", "invalid-verify")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].invalidVerify = &invalidVerifyFixture
+		cases[last].invalidVerifyError = "ResultMismatch"
+	}
+
 	return cases, systems, nil
+}
+
+// buildPermutationSystem builds a size-4 single-column permutation A ~ B,
+// reduced by grandproduct.Compile directly. Compile order: grandproduct's
+// Z-final endpoint is a scalar (ColumnPosition-based) local opening, so
+// localvanishing.Compile must run BEFORE global.Compile to lift it to a
+// multi-valued vanishing that global.Compile can discharge; pcscompiler.Compile
+// runs last so it sees every committed column and LagrangeEval opening the
+// earlier passes registered.
+func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+	sys := wiop.NewSystemf("permutation")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())},
+	)
+
+	grandproduct.Compile(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+	return sys, colA, colB
+}
+
+// flippedExtTraceCell returns an extension-field trace cell with a value
+// guaranteed to differ from cell's, for tampering a single committed cell in
+// a proof's rounds. Used for the grandproduct permutation fixture's invalid
+// proof: it flips the committed Z-endpoint cell that both the vanishing
+// boundary constraint (Z's OOD claim == this transcript cell, at the module's
+// last row) and grandproduct.verify (this cell feeds ∏Z == Result) read, so
+// ONE flip breaks both sub-verifiers' checks.
+func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
+	if cell.extValue == nil {
+		panic("flippedExtTraceCell: expected an extension-field trace cell")
+	}
+	one := elem(1)
+	var flipped field.Ext
+	field.AddByBase(&flipped, cell.extValue, &one)
+	return extTraceCell(flipped)
 }
 
 // buildLookupMultiColumnBenchSystem is a verifier-ray-local stress fixture for
@@ -1288,14 +1463,21 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.invalid != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
 	}
+	// Self-consistent sub-verifier-failing proof (verify.zig only). Distinct
+	// from _failing (the vanishing-breaking, PCS-rejected .invalid): this one
+	// is PCS- and vanishing-valid and fails specifically in a later
+	// sub-verifier, so it exercises that sub-verifier's wiring end-to-end.
+	if tc.invalidVerify != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing_verify", idx), *tc.invalidVerify)
+	}
 	// The alt (second-size) honest proof, verified against the SAME System's .pcs.
 	if tc.alt != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
-		idx, idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }
@@ -1452,6 +1634,53 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalid != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// getInputFailingVerify returns a case's SELF-CONSISTENT failing input: a
+	// proof that is PCS- and vanishing-valid and is rejected specifically by a
+	// later sub-verifier (e.g. grandproduct.verify). Unlike getInputFailing
+	// (which shares the vanishing-breaking .invalid fixture and is rejected at
+	// the PCS stage), this input reaches the targeted sub-verifier, so the
+	// caller can assert the EXACT error that sub-verifier returns.
+	fmt.Fprintln(out, "pub fn getInputFailingVerify(comptime index: usize) verifier.VerifyInput {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalidVerify != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_verify_input,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// hasFailingVerify gates getInputFailingVerify for cases without one.
+	fmt.Fprintln(out, "pub fn hasFailingVerify(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalidVerify != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// failingVerifyError is the exact error name verifier.verify must return
+	// for the self-consistent failing input, pinning which sub-verifier fires.
+	fmt.Fprintln(out, "pub fn failingVerifyError(comptime index: usize) []const u8 {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalidVerify != nil {
+			fmt.Fprintf(out, "        %d => \"%s\",\n", i, codegen.ZigString(tc.invalidVerifyError))
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no self-consistent failing input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
