@@ -1,13 +1,11 @@
 package wiop_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -344,53 +342,88 @@ func TestRound_PreSamplingHook_SeedsCoin(t *testing.T) {
 			"sampled coin must equal the value produced by an independent FS instance with the same seed")
 }
 
-// TestRound_PreSamplingHook_RunsInOrder verifies two coupled contracts of
-// the multi-hook path:
-//
-//  1. Registering a second PreSamplingHook on a round emits a logrus
-//     warning. The wiring is informational, not blocking — see the
-//     RegisterPreSamplingHook docstring — but the warning must fire so the
-//     misuse is surfaced early.
-//  2. Despite being discouraged, the stacked-hooks behaviour is still
-//     well-defined: hooks run in registration order and the last hook's
-//     SetFSState is the state from which the coins are derived.
-func TestRound_PreSamplingHook_RunsInOrder(t *testing.T) {
+// TestRound_PreSamplingHook_SecondRegistrationPanics covers the
+// one-hook-per-round rule. A round holds a single Fiat-Shamir state, so a second
+// hook could only discard the first's work — there is no seed-per-coin to be had
+// from stacking. Registering one therefore panics rather than silently letting
+// the last one win.
+func TestRound_PreSamplingHook_SecondRegistrationPanics(t *testing.T) {
+	_, _, r1, _ := newTestSystem(t)
+
+	seed := field.NewOctupletFromStrings([8]string{"1", "1", "1", "1", "1", "1", "1", "1"})
+
+	r1.RegisterPreSamplingHook(&fixedSeedHook{seed: seed})
+	assert.Panics(t, func() { r1.RegisterPreSamplingHook(&fixedSeedHook{seed: seed}) },
+		"a round accepts one PreSamplingHook; the second must be refused")
+}
+
+// TestRound_MarkSeeded_ScopesSeedToMarkedCoins is the core property: a seeded
+// coin is invisible to the transcript. On a round carrying a marked and an
+// unmarked coin, the hook's seed reaches the marked one only, and the unmarked
+// one comes out exactly as it would have if the marked coin never existed.
+func TestRound_MarkSeeded_ScopesSeedToMarkedCoins(t *testing.T) {
+	seed := field.NewOctupletFromStrings([8]string{
+		"1", "2", "3", "5", "8", "13", "21", "34",
+	})
+
+	drive := func(sys *wiop.System, col *wiop.Column) *wiop.Runtime {
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(col, baseVec(4, 7)) // influences the natural transcript
+		rt.AdvanceRound()
+		return rt
+	}
+
+	// The system under test: a marked coin and an unmarked one on one round,
+	// behind a seeding hook.
 	sys, r0, r1, mod := newTestSystem(t)
 	col := mod.NewColumn(sys.Context.Childf("col"), r0)
-	coin := r1.NewCoinField(sys.Context.Childf("coin"))
+	seeded := r1.NewCoinField(sys.Context.Childf("seeded"))
+	plain := r1.NewCoinField(sys.Context.Childf("plain"))
+	seeded.MarkSeeded()
+	r1.RegisterPreSamplingHook(&fixedSeedHook{seed: seed})
+	rt := drive(sys, col)
 
-	seedFirst := field.NewOctupletFromStrings([8]string{"1", "1", "1", "1", "1", "1", "1", "1"})
-	seedLast := field.NewOctupletFromStrings([8]string{"9", "9", "9", "9", "9", "9", "9", "9"})
+	// The twin: the plain coin alone, no hook, driven identically.
+	twinSys, twinR0, twinR1, twinMod := newTestSystem(t)
+	twinCol := twinMod.NewColumn(twinSys.Context.Childf("col"), twinR0)
+	twinPlain := twinR1.NewCoinField(twinSys.Context.Childf("plain"))
+	twinRt := drive(twinSys, twinCol)
 
-	// Capture logrus output so we can verify the multi-hook warning fires
-	// on the second registration. Restore the standard logger's output on
-	// exit so neighbouring tests are unaffected.
-	var buf bytes.Buffer
-	stdLogger := logrus.StandardLogger()
-	origOut := stdLogger.Out
-	stdLogger.SetOutput(&buf)
-	defer stdLogger.SetOutput(origOut)
+	// The marked coin is the seed's first draw, reproduced independently.
+	fs := fiatshamir.NewFiatShamir()
+	fs.SetState(seed)
+	assert.Equal(t, field.ElemFromExt(fs.RandomFext()), rt.GetCoinValue(seeded),
+		"a coin marked seeded must be drawn from the state the hook installed")
 
-	r1.RegisterPreSamplingHook(&fixedSeedHook{seed: seedFirst})
-	assert.Empty(t, buf.String(),
-		"first PreSamplingHook registration must be silent")
+	// The unmarked coin is untouched by the seeded draw that preceded it.
+	assert.Equal(t, twinRt.GetCoinValue(twinPlain), rt.GetCoinValue(plain),
+		"an unmarked coin sharing the round must derive from the local transcript, "+
+			"exactly as it would if the seeded coin did not exist")
 
-	r1.RegisterPreSamplingHook(&fixedSeedHook{seed: seedLast})
-	assert.Contains(t, buf.String(), "already has",
-		"second PreSamplingHook registration must emit a logrus warning")
+	// Control: the two coins really are drawn from different states, so the
+	// assertions above are not comparing a system against itself.
+	assert.NotEqual(t, rt.GetCoinValue(plain), rt.GetCoinValue(seeded),
+		"setup is degenerate: the seeded and unmarked coins must differ")
+
+	// The transcript itself survives the seeded round.
+	assert.Equal(t, twinRt.GetFS().State(), rt.GetFS().State(),
+		"the Fiat-Shamir state after a seeded round must match the twin's, so every "+
+			"later challenge stays bound to what preceded the round")
+}
+
+// TestRound_MarkSeeded_WithoutHookPanics covers the wiring guard: a coin asking
+// to be seeded on a round where nothing installs a seed would quietly derive
+// from the ordinary transcript, which is a compile-time mistake rather than a
+// proof failure — so AdvanceRound refuses it.
+func TestRound_MarkSeeded_WithoutHookPanics(t *testing.T) {
+	sys, r0, r1, mod := newTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	r1.NewCoinField(sys.Context.Childf("coin")).MarkSeeded()
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, baseVec(4, 0))
-	rt.AdvanceRound()
-
-	// Expected coin derives from seedLast, since it is registered second
-	// and overwrites the first hook's SetFSState.
-	fs := fiatshamir.NewFiatShamir()
-	fs.SetState(seedLast)
-	expected := field.ElemFromExt(fs.RandomFext())
-
-	assert.Equal(t, expected, rt.GetCoinValue(coin),
-		"PreSamplingHooks must fire in registration order; the last SetFSState wins")
+	rt.AssignColumn(col, baseVec(4, 1))
+	assert.Panics(t, func() { rt.AdvanceRound() },
+		"a seeded coin on a round with no PreSamplingHook must panic")
 }
 
 func TestRuntime_GetCoinValue_NotSampledPanic(t *testing.T) {

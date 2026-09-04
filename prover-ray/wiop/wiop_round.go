@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/sirupsen/logrus"
 )
 
 // Round represents a single interaction round between the prover and the
@@ -40,19 +39,24 @@ type Round struct {
 	// round, in declaration order. Each check is run by the verifier when the
 	// runtime enters this round, after coins have been derived.
 	VerifierActions []VerifierAction
-	// PreSamplingHooks holds prover-side actions registered to fire BEFORE
-	// any [CoinField] in this round is sampled. They run during
+	// PreSamplingHook is an optional prover-side action registered to fire
+	// BEFORE any [CoinField] in this round is sampled. It runs during
 	// [Runtime.AdvanceRound] *after* the previous round's commitment and cells
 	// have been absorbed into the Fiat–Shamir state but *before* this
-	// round's coins are derived. Hooks run in declaration order.
+	// round's coins are derived.
 	//
 	// The canonical use is shared-randomness seeding in sharded protocols:
-	// a hook reads a precomputed seed and calls
+	// the hook reads a precomputed seed and calls
 	// [Runtime.SetFSState] so this round's coins derive deterministically
 	// from that seed instead of from this shard's local transcript. For any
 	// non-seeding use case, prefer [ProverActions] — running before coin
 	// sampling is a sharp tool and easy to misuse.
-	PreSamplingHooks []ProverAction
+	//
+	// There is at most one per round, because a round holds one Fiat–Shamir
+	// state and a second hook could only overwrite the first's. Coins marked via
+	// [CoinField.MarkSeeded] are drawn from the seed; the rest keep deriving from
+	// the local transcript, which [Runtime.AdvanceRound] restores afterwards.
+	PreSamplingHook ProverAction
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
@@ -78,32 +82,25 @@ func (r *Round) RegisterVerifierAction(a VerifierAction) {
 	r.VerifierActions = append(r.VerifierActions, a)
 }
 
-// RegisterPreSamplingHook appends a to the round's pre-sampling hook list.
-// Hooks fire in declaration order at the start of [Runtime.AdvanceRound]
-// into this round — after the previous round's commitments have been
-// absorbed into Fiat–Shamir but before this round's coins are sampled.
+// RegisterPreSamplingHook sets a as the round's pre-sampling hook. It fires at
+// the start of [Runtime.AdvanceRound] into this round — after the previous
+// round's commitments have been absorbed into Fiat–Shamir but before this
+// round's coins are sampled.
 //
-// Registering more than one hook on the same round is almost always a
-// bug: hooks typically end with [Runtime.SetFSState], so each one's effect
-// is wiped out by the next, and only the last-registered hook actually
-// influences the coins. This method emits a logrus warning when a second
-// (or later) hook is added so the misuse surfaces early; the behaviour
-// itself is still well-defined (last hook wins) for the rare legitimate
-// case where the stacking is intentional.
+// A round takes at most one hook, so registering a second panics; coins needing
+// a different seed belong on a different round.
 //
-// See [Round.PreSamplingHooks] for when to use this versus
+// See [Round.PreSamplingHook] for when to use this versus
 // [Round.RegisterAction].
 func (r *Round) RegisterPreSamplingHook(a ProverAction) {
-	if len(r.PreSamplingHooks) > 0 {
-		logrus.Warnf(
-			"wiop: round %d already has %d PreSamplingHook(s); "+
-				"registering another is almost always a bug — hooks typically "+
-				"call Runtime.SetFSState and overwrite each other so only the "+
-				"last-registered hook affects the coins",
-			r.ID, len(r.PreSamplingHooks),
-		)
+	if r.PreSamplingHook != nil {
+		panic(fmt.Sprintf(
+			"wiop: round %d already has a PreSamplingHook; a round holds one "+
+				"Fiat-Shamir state, so a second hook could only discard the first's work",
+			r.ID,
+		))
 	}
-	r.PreSamplingHooks = append(r.PreSamplingHooks, a)
+	r.PreSamplingHook = a
 }
 
 // System returns the owning System. It is always non-nil for a well-formed
