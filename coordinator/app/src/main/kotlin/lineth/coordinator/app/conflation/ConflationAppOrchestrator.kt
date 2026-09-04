@@ -214,7 +214,7 @@ class ConflationAppOrchestrator(
     }
   }
 
-  private val targetCheckpointPauseController =
+  private fun newTargetCheckpointPauseController() =
     ConflationTargetCheckpointPauseController(
       ConflationTargetCheckpointPauseController.Config(
         initialLastImportedBlockTimestamp = lastProcessedBlocks.lastConflatedBlock.headerSummary.timestamp,
@@ -225,6 +225,12 @@ class ConflationAppOrchestrator(
       ),
       latestL1FinalizedBlockProvider = lastProvenBlockNumberProvider,
     )
+
+  // V1 and V2 each get their own controller so that V2 importing the cutover block does not
+  // pause V1 before V1's conflation pipeline has had a chance to fire HARD_FORK and seal its
+  // last pre-cutover batch.
+  private val targetCheckpointPauseControllerV1 = newTargetCheckpointPauseController()
+  private val targetCheckpointPauseControllerV2 = newTargetCheckpointPauseController()
 
   private val conflationAppV1: ConflationAppV1? = if (riscVCutoverCrossed()) {
     null
@@ -245,7 +251,7 @@ class ConflationAppOrchestrator(
       tracesClients = tracesClients,
       forcedTransactionsApp = forcedTransactionsApp,
       lastProcessedBlocks = lastProcessedBlocks,
-      targetCheckpointPauseController = targetCheckpointPauseController,
+      targetCheckpointPauseController = targetCheckpointPauseControllerV1,
       lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
       lastestL1FinalizedBlockProviderSync = lastProvenBlockNumberProvider,
     )
@@ -261,7 +267,7 @@ class ConflationAppOrchestrator(
         forcedTransactionsDao = forcedTransactionsDao,
         metricsFacade = metricsFacade,
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
-        targetCheckpointPauseController = targetCheckpointPauseController,
+        targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,
       )
     } else {
@@ -271,8 +277,20 @@ class ConflationAppOrchestrator(
   override fun start(): CompletableFuture<Unit> {
     return (conflationAppV1?.start() ?: SafeFuture.completedFuture(Unit))
       .thenCompose { forcedTransactionsApp.start() }
-      .thenCompose { conflationAppV2?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { provenBlockNumberMonitor.start() }
+      .thenCompose {
+        if (riscVCutoverCrossed()) {
+          // Already past cutover: V2 resumes from a known block number, completes quickly.
+          conflationAppV2?.start() ?: SafeFuture.completedFuture(Unit)
+        } else {
+          // Pre-cutover: V2 polls until the cutover timestamp arrives on L2. Start it in the
+          // background so the rest of CoordinatorApp (L1 relay, API, …) can come up immediately.
+          conflationAppV2?.start()?.exceptionally { e ->
+            log.error("ConflationAppV2 failed to start: {}", e.message, e)
+          }
+          SafeFuture.completedFuture(Unit)
+        }
+      }
   }
 
   override fun stop(): CompletableFuture<Unit> {
@@ -288,6 +306,9 @@ class ConflationAppOrchestrator(
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> =
     lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(blockNumber)
 
-  fun signalTargetCheckpointResumeFromApi(): Boolean =
-    targetCheckpointPauseController.signalResumeFromApi()
+  fun signalTargetCheckpointResumeFromApi(): Boolean {
+    val v1 = targetCheckpointPauseControllerV1.signalResumeFromApi()
+    val v2 = targetCheckpointPauseControllerV2.signalResumeFromApi()
+    return v1 || v2
+  }
 }

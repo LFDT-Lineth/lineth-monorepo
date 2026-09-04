@@ -100,7 +100,7 @@ class ConflationAppV2(
       blocksPerBatch = blocksPerBatch,
       metricsFacade = metricsFacade,
       safeBlockNumberProvider = forcedTransactionsApp.conflationSafeBlockNumberProvider,
-      extraSyncCalculators = listOf(forcedTransactionsApp.conflationCalculator),
+      extraSyncCalculators = emptyList(),
       timestampBasedHardForks = configs.conflation.proofAggregation.timestampBasedHardForks,
       aggregationTargetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks?.toSet() ?: emptySet(),
     )
