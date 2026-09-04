@@ -8,8 +8,8 @@
         // zkVM guest) shims + rv64 freestanding build natively. The pinned hash is
         // the cache key for the rv64 nimble task in build.zig.
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#07bed878e6cc5dfc34f3edc7d3fac35b2b16ce9b",
-            .hash = "N-V-__8AAOjN6AaqcFQCa0UDq4tpfySiJBcBRLVjfJ4vrpFY",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#a132035d2d0ff906ecd60fb93b7a5a635a59d522",
+            .hash = "N-V-__8AAPLr6AaWuznPa29HeM1n_Fo2D-T8Wuiwa7Wq8P1f",
         },
     },
     .paths = .{

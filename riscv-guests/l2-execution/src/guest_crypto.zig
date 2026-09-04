@@ -9,9 +9,10 @@
 //! pairing/MSM inputs are repacked record-by-record. BN254's seam encoding already matches the
 //! EIP-196/197 layout, so those wrappers pass buffers through unchanged.
 //!
-//! secp256k1 (ecrecover / verify) is pure Zig via std.crypto.ecc.Secp256k1 — Constantine's
-//! ecrecover takes the EIP 128-byte input and returns the keccak'd ADDRESS, not the raw
-//! 64-byte pubkey this seam uses, so the seam is served without the ctt FFI.
+//! secp256k1 ecrecover and verify both go through the ctt_eth_zkvm_* raw-primitive exports
+//! (the zkvm-standards accelerator ABI shape, distinct from the eth_evm precompiles): ecrecover
+//! takes digest ‖ recid ‖ r ‖ s and returns the raw 64-byte pubkey (x‖y, no keccak-to-address),
+//! verify takes digest ‖ x ‖ y ‖ r ‖ s and returns a 1-byte 0/1.
 //!
 //! KZG point evaluation runs against a ctt_eth_kzg_context built from the 4096-point
 //! trusted setup baked into the ELF at compile time (there is no filesystem in-guest).
@@ -28,66 +29,35 @@ extern fn ctt_eth_evm_bls12381_map_fp2_to_g2(r: [*]u8, r_len: usize, inputs: [*]
 extern fn ctt_eth_evm_bn254_g1add(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bn254_g1mul(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 extern fn ctt_eth_evm_bn254_ecpairingcheck(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+extern fn ctt_eth_zkvm_secp256k1_verify(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
+extern fn ctt_eth_zkvm_secp256k1_ecrecover(r: [*]u8, r_len: usize, inputs: [*]const u8, inputs_len: usize) c_int;
 
 const OK: c_int = 0; // cttEVM_Success
 
-// ── secp256k1 (pure Zig, std.crypto.ecc.Secp256k1) ─────────────────────────────────────────────
-const Secp256k1 = std.crypto.ecc.Secp256k1;
-const EcdsaK1 = std.crypto.sign.ecdsa.Ecdsa(Secp256k1, std.crypto.hash.sha2.Sha256);
-
-/// ECDSA public-key recovery over a 32-byte pre-hash (the EVM precompile form). sig is compact
-/// r‖s (32+32, big-endian); recid selects the y parity (0/1, or Ethereum's 27/28). output is the
-/// uncompressed point without the 0x04 prefix (x‖y, 64 bytes).
+/// ECDSA public-key recovery over a 32-byte pre-hash. sig is compact r‖s (32+32, big-endian);
+/// recid selects the y parity (0/1, or Ethereum's 27/28). output is the uncompressed point
+/// without the 0x04 prefix (x‖y, 64 bytes) — the raw-primitive form, no keccak-to-address.
 pub fn ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) bool {
     const recid_norm: u8 = switch (recid) {
         0, 1 => recid,
         27, 28 => recid - 27,
         else => return false,
     };
-    const K1S = Secp256k1.scalar;
-    const r_bytes: [32]u8 = sig[0..32].*;
-    const s_bytes: [32]u8 = sig[32..64].*;
-    const r = K1S.Scalar.fromBytes(r_bytes, .big) catch return false;
-    const s = K1S.Scalar.fromBytes(s_bytes, .big) catch return false;
-    if (r.isZero() or s.isZero()) return false;
-
-    // R = the curve point with x = r (canonical, so x < n < q) and the parity recid selects.
-    const x = Secp256k1.Fe.fromBytes(r_bytes, .big) catch return false;
-    const y = Secp256k1.recoverY(x, (recid_norm & 1) == 1) catch return false;
-    const R = Secp256k1.fromAffineCoordinates(.{ .x = x, .y = y }) catch return false;
-    R.rejectIdentity() catch return false;
-
-    // Q = r⁻¹·(s·R − z·G); z is the hash reduced mod n (fromBytes64 reduces, matching the
-    // ECDSA convention of a field reduction of the message representative).
-    var msg64: [64]u8 = undefined;
-    @memcpy(msg64[32..64], msg);
-    @memset(msg64[0..32], 0);
-    const z = K1S.Scalar.fromBytes64(msg64, .big);
-    const r_inv = r.invert();
-    const s_r = s.mul(r_inv).toBytes(.big);
-    const neg_z_r = z.neg().mul(r_inv).toBytes(.big);
-    const q = Secp256k1.mulDoubleBasePublic(R, s_r, Secp256k1.basePoint, neg_z_r, .big) catch return false;
-    const affine = q.affineCoordinates();
-    output[0..32].* = affine.x.toBytes(.big);
-    output[32..64].* = affine.y.toBytes(.big);
-    return true;
+    var in: [97]u8 = undefined; // digest ‖ recid ‖ r ‖ s
+    @memcpy(in[0..32], msg);
+    in[32] = recid_norm;
+    @memcpy(in[33..97], sig);
+    return ctt_eth_zkvm_secp256k1_ecrecover(output, 64, &in, 97) == OK;
 }
 
 /// ECDSA verification over a 32-byte pre-hash; pubkey is x‖y (64 bytes, no 0x04 prefix).
 pub fn secp256k1Verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) void {
-    var sec1: [65]u8 = undefined;
-    sec1[0] = 0x04;
-    @memcpy(sec1[1..65], pubkey);
-    const pk = EcdsaK1.PublicKey.fromSec1(&sec1) catch {
-        verified.* = false;
-        return;
-    };
-    const signature = EcdsaK1.Signature.fromBytes(sig.*);
-    signature.verifyPrehashed(msg.*, pk) catch {
-        verified.* = false;
-        return;
-    };
-    verified.* = true;
+    var in: [160]u8 = undefined; // digest ‖ x ‖ y ‖ r ‖ s, big-endian
+    @memcpy(in[0..32], msg);
+    @memcpy(in[32..96], pubkey);
+    @memcpy(in[96..160], sig);
+    var out: [1]u8 = .{0};
+    verified.* = ctt_eth_zkvm_secp256k1_verify(&out, 1, &in, 160) == OK and out[0] == 1;
 }
 
 // ── raw↔padded helpers ────────────────────────────────────────────────────────────────────────
