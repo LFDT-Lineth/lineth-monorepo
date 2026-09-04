@@ -69,7 +69,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
 	sort.Slice(modules, func(i, j int) bool {
-		return modules[i].Name().String() < modules[j].Name().String()
+		return modules[i].Name() < modules[j].Name()
 	})
 
 	scanner := &schemaScanner{
@@ -102,7 +102,7 @@ func (s *schemaScanner) collectPublicOutputs() PublicOutput {
 			continue
 		}
 
-		moduleName := modDecl.Name().String()
+		moduleName := modDecl.Name()
 
 		// Only one public output is supported, so a slot already claimed by an
 		// earlier module is refused rather than silently resolved.
@@ -163,7 +163,7 @@ func (s *schemaScanner) scanColumns() {
 	// Use the pre-sorted modules from the scanner to ensure deterministic ordering
 	// Iterate each declared module
 	for _, modDecl := range s.Modules {
-		moduleName := modDecl.Name().String()
+		moduleName := modDecl.Name()
 
 		// Skip non-native modules whose every column is dangling to avoid creating empty
 		// wiop modules whose dynamic size would never be set.
@@ -292,7 +292,7 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 		case air.RangeConstraint[koalabear.Element]:
 			rc := cs.Unwrap()
 			for i := range rc.Bitwidths {
-				s.addColRef(rc.Context, rc.Sources[i].Register(), referenced)
+				s.addColRef(rc.Context, rc.Sources[i], referenced)
 			}
 		}
 	}
@@ -334,7 +334,7 @@ func (s *schemaScanner) collectFromTerm(
 func (s *schemaScanner) addColRef(modID schema.ModuleId, regID register.Id, out map[string]struct{}) {
 	ref := register.NewRef(modID, regID)
 	cCol := s.Schema.Register(ref)
-	moduleName := s.Schema.Module(modID).Name().String()
+	moduleName := s.Schema.Module(modID).Name()
 	out[qualifiedCorsetName(moduleName, cCol.Name())] = struct{}{}
 }
 
@@ -388,6 +388,42 @@ func (s *schemaScanner) scanConstraints() {
 func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constraint[koalabear.Element]) {
 
 	switch cs := corsetCS.(type) {
+
+	case air.BusConstraint[koalabear.Element]:
+
+		var bc = cs.Unwrap()
+		// Iterate receive ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// reveived.
+		for _, recvPort := range bc.Receives {
+
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(recvPort.Registers)),
+				Selector: s.compColumnByCorsetID(recvPort.Module, recvPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(recvPort.Module, recvPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusReceive(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
+
+		// Iterate send ports, each of which identifies a set of columns in a
+		// given module (including a selector) which determine the message being
+		// sent.
+		for _, sendPort := range bc.Sends {
+			table := wiop.Table{
+				Columns:  make([]*wiop.ColumnView, len(sendPort.Registers)),
+				Selector: s.compColumnByCorsetID(sendPort.Module, sendPort.Selector).View(),
+			}
+
+			for i := range table.Columns {
+				table.Columns[i] = s.compColumnByCorsetID(sendPort.Module, sendPort.Registers[i]).View()
+			}
+
+			s.Sys.NewMessageBusSend(s.Sys.Context.Childf("bus-%v", name), "0", name, table)
+		}
 
 	case air.LookupConstraint[koalabear.Element]:
 
@@ -493,7 +529,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		for i, bitwidth := range rc.Bitwidths {
 			// Determine bound for this range constraint
 			bound := 1 << bitwidth
-			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i].Register())
+			col := s.compColumnByCorsetID(rc.Context, rc.Sources[i])
 			col.Module.NewRangeCheck(col.Context.Childf("range-%v", name), col, bound)
 		}
 
@@ -588,7 +624,7 @@ func (s *schemaScanner) compColumnByCorsetID(
 		// construct register reference which uniquely identifies the column
 		ref        = register.NewRef(modID, regID)
 		cCol       = s.Schema.Register(ref)
-		moduleName = s.Schema.Module(modID).Name().String()
+		moduleName = s.Schema.Module(modID).Name()
 		columnName = qualifiedCorsetName(moduleName, cCol.Name())
 	)
 

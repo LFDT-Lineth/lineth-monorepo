@@ -55,6 +55,11 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - grandproduct.CheckResultIsOne             → BuildGrandProductSystem / grandproduct
 //     sub-verifier (permutation Result == 1, folded into the same query's
 //     `expected` field)
+//   - grandproduct.RowLimitAction               → BuildRowLimitSystem / rowlimit
+//     sub-verifier (permutation per-side row bound, analogous to
+//     lookuptologderivsum.RowLimitVerifierAction but guarding MaxPermutationRows
+//     for a single permutation query's A/B sides instead of MaxLookupRows for a
+//     lookup subgroup)
 //   - messagebus.CheckHandleSumInShard          → BuildGrandProductSystem / grandproduct
 //     sub-verifier (message-bus handle Result == expected, folded into the
 //     same query's `expected` field; absent entirely when SkipInShardCheck
@@ -97,6 +102,8 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 	case *grandproduct.FinalProductCheck:
 		return true
 	case *grandproduct.CheckResultIsOne:
+		return true
+	case *grandproduct.RowLimitAction:
 		return true
 	case *messagebus.CheckHandleSumInShard:
 		return true

@@ -1,5 +1,11 @@
 github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827095445-9c51af6cc3b1 h1:7jkMwDOucHpfrvdBJQq5+HU8TLJe4EGHb1K3v0OJ8Ns=
 github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827095445-9c51af6cc3b1/go.mod h1:+ZCrSWb2pdQMZgYTRvbiYBY8kXxSSdSsUAk0jpj5x78=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902094632-d4bb7a17e55e h1:PxsKtt6xGl5JbceA64ah1oMlx3EMuVzlUj+i0M8sGA0=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902094632-d4bb7a17e55e/go.mod h1:+ZCrSWb2pdQMZgYTRvbiYBY8kXxSSdSsUAk0jpj5x78=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902101936-2e6d9ca87057 h1:nQQQEumHGK7vxHTfq6l4CRTWFreix59OaNGTlG8eq4A=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902101936-2e6d9ca87057/go.mod h1:+ZCrSWb2pdQMZgYTRvbiYBY8kXxSSdSsUAk0jpj5x78=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0 h1:4fzUeqYNqqiEeW+xoEvKLT7GJWVGGZpe7FNKRJQNlp0=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0/go.mod h1:+ZCrSWb2pdQMZgYTRvbiYBY8kXxSSdSsUAk0jpj5x78=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
 github.com/bits-and-blooms/bitset v1.24.4/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=

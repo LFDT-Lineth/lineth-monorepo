@@ -22,8 +22,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.OptionalLong;
 import lineth.config.LineaTracerConfiguration;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
+import lineth.sequencer.tracing.BespokeTracingActivationPolicy;
+import lineth.sequencer.tracing.LineaTracerFactory;
 import lineth.sequencer.txpoolvalidation.validators.TraceLineLimitValidator;
 import lineth.sequencer.txselection.selectors.TestTransactionEvaluationContext;
 import lineth.sequencer.txselection.selectors.TraceLineLimitTransactionSelector;
@@ -98,18 +101,24 @@ public class TraceLineLimitCacheIntegrationTest {
     transactionSelector =
         new TraceLineLimitTransactionSelector(
             stateManager,
-            blockchainService,
-            LineaL1L2BridgeSharedConfiguration.builder()
-                .contract(Address.fromHexString("0xdeadbeef"))
-                .topic(Bytes32.fromHexString("0xc0ffee"))
-                .build(),
             tracerConfiguration,
-            sharedCache);
+            sharedCache,
+            LineaTracerFactory.fromBlockchainService(
+                    blockchainService,
+                    tracerConfiguration,
+                    LineaL1L2BridgeSharedConfiguration.builder()
+                        .contract(Address.fromHexString("0xdeadbeef"))
+                        .topic(Bytes32.fromHexString("0xc0ffee"))
+                        .build())
+                .create(0)
+                .orElseThrow());
 
     stateManager.blockSelectionStarted();
 
     // Create transaction pool validator using the same shared cache
-    transactionPoolValidator = new TraceLineLimitValidator(sharedCache);
+    transactionPoolValidator =
+        new TraceLineLimitValidator(
+            sharedCache, new BespokeTracingActivationPolicy(OptionalLong.empty()), () -> 0L);
   }
 
   @Test
