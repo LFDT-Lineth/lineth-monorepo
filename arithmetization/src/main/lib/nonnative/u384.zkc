@@ -1,0 +1,96 @@
+#[native]
+fn mulmod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384) {
+    if modL == 0 {
+        fail
+    }
+    // integer product result `product = lhsL * rhsL`
+    var product:u768 = (lhsL as u768) * (rhsL as u768)
+
+    var q:u768, rem:u768, overflow:u384, overflow2:u384
+    var quotient:u384
+    q, rem = product /% (modL as u768)
+    overflow::remainder = rem
+    if overflow != 0 {
+        fail
+    }
+    overflow2::quotient = q
+    if overflow2 != 0 {
+        fail
+    }
+}
+
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u384
+// values. Implemented as multiplication by 1 modulo modL.
+fn reduce_384(val:u384, modL:u384) -> (remainder:u384) {
+    remainder = mulmod_384(1, val, modL)
+    if remainder >= modL {
+        fail
+    }
+}
+
+// addmod_384 adds two values and reduces modulo modL. Assumes inputs are already
+// reduced
+fn addmod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384) {
+    if modL == 0 {
+        fail
+    }
+    var sum:u385 = (lhsL as u385) + (rhsL as u385)
+    if sum >= (modL as u385) {
+        sum = sum - (modL as u385)
+    }
+    var overflow:u1
+    overflow::remainder = sum
+    if overflow != 0 {
+        fail
+    }
+}
+
+// submod_384 computes subtraction and mod reduces. It assumes inputs are already reduced
+fn submod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384) {
+    if modL == 0 {
+        fail
+    }
+    var lhs:u385
+    if rhsL>lhsL {
+        lhs = (lhsL as u385) + (modL as u385)
+    } else {
+        lhs = (lhsL as u385)
+    }
+    var overflow:u1
+    overflow::remainder = lhs - (rhsL as u385)
+    if overflow != 0 {
+        fail
+    }
+}
+
+#[native]
+fn expmod_unconstrained_384(base:u384, exp:u384, mod:u384) -> (res:u384) {
+    if exp == 0 {
+        res = 1 % mod
+    } else {
+        var half:u384
+        var bit:u1
+        half::bit = exp as u385
+        var half_res:u384 = expmod_unconstrained_384(base, half, mod)
+        var sq:u384 = mulmod_384(half_res, half_res, mod)
+        if bit == 1 {
+            res = mulmod_384(sq, base, mod)
+        } else {
+            res = sq
+        }
+    }
+}
+
+fn invmod_384(inp:u384, modL:u384) -> (inv:u384) {
+    // we first hint the inversion
+    inv = expmod_unconstrained_384(inp, modL - 2, modL)
+    // compute the product using the native product
+    var prod:u384 = mulmod_384(inv, inp, modL)
+    // now we check that the hinted inversion result is correct
+    if prod != 1 {
+        fail
+    }
+}
