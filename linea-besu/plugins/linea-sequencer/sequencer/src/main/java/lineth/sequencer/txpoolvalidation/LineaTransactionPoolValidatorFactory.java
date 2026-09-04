@@ -19,6 +19,7 @@ import lineth.config.LineaTracerConfiguration;
 import lineth.config.LineaTransactionPoolValidatorConfiguration;
 import lineth.config.LineaTransactionValidatorConfiguration;
 import lineth.jsonrpc.JsonRpcManager;
+import lineth.sequencer.tracing.BespokeTracingActivationPolicy;
 import lineth.sequencer.txpoolvalidation.validators.CalldataValidator;
 import lineth.sequencer.txpoolvalidation.validators.DeniedAddressValidator;
 import lineth.sequencer.txpoolvalidation.validators.GasLimitValidator;
@@ -121,7 +122,11 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     if (!blockTransactionValidatorActive) {
       validators.add(new TransactionTypeValidator(txValidatorConf));
     }
-    validators.add(new TraceLineLimitValidator(invalidTransactionByLineCountCache));
+    validators.add(
+        new TraceLineLimitValidator(
+            invalidTransactionByLineCountCache,
+            new BespokeTracingActivationPolicy(tracerConfiguration.tracingEndTimestamp()),
+            () -> transactionSimulationService.simulatePendingBlockHeader().getTimestamp()));
     validators.add(new DeniedAddressValidator(deniedAddresses));
     validators.add(new PrecompileAddressValidator());
     validators.add(new GasLimitValidator(txPoolValidatorConf.maxTxGasLimit()));

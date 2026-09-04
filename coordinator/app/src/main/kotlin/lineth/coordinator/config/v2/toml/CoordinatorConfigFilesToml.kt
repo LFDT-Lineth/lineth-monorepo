@@ -31,7 +31,11 @@ data class CoordinatorConfigFileToml(
   val l1FinalizationMonitor: L1FinalizationMonitorConfigToml,
   @param:ConfigSection("L1 blob/aggregation submission (data availability and finalization) settings.")
   val l1Submission: L1SubmissionConfigToml,
-  @param:ConfigSection("Forced transactions handling settings; omit the section to disable the feature.")
+  @param:ConfigSection(
+    "Forced transactions handling settings; omit the section to disable the feature. Ignored on " +
+      "validium deployments: the coordinator does not support forced transactions there yet and " +
+      "disables them with a warning.",
+  )
   val forcedTransactions: ForcedTransactionsConfigToml? = null,
   @param:ConfigSection("L1 to L2 message anchoring settings.")
   val messageAnchoring: MessageAnchoringConfigToml,
