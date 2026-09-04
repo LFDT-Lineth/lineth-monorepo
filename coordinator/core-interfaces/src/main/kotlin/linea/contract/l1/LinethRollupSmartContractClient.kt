@@ -204,11 +204,13 @@ interface LinethRollupSmartContractClient :
   /**
    * Submits blocks for V9 (RISC-V arithmetization)
    * @param preflightWithEthCall when true will call eth_call to prevalidate the transaction does not revert
+   * @param onlyEthCall when true will only call eth_call without doing the actual transaction submission
    */
   fun submitBlobsV9(
     blobData: BlobsSubmissionV9,
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean = true,
+    onlyEthCall: Boolean = false,
   ): SafeFuture<String>
 
   /**

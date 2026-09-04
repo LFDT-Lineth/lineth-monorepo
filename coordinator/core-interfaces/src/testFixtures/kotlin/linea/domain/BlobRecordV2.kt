@@ -19,6 +19,7 @@ fun createBlobRecordV2(
       blobHash = Random.nextBytes(32),
       compressedData = Random.nextBytes(32),
       batchesCount = 1U,
+      endBlockHash = Random.nextBytes(32),
     ),
   ),
 ): BlobRecordV2 {
