@@ -56,9 +56,18 @@ func run() error {
 		LogDerivImport:     `@import("verifier_ray").query.logderivativesum`,
 		GrandProductImport: `@import("verifier_ray").query.grandproduct`,
 		RowLimitImport:     `@import("verifier_ray").query.rowlimit`,
-		WritePcs:           true,
-		PcsImport:          `@import("verifier_ray").query.pcs`,
-		FriImport:          `@import("verifier_ray").query.fri`,
+		// TODO(shared-randomness): when this branch is rebased onto the
+		// shared-randomness work (split/3832-3, which adds
+		// CompiledSystemZigOptions.SharedRandomnessImport and exports
+		// query.shared_randomness from src/lib.zig), set it here alongside the
+		// other query imports:
+		//   SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
+		// With EmitHeader: true the shared_randomness writer emits
+		// `const shared_randomness = <SharedRandomnessImport>;`, so leaving the
+		// field empty would render invalid Zig.
+		WritePcs:  true,
+		PcsImport: `@import("verifier_ray").query.pcs`,
+		FriImport: `@import("verifier_ray").query.fri`,
 	}); err != nil {
 		return fmt.Errorf("WriteCompiledSystemZig: %w", err)
 	}
