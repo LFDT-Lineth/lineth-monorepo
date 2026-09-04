@@ -1,7 +1,6 @@
-import { commitmentsToVersionedHashes } from "@ethereumjs/util";
 import * as kzg from "c-kzg";
-import { AbiCoder, BytesLike, Transaction, Wallet, ethers } from "ethers";
-import { DataHexString } from "ethers/lib.commonjs/utils/data";
+import { LineaRollup__factory, type ILineaRollupBase } from "contracts/typechain-types";
+import { Transaction, Wallet, ethers } from "ethers";
 
 import aggregateProof1to305 from "./aggregatedProof-1-305.json";
 import submissionDataJson1 from "./blocks-1-46.json";
@@ -16,6 +15,9 @@ import submissionDataJson3 from "./blocks-82-114.json";
 
 const chainId = 31648428;
 
+// Each fixture predates the blockhash-centric ABI cutover and only carries `parentStateRootHash` /
+// `finalStateRootHash` (no real L2 block hashes). We reuse those hashes as stand-in block hashes below —
+// see `FixtureSubmission` in `contracts/test/hardhat/common/helpers/dataGeneration.ts` for the same convention.
 const dataItems = [
   submissionDataJson1,
   submissionDataJson2,
@@ -28,109 +30,61 @@ const dataItems = [
   submissionDataJson9,
 ];
 
-export function generateKeccak256(types: string[], values: unknown[], packed?: boolean) {
-  return ethers.keccak256(encodeData(types, values, packed));
+/**
+ * A single blob's submission data plus the shnarf chain values computed for it.
+ * @dev `submitBlobs` no longer takes a KZG proof or data-evaluation claim: the point-evaluation
+ *   precompile-based verification was removed from the contract in favor of relying on the EVM's
+ *   native `blobhash()` (the beacon chain already guarantees blob/commitment validity for a landed
+ *   EIP-4844 transaction).
+ */
+type BlobEntry = {
+  finalBlockHash: string;
+  dataHash: string;
+  compressedData: string;
+  parentShnarf: string;
+  expectedShnarf: string;
+};
+
+/**
+ * Mirrors the Solidity 3-field _computeShnarf: keccak256(abi.encodePacked(parentShnarf, finalBlockHash, dataHash)).
+ */
+function computeShnarfV2(parentShnarf: string, finalBlockHash: string, dataHash: string): string {
+  return ethers.keccak256(ethers.concat([parentShnarf, finalBlockHash, dataHash]));
 }
 
-export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
-  if (packed) {
-    return ethers.solidityPacked(types, values);
-  }
-  return AbiCoder.defaultAbiCoder().encode(types, values);
-};
-
-export type SubmissionData = {
-  parentStateRootHash: string;
-  dataParentHash: string;
-  finalStateRootHash: string;
-  firstBlockInData: bigint;
-  finalBlockInData: bigint;
-  snarkHash: string;
-};
-
-export type BlobSubmissionData = {
-  submissionData: SubmissionData;
-  parentSubmissionData: ParentSubmissionData;
-  dataEvaluationClaim: bigint;
-  kzgCommitment: BytesLike;
-  kzgProof: BytesLike;
-};
-
-export type ParentSubmissionData = {
-  finalStateRootHash: string;
-  firstBlockInData: bigint;
-  finalBlockInData: bigint;
-  shnarf: string;
-  dataParentHash: string;
-};
-
-export function generateSubmissionDataFromJSON(
-  startingBlockNumber: number,
-  endingBlockNumber: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parsedJSONData: any,
-): { submissionData: SubmissionData; blob: Uint8Array } {
-  const returnData = {
-    parentStateRootHash: parsedJSONData.parentStateRootHash,
-    dataParentHash: parsedJSONData.parentDataHash,
-    finalStateRootHash: parsedJSONData.finalStateRootHash,
-    firstBlockInData: BigInt(startingBlockNumber),
-    finalBlockInData: BigInt(endingBlockNumber),
-    snarkHash: parsedJSONData.snarkHash,
-  };
-
-  return {
-    submissionData: returnData,
-    blob: ethers.decodeBase64(parsedJSONData.compressedData),
-  };
+function computeGenesisShnarf(initialBlockHash: string): string {
+  return computeShnarfV2(ethers.ZeroHash, initialBlockHash, ethers.ZeroHash);
 }
 
-export function generateParentSubmissionData(finalStateRootHash: string, parentDataHash: string): ParentSubmissionData {
-  return {
-    finalStateRootHash: finalStateRootHash,
-    firstBlockInData: BigInt(0),
-    finalBlockInData: BigInt(0),
-    shnarf: "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f",
-    dataParentHash: parentDataHash,
-  };
+/**
+ * EIP-4844 versioned blob hash from a KZG commitment: 0x01 || sha256(commitment)[1:].
+ * This is what `blobhash()` returns on-chain for the blob carrying this commitment.
+ */
+function computeBlobVersionedHash(commitment: string): string {
+  return `0x01${ethers.sha256(commitment).slice(4)}`;
 }
 
+/**
+ * Builds the blob submission chain (final block hash + shnarf per blob) from the JSON fixtures.
+ * @dev The fixtures already carry the real KZG `commitment` for their `compressedData`, so it's reused
+ *   directly here rather than recomputed — c-kzg/ethers will derive the identical commitment when the
+ *   blob transaction is built and signed in `submitBlob`.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function generateParentSubmissionDataFromJson(parsedJSONData: any): ParentSubmissionData {
-  return {
-    finalStateRootHash: parsedJSONData.finalStateRootHash,
-    firstBlockInData: BigInt(parsedJSONData.conflationOrder.startingBlockNumber),
-    finalBlockInData: BigInt(parsedJSONData.conflationOrder.upperBoundaries.slice(-1)[0]),
-    shnarf: parsedJSONData.expectedShnarf,
-    dataParentHash: parsedJSONData.parentDataHash,
-  };
-}
+function buildBlobChain(dataSet: any[]): BlobEntry[] {
+  const initialBlockHash = dataSet[0].parentStateRootHash;
+  let parentShnarf = computeGenesisShnarf(initialBlockHash);
 
-export function generateSubmissionCallDataFromJSON(
-  startingBlockNumber: number,
-  endingBlockNumber: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parsedJSONData: any,
-): { submissionData: SubmissionData } {
-  const returnData = {
-    parentStateRootHash: parsedJSONData.parentStateRootHash,
-    dataParentHash: parsedJSONData.parentDataHash,
-    finalStateRootHash: parsedJSONData.finalStateRootHash,
-    firstBlockInData: BigInt(startingBlockNumber),
-    finalBlockInData: BigInt(endingBlockNumber),
-    snarkHash: parsedJSONData.snarkHash,
-    compressedData: ethers.hexlify(ethers.decodeBase64(parsedJSONData.compressedData)),
-  };
+  return dataSet.map((data) => {
+    const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
+    const finalBlockHash = data.finalStateRootHash;
+    const dataHash = computeBlobVersionedHash(data.commitment);
+    const expectedShnarf = computeShnarfV2(parentShnarf, finalBlockHash, dataHash);
 
-  return {
-    submissionData: returnData,
-  };
-}
-
-function getPadded(data: Uint8Array): Uint8Array {
-  const pdata = new Uint8Array(131072).fill(0);
-  pdata.set(data);
-  return pdata;
+    const entry: BlobEntry = { finalBlockHash, dataHash, compressedData, parentShnarf, expectedShnarf };
+    parentShnarf = expectedShnarf;
+    return entry;
+  });
 }
 
 function requireEnv(name: string): string {
@@ -142,11 +96,6 @@ function requireEnv(name: string): string {
   return envVariable;
 }
 
-function kzgCommitmentsToVersionedHashes(commitments: Uint8Array[]): string[] {
-  const versionedHashes = commitmentsToVersionedHashes(commitments);
-  return versionedHashes.map((versionedHash) => ethers.hexlify(versionedHash));
-}
-
 async function main() {
   const rpcUrl = requireEnv("RPC_URL");
   const privateKey = requireEnv("DEPLOYER_PRIVATE_KEY");
@@ -155,93 +104,27 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new Wallet(privateKey, provider);
 
-  kzg.loadTrustedSetup(`${__dirname}/trusted_setup.txt`);
+  kzg.loadTrustedSetup(0, `${__dirname}/trusted_setup.txt`);
 
-  const parentSubmissionData1 = generateParentSubmissionData(
-    "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-    ethers.ZeroHash,
+  const blobChain = buildBlobChain(dataItems);
+
+  const encodedCall = LineaRollup__factory.createInterface().encodeFunctionData("submitBlobs", [
+    blobChain.map((blob) => blob.finalBlockHash),
+    blobChain[0].parentShnarf,
+    blobChain[blobChain.length - 1].expectedShnarf,
+  ]);
+
+  await submitBlob(
+    provider,
+    wallet,
+    encodedCall,
+    destinationAddress,
+    blobChain.map((blob) => blob.compressedData),
   );
-
-  const kzgProofsArray: Uint8Array[] = [];
-  const commitmentsArray: Uint8Array[] = [];
-  const versionedHashesArray: string[] = [];
-  const blobsArray: Uint8Array[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kzgProofsContractArray: any[] = [];
-  // const parentSubmissionData: ParentSubmissionData[] = [];
-
-  const blobSubmissionData: BlobSubmissionData[] = [];
-
-  let previousSubmissionData = generateParentSubmissionData(
-    "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-    ethers.ZeroHash,
-  );
-
-  const finalSubmissionData = generateParentSubmissionDataFromJson(submissionDataJson6);
-
-  for (let i = 0; i < dataItems.length; i++) {
-    const { submissionData, blob } = generateSubmissionDataFromJSON(
-      dataItems[i].conflationOrder.startingBlockNumber,
-      dataItems[i].conflationOrder.upperBoundaries.slice(-1)[0],
-      dataItems[i],
-    );
-    const fullblob = getPadded(blob);
-    const commitment = kzg.blobToKzgCommitment(fullblob);
-    const kzgProof = kzg.computeBlobKzgProof(fullblob, commitment);
-
-    blobsArray.push(fullblob);
-    versionedHashesArray.push(kzgCommitmentsToVersionedHashes([commitment])[0]);
-    commitmentsArray.push(commitment);
-    kzgProofsArray.push(kzgProof);
-    kzgProofsContractArray.push(dataItems[i].kzgProofContract);
-
-    blobSubmissionData.push({
-      submissionData: submissionData,
-      parentSubmissionData: previousSubmissionData,
-      dataEvaluationClaim: BigInt(dataItems[i].expectedY),
-      kzgCommitment: commitment,
-      kzgProof: dataItems[i].kzgProofContract,
-    });
-
-    previousSubmissionData = generateParentSubmissionDataFromJson(dataItems[i]);
-  }
-
-  const encodedCall = encodeCall(blobSubmissionData);
-
-  await submitBlob(provider, wallet, encodedCall, destinationAddress, versionedHashesArray, blobsArray);
 
   await sendMessage();
 
-  await sendProof(aggregateProof1to305, parentSubmissionData1, finalSubmissionData);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapToTuple(blobSubmissionDataItems: BlobSubmissionData[]): any {
-  return blobSubmissionDataItems.map((blobSubmissionData) => [
-    blobSubmissionData.dataEvaluationClaim,
-    blobSubmissionData.kzgCommitment,
-    blobSubmissionData.kzgProof,
-    blobSubmissionData.submissionData.finalStateRootHash,
-    blobSubmissionData.submissionData.snarkHash,
-  ]);
-}
-
-function encodeCall(submissionData: BlobSubmissionData[]): DataHexString {
-  //submitBlobs((uint256,bytes,bytes,bytes32,bytes32)[],bytes32,bytes32)": "99467a35"
-
-  const encodedCall = ethers.concat([
-    "0x99467a35",
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      ["tuple(uint256,bytes,bytes,bytes32,bytes32)[]", "bytes32", "bytes32"],
-      [
-        mapToTuple(submissionData),
-        submissionData[0].parentSubmissionData.shnarf,
-        dataItems[dataItems.length - 1].expectedShnarf,
-      ],
-    ),
-  ]);
-
-  return encodedCall;
+  await sendProof(aggregateProof1to305, blobChain);
 }
 
 async function sendMessage() {
@@ -281,21 +164,26 @@ async function sendMessage() {
   console.log({ transaction: tx, receipt });
 }
 
+/**
+ * Builds and broadcasts the EIP-4844 blob transaction carrying `_submitBlobsCall`.
+ * @dev Only `blobs` + `kzg` are supplied; ethers derives the commitments, proofs and versioned hashes
+ *   for the transaction's blob sidecar itself (no need to compute them manually, see also
+ *   `contracts/test/hardhat/rollup/helpers/blob.ts#buildBlobTransaction`).
+ */
 async function submitBlob(
   provider: ethers.JsonRpcProvider,
   wallet: Wallet,
-  encodedCall: string,
+  submitBlobsCall: string,
   destinationAddress: string,
-  versionedHashes: string[],
-  fullblobs: Uint8Array[],
+  compressedBlobs: string[],
 ) {
   const { maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
   const nonce = await provider.getTransactionCount(wallet.address);
 
-  console.log(encodedCall);
+  console.log(submitBlobsCall);
 
   const transaction = Transaction.from({
-    data: encodedCall,
+    data: submitBlobsCall,
     maxPriorityFeePerGas: maxPriorityFeePerGas!,
     maxFeePerGas: maxFeePerGas!,
     to: destinationAddress,
@@ -304,26 +192,31 @@ async function submitBlob(
     nonce,
     value: 0,
     kzg,
-    blobs: fullblobs,
+    blobs: compressedBlobs,
     gasLimit: 5_000_000,
-    blobVersionedHashes: versionedHashes,
     maxFeePerBlobGas: maxFeePerGas!,
   });
 
   const tx = await wallet.sendTransaction(transaction);
   const receipt = await tx.wait();
 
-  console.log(versionedHashes);
   console.log("BlobTX Hash: ", tx.hash);
   console.log(`BlobTX receipt: ${JSON.stringify(receipt, null, 2)}`);
 }
 
-async function sendProof(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  proofFile: any,
-  submissionData: ParentSubmissionData,
-  finalSubmissionData: ParentSubmissionData,
-) {
+/**
+ * Submits the aggregated proof via `finalizeBlocks`.
+ * @dev Assumes this is the *first* finalization after a fresh deploy (no prior finalized state, no
+ *   forced transactions yet), matching the `aggregatedProof-1-305.json` fixture. `parentBlockHash` and
+ *   `lastFinalizedTimestamp` must match whatever `INITIAL_L2_BLOCK_HASH` / `L2_GENESIS_TIMESTAMP` the
+ *   contract was actually deployed with (see `contracts/deploy/03_deploy_LineaRollup.ts`) — the values
+ *   below assume the deploy step reused the same fixture values as `blocks-1-46.json`.
+ * @dev `aggregatedProof-1-305.json`'s `aggregatedProof`/`finalShnarf` were generated for the legacy
+ *   5-field/Horner-Y public input formula, not the current blockhash-centric one, so verification will
+ *   fail on-chain until the fixture is regenerated by the prover against the current ABI.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function sendProof(proofFile: any, blobChain: BlobEntry[]) {
   console.log("proof");
 
   const rpcUrl = requireEnv("RPC_URL");
@@ -333,51 +226,43 @@ async function sendProof(
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new Wallet(privateKey, provider);
 
-  const finalSubmission = dataItems[dataItems.length - 1];
+  const lastBlob = blobChain[blobChain.length - 1];
+  const initialBlockHash = dataItems[0].parentStateRootHash;
 
-  const proofData = [
+  const finalizationData: ILineaRollupBase.FinalizationDataV5Struct = {
+    parentStateRootHash: proofFile.parentStateRootHash,
+    parentBlockHash: initialBlockHash,
+    endBlockNumber: BigInt(proofFile.finalBlockNumber),
+    shnarfData: {
+      parentShnarf: lastBlob.parentShnarf,
+      snarkHash: ethers.ZeroHash,
+      finalStateRootHash: ethers.ZeroHash,
+      dataEvaluationPoint: ethers.ZeroHash,
+      dataEvaluationClaim: ethers.ZeroHash,
+    },
+    lastFinalizedTimestamp: BigInt(proofFile.parentAggregationLastBlockTimestamp),
+    finalTimestamp: BigInt(proofFile.finalTimestamp),
+    lastFinalizedL1RollingHash: ethers.ZeroHash,
+    l1RollingHash: proofFile.l1RollingHash,
+    lastFinalizedL1RollingHashMessageNumber: 0n,
+    l1RollingHashMessageNumber: BigInt(proofFile.l1RollingHashMessageNumber),
+    l2MerkleTreesDepth: BigInt(proofFile.l2MerkleTreesDepth),
+    lastFinalizedForcedTransactionNumber: 0n,
+    finalForcedTransactionNumber: 0n,
+    lastFinalizedForcedTransactionRollingHash: ethers.ZeroHash,
+    finalBlockHash: lastBlob.finalBlockHash,
+    finalBlobHash: lastBlob.dataHash,
+    l2MerkleRoots: proofFile.l2MerkleRoots,
+    filteredAddresses: [],
+    verifierKeys: [],
+    l2MessagingBlocksOffsets: proofFile.l2MessagingBlocksOffsets,
+  };
+
+  const encodedCall = LineaRollup__factory.createInterface().encodeFunctionData("finalizeBlocks", [
     proofFile.aggregatedProof,
-    0,
-    [
-      proofFile.parentStateRootHash,
-      finalSubmissionData.finalBlockInData,
-      [
-        finalSubmission.prevShnarf,
-        finalSubmission.snarkHash,
-        finalSubmission.finalStateRootHash,
-        finalSubmission.expectedX,
-        finalSubmission.expectedY,
-      ],
-      proofFile.parentAggregationLastBlockTimestamp,
-      proofFile.finalTimestamp,
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      proofFile.l1RollingHash,
-      0, // last finalized message number
-      proofFile.l1RollingHashMessageNumber,
-      proofFile.l2MerkleTreesDepth,
-      proofFile.l2MerkleRoots,
-      proofFile.l2MessagingBlocksOffsets,
-    ],
-  ];
-
-  console.log(proofData);
-  //finalizeBlocks(bytes,uint256,(bytes32,uint256,(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,bytes32[],bytes))": "5603c65f"
-  //finalizeBlocks(bytes,uint256,(bytes32,uint256,(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,bytes32[],bytes))": "5603c65f"
-  const encodedCall = ethers.concat([
-    "0x5603c65f",
-    ethers.AbiCoder.defaultAbiCoder().encode(
-      [
-        "bytes",
-        "uint256",
-        "tuple(bytes32,uint256,tuple(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,bytes32[],bytes)",
-      ],
-      proofData,
-    ),
+    proofFile.aggregatedVerifierIndex,
+    finalizationData,
   ]);
-
-  console.log(submissionData.shnarf);
-  console.log(finalSubmission.expectedShnarf);
-  console.log(BigInt(finalSubmission.conflationOrder.upperBoundaries.slice(-1)[0]));
 
   const { maxFeePerGas, maxPriorityFeePerGas } = await provider.getFeeData();
   const nonce = await provider.getTransactionCount(wallet.address);

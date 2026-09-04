@@ -184,6 +184,8 @@ const config: HardhatUserConfig = {
       "security/reentrancy/TransientStorageReentrancyGuardUpgradeable.sol",
       "tokens",
       "verifiers",
+      // solidity-docgen cannot parse @return tags for `$`/`$$` return names (\w+ only)
+      "yield/YieldManagerStorageLayout.sol",
     ],
     pages: "files",
     outputDir: "docs/api/",

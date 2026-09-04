@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import { LinethRollup } from "../../../rollup/LinethRollup.sol";
 import { FinalizedStateHashing } from "../../../libraries/FinalizedStateHashing.sol";
-import { LinethRollupBase } from "../../../rollup/LinethRollupBase.sol";
 import { CalldataBlobAcceptor } from "../../../rollup/dataAvailability/CalldataBlobAcceptor.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { EfficientLeftRightKeccak } from "../../../libraries/EfficientLeftRightKeccak.sol";
@@ -25,16 +24,20 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
     _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
   }
 
-  function calculateY(bytes calldata _data, bytes32 _x) external pure returns (bytes32 y) {
-    return _calculateY(_data, _x);
-  }
-
   function setupParentShnarf(bytes32 _shnarf) external {
     _blobShnarfExists[_shnarf] = 1;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
     currentL2BlockNumber = _blockNumber;
+  }
+
+  function setStateRootHash(uint256 _blockNumber, bytes32 _stateRootHash) external {
+    stateRootHashes[_blockNumber] = _stateRootHash;
+  }
+
+  function setBlockHash(uint256 _blockNumber, bytes32 _blockHash) external {
+    blockHashes[_blockNumber] = _blockHash;
   }
 
   function setLastFinalizedShnarf(bytes32 _lastFinalizedShnarf) external {
