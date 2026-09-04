@@ -18,8 +18,10 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | L1_SECURITY_COUNCIL | registry\|env | address | L1 Security Council address (default admin). Read from registry on stable networks; env var used as fallback. |
 | FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID | true | uint256 | Destination L2 chain ID |
 | FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER | true | uint256 | L2 block buffer for forced transaction inclusion |
+| FORCED_TRANSACTION_GATEWAY_MIN_GAS_LIMIT | true | uint256 | Minimum gas limit for forced transactions. Must cover the worst-case intrinsic gas for the network's calldata rules. For Osaka with MAX_INPUT_LENGTH_LIMIT=1000 bytes: 21000 base + 16000 non-zero calldata + 32000 creation + 64 initcode word charge = 69064 exact; recommended value is 70000 (conservative over-estimate). If the calldata byte limit or per-byte gas costs change, update this value and the prover RLP-byte-size configuration together. |
 | FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT | true | uint256 | Maximum gas limit for forced transactions |
 | FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER | true | uint256 | Maximum input length buffer |
+| FORCED_TRANSACTION_GATEWAY_MINIMUM_BASE_GAS_FEE | true | uint256 | Minimum maxFeePerGas accepted for forced transactions. Set to 0 for gasless networks (disables the zero-fee and base-fee-floor checks); set to the network base gas fee floor (e.g. 7000000000 for 7 gwei) for non-gasless networks. |
 | FORCED_TRANSACTION_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
 | FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS | true | uint256 | L2 block duration in seconds |
 | FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER | true | uint256 | Block number deadline buffer |
@@ -38,7 +40,7 @@ npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
 
 Base command with cli arguments:
 ```shell
-DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINETH_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
+DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINETH_ROLLUP_ADDRESS=<address> L1_SECURITY_COUNCIL=<address> FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=<value> FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MIN_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=<value> FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=<value> FORCED_TRANSACTION_GATEWAY_MINIMUM_BASE_GAS_FEE=<value> FORCED_TRANSACTION_ADDRESS_FILTER=<address> FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=<value> FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=<value> MIMC_LIBRARY_ADDRESS=<address> npx hardhat deploy --network sepolia --tags ForcedTransactionGateway
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)

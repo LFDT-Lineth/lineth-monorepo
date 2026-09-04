@@ -26,7 +26,7 @@
  *   TX_DATA_FILE          Path to a JSON file with a signed EIP-1559 transaction.
  *                         Expected fields: nonce, maxPriorityFeePerGas, maxFeePerGas,
  *                         gasLimit (or gas), to, value, input (or data),
- *                         accessList, yParity (or v), r, s
+ *                         yParity (or v), r, s. accessList must be absent or [].
  *
  * ──────────────────────────────────────────────────────────────────────────────
  * MODE B — FROM PARAMS  (omit TX_DATA_FILE, set the vars below)
@@ -104,7 +104,6 @@ type Eip1559TransactionStruct = {
   to: string;
   value: bigint;
   input: string;
-  accessList: { contractAddress: string; storageKeys: string[] }[];
   yParity: number;
   r: bigint;
   s: bigint;
@@ -225,6 +224,10 @@ function buildTransactionFromFile(filePath: string): Eip1559TransactionStruct {
 
   const raw = JSON.parse(fs.readFileSync(absolutePath, "utf-8"));
 
+  if ((raw.accessList ?? []).length !== 0) {
+    throw new Error("ForcedTransactionGateway only supports signed EIP-1559 transactions with an empty accessList.");
+  }
+
   return {
     nonce: BigInt(raw.nonce),
     maxPriorityFeePerGas: BigInt(raw.maxPriorityFeePerGas),
@@ -233,12 +236,6 @@ function buildTransactionFromFile(filePath: string): Eip1559TransactionStruct {
     to: raw.to,
     value: BigInt(raw.value ?? 0),
     input: raw.input ?? raw.data ?? "0x",
-    accessList: (raw.accessList ?? []).map(
-      (entry: { address?: string; contractAddress?: string; storageKeys: string[] }) => ({
-        contractAddress: entry.contractAddress ?? entry.address,
-        storageKeys: entry.storageKeys ?? [],
-      }),
-    ),
     yParity: Number(raw.yParity ?? raw.v),
     r: BigInt(raw.r),
     s: BigInt(raw.s),
@@ -289,7 +286,6 @@ async function buildTransactionFromParams(wallet: ethers.Wallet, chainId: bigint
     to: parsed.to!,
     value: parsed.value,
     input: parsed.data,
-    accessList: [],
     yParity: parsed.signature.yParity,
     r: BigInt(parsed.signature.r),
     s: BigInt(parsed.signature.s),
