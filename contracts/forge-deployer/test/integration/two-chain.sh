@@ -111,42 +111,55 @@ get_code() {
     code --rpc-url "http://${container}:8545" "$address"
 }
 
-# The deployer reads/writes its checkpoint in a NAMED volume, not a bind mount.
-# On the Kubernetes self-hosted runners the Docker daemon runs rootless / in a
-# sidecar with its own user namespace, so a bind-mounted host dir is not writable
-# by the image's non-root `node` user (neither `chmod 0777` nor `--user "$(id
-# -u)"` survives the uid-remap). A named volume is container-owned, so `node`
-# can write it regardless of the host daemon's mapping. The published image still
-# runs as the non-root `node` user; this changes only how the test shares state.
+# Checkpoint sharing design (rootless-Docker safe).
 #
-# The host never touches the volume's filesystem directly (checkpoint files are
-# written 0o600). Instead the host keeps a staging dir (CHECKPOINT_DIR) and syncs
-# it with the volume via tar streams through the daemon, which runs as root and
-# is therefore immune to both the uid-remap and the 0o600 mode.
+# On the Kubernetes self-hosted runners the Docker daemon runs ROOTLESS: it has
+# its own user namespace, and "root" inside a container is the daemon's remapped
+# UID with no CAP_CHOWN/CAP_FOWNER over files owned by other UIDs. So:
+#   - a bind-mounted host dir is not writable by the deployer (EACCES), and
+#   - a container cannot chmod/chown/utime paths it does not own (the earlier
+#     "Cannot utime / changing permissions: Operation not permitted" failures).
+#
+# The fix is to never fight ownership: the deployer and the sync helpers all run
+# as `--user 0:0`, which under rootless maps to the SAME daemon user that owns a
+# fresh named volume. The deployer writes its checkpoint there directly, and no
+# chmod is ever needed. All tar extracts use --no-same-owner --no-same-permissions
+# so tar never attempts chmod/utime on a path the remapped root cannot touch.
+#
+# The host never mounts the volume (checkpoint files are written 0o600 and owned
+# by the daemon). It keeps a host-owned staging dir (CHECKPOINT_DIR) and syncs it
+# with the volume via tar streams; the pull side extracts on the HOST, stripping
+# ownership/permissions, so the staged copies are host-owned and readable by
+# jq/cmp/cp/mv regardless of the 0o600 source mode.
 
 # push_checkpoint: replace the volume's contents with the host staging dir. The
 # volume is cleared first so an empty staging dir reproduces checkpoint loss.
-# The volume root is chmod 0777 so `node` can create checkpoint.json.tmp, and the
-# staged files are made world-readable so `node` can read bootstrap fixtures.
+# Extract runs as the daemon user (volume owner) with perms stripped, so no
+# chmod/chown is attempted and no chmod of the volume root is required.
 push_checkpoint() {
-  tar -C "$CHECKPOINT_DIR" -cf - . | docker run --rm -i \
+  tar -C "$CHECKPOINT_DIR" --no-same-owner -cf - . | docker run --rm -i \
+    --user 0:0 \
     -v "$CHECKPOINT_VOL:/checkpoint" \
     --entrypoint sh "$DEPLOYER_IMAGE" -c \
-    'find /checkpoint -mindepth 1 -delete 2>/dev/null || true; tar -C /checkpoint -xf -; chmod 0777 /checkpoint; chmod -R a+rX /checkpoint'
+    'find /checkpoint -mindepth 1 -delete 2>/dev/null || true; tar -C /checkpoint --no-same-owner --no-same-permissions -xf -'
 }
 
-# pull_checkpoint: copy the volume's contents into the host staging dir. The tar
-# stream is extracted on the HOST with ownership and permissions stripped, so the
-# staged copies are host-owned and readable (not root-owned 0o600) and jq/cmp/cp
-# work. Tolerates an empty volume. Used after each run and on each poll iteration.
+# pull_checkpoint: copy the volume's contents into the host staging dir. The
+# container reads the volume as the daemon user (which owns the files) and
+# streams tar to the HOST, where extraction strips ownership/permissions so the
+# staged copies are host-owned and readable. Tolerates an empty volume.
 pull_checkpoint() {
-  docker run --rm -v "$CHECKPOINT_VOL:/checkpoint:ro" \
-    --entrypoint sh "$DEPLOYER_IMAGE" -c 'tar -C /checkpoint -cf - .' \
+  docker run --rm --user 0:0 -v "$CHECKPOINT_VOL:/checkpoint:ro" \
+    --entrypoint sh "$DEPLOYER_IMAGE" -c \
+    'tar -C /checkpoint --no-same-owner --no-same-permissions -cf - .' \
     | tar -C "$CHECKPOINT_DIR" --no-same-owner --no-same-permissions -xf - 2>/dev/null || true
 }
 
 deployer_container() {
+  # Run as the daemon user (root under rootless == the volume owner), NOT the
+  # image's default `node` user, so the deployer can write the checkpoint volume.
   docker run "$@" --network "$NETWORK" \
+    --user 0:0 \
     -v "$CHECKPOINT_VOL:/checkpoint" \
     -e "L1_RPC_URL=http://${L1_CONTAINER}:8545" \
     -e "L2_RPC_URL=http://${L2_CONTAINER}:8545" \
