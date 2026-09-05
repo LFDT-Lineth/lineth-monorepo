@@ -113,11 +113,11 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
       .atMost(4, TimeUnit.SECONDS)
       .pollInterval(50, TimeUnit.MILLISECONDS)
       .untilAsserted {
-        assertThat(getRejectionReason(largeTxHash))
+        assertThat(getLineaRejectionReason(largeTxHash))
           .withFailMessage { "Expected large tx to be rejected with BLOCK_COMPRESSED_SIZE_OVERFLOW" }
           .isEqualTo(LineaTransactionSelectionResult.BLOCK_COMPRESSED_SIZE_OVERFLOW.toString())
       }
-    assertThat(getRejectionReason(smallTxHash))
+    assertThat(getLineaRejectionReason(smallTxHash))
       .withFailMessage { "Expected small tx to not have a rejection reason (it was selected)" }
       .isNull()
   }
@@ -218,9 +218,9 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
     return TransactionEncoder.signMessage(rawTx, sender.web3jCredentialsOrThrow()).encodeHex()
   }
 
-  private fun getRejectionReason(txHash: String): String? {
+  private fun getLineaRejectionReason(txHash: String): String? {
     val response = org.web3j.protocol.core.Request(
-      "test_getRejectionReason",
+      "test_getLineaRejectionReason",
       listOf(txHash),
       minerNode.nodeRequests().web3jService,
       TestRejectionResponse::class.java,
