@@ -30,16 +30,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .build()
   }
 
-  override fun getBlockTxsSelectionMaxTimeMillis(): Int =
-    // The whole fitting batch must be evaluated inside ONE block's transaction selection budget,
-    // otherwise Besu returns BLOCK_SELECTION_TIMEOUT mid-batch, seals the block with the subset it
-    // managed to evaluate, and the rest spills into the next block (the `got [3, 4]` failure).
-    //
-    // EcPairing transactions are very expensive to trace: individual transactions here have been
-    // measured at 1-5 s, and the batch has 8 of them, so the default (one block period) is far too
-    // small. This only widens how long Besu may spend selecting; it does not change the block
-    // period or add any fixed wait to the test.
-    120_000
+  override fun getBlockPeriodSeconds(): Int =
+    // adding 2 more seconds to the block period, in order to avoid flakiness on the CI
+    // due to EcPairing sometimes taking all the selection time before all pending txs
+    // have been evaluated
+    BLOCK_PERIOD_SECONDS + 2
 
   /**
    * Tests the EcPairing limits, that are the number of times a certain circuit may be invoked in a
