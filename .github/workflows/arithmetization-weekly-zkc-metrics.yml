@@ -136,7 +136,10 @@ jobs:
         id: guest
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run-heavy }}
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           d="$RUN/guest"; mkdir -p "$d"
           t0=$(date +%s)
           # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
@@ -244,7 +247,10 @@ jobs:
       # wall_s were written and leave the table unable to name the failure.
       - name: zkc compile --stats
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           d="$RUN/compile"; mkdir -p "$d"
           t0=$(date +%s)
           # --order name (not zkc's default --order total) keeps the table diffable week to week.
@@ -300,7 +306,10 @@ jobs:
       # lost in exactly the case worth recording. timeout exits 124.
       - name: zkc trace --stats
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           # Clamped below the job's timeout-minutes so the cap fires here and the measurement is
           # recorded, instead of the job being killed with nothing to show.
           [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
@@ -363,7 +372,10 @@ jobs:
 
       - name: zkc trace --stats --check
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
           cap=${{ inputs.check-timeout-min || 90 }}
           if [ "$cap" -gt 110 ]; then cap=110; fi
@@ -404,10 +416,25 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 20
     steps:
+      # Generated before the checkout, not after it: actions/checkout persists whatever token it used
+      # into .git/config as an http.<host>.extraheader, and that header takes precedence over
+      # credentials embedded in a remote URL. Handing the App token to checkout is therefore the only
+      # way to make the later push authenticate as the App, and mirrors component-changelog-commit.yml.
+      - name: Generate release bot App token
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
       # fetch-depth: 0 because the commit step rebases onto origin/<branch>; a shallow clone cannot.
       - name: Checkout tooling
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          # Falls back to the default token on a dispatch that is not committing results, where the
+          # step above is skipped and its output is the empty string.
+          token: ${{ steps.app-token.outputs.token || github.token }}
           submodules: false
           fetch-depth: 0
 
@@ -433,7 +460,10 @@ jobs:
           name: zkc-metrics-meta
           path: ${{ env.RUN }}
 
+      # Only attempted when the heavy path ran: prepare skips the guest build otherwise, and a
+      # download for a non-existent artifact leaves a red annotation on an otherwise green run.
       - name: Download guest build measurement
+        if: ${{ github.event_name == 'schedule' || inputs.run-heavy }}
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -497,16 +527,8 @@ jobs:
             ${{ env.RUN }}/meta.env
           retention-days: 7
 
-      # App token so the push is not blocked by branch protection, mirroring
-      # component-changelog-commit.yml. [skip ci] keeps it from re-triggering.
-      - name: Generate release bot App token
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
-          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-
+      # Pushes as the App so branch protection does not block it; the credentials come from the
+      # checkout above. [skip ci] keeps the commit from re-triggering the workflow.
       - name: Commit and push metrics
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
         env:
@@ -520,8 +542,6 @@ jobs:
           fi
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
-          git remote set-url origin \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add "$METRICS_FILE"
           git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) [skip ci]"
           for attempt in 1 2 3; do
