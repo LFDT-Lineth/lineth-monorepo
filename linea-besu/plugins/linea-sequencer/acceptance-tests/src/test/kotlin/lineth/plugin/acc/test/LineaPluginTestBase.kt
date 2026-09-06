@@ -61,6 +61,7 @@ import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction
 import org.web3j.crypto.TransactionEncoder
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.protocol.exceptions.TransactionException
 import org.web3j.tx.RawTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
@@ -73,6 +74,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.*
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** Base class for plugin tests. */
@@ -293,26 +296,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
   }
 
   private fun assertTransactionsInCorrectBlocks(web3j: Web3j, hashes: List<String>, num: Int) {
-    val txMap = hashMapOf<Long, Int>()
-    val receiptProcessor = createReceiptProcessor(web3j)
-
     // CallData for the transaction for empty String is 68 and grows in steps of 32 with (String
     // size / 32)
     val maxTxs = MAX_CALLDATA_SIZE / (68 + ((num + 31) / 32) * 32)
 
-    // Wait for transaction to be mined and check that there are no more than maxTxs per block
-    hashes.forEach { h ->
-      val transactionReceipt = try {
-        receiptProcessor.waitForTransactionReceipt(h)
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
-
-      val blockNumber = transactionReceipt.blockNumber.toLong()
+    // Wait for transactions to be mined and check that there are no more than maxTxs per block
+    val txMap = hashMapOf<Long, Int>()
+    getReceiptsInParallel(web3j, hashes).forEach { receipt ->
+      val blockNumber = receipt.blockNumber.toLong()
       txMap.compute(blockNumber) { _, n -> (n ?: 0) + 1 }
-
       // make sure that no block contained more than maxTxs
       assertThat(txMap[blockNumber]).isLessThanOrEqualTo(maxTxs)
     }
@@ -441,30 +433,55 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return deploy.send()
   }
 
-  protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
+  /**
+   * Waits for the receipt of every transaction in [hashes] in parallel and returns them in input
+   * order. Each [org.web3j.tx.response.TransactionReceiptProcessor.waitForTransactionReceipt] call
+   * is a blocking network poll that can take up to `getBlockPeriodSeconds()`, so running them
+   * sequentially would add that latency per hash; since the lookups are independent they are run on
+   * a bounded thread pool instead.
+   */
+  protected fun getReceiptsInParallel(
+    web3j: Web3j,
+    hashes: List<String>,
+  ): List<TransactionReceipt> {
     val receiptProcessor = createReceiptProcessor(web3j)
-
-    val blockNumbers = hashSetOf<Long>()
-    for (hash in hashes) {
-      val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-      assertThat(receipt).isNotNull
-      val isAdded = blockNumbers.add(receipt.blockNumber.toLong())
-      assertThat(isAdded).isEqualTo(true)
+    val executor = Executors.newFixedThreadPool(hashes.size)
+    val futures = hashes.map { hash ->
+      executor.submit(
+        Callable<TransactionReceipt> {
+          try {
+            receiptProcessor.waitForTransactionReceipt(hash)
+          } catch (e: IOException) {
+            throw RuntimeException(e)
+          } catch (e: TransactionException) {
+            throw RuntimeException(e)
+          }
+        },
+      )
     }
+    val receipts = futures.map { it.get() }
+    executor.shutdownNow()
+    return receipts
+  }
+
+  protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
+
+    val uniqueBlockNumbers = blockNumbers.toSet()
+    assertThat(uniqueBlockNumbers.size)
+      .withFailMessage {
+        "Expected transactions to be mined in separate blocks, got block numbers $blockNumbers"
+      }
+      .isEqualTo(blockNumbers.size)
   }
 
   protected fun assertTransactionsMinedInSameBlock(web3j: Web3j, hashes: List<String>) {
-    val receiptProcessor = createReceiptProcessor(web3j)
-    val blockNumbers = hashes.map { hash ->
-      try {
-        val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-        assertThat(receipt).isNotNull
-        receipt.blockNumber.toLong()
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
     }.toSet()
 
     assertThat(blockNumbers.size).isEqualTo(1)
@@ -483,25 +500,19 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     fittingHashes: List<String>,
     overflowHash: String,
   ) {
-    val receiptProcessor = createReceiptProcessor(web3j)
+    val allHashes = fittingHashes + overflowHash
+    val receipts = getReceiptsInParallel(web3j, allHashes)
+    val blockNumbers = receipts.map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
 
-    fun blockNumberOf(hash: String): Long =
-      try {
-        val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-        assertThat(receipt).isNotNull
-        receipt.blockNumber.toLong()
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
+    val fittingBlocks = blockNumbers.dropLast(1).toSet()
+    val overflowBlock = blockNumbers.last()
 
-    val fittingBlocks = fittingHashes.map(::blockNumberOf).toSet()
     assertThat(fittingBlocks)
       .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
       .hasSize(1)
-
-    val overflowBlock = blockNumberOf(overflowHash)
     assertThat(overflowBlock)
       .withFailMessage {
         "Expected overflow transaction to be mined strictly after the fitting block " +
@@ -519,32 +530,6 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
   protected fun getTxPoolContent(): List<Map<String, String>> {
     return minerNode.execute(TxPoolTransactions().txPoolContents)
-  }
-
-  /**
-   * Waits until every hash in [hashes] is present in the txpool.
-   *
-   * `eth_sendRawTransaction` returning a hash only means the transaction was accepted for
-   * processing; with `noLocalPriority(true)` it still has to make its way through the layered
-   * txpool before block building can select it. Starting a build before that has happened lets a
-   * subset of a batch be selected, splitting transactions that the test expects in one block across
-   * two. This is a condition-based wait (no fixed sleep): it returns as soon as the pool has caught
-   * up, and only spends the full budget when something is genuinely wrong.
-   */
-  protected fun awaitTransactionsInPool(hashes: List<String>) {
-    val expected = hashes.map { it.lowercase() }.toSet()
-    await()
-      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
-      .pollInterval(100, TimeUnit.MILLISECONDS)
-      .untilAsserted {
-        val inPool = getTxPoolContent().mapNotNull { it["hash"]?.lowercase() }.toSet()
-        assertThat(inPool)
-          .withFailMessage {
-            "Expected all ${expected.size} transactions to be in the txpool, missing: " +
-              (expected - inPool)
-          }
-          .containsAll(expected)
-      }
   }
 
   private fun createReceiptProcessor(web3j: Web3j): TransactionReceiptProcessor {
