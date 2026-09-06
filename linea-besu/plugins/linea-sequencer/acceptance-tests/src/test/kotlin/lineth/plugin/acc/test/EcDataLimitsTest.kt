@@ -112,7 +112,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nTransactions - 1]!!,
     )
 
-    asserLogsContain(target)
+    assertLogsContain(target)
   }
 
   /**
@@ -202,7 +202,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nTransactions - 1]!!,
     )
 
-    asserLogsContain(target)
+    assertLogsContain(target)
   }
 
   /**
@@ -287,7 +287,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nTransactions - 1]!!,
     )
 
-    asserLogsContain(target)
+    assertLogsContain(target)
   }
 
   /**
@@ -375,7 +375,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       txHashes[nTransactions - 1]!!,
     )
 
-    asserLogsContain(target)
+    assertLogsContain(target)
   }
 
   companion object {
