@@ -109,21 +109,15 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(smallTxHash))
     minerNode.verify(eth.expectNoTransactionReceipt(largeTxHash))
-    // Under Vert.x 5 (Besu 26.8.1) the first block build on a loaded CI runner can take several
-    // seconds before the selector's slow-path compression check records the rejection, so give the
-    // poll a budget comfortably above one block period. The RecordingTransactionSelectorPlugin keeps
-    // the substantive BLOCK_COMPRESSED_SIZE_OVERFLOW (it is not overwritten by later transient
-    // SELECTION_CANCELLED / EXECUTION_INTERRUPTED outcomes), so a longer window only adds patience,
-    // not false positives.
     await()
-      .atMost(3L * getBlockPeriodSeconds(), TimeUnit.SECONDS)
+      .atMost(4, TimeUnit.SECONDS)
       .pollInterval(50, TimeUnit.MILLISECONDS)
       .untilAsserted {
-        assertThat(getRejectionReason(largeTxHash))
+        assertThat(getLineaRejectionReason(largeTxHash))
           .withFailMessage { "Expected large tx to be rejected with BLOCK_COMPRESSED_SIZE_OVERFLOW" }
           .isEqualTo(LineaTransactionSelectionResult.BLOCK_COMPRESSED_SIZE_OVERFLOW.toString())
       }
-    assertThat(getRejectionReason(smallTxHash))
+    assertThat(getLineaRejectionReason(smallTxHash))
       .withFailMessage { "Expected small tx to not have a rejection reason (it was selected)" }
       .isNull()
   }
@@ -224,9 +218,9 @@ class CompressionAwareBlockBuildingTest : LineaPluginPoSTestBase() {
     return TransactionEncoder.signMessage(rawTx, sender.web3jCredentialsOrThrow()).encodeHex()
   }
 
-  private fun getRejectionReason(txHash: String): String? {
+  private fun getLineaRejectionReason(txHash: String): String? {
     val response = org.web3j.protocol.core.Request(
-      "test_getRejectionReason",
+      "test_getLineaRejectionReason",
       listOf(txHash),
       minerNode.nodeRequests().web3jService,
       TestRejectionResponse::class.java,
