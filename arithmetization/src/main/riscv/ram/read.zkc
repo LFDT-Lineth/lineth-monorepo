@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../utils/bswap.zkc"
 include "../utils/constants.zkc"
 
 fn read_8<ram>(address:Address) -> (value:u8) {
@@ -120,4 +121,32 @@ fn read_u256_be<ram>(address:Address) -> (value:u256) {
     var hi:u128 = read_u128_be(address)
     var lo:u128 = read_u128_be(address + 16)
     value = hi::lo
+}
+
+// Read a 48-byte big-endian integer from memory (byte at `address` is the MSB).
+// This is the BLS12-381 base field width: p is 381 bits, so an Fp element
+// serialises to exactly 48 bytes.
+//
+// Deliberately NOT built from the read_u*_be doubling ladder above. That ladder
+// bottoms out at read_8, so a 48-byte value would cost 48 RAM lookups and 48
+// offset switches; going a word at a time costs 12 (one per read_32, which has
+// an aligned fast path) plus pure wiring for the byte reversal. Measured on a
+// write-then-read round trip at a 4-byte aligned address, that is ~5x fewer
+// trace cells. Callers should keep Fp buffers 4-byte aligned to stay on the
+// fast path -- every EIP-2537 field element is a multiple of 4 bytes, so
+// aligning the base of a point or pair buffer aligns every element in it.
+fn read_u384_be<ram>(address:Address) -> (value:u384) {
+    var w0:Word = bswap_32(read_32(address))
+    var w1:Word = bswap_32(read_32(address + 4))
+    var w2:Word = bswap_32(read_32(address + 8))
+    var w3:Word = bswap_32(read_32(address + 12))
+    var w4:Word = bswap_32(read_32(address + 16))
+    var w5:Word = bswap_32(read_32(address + 20))
+    var w6:Word = bswap_32(read_32(address + 24))
+    var w7:Word = bswap_32(read_32(address + 28))
+    var w8:Word = bswap_32(read_32(address + 32))
+    var w9:Word = bswap_32(read_32(address + 36))
+    var w10:Word = bswap_32(read_32(address + 40))
+    var w11:Word = bswap_32(read_32(address + 44))
+    value = w0::w1::w2::w3::w4::w5::w6::w7::w8::w9::w10::w11
 }

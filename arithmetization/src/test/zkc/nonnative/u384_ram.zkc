@@ -1,0 +1,52 @@
+// ===================================================================
+// Unit test for the 48-byte big-endian RAM marshalling
+// (read_u384_be / write_u384_be in arithmetization/src/main/riscv/ram).
+//
+// 48 bytes is the BLS12-381 Fp serialisation width. Unlike the other
+// read_u*_be helpers these two go a word at a time rather than
+// extending the byte-wise doubling ladder, so the test pins down three
+// separate things:
+//
+//   1. round trip     -- write then read returns the original value;
+//   2. byte order     -- a round trip alone would still pass if read and
+//                        write shared the same wrong endianness, so the
+//                        first and last bytes are checked directly;
+//   3. interoperation -- the low 32 bytes must read back identically
+//                        through the pre-existing read_u256_be, which is
+//                        built the other way (byte-wise ladder).
+//
+// Fixtures cover all four alignments of `at`, since read_32/write_32
+// take a different path when the address is not 4-byte aligned.
+// ===================================================================
+
+include "../../../main/riscv/ram/read.zkc"
+include "../../../main/riscv/ram/write.zkc"
+
+type lane = u64
+
+pub input v(address:u1) -> (val:u384)
+pub input at(address:u1) -> (a:u64)
+pub input want_msb(address:u1) -> (b:u8)
+pub input want_lsb(address:u1) -> (b:u8)
+
+fn main<ram>() {
+    var addr:Address = at[0]
+
+    write_u384_be(addr, v[0])
+
+    if read_u384_be(addr) != v[0] {
+        fail
+    }
+    if read_8(addr) != want_msb[0] {
+        fail
+    }
+    if read_8(addr + 47) != want_lsb[0] {
+        fail
+    }
+
+    var hi:u128, lo:u256
+    hi::lo = v[0]
+    if read_u256_be(addr + 16) != lo {
+        fail
+    }
+}

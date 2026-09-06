@@ -1,0 +1,177 @@
+include "u384.zkc"
+
+// 384-bit counterpart of sw_add_mul_formulas.zkc.
+//
+// Shared elliptic-curve group law for short Weierstrass curves with a = 0
+// (y^2 = x^3 + b), parameterized on the base-field modulus `p` and the
+// complete-addition constant `b3 = 3*b`. BLS12-381 G1 (p, b3 = 12) instantiates
+// these; per-curve wrappers just forward their constants so the formulas live in
+// exactly one place.
+//
+// This is a deliberate line-for-line mirror of the u256 file rather than a
+// variation on it: zkc functions are monomorphic in their operand widths, so a
+// 381-bit base field cannot reuse the u256 formulas, but keeping the two files
+// structurally identical means any fix to one transfers mechanically to the
+// other (and they can be unified outright if zkc ever gains width generics).
+//
+// Points are projective (X : Y : Z); the identity O is (0 : 1 : 0) (any Z = 0).
+// All arithmetic goes through the modulus-parameterized nonnative primitives.
+//
+// Note vs. per-curve copies: the two `b3·t` terms in the complete addition can
+// be specialized as addmod chains (e.g. 12 = 8+4) when b3 is a compile-time
+// literal. With b3 a runtime parameter they become general mulmod_384(t, b3, p)
+// calls — 2 extra modular multiplications per point addition, traded for a
+// single shared implementation. At u384 a mulmod is ~15.3k trace cells against
+// ~225 for an addmod, so that trade costs ~15% of a point addition; see the
+// mul_small_mod todo below.
+
+// Complete projective addition (RCB 2015, https://eprint.iacr.org/2015/1060.pdf,
+// Algorithm 7). Correct for ALL input pairs — P == Q (doubling), P == -Q (-> O),
+// and either operand = O — with no case analysis.
+fn sw_add_projective_384(X1:u384, Y1:u384, Z1:u384, X2:u384, Y2:u384, Z2:u384, p:u384, b3:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+
+    // products of matching coordinates
+    var xx:u384 = mulmod_384(X1, X2, p)
+    var yy:u384 = mulmod_384(Y1, Y2, p)
+    var zz:u384 = mulmod_384(Z1, Z2, p)
+
+    // X1Y2+X2Y1 via Karatsuba
+    var sx1y1:u384 = addmod_384(X1, Y1, p)
+    var sx2y2:u384 = addmod_384(X2, Y2, p)
+    var pxy:u384 = mulmod_384(sx1y1, sx2y2, p)
+    var diag_xy:u384 = addmod_384(xx, yy, p)
+    var cxy:u384 = submod_384(pxy, diag_xy, p) // X1Y2 + X2Y1
+
+    // Y1Z2+Y2Z1 via Karatsuba
+    var sy1z1:u384 = addmod_384(Y1, Z1, p)
+    var sy2z2:u384 = addmod_384(Y2, Z2, p)
+    var pyz:u384 = mulmod_384(sy1z1, sy2z2, p)
+    var diag_yz:u384 = addmod_384(yy, zz, p)
+    var cyz:u384 = submod_384(pyz, diag_yz, p) // Y1Z2 + Y2Z1
+
+    // X1Z2+X2Z1 via Karatsuba
+    var sx1z1:u384 = addmod_384(X1, Z1, p)
+    var sx2z2:u384 = addmod_384(X2, Z2, p)
+    var pxz:u384 = mulmod_384(sx1z1, sx2z2, p)
+    var diag_xz:u384 = addmod_384(xx, zz, p)
+    var cxz:u384 = submod_384(pxz, diag_xz, p) // X1Z2 + X2Z1
+
+    // 3·(X1X2)
+    var xx2:u384 = addmod_384(xx, xx, p)
+    var xx3:u384 = addmod_384(xx2, xx, p)
+
+    // b3·(Z1Z2) and b3·(X1Z2+X2Z1) — runtime b3, so a general modular multiply instead of an
+    // add chain.
+    // (todo:arijit): add dedicated mul_small_mod (e.g. b3 = 9, 12 or 21) for optimization
+    var zz_b3:u384 = mulmod_384(zz, b3, p)
+    var cxz_b3:u384 = mulmod_384(cxz, b3, p)
+
+    // paper steps 22-23
+    var pre_z3:u384 = addmod_384(yy, zz_b3, p) // Y1Y2 + b3·Z1Z2
+    var t1:u384 = submod_384(yy, zz_b3, p) // Y1Y2 - b3·Z1Z2
+
+    // X3 (paper steps 25-27)
+    var m_a:u384 = mulmod_384(cyz, cxz_b3, p)
+    var m_b:u384 = mulmod_384(cxy, t1, p)
+    X3 = submod_384(m_b, m_a, p)
+
+    // Y3 (paper steps 28-30)
+    var m_c:u384 = mulmod_384(cxz_b3, xx3, p)
+    var m_d:u384 = mulmod_384(t1, pre_z3, p)
+    Y3 = addmod_384(m_d, m_c, p)
+
+    // Z3 (paper steps 31-33)
+    var m_e:u384 = mulmod_384(xx3, cxy, p)
+    var m_f:u384 = mulmod_384(pre_z3, cyz, p)
+    Z3 = addmod_384(m_f, m_e, p)
+}
+
+// Dedicated projective doubling for a = 0 curves. Depends only on a = 0 (never
+// on b), so it needs the modulus alone.
+// ref: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo
+// Precondition: P != O (Z1 != 0, Y1 != 0 — holds for every non-identity point of
+// an odd prime-order group, which has no 2-torsion).
+fn sw_double_projective_384(X1:u384, Y1:u384, Z1:u384, p:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+
+    // basic products
+    var x1sq:u384 = mulmod_384(X1, X1, p) // X1²
+    var y1sq:u384 = mulmod_384(Y1, Y1, p) // Y1²
+    var S:u384 = mulmod_384(Y1, Z1, p) // Y1·Z1
+
+    // W = 3·X1²  (tangent numerator, a=0)
+    var x1sq2:u384 = addmod_384(x1sq, x1sq, p)
+    var W:u384 = addmod_384(x1sq2, x1sq, p)
+
+    // B = X1·Y1·S
+    var x1y1:u384 = mulmod_384(X1, Y1, p)
+    var B:u384 = mulmod_384(x1y1, S, p)
+
+    // H = W² - 8B
+    var W2:u384 = mulmod_384(W, W, p)
+    var B2:u384 = addmod_384(B, B, p)
+    var B4:u384 = addmod_384(B2, B2, p)
+    var B8:u384 = addmod_384(B4, B4, p)
+    var H:u384 = submod_384(W2, B8, p)
+
+    // X3 = 2·H·S
+    var HS:u384 = mulmod_384(H, S, p)
+    X3 = addmod_384(HS, HS, p)
+
+    // Y3 = W·(4B - H) - 8·Y1²·S²
+    var S2:u384 = mulmod_384(S, S, p)
+    var y1sqS2:u384 = mulmod_384(y1sq, S2, p)
+    var B4mH:u384 = submod_384(B4, H, p)
+    var WB4mH:u384 = mulmod_384(W, B4mH, p)
+    var y1sqS2_2:u384 = addmod_384(y1sqS2, y1sqS2, p)
+    var y1sqS2_4:u384 = addmod_384(y1sqS2_2, y1sqS2_2, p)
+    var y1sqS2_8:u384 = addmod_384(y1sqS2_4, y1sqS2_4, p)
+    Y3 = submod_384(WB4mH, y1sqS2_8, p)
+
+    // Z3 = 8·S³
+    var S3:u384 = mulmod_384(S2, S, p)
+    var S3_2:u384 = addmod_384(S3, S3, p)
+    var S3_4:u384 = addmod_384(S3_2, S3_2, p)
+    Z3 = addmod_384(S3_4, S3_4, p)
+}
+
+// Recursive scalar multiplication over projective coords, LSB-peeled on the way
+// down and applied MSB-first on the way back up (double-and-add).
+//   k*P = 2*((k >> 1)*P) + (k & 1)*P,   base case 0*P = O = (0 : 1 : 0)
+// Handles the full 384-bit range of k (no group-order bound); O is explicit
+// (Z = 0), doubling O is guarded, and the complete addition absorbs O + P = P at
+// the top set bit.
+fn sw_scalar_mul_projective_384(k:u384, PX:u384, PY:u384, PZ:u384, p:u384, b3:u384) -> (QX:u384, QY:u384, QZ:u384) {
+    if k == 0 {
+        // O = (0 : 1 : 0)
+        QX = 0
+        QY = 1
+        QZ = 0
+        return
+    }
+    var half:u383
+    var bit:u1
+    half::bit = k as u384
+
+    var HX:u384, HY:u384, HZ:u384
+    HX, HY, HZ = sw_scalar_mul_projective_384(half as u384, PX, PY, PZ, p, b3)
+
+    // D = 2*H. The dedicated doubling requires H != O, so guard on Z:
+    // above k's top set bit H is still O, and 2*O = O.
+    var DX:u384, DY:u384, DZ:u384
+    if HZ == 0 {
+        DX = 0
+        DY = 1
+        DZ = 0
+    } else {
+        DX, DY, DZ = sw_double_projective_384(HX, HY, HZ, p)
+    }
+
+    if bit == 1 {
+        // complete addition: also correct when D = O (returns P)
+        QX, QY, QZ = sw_add_projective_384(DX, DY, DZ, PX, PY, PZ, p, b3)
+    } else {
+        QX = DX
+        QY = DY
+        QZ = DZ
+    }
+}

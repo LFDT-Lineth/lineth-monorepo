@@ -1,0 +1,46 @@
+// ===================================================================
+// Unit test for BLS12-381 G1 input validation and point addition
+// (arithmetization/src/main/lib/bls12_381/g1.zkc).
+//
+// Each fixture supplies two candidate points, the expected verdict of
+// is_valid_affine_bls12_381_g1 on each, and -- when both are valid --
+// the expected sum. Invalid fixtures carry a zero expected sum, which
+// is never read: an out-of-range or off-curve point must produce a
+// verdict rather than a `fail`, because a rejected EIP-2537 input is a
+// normal revert path the arithmetization has to be able to prove.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g1.zkc"
+
+pub input px(address:u1) -> (v:u384)
+pub input py(address:u1) -> (v:u384)
+pub input qx(address:u1) -> (v:u384)
+pub input qy(address:u1) -> (v:u384)
+
+pub input want_valid_p(address:u1) -> (v:u8)
+pub input want_valid_q(address:u1) -> (v:u8)
+pub input want_rx(address:u1) -> (v:u384)
+pub input want_ry(address:u1) -> (v:u384)
+
+fn main() {
+    var vp:u1 = is_valid_affine_bls12_381_g1(px[0], py[0])
+    var vq:u1 = is_valid_affine_bls12_381_g1(qx[0], qy[0])
+
+    if (vp as u8) != want_valid_p[0] {
+        fail
+    }
+    if (vq as u8) != want_valid_q[0] {
+        fail
+    }
+
+    if (vp == 1) && (vq == 1) {
+        var rx:u384, ry:u384
+        rx, ry = add_affine_bls12_381_g1(px[0], py[0], qx[0], qy[0])
+        if rx != want_rx[0] {
+            fail
+        }
+        if ry != want_ry[0] {
+            fail
+        }
+    }
+}

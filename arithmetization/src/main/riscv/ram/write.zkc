@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../utils/bswap.zkc"
 include "../utils/constants.zkc"
 
 fn write_8<ram>(address:Address, value:u8) -> () {
@@ -129,4 +130,26 @@ fn write_u256_be<ram>(address:Address, value:u256) {
     hi::lo = value
     write_u128_be(address, hi)
     write_u128_be(address + 16, lo)
+}
+
+// Write a 48-byte big-endian integer to memory (MSB at `address`), the
+// BLS12-381 Fp serialisation width. Word-at-a-time for the same reason as
+// read_u384_be -- see the note there on why the doubling ladder is not used and
+// why callers should keep Fp buffers 4-byte aligned.
+fn write_u384_be<ram>(address:Address, value:u384) {
+    var w0:Word, w1:Word, w2:Word, w3:Word, w4:Word, w5:Word
+    var w6:Word, w7:Word, w8:Word, w9:Word, w10:Word, w11:Word
+    w0::w1::w2::w3::w4::w5::w6::w7::w8::w9::w10::w11 = value
+    write_32(address, bswap_32(w0))
+    write_32(address + 4, bswap_32(w1))
+    write_32(address + 8, bswap_32(w2))
+    write_32(address + 12, bswap_32(w3))
+    write_32(address + 16, bswap_32(w4))
+    write_32(address + 20, bswap_32(w5))
+    write_32(address + 24, bswap_32(w6))
+    write_32(address + 28, bswap_32(w7))
+    write_32(address + 32, bswap_32(w8))
+    write_32(address + 36, bswap_32(w9))
+    write_32(address + 40, bswap_32(w10))
+    write_32(address + 44, bswap_32(w11))
 }

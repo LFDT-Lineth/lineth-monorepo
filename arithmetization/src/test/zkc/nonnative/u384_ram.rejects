@@ -1,0 +1,7 @@
+;; Rejecting fixtures for u384_ram.zkc: each corrupts one expected end byte.
+;; aligned, want_msb off by one
+{ "v": "0x19fc68083c5f9d2dd34325e4cf98af6e02c48cd103ae71afe73fc652ee4145b01bb315f08720d30e8b743c642486cca5", "at": "0x0000000000001000", "want_msb": "0x1a", "want_lsb": "0xa5", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; aligned, want_lsb off by one
+{ "v": "0x19fc68083c5f9d2dd34325e4cf98af6e02c48cd103ae71afe73fc652ee4145b01bb315f08720d30e8b743c642486cca5", "at": "0x0000000000001000", "want_msb": "0x19", "want_lsb": "0xa6", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; unaligned +3, want_msb off by one
+{ "v": "0x0a39cf1918e4443d39210b553658447198a2ec7be3845d8f064469c3ddc1d4a38a44a2c206a3a81195ec931857e9b1a8", "at": "0x0000000000001003", "want_msb": "0x0b", "want_lsb": "0xa8", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }

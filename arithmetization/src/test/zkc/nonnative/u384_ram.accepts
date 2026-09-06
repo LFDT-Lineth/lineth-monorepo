@@ -1,0 +1,19 @@
+;; Accepting fixtures for u384_ram.zkc -- see the harness for the schema.
+;; aligned base, full-width value
+{ "v": "0x19fc68083c5f9d2dd34325e4cf98af6e02c48cd103ae71afe73fc652ee4145b01bb315f08720d30e8b743c642486cca5", "at": "0x0000000000001000", "want_msb": "0x19", "want_lsb": "0xa5", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; aligned base, the BLS12-381 prime itself
+{ "v": "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab", "at": "0x0000000000002000", "want_msb": "0x1a", "want_lsb": "0xab", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; unaligned +1
+{ "v": "0x19fc68083c5f9d2dd34325e4cf98af6e02c48cd103ae71afe73fc652ee4145b01bb315f08720d30e8b743c642486cca5", "at": "0x0000000000001001", "want_msb": "0x19", "want_lsb": "0xa5", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; unaligned +2
+{ "v": "0x0a39cf1918e4443d39210b553658447198a2ec7be3845d8f064469c3ddc1d4a38a44a2c206a3a81195ec931857e9b1a8", "at": "0x0000000000001002", "want_msb": "0x0a", "want_lsb": "0xa8", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; unaligned +3
+{ "v": "0x0a39cf1918e4443d39210b553658447198a2ec7be3845d8f064469c3ddc1d4a38a44a2c206a3a81195ec931857e9b1a8", "at": "0x0000000000001003", "want_msb": "0x0a", "want_lsb": "0xa8", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; value 0 (every byte must be written, not skipped)
+{ "v": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "at": "0x0000000000003000", "want_msb": "0x00", "want_lsb": "0x00", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; value 2^384-1 (all bytes 0xff)
+{ "v": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "at": "0x0000000000003040", "want_msb": "0xff", "want_lsb": "0xff", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; MSB set, LSB clear -- catches a whole-value byte reversal
+{ "v": "0x800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "at": "0x0000000000004000", "want_msb": "0x80", "want_lsb": "0x00", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }
+;; MSB clear, LSB set -- the mirror image of the above
+{ "v": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001", "at": "0x0000000000004040", "want_msb": "0x00", "want_lsb": "0x01", "entry_point_and_blobs_count": "0x00000000000000000000000000000000", "blobs_offset_and_size": "0x00000000000000000000000000000000", "blobs_data": "0x00" }

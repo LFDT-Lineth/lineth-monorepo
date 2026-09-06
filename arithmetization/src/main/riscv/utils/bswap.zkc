@@ -1,0 +1,15 @@
+include "type.zkc"
+
+// Reverse the byte order of a 32-bit word.
+//
+// Used to bridge between the word-addressed RAM (whose words hold bytes in
+// little-endian order) and the big-endian integer encodings the EVM uses for
+// precompile inputs and outputs. Reversing a whole word at a time is much
+// cheaper than reading byte by byte: the byte reversal itself is pure wiring,
+// whereas each byte-wise access costs a RAM lookup plus an offset switch.
+#[inline]
+fn bswap_32(w:Word) -> (v:Word) {
+    var b3:Byte, b2:Byte, b1:Byte, b0:Byte
+    b3::b2::b1::b0 = w
+    v = b0::b1::b2::b3
+}
