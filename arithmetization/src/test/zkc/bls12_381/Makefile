@@ -1,21 +1,20 @@
-# Runs the u384 non-native modular arithmetic unit tests.
+# Runs the BLS12-381 G1 unit tests.
 #
-# zkc execute consumes a single JSON object per run (with a .json extension),
-# while the fixtures hold one trace per line (with `;;` comments). This target
-# splits each fixture line into a one-line JSON and runs it through the VM:
+# Same fixture convention as ../nonnative: one JSON object per line in
+# .accepts/.rejects with `;;` comments, split into a temp file per run.
 #   - .accepts lines must run to completion (exit 0)
 #   - .rejects lines must hit `fail` (nonzero exit)
 #
-# Unlike the poseidon2 unit test this runs in TRACING mode with `-c`
-# (constraint checking) rather than `--fast`: the fast interpreter panics with
-# "unsupported instruction form (6 v 7 limbs)" on the u385 carry type used by
-# addmod_384/submod_384. Tracing mode handles it, and `-c` is the check that
-# actually matters here -- it verifies the 48-limb mulmod_384 native circuit
-# against its constraints, not merely that it executes.
+# Runs in TRACING mode with `-c`; `--fast` panics on u384 ("unsupported
+# instruction form (6 v 7 limbs)"). See ../nonnative/Makefile.
+#
+# g1_mul is much slower than g1_add: every affine result costs one Fermat
+# inversion, which is ~613 mulmod_384 calls on its own -- far more than the
+# group law it follows. Expect ~11s per fixture.
 
 SHELL := /bin/sh
 
-HARNESSES := u384_arith u384_inv u384_ram
+HARNESSES := g1_add g1_mul
 FIELD     := KOALABEAR_16
 ZKC       ?= zkc
 

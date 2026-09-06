@@ -1,0 +1,169 @@
+include "constants.zkc"
+include "../nonnative/sw_add_mul_formulas_384.zkc"
+
+// ============================================================================
+// BLS12-381 G1: the group of Fp-rational points on y^2 = x^3 + 4.
+//
+// This is the curve behind the EIP-2537 BLS12_G1ADD (0x0b) and BLS12_G1MSM
+// (0x0c) precompiles.
+//
+// The projective group law (complete addition, doubling, scalar mul) is shared
+// via nonnative/sw_add_mul_formulas_384.zkc — the 384-bit mirror of the u256
+// sw_add_mul_formulas.zkc that secp256k1 and BN254 use. This file just supplies
+// the BLS12-381 constants (p, b3 = 12) and the affine/validity layer. Design
+// notes:
+//   - b = 4, so the complete-addition constant is b3 = 3*b = 12
+//     (secp256k1: 21, BN254: 9).
+//   - No sqrt / point decompression: G1ADD takes full (x, y) coordinates.
+//   - Unlike BN254 G1, the cofactor is NOT 1, so "on the curve" does not imply
+//     "in the prime-order subgroup". EIP-2537 requires no subgroup check for
+//     G1ADD ("There is no subgroup check for the G1 addition precompile"), and
+//     addition is well defined on the whole curve, so is_valid_affine_* below
+//     deliberately accepts off-subgroup points. G1MSM and the pairing DO
+//     require one, and will add it separately.
+//   - On-curve validity is exposed as a boolean predicate rather than a hard
+//     `fail`, so callers can implement the EVM "invalid point => precompile
+//     failure / frame revert" path as a soft failure (returning a status)
+//     instead of aborting the whole proof.
+// ============================================================================
+
+// Base point (generator) of the prime-order subgroup of G1.
+const BLS12_381_GX:u384 = 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+const BLS12_381_GY:u384 = 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+
+// Returns the curve generator G = (Gx, Gy).
+fn generator_bls12_381_g1() -> (x:u384, y:u384) {
+    x = BLS12_381_GX
+    y = BLS12_381_GY
+}
+
+// ----- validity / assertions ------
+
+// The point at infinity O is encoded as the affine pair (0, 0) (matching the
+// EIP-2537 ABI, which uses an all-zero point). Note (0,0) does NOT satisfy the
+// curve equation; it is treated as the identity by convention. It is therefore
+// valid input AND valid output, and cannot be used as a failure sentinel.
+fn is_infinity_affine_bls12_381_g1(x:u384, y:u384) -> (res:u1) {
+    res = 0
+    if (x == 0) && (y == 0) {
+        res = 1
+    }
+}
+
+fn is_equal_affine_bls12_381_g1(Px:u384, Py:u384, Qx:u384, Qy:u384) -> (res:u1) {
+    res = 0
+    if (Px == Qx) && (Py == Qy) {
+        res = 1
+    }
+}
+
+// Returns one iff (x, y) is a canonical, FINITE point of the curve.
+// Non-canonical coordinates (>= p) return zero rather than being reduced: an
+// out-of-range coordinate is an invalid EVM input, and the precompile must be
+// able to prove that, so this must not `fail`.
+fn is_on_curve_affine_bls12_381_g1(x:u384, y:u384) -> (res:u1) {
+    res = 0
+    if x >= BLS12_381_P || y >= BLS12_381_P {
+        return
+    }
+    if is_infinity_affine_bls12_381_g1(x, y) == 1 {
+        return
+    }
+    var y2:u384 = mulmod_384(y, y, BLS12_381_P)
+    var x2:u384 = mulmod_384(x, x, BLS12_381_P)
+    var x3:u384 = mulmod_384(x2, x, BLS12_381_P)
+    var rhs:u384 = addmod_384(x3, BLS12_381_B, BLS12_381_P)
+    if rhs == y2 {
+        res = 1
+    }
+}
+
+// Returns one iff (x, y) is accepted as G1ADD input by EIP-2537: canonical
+// coordinates, and either the encoded infinity or a genuine curve point.
+// No subgroup check — see the header note.
+fn is_valid_affine_bls12_381_g1(x:u384, y:u384) -> (res:u1) {
+    res = 0
+    if x >= BLS12_381_P || y >= BLS12_381_P {
+        return
+    }
+    if is_infinity_affine_bls12_381_g1(x, y) == 1 {
+        res = 1
+        return
+    }
+    res = is_on_curve_affine_bls12_381_g1(x, y)
+}
+
+// ----- coordinate conversion -----
+
+fn affine_to_projective_bls12_381_g1(x:u384, y:u384) -> (X:u384, Y:u384, Z:u384) {
+    if is_infinity_affine_bls12_381_g1(x, y) == 1 {
+        X = 0
+        Y = 1
+        Z = 0
+    } else {
+        X = x
+        Y = y
+        Z = 1
+    }
+}
+
+fn projective_to_affine_bls12_381_g1(X:u384, Y:u384, Z:u384) -> (x:u384, y:u384) {
+    if Z == 0 {
+        x = 0
+        y = 0
+    } else {
+        var z_inv:u384 = invmod_384(Z, BLS12_381_P)
+        x = mulmod_384(X, z_inv, BLS12_381_P)
+        y = mulmod_384(Y, z_inv, BLS12_381_P)
+    }
+}
+
+// ----- projective group law (thin forwards to the shared formulas) -----
+
+fn add_projective_bls12_381_g1(X1:u384, Y1:u384, Z1:u384, X2:u384, Y2:u384, Z2:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+    X3, Y3, Z3 = sw_add_projective_384(X1, Y1, Z1, X2, Y2, Z2, BLS12_381_P, BLS12_381_B3)
+}
+
+fn double_projective_bls12_381_g1(X1:u384, Y1:u384, Z1:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+    X3, Y3, Z3 = sw_double_projective_384(X1, Y1, Z1, BLS12_381_P)
+}
+
+fn scalar_mul_projective_bls12_381_g1(k:u384, PX:u384, PY:u384, PZ:u384) -> (QX:u384, QY:u384, QZ:u384) {
+    QX, QY, QZ = sw_scalar_mul_projective_384(k, PX, PY, PZ, BLS12_381_P, BLS12_381_B3)
+}
+
+// ----- affine entry points -----
+
+// Affine point addition, the operation behind the BLS12_G1ADD precompile.
+// Inputs must already have been accepted by is_valid_affine_bls12_381_g1; the
+// encoded infinity (0, 0) is handled as the identity on both input and output.
+fn add_affine_bls12_381_g1(Px:u384, Py:u384, Qx:u384, Qy:u384) -> (Rx:u384, Ry:u384) {
+    var PX:u384, PY:u384, PZ:u384
+    PX, PY, PZ = affine_to_projective_bls12_381_g1(Px, Py)
+
+    var QX:u384, QY:u384, QZ:u384
+    QX, QY, QZ = affine_to_projective_bls12_381_g1(Qx, Qy)
+
+    var RX:u384, RY:u384, RZ:u384
+    RX, RY, RZ = add_projective_bls12_381_g1(PX, PY, PZ, QX, QY, QZ)
+
+    Rx, Ry = projective_to_affine_bls12_381_g1(RX, RY, RZ)
+}
+
+// Scalar multiplication. No group-order bound on k: s*P = (s mod r)*P holds for
+// subgroup points, and G1MSM takes a full 256-bit scalar.
+fn scalar_mul_affine_bls12_381_g1(k:u384, Px:u384, Py:u384) -> (Qx:u384, Qy:u384) {
+    Qx = 0
+    Qy = 0
+    if k == 0 {
+        return
+    }
+
+    var PX:u384, PY:u384, PZ:u384
+    PX, PY, PZ = affine_to_projective_bls12_381_g1(Px, Py)
+
+    var QX:u384, QY:u384, QZ:u384
+    QX, QY, QZ = scalar_mul_projective_bls12_381_g1(k, PX, PY, PZ)
+
+    Qx, Qy = projective_to_affine_bls12_381_g1(QX, QY, QZ)
+}
