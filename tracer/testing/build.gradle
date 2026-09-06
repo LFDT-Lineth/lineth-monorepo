@@ -17,10 +17,6 @@ apply from: lineaTracerProject.file("gradle/lint.gradle")
 dependencies {
   implementation project(path: ':tracer:arithmetization')
 
-  // The shomei-server library is deliberately NOT a dependency: the empty-block Besu tests stand in
-  // for a Shomei node with an in-process HTTP stub (net.consensys.linea.testing.ShomeiNode), which
-  // keeps them off shomei-server's Vert.x 4-era HTTP server that fails to start under the Vert.x 5
-  // runtime Besu 26.8.1 brings.
   implementation 'io.micrometer:micrometer-registry-prometheus:1.11.1'
   implementation 'org.assertj:assertj-core'
   implementation 'org.junit.jupiter:junit-jupiter-api'

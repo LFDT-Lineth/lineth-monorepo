@@ -199,14 +199,7 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     // runner has many independent chances to complete the bundle inside the budget
     // and include the tx that should have timed out. A short window collapses that
     // to a single pass.
-    //
-    // The window is derived from the slot time rather than hardcoded: under Vert.x 5
-    // (Besu 26.8.1) the engine-API round-trip that delivers the payload is slower and
-    // more variable, so a fixed 300ms can expire before a single selection pass even
-    // runs on a loaded CI runner — which then behaves like zero passes and flakes the
-    // "big bundle timed out" assertion below. A small fraction of the slot keeps the
-    // single-pass intent while tolerating that added latency.
-    buildNewBlockAndWait(Math.max(300L, blockTimeSeconds!! * 1000L / 10))
+    buildNewBlockAndWait(300L)
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
     val transferReceipt = ethTransactions.getTransactionReceipt(transferTxHash.bytes.toHexString())

@@ -736,12 +736,18 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow())
   }
 
-  fun asserLogsContain(
-    target: String,
-    logs: String = getAndResetLog(),
-  ) {
-    assertThat(logs)
-      .withFailMessage { "Expected Besu logs to contain '$target'" }
-      .contains(target)
+  fun assertLogsContain(target: String) {
+    // The log line can be written to MemoryAppender slightly after the block that triggered it is
+    // confirmed (e.g. via a receipt), so a single synchronous read can race with the log write.
+    // Poll instead of reading once.
+    await()
+      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted {
+        assertThat(getLog())
+          .withFailMessage { "Expected Besu logs to contain '$target'" }
+          .contains(target)
+      }
+    getAndResetLog()
   }
 }
