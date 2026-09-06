@@ -9,7 +9,7 @@ SEQUENCER_PLUGIN_VERSION ?= linea-$(shell git rev-parse --short=7 HEAD)
 LOCAL_SEQUENCER_DIST_FOLDER ?= $(abspath ../plugins/linea-sequencer/sequencer/build/install/sequencer)
 LOCAL_TRACER_DIST_FOLDER ?= $(abspath ../../tracer/plugins/build/install/linea-tracer)
 LOCAL_BESU_DIST_FOLDER ?= $(abspath ../../tmp/besu-eth/build/distributions)
-BESU_VERSION ?= $(shell ls ../../tmp/besu-eth/build/distributions/besu-*.tar.gz 2>/dev/null | head -1 | sed 's/.*besu-\(.*\)\.tar\.gz/\1/')
+BESU_VERSION ?= $(shell sed -n 's/^besuVersion=//p' ../besu/.besu-resolved)
 LOCAL_BESU_ZIP_PATH ?= $(LOCAL_BESU_DIST_FOLDER)/besu-$(BESU_VERSION).tar.gz
 
 clean-besu-and-maven-local:
