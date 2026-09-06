@@ -1,0 +1,152 @@
+name: contracts-forge-deployer-build-and-publish
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable image tag to publish
+        required: true
+        type: string
+      image_name:
+        description: Docker image repository
+        required: false
+        type: string
+        default: consensys/lineth-contract-deployer
+      push_image:
+        description: Publish to Docker Hub after tests and scanning
+        required: true
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      image_name:
+        required: false
+        type: string
+        default: consensys/lineth-contract-deployer
+      push_image:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+concurrency:
+  group: contracts-forge-deployer-build-and-publish-${{ inputs.image_name }}-${{ inputs.image_tag }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-scan-and-publish:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    name: Forge contract deployer build
+    timeout-minutes: 30
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Get Node.js version
+        id: get-node-version
+        uses: ./.github/actions/get-node-version
+
+      - name: Validate immutable image tag
+        run: |
+          if [[ ! "${IMAGE_TAG}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "image_tag must be a full 40-character lowercase Git commit SHA, got ${IMAGE_TAG}" >&2
+            exit 1
+          fi
+          source_sha="$(git rev-parse HEAD)"
+          if [[ "${source_sha}" != "${IMAGE_TAG}" ]]; then
+            echo "image_tag ${IMAGE_TAG} does not identify checked-out commit ${source_sha}" >&2
+            exit 1
+          fi
+          if [[ "$PUSH_IMAGE" == "true" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "image publication is allowed only from refs/heads/main" >&2
+            exit 1
+          fi
+
+      - name: Build image for tests and security scan
+        uses: ./.github/actions/docker-build-publish
+        with:
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tags: ${{ env.IMAGE_TAG }}
+          develop_tag: ''
+          push_image: false
+          dockerfile_path: ./contracts/forge-deployer/Dockerfile
+          build_args: |
+            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
+          save_artifact: true
+          artifact_name: lineth-contract-deployer
+
+      - name: Load image
+        run: gzip -dc lineth-contract-deployer-docker-image.tar.gz | docker load
+
+      - name: Run two-chain deployment and rerun test
+        run: DEPLOYER_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}" bash contracts/forge-deployer/test/integration/two-chain.sh
+
+      - name: Scan image for high and critical vulnerabilities
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 image \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            "${IMAGE_NAME}:${IMAGE_TAG}"
+
+      - name: Login to Docker Hub
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Verify immutable image tag is unused
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+        run: |
+          set +e
+          inspect_output="$(docker manifest inspect "${IMAGE_NAME}:${IMAGE_TAG}" 2>&1)"
+          inspect_status=$?
+          set -e
+          if [[ $inspect_status -eq 0 ]]; then
+            echo "${IMAGE_NAME}:${IMAGE_TAG} already exists; refusing to overwrite an immutable tag" >&2
+            exit 1
+          fi
+          inspect_output_lower="${inspect_output,,}"
+          if [[ "${inspect_output_lower}" != *"no such manifest"* && "${inspect_output_lower}" != *"manifest unknown"* ]]; then
+            echo "Could not verify whether ${IMAGE_NAME}:${IMAGE_TAG} exists: ${inspect_output}" >&2
+            exit 1
+          fi
+
+      - name: Publish tested and scanned image
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+        run: |
+          docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+          immutable_reference="$(docker image inspect --format '{{index .RepoDigests 0}}' "${IMAGE_NAME}:${IMAGE_TAG}")"
+          if [[ ! "${immutable_reference}" =~ ^${IMAGE_NAME}@sha256:[0-9a-f]{64}$ ]]; then
+            echo "published image did not resolve to an immutable repository digest" >&2
+            exit 1
+          fi
+          {
+            echo "### Forge contract deployer image"
+            echo "- Source commit: ${GITHUB_SHA}"
+            echo "- Published image: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "- Immutable reference: ${immutable_reference}"
+          } >> "$GITHUB_STEP_SUMMARY"

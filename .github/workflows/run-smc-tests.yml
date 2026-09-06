@@ -57,6 +57,13 @@ jobs:
       - name: Check JS formatting
         run: pnpm -F contracts run lint:ts
 
+      - name: Test Forge contract deployer
+        working-directory: contracts/forge-deployer
+        run: |
+          pnpm test
+          pnpm typecheck
+          pnpm build
+
       # Required for hardhat commands due to @nomicfoundation/hardhat-foundry package
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 #v1.9.1
