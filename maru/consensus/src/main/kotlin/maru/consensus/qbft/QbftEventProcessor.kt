@@ -14,6 +14,7 @@ import org.hyperledger.besu.consensus.common.bft.events.BftEvent
 import java.util.Optional
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 class QbftEventProcessor(
   private val incomingQueue: BftEventQueue,
@@ -49,6 +50,16 @@ class QbftEventProcessor(
   fun awaitStop() {
     shutdownLatch.await()
   }
+
+  /**
+   * Await stop, giving up after [timeout].
+   *
+   * @return true if the processor finished within the timeout
+   * @throws InterruptedException the interrupted exception
+   */
+  @Throws(InterruptedException::class)
+  fun awaitStop(timeout: Duration): Boolean =
+    shutdownLatch.await(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
 
   override fun run() {
     try {
