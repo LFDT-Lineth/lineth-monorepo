@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	// TODO: do we want a max ? 
 	DefaultMaxDecodedRecords uint64 = 2_000_000
 	// BitsPerRowOfModuleDecoded determines the number of bits for a single row of the
 	// module "decoded" in the RISC-V interpreter.
@@ -32,6 +33,7 @@ const (
 	bType         = 4
 	uType         = 5
 	jType         = 6
+	// TODO : should be renamed 
 	miscMemType   = 7
 )
 
