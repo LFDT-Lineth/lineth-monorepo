@@ -8,7 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	zkcr5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -19,7 +20,6 @@ import (
 )
 
 const (
-	r5ZKCPath      = "../../arithmetization/src/main/riscv/main.zkc"
 	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
 )
 
@@ -68,11 +68,11 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	if err != nil {
 		b.Skipf("R5 verifier ELF unavailable at %s; run `make -C ../verifier-ray build-r5`: %v", r5VerifierPath, err)
 	}
-	inputs, err := zkcr5.PrepareInput(verifierELF, []byte("foobar"))
+	inputs, err := predecoding.PrepareInputs(verifierELF, []byte("foobar"))
 	if err != nil {
 		b.Fatalf("preparing R5 input: %v", err)
 	}
-	binFile, err := compileBinaryConstraints(r5ZKCPath)
+	binFile, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		b.Fatalf("compiling R5 ZKC program: %v", err)
 	}
@@ -247,7 +247,7 @@ func BenchmarkR5ZKCCompile(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		if _, err := compileBinaryConstraints(r5ZKCPath); err != nil {
+		if _, err := embedded.CompiledBinaryFile(); err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
 	}
@@ -268,7 +268,7 @@ func BenchmarkR5Prove(b *testing.B) {
 
 	for b.Loop() {
 		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+			fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
 		})
 		r5ProofSink, r5PubSink = []wiop.Proof{proof}, []wiop.PublicInput{pub}
 	}
@@ -286,7 +286,7 @@ func BenchmarkR5Verify(b *testing.B) {
 	traces := fixture.driver.TraceZkcInputs(inputs)
 
 	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+		fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
 	})
 	if err := fixture.system.Verify(proof, pub); err != nil {
 		b.Fatalf("verifying setup proof: %v", err)
@@ -311,26 +311,26 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		binFile, err := compileBinaryConstraints(r5ZKCPath)
+		binFile, err := embedded.CompiledBinaryFile()
 		if err != nil {
 			b.Fatalf("compiling R5 ZKC program: %v", err)
 		}
-		serialized, err := binFile.MarshalBinary()
+		fixture.serialized, err = binFile.MarshalBinary()
 		if err != nil {
 			b.Fatalf("serializing R5 constraints: %v", err)
 		}
 
 		var (
-			system, driver = compileR5BenchmarkSystem(b, serialized)
+			system, driver = compileR5BenchmarkSystem(b, fixture.serialized)
 			inputs         = &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-			traces         = fixture.driver.TraceZkcInputs(inputs)
+			traces         = driver.TraceZkcInputs(inputs)
 			proofs         = make([]wiop.Proof, len(traces))
 			pubs           = make([]wiop.PublicInput, len(traces))
 		)
 
 		for i, shard := range traces {
 			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
-				driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
+				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			})
 		}
 

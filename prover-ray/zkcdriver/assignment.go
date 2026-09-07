@@ -62,18 +62,13 @@ func AssignFromTraceShard(
 						col         = trMod.Column(uint(id))
 						moduleName  = trMod.Name()
 						name        = qualifiedCorsetName(moduleName, trMod.Descriptor().Columns[id].Name)
-						pad         koalabear.Element
 					)
 
 					if _, ok := columnIDMap[name]; !ok {
 						logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
 						continue
 					}
-
-					var (
-						wCol    = sys.LookupColumn(columnIDMap[name])
-						padding field.Element
-					)
+					wCol := sys.LookupColumn(columnIDMap[name])
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.
@@ -83,12 +78,12 @@ func AssignFromTraceShard(
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
 
-					padding = *(*field.Element)(unsafe.Pointer(&pad))
-
 					// Done
 					run.AssignColumn(
 						wCol,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+						&wiop.ConcreteVector{
+							Plain: field.VecFromBase(plain),
+						},
 					)
 				}
 			})
