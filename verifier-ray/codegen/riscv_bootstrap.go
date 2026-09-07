@@ -42,6 +42,28 @@ type HonestRiscvArtifacts struct {
 	VerifyInput    proofserialization.VerifyInput
 }
 
+// honestSharedRandomness is the γ seed handed to the shard being proved.
+//
+// It must not be the zero octuplet. runCompilePipeline enables
+// messagebus.CompileOptions.SharedRandomness, which registers a pre-sampling
+// hook that overwrites the Fiat-Shamir state with this seed before any coin of
+// the message-bus coin round is drawn. Every coin sampled from that FS state —
+// including the γ that lookuptologderivsum adds to each lookup denominator —
+// is therefore a pure function of this value. Seeding it with zeros makes the
+// FS output, and hence that γ, zero, which collapses the denominator
+// γ + RLC(T) to zero on every left-padded (all-zero) row and trips the
+// zero-denominator panic in logderivativesum's prover.
+//
+// The value itself is arbitrary; it only has to be a fixed non-zero constant so
+// the artifacts stay byte-reproducible. Real shards get their γ from the
+// aggregation layer, which is what makes the sampled coins agree across shards.
+var honestSharedRandomness = koalafield.Octuplet{
+	koalafield.NewElement(11), koalafield.NewElement(22),
+	koalafield.NewElement(33), koalafield.NewElement(44),
+	koalafield.NewElement(55), koalafield.NewElement(66),
+	koalafield.NewElement(77), koalafield.NewElement(88),
+}
+
 // BuildAllInOneHonestRiscvArtifacts compiles the real main.zkc entrypoint,
 // proves zkc_r5.AllInOneGuestELF against it — a single honest, halting guest
 // that concatenates the full RV64I + M-extension + custom-precompile surface
@@ -81,9 +103,16 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	}
 	inputs := &zkcdriver.PreReadInputs{Inputs: honestInputs}
 
+	// Tracing is hoisted out of the assignment closure: it depends only on the
+	// inputs, not on the runtime. This guest fits a single shard.
+	traces := driver.TraceZkcInputs(inputs)
+	if len(traces) != 1 {
+		return HonestRiscvArtifacts{}, fmt.Errorf("expected a single trace shard, got %d", len(traces))
+	}
+
 	proof, pub := sys.Prove(
 		func(assignRt *wiop.Runtime) {
-			driver.AssignWithPreRead(assignRt, inputs, koalafield.Octuplet{})
+			driver.AssignTraceShard(assignRt, traces[0], honestSharedRandomness)
 		},
 		wiop.ProveOptions{CheckUnreducedQueries: true},
 	)
@@ -125,7 +154,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
 	if len(errs) > 0 {
 		for i := range errs {
 			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
@@ -139,7 +168,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	return binfile, nil
 }
 
