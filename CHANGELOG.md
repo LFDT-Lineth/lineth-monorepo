@@ -32,6 +32,7 @@
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
 - *(coordinator)* Support finalization on validium chains (#3910)
+- *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
 
 ### 🐛 Bug Fixes
 
@@ -154,3 +155,4 @@
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
+- *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)

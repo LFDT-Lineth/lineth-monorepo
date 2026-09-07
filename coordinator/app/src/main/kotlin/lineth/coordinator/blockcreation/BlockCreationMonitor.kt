@@ -152,13 +152,24 @@ class BlockCreationMonitor(
         "Block creation monitor ready. Starting from block number={}",
         firstBlockNumber,
       )
-      if (firstBlockNumber == 0L) {
+      val setParentHash = if (firstBlockNumber == 0L) {
         expectedParentBlockHash.set(ByteArray(32))
         SafeFuture.completedFuture(Unit)
       } else {
         ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(firstBlockNumber - 1))
           .thenApply { parentBlock ->
             expectedParentBlockHash.set(parentBlock.hash)
+          }
+      }
+      // Notify the checkpoint controller with the first cutover block before the polling loop
+      // starts, so the very first tick is already paused and no blocks are imported until
+      // L1 finalization of the pre-cutover batch allows the loop to proceed.
+      setParentHash.thenCompose {
+        ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(firstBlockNumber))
+          .thenApply { firstBlock ->
+            if (firstBlock != null) {
+              targetCheckpointPauseController.importBlock(firstBlock)
+            }
           }
       }
     }
