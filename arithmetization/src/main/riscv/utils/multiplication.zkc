@@ -108,7 +108,7 @@ fn divMod_32_ss(a:u32, b:u32) -> (q:u32, r:u32) {
     // special care when dividing by 0, do NOT apply sign to the quotient, just return -1 and the dividend as remainder
     if b == 0 {
         q = NEGATIVE_ONE_AS_I32
-        r = b
+        r = a
         return
     }
 
@@ -117,5 +117,5 @@ fn divMod_32_ss(a:u32, b:u32) -> (q:u32, r:u32) {
     q = a_sign == sign_bit_of_word(b) ? q_u:negative_of_word(q_u)
 
     // remainder follows the dividend sign
-    r = a == 0 ? r_u:negative_of_word(r_u)
+    r = a_sign == 0 ? r_u:negative_of_word(r_u)
 }
