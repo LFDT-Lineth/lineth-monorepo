@@ -1,0 +1,475 @@
+include "fp2.zkc"
+
+// ============================================================================
+// BLS12-381 G2: the sextic twist E'(Fp2): y^2 = x^3 + 4(1 + u).
+//
+// Scope: this is the MINIMAL G2 layer the pairing needs -- validity, the
+// projective group law, and the psi-based subgroup check. It is deliberately
+// not a full G2ADD/G2MSM precompile layer.
+//
+// The Miller loop does NOT use the complete addition below: it needs doubling
+// and addition steps that also emit line coefficients, which live with the
+// pairing. What is here is what the pairing needs *around* the Miller loop:
+//   - is_valid_affine_*     -- EIP-2537 input screening (canonical, on-twist)
+//   - is_in_subgroup_*      -- mandatory for PAIRING_CHECK (unlike G2ADD)
+//   - scalar_mul_*          -- only because the subgroup check needs [x]Q
+//
+// TWIST TYPE. Fp6 is built as Fp2[v]/(v^3 - xi) with xi = 1 + u, and the twist
+// constant here is b' = 4(1+u) = b*xi, so BLS12-381 uses an M-twist. This is
+// the fact that fixes the line sparsity pattern in the Miller loop, so it is
+// worth stating explicitly rather than rediscovering later.
+//
+// Every constant below was verified numerically (generator on-twist and of
+// order r; the psi constants reproduced by exponentiating xi) rather than
+// copied on faith -- see the unit tests.
+// ============================================================================
+
+// Twist constant b' = 4 + 4u.
+const BLS12_381_G2_B_C0:u384 = 4
+const BLS12_381_G2_B_C1:u384 = 4
+
+// Generator of the prime-order subgroup of G2.
+const BLS12_381_G2_GX_C0:u384 = 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
+const BLS12_381_G2_GX_C1:u384 = 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
+const BLS12_381_G2_GY_C0:u384 = 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
+const BLS12_381_G2_GY_C1:u384 = 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
+
+// |x|, the absolute value of the curve seed. The seed itself is NEGATIVE:
+// x = -0xd201000000010000. Everything that "multiplies by the seed" therefore
+// multiplies by this magnitude and negates.
+const BLS12_381_SEED_ABS:u384 = 0xd201000000010000
+
+// psi = untwist . Frobenius . twist, as psi(x, y) = (c2 * conj(x), c3 * conj(y))
+// with c2 = xi^-((p-1)/3) and c3 = xi^-((p-1)/2). Note c2 is purely imaginary.
+const BLS12_381_PSI_C2_C0:u384 = 0
+const BLS12_381_PSI_C2_C1:u384 = 0x1a0111ea397fe699ec02408663d4de85aa0d857d89759ad4897d29650fb85f9b409427eb4f49fffd8bfd00000000aaad
+const BLS12_381_PSI_C3_C0:u384 = 0x135203e60180a68ee2e9c448d77a2cd91c3dedd930b1cf60ef396489f61eb45e304466cf3e67fa0af1ee7b04121bdea2
+const BLS12_381_PSI_C3_C1:u384 = 0x06af0e0437ff400b6831e36d6bd17ffe48395dabc2d3435e77f76e17009241c5ee67992f72ec05f4c81084fbede3cc09
+
+fn generator_bls12_381_g2() -> (x0:u384, x1:u384, y0:u384, y1:u384) {
+    x0 = BLS12_381_G2_GX_C0
+    x1 = BLS12_381_G2_GX_C1
+    y0 = BLS12_381_G2_GY_C0
+    y1 = BLS12_381_G2_GY_C1
+}
+
+// ----- validity -----
+
+// Infinity is the all-zero point, matching the EIP-2537 encoding.
+fn is_infinity_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u1) {
+    res = 0
+    if (x0 == 0) && (x1 == 0) && (y0 == 0) && (y1 == 0) {
+        res = 1
+    }
+}
+
+fn is_equal_affine_bls12_381_g2(Px0:u384, Px1:u384, Py0:u384, Py1:u384,
+                                Qx0:u384, Qx1:u384, Qy0:u384, Qy1:u384) -> (res:u1) {
+    res = 0
+    if (Px0 == Qx0) && (Px1 == Qx1) && (Py0 == Qy0) && (Py1 == Qy1) {
+        res = 1
+    }
+}
+
+// Returns one iff (x, y) is a canonical, FINITE point of the twist.
+// Out-of-range coordinates return zero rather than being reduced or failing:
+// an invalid EIP-2537 input is a provable revert path, not a proof abort.
+fn is_on_curve_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u1) {
+    res = 0
+    if x0 >= BLS12_381_P || x1 >= BLS12_381_P || y0 >= BLS12_381_P || y1 >= BLS12_381_P {
+        return
+    }
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        return
+    }
+    var l0:u384, l1:u384
+    l0, l1 = fp2_sqr_bls12_381(y0, y1)
+
+    var s0:u384, s1:u384
+    s0, s1 = fp2_sqr_bls12_381(x0, x1)
+    var c0:u384, c1:u384
+    c0, c1 = fp2_mul_bls12_381(s0, s1, x0, x1)
+    var r0:u384, r1:u384
+    r0, r1 = fp2_add_bls12_381(c0, c1, BLS12_381_G2_B_C0, BLS12_381_G2_B_C1)
+
+    res = fp2_is_equal_bls12_381(l0, l1, r0, r1)
+}
+
+// Canonical coordinates, and either the encoded infinity or a genuine twist
+// point. NO subgroup check -- EIP-2537 does not require one for G2ADD. The
+// pairing must additionally call is_in_subgroup_affine_bls12_381_g2.
+fn is_valid_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u1) {
+    res = 0
+    if x0 >= BLS12_381_P || x1 >= BLS12_381_P || y0 >= BLS12_381_P || y1 >= BLS12_381_P {
+        return
+    }
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        res = 1
+        return
+    }
+    res = is_on_curve_affine_bls12_381_g2(x0, x1, y0, y1)
+}
+
+fn neg_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+    rx0 = x0
+    rx1 = x1
+    // negating the encoded infinity (0,0) leaves it unchanged, since -0 = 0
+    ry0, ry1 = fp2_neg_bls12_381(y0, y1)
+}
+
+// ----- coordinate conversion -----
+
+fn affine_to_projective_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384)
+        -> (X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384) {
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        X0 = 0
+        X1 = 0
+        Y0 = 1
+        Y1 = 0
+        Z0 = 0
+        Z1 = 0
+    } else {
+        X0 = x0
+        X1 = x1
+        Y0 = y0
+        Y1 = y1
+        Z0 = 1
+        Z1 = 0
+    }
+}
+
+fn projective_to_affine_bls12_381_g2(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384)
+        -> (x0:u384, x1:u384, y0:u384, y1:u384) {
+    if fp2_is_zero_bls12_381(Z0, Z1) == 1 {
+        x0 = 0
+        x1 = 0
+        y0 = 0
+        y1 = 0
+    } else {
+        var zi0:u384, zi1:u384
+        zi0, zi1 = fp2_inv_bls12_381(Z0, Z1)
+        x0, x1 = fp2_mul_bls12_381(X0, X1, zi0, zi1)
+        y0, y1 = fp2_mul_bls12_381(Y0, Y1, zi0, zi1)
+    }
+}
+
+// ----- projective group law -----
+
+// Multiply an Fp element by 12 through an addition chain (12 = 8 + 4).
+fn mul12_bls12_381(t:u384) -> (r:u384) {
+    var t2:u384 = addmod_384(t, t, BLS12_381_P)
+    var t4:u384 = addmod_384(t2, t2, BLS12_381_P)
+    var t8:u384 = addmod_384(t4, t4, BLS12_381_P)
+    r = addmod_384(t8, t4, BLS12_381_P)
+}
+
+// Multiply by b3 = 3*b' = 12(1 + u), the complete-addition constant.
+// Factored as 12 * (t * (1 + u)): multiplying by the nonresidue is pure
+// add/sub, and 12 is an addition chain, so this costs ZERO mulmods where a
+// general fp2_mul by (12, 12) would cost three (~46k trace cells).
+fn fp2_mul_by_b3_bls12_381_g2(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    var n0:u384, n1:u384
+    n0, n1 = fp2_mul_by_nonresidue_bls12_381(a0, a1)
+    c0 = mul12_bls12_381(n0)
+    c1 = mul12_bls12_381(n1)
+}
+
+// MIXED complete projective addition over Fp2: P (projective) + Q (affine),
+// i.e. RCB 2015 Algorithm 7 with Z2 = 1 substituted throughout.
+//
+// WHY MIXED RATHER THAN GENERAL. zkc caps a call at 255 *split* registers, and
+// at KOALABEAR_16 a u384 splits into 24 limbs, so a function takes at most TEN
+// u384 arguments -- 11 panics with "too many call arguments" at execution time
+// (note: `zkc compile` does NOT catch this). A general projective+projective
+// addition needs 12, which is unrepresentable. Mixed needs 6 + 4 = 10, exactly
+// at the limit, and every caller wants mixed anyway: the ladder below always
+// adds the fixed affine base point, and the Miller loop always adds the fixed
+// affine Q. Substituting Z2 = 1 also drops one Fp2 multiplication (11 vs 12).
+//
+// PRECONDITION: (x2, y2) must be a genuine affine point, NOT the encoded
+// infinity -- an affine representation cannot express the identity. The formula
+// remains complete in its projective operand, so P may be the identity, may
+// equal Q (doubling) or may be -Q. Callers taking untrusted input must screen
+// Q for infinity first; add_affine_bls12_381_g2 below does exactly that.
+fn add_mixed_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u384, Z11:u384,
+                          x20:u384, x21:u384, y20:u384, y21:u384)
+        -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
+
+    // products of matching coordinates; with Z2 = 1, zz = Z1 comes for free
+    var xx0:u384, xx1:u384
+    xx0, xx1 = fp2_mul_bls12_381(X10, X11, x20, x21)
+    var yy0:u384, yy1:u384
+    yy0, yy1 = fp2_mul_bls12_381(Y10, Y11, y20, y21)
+    var zz0:u384 = Z10
+    var zz1:u384 = Z11
+
+    // X1Y2+X2Y1 via Karatsuba
+    var sa0:u384, sa1:u384, sb0:u384, sb1:u384, pr0:u384, pr1:u384, dg0:u384, dg1:u384
+    sa0, sa1 = fp2_add_bls12_381(X10, X11, Y10, Y11)
+    sb0, sb1 = fp2_add_bls12_381(x20, x21, y20, y21)
+    pr0, pr1 = fp2_mul_bls12_381(sa0, sa1, sb0, sb1)
+    dg0, dg1 = fp2_add_bls12_381(xx0, xx1, yy0, yy1)
+    var cxy0:u384, cxy1:u384
+    cxy0, cxy1 = fp2_sub_bls12_381(pr0, pr1, dg0, dg1)
+
+    // Y1Z2+Y2Z1 collapses to Y1 + Y2*Z1 when Z2 = 1
+    var ty0:u384, ty1:u384
+    ty0, ty1 = fp2_mul_bls12_381(y20, y21, Z10, Z11)
+    var cyz0:u384, cyz1:u384
+    cyz0, cyz1 = fp2_add_bls12_381(Y10, Y11, ty0, ty1)
+
+    // X1Z2+X2Z1 collapses to X1 + X2*Z1 when Z2 = 1
+    var tx0:u384, tx1:u384
+    tx0, tx1 = fp2_mul_bls12_381(x20, x21, Z10, Z11)
+    var cxz0:u384, cxz1:u384
+    cxz0, cxz1 = fp2_add_bls12_381(X10, X11, tx0, tx1)
+
+    // 3*(X1X2)
+    var xx20:u384, xx21:u384
+    xx20, xx21 = fp2_add_bls12_381(xx0, xx1, xx0, xx1)
+    var xx30:u384, xx31:u384
+    xx30, xx31 = fp2_add_bls12_381(xx20, xx21, xx0, xx1)
+
+    // b3*(Z1Z2) and b3*(X1Z2+X2Z1)
+    var zzb0:u384, zzb1:u384
+    zzb0, zzb1 = fp2_mul_by_b3_bls12_381_g2(zz0, zz1)
+    var cxzb0:u384, cxzb1:u384
+    cxzb0, cxzb1 = fp2_mul_by_b3_bls12_381_g2(cxz0, cxz1)
+
+    // paper steps 22-23
+    var pz0:u384, pz1:u384
+    pz0, pz1 = fp2_add_bls12_381(yy0, yy1, zzb0, zzb1)
+    var t10:u384, t11:u384
+    t10, t11 = fp2_sub_bls12_381(yy0, yy1, zzb0, zzb1)
+
+    // X3 (paper steps 25-27)
+    var ma0:u384, ma1:u384
+    ma0, ma1 = fp2_mul_bls12_381(cyz0, cyz1, cxzb0, cxzb1)
+    var mb0:u384, mb1:u384
+    mb0, mb1 = fp2_mul_bls12_381(cxy0, cxy1, t10, t11)
+    X30, X31 = fp2_sub_bls12_381(mb0, mb1, ma0, ma1)
+
+    // Y3 (paper steps 28-30)
+    var mc0:u384, mc1:u384
+    mc0, mc1 = fp2_mul_bls12_381(cxzb0, cxzb1, xx30, xx31)
+    var md0:u384, md1:u384
+    md0, md1 = fp2_mul_bls12_381(t10, t11, pz0, pz1)
+    Y30, Y31 = fp2_add_bls12_381(md0, md1, mc0, mc1)
+
+    // Z3 (paper steps 31-33)
+    var me0:u384, me1:u384
+    me0, me1 = fp2_mul_bls12_381(xx30, xx31, cxy0, cxy1)
+    var mf0:u384, mf1:u384
+    mf0, mf1 = fp2_mul_bls12_381(pz0, pz1, cyz0, cyz1)
+    Z30, Z31 = fp2_add_bls12_381(mf0, mf1, me0, me1)
+}
+
+// Dedicated projective doubling (a = 0), the Fp2 analogue of
+// sw_double_projective_384. Precondition: P != O (Z != 0); the ladder guards it.
+fn double_projective_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u384, Z11:u384)
+        -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
+
+    var xs0:u384, xs1:u384
+    xs0, xs1 = fp2_sqr_bls12_381(X10, X11)
+    var ys0:u384, ys1:u384
+    ys0, ys1 = fp2_sqr_bls12_381(Y10, Y11)
+    var S0:u384, S1:u384
+    S0, S1 = fp2_mul_bls12_381(Y10, Y11, Z10, Z11)
+
+    // W = 3*X1^2
+    var w20:u384, w21:u384
+    w20, w21 = fp2_add_bls12_381(xs0, xs1, xs0, xs1)
+    var W0:u384, W1:u384
+    W0, W1 = fp2_add_bls12_381(w20, w21, xs0, xs1)
+
+    // B = X1*Y1*S
+    var xy0:u384, xy1:u384
+    xy0, xy1 = fp2_mul_bls12_381(X10, X11, Y10, Y11)
+    var B0:u384, B1:u384
+    B0, B1 = fp2_mul_bls12_381(xy0, xy1, S0, S1)
+
+    // H = W^2 - 8B
+    var W20:u384, W21:u384
+    W20, W21 = fp2_sqr_bls12_381(W0, W1)
+    var b20:u384, b21:u384
+    b20, b21 = fp2_add_bls12_381(B0, B1, B0, B1)
+    var b40:u384, b41:u384
+    b40, b41 = fp2_add_bls12_381(b20, b21, b20, b21)
+    var b80:u384, b81:u384
+    b80, b81 = fp2_add_bls12_381(b40, b41, b40, b41)
+    var H0:u384, H1:u384
+    H0, H1 = fp2_sub_bls12_381(W20, W21, b80, b81)
+
+    // X3 = 2*H*S
+    var hs0:u384, hs1:u384
+    hs0, hs1 = fp2_mul_bls12_381(H0, H1, S0, S1)
+    X30, X31 = fp2_add_bls12_381(hs0, hs1, hs0, hs1)
+
+    // Y3 = W*(4B - H) - 8*Y1^2*S^2
+    var S20:u384, S21:u384
+    S20, S21 = fp2_sqr_bls12_381(S0, S1)
+    var ys20:u384, ys21:u384
+    ys20, ys21 = fp2_mul_bls12_381(ys0, ys1, S20, S21)
+    var bh0:u384, bh1:u384
+    bh0, bh1 = fp2_sub_bls12_381(b40, b41, H0, H1)
+    var wbh0:u384, wbh1:u384
+    wbh0, wbh1 = fp2_mul_bls12_381(W0, W1, bh0, bh1)
+    var y20:u384, y21:u384
+    y20, y21 = fp2_add_bls12_381(ys20, ys21, ys20, ys21)
+    var y40:u384, y41:u384
+    y40, y41 = fp2_add_bls12_381(y20, y21, y20, y21)
+    var y80:u384, y81:u384
+    y80, y81 = fp2_add_bls12_381(y40, y41, y40, y41)
+    Y30, Y31 = fp2_sub_bls12_381(wbh0, wbh1, y80, y81)
+
+    // Z3 = 8*S^3
+    var S30:u384, S31:u384
+    S30, S31 = fp2_mul_bls12_381(S20, S21, S0, S1)
+    var s20:u384, s21:u384
+    s20, s21 = fp2_add_bls12_381(S30, S31, S30, S31)
+    var s40:u384, s41:u384
+    s40, s41 = fp2_add_bls12_381(s20, s21, s20, s21)
+    Z30, Z31 = fp2_add_bls12_381(s40, s41, s40, s41)
+}
+
+// Affine addition, handling the identity on either side. Kept thin: it exists
+// so callers do not have to remember add_mixed's no-infinity precondition.
+fn add_affine_bls12_381_g2(px0:u384, px1:u384, py0:u384, py1:u384,
+                           qx0:u384, qx1:u384, qy0:u384, qy1:u384)
+        -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+    if is_infinity_affine_bls12_381_g2(qx0, qx1, qy0, qy1) == 1 {
+        rx0 = px0
+        rx1 = px1
+        ry0 = py0
+        ry1 = py1
+        return
+    }
+
+    // P may still be the identity here -- add_mixed is complete in that operand.
+    var PX0:u384, PX1:u384, PY0:u384, PY1:u384, PZ0:u384, PZ1:u384
+    PX0, PX1, PY0, PY1, PZ0, PZ1 = affine_to_projective_bls12_381_g2(px0, px1, py0, py1)
+
+    var RX0:u384, RX1:u384, RY0:u384, RY1:u384, RZ0:u384, RZ1:u384
+    RX0, RX1, RY0, RY1, RZ0, RZ1 = add_mixed_bls12_381_g2(PX0, PX1, PY0, PY1, PZ0, PZ1, qx0, qx1, qy0, qy1)
+
+    rx0, rx1, ry0, ry1 = projective_to_affine_bls12_381_g2(RX0, RX1, RY0, RY1, RZ0, RZ1)
+}
+
+// Recursive double-and-add, same shape as sw_scalar_mul_projective_384:
+// bits peeled LSB-first on the way down, applied MSB-first on the way back up.
+//
+// The base point is carried in AFFINE form rather than projective. That is
+// forced by the 10-u384 argument cap: (k, projective P) plus the affine point
+// the mixed addition needs would be 11. It is also what mixed addition wants,
+// so nothing is lost.
+//
+// PRECONDITION: (px, py) is a genuine affine point, not the encoded infinity.
+fn scalar_mul_projective_bls12_381_g2(k:u384, px0:u384, px1:u384, py0:u384, py1:u384)
+        -> (QX0:u384, QX1:u384, QY0:u384, QY1:u384, QZ0:u384, QZ1:u384) {
+    if k == 0 {
+        // O = (0 : 1 : 0)
+        QX0 = 0
+        QX1 = 0
+        QY0 = 1
+        QY1 = 0
+        QZ0 = 0
+        QZ1 = 0
+        return
+    }
+    var half:u383
+    var bit:u1
+    half::bit = k as u384
+
+    var HX0:u384, HX1:u384, HY0:u384, HY1:u384, HZ0:u384, HZ1:u384
+    HX0, HX1, HY0, HY1, HZ0, HZ1 = scalar_mul_projective_bls12_381_g2(half as u384, px0, px1, py0, py1)
+
+    // D = 2*H, guarded because the dedicated doubling needs H != O
+    var DX0:u384, DX1:u384, DY0:u384, DY1:u384, DZ0:u384, DZ1:u384
+    if fp2_is_zero_bls12_381(HZ0, HZ1) == 1 {
+        DX0 = 0
+        DX1 = 0
+        DY0 = 1
+        DY1 = 0
+        DZ0 = 0
+        DZ1 = 0
+    } else {
+        DX0, DX1, DY0, DY1, DZ0, DZ1 = double_projective_bls12_381_g2(HX0, HX1, HY0, HY1, HZ0, HZ1)
+    }
+
+    if bit == 1 {
+        // complete in the projective operand, so this absorbs D = O at the top bit
+        QX0, QX1, QY0, QY1, QZ0, QZ1 = add_mixed_bls12_381_g2(DX0, DX1, DY0, DY1, DZ0, DZ1, px0, px1, py0, py1)
+    } else {
+        QX0 = DX0
+        QX1 = DX1
+        QY0 = DY0
+        QY1 = DY1
+        QZ0 = DZ0
+        QZ1 = DZ1
+    }
+}
+
+fn scalar_mul_affine_bls12_381_g2(k:u384, x0:u384, x1:u384, y0:u384, y1:u384)
+        -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+    rx0 = 0
+    rx1 = 0
+    ry0 = 0
+    ry1 = 0
+    if k == 0 {
+        return
+    }
+    // k*O = O; also keeps the encoded infinity away from add_mixed
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        return
+    }
+
+    var QX0:u384, QX1:u384, QY0:u384, QY1:u384, QZ0:u384, QZ1:u384
+    QX0, QX1, QY0, QY1, QZ0, QZ1 = scalar_mul_projective_bls12_381_g2(k, x0, x1, y0, y1)
+
+    rx0, rx1, ry0, ry1 = projective_to_affine_bls12_381_g2(QX0, QX1, QY0, QY1, QZ0, QZ1)
+}
+
+// ----- subgroup check -----
+
+// psi(x, y) = (c2 * conj(x), c3 * conj(y)), the untwist-Frobenius-twist
+// endomorphism. conj is the p-power Frobenius of Fp2 (see fp2.zkc).
+fn psi_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+    var cx0:u384, cx1:u384
+    cx0, cx1 = fp2_conjugate_bls12_381(x0, x1)
+    rx0, rx1 = fp2_mul_bls12_381(BLS12_381_PSI_C2_C0, BLS12_381_PSI_C2_C1, cx0, cx1)
+
+    var cy0:u384, cy1:u384
+    cy0, cy1 = fp2_conjugate_bls12_381(y0, y1)
+    ry0, ry1 = fp2_mul_bls12_381(BLS12_381_PSI_C3_C0, BLS12_381_PSI_C3_C1, cy0, cy1)
+}
+
+// Prime-order subgroup membership, required by PAIRING_CHECK (and by G2MSM),
+// but NOT by G2ADD.
+//
+// Uses the endomorphism identity psi(Q) == [x]Q rather than the naive
+// [r]Q == O. That matters enormously here: r is 255 bits while the seed is 64,
+// so this is a 64-bit ladder instead of a 255-bit one -- roughly a 4x saving on
+// what is already one of the more expensive parts of validating a pairing input.
+//
+// The seed is negative, so [x]Q = -[|x|]Q.
+// PRECONDITION: the caller has already established that (x, y) is on the twist.
+// This predicate only tests subgroup membership.
+fn is_in_subgroup_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u1) {
+    res = 0
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        // the identity is in every subgroup
+        res = 1
+        return
+    }
+
+    var px0:u384, px1:u384, py0:u384, py1:u384
+    px0, px1, py0, py1 = psi_bls12_381_g2(x0, x1, y0, y1)
+
+    var sx0:u384, sx1:u384, sy0:u384, sy1:u384
+    sx0, sx1, sy0, sy1 = scalar_mul_affine_bls12_381_g2(BLS12_381_SEED_ABS, x0, x1, y0, y1)
+
+    var nx0:u384, nx1:u384, ny0:u384, ny1:u384
+    nx0, nx1, ny0, ny1 = neg_affine_bls12_381_g2(sx0, sx1, sy0, sy1)
+
+    res = is_equal_affine_bls12_381_g2(px0, px1, py0, py1, nx0, nx1, ny0, ny1)
+}

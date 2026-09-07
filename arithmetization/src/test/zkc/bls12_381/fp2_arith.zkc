@@ -1,0 +1,98 @@
+// ===================================================================
+// Unit test for BLS12-381 Fp2 arithmetic
+// (arithmetization/src/main/lib/bls12_381/fp2.zkc).
+//
+// Fp2 = Fp[u]/(u^2 + 1); an element (a0, a1) means a0 + a1*u. Each
+// fixture supplies two Fp2 elements plus an Fp scalar, and the expected
+// result of every operation.
+//
+// Inversion is deliberately NOT here -- it is the only operation that
+// costs a Fermat exponentiation (~617 mulmod_384 against 3 for a
+// multiply) and the only one undefined on zero, so it gets its own
+// harness with non-zero fixtures.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/fp2.zkc"
+
+pub input a0(address:u1) -> (v:u384)
+pub input a1(address:u1) -> (v:u384)
+pub input b0(address:u1) -> (v:u384)
+pub input b1(address:u1) -> (v:u384)
+pub input k(address:u1) -> (v:u384)
+
+pub input want_add0(address:u1) -> (v:u384)
+pub input want_add1(address:u1) -> (v:u384)
+pub input want_sub0(address:u1) -> (v:u384)
+pub input want_sub1(address:u1) -> (v:u384)
+pub input want_neg0(address:u1) -> (v:u384)
+pub input want_neg1(address:u1) -> (v:u384)
+pub input want_mul0(address:u1) -> (v:u384)
+pub input want_mul1(address:u1) -> (v:u384)
+pub input want_sqr0(address:u1) -> (v:u384)
+pub input want_sqr1(address:u1) -> (v:u384)
+pub input want_conj0(address:u1) -> (v:u384)
+pub input want_conj1(address:u1) -> (v:u384)
+pub input want_nr0(address:u1) -> (v:u384)
+pub input want_nr1(address:u1) -> (v:u384)
+pub input want_mulfp0(address:u1) -> (v:u384)
+pub input want_mulfp1(address:u1) -> (v:u384)
+
+fn main() {
+    var c0:u384, c1:u384
+
+    c0, c1 = fp2_add_bls12_381(a0[0], a1[0], b0[0], b1[0])
+    if (c0 != want_add0[0]) || (c1 != want_add1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_sub_bls12_381(a0[0], a1[0], b0[0], b1[0])
+    if (c0 != want_sub0[0]) || (c1 != want_sub1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_neg_bls12_381(a0[0], a1[0])
+    if (c0 != want_neg0[0]) || (c1 != want_neg1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_mul_bls12_381(a0[0], a1[0], b0[0], b1[0])
+    if (c0 != want_mul0[0]) || (c1 != want_mul1[0]) {
+        fail
+    }
+
+    // squaring has its own (cheaper) formula, so it must be checked
+    // independently of mul -- not just as fp2_mul(a, a)
+    c0, c1 = fp2_sqr_bls12_381(a0[0], a1[0])
+    if (c0 != want_sqr0[0]) || (c1 != want_sqr1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_conjugate_bls12_381(a0[0], a1[0])
+    if (c0 != want_conj0[0]) || (c1 != want_conj1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_mul_by_nonresidue_bls12_381(a0[0], a1[0])
+    if (c0 != want_nr0[0]) || (c1 != want_nr1[0]) {
+        fail
+    }
+
+    c0, c1 = fp2_mul_by_fp_bls12_381(a0[0], a1[0], k[0])
+    if (c0 != want_mulfp0[0]) || (c1 != want_mulfp1[0]) {
+        fail
+    }
+
+    // cross-checks tying the cheap special cases back to the general
+    // multiply: a*a must equal sqr(a), and a*(1+u) must equal the
+    // nonresidue shortcut. These catch a formula that is self-consistent
+    // but wrong.
+    var m0:u384, m1:u384
+    m0, m1 = fp2_mul_bls12_381(a0[0], a1[0], a0[0], a1[0])
+    if (m0 != want_sqr0[0]) || (m1 != want_sqr1[0]) {
+        fail
+    }
+    m0, m1 = fp2_mul_bls12_381(a0[0], a1[0], 1, 1)
+    if (m0 != want_nr0[0]) || (m1 != want_nr1[0]) {
+        fail
+    }
+}

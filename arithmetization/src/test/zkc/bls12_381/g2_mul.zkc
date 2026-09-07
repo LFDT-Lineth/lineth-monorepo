@@ -1,0 +1,38 @@
+// ===================================================================
+// Unit test for BLS12-381 G2 scalar multiplication
+// (arithmetization/src/main/lib/bls12_381/g2.zkc).
+//
+// This is the harness that exercises the dedicated Fp2 doubling
+// formula, which the g2_add fixtures never reach (they only go through
+// the mixed complete addition).
+//
+// Not a precompile in its own right: the pairing needs [x]Q solely for
+// the psi-based subgroup check, which g2_subgroup.zkc covers with the
+// real 64-bit seed. The scalars here are small so the ladder stays
+// cheap while still covering the interesting bit patterns.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g2.zkc"
+
+pub input k(address:u1) -> (v:u384)
+pub input px0(address:u1) -> (v:u384)
+pub input px1(address:u1) -> (v:u384)
+pub input py0(address:u1) -> (v:u384)
+pub input py1(address:u1) -> (v:u384)
+
+pub input want_qx0(address:u1) -> (v:u384)
+pub input want_qx1(address:u1) -> (v:u384)
+pub input want_qy0(address:u1) -> (v:u384)
+pub input want_qy1(address:u1) -> (v:u384)
+
+fn main() {
+    var qx0:u384, qx1:u384, qy0:u384, qy1:u384
+    qx0, qx1, qy0, qy1 = scalar_mul_affine_bls12_381_g2(k[0], px0[0], px1[0], py0[0], py1[0])
+
+    if (qx0 != want_qx0[0]) || (qx1 != want_qx1[0]) {
+        fail
+    }
+    if (qy0 != want_qy0[0]) || (qy1 != want_qy1[0]) {
+        fail
+    }
+}

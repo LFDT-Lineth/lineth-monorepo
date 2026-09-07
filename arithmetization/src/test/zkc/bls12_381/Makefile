@@ -8,13 +8,16 @@
 # Runs in TRACING mode with `-c`; `--fast` panics on u384 ("unsupported
 # instruction form (6 v 7 limbs)"). See ../nonnative/Makefile.
 #
-# g1_mul is much slower than g1_add: every affine result costs one Fermat
-# inversion, which is ~613 mulmod_384 calls on its own -- far more than the
-# group law it follows. Expect ~11s per fixture.
+# Cost notes (these are dev targets, not CI -- the whole run is ~20 minutes):
+#   - every affine result costs one Fermat inversion, ~613 mulmod_384 on its
+#     own, which dominates the group law it follows;
+#   - g2_subgroup runs the real 64-bit seed ladder and is the slowest at ~20s
+#     per fixture, against ~11s for everything else.
+# Harnesses are ordered cheapest-first so a regression surfaces early.
 
 SHELL := /bin/sh
 
-HARNESSES := g1_add g1_mul
+HARNESSES := fp2_arith fp2_inv g1_add g1_mul g2_add g2_mul g2_subgroup
 FIELD     := KOALABEAR_16
 ZKC       ?= zkc
 
