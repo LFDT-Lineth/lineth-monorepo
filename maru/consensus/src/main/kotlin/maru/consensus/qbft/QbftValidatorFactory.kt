@@ -142,7 +142,10 @@ class QbftValidatorFactory(
         finalizationStateProvider = finalizationStateProvider,
         prevRandaoProvider = prevRandaoProvider,
         feeRecipient = qbftOptions.feeRecipient,
-        eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(qbftOptions.minBlockBuildTime),
+        eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(
+          minBlockBuildTime = qbftOptions.minBlockBuildTime,
+          forkActivationTimestamp = forkSpec.timestampSeconds,
+        ),
         blockHashing = blockHashing,
       )
 

@@ -330,9 +330,15 @@ data class QbftConfig(
   val futureMessagesLimit: Long = 1000L,
   val feeRecipient: ByteArray,
   val validatorSigner: ValidatorSignerConfig = ValidatorSignerConfig(),
+  @param:ConfigDoc(
+    description = "Target execution block gas limit requested from Amsterdam onward.",
+    default = "30000000",
+  )
+  val targetGasLimit: ULong = 30_000_000UL,
 ) {
   init {
     feeRecipient.assertIs20Bytes("feeRecipient")
+    require(targetGasLimit >= 5000UL) { "targetGasLimit must be at least 5000" }
   }
 
   override fun equals(other: Any?): Boolean {
@@ -350,6 +356,7 @@ data class QbftConfig(
     if (roundExpiryCoefficient != other.roundExpiryCoefficient) return false
     if (!feeRecipient.contentEquals(other.feeRecipient)) return false
     if (validatorSigner != other.validatorSigner) return false
+    if (targetGasLimit != other.targetGasLimit) return false
 
     return true
   }
@@ -364,6 +371,7 @@ data class QbftConfig(
     result = 31 * result + roundExpiryCoefficient.hashCode()
     result = 31 * result + feeRecipient.contentHashCode()
     result = 31 * result + validatorSigner.hashCode()
+    result = 31 * result + targetGasLimit.hashCode()
     return result
   }
 
@@ -377,7 +385,8 @@ data class QbftConfig(
       "futureMessageMaxDistance=$futureMessageMaxDistance, " +
       "futureMessagesLimit=$futureMessagesLimit, " +
       "feeRecipient=${feeRecipient.encodeHex()}, " +
-      "validatorSigner=$validatorSigner" +
+      "validatorSigner=$validatorSigner, " +
+      "targetGasLimit=$targetGasLimit" +
       ")"
 }
 

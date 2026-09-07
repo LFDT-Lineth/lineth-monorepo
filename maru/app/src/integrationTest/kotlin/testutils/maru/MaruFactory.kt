@@ -70,7 +70,6 @@ class MaruFactory(
   private val shanghaiTimestamp: ULong? = null,
   private val cancunTimestamp: ULong? = null,
   private val pragueTimestamp: ULong? = null,
-  private val amsterdamTimestamp: ULong? = null,
   private val ttd: ULong? = null,
   /**
    * Overrides the QBFT round-0 expiry. Defaults to [blockTimeSeconds] (1 s).
@@ -94,10 +93,10 @@ class MaruFactory(
   init {
     // If one of pragueTimestamp, cancunTimestamp, shanghaiTimestamp is defined and some other is not, throw
     require(
-      (pragueTimestamp == null && cancunTimestamp == null && shanghaiTimestamp == null && amsterdamTimestamp == null) ||
-        (pragueTimestamp != null && cancunTimestamp != null && shanghaiTimestamp != null && amsterdamTimestamp != null),
+      (pragueTimestamp == null && cancunTimestamp == null && shanghaiTimestamp == null) ||
+        (pragueTimestamp != null && cancunTimestamp != null && shanghaiTimestamp != null),
     ) {
-      "pragueTimestamp, cancunTimestamp, shanghaiTimestamp and amsterdamTimestamp should be defined or all be absent!"
+      "pragueTimestamp, cancunTimestamp and shanghaiTimestamp should be defined or all be absent!"
     }
   }
 
@@ -160,16 +159,10 @@ class MaruFactory(
     pragueTimestamp: ULong?,
     cancunTimestamp: ULong?,
     shanghaiTimestamp: ULong?,
-    amsterdamTimestamp: ULong?,
     ttd: ULong?,
     validatorSet: Set<Validator>,
   ): ForksSchedule =
-    if (
-      pragueTimestamp != null &&
-        cancunTimestamp != null &&
-        shanghaiTimestamp != null &&
-        amsterdamTimestamp != null
-    ) {
+    if (pragueTimestamp != null && cancunTimestamp != null && shanghaiTimestamp != null) {
       ForksSchedule(
         1337u,
         setOf(
@@ -206,14 +199,6 @@ class MaruFactory(
             configuration = QbftConsensusConfig(
               validatorSet = validatorSet,
               fork = ChainFork(clFork, ElFork.Prague),
-            ),
-          ),
-          ForkSpec(
-            timestampSeconds = amsterdamTimestamp,
-            blockTimeSeconds = 1u,
-            configuration = QbftConsensusConfig(
-              validatorSet = validatorSet,
-              fork = ChainFork(clFork, ElFork.Amsterdam),
             ),
           ),
         ),
@@ -433,7 +418,6 @@ class MaruFactory(
         pragueTimestamp,
         cancunTimestamp,
         shanghaiTimestamp,
-        amsterdamTimestamp,
         ttd,
         initialValidators,
       ),

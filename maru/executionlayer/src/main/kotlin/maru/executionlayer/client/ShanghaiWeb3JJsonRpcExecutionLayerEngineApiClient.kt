@@ -12,7 +12,6 @@ import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
-import maru.executionlayer.mappers.Mappers.toExecutionPayloadV1
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV2
 import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import net.consensys.linea.async.toSafeFuture

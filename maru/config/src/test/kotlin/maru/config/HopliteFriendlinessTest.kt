@@ -384,6 +384,12 @@ class HopliteFriendlinessTest {
   }
 
   @Test
+  fun amsterdamTargetGasLimitIsParseable() {
+    val config = parseConfig<QbftOptionsDtoToml>(qbftOptionsToml + "\ntarget-gas-limit = 60000000")
+    assertThat(config.toDomain().targetGasLimit).isEqualTo(60_000_000UL)
+  }
+
+  @Test
   fun payloadValidationEnablementFlagIsParseableWhenTrue() {
     val payloadValidatorToml =
       """

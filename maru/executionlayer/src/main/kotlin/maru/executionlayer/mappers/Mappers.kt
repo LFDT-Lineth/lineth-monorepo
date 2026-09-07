@@ -40,9 +40,6 @@ import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
 import tech.pegasys.teku.spec.executionlayer.PayloadStatus as TekuPayloadStatus
 
 object Mappers {
-  private val amsterdamTargetGasLimit = UInt64.valueOf(30_000_000L)
-  private val amsterdamSlotNumber = UInt64.ZERO
-
   private fun recIdFromV(v: BigInteger): Pair<Byte, BigInteger?> {
     val recId: Byte
     var chainId: BigInteger? = null
@@ -173,6 +170,8 @@ object Mappers {
       baseFeePerGas = this.baseFeePerGas.toBigInteger(),
       blockHash = this.blockHash.toArray(),
       transactions = this.transactions.map { it.toArray() },
+      blockAccessList = this.blockAccessList.toArray(),
+      slotNumber = this.slotNumber.longValue().toULong(),
     )
 
   fun ExecutionPayloadV1.toDomainExecutionPayload() =
@@ -268,9 +267,9 @@ object Mappers {
       /* excessBlobGas */
       UInt64.ZERO,
       /* blockAccessList */
-      Bytes.EMPTY,
+      Bytes.wrap(requireNotNull(this.blockAccessList) { "Amsterdam requires blockAccessList" }),
       /* slotNumber */
-      amsterdamSlotNumber,
+      UInt64.valueOf(requireNotNull(this.slotNumber) { "Amsterdam requires slotNumber" }.toString()),
     )
 
   fun ExecutionPayload.toExecutionPayloadV2() =
@@ -346,26 +345,15 @@ object Mappers {
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
     )
 
-  fun PayloadAttributes.toPayloadAttributesV4(): PayloadAttributesV4 =
+  fun PayloadAttributes.toPayloadAttributesV4(targetGasLimit: ULong): PayloadAttributesV4 =
     PayloadAttributesV4(
       UInt64.fromLongBits(this.timestamp.toLong()),
       Bytes32.wrap(this.prevRandao),
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
       emptyList(),
       Bytes32.ZERO,
-      this.slotNumber?.let { UInt64.valueOf(it.toString()) } ?: amsterdamSlotNumber,
-      amsterdamTargetGasLimit,
-    )
-
-  fun PayloadAttributesV1.toPayloadAttributesV4(): PayloadAttributesV4 =
-    PayloadAttributesV4(
-      this.timestamp,
-      this.prevRandao,
-      this.suggestedFeeRecipient,
-      emptyList(),
-      Bytes32.ZERO,
-      amsterdamSlotNumber,
-      amsterdamTargetGasLimit,
+      UInt64.valueOf(requireNotNull(this.slotNumber) { "Amsterdam requires slotNumber" }.toString()),
+      UInt64.valueOf(targetGasLimit.toString()),
     )
 
   fun PayloadAttributesV1.toPayloadAttributesV1(): PayloadAttributesV1 =

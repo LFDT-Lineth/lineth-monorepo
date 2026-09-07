@@ -29,7 +29,15 @@ data class ExecutionPayload(
   val baseFeePerGas: BigInteger,
   val blockHash: ByteArray,
   val transactions: List<ByteArray>,
+  val blockAccessList: ByteArray? = null,
+  val slotNumber: ULong? = null,
 ) {
+  init {
+    require((blockAccessList == null) == (slotNumber == null)) {
+      "Amsterdam payloads must contain both blockAccessList and slotNumber"
+    }
+  }
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -48,6 +56,8 @@ data class ExecutionPayload(
     if (!extraData.contentEquals(other.extraData)) return false
     if (baseFeePerGas != other.baseFeePerGas) return false
     if (!blockHash.contentEquals(other.blockHash)) return false
+    if (!blockAccessList.contentEquals(other.blockAccessList)) return false
+    if (slotNumber != other.slotNumber) return false
     if (!transactions.zip(other.transactions).all { it.first.contentEquals(it.second) }) return false
 
     return true
@@ -67,6 +77,8 @@ data class ExecutionPayload(
     result = 31 * result + baseFeePerGas.hashCode()
     result = 31 * result + blockHash.contentHashCode()
     result = 31 * result + transactions.hashCode()
+    result = 31 * result + (blockAccessList?.contentHashCode() ?: 0)
+    result = 31 * result + (slotNumber?.hashCode() ?: 0)
     return result
   }
 }

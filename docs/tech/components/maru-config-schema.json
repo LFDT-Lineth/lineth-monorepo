@@ -952,6 +952,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "qbft.target-gas-limit": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "30000000",
+        "description": "Target execution block gas limit requested from Amsterdam onward.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "syncing": {
         "type": "SyncingConfig",
         "section": true,

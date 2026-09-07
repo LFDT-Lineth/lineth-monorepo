@@ -2,6 +2,8 @@
 
 ### 🚀 Features
 
+- *(maru)* Support Amsterdam from genesis and when upgrading from Osaka, with a configurable target gas limit (#3930).
+
 - *(maru)* Support Noise / Yamux (#3751)
 - *(maru)* Support custom validator signers (#3700)
 

@@ -39,6 +39,7 @@ class EagerQbftBlockCreator(
 
   data class Config(
     val minBlockBuildTime: Duration,
+    val forkActivationTimestamp: ULong = 0UL,
   )
 
   override fun createBlock(
@@ -71,7 +72,11 @@ class EagerQbftBlockCreator(
     // INVALID_PAYLOAD_ATTRIBUTES (or INVALID_WITHDRAWALS_PARAMS on V1). Clamping here makes the
     // timestamp strictly greater than the EL head, mirroring what Clique's DefaultBlockScheduler
     // does for non-merge consensus.
-    val safeTimestampSeconds = maxOf(headerTimeStampSeconds, elHeadTimestampSeconds.toLong() + 1L)
+    val safeTimestampSeconds = maxOf(
+      headerTimeStampSeconds,
+      elHeadTimestampSeconds.toLong() + 1L,
+      config.forkActivationTimestamp.toLong(),
+    )
     if (safeTimestampSeconds != headerTimeStampSeconds) {
       log.debug(
         "Clamped next block timestamp from {} to {} (EL head timestamp={})",

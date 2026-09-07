@@ -116,6 +116,7 @@ class EagerQbftBlockCreatorTest {
     mainBlockCreator: QbftBlockCreator,
     sequence: Long,
     round: Int,
+    forkActivationTimestamp: ULong = 0UL,
   ): EagerQbftBlockCreator {
     whenever(
       beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
@@ -147,6 +148,7 @@ class EagerQbftBlockCreatorTest {
         feeRecipient = feeRecipient,
         config = EagerQbftBlockCreator.Config(
           minBlockBuildTime = 500.milliseconds,
+          forkActivationTimestamp = forkActivationTimestamp,
         ),
         beaconChain = beaconChain,
       )
@@ -282,6 +284,46 @@ class EagerQbftBlockCreatorTest {
       prevRandao = any(),
       nextBlockSlotNumber = eq(1UL),
     )
+  }
+
+  @Test
+  fun `clamps build timestamp to fork activation before FCU and block assembly`() {
+    val latestPayload = ethApiClient.eth1Web3j
+      .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), true)
+      .send().block.toDomain()
+    val parent = SealedBeaconBlock(
+      BeaconBlock(
+        DataGenerators.randomBeaconBlockHeader(0U),
+        DataGenerators.randomBeaconBlockBody().copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),
+      ),
+      emptySet(),
+    )
+    val activationTimestamp = latestPayload.timestamp + 2UL
+    val manager = Mockito.spy(executionLayerManager)
+    val delegate = Mockito.spy(createDelayedBlockCreator(round = 0, manager = manager))
+    val creator = setup(
+      manager,
+      parent,
+      delegate,
+      sequence = 1,
+      round = 0,
+      forkActivationTimestamp = activationTimestamp,
+    )
+    val parentHeader = QbftBlockHeaderAdapter(parent.beaconBlock.beaconBlockHeader)
+
+    val result = creator.createBlock((activationTimestamp - 1UL).toLong(), parentHeader)
+
+    assertThat(result.block().toBeaconBlock().beaconBlockHeader.timestamp).isEqualTo(activationTimestamp)
+    verify(manager).setHeadAndStartBlockBuilding(
+      headHash = any(),
+      safeHash = any(),
+      finalizedHash = any(),
+      nextBlockTimestamp = eq(activationTimestamp.toLong()).toULong(),
+      feeRecipient = any(),
+      prevRandao = any(),
+      nextBlockSlotNumber = eq(1UL),
+    )
+    verify(delegate).createBlock(activationTimestamp.toLong(), parentHeader)
   }
 
   @Test

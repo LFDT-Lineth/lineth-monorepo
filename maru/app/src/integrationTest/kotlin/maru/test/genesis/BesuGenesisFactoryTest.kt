@@ -174,7 +174,10 @@ class BesuGenesisFactoryTest {
         )
 
       val forksSchedule =
-        ForksSchedule(13U, listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec, amsterdamForkSpec))
+        ForksSchedule(
+          13U,
+          listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec, amsterdamForkSpec),
+        )
 
       val result =
         BesuGenesisFactory.createGenesisWithQBFT(

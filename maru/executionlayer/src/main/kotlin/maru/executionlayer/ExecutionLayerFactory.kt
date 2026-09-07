@@ -26,12 +26,14 @@ object ExecutionLayerFactory {
     web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
+    targetGasLimit: ULong = 30_000_000UL,
   ): ExecutionLayerManager =
     JsonRpcExecutionLayerManager(
       executionLayerEngineApiClient = buildExecutionEngineClient(
         web3JEngineApiClient = web3JEngineApiClient,
         elFork = elFork,
         metricsFacade = metricsFacade,
+        targetGasLimit = targetGasLimit,
       ),
     )
 
@@ -39,6 +41,7 @@ object ExecutionLayerFactory {
     web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
+    targetGasLimit: ULong = 30_000_000UL,
   ): ExecutionLayerEngineApiClient =
     when (elFork) {
       ElFork.Paris ->
@@ -75,6 +78,7 @@ object ExecutionLayerFactory {
         AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
           web3jClient = web3JEngineApiClient,
           metricsFacade = metricsFacade,
+          targetGasLimit = targetGasLimit,
         )
     }
 }

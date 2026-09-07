@@ -30,6 +30,7 @@ import java.util.Optional
 class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
   web3jClient: Web3JClient,
   metricsFacade: MetricsFacade,
+  private val targetGasLimit: ULong = 30_000_000UL,
 ) : BaseWeb3JJsonRpcExecutionLayerEngineApiClient(web3jClient = web3jClient, metricsFacade = metricsFacade) {
   override fun getFork(): ElFork = ElFork.Amsterdam
 
@@ -75,7 +76,7 @@ class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
     ).captureTime(
       web3jEngineClient.forkChoiceUpdatedV4(
         forkChoiceState,
-        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV4()),
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV4(targetGasLimit)),
       ),
     ).toSafeFuture()
 }
