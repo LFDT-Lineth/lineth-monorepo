@@ -1,110 +1,131 @@
-//! Generic, guest-agnostic runner for EF execution-spec-tests zkevm *stateless* fixtures.
+//! Deterministic traversal and aggregation for file-oriented test suites.
 //!
-//! Mirrors zesu's `zkevm-blockchain-test-runner` (tools/zkevm_test/main.zig): it walks a
-//! `blockchain_tests/` directory and, for every block in every fixture, hands the SSZ
-//! `statelessInputBytes` + expected `statelessOutputBytes` to a guest `Adapter`. The fixture JSON
-//! shape + hex decoding are NOT re-implemented here — they live in `zkevm_fixture.zig`, shared
-//! with the single-fixture smoke test.
-//!
-//! ── The extension seam ──────────────────────────────────────────────────────────────────
-//! Everything here (dir walk, JSON parse, per-block extraction, fork filter, reporting) is
-//! guest-agnostic. The *only* guest-specific piece is the comptime `Adapter`, which adapts the
-//! fixture's vanilla SSZ `StatelessInput` to whatever shape a given guest consumes and then runs
-//! and checks it. `extended_vanilla_runner.zig`'s `ExtendedVanillaAdapter` (the sole consumer of
-//! this file) wraps the vanilla input into the extended `L2ExecutionProofPrivateInput` shape
-//! (dummy-filled rollup fields — see `vanilla_wrap.zig`) and checks validity against the fixture's
-//! own expected output.
-//!
-//! Adapter contract (comptime duck-typed):
-//!   pub const label: []const u8
-//!   /// Transform the fixture's SSZ StatelessInput into this guest's input bytes; null if
-//!   /// adaptation fails. A null is handed to `runAndCheck` as a coarse "this block is invalid"
-//!   /// signal, the same way any other guest-pipeline rejection is handled. This matches the
-//!   /// granularity a real batch proof (`l2_execution.runL2Execution` over a payload range) reports:
-//!   /// one pass/fail verdict for the whole range. Malformed SSZ the EF corpus deliberately feeds a
-//!   /// block, expecting rejection, is exactly this case.
-//!   pub fn adaptInput(alloc: std.mem.Allocator, ssz_stateless_input: []const u8, ctx: BlockContext) ?[]const u8
-//!   /// Run the guest on the adapted input (null if adaptation failed) and compare against the
-//!   /// fixture's expected output. Returns true on pass; on failure prints a one-line `FAIL …`
-//!   /// diagnostic and returns false.
-//!   pub fn runAndCheck(init: std.process.Init, alloc: std.mem.Allocator, guest_input: ?[]const u8, expected_output: []const u8, ctx: BlockContext) !bool
-//!   /// True if this block exercises a property belonging to the vanilla reference guest's
-//!   /// multi-fork/schedule model rather than this guest's own fixed-fork design. Skipped blocks
-//!   /// are excluded entirely from the pass/fail tally.
-//!   pub fn shouldSkip(alloc: std.mem.Allocator, ssz_stateless_input: []const u8, ctx: BlockContext) bool
+//! Suite contract (comptime duck-typed):
+//!   pub fn processFile(init: std.process.Init, path: []const u8, case_limit: ?u64) !FileResult
 
 const std = @import("std");
-const zkevm_fixture = @import("zkevm_fixture.zig");
+const zlob = @import("zlob");
+
+const match_flags = zlob.ZlobFlags{ .doublestar_recursive = true };
+
+const Matcher = struct {
+    compiled: zlob.CompiledPattern,
+    matches_basename: bool,
+
+    fn init(alloc: std.mem.Allocator, source: []const u8) !Matcher {
+        return .{
+            .compiled = try zlob.compilePattern(alloc, source, match_flags),
+            .matches_basename = std.mem.indexOfScalar(u8, source, '/') == null,
+        };
+    }
+
+    fn deinit(self: *Matcher) void {
+        self.compiled.deinit();
+    }
+
+    fn matches(self: Matcher, path: []const u8) bool {
+        const subject = if (self.matches_basename) std.fs.path.basename(path) else path;
+        return self.compiled.matches(subject, match_flags);
+    }
+};
 
 pub const Options = struct {
-    /// Directory holding the `blockchain_tests/` JSON tree (absolute, supplied by build.zig).
-    fixtures_dir: []const u8,
-    /// Run a single fixture file instead of walking `fixtures_dir`.
-    single_file: ?[]const u8 = null,
-    /// Only run test cases whose `network` equals this (case-insensitive), e.g. "Amsterdam".
-    fork_filter: ?[]const u8 = null,
-    /// Only run fixture files whose relative path matches this `--match` pattern.
-    /// A pattern containing `*` or `?` is a glob (against the relative path or its basename);
-    /// otherwise it is a substring, e.g. `block_access_lists`.
-    path_match: ?[]const u8 = null,
-    /// Stop after this many blocks have been attempted (dev speed).
+    /// Glob matched against an operand-relative directory entry or a direct file's basename.
+    match_pattern: ?[]const u8 = null,
+    /// Stop after this many selected cases.
     limit: ?u64 = null,
-    /// Stop walking after the first failing block.
+    /// Stop after the first file contribution containing a failure.
     stop_on_fail: bool = false,
 };
 
-pub const Stats = struct {
+pub const Contribution = struct {
     files: u64 = 0,
-    blocks: u64 = 0,
+    cases: u64 = 0,
     passed: u64 = 0,
     failed: u64 = 0,
     skipped: u64 = 0,
 
-    pub fn total(self: Stats) u64 {
+    pub fn add(self: *Contribution, other: Contribution) void {
+        self.files += other.files;
+        self.cases += other.cases;
+        self.passed += other.passed;
+        self.failed += other.failed;
+        self.skipped += other.skipped;
+    }
+
+    pub fn total(self: Contribution) u64 {
         return self.passed + self.failed;
     }
 };
 
-/// Identifies the block currently under test; handed to the adapter for diagnostics and (for an
-/// extended guest) any fork/chain-dependent adaptation.
-pub const BlockContext = struct {
-    file_path: []const u8,
-    test_name: []const u8,
-    block_index: usize,
-    network: ?[]const u8,
+pub const FileResult = union(enum) {
+    unrecognized,
+    recognized: Contribution,
 };
 
-/// Walk `opts.fixtures_dir` (or run `opts.single_file`) and run every stateless block through
-/// `Adapter`. Returns aggregate stats; the caller decides the exit code.
-pub fn run(comptime Adapter: type, init: std.process.Init, opts: Options) !Stats {
-    const io = init.io;
-    const gpa = init.gpa;
-    var stats = Stats{};
+pub const Stats = struct {
+    recognized_files: u64 = 0,
+    contribution: Contribution = .{},
 
-    if (opts.single_file) |path| {
-        try processFile(Adapter, init, path, opts, &stats);
-        return stats;
+    pub fn total(self: Stats) u64 {
+        return self.contribution.total();
     }
+};
 
-    var dir = std.Io.Dir.cwd().openDir(io, opts.fixtures_dir, .{ .iterate = true }) catch |err| {
-        std.debug.print("error: cannot open fixtures dir '{s}': {}\n", .{ opts.fixtures_dir, err });
-        return error.FixturesDirOpenFailed;
+/// Process operands in order. Files within each directory operand are visited recursively in
+/// lexical order. Repeated operands are intentionally processed repeatedly.
+pub fn run(suite: anytype, init: std.process.Init, operands: []const []const u8, opts: Options) !Stats {
+    var matcher = if (opts.match_pattern) |source| try Matcher.init(init.gpa, source) else null;
+    defer if (matcher) |*value| value.deinit();
+
+    var stats = Stats{};
+    for (operands) |operand| {
+        if (std.mem.eql(u8, operand, "-")) return error.StdinNotSupported;
+        const stat = std.Io.Dir.cwd().statFile(init.io, operand, .{}) catch |err| {
+            std.debug.print("error: cannot inspect path '{s}': {s}\n", .{ operand, @errorName(err) });
+            return error.PathInspectionFailed;
+        };
+        switch (stat.kind) {
+            .directory => try processDirectory(suite, init, operand, if (matcher) |*value| value else null, opts, &stats),
+            .file => {
+                if (matches(std.fs.path.basename(operand), if (matcher) |*value| value else null)) {
+                    try processOne(suite, init, operand, opts, &stats);
+                }
+            },
+            else => return error.UnsupportedPathType,
+        }
+        if (shouldStop(stats, opts)) break;
+    }
+    if (stats.recognized_files == 0) return error.NoRecognizedFiles;
+    if (stats.contribution.cases == 0) return error.NoSelectedCases;
+    if (stats.total() == 0) return error.NoExecutedCases;
+    return stats;
+}
+
+fn processDirectory(
+    suite: anytype,
+    init: std.process.Init,
+    root: []const u8,
+    matcher: ?*const Matcher,
+    opts: Options,
+    stats: *Stats,
+) !void {
+    var dir = std.Io.Dir.cwd().openDir(init.io, root, .{ .iterate = true }) catch |err| {
+        std.debug.print("error: cannot open directory '{s}': {s}\n", .{ root, @errorName(err) });
+        return error.DirectoryOpenFailed;
     };
-    defer dir.close(io);
+    defer dir.close(init.io);
 
-    var walker = try dir.walk(gpa);
+    var walker = try dir.walk(init.gpa);
     defer walker.deinit();
-
-    // Collect + sort paths so the run order is deterministic across machines.
     var paths = std.ArrayList([]u8).empty;
     defer {
-        for (paths.items) |p| gpa.free(p);
-        paths.deinit(gpa);
+        for (paths.items) |path| init.gpa.free(path);
+        paths.deinit(init.gpa);
     }
-    while (try walker.next(io)) |entry| {
-        if (entry.kind != .file) continue;
-        if (!std.mem.endsWith(u8, entry.path, ".json")) continue;
-        try paths.append(gpa, try gpa.dupe(u8, entry.path));
+    while (try walker.next(init.io)) |entry| {
+        if (entry.kind != .file or !matches(entry.path, matcher)) continue;
+        try paths.append(init.gpa, try init.gpa.dupe(u8, entry.path));
     }
     std.mem.sort([]u8, paths.items, {}, struct {
         fn lessThan(_: void, a: []u8, b: []u8) bool {
@@ -112,111 +133,228 @@ pub fn run(comptime Adapter: type, init: std.process.Init, opts: Options) !Stats
         }
     }.lessThan);
 
-    for (paths.items) |rel_path| {
-        if (opts.limit) |lim| if (stats.blocks >= lim) break;
-        if (opts.path_match) |m| if (!pathMatches(rel_path, m)) continue;
-        const full = try std.Io.Dir.path.join(gpa, &.{ opts.fixtures_dir, rel_path });
-        defer gpa.free(full);
+    for (paths.items) |relative_path| {
+        const full_path = try std.Io.Dir.path.join(init.gpa, &.{ root, relative_path });
+        defer init.gpa.free(full_path);
+        try processOne(suite, init, full_path, opts, stats);
+        if (shouldStop(stats.*, opts)) return;
+    }
+}
 
-        const failed_before = stats.failed;
-        try processFile(Adapter, init, full, opts, &stats);
-        if (opts.stop_on_fail and stats.failed > failed_before) break;
+fn processOne(suite: anytype, init: std.process.Init, path: []const u8, opts: Options, stats: *Stats) !void {
+    const remaining = if (opts.limit) |limit| limit -| stats.contribution.cases else null;
+    if (remaining == 0) return;
+    switch (try suite.processFile(init, path, remaining)) {
+        .unrecognized => {},
+        .recognized => |contribution| {
+            if (remaining) |limit| if (contribution.cases > limit) return error.SuiteExceededCaseLimit;
+            if (contribution.cases != contribution.passed + contribution.failed + contribution.skipped) {
+                return error.InvalidSuiteContribution;
+            }
+            stats.recognized_files += 1;
+            stats.contribution.add(contribution);
+        },
+    }
+}
+
+fn matches(path: []const u8, matcher: ?*const Matcher) bool {
+    const value = matcher orelse return true;
+    return value.matches(path);
+}
+
+fn shouldStop(stats: Stats, opts: Options) bool {
+    if (opts.limit) |limit| if (stats.contribution.cases >= limit) return true;
+    return opts.stop_on_fail and stats.contribution.failed > 0;
+}
+
+const RecordingSuite = struct {
+    paths: std.ArrayList([]u8) = .empty,
+    root: ?[]const u8 = null,
+
+    fn deinit(self: *RecordingSuite) void {
+        for (self.paths.items) |path| std.testing.allocator.free(path);
+        self.paths.deinit(std.testing.allocator);
     }
 
-    return stats;
-}
-
-/// `--match` filter: glob if the pattern contains `*` or `?`, otherwise substring.
-/// Globs are tried against the relative path and its basename so `*.ssz` and
-/// `stateless_input.ssz` both work.
-pub fn pathMatches(rel_path: []const u8, pattern: []const u8) bool {
-    if (isGlobPattern(pattern)) {
-        return globMatch(rel_path, pattern) or globMatch(std.fs.path.basename(rel_path), pattern);
+    pub fn processFile(self: *RecordingSuite, _: std.process.Init, path: []const u8, limit: ?u64) !FileResult {
+        if (!std.mem.endsWith(u8, path, ".case")) return .unrecognized;
+        const recorded_path = if (self.root) |root| std.mem.trimStart(u8, path[root.len..], std.fs.path.sep_str) else std.fs.path.basename(path);
+        try self.paths.append(std.testing.allocator, try std.testing.allocator.dupe(u8, recorded_path));
+        if (limit == 0) return .{ .recognized = .{ .files = 1 } };
+        return .{ .recognized = .{
+            .files = 1,
+            .cases = 1,
+            .passed = if (std.mem.indexOf(u8, path, "fail") == null) 1 else 0,
+            .failed = if (std.mem.indexOf(u8, path, "fail") == null) 0 else 1,
+        } };
     }
-    return std.mem.indexOf(u8, rel_path, pattern) != null;
+};
+
+fn testInit() std.process.Init {
+    return .{
+        .minimal = undefined,
+        .arena = undefined,
+        .gpa = std.testing.allocator,
+        .io = std.testing.io,
+        .environ_map = undefined,
+        .preopens = undefined,
+    };
 }
 
-fn isGlobPattern(pattern: []const u8) bool {
-    return std.mem.indexOfAny(u8, pattern, "*?") != null;
+fn tempPath(alloc: std.mem.Allocator, temp: *std.testing.TmpDir, suffix: []const u8) ![]u8 {
+    return std.fmt.allocPrint(alloc, ".zig-cache/tmp/{s}/{s}", .{ temp.sub_path, suffix });
 }
 
-fn globMatch(s: []const u8, pattern: []const u8) bool {
-    var si: usize = 0;
-    var pi: usize = 0;
-    var star_p: ?usize = null;
-    var star_s: usize = 0;
-    while (si < s.len) {
-        if (pi < pattern.len and (pattern[pi] == '?' or pattern[pi] == s[si])) {
-            si += 1;
-            pi += 1;
-        } else if (pi < pattern.len and pattern[pi] == '*') {
-            star_p = pi;
-            star_s = si;
-            pi += 1;
-        } else if (star_p) |sp| {
-            pi = sp + 1;
-            star_s += 1;
-            si = star_s;
-        } else return false;
-    }
-    while (pi < pattern.len and pattern[pi] == '*') pi += 1;
-    return pi == pattern.len;
+test "file and directory operands preserve operand order and lexical directory order" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.createDir(std.testing.io, "nested", .default_dir);
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "z.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "a.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "nested/m.case", .data = "" });
+
+    const directory = try tempPath(std.testing.allocator, &temp, "");
+    defer std.testing.allocator.free(directory);
+    const file = try tempPath(std.testing.allocator, &temp, "z.case");
+    defer std.testing.allocator.free(file);
+    var suite = RecordingSuite{};
+    defer suite.deinit();
+
+    const stats = try run(&suite, testInit(), &.{ file, directory, file }, .{});
+    try std.testing.expectEqual(@as(u64, 5), stats.recognized_files);
+    try std.testing.expectEqual(@as(u64, 5), stats.contribution.cases);
+    const expected = [_][]const u8{ "z.case", "a.case", "m.case", "z.case", "z.case" };
+    try std.testing.expectEqual(expected.len, suite.paths.items.len);
+    for (expected, suite.paths.items) |want, actual| try std.testing.expectEqualStrings(want, actual);
 }
 
-fn processFile(
-    comptime Adapter: type,
-    init: std.process.Init,
-    path: []const u8,
-    opts: Options,
-    stats: *Stats,
-) !void {
-    const io = init.io;
-    // One arena per file: the parsed JSON, decoded bytes and adapted input live only for this file.
-    var arena = std.heap.ArenaAllocator.init(init.gpa);
-    defer arena.deinit();
-    const alloc = arena.allocator();
+test "glob patterns select files by operand-relative path" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.createDir(std.testing.io, "nested", .default_dir);
+    try temp.dir.createDir(std.testing.io, "nested/deeper", .default_dir);
+    inline for (&.{
+        "a.case",
+        "b.case",
+        "c.txt",
+        "file1.case",
+        "file2.case",
+        "file10.case",
+        "target.case",
+        "nested/other.case",
+        "nested/deeper/target.case",
+    }) |path| try temp.dir.writeFile(std.testing.io, .{ .sub_path = path, .data = "" });
 
-    // A fixture we can't read or parse is a failure, not a silent skip: counting it keeps a
-    // systemic regression (e.g. parseBlocks breaking across the whole corpus) from passing green.
-    const text = std.Io.Dir.cwd().readFileAlloc(io, path, alloc, .limited(1 << 30)) catch |err| {
-        std.debug.print("FAIL cannot read '{s}': {}\n", .{ path, err });
-        stats.failed += 1;
-        return;
+    const directory = try tempPath(std.testing.allocator, &temp, "");
+    defer std.testing.allocator.free(directory);
+
+    const Case = struct {
+        pattern: []const u8,
+        expected: []const []const u8,
+    };
+    const cases = [_]Case{
+        .{ .pattern = "*.case", .expected = &.{ "a.case", "b.case", "file1.case", "file10.case", "file2.case", "nested/deeper/target.case", "nested/other.case", "target.case" } },
+        .{ .pattern = "file?.case", .expected = &.{ "file1.case", "file2.case" } },
+        .{ .pattern = "[ab].case", .expected = &.{ "a.case", "b.case" } },
+        .{ .pattern = "**/target.case", .expected = &.{ "nested/deeper/target.case", "target.case" } },
     };
 
-    const blocks = zkevm_fixture.parseBlocks(alloc, text) catch |err| {
-        std.debug.print("FAIL parse failed in '{s}': {s}\n", .{ path, @errorName(err) });
-        stats.failed += 1;
-        return;
-    };
-    if (blocks.len == 0) return;
-    stats.files += 1;
-
-    for (blocks) |block| {
-        if (opts.limit) |lim| if (stats.blocks >= lim) return;
-        if (opts.fork_filter) |want| {
-            const got = block.network orelse continue;
-            if (!std.ascii.eqlIgnoreCase(got, want)) continue;
-        }
-
-        const ctx = BlockContext{
-            .file_path = path,
-            .test_name = block.test_name,
-            .block_index = block.block_index,
-            .network = block.network,
-        };
-        stats.blocks += 1;
-
-        if (Adapter.shouldSkip(alloc, block.input, ctx)) {
-            stats.skipped += 1;
-            continue;
-        }
-
-        const guest_input = Adapter.adaptInput(alloc, block.input, ctx);
-        const ok = Adapter.runAndCheck(init, alloc, guest_input, block.expected_output, ctx) catch |err| blk: {
-            std.debug.print("FAIL {s}[{}]  runAndCheck error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
-            break :blk false;
-        };
-        if (ok) stats.passed += 1 else stats.failed += 1;
+    for (cases) |case| {
+        var suite = RecordingSuite{ .root = directory };
+        defer suite.deinit();
+        const stats = try run(&suite, testInit(), &.{directory}, .{ .match_pattern = case.pattern });
+        try std.testing.expectEqual(@as(u64, @intCast(case.expected.len)), stats.recognized_files);
+        try std.testing.expectEqual(case.expected.len, suite.paths.items.len);
+        for (case.expected, suite.paths.items) |expected, actual| try std.testing.expectEqualStrings(expected, actual);
     }
+}
+
+test "glob patterns with separators match the operand-relative path" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.createDir(std.testing.io, "nested", .default_dir);
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "target.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "nested/target.case", .data = "" });
+    const directory = try tempPath(std.testing.allocator, &temp, "");
+    defer std.testing.allocator.free(directory);
+
+    var suite = RecordingSuite{ .root = directory };
+    defer suite.deinit();
+    const stats = try run(&suite, testInit(), &.{directory}, .{ .match_pattern = "nested/*.case" });
+    try std.testing.expectEqual(@as(u64, 1), stats.contribution.cases);
+    try std.testing.expectEqualStrings("nested/target.case", suite.paths.items[0]);
+}
+
+test "direct file glob matching uses the basename" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "selected.case", .data = "" });
+    const file = try tempPath(std.testing.allocator, &temp, "selected.case");
+    defer std.testing.allocator.free(file);
+
+    var suite = RecordingSuite{};
+    defer suite.deinit();
+    const stats = try run(&suite, testInit(), &.{file}, .{ .match_pattern = "selected.case" });
+    try std.testing.expectEqual(@as(u64, 1), stats.recognized_files);
+}
+
+test "glob selection limit and stop-on-failure affect observable traversal" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "01-selected.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "02-fail-selected.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "03-selected.case", .data = "" });
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "ignored.case", .data = "" });
+    const directory = try tempPath(std.testing.allocator, &temp, "");
+    defer std.testing.allocator.free(directory);
+
+    var stopped = RecordingSuite{};
+    defer stopped.deinit();
+    const stopped_stats = try run(&stopped, testInit(), &.{directory}, .{ .match_pattern = "*selected.case", .stop_on_fail = true });
+    try std.testing.expectEqual(@as(u64, 2), stopped_stats.contribution.cases);
+    try std.testing.expectEqual(@as(u64, 1), stopped_stats.contribution.failed);
+
+    var limited = RecordingSuite{};
+    defer limited.deinit();
+    const limited_stats = try run(&limited, testInit(), &.{directory}, .{ .match_pattern = "*selected.case", .limit = 1 });
+    try std.testing.expectEqual(@as(u64, 1), limited_stats.contribution.cases);
+    try std.testing.expectEqual(@as(usize, 1), limited.paths.items.len);
+}
+
+test "runner rejects runs with no recognized files or no selected cases" {
+    var temp = std.testing.tmpDir(.{ .iterate = true });
+    defer temp.cleanup();
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "ignored.txt", .data = "" });
+    const directory = try tempPath(std.testing.allocator, &temp, "");
+    defer std.testing.allocator.free(directory);
+    var suite = RecordingSuite{};
+    defer suite.deinit();
+    try std.testing.expectError(error.NoRecognizedFiles, run(&suite, testInit(), &.{directory}, .{}));
+    try std.testing.expectError(error.NoRecognizedFiles, run(&suite, testInit(), &.{directory}, .{ .match_pattern = "absent*" }));
+
+    const EmptySuite = struct {
+        pub fn processFile(_: *@This(), _: std.process.Init, _: []const u8, _: ?u64) !FileResult {
+            return .{ .recognized = .{ .files = 1 } };
+        }
+    };
+    var empty_suite = EmptySuite{};
+    const ignored = try tempPath(std.testing.allocator, &temp, "ignored.txt");
+    defer std.testing.allocator.free(ignored);
+    try std.testing.expectError(error.NoSelectedCases, run(&empty_suite, testInit(), &.{ignored}, .{}));
+
+    const InconsistentSuite = struct {
+        pub fn processFile(_: *@This(), _: std.process.Init, _: []const u8, _: ?u64) !FileResult {
+            return .{ .recognized = .{ .files = 1, .cases = 1 } };
+        }
+    };
+    var inconsistent_suite = InconsistentSuite{};
+    try std.testing.expectError(error.InvalidSuiteContribution, run(&inconsistent_suite, testInit(), &.{ignored}, .{}));
+
+    const SkippingSuite = struct {
+        pub fn processFile(_: *@This(), _: std.process.Init, _: []const u8, _: ?u64) !FileResult {
+            return .{ .recognized = .{ .files = 1, .cases = 1, .skipped = 1 } };
+        }
+    };
+    var skipping_suite = SkippingSuite{};
+    try std.testing.expectError(error.NoExecutedCases, run(&skipping_suite, testInit(), &.{ignored}, .{}));
 }
