@@ -86,6 +86,9 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     val MAX_TX_GAS_LIMIT: Int = DefaultGasProvider.GAS_LIMIT.toInt()
     const val CHAIN_ID = 1337L
     const val BLOCK_PERIOD_SECONDS = 5
+    const val RECEIPT_FETCH_MAX_CONCURRENCY = 4
+    const val RECEIPT_FETCH_MAX_RETRIES = 2
+    const val RECEIPT_FETCH_RETRY_DELAY_MILLIS = 200L
     val DEFAULT_REQUESTED_PLUGINS = listOf(
       "LineaExtraDataPlugin",
       "LineaEstimateGasEndpointPlugin",
@@ -445,24 +448,42 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     hashes: List<String>,
   ): List<TransactionReceipt> {
     val receiptProcessor = createReceiptProcessor(web3j)
-    val executor = Executors.newFixedThreadPool(hashes.size)
+    val executor = Executors.newFixedThreadPool(minOf(hashes.size, RECEIPT_FETCH_MAX_CONCURRENCY))
     try {
       val futures = hashes.map { hash ->
         executor.submit(
           Callable<TransactionReceipt> {
-            try {
-              receiptProcessor.waitForTransactionReceipt(hash)
-            } catch (e: IOException) {
-              throw RuntimeException(e)
-            } catch (e: TransactionException) {
-              throw RuntimeException(e)
-            }
+            waitForTransactionReceiptWithRetry(receiptProcessor, hash)
           },
         )
       }
       return futures.map { it.get() }
     } finally {
       executor.shutdownNow()
+    }
+  }
+
+  /**
+   * Polls for [hash]'s receipt, retrying on [IOException] up to [RECEIPT_FETCH_MAX_RETRIES] times.
+   * Under CI load, concurrent polls against the single local node can hit a connection torn down
+   * mid-request by the node's HTTP server (surfaces as OkHttp "unexpected end of stream"); a retry
+   * lets that transient failure self-heal instead of failing the whole batch.
+   */
+  private fun waitForTransactionReceiptWithRetry(
+    receiptProcessor: TransactionReceiptProcessor,
+    hash: String,
+  ): TransactionReceipt {
+    var attempt = 0
+    while (true) {
+      try {
+        return receiptProcessor.waitForTransactionReceipt(hash)
+      } catch (e: IOException) {
+        attempt++
+        if (attempt > RECEIPT_FETCH_MAX_RETRIES) throw RuntimeException(e)
+        Thread.sleep(RECEIPT_FETCH_RETRY_DELAY_MILLIS)
+      } catch (e: TransactionException) {
+        throw RuntimeException(e)
+      }
     }
   }
 
