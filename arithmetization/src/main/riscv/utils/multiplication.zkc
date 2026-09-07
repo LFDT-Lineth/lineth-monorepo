@@ -48,74 +48,74 @@ fn mul64_su(lhs:u64, rhs:u64) -> (hi:u64, lo:u64) {
 ///  Division and Remainder  //
 ///////////////////////////////
 
-// 64-bit unsigned div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
-fn divMod_64_uu(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
-    if rhs == 0 {
+// 64-bit unsigned div mod. Special case: if b == 0, then q = -1 and r = a.
+fn divMod_64_uu(a:u64, b:u64) -> (q:u64, r:u64) {
+    if b == 0 {
         q = NEGATIVE_ONE_AS_I64
-        r = lhs
+        r = a
     } else {
-        q, r = lhs /% rhs
+        q, r = a /% b
     }
 }
 
-// 64-bit signed div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
-fn divMod_64_ss(lhs:u64, rhs:u64) -> (q:u64, r:u64) {
+// 64-bit signed div mod. Special case: if b == 0, then q = -1 and r = lhs.
+fn divMod_64_ss(a:u64, b:u64) -> (q:u64, r:u64) {
+    var q_u:u64
+    var r_u:u64
+    // compute unsigned remainder
+    q_u, r_u = divMod_64_uu(absolute_value_double_word(a), absolute_value_double_word(b))
+
+    var a_sign:u1 = sign_bit_of_double_word(a)
+
     // special care when dividing by 0, do NOT apply sign to the quotient, just return -1 and the dividend as remainder
-    if rhs == 0 {
+    if b == 0 {
         q = NEGATIVE_ONE_AS_I64
-        r = lhs
+        r = a
         return
     }
 
     // General case: compute unsigned division and apply sign to the result
-    var q_u:u64
-    var r_u:u64
-    // compute unsigned remainder
-    q_u, r_u = divMod_64_uu(absolute_value_double_word(lhs), absolute_value_double_word(rhs))
-    // apply sign
-    if sign_bit_of_double_word(lhs) == 0 {
-        q = q_u
-        r = r_u
-    } else {
-        q = negative_of_double_word(q_u)
-        r = negative_of_double_word(r_u)
-    }
+    // quotient is negative iff signs differ
+    q = a_sign == sign_bit_of_double_word(b) ? q_u:negative_of_double_word(q_u)
+
+    // remainder follows the dividend sign
+    r = a_sign == 0 ? r_u:negative_of_double_word(r_u)
 }
 
 ///////////////////////////////////////////
 //////// same same but for 32-bit /////////
 ///////////////////////////////////////////
 
-// 32-bit unsigned div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
-fn divMod_32_uu(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
-    if rhs == 0 {
+// 32-bit unsigned div mod. Special case: if b == 0, then q = -1 and r = a.
+fn divMod_32_uu(a:u32, b:u32) -> (q:u32, r:u32) {
+    if b == 0 {
         q = NEGATIVE_ONE_AS_I32
-        r = lhs
+        r = a
     } else {
-        q, r = lhs /% rhs
+        q, r = a /% b
     }
 }
 
-// 32-bit signed div mod. Special case: if rhs == 0, then q = -1 and r = lhs.
-fn divMod_32_ss(lhs:u32, rhs:u32) -> (q:u32, r:u32) {
+// 32-bit signed div mod. Special case: if b == 0, then q = -1 and r = a.
+fn divMod_32_ss(a:u32, b:u32) -> (q:u32, r:u32) {
+    var q_u:u32
+    var r_u:u32
+    // compute unsigned remainder
+    q_u, r_u = divMod_32_uu(absolute_value_word(a), absolute_value_word(b))
+
+    var a_sign:u1 = sign_bit_of_word(a)
+
     // special care when dividing by 0, do NOT apply sign to the quotient, just return -1 and the dividend as remainder
-    if rhs == 0 {
+    if b == 0 {
         q = NEGATIVE_ONE_AS_I32
-        r = lhs
+        r = b
         return
     }
 
     // General case: compute unsigned division and apply sign to the result
-    var q_u:u32
-    var r_u:u32
-    // compute unsigned remainder
-    q_u, r_u = divMod_32_uu(absolute_value_word(lhs), absolute_value_word(rhs))
-    // apply sign
-    if sign_bit_of_word(lhs) == 0 {
-        q = q_u
-        r = r_u
-    } else {
-        q = negative_of_word(q_u)
-        r = negative_of_word(r_u)
-    }
+    // quotient is negative iff signs differ
+    q = a_sign == sign_bit_of_word(b) ? q_u:negative_of_word(q_u)
+
+    // remainder follows the dividend sign
+    r = a == 0 ? r_u:negative_of_word(r_u)
 }

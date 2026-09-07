@@ -214,6 +214,7 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, b
     // -- PREDECODING PROOF SECTION END--
     printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
     // Execute current instruction
+    printf "\n POUUUUUUUUET juste avant interpreter_a \n"
     new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
     // Check for termination
     if new_pc != MAX_UINT_64 {
@@ -237,6 +238,7 @@ fn interpreter_a<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     var rs1:Register
     var rs2:Register
     var rd:Register
+    printf "\n POUUUUUUUUET a l'interieur de interpreter_a \n"
     compute_op, imm, rs1, rs2, rd = decoded[index]
 
     var v1:DoubleWord = registers[rs1]
