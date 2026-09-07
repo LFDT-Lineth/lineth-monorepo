@@ -81,10 +81,7 @@ install-native-crypto-deps:
 		$$sudo cp -r /tmp/mcl-src/include/mcl "$$prefix/include/"; \
 	fi
 
-# Toolchain the guest-crypto-ctt package's build.zig shells out to: Nim + nimble (Nim→C and
-# the fork's rv64 freestanding task) and an LLVM clang with the riscv64 backend. The rv64im
-# objects are freestanding: header declarations come from the Constantine fork's standalone
-# include dir, so no libc sysroot is needed.
+# Toolchain for the freestanding Constantine build: Nim, nimble, and LLVM clang.
 install-constantine-deps:
 	@set -eu; \
 	if [ "$$(uname -s)" = "Darwin" ]; then \

@@ -4,13 +4,10 @@ const common = @import("build_common");
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
-    // All guests target the same freestanding rv64im ZkC profile (shared helper).
+    // All guests target the same freestanding rv64im profile.
     const target = common.standardGuestTarget(b);
 
-    // Use b.option directly (not standardOptimizeOption) so the `-Doptimize` enum option stays
-    // exposed — consumers of the exposed zkvm_provide module set it through `b.dependency(..., .{ .optimize = ... })`
-    // — while still defaulting to ReleaseSmall. (standardOptimizeOption with preferred_optimize_mode would swap
-    //`-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
+    // Keep `-Doptimize` exposed to dependency consumers and default to ReleaseSmall.
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
     // Keccak provider: standard zig keccak (std.crypto) by default; the
@@ -24,30 +21,11 @@ pub fn build(b: *std.Build) void {
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
 
-    // ── Guest: statically-linked rv64im ELF ───────────────────────────────────
-    // The zkvm-standards riscv-target deliverable is "ELF, statically linked" (RV64I+M+Zicclsm, LP64
-    // soft-float): https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md
-    // So the default build links a self-contained ELF the ZkC interpreter loads (via ELF→JSON). There
-    // is no relocatable `.o`: a `.o` is not statically linked, and the interpreter loads a finished ELF
-    // rather than performing a final link. The shared entry stub + memory layout + compiler_rt/GC
-    // plumbing live in build_common.installGuestElf; here we wire the guest's root module:
-    //   • zesu executor + SSZ modules — the execution logic;
-    //   • guest_crypto — the precompile crypto staticlib (secp256k1, BLS12-381, KZG, bn254): the
-    //     Zig bindings module plus the rv64im archive, both from the guest_crypto package;
-    //   • zesu_crypto_backend — zesu's own native crypto backend (the handful of its precompiles
-    //     with no C-library dependency: modexp, RIPEMD-160, BLAKE2f);
-    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak and the standards `write_output`):
-    //     the only actually prover-accelerated (custom opcode / circuit) source in this file —
-    //     accelerated at execution rather than at link time, so the ELF stays fully resolved;
-    //   • linea_zkvm_io — the local zkvm_io: satisfies the standards `read_input` by reading the
-    //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
-    //     guest; `_in_start` is supplied by the linker script).
+    // Build a self-contained rv64im ELF that links execution, crypto, accelerators, and input I/O.
     const zesu_guest = b.dependency("zesu", .{ .target = target, .optimize = optimize });
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
-    // The guest_crypto staticlib: one archive per side (rv64im for the guest ELF and the
-    // exposed zkvm_provide module, host for the FFI unit test), produced by the package's
-    // own build.zig, plus the Zig bindings module over its C ABI.
+    // Build guest and host Constantine archives, plus the Zig bindings module.
     const guest_crypto_dep = b.dependency("guest_crypto", .{});
     const guest_crypto_riscv_a = guest_crypto_dep.namedLazyPath("riscv_staticlib");
     const guest_crypto_host_a = guest_crypto_dep.namedLazyPath("host_staticlib");
@@ -82,9 +60,7 @@ pub fn build(b: *std.Build) void {
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
 
-    // Expose the precompile providers (zkvm_provide.zig) as a standalone module so other packages
-    // can link the SAME exported zkvm_* symbols this guest uses. The guest-crypto archive rides on
-    // the module, so consumers' final links resolve the guest_crypto_* externs without extra wiring.
+    // Expose the precompile providers as a standalone module for the exported zkvm_* symbols.
     const provide_mod = b.addModule("zkvm_provide", .{
         .root_source_file = b.path("src/zkvm_provide.zig"),
         .target = target,
@@ -102,12 +78,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // The extended wire format's SSZ codec, built for the SAME riscv64/optimize pair as the guest
-    // itself (mirrors the native l2_execution_ssz_mod below, for the test host). `l2_execution.zig`
-    // is pulled into `evm_execution_guest.zig` via a plain relative import, not a separate module:
-    // a separate module would double-claim `execution.zig`, which both files import. The native
-    // `guest_mod` used by the native test never needs this wiring — Zig's lazy analysis skips it
-    // since `guestMain` (the only caller) isn't `@export`-ed for that target.
+    // Build the SSZ codec for the same target and optimize mode as the guest.
     const l2_execution_ssz_guest_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),
         .target = target,
@@ -183,6 +154,22 @@ pub fn build(b: *std.Build) void {
     });
     guest_crypto_tests.root_module.addImport("guest_crypto", guest_crypto_native_mod);
     guest_crypto_tests.root_module.addObjectFile(guest_crypto_host_a);
+    // EIP-196/197 smoke vectors straight from zesu's testdata (CSV: input,result,gas,notes;
+    // hex without 0x; empty notes = success row).
+    for ([_][2][]const u8{
+        .{ "eip196_g1_add_csv", "src/evm/precompile/testdata/eip196_g1_add.csv" },
+        .{ "eip196_g1_mul_csv", "src/evm/precompile/testdata/eip196_g1_mul.csv" },
+        .{ "eip196_pairing_csv", "src/evm/precompile/testdata/eip196_pairing.csv" },
+        .{ "eip2537_g1_add_csv", "src/evm/precompile/testdata/eip2537_g1_add.csv" },
+        .{ "eip2537_g2_add_csv", "src/evm/precompile/testdata/eip2537_g2_add.csv" },
+        .{ "eip2537_pairing_csv", "src/evm/precompile/testdata/eip2537_pairing.csv" },
+        .{ "eip2537_fp_to_g1_csv", "src/evm/precompile/testdata/eip2537_fp_to_g1.csv" },
+        .{ "eip2537_fp2_to_g2_csv", "src/evm/precompile/testdata/eip2537_fp2_to_g2.csv" },
+    }) |spec| {
+        guest_crypto_tests.root_module.addAnonymousImport(spec[0], .{
+            .root_source_file = zesu_native.path(spec[1]),
+        });
+    }
     test_step.dependOn(&b.addRunArtifact(guest_crypto_tests).step);
 
     const l2_execution_ssz_mod = b.createModule(.{

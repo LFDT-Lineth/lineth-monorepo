@@ -1,7 +1,4 @@
-//! Re-exports the functions this guest borrows directly from zesu's own native crypto backend
-//! (`crypto/backends/*.zig`) — the ones with no C-library dependency, so they cross-compile to
-//! riscv64 freestanding. Used by zkvm_provide.zig as the software implementation for modexp,
-//! RIPEMD-160, and BLAKE2f, until a real Lineth accelerator wrapper exists for them.
+//! Re-exports Zesu's native crypto backend functions that cross-compile to freestanding riscv64.
 
 const modexp_impl = @import("zesu_modexp_impl");
 const ripemd160_impl = @import("zesu_ripemd160_impl");

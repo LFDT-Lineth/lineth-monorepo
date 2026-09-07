@@ -72,16 +72,11 @@ jobs:
         with:
           submodules: false
 
-      # Pinned Zig (from .zigversion) + zig-pkg/.zig-cache caches that make the zesu graph build
-      # a near-no-op. This action also builds native crypto libs (blst/mcl/…) that the FREESTANDING
-      # guest ELF does not link (its precompiles are compiled in from Zig/Constantine sources or a
-      # custom op) — that work is cached and harmless; we reuse the action for the toolchain pins +
-      # caching, so do not "optimize" it away.
+      # Set up the pinned Zig toolchain and restore package caches.
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
 
-      # exec needs Go for the module-pinned zkc tool and elf_to_json_gen. The Zig setup above installs
-      # no Go. Pin chosen to match the repo's other Go pins (keep in sync).
+      # Install Go for the module-pinned zkc tool and elf_to_json_gen.
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:

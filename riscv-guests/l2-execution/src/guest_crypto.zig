@@ -1,21 +1,11 @@
-//! Zig bindings to Constantine's `ctt_eth_evm_*` EVM precompile functions, exposing the
-//! `guest_crypto` module interface consumed by zkvm_provide.zig. The `guest_crypto` dependency
-//! in build.zig.zon resolves to the Constantine package.
+//! Zig bindings to Constantine's `ctt_eth_evm_*` precompile functions.
 //!
-//! ABI note: the guest's zkvm_* seam uses the RAW unpadded EIP encodings (Fp = 48 bytes,
-//! G1 = 96, G2 = 192). Constantine's ctt_eth_evm_* take the PADDED EIP-2537 byte layout
-//! (Fp padded to 64, G1 = 128, G2 = 256) and write padded outputs, so each BLS12-381 wrapper
-//! zero-pads every 48-byte limb to 64 on the way in and strips the padding on the way out; the
-//! pairing/MSM inputs are repacked record-by-record. BN254's seam encoding already matches the
-//! EIP-196/197 layout, so those wrappers pass buffers through unchanged.
+//! BLS12-381 wrappers repack raw 48-byte limbs into Constantine's padded EIP-2537 layout.
+//! BN254 uses the EIP-196/197 layout directly.
 //!
-//! secp256k1 ecrecover and verify both go through the ctt_eth_zkvm_* raw-primitive exports
-//! (the zkvm-standards accelerator ABI shape, distinct from the eth_evm precompiles): ecrecover
-//! takes digest ‖ recid ‖ r ‖ s and returns the raw 64-byte pubkey (x‖y, no keccak-to-address),
-//! verify takes digest ‖ x ‖ y ‖ r ‖ s and returns a 1-byte 0/1.
+//! secp256k1 ecrecover and verify use Constantine's raw-primitive exports.
 //!
-//! KZG point evaluation runs against a ctt_eth_kzg_context built from the 4096-point
-//! trusted setup baked into the ELF at compile time (there is no filesystem in-guest).
+//! KZG point evaluation uses the trusted setup baked into the ELF.
 
 const std = @import("std");
 
@@ -34,9 +24,8 @@ extern fn ctt_eth_zkvm_secp256k1_ecrecover(r: [*]u8, r_len: usize, inputs: [*]co
 
 const OK: c_int = 0; // cttEVM_Success
 
-/// ECDSA public-key recovery over a 32-byte pre-hash. sig is compact r‖s (32+32, big-endian);
-/// recid selects the y parity (0/1, or Ethereum's 27/28). output is the uncompressed point
-/// without the 0x04 prefix (x‖y, 64 bytes) — the raw-primitive form, no keccak-to-address.
+/// Recovers the raw 64-byte x‖y public key from a pre-hash and compact big-endian r‖s signature.
+/// `recid` selects the y parity as 0/1 or Ethereum's 27/28.
 pub fn ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) bool {
     const recid_norm: u8 = switch (recid) {
         0, 1 => recid,
@@ -50,7 +39,7 @@ pub fn ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64
     return ctt_eth_zkvm_secp256k1_ecrecover(output, 64, &in, 97) == OK;
 }
 
-/// ECDSA verification over a 32-byte pre-hash; pubkey is x‖y (64 bytes, no 0x04 prefix).
+/// Verifies a compact big-endian r‖s signature against a pre-hash and raw 64-byte x‖y key.
 pub fn secp256k1Verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) void {
     var in: [160]u8 = undefined; // digest ‖ x ‖ y ‖ r ‖ s, big-endian
     @memcpy(in[0..32], msg);
@@ -60,8 +49,7 @@ pub fn secp256k1Verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [6
     verified.* = ctt_eth_zkvm_secp256k1_verify(&out, 1, &in, 160) == OK and out[0] == 1;
 }
 
-// ── raw↔padded helpers ────────────────────────────────────────────────────────────────────────
-// Copy `count` 48-byte limbs from `src` into 64-byte slots in `dst` (16-byte zero left-pad).
+// Copy 48-byte limbs into 64-byte slots with 16 bytes of left padding.
 fn padLimbs(dst: [*]u8, src: [*]const u8, count: usize) void {
     var i: usize = 0;
     while (i < count) : (i += 1) {
@@ -71,7 +59,7 @@ fn padLimbs(dst: [*]u8, src: [*]const u8, count: usize) void {
     }
 }
 
-// Strip 16-byte left-padding: `count` 64-byte limbs from `src` into 48-byte limbs in `dst`.
+// Strip 16-byte left padding from 64-byte limbs.
 fn unpadLimbs(dst: [*]u8, src: [*]const u8, count: usize) void {
     var i: usize = 0;
     while (i < count) : (i += 1) {
@@ -100,7 +88,7 @@ pub fn g2Add(p1: *const [192]u8, p2: *const [192]u8, result: *[192]u8) bool {
 }
 
 pub fn g1Msm(pairs: anytype, result: *[96]u8) bool {
-    // raw record = 96 (point) + 32 (scalar) = 128; ctt record = 128 (padded point) + 32 = 160
+    // Raw record = 96-byte point + 32-byte scalar; padded record adds 32 bytes.
     const n = pairs.len;
     const raw = pairBytes(pairs, 96 + 32);
     var in: [4096 * 160]u8 = undefined; // bounded scratch; MSM degree is gas-limited far below this
@@ -117,7 +105,7 @@ pub fn g1Msm(pairs: anytype, result: *[96]u8) bool {
 }
 
 pub fn g2Msm(pairs: anytype, result: *[192]u8) bool {
-    // raw record = 192 + 32 = 224; ctt record = 256 + 32 = 288
+    // Raw record = 192-byte point + 32-byte scalar; padded record adds 64 bytes.
     const n = pairs.len;
     const raw = pairBytes(pairs, 192 + 32);
     var in: [2048 * 288]u8 = undefined;
@@ -134,10 +122,9 @@ pub fn g2Msm(pairs: anytype, result: *[192]u8) bool {
 }
 
 pub fn pairingCheck(pairs: anytype, verified: *bool) bool {
-    // raw record = 96 (g1) + 192 (g2) = 288; ctt record = 128 + 256 = 384
+    // Raw record = 96-byte G1 + 192-byte G2; padded record adds 96 bytes.
     const n = pairs.len;
-    // Seam contract: an empty pairing product is trivially verified (multiplicative identity);
-    // ctt rejects N == 0, so the wrapper answers before calling in.
+    // An empty pairing product verifies as the multiplicative identity.
     if (n == 0) {
         verified.* = true;
         return true;
@@ -174,9 +161,7 @@ pub fn mapFp2ToG2(field_element: *const [96]u8, result: *[192]u8) bool {
     return true;
 }
 
-// ── BN254 (alt_bn128): unpadded EIP-196/197 raw layout, 32-byte big-endian coords ───────────────
-// Unlike BLS12-381, the seam's encodings ARE the EIP encodings (G1 = 64 bytes, pairing record =
-// 192 bytes), so these wrappers pass the buffers through with no repacking.
+// BN254 uses the EIP-196/197 raw layout directly.
 pub fn bn254G1Add(p1: *const [64]u8, p2: *const [64]u8, result: *[64]u8) bool {
     var in: [128]u8 = undefined;
     @memcpy(in[0..64], p1);
@@ -193,7 +178,7 @@ pub fn bn254G1Mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) 
 
 pub fn bn254PairingCheck(pairs: anytype, verified: *bool) bool {
     const n = pairs.len;
-    // Same empty-input contract as pairingCheck.
+    // Empty input verifies as the multiplicative identity.
     if (n == 0) {
         verified.* = true;
         return true;
@@ -213,7 +198,7 @@ pub fn kzgPointEvalVerify(
 ) bool {
     const ctx = kzgContext() orelse return false;
     var in: [192]u8 = undefined;
-    // versioned_hash = 0x01 ‖ sha256(commitment)[1:] (EIP-4844 kzg_to_versioned_hash)
+    // versioned_hash = 0x01 ‖ sha256(commitment)[1:]
     std.crypto.hash.sha2.Sha256.hash(commitment, in[0..32], .{});
     in[0] = 0x01;
     @memcpy(in[32..64], z);
@@ -238,8 +223,7 @@ extern fn ctt_eth_evm_kzg_point_evaluation(
 var kzg_ctx: ?*CttKzgContext = null;
 var kzg_ctx_failed = false;
 
-/// Lazily build the KZG trusted-setup context once from the SRS baked into the ELF.
-/// The guest is single-threaded, so a plain global suffices.
+/// Lazily builds the KZG trusted-setup context once.
 fn kzgContext() ?*CttKzgContext {
     if (kzg_ctx) |c| return c;
     if (kzg_ctx_failed) return null;

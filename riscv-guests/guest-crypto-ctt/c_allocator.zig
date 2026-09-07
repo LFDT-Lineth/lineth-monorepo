@@ -1,13 +1,9 @@
-//! C allocator API adapter the Constantine archive needs on a freestanding guest (ARC's useMalloc).
-//! Every entry point delegates to the guest's own allocator: `guest_allocator` is the
-//! FixedBufferAllocator over `_heap_start`, exported by the guest root (evm_execution_guest.zig).
-//! A 16-byte header before each returned pointer records the size, which `free`/`realloc` need
-//! to call back into rawFree/rawRemap.
+//! C allocator adapter for the Constantine archive on a freestanding guest.
+//! A 16-byte header before each allocation stores the payload size.
 
 const std = @import("std");
 
-// extern vars can't have slice-containing types, so this mirrors std.mem.Allocator's
-// two-word (ptr, vtable) layout and pointer-casts at use.
+// `extern` vars cannot hold slices, so this mirrors `std.mem.Allocator`'s two-word layout.
 const AllocatorWords = extern struct { ptr: *anyopaque, vtable: *const anyopaque };
 extern var guest_allocator: AllocatorWords;
 
@@ -18,10 +14,8 @@ fn allocator() *std.mem.Allocator {
     return @ptrCast(&guest_allocator);
 }
 
-// rawAlloc over-allocates by the alignment and the payload sits HDR bytes past an aligned
-// boundary; the header records the payload size. rawFree/rawRemap are given the payload slice
-// at MIN_ALIGN: exact for minimum-aligned payloads, and for over-aligned ones the FBA's
-// free is a no-op unless the block is the most recent allocation, so the slack is harmless.
+// Over-allocates for alignment and leaves the payload behind the header. The fixed-buffer
+// allocator can reclaim the latest allocation; earlier over-aligned frees retain their slack.
 fn allocImpl(size: usize, align_req: std.mem.Alignment) ?*anyopaque {
     const alignment: std.mem.Alignment = if (@intFromEnum(align_req) > @intFromEnum(MIN_ALIGN)) align_req else MIN_ALIGN;
     const total = alignment.toByteUnits() + HDR + size;
@@ -48,8 +42,7 @@ export fn aligned_alloc(alignment: usize, size: usize) ?*anyopaque {
     return allocImpl(size, @enumFromInt(@ctz(alignment)));
 }
 
-// POSIX spelling Constantine's posixMemalign wrapper imports; same contract as aligned_alloc
-// plus the C89 constraint (alignment is a power-of-two multiple of sizeof(void*)).
+// POSIX `posix_memalign` requires a power-of-two multiple of `sizeof(void*)`.
 export fn posix_memalign(out: *?*anyopaque, alignment: usize, size: usize) c_int {
     if (!std.math.isPowerOfTwo(alignment) or alignment % @sizeOf(*anyopaque) != 0) return 22; // EINVAL
     const p = allocImpl(size, @enumFromInt(@ctz(alignment))) orelse return 12; // ENOMEM

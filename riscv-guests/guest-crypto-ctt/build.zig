@@ -1,12 +1,5 @@
-//! Constantine (Nim→C) precompile staticlib, built from the fork (which carries the
-//! `defined(standalone)` gates, the embedded KZG SRS, and the rv64im-freestanding
-//! nimble task natively). Exposes the two lazy-path artifacts l2-execution links:
-//!   - riscv_staticlib: rv64im archive (fork task output + guest allocator object)
-//!   - host_staticlib:  host archive for the FFI unit tests
-//! Toolchain prerequisites (nim, nimble, clang) are installed by
-//! `make -C riscv-guests install-constantine-deps`; tool locations are overridable via the
-//! NIM / NIMBLE / LLVM_AR env vars (evaluated when the build script itself runs,
-//! so they are not cached per step).
+//! Builds Constantine static archives for the guest and host FFI tests.
+//! Tool locations are overridable with `NIM`, `NIMBLE`, and `LLVM_AR`.
 
 const std = @import("std");
 
@@ -20,12 +13,9 @@ fn envOr(b: *std.Build, key: []const u8, default: []const u8) []const u8 {
     return b.graph.environ_map.get(key) orelse default;
 }
 
-/// Locates nim, nimble and llvm-ar: env override, else PATH, else Homebrew's keg-only llvm
-/// prefix (macOS, where llvm is deliberately not on PATH). Fatal with an actionable message
-/// when a tool is missing — this runs at build-script evaluation, before any step executes.
+/// Locates `nim`, `nimble`, and `llvm-ar`.
 fn resolveToolchain(b: *std.Build) Toolchain {
-    // Homebrew's llvm is keg-only (not on PATH); /opt/homebrew/opt is its stable symlinked
-    // prefix on Apple Silicon. Passed as an extra search dir — a nonexistent one is skipped.
+    // Homebrew's LLVM is keg-only on macOS, so add its stable prefix explicitly.
     const extra: []const []const u8 = if (b.graph.host.result.os.tag == .macos)
         &.{"/opt/homebrew/opt/llvm/bin"}
     else
@@ -50,9 +40,7 @@ fn findTool(b: *std.Build, name: []const u8, extra: []const []const u8) []const 
 pub fn build(b: *std.Build) void {
     const tc = resolveToolchain(b);
     const ctt = b.dependency("constantine", .{});
-    // The fork tree carries the standalone gates + shims; the rv64 nimble task compiles in
-    // place (writing lib/ + nimcache/ under the fork), while the host nim compile redirects
-    // --nimcache/--outdir into zig output dirs.
+    // Build the rv64 archive in place and the host archive into Zig output dirs.
     const tree = ctt.path(".");
 
     b.addNamedLazyPath("riscv_staticlib", buildRiscv(b, tc, tree));
@@ -62,18 +50,14 @@ pub fn build(b: *std.Build) void {
 const NIM_BINDINGS = "bindings/lib_constantine.nim";
 
 fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
-    // The fork owns the rv64im-freestanding compile (target flags, clang driver shim,
-    // standalone headers, stdio backing, archive reindex) via its nimble task; here we
-    // only drive it and merge the guest allocator in.
+    // Run the fork's rv64im-freestanding build and merge in the guest allocator.
     const task = b.addSystemCommand(&.{ tc.nimble, "-y", "make_lib_riscv64_freestanding" });
     task.setName("nimble make_lib_riscv64_freestanding (rv64im)");
     task.setCwd(tree);
-    // Cache invalidation comes from the dependency's .zon hash once it points at the pinned
-    // repo url; the archive is an in-tree product consumed by the merge.
+    // The pinned dependency hash covers cache invalidation.
     const archive = tree.join(b.allocator, "lib/libconstantine.riscv64.a") catch @panic("oom");
 
-    // The FBA-backed malloc shim, compiled with zig for rv64im (same soft-float feature set
-    // as the l2-execution guest's mcpu, or lld rejects the mixed-ABI link).
+    // Match the guest's rv64im soft-float ABI.
     const allocator_obj = b.addObject(.{
         .name = "ctt_allocator_rv64",
         .root_module = b.createModule(.{
@@ -89,13 +73,12 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
     });
 
     const merged = mergeArchive(b, tc, "constantine rv64", archive, allocator_obj.getEmittedBin(), "libguest_crypto_ctt.a");
-    // Merge after the task (which produces the archive it consumes).
+    // Merge after the task that produces the archive.
     merged.step.step.dependOn(&task.step);
     return merged.archive;
 }
 
-/// nim compile flags shared by both targets; the caller appends target flags and the
-/// bindings compile arg.
+/// Shared `nim c` flags.
 fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const u8) *std.Build.Step.Run {
     const nim = b.addSystemCommand(&.{
         tc.nim,             "c",                  "--cc:clang",
@@ -105,18 +88,17 @@ fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const 
         "-d:release",       "-d:danger",          "--opt:size",
     });
     nim.setName(name);
-    nim.setCwd(tree); // constantine/config.nims resolves --path:"." against cwd
+    nim.setCwd(tree); // `config.nims` resolves relative paths from cwd
     return nim;
 }
 
 fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
-    // The host archive backs the FFI unit test, which builds its KZG context via
-    // ctt_eth_kzg_context_new_embedded — that export only exists under this define.
+    // The host archive backs the FFI unit test and its embedded KZG context.
     nim.addArgs(&.{ "--os:macosx", "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
-    _ = nimcache; // declared as a cache output; the archive is the consumed artifact
+    _ = nimcache; // declared as a cache output
     const archive = nim.addPrefixedOutputFileArg("--out:", "libconstantine.host.a");
     nim.addFileArg(tree.join(b.allocator, NIM_BINDINGS) catch @panic("oom"));
 
@@ -132,11 +114,7 @@ fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.L
     return mergeArchive(b, tc, "constantine host", archive, allocator_obj.getEmittedBin(), "libguest_crypto_ctt_host.a").archive;
 }
 
-/// llvm-ar MRI merge: add the allocator object to the nim-built archive. The rv64 archive
-/// arrives already reindexed by the fork's nimble task; the host archive is native, so its
-/// nim index is valid as-is. llvm-ar reads the MRI script from stdin (`-M` takes no file
-/// arg), so the heredoc below IS the script, with the zig-assigned paths spliced in as
-/// $2..$4. Returns the Run step so callers can add ordering deps; `.archive` is the output.
+/// Merges the allocator object into the Nim-built archive with an `llvm-ar` MRI script.
 const Merged = struct { step: *std.Build.Step.Run, archive: std.Build.LazyPath };
 
 fn mergeArchive(b: *std.Build, tc: Toolchain, name: []const u8, lib: std.Build.LazyPath, allocator_obj: std.Build.LazyPath, out_name: []const u8) Merged {
