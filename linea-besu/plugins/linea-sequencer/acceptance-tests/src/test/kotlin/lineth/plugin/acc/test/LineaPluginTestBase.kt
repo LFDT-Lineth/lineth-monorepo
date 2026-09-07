@@ -296,26 +296,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
   }
 
   private fun assertTransactionsInCorrectBlocks(web3j: Web3j, hashes: List<String>, num: Int) {
-    val txMap = hashMapOf<Long, Int>()
-    val receiptProcessor = createReceiptProcessor(web3j)
-
     // CallData for the transaction for empty String is 68 and grows in steps of 32 with (String
     // size / 32)
     val maxTxs = MAX_CALLDATA_SIZE / (68 + ((num + 31) / 32) * 32)
 
-    // Wait for transaction to be mined and check that there are no more than maxTxs per block
-    hashes.forEach { h ->
-      val transactionReceipt = try {
-        receiptProcessor.waitForTransactionReceipt(h)
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
-
-      val blockNumber = transactionReceipt.blockNumber.toLong()
+    // Wait for transactions to be mined and check that there are no more than maxTxs per block
+    val txMap = hashMapOf<Long, Int>()
+    getReceiptsInParallel(web3j, hashes).forEach { receipt ->
+      val blockNumber = receipt.blockNumber.toLong()
       txMap.compute(blockNumber) { _, n -> (n ?: 0) + 1 }
-
       // make sure that no block contained more than maxTxs
       assertThat(txMap[blockNumber]).isLessThanOrEqualTo(maxTxs)
     }
@@ -457,48 +446,44 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
   ): List<TransactionReceipt> {
     val receiptProcessor = createReceiptProcessor(web3j)
     val executor = Executors.newFixedThreadPool(hashes.size)
-    val futures = hashes.map { hash ->
-      executor.submit(
-        Callable<TransactionReceipt> {
-          try {
-            receiptProcessor.waitForTransactionReceipt(hash)
-          } catch (e: IOException) {
-            throw RuntimeException(e)
-          } catch (e: TransactionException) {
-            throw RuntimeException(e)
-          }
-        },
-      )
+    try {
+      val futures = hashes.map { hash ->
+        executor.submit(
+          Callable<TransactionReceipt> {
+            try {
+              receiptProcessor.waitForTransactionReceipt(hash)
+            } catch (e: IOException) {
+              throw RuntimeException(e)
+            } catch (e: TransactionException) {
+              throw RuntimeException(e)
+            }
+          },
+        )
+      }
+      return futures.map { it.get() }
+    } finally {
+      executor.shutdownNow()
     }
-    val receipts = futures.map { it.get() }
-    executor.shutdownNow()
-    return receipts
   }
 
   protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
-    val receiptProcessor = createReceiptProcessor(web3j)
-
-    val blockNumbers = hashSetOf<Long>()
-    for (hash in hashes) {
-      val receipt = receiptProcessor.waitForTransactionReceipt(hash)
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
       assertThat(receipt).isNotNull
-      val isAdded = blockNumbers.add(receipt.blockNumber.toLong())
-      assertThat(isAdded).isEqualTo(true)
+      receipt.blockNumber.toLong()
     }
+
+    val uniqueBlockNumbers = blockNumbers.toSet()
+    assertThat(uniqueBlockNumbers.size)
+      .withFailMessage {
+        "Expected transactions to be mined in separate blocks, got block numbers $blockNumbers"
+      }
+      .isEqualTo(blockNumbers.size)
   }
 
   protected fun assertTransactionsMinedInSameBlock(web3j: Web3j, hashes: List<String>) {
-    val receiptProcessor = createReceiptProcessor(web3j)
-    val blockNumbers = hashes.map { hash ->
-      try {
-        val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-        assertThat(receipt).isNotNull
-        receipt.blockNumber.toLong()
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
     }.toSet()
 
     assertThat(blockNumbers.size).isEqualTo(1)
