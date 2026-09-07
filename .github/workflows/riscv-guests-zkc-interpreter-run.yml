@@ -24,7 +24,11 @@ on:
       - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
       - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
       - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
-      - 'arithmetization/src/test/scripts/**'     # elf_to_json_gen
+      - 'arithmetization/cmd/elf_to_json/**'
+      - 'arithmetization/gopkg/elfmapping/**'
+      - 'arithmetization/gopkg/predecoding/**'
+      - 'arithmetization/go.mod'
+      - 'arithmetization/go.sum'
       - 'arithmetization/Makefile'                # prepare-zkc / ZKC_REF
       - '.github/actions/setup-riscv-guests/**'
       - '.github/actions/setup-zig/**'
@@ -37,7 +41,11 @@ on:
       - 'arithmetization/src/main/riscv/**'
       - 'arithmetization/src/main/lib/**'
       - 'arithmetization/src/test/Makefile'
-      - 'arithmetization/src/test/scripts/**'
+      - 'arithmetization/cmd/elf_to_json/**'
+      - 'arithmetization/gopkg/elfmapping/**'
+      - 'arithmetization/gopkg/predecoding/**'
+      - 'arithmetization/go.mod'
+      - 'arithmetization/go.sum'
       - 'arithmetization/Makefile'
       - '.github/actions/setup-riscv-guests/**'
       - '.github/actions/setup-zig/**'
@@ -79,7 +87,7 @@ jobs:
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
 
-      # exec needs Go for the module-pinned zkc tool and elf_to_json_gen. The Zig setup above installs
+      # exec needs Go for the module-pinned zkc and elf_to_json tools. The Zig setup above installs
       # no Go. Pin chosen to match the repo's other Go pins (keep in sync).
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
