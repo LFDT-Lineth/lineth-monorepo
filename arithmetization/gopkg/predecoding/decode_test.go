@@ -1,45 +1,39 @@
 package predecoding
 
 import (
-	"fmt"
 	"testing"
 )
 
 // TestInstructionTypeFromOpcode
 // checks the opcode -> instruction-type mapping.
-// Vectors are keyed by the 7-bit RISC-V opcode; the value is the expected type.
 func TestInstructionTypeFromOpcode(t *testing.T) {
-	vectors := map[uint32]uint32{
-		// R-type: register-register ALU, 32-bit-word ALU, and Custom-1.
-		opcodeOP:      rType,
-		opcodeOP32:    rType,
-		opcodeCUSTOM1: rType,
-		// I-type: loads, immediate ALU, JALR, and SYSTEM (ecall/ebreak).
-		opcodeLOAD:    iType,
-		opcodeOPIMM:   iType,
-		opcodeOPIMM32: iType,
-		opcodeJALR:    iType,
-		opcodeSYSTEM:  iType,
-		// S-type: stores.
-		opcodeSTORE: sType,
-		// B-type: conditional branches.
-		opcodeBRANCH: bType,
-		// U-type: LUI / AUIPC.
-		opcodeLUI:   uType,
-		opcodeAUIPC: uType,
-		// J-type: JAL.
-		opcodeJAL: jType,
-		// Misc-mem: FENCE / FENCE.I.
-		opcodeMISCMEM: miscMemType,
-		// Unknown opcodes fall through to the default arm.
-		0b0000000: undefinedType,
-		0b1111111: undefinedType,
+	tests := []struct {
+		name          string
+		opcode        uint32
+		type_expected uint32
+	}{
+		{"op", opcodeOP, rType},
+		{"op32", opcodeOP32, rType},
+		{"custom1", opcodeCUSTOM1, rType},
+		{"load", opcodeLOAD, iType},
+		{"opimm", opcodeOPIMM, iType},
+		{"opimm32", opcodeOPIMM32, iType},
+		{"jalr", opcodeJALR, iType},
+		{"system", opcodeSYSTEM, iType},
+		{"store", opcodeSTORE, sType},
+		{"branch", opcodeBRANCH, bType},
+		{"lui", opcodeLUI, uType},
+		{"auipc", opcodeAUIPC, uType},
+		{"jal", opcodeJAL, jType},
+		{"miscmem", opcodeMISCMEM, miscMemType},
+		{"unknown zero", 0b0000000, undefinedType},
+		{"unknown all-ones", 0b1111111, undefinedType},
 	}
 
-	for opcode, type_expected := range vectors {
-		t.Run(fmt.Sprintf("opcode_%07b", opcode), func(t *testing.T) {
-			if type_value := instructionTypeFromOpcode(opcode); type_value != type_expected {
-				t.Fatalf("instructionTypeFromOpcode(%#09b) = %d, want %d", opcode, type_value, type_expected)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if type_value := instructionTypeFromOpcode(tt.opcode); type_value != tt.type_expected {
+				t.Fatalf("instructionTypeFromOpcode(%#09b) = %d, want %d", tt.opcode, type_value, tt.type_expected)
 			}
 		})
 	}
