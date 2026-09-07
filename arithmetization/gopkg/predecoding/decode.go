@@ -127,31 +127,31 @@ func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
 
 // I-type semantic micro-op local indices. Unified value = computeITypeBase + index.
 const (
-	itypeRead8SgnWB   = 0
-	itypeRead16SgnWB  = 1
-	itypeRead32SgnWB  = 2
-	itypeRead64WB     = 3
-	itypeRead8ZextWB  = 4
-	itypeRead16ZextWB = 5
-	itypeRead32ZextWB = 6
-	itypeOpAddiWB     = 7
-	itypeOpSltiWB     = 8
-	itypeOpSltiuWB    = 9
-	itypeOpXoriWB     = 10
-	itypeOpOriWB      = 11
-	itypeOpAndiWB     = 12
-	itypeOpSlliWB     = 13
-	itypeOpSrliWB     = 14
-	itypeOpSraiWB     = 15
-	itypeOpAddiwWB    = 16
-	itypeOpSlliwWB    = 17
-	itypeOpSrliwWB    = 18
-	itypeOpSraiwWB    = 19
-	itypeJalr         = 20
-	itypeJalrWB       = 21
-	itypeEcall        = 22
-	itypeEbreak       = 23
-	itypeInvalid      = 63
+	itypeRead8SgnWB   = 0 // LB, read signed 8 bits, sign extend to 64 bits
+	itypeRead16SgnWB  = 1 // LH
+	itypeRead32SgnWB  = 2 // LW
+	itypeRead64WB     = 3 // LD
+	itypeRead8ZextWB  = 4 // LBU, read unsigned 8 bits, zero extend to 64 bits
+	itypeRead16ZextWB = 5 // LHU
+	itypeRead32ZextWB = 6 // LWU		
+	itypeOpAddiWB     = 7 // ADDI						
+	itypeOpSltiWB     = 8 // SLTI
+	itypeOpSltiuWB    = 9 // SLTIU
+	itypeOpXoriWB     = 10 // XORI
+	itypeOpOriWB      = 11 // ORI
+	itypeOpAndiWB     = 12 // ANDI
+	itypeOpSlliWB     = 13 // SLLI
+	itypeOpSrliWB     = 14 // SRLI
+	itypeOpSraiWB     = 15 // SRAI
+	itypeOpAddiwWB    = 16 // ADDIW
+	itypeOpSlliwWB    = 17 // SLLIW
+	itypeOpSrliwWB    = 18 // SRLIW
+	itypeOpSraiwWB    = 19 // SRAIW
+	itypeJalr         = 20 // JALR	
+	itypeJalrWB       = 21 // JALR_WB
+	itypeEcall        = 22 // ECALL
+	itypeEbreak       = 23 // EBREAK
+	itypeInvalid      = 63 // INVALID
 )
 
 // itypeOpForRd selects ITYPE_JALR_WB when rd != x0; other ops already use *_WB indices.
@@ -315,14 +315,28 @@ func unifiedComputeOp(instrType, localOp uint32) uint32 {
 	}
 }
 
+// imm12Funct6 extracts the funct6 field (imm12[11:6]) that validates RV64
+// immediate shifts (slli/srli/srai).
+func imm12Funct6(imm12 uint32) uint32 { return (imm12 >> 6) & 0x3f }
+
+// imm12Funct7 extracts the funct7 field (imm12[11:5]) that validates RV64 word
+// immediate shifts (slliw/srliw/sraiw).
+func imm12Funct7(imm12 uint32) uint32 { return (imm12 >> 5) & 0x7f }
+
+// imm12Uimm6 extracts the 6-bit shift amount (imm12[5:0]) for RV64 shifts.
+func imm12Uimm6(imm12 uint32) uint32 { return imm12 & 0x3f }
+
+// imm12Uimm5 extracts the 5-bit shift amount (imm12[4:0]) for RV64 word shifts.
+func imm12Uimm5(imm12 uint32) uint32 { return imm12 & 0x1f }
+
 // decodeITypeSemantic maps a raw I-type encoding to a local op index and normalized immediate.
 // Shift amounts are stripped to their low uimm6/uimm5 bits; funct6/funct7
 // validation happens here.
 func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm12 uint32) {
-	funct6 := (imm12 >> 6) & 0x3f
-	funct7FromImm := (imm12 >> 5) & 0x7f
-	uimm6 := imm12 & 0x3f
-	uimm5 := imm12 & 0x1f
+	funct6 := imm12Funct6(imm12)
+	funct7FromImm := imm12Funct7(imm12)
+	uimm6 := imm12Uimm6(imm12)
+	uimm5 := imm12Uimm5(imm12)
 
 	switch opcode {
 	case opcodeLOAD:
