@@ -11,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrNotImplemented is returned by stubs that are not yet wired up.
@@ -139,8 +140,13 @@ func (c *Core) runProve(
 ) (wiop.Proof, wiop.PublicInput, error) {
 	_ = ctx // cancellation not yet propagated into the prover internals
 
+	traces := c.driver.TraceZkcInputs(preRead)
+	if len(traces) > 1 {
+		logrus.Fatalf("the test case is expected to only use a single public inputs")
+	}
+
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
-		c.driver.AssignWithPreRead(rt, preRead, field.Octuplet{})
+		c.driver.AssignTraceShard(rt, traces[0], field.Octuplet{})
 	})
 
 	if err := c.sys.Verify(proof, pub); err != nil {

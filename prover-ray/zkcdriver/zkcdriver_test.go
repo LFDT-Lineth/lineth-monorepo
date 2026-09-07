@@ -48,7 +48,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, codegen.DEFAULT_MAX_STATIC_HEIGHT, *src)
 	if len(errs) > 0 {
 		for i := range errs {
 			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
@@ -62,7 +62,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	return binfile, nil
 }
 
@@ -87,10 +87,10 @@ func parseTestCase(
 	// the input file also has outputs what the zkc program produces. Lets
 	// filter them out for tracing purposes, so that we can sanity-check the
 	// inputs of the test-case.
-	filteredInputs := vm.FilterInputs(binF.Program(), inputs.Inputs)
+	filteredInputs, _ := vm.FilterInputs(binF.TracingProgram(), inputs.Inputs)
 
 	// This sanity-checks the corset inputs of the test-case
-	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
+	outputs, err = traceZkc(binF, vm.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
 	if err != nil {
 		return nil, nil, fmt.Errorf("constraint check failed: %w", err)
 	}
@@ -100,7 +100,7 @@ func parseTestCase(
 
 func traceZkc(
 	binFile *constraints.BinaryFile[koalabear.Element],
-	tracingCfg constraints.TraceConfig,
+	tracingCfg vm.TraceConfig,
 	input map[string][]byte,
 	withCheck bool,
 ) (outputs map[string][]byte, err error) {
@@ -112,14 +112,14 @@ func traceZkc(
 	}()
 
 	// trace program with given input
-	outputs, _, tr, errs := binFile.Trace(input, tracingCfg)
+	outputs, tr, errs := binFile.Trace(input, tracingCfg)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
 
 	if withCheck {
 		// check the traces work
-		if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
+		if errsSchema := binFile.Check(tracingCfg, tr); len(errsSchema) > 0 {
 			errs := make([]error, len(errsSchema))
 			for i, e := range errsSchema {
 				errs[i] = errors.New(e.Message())
@@ -181,14 +181,25 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	// Run the prover compile pipeline, which will compile the system and prepare it for proof generation
 	proverCompilePipeline(sys)
 
-	// Run the ZkC driver to produce a proof and public inputs
-	proof, pub := sys.Prove(
-		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{}) },
-		wiop.ProveOptions{CheckUnreducedQueries: true})
+	var (
+		traces = driver.TraceZkcInputs(inputs)
+		proofs = make([]wiop.Proof, len(traces))
+		pubs   = make([]wiop.PublicInput, len(traces))
+	)
 
-	// Verify the proof and public inputs
-	if err := sys.Verify(proof, pub); err != nil {
-		return fmt.Errorf("verification failed: %w", err)
+	for i, shard := range traces {
+
+		proofs[i], pubs[i] = sys.Prove(
+			func(rt *wiop.Runtime) { driver.AssignTraceShard(rt, shard, koalafield.Octuplet{}) },
+			wiop.ProveOptions{CheckUnreducedQueries: true})
 	}
+
+	for i := range proofs {
+
+		if err := sys.Verify(proofs[i], pubs[i]); err != nil {
+			return fmt.Errorf("verification failed: %w", err)
+		}
+	}
+
 	return nil
 }

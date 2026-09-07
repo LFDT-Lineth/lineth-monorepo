@@ -87,7 +87,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 	zkcField := field.KOALABEAR_16
 	zkcCfg := codegen.DEFAULT_CONFIG
 
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, codegen.DEFAULT_MAX_STATIC_HEIGHT, *src)
 	if len(errs) > 0 {
 		t.Fatalf("zkc macro compile %q: %v", srcPath, errs)
 	}
@@ -96,7 +96,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
 	}
 
-	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	binBytes, err := binF.MarshalBinary()
 	require.NoError(t, err)
 

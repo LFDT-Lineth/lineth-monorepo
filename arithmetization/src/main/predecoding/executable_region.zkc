@@ -1,5 +1,5 @@
 // Upper bound of the dense executable span: align-up the max end of every
-// executable-flagged blob. Matches collectExecutableImage in elf_to_json_gen.
+// executable-flagged blob. Matches the Go predecoding package.
 fn executable_region_end() -> (end:Address) {
     var blobs_count:u64
     var entry_point:Address

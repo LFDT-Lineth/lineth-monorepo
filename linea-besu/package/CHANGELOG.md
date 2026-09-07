@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
+
 ### 🐛 Bug Fixes
 
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)

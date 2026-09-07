@@ -6,7 +6,7 @@ import (
 
 	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 // This is a benchmark for the RISC-V arithmetization and not a test so that we
@@ -31,7 +31,7 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 		b.Fatalf("failed to compile zkc source: %v", err)
 	}
 	b.Logf("tracing zkc")
-	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap, false)
+	outputs, err := traceZkc(binf, vm.DEFAULT_TRACE_CONFIG, inputsMap, false)
 	if err != nil {
 		b.Fatalf("failed to parse test case: %v", err)
 	}

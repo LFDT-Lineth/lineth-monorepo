@@ -46,6 +46,15 @@ pub const Transcript = struct {
         }
     }
 
+    /// Replaces the transcript state outright, discarding any buffered but
+    /// unabsorbed elements. Mirrors prover-ray's `FiatShamir.SetState`
+    /// (`MDHasher.SetStateOctuplet`): used to splice in a cross-shard shared
+    /// randomness seed (γ) before a round's coins are squeezed, matching
+    /// `Runtime.SetFSState` inside a `Round.PreSamplingHooks` entry.
+    pub fn setState(self: *Transcript, state: poseidon2.Digest) void {
+        self.hasher.setState(state);
+    }
+
     pub fn randomDigest(self: *Transcript) poseidon2.Digest {
         const challenge = self.hasher.sumDigest();
         self.updateElement(field.Element.zero());
