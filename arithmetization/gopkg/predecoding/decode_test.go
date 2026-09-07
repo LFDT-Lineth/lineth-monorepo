@@ -117,66 +117,74 @@ type iTypeInput struct {
 	imm12  uint32
 }
 
+// iTypeResult is the (local op, normalized imm12) pair decodeITypeSemantic
+// returns.
+type iTypeResult struct {
+	op  uint32
+	imm uint32
+}
+
 // decodeITypeVectors is the static truth table mapping a decode input to the
-// local op (first return value) decodeITypeSemantic must produce. It lists every
-// valid arm and, for the imm12-sensitive arms, the imm12 edges that steer
-// funct6/funct7 shift validation and SYSTEM funct12 discrimination (including
-// the imm12 values that make an otherwise-valid arm reject).
-var decodeITypeVectors = map[iTypeInput]uint32{
-	// LOAD: op fixed by funct3, imm12 irrelevant (min + max sampled).
-	{opcodeLOAD, 0b000, 0x008}: itypeRead8SgnWB,
-	{opcodeLOAD, 0b000, 0xfff}: itypeRead8SgnWB,
-	{opcodeLOAD, 0b001, 0x004}: itypeRead16SgnWB,
-	{opcodeLOAD, 0b010, 0x000}: itypeRead32SgnWB,
-	{opcodeLOAD, 0b011, 0x7ff}: itypeRead64WB,
-	{opcodeLOAD, 0b100, 0x001}: itypeRead8ZextWB,
-	{opcodeLOAD, 0b101, 0x002}: itypeRead16ZextWB,
-	{opcodeLOAD, 0b110, 0x003}: itypeRead32ZextWB,
+// (op, normalized imm12) decodeITypeSemantic must produce.
+// It lists every valid arm, meaning an opcode and funct3 pair that can decode
+// to a non-invalid op for at least one imm12.
+// The expected imm is imm12 unchanged except for the arithmetic shifts (srai/sraiw),
+// where it is the stripped shift amount.
+// The stripping itself is exhaustively verified separately by the imm12 field-extractor
+// tests, so here we only pin the value passed through for each vector.
+var decodeITypeVectors = map[iTypeInput]iTypeResult{
+	// LOAD: op fixed by funct3, imm12 passed through (min + max sampled).
+	{opcodeLOAD, 0b000, 0x008}: {itypeRead8SgnWB, 0x008},
+	{opcodeLOAD, 0b000, 0xfff}: {itypeRead8SgnWB, 0xfff},
+	{opcodeLOAD, 0b001, 0x004}: {itypeRead16SgnWB, 0x004},
+	{opcodeLOAD, 0b010, 0x000}: {itypeRead32SgnWB, 0x000},
+	{opcodeLOAD, 0b011, 0x7ff}: {itypeRead64WB, 0x7ff},
+	{opcodeLOAD, 0b100, 0x001}: {itypeRead8ZextWB, 0x001},
+	{opcodeLOAD, 0b101, 0x002}: {itypeRead16ZextWB, 0x002},
+	{opcodeLOAD, 0b110, 0x003}: {itypeRead32ZextWB, 0x003},
 
-	// OPIMM non-shift: op fixed by funct3, imm12 irrelevant.
-	{opcodeOPIMM, 0b000, 0x02a}: itypeOpAddiWB,
-	{opcodeOPIMM, 0b000, 0xfff}: itypeOpAddiWB,
-	{opcodeOPIMM, 0b010, 0x005}: itypeOpSltiWB,
-	{opcodeOPIMM, 0b011, 0x007}: itypeOpSltiuWB,
-	{opcodeOPIMM, 0b100, 0x0ff}: itypeOpXoriWB,
-	{opcodeOPIMM, 0b110, 0x0f0}: itypeOpOriWB,
-	{opcodeOPIMM, 0b111, 0xabc}: itypeOpAndiWB,
+	// OPIMM non-shift: op fixed by funct3, imm12 passed through.
+	{opcodeOPIMM, 0b000, 0x02a}: {itypeOpAddiWB, 0x02a},
+	{opcodeOPIMM, 0b000, 0xfff}: {itypeOpAddiWB, 0xfff},
+	{opcodeOPIMM, 0b010, 0x005}: {itypeOpSltiWB, 0x005},
+	{opcodeOPIMM, 0b011, 0x007}: {itypeOpSltiuWB, 0x007},
+	{opcodeOPIMM, 0b100, 0x0ff}: {itypeOpXoriWB, 0x0ff},
+	{opcodeOPIMM, 0b110, 0x0f0}: {itypeOpOriWB, 0x0f0},
+	{opcodeOPIMM, 0b111, 0xabc}: {itypeOpAndiWB, 0xabc},
 
-	// OPIMM shifts: op depends on funct6 (imm12[11:6]).
-	{opcodeOPIMM, 0b001, 0x000}: itypeOpSlliWB, // funct6 0
-	{opcodeOPIMM, 0b001, 0x03f}: itypeOpSlliWB, // funct6 0, shamt 63
-	{opcodeOPIMM, 0b001, 0x040}: itypeInvalid,  // funct6 != 0
-	{opcodeOPIMM, 0b101, 0x003}: itypeOpSrliWB, // funct6 000000
-	{opcodeOPIMM, 0b101, 0x03f}: itypeOpSrliWB, // funct6 000000, shamt 63
-	{opcodeOPIMM, 0b101, 0x405}: itypeOpSraiWB, // funct6 010000
-	{opcodeOPIMM, 0b101, 0x43f}: itypeOpSraiWB, // funct6 010000, shamt 63
-	{opcodeOPIMM, 0b101, 0x100}: itypeInvalid,  // funct6 neither 0 nor 010000
+	// OPIMM shifts: op depends on funct6 (imm12[11:6]); srai strips to uimm6.
+	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000}, // funct6 0
+	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f}, // funct6 0, shamt 63
+	{opcodeOPIMM, 0b001, 0x040}: {itypeInvalid, 0x040},  // funct6 != 0
+	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003}, // funct6 000000
+	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f}, // funct6 000000, shamt 63
+	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005}, // funct6 010000 -> uimm6 5
+	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f}, // funct6 010000 -> uimm6 63
+	{opcodeOPIMM, 0b101, 0x100}: {itypeInvalid, 0x100},  // funct6 neither 0 nor 010000
 
-	// OPIMM32: word shifts depend on funct7 (imm12[11:5]).
-	{opcodeOPIMM32, 0b000, 0x007}: itypeOpAddiwWB,
-	{opcodeOPIMM32, 0b001, 0x000}: itypeOpSlliwWB, // funct7 0
-	{opcodeOPIMM32, 0b001, 0x01f}: itypeOpSlliwWB, // funct7 0, shamt 31
-	{opcodeOPIMM32, 0b001, 0x020}: itypeInvalid,   // funct7 != 0
-	{opcodeOPIMM32, 0b101, 0x003}: itypeOpSrliwWB, // funct7 0000000
-	{opcodeOPIMM32, 0b101, 0x01f}: itypeOpSrliwWB, // funct7 0000000, shamt 31
-	{opcodeOPIMM32, 0b101, 0x405}: itypeOpSraiwWB, // funct7 0100000
-	{opcodeOPIMM32, 0b101, 0x41f}: itypeOpSraiwWB, // funct7 0100000, shamt 31
-	{opcodeOPIMM32, 0b101, 0x200}: itypeInvalid,   // funct7 neither 0 nor 0100000
+	// OPIMM32: word shifts depend on funct7 (imm12[11:5]); sraiw strips to uimm5.
+	{opcodeOPIMM32, 0b000, 0x007}: {itypeOpAddiwWB, 0x007},
+	{opcodeOPIMM32, 0b001, 0x000}: {itypeOpSlliwWB, 0x000}, // funct7 0
+	{opcodeOPIMM32, 0b001, 0x01f}: {itypeOpSlliwWB, 0x01f}, // funct7 0, shamt 31
+	{opcodeOPIMM32, 0b001, 0x020}: {itypeInvalid, 0x020},   // funct7 != 0
+	{opcodeOPIMM32, 0b101, 0x003}: {itypeOpSrliwWB, 0x003}, // funct7 0000000
+	{opcodeOPIMM32, 0b101, 0x01f}: {itypeOpSrliwWB, 0x01f}, // funct7 0000000, shamt 31
+	{opcodeOPIMM32, 0b101, 0x405}: {itypeOpSraiwWB, 0x005}, // funct7 0100000 -> uimm5 5
+	{opcodeOPIMM32, 0b101, 0x41f}: {itypeOpSraiwWB, 0x01f}, // funct7 0100000 -> uimm5 31
+	{opcodeOPIMM32, 0b101, 0x200}: {itypeInvalid, 0x200},   // funct7 neither 0 nor 0100000
 
-	// JALR: op fixed, imm12 irrelevant.
-	{opcodeJALR, 0b000, 0x123}: itypeJalr,
-	{opcodeJALR, 0b000, 0xfff}: itypeJalr,
+	// JALR: op fixed, imm12 passed through.
+	{opcodeJALR, 0b000, 0x123}: {itypeJalr, 0x123},
+	{opcodeJALR, 0b000, 0xfff}: {itypeJalr, 0xfff},
 
-	// SYSTEM: op selected by funct12 (== imm12).
-	{opcodeSYSTEM, 0b000, funct12Ecall}:  itypeEcall,
-	{opcodeSYSTEM, 0b000, funct12Ebreak}: itypeEbreak,
-	{opcodeSYSTEM, 0b000, 0x002}:         itypeInvalid, // unknown funct12
+	// SYSTEM: op selected by funct12 (== imm12), passed through.
+	{opcodeSYSTEM, 0b000, funct12Ecall}:  {itypeEcall, funct12Ecall},
+	{opcodeSYSTEM, 0b000, funct12Ebreak}: {itypeEbreak, funct12Ebreak},
+	{opcodeSYSTEM, 0b000, 0x002}:         {itypeInvalid, 0x002}, // unknown funct12
 }
 
 // validITypeArms is the static set of (opcode, funct3) pairs that can decode to
-// a non-invalid op for at least one imm12. Every (opcode, funct3) NOT listed
-// here must return itypeInvalid for all imm12 (asserted exhaustively by
-// TestDecodeITypeSemanticInvalidArms).
+// a non-invalid op for at least one imm12
 var validITypeArms = map[iTypeArm]bool{
 	{opcodeLOAD, 0b000}: true, {opcodeLOAD, 0b001}: true,
 	{opcodeLOAD, 0b010}: true, {opcodeLOAD, 0b011}: true,
@@ -195,28 +203,33 @@ var validITypeArms = map[iTypeArm]bool{
 	{opcodeSYSTEM, 0b000}: true,
 }
 
-// TestDecodeITypeSemanticOp checks the local op against the decodeITypeVectors
-// static truth table.
+// TestDecodeITypeSemanticOp checks both return values (computed op and normalized
+// imm12) against the decodeITypeVectors static truth table.
 func TestDecodeITypeSemanticOp(t *testing.T) {
-	for in, wantOp := range decodeITypeVectors {
+	for in, want := range decodeITypeVectors {
 		// Guard: every input in the table must belong to a valid arm.
 		if !validITypeArms[iTypeArm{in.opcode, in.funct3}] {
 			t.Fatalf("decodeITypeVectors has entry for non-valid arm opcode=%#x funct3=%#03b", in.opcode, in.funct3)
 		}
-		if gotOp, _ := decodeITypeSemantic(in.opcode, in.funct3, in.imm12); gotOp != wantOp {
-			t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#03b, imm=%#05x) op = %d, want %d",
-				in.opcode, in.funct3, in.imm12, gotOp, wantOp)
+		gotOp, gotImm := decodeITypeSemantic(in.opcode, in.funct3, in.imm12)
+		if gotOp != want.op || gotImm != want.imm {
+			t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#03b, imm=%#05x) = (%d, %#x), want (%d, %#x)",
+				in.opcode, in.funct3, in.imm12, gotOp, gotImm, want.op, want.imm)
 		}
 	}
 }
 
-// TestDecodeITypeSemanticInvalidArms sweeps every opcode (0..127) and funct3
-// (0..7) NOT in validITypeArms and asserts decodeITypeSemantic returns
-// itypeInvalid with imm12 unchanged for all imm12 (0..4095).
+// TestDecodeITypeSemanticInvalidArms scans
+// - every opcode (0..127) 
+// - every funct3 (0..7)
+// which pair is NOT in the list of validITypeArms and asserts
+// decodeITypeSemantic returns itypeInvalid with imm12 unchanged
+// for all imm12 (0..4095).
 func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
 		for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
 			if validITypeArms[iTypeArm{opcode, funct3}] {
+				// if the pair is in the list of validITypeArms, skip
 				continue
 			}
 			for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
