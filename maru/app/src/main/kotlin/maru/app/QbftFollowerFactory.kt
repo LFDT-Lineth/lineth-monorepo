@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -41,6 +42,7 @@ class QbftFollowerFactory(
   private val finalizationStateProvider: FinalizationProvider,
   private val payloadValidationEnabled: Boolean,
   private val blockHashing: ForkAwareBlockHashing,
+  private val targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): Protocol {
     val qbftConsensusConfig = (forkSpec.configuration as QbftConsensusConfig)
@@ -51,6 +53,7 @@ class QbftFollowerFactory(
           web3JEngineApiClient = it,
           elFork = qbftConsensusConfig.elFork,
           metricsFacade = metricsFacade,
+          targetGasLimit = targetGasLimit,
         )
       }
 
@@ -71,6 +74,7 @@ class QbftFollowerFactory(
         metricsFacade = metricsFacade,
         finalizationStateProvider = finalizationStateProvider,
         followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+        targetGasLimit = targetGasLimit,
       )
 
     val validatorProvider = StaticValidatorProvider(validators = qbftConsensusConfig.validatorSet)

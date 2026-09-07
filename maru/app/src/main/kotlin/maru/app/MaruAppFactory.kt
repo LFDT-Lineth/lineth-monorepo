@@ -269,6 +269,7 @@ class MaruAppFactory(
               web3JEngineApiClient = engineApiWeb3jClient,
               elFork = it,
               metricsFacade = metricsFacade,
+              targetGasLimit = config.qbft?.targetGasLimit ?: AMSTERDAM_TARGET_GAS_LIMIT,
             )
           JsonRpcExecutionLayerManager(engineApiClient)
         }
@@ -318,6 +319,7 @@ class MaruAppFactory(
           metricsFacade = metricsFacade,
           followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
           finalizationProvider = finalizationProvider,
+          targetGasLimit = config.qbft?.targetGasLimit ?: AMSTERDAM_TARGET_GAS_LIMIT,
         )
       // Validators manage EL sync through QBFT consensus itself.
       // Followers only use ELSyncService when an explicit polling interval is configured.

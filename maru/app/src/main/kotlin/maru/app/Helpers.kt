@@ -56,6 +56,7 @@ object Helpers {
     metricsFacade: MetricsFacade,
     finalizationStateProvider: FinalizationProvider,
     followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
+    targetGasLimit: ULong,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =
       followerELNodeEngineApiWeb3JClients.mapValues { (followerName, web3JClient) ->
@@ -64,6 +65,7 @@ object Helpers {
             web3JEngineApiClient = web3JClient,
             elFork = elFork,
             metricsFacade = metricsFacade,
+            targetGasLimit = targetGasLimit,
           )
         FollowerBeaconBlockImporter.create(
           executionLayerManager = elFollowerExecutionLayerManager,
@@ -79,6 +81,7 @@ object Helpers {
     metricsFacade: MetricsFacade,
     followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
     finalizationProvider: FinalizationProvider,
+    targetGasLimit: ULong,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =
       followerELNodeEngineApiWeb3JClients.mapValues { (followerName, web3JClient) ->
@@ -88,6 +91,7 @@ object Helpers {
               web3JEngineApiClient = web3JClient,
               elFork = elFork,
               metricsFacade = metricsFacade,
+              targetGasLimit = targetGasLimit,
             )
           }
         ElForkAwareBlockImporter(

@@ -14,6 +14,9 @@ import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.kotlin.assertIs20Bytes
 import linea.kotlin.encodeHex
+import maru.core.AMSTERDAM_MIN_TARGET_GAS_LIMIT
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT_TEXT
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path
@@ -332,13 +335,13 @@ data class QbftConfig(
   val validatorSigner: ValidatorSignerConfig = ValidatorSignerConfig(),
   @param:ConfigDoc(
     description = "Target execution block gas limit requested from Amsterdam onward.",
-    default = "30000000",
+    default = AMSTERDAM_TARGET_GAS_LIMIT_TEXT,
   )
-  val targetGasLimit: ULong = 30_000_000UL,
+  val targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
 ) {
   init {
     feeRecipient.assertIs20Bytes("feeRecipient")
-    require(targetGasLimit >= 5000UL) { "targetGasLimit must be at least 5000" }
+    require(targetGasLimit >= AMSTERDAM_MIN_TARGET_GAS_LIMIT) { "targetGasLimit must be at least $AMSTERDAM_MIN_TARGET_GAS_LIMIT" }
   }
 
   override fun equals(other: Any?): Boolean {

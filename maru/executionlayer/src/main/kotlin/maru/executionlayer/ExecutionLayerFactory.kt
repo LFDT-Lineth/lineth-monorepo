@@ -9,6 +9,7 @@
 package maru.executionlayer
 
 import maru.consensus.ElFork
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.executionlayer.client.AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.CancunWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
@@ -26,7 +27,7 @@ object ExecutionLayerFactory {
     web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
-    targetGasLimit: ULong = 30_000_000UL,
+    targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
   ): ExecutionLayerManager =
     JsonRpcExecutionLayerManager(
       executionLayerEngineApiClient = buildExecutionEngineClient(
@@ -41,7 +42,7 @@ object ExecutionLayerFactory {
     web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
-    targetGasLimit: ULong = 30_000_000UL,
+    targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
   ): ExecutionLayerEngineApiClient =
     when (elFork) {
       ElFork.Paris ->

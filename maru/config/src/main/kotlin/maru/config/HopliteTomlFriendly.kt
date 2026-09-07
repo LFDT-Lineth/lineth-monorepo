@@ -13,6 +13,8 @@ import linea.config.docs.ConfigSection
 import linea.domain.RetryConfig
 import linea.domain.toBlockParameter
 import linea.kotlin.assertIs20Bytes
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT_TEXT
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -126,9 +128,9 @@ data class QbftOptionsDtoToml(
   val signerName: String? = null,
   @param:ConfigDoc(
     description = "Target execution block gas limit requested from Amsterdam onward.",
-    default = "30000000",
+    default = AMSTERDAM_TARGET_GAS_LIMIT_TEXT,
   )
-  val targetGasLimit: ULong = 30_000_000UL,
+  val targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
 ) {
   fun toDomain(): QbftConfig =
     QbftConfig(

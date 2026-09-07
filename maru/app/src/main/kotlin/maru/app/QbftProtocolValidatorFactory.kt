@@ -81,6 +81,7 @@ class QbftProtocolValidatorFactory(
         metricsFacade = metricsFacade,
         finalizationStateProvider = finalizationStateProvider,
         followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
+        targetGasLimit = qbftOptions.targetGasLimit,
       )
     val sealedBlockHandlers =
       mutableMapOf(
