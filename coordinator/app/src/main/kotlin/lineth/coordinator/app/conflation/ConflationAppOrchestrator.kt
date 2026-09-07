@@ -232,8 +232,8 @@ class ConflationAppOrchestrator(
   private val targetCheckpointPauseControllerV1 = newTargetCheckpointPauseController()
   private val targetCheckpointPauseControllerV2 = newTargetCheckpointPauseController()
 
-  private val conflationAppV1: ConflationAppV1? = if (riscVCutoverCrossed()) {
-    null
+  private val conflationAppV1: LongRunningService = if (riscVCutoverCrossed()) {
+    DisabledService("conflation-app-v1")
   } else {
     ConflationAppV1(
       vertx = vertx,
@@ -257,7 +257,7 @@ class ConflationAppOrchestrator(
     )
   }
 
-  private val conflationAppV2: ConflationAppV2? =
+  private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
       ConflationAppV2(
         vertx = vertx,
@@ -271,21 +271,29 @@ class ConflationAppOrchestrator(
         lastProcessedBlocks = lastProcessedBlocks,
       )
     } else {
-      null
+      DisabledService("conflation-app-v2")
     }
 
+  // Holds the in-flight V2 start future when V2 is started in the background pre-cutover.
+  // stop() cancels it so that a stop() call racing the background start does not leave the
+  // block monitor running after the orchestrator has shut down.
+  @Volatile
+  private var v2StartFuture: CompletableFuture<*>? = null
+
   override fun start(): CompletableFuture<Unit> {
-    return (conflationAppV1?.start() ?: SafeFuture.completedFuture(Unit))
-      .thenCompose { forcedTransactionsApp.start() }
+    return forcedTransactionsApp.start()
       .thenCompose { provenBlockNumberMonitor.start() }
+      .thenCompose { conflationAppV1.start() }
       .thenCompose {
         if (riscVCutoverCrossed()) {
           // Already past cutover: V2 resumes from a known block number, completes quickly.
-          conflationAppV2?.start() ?: SafeFuture.completedFuture(Unit)
+          conflationAppV2.start()
         } else {
           // Pre-cutover: V2 polls until the cutover timestamp arrives on L2. Start it in the
           // background so the rest of CoordinatorApp (L1 relay, API, …) can come up immediately.
-          conflationAppV2?.start()?.exceptionally { e ->
+          // The future is stored so stop() can cancel it if called before the cutover arrives,
+          // preventing the polling loop from starting on a stopped orchestrator.
+          v2StartFuture = conflationAppV2.start().exceptionally { e ->
             log.error("ConflationAppV2 failed to start: {}", e.message, e)
           }
           SafeFuture.completedFuture(Unit)
@@ -294,8 +302,9 @@ class ConflationAppOrchestrator(
   }
 
   override fun stop(): CompletableFuture<Unit> {
-    return (conflationAppV1?.stop() ?: SafeFuture.completedFuture(Unit))
-      .thenCompose { conflationAppV2?.stop() ?: SafeFuture.completedFuture(Unit) }
+    v2StartFuture?.cancel(true)
+    return conflationAppV1.stop()
+      .thenCompose { conflationAppV2.stop() }
       .thenCompose { forcedTransactionsApp.stop() }
       .thenCompose { provenBlockNumberMonitor.stop() }
   }

@@ -36,6 +36,7 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
@@ -184,7 +185,7 @@ class ConflationAppV2(
     return if (blockTimestamp < cutover) {
       log.info(
         "Cold start: no RISC-V progress found. " +
-          "Will wait for cutover timestamp {}. candidateBlock={} blockTimestamp={}",
+          "Will wait for cutover timestamp={}. candidateBlock={} blockTimestamp={}",
         cutover,
         candidateBlock,
         blockTimestamp,
@@ -215,6 +216,7 @@ class ConflationAppV2(
           pollingInterval = configs.conflation.blocksPollingInterval,
           blocksToFinalization = 0L,
           blocksFetchLimit = configs.conflation.l2FetchBlocksLimit.toLong(),
+          startingBlockWaitTimeout = Duration.INFINITE,
         ),
         targetCheckpointPauseController = targetCheckpointPauseController,
       )
@@ -224,8 +226,7 @@ class ConflationAppV2(
   }
 
   override fun stop(): CompletableFuture<Unit> {
-    val monitorStop = blockCreationMonitor?.let { SafeFuture.allOf(it.stop()) }
-      ?: SafeFuture.completedFuture(Unit)
+    val monitorStop = blockCreationMonitor?.stop() ?: SafeFuture.completedFuture(Unit)
     val coordinatorStop = executionPipeline.executionProofCoordinator.stop().toSafeFuture()
     return SafeFuture.allOf(monitorStop, coordinatorStop)
       .thenApply { log.info("ConflationAppV2 stopped") }
