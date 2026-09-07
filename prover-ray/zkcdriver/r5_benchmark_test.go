@@ -319,23 +319,23 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 		if err != nil {
 			b.Fatalf("serializing R5 constraints: %v", err)
 		}
-		fixture.ensureSystem(b)
 
 		var (
-			inputs = &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-			traces = fixture.driver.TraceZkcInputs(inputs)
-			proofs = make([]wiop.Proof, len(traces))
-			pubs   = make([]wiop.PublicInput, len(traces))
+			system, driver = compileR5BenchmarkSystem(b, fixture.serialized)
+			inputs         = &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
+			traces         = driver.TraceZkcInputs(inputs)
+			proofs         = make([]wiop.Proof, len(traces))
+			pubs           = make([]wiop.PublicInput, len(traces))
 		)
 
 		for i, shard := range traces {
-			proofs[i], pubs[i] = fixture.system.Prove(func(rt *wiop.Runtime) {
-				fixture.driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
+			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
 			})
 		}
 
 		for i := range proofs {
-			if err := fixture.system.Verify(proofs[i], pubs[i]); err != nil {
+			if err := system.Verify(proofs[i], pubs[i]); err != nil {
 				b.Fatalf("verifying R5 proof: %v", err)
 			}
 		}
