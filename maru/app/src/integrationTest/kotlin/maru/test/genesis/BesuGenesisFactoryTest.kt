@@ -160,9 +160,21 @@ class BesuGenesisFactoryTest {
             fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Osaka),
           ),
         )
+      val amsterdamForkSpec =
+        ForkSpec(
+          timestampSeconds = Instant.Companion
+            .parse("2025-10-24T00:00:00Z")
+            .epochSeconds
+            .toULong(),
+          blockTimeSeconds = 2U,
+          configuration = QbftConsensusConfig(
+            validatorSet = validators,
+            fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Amsterdam),
+          ),
+        )
 
       val forksSchedule =
-        ForksSchedule(13U, listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec))
+        ForksSchedule(13U, listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec, amsterdamForkSpec))
 
       val result =
         BesuGenesisFactory.createGenesisWithQBFT(
@@ -184,6 +196,7 @@ class BesuGenesisFactoryTest {
       assertIsNumberWithValue(config.get("cancunTime"), cancunForkSpec.timestampSeconds)
       assertIsNumberWithValue(config.get("pragueTime"), pragueForkSpec.timestampSeconds)
       assertIsNumberWithValue(config.get("osakaTime"), osakaForkSpec.timestampSeconds)
+      assertIsNumberWithValue(config.get("amsterdamTime"), amsterdamForkSpec.timestampSeconds)
     }
 
     @Test

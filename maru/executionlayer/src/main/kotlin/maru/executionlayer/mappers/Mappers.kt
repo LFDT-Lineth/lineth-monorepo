@@ -29,7 +29,9 @@ import org.web3j.protocol.core.methods.response.EthBlock
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV2
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV3
+import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV4
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
+import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV4
 import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.math.BigInteger
@@ -38,6 +40,9 @@ import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
 import tech.pegasys.teku.spec.executionlayer.PayloadStatus as TekuPayloadStatus
 
 object Mappers {
+  private val amsterdamTargetGasLimit = UInt64.valueOf(30_000_000L)
+  private val amsterdamSlotNumber = UInt64.ZERO
+
   private fun recIdFromV(v: BigInteger): Pair<Byte, BigInteger?> {
     val recId: Byte
     var chainId: BigInteger? = null
@@ -152,6 +157,24 @@ object Mappers {
       transactions = this.transactions.map { it.toArray() },
     )
 
+  fun ExecutionPayloadV4.toDomainExecutionPayload() =
+    ExecutionPayload(
+      parentHash = this.parentHash.toArray(),
+      feeRecipient = this.feeRecipient.wrappedBytes.toArray(),
+      stateRoot = this.stateRoot.toArray(),
+      receiptsRoot = this.receiptsRoot.toArray(),
+      logsBloom = this.logsBloom.toArray(),
+      prevRandao = this.prevRandao.toArray(),
+      blockNumber = this.blockNumber.longValue().toULong(),
+      gasLimit = this.gasLimit.longValue().toULong(),
+      gasUsed = this.gasUsed.longValue().toULong(),
+      timestamp = this.timestamp.longValue().toULong(),
+      extraData = this.extraData.toArray(),
+      baseFeePerGas = this.baseFeePerGas.toBigInteger(),
+      blockHash = this.blockHash.toArray(),
+      transactions = this.transactions.map { it.toArray() },
+    )
+
   fun ExecutionPayloadV1.toDomainExecutionPayload() =
     ExecutionPayload(
       parentHash = this.parentHash.toArray(),
@@ -206,6 +229,48 @@ object Mappers {
       UInt64.ZERO,
       /* excessBlobGas */
       UInt64.ZERO,
+    )
+
+  fun ExecutionPayload.toExecutionPayloadV4() =
+    ExecutionPayloadV4(
+      /* parentHash */
+      Bytes32.wrap(this.parentHash),
+      /* feeRecipient */
+      Bytes20(Bytes.wrap(this.feeRecipient)),
+      /* stateRoot */
+      Bytes32.wrap(this.stateRoot),
+      /* receiptsRoot */
+      Bytes32.wrap(this.receiptsRoot),
+      /* logsBloom */
+      Bytes.wrap(this.logsBloom),
+      /* prevRandao */
+      Bytes32.wrap(this.prevRandao),
+      /* blockNumber */
+      UInt64.valueOf(this.blockNumber.toString()),
+      /* gasLimit */
+      UInt64.valueOf(this.gasLimit.toString()),
+      /* gasUsed */
+      UInt64.valueOf(this.gasUsed.toString()),
+      /* timestamp */
+      UInt64.valueOf(this.timestamp.toString()),
+      /* extraData */
+      Bytes.wrap(this.extraData),
+      /* baseFeePerGas */
+      UInt256.valueOf(this.baseFeePerGas),
+      /* blockHash */
+      Bytes32.wrap(this.blockHash),
+      /* transactions */
+      this.transactions.map { Bytes.wrap(it) },
+      /* withdrawals */
+      emptyList(),
+      /* blobGasUsed */
+      UInt64.ZERO,
+      /* excessBlobGas */
+      UInt64.ZERO,
+      /* blockAccessList */
+      Bytes.EMPTY,
+      /* slotNumber */
+      amsterdamSlotNumber,
     )
 
   fun ExecutionPayload.toExecutionPayloadV2() =
@@ -279,6 +344,35 @@ object Mappers {
       UInt64.fromLongBits(this.timestamp.toLong()),
       Bytes32.wrap(this.prevRandao),
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
+    )
+
+  fun PayloadAttributes.toPayloadAttributesV4(): PayloadAttributesV4 =
+    PayloadAttributesV4(
+      UInt64.fromLongBits(this.timestamp.toLong()),
+      Bytes32.wrap(this.prevRandao),
+      Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
+      emptyList(),
+      Bytes32.ZERO,
+      amsterdamSlotNumber,
+      amsterdamTargetGasLimit,
+    )
+
+  fun PayloadAttributesV1.toPayloadAttributesV4(): PayloadAttributesV4 =
+    PayloadAttributesV4(
+      this.timestamp,
+      this.prevRandao,
+      this.suggestedFeeRecipient,
+      emptyList(),
+      Bytes32.ZERO,
+      amsterdamSlotNumber,
+      amsterdamTargetGasLimit,
+    )
+
+  fun PayloadAttributesV1.toPayloadAttributesV1(): PayloadAttributesV1 =
+    PayloadAttributesV1(
+      this.timestamp,
+      this.prevRandao,
+      this.suggestedFeeRecipient,
     )
 
   fun TekuPayloadStatus.toDomain(): PayloadStatus =
