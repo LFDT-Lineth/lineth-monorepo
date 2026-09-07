@@ -12,6 +12,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
+// TODO: do we want a max ? 
 const DefaultMaxDecodedRecords uint64 = 2_000_000
 
 const (
@@ -29,6 +30,7 @@ const (
 	bType         = 4
 	uType         = 5
 	jType         = 6
+	// TODO : should be renamed 
 	miscMemType   = 7
 )
 
