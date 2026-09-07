@@ -48,13 +48,13 @@ func run() error {
 	// source into systemBuf.
 	var systemBuf bytes.Buffer
 	if err := verifierraycodegen.WriteCompiledSystemZig(&systemBuf, 0, artifacts.CompiledSystem, verifierraycodegen.CompiledSystemZigOptions{
-		EmitHeader:         true,
-		EvalBranchQuota:    2_000_000,
-		ProtocolImport:     `@import("verifier_ray").protocol`,
-		FieldImport:        `@import("verifier_ray").field.koalabear`,
-		VanishingImport:    `@import("verifier_ray").query.vanishing`,
-		LogDerivImport:     `@import("verifier_ray").query.logderivativesum`,
-		GrandProductImport: `@import("verifier_ray").query.grandproduct`,
+		EmitHeader:             true,
+		EvalBranchQuota:        2_000_000,
+		ProtocolImport:         `@import("verifier_ray").protocol`,
+		FieldImport:            `@import("verifier_ray").field.koalabear`,
+		VanishingImport:        `@import("verifier_ray").query.vanishing`,
+		LogDerivImport:         `@import("verifier_ray").query.logderivativesum`,
+		GrandProductImport:     `@import("verifier_ray").query.grandproduct`,
 		RowLimitImport:         `@import("verifier_ray").query.rowlimit`,
 		SharedRandomnessImport: `@import("verifier_ray").query.shared_randomness`,
 		WritePcs:               true,
