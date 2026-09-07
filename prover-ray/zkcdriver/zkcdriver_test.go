@@ -34,6 +34,11 @@ var (
 	zkcCfg   = codegen.DEFAULT_CONFIG
 )
 
+var (
+	// XXX(ivokub): use non-zero shared randomness until we start running preflight to get the shared randomness across shards
+	placeholderSharedRandomness = koalafield.NewOctupletFromStrings([8]string{"1", "0", "0", "0", "0", "0", "0", "0"})
+)
+
 func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
 	// recover panics. ZKC tends to panic when it fails compiling, so we want to catch those and return them as errors.
 	defer func() {
@@ -48,7 +53,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, codegen.DEFAULT_MAX_STATIC_HEIGHT, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
 	if len(errs) > 0 {
 		for i := range errs {
 			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
@@ -140,20 +145,14 @@ func proverCompilePipeline(sys *wiop.System) {
 	// deliberately: once the arithmetization emits bus entries, the seeded path
 	// engages here on its own and any gap in the γ wiring surfaces as a failing
 	// test rather than staying hidden behind a flag nobody remembers to flip.
+	//
+	// See the variable placeholderSharedRandomness above: it is a non-zero octuplet to ensure that the
+	// shared randomness is not all zero, which would be a degenerate case.
 	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	// XXX(ivokub): we have disabled pcs compiler for now as zkc compiler doesn't generate lookup constraints.
-	// in that case we would have columns which are not constrained at all and we would get a panic in the
-	// pcs compiler due to shifts not defined.
-	//
-	// replug when zkc start emitting lookup constraints, see https://github.com/LFDT-Lineth/zkc/issues/2013
-	//
-	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
-	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
-	// test case. We should also do it in the pipeline test then.
 	pcs.Compile(sys)
 }
 
@@ -190,7 +189,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	for i, shard := range traces {
 
 		proofs[i], pubs[i] = sys.Prove(
-			func(rt *wiop.Runtime) { driver.AssignTraceShard(rt, shard, koalafield.Octuplet{}) },
+			func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
+			},
 			wiop.ProveOptions{CheckUnreducedQueries: true})
 	}
 
