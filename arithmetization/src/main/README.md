@@ -12,7 +12,7 @@ ZkC arithmetization for a RISC-V guest VM.
 | `lib/`         | —            | Guest accelerators (Keccak, Poseidon2); see [`lib/README.md`](lib/README.md) |
 
 Offline JSON inputs are produced by
-[`../test/scripts/elf_to_json_gen/`](../test/scripts/elf_to_json_gen/README.md).
+[`../../cmd/elf_to_json/`](../../cmd/elf_to_json/README.md).
 
 ## Predecoding
 
@@ -50,7 +50,7 @@ keeping the PC → index mapping uniform across the whole span.
 
 ### Compute operation and bitfields
 
-At ELF time, `elf_to_json_gen` maps each raw word to a semantic dispatch tag
+At ELF time, `elf_to_json` maps each raw word to a semantic dispatch tag
 `compute_op` plus normalized operands in a unified `decoded[]` record:
 
 ```
@@ -92,10 +92,10 @@ After it succeeds, the interpreter trusts `decoded[]` for every executed step.
 | `predecoding/check/check_*_type.zkc` | Per-format operand verification (B/I/R/J/U/S) |
 | `common/constants.zkc`            | Canonical `OPCODE_*`, `FUNCT3_*`, `FUNCT7_*`, `RTYPE_*`, … |
 
-### Offline predecoded program generation (`elf_to_json_gen`)
+### Offline predecoded program generation (`elf_to_json`)
 
 Predecoding happens **offline**, before ZkC execution. The Go tool
-[`elf_to_json_gen`](../test/scripts/elf_to_json_gen/) reads a RISC-V ELF and
+[`elf_to_json`](../../cmd/elf_to_json/) reads a RISC-V ELF and
 emits JSON public inputs for `riscv/memory.zkc`:
 
 | Output group | Keys | Purpose |
@@ -103,10 +103,10 @@ emits JSON public inputs for `riscv/memory.zkc`:
 | RAM image    | `entry_point_and_blobs_count`, `blobs_offset_and_size`, `blobs_executable`, `blobs_data` | Sparse loadable sections (+ optional `IN_BYTES` at a fixed offset) |
 | Decode table | `instruction_base`, `decoded[]` | Lowest executable address and one dense row per 4-byte word; inter-section gaps → `COMPUTE_INVALID` |
 
-[`Predecoded program generation README`](../test/scripts/elf_to_json_gen/README.md)
+[`Predecoded program generation README`](../../cmd/elf_to_json/README.md)
 
 ```shell
 # direct invocation
-cd arithmetization/src/test/scripts/elf_to_json_gen
-go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset> > input.json
+cd arithmetization
+go tool elf_to_json <elfFile> <input|@file.hex|@file.ssz|@file.bin> [inputOffset] > input.json
 ```

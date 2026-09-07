@@ -25,3 +25,4 @@ require (
 )
 
 tool github.com/LFDT-Lineth/zkc/cmd/zkc
+tool github.com/LFDT-Lineth/lineth-monorepo/arithmetization/cmd/elf_to_json
