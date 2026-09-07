@@ -7,6 +7,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 )
 
 func boolModuleSystem(name string) *wiop.System {
@@ -55,6 +56,27 @@ func TestBuildCoinRoutingRejectsRoundZeroCoins(t *testing.T) {
 
 	if _, err := BuildCoinRouting(sys); err == nil {
 		t.Fatalf("BuildCoinRouting() error = nil, want round-0-coin error")
+	}
+}
+
+func TestBuildCoinRoutingSharedRandomnessCoinRoundMatchesHookRound(t *testing.T) {
+	sys := newSharedRandomnessMessageBusHandle(t)
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+
+	// wiop.Round 0 carries the message-bus columns, round 1 carries the
+	// pre-sampling hook plus alpha/beta, so SharedRandomnessCoinRound (the
+	// wiop.Round.ID replayWithTranscript overrides FS state before squeezing
+	// coins for) must be 1 — not shifted, since RoundCoinCounts is indexed
+	// directly by wiop.Round.ID.
+	if routing.SharedRandomnessCoinRound != 1 {
+		t.Fatalf("shared randomness coin round = %d, want 1", routing.SharedRandomnessCoinRound)
+	}
+	if len(routing.SharedRandomnessGammaRefs) != messagebus.NumSharedRandomness {
+		t.Fatalf("gamma refs = %d, want %d", len(routing.SharedRandomnessGammaRefs), messagebus.NumSharedRandomness)
 	}
 }
 
