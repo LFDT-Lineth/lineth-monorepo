@@ -2,17 +2,11 @@ package zkcr5
 
 import (
 	"bytes"
-	"debug/elf"
-	"encoding/binary"
-	"fmt"
 	"io"
-	"sort"
-)
+	"maps"
 
-const (
-	entryPointAndBlobsCountKey = "entry_point_and_blobs_count"
-	blobsOffsetAndSizeKey      = "blobs_offset_and_size"
-	blobsDataKey               = "blobs_data"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 )
 
 // ElfSection is an in-memory guest RAM region: a contiguous byte slice mapped
@@ -20,15 +14,22 @@ const (
 type ElfSection struct {
 	Offset uint64
 	Data   []byte
+	// Executable reports whether this region holds SHF_EXECINSTR bytes. Only
+	// executable regions are statically pre-decoded into the `instruction_base`
+	// / `decoded` inputs (see [predecoding.Predecode]); data sections supplied
+	// by the caller leave it false.
+	Executable bool
 }
 
 // PrepareInput constructs the map[string][]byte that [zkcdriver.PreReadInputs]
-// expects. It produces the three pub-input keys that RISCV-ZKC.bin's main.zkc
-// declares:
+// expects. It produces the pub-input keys that RISCV-ZKC.bin's main.zkc
+// declares (see arithmetization/src/main/common/inputs.zkc):
 //
 //   - "entry_point_and_blobs_count"
 //   - "blobs_offset_and_size"
 //   - "blobs_data"
+//   - "instruction_base"
+//   - "decoded"
 //
 // guestElfBytes is the raw guest ELF. guestInputData is the input data the
 // guest reads at _in_start, placed at [DefaultINOrigin].
@@ -57,84 +58,25 @@ type GuestProgramSections struct {
 // jobs from the same ELF should call this once at startup and cache the result
 // on [Core].
 func LoadGuestElf(r io.ReaderAt) (GuestProgramSections, error) {
-	ef, err := elf.NewFile(r)
-	if err != nil {
-		return GuestProgramSections{}, fmt.Errorf("parsing guest ELF: %w", err)
-	}
-	blobs, err := extractElfSections(ef)
+	program, err := elfmapping.Load(r)
 	if err != nil {
 		return GuestProgramSections{}, err
 	}
-	return GuestProgramSections{Sections: blobs, EntryPoint: ef.Entry}, nil
-}
-
-// extractElfSections extracts allocated, file-backed ELF sections as memory
-// blobs. SHT_NOBITS sections (.bss, padding) are omitted: guest RAM is zero-
-// initialized before memory blob loading, so explicit zeros waste space.
-func extractElfSections(ef *elf.File) ([]ElfSection, error) {
-	var result []ElfSection
-
-	for _, p := range ef.Progs {
-		if p.Type != elf.PT_LOAD || p.Memsz == 0 {
-			continue
-		}
-		if p.Filesz > p.Memsz {
-			return nil, fmt.Errorf("loadable segment at %#x has file size larger than memory size", p.Vaddr)
-		}
-		progEnd := p.Vaddr + p.Memsz
-		if progEnd < p.Vaddr {
-			return nil, fmt.Errorf("loadable segment address overflow at %#x", p.Vaddr)
-		}
-
-		var segBlobs []ElfSection
-		for _, s := range ef.Sections {
-			if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_ALLOC == 0 {
-				continue
-			}
-			sectionEnd := s.Addr + s.Size
-			if sectionEnd < s.Addr {
-				return nil, fmt.Errorf("section %s address overflow at %#x", s.Name, s.Addr)
-			}
-			if s.Addr < p.Vaddr || sectionEnd > progEnd {
-				continue
-			}
-			data, err := io.ReadAll(s.Open())
-			if err != nil {
-				return nil, fmt.Errorf("reading ELF section %s: %w", s.Name, err)
-			}
-			if uint64(len(data)) != s.Size {
-				return nil, fmt.Errorf("short read for section %s: got %d bytes, expected %d", s.Name, len(data), s.Size)
-			}
-			segBlobs = append(segBlobs, ElfSection{Offset: s.Addr, Data: data})
-		}
-
-		sort.Slice(segBlobs, func(i, j int) bool {
-			return segBlobs[i].Offset < segBlobs[j].Offset
-		})
-		result = append(result, segBlobs...)
-	}
-
-	if len(result) == 0 {
-		return nil, fmt.Errorf("guest ELF has no loadable sections")
-	}
-	return result, nil
+	return GuestProgramSections{
+		Sections:   fromBlobs(program.Blobs),
+		EntryPoint: program.EntryPoint,
+	}, nil
 }
 
 // NewDataSection splits data into the two memory blobs that linea_zkvm_io expects at
 // _in_start: an 8-byte LE length prefix followed by the payload bytes. It does
 // not interpret the payload.
 func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
-	payloadOffset := inOrigin + 8
-	if payloadOffset < inOrigin {
-		return nil, fmt.Errorf("data input offset overflow: in_origin=%#x", inOrigin)
+	blobs, err := elfmapping.NewData(inOrigin, data, elfmapping.WithLengthPrefix())
+	if err != nil {
+		return nil, err
 	}
-	prefix := make([]byte, 8)
-	binary.LittleEndian.PutUint64(prefix, uint64(len(data)))
-	memBlobs := []ElfSection{{Offset: inOrigin, Data: prefix}}
-	if len(data) > 0 {
-		memBlobs = append(memBlobs, ElfSection{Offset: payloadOffset, Data: data})
-	}
-	return memBlobs, nil
+	return fromBlobs(blobs), nil
 }
 
 // EncodeGuestAndMemoryForZkc builds the keyed byte map that
@@ -143,6 +85,8 @@ func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
 //   - "entry_point_and_blobs_count": [8 BE entry point][8 BE blob count]
 //   - "blobs_offset_and_size":       per blob, [8 BE offset][8 BE size]
 //   - "blobs_data":                  all blob bytes concatenated
+//   - "instruction_base":            [8 BE lowest executable address]
+//   - "decoded":                     bit-packed pre-decoded instruction table
 //
 // guestSections is the ELF's loadable sections, and memory is any additional
 // memory blobs (e.g. the framed StatelessInput).
@@ -150,58 +94,58 @@ func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
 // It sorts the combined sections by offset without mutating either input slice,
 // and rejects overlapping or overflowing address ranges.
 func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) (map[string][]byte, error) {
-	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), guestSections.EntryPoint)
-	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(guestSections.Sections)+len(memory)))
-
-	allSections := make([]ElfSection, 0, len(guestSections.Sections)+len(memory))
-	allSections = append(allSections, guestSections.Sections...)
-	allSections = append(allSections, memory...)
-	sort.SliceStable(allSections, func(i, j int) bool {
-		return allSections[i].Offset < allSections[j].Offset
-	})
-	if err := validateNonOverlappingSections(allSections); err != nil {
+	program := elfmapping.Program{
+		EntryPoint: guestSections.EntryPoint,
+		Blobs:      toBlobs(guestSections.Sections),
+	}
+	inputs, err := elfmapping.EncodeInputs(program, toBlobs(memory))
+	if err != nil {
 		return nil, err
 	}
 
-	var dataLen int
-	for _, b := range allSections {
-		dataLen += len(b.Data)
-	}
-	offsetAndSize := make([]byte, 0, 16*len(allSections))
-	data := make([]byte, 0, dataLen)
-	for _, b := range allSections {
-		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, b.Offset)
-		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, uint64(len(b.Data)))
-		data = append(data, b.Data...)
+	// Statically pre-decode the executable region. main.zkc's interpreter
+	// dispatches on the unified compute_op from `decoded` instead of decoding
+	// each instruction at every step, so a guest program must supply these
+	// inputs: omitting them fails tracing with `missing input
+	// "instruction_base"`.
+	//
+	// Callers that encode a data-only layout (no executable section) get
+	// neither key: there is no instruction stream to describe, and emitting an
+	// empty table would claim a zero-length executable region at address 0.
+	if hasExecutable(program.Blobs) {
+		decoded, err := predecoding.Predecode(program)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(inputs, decoded.EncodeInputs())
 	}
 
-	return map[string][]byte{
-		entryPointAndBlobsCountKey: entryAndCount,
-		blobsOffsetAndSizeKey:      offsetAndSize,
-		blobsDataKey:               data,
-	}, nil
+	return inputs, nil
 }
 
-func validateNonOverlappingSections(sections []ElfSection) error {
-	var previousOffset, previousEnd uint64
-	hasPrevious := false
-	for _, section := range sections {
-		if len(section.Data) == 0 {
-			continue
+func hasExecutable(blobs []elfmapping.Blob) bool {
+	for _, blob := range blobs {
+		if blob.Executable {
+			return true
 		}
-		end := section.Offset + uint64(len(section.Data))
-		if end < section.Offset {
-			return fmt.Errorf("memory section at %#x with %d bytes overflows address space", section.Offset, len(section.Data))
-		}
-		if hasPrevious && section.Offset < previousEnd {
-			return fmt.Errorf(
-				"memory section at %#x overlaps section at %#x ending at %#x",
-				section.Offset,
-				previousOffset,
-				previousEnd,
-			)
-		}
-		previousOffset, previousEnd, hasPrevious = section.Offset, end, true
 	}
-	return nil
+	return false
+}
+
+// toBlobs adapts prover-ray's ElfSection to the arithmetization's elfmapping.Blob.
+func toBlobs(sections []ElfSection) []elfmapping.Blob {
+	blobs := make([]elfmapping.Blob, len(sections))
+	for i, s := range sections {
+		blobs[i] = elfmapping.Blob{Address: s.Offset, Data: s.Data, Executable: s.Executable}
+	}
+	return blobs
+}
+
+// fromBlobs adapts the arithmetization's elfmapping.Blob to prover-ray's ElfSection.
+func fromBlobs(blobs []elfmapping.Blob) []ElfSection {
+	sections := make([]ElfSection, len(blobs))
+	for i, b := range blobs {
+		sections[i] = ElfSection{Offset: b.Address, Data: b.Data, Executable: b.Executable}
+	}
+	return sections
 }
