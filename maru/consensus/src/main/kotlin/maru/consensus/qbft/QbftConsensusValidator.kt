@@ -11,13 +11,13 @@ package maru.consensus.qbft
 import maru.core.Protocol
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
-import org.hyperledger.besu.consensus.qbft.core.statemachine.QbftController
+import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
 import java.util.concurrent.Executor
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class QbftConsensusValidator(
-  private val qbftController: QbftController,
+  private val qbftController: QbftEventHandler,
   private val eventProcessor: QbftEventProcessor,
   private val bftExecutors: BftExecutors,
   private val eventQueueExecutor: Executor,
@@ -47,11 +47,8 @@ class QbftConsensusValidator(
     val wasRunning = isRunning
     isRunning = false
     eventProcessor.stop()
-    // Block until the event processor has finished the event it is currently handling. Block import
-    // runs synchronously on that thread, so returning early would let ProtocolStarter start the next
-    // fork's protocol while this one is still committing a block. The incoming protocol would then
-    // read a stale chain head and propose a second block at the same height, forking the chain and
-    // stranding followers that already imported the outgoing fork's block.
+    // Returning before the in-flight block import commits lets ProtocolStarter start the next
+    // fork's protocol against a stale chain head, forking the chain at that height.
     if (wasRunning && !eventProcessor.awaitStop(shutdownTimeout)) {
       log.warn("BFT event processor did not stop within {}, proceeding with shutdown anyway", shutdownTimeout)
     }

@@ -52,9 +52,8 @@ class QbftEventProcessor(
   }
 
   /**
-   * Await stop, giving up after [timeout].
+   * Await stop, returning false if it did not finish within [timeout].
    *
-   * @return true if the processor finished within the timeout
    * @throws InterruptedException the interrupted exception
    */
   @Throws(InterruptedException::class)
