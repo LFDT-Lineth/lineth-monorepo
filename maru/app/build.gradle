@@ -45,14 +45,7 @@ dependencies {
   // import dropped in favor of zkevm's lighter `lineth.kotlin-application-conventions`).
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:linea:metrics:micrometer')
-  // Pinned to the published Vert.x 4-era artifact rather than the local
-  // :jvm-libs:generic:vertx-helper (Vert.x 5) because Besu 26.5's acceptance-tests-dsl
-  // and besu-ethereum-p2p call removed Vert.x 4 methods/internals at runtime.
-  // Tracked in libs.versions.toml `lineaPackages`.
-  implementation("build.linea.internal:vertx-helper:${libs.versions.lineaPackages.get()}") {
-    exclude group: "build.linea.internal", module: "kotlin"
-    exclude group: "build.linea.internal", module: "futures"
-  }
+  implementation project(':jvm-libs:generic:vertx-helper')
   implementation "io.vertx:vertx-micrometer-metrics"
 
   implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
