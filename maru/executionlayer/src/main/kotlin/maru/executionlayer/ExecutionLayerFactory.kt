@@ -9,6 +9,7 @@
 package maru.executionlayer
 
 import maru.consensus.ElFork
+import maru.executionlayer.client.AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.CancunWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
 import maru.executionlayer.client.OsakaWeb3JJsonRpcExecutionLayerEngineApiClient
@@ -63,8 +64,15 @@ object ExecutionLayerFactory {
           web3jClient = web3JEngineApiClient,
           metricsFacade = metricsFacade,
         )
+
       ElFork.Osaka ->
         OsakaWeb3JJsonRpcExecutionLayerEngineApiClient(
+          web3jClient = web3JEngineApiClient,
+          metricsFacade = metricsFacade,
+        )
+
+      ElFork.Amsterdam ->
+        AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
           web3jClient = web3JEngineApiClient,
           metricsFacade = metricsFacade,
         )
