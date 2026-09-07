@@ -8,7 +8,6 @@
  */
 package maru.app
 
-import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -23,6 +22,7 @@ import maru.consensus.state.StateTransitionImpl
 import maru.consensus.validation.BeaconBlockValidatorFactoryImpl
 import maru.consensus.validation.QuorumOfSealsVerifier
 import maru.consensus.validation.SCEP256SealVerifier
+import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.core.Protocol
 import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager

@@ -341,7 +341,9 @@ data class QbftConfig(
 ) {
   init {
     feeRecipient.assertIs20Bytes("feeRecipient")
-    require(targetGasLimit >= AMSTERDAM_MIN_TARGET_GAS_LIMIT) { "targetGasLimit must be at least $AMSTERDAM_MIN_TARGET_GAS_LIMIT" }
+    require(targetGasLimit >= AMSTERDAM_MIN_TARGET_GAS_LIMIT) {
+      "targetGasLimit must be at least $AMSTERDAM_MIN_TARGET_GAS_LIMIT"
+    }
   }
 
   override fun equals(other: Any?): Boolean {
