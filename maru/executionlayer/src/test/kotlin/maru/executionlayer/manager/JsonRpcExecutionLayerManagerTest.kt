@@ -8,6 +8,7 @@
  */
 package maru.executionlayer.manager
 
+import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
@@ -31,13 +32,10 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.times
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
-import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextULong
@@ -182,10 +180,74 @@ class JsonRpcExecutionLayerManagerTest {
       },
       argThat { payloadAttributes ->
         payloadAttributes ==
-          PayloadAttributesV1(
-            UInt64.fromLongBits(nextTimestamp.toLong()),
-            Bytes32.ZERO,
-            Bytes20(Bytes.wrap(feeRecipient)),
+          PayloadAttributes(
+            timestamp = nextTimestamp,
+            prevRandao = EMPTY_HASH,
+            suggestedFeeRecipient = feeRecipient,
+          )
+      },
+    )
+  }
+
+  @Test
+  fun `setHeadAndStartBlockBuilding passes Amsterdam slot number to FCU`() {
+    val newHeadHash = Bytes32.random()
+    val newSafeHash = Bytes32.random()
+    val newFinalizedHash = Bytes32.random()
+    val nextTimestamp = Random.nextULong(0U, ULong.MAX_VALUE)
+    val nextSlot = Random.nextULong(0U, ULong.MAX_VALUE)
+
+    val payloadId = Bytes8(Bytes.random(8))
+    val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
+
+    val result =
+      executionLayerManager
+        .setHeadAndStartBlockBuilding(
+          headHash = newHeadHash.toArray(),
+          safeHash = newSafeHash.toArray(),
+          finalizedHash = newFinalizedHash.toArray(),
+          nextBlockTimestamp = nextTimestamp,
+          feeRecipient = feeRecipient,
+          nextBlockSlotNumber = nextSlot,
+        ).get()
+
+    val expectedPayloadStatus =
+      PayloadStatus(
+        ExecutionPayloadStatus.VALID,
+        latestValidHash = payloadStatus
+          .asInternalExecutionPayload()
+          .latestValidHash
+          .get()
+          .toArray(),
+        validationError = null,
+      )
+    val expectedResult = ForkChoiceUpdatedResult(expectedPayloadStatus, payloadId.wrappedBytes.toArray())
+    assertThat(result).isEqualTo(expectedResult)
+    verify(executionLayerEngineApiClient, atLeastOnce()).forkChoiceUpdate(
+      argThat { forkChoiceState ->
+        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
+      },
+      argThat { payloadAttributes ->
+        payloadAttributes ==
+          PayloadAttributes(
+            timestamp = nextTimestamp,
+            prevRandao = EMPTY_HASH,
+            suggestedFeeRecipient = feeRecipient,
+            slotNumber = nextSlot,
+          )
+      },
+    )
+    verify(executionLayerEngineApiClient, atLeastOnce()).forkChoiceUpdate(
+      argThat { forkChoiceState ->
+        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
+      },
+      argThat { payloadAttributes ->
+        payloadAttributes ==
+          PayloadAttributes(
+            timestamp = nextTimestamp,
+            prevRandao = EMPTY_HASH,
+            suggestedFeeRecipient = feeRecipient,
+            slotNumber = nextSlot,
           )
       },
     )

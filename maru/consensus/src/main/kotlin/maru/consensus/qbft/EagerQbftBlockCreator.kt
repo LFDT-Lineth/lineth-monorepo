@@ -94,6 +94,7 @@ class EagerQbftBlockCreator(
               .inc(),
             prevRandao = parentBeaconBlock.beaconBlockBody.executionPayload.prevRandao,
           ),
+          nextBlockSlotNumber = beaconBlockHeader.number + 1UL,
         ).get()
     log.debug(
       "Building new block, FCU result={}",

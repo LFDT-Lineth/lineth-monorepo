@@ -147,6 +147,7 @@ class BlockBuildingBeaconBlockImporter(
               .inc(),
             prevRandao = beaconBlock.beaconBlockBody.executionPayload.prevRandao,
           ),
+          nextBlockSlotNumber = beaconBlockHeader.number + 1UL,
         )
       } catch (error: Exception) {
         SafeFuture.failedFuture(error)

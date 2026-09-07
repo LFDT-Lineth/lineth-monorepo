@@ -10,6 +10,7 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
+import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade

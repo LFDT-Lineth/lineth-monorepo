@@ -353,7 +353,7 @@ object Mappers {
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
       emptyList(),
       Bytes32.ZERO,
-      amsterdamSlotNumber,
+      this.slotNumber?.let { UInt64.valueOf(it.toString()) } ?: amsterdamSlotNumber,
       amsterdamTargetGasLimit,
     )
 

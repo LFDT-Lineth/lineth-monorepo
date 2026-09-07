@@ -280,6 +280,7 @@ class EagerQbftBlockCreatorTest {
       nextBlockTimestamp = any(),
       feeRecipient = any(),
       prevRandao = any(),
+      nextBlockSlotNumber = eq(1UL),
     )
   }
 
@@ -325,6 +326,7 @@ class EagerQbftBlockCreatorTest {
       nextBlockTimestamp = any(),
       feeRecipient = any(),
       prevRandao = any(),
+      nextBlockSlotNumber = eq(1UL),
     )
   }
 
@@ -342,6 +344,7 @@ class EagerQbftBlockCreatorTest {
         finalizedHash = genesisBlockHash,
         nextBlockTimestamp = rejectedBlockTimestamp.toULong(),
         feeRecipient = validator.address,
+        nextBlockSlotNumber = 1UL,
       ).get()
     val transaction = BesuTransactionsHelper().createTransfers(1u)
     besuInstance.execute(transaction)
