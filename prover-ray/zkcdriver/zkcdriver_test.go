@@ -34,6 +34,11 @@ var (
 	zkcCfg   = codegen.DEFAULT_CONFIG
 )
 
+var (
+	// XXX(ivokub): use non-zero shared randomness until we start running preflight to get the shared randomness across shards
+	placeholderSharedRandomness = koalafield.NewOctupletFromStrings([8]string{"1", "0", "0", "0", "0", "0", "0", "0"})
+)
+
 func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
 	// recover panics. ZKC tends to panic when it fails compiling, so we want to catch those and return them as errors.
 	defer func() {
@@ -140,6 +145,9 @@ func proverCompilePipeline(sys *wiop.System) {
 	// deliberately: once the arithmetization emits bus entries, the seeded path
 	// engages here on its own and any gap in the γ wiring surfaces as a failing
 	// test rather than staying hidden behind a flag nobody remembers to flip.
+	//
+	// See the variable placeholderSharedRandomness above: it is a non-zero octuplet to ensure that the
+	// shared randomness is not all zero, which would be a degenerate case.
 	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
@@ -181,7 +189,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	for i, shard := range traces {
 
 		proofs[i], pubs[i] = sys.Prove(
-			func(rt *wiop.Runtime) { driver.AssignTraceShard(rt, shard, koalafield.Octuplet{}) },
+			func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
+			},
 			wiop.ProveOptions{CheckUnreducedQueries: true})
 	}
 

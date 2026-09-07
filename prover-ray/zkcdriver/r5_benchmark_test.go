@@ -268,7 +268,7 @@ func BenchmarkR5Prove(b *testing.B) {
 
 	for b.Loop() {
 		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+			fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
 		})
 		r5ProofSink, r5PubSink = []wiop.Proof{proof}, []wiop.PublicInput{pub}
 	}
@@ -286,7 +286,7 @@ func BenchmarkR5Verify(b *testing.B) {
 	traces := fixture.driver.TraceZkcInputs(inputs)
 
 	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
+		fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
 	})
 	if err := fixture.system.Verify(proof, pub); err != nil {
 		b.Fatalf("verifying setup proof: %v", err)
@@ -330,7 +330,7 @@ func BenchmarkR5ColdEndToEnd(b *testing.B) {
 
 		for i, shard := range traces {
 			proofs[i], pubs[i] = system.Prove(func(rt *wiop.Runtime) {
-				driver.AssignTraceShard(rt, shard, koalafield.Octuplet{})
+				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
 			})
 		}
 
