@@ -356,13 +356,6 @@ object Mappers {
       UInt64.valueOf(targetGasLimit.toString()),
     )
 
-  fun PayloadAttributesV1.toPayloadAttributesV1(): PayloadAttributesV1 =
-    PayloadAttributesV1(
-      this.timestamp,
-      this.prevRandao,
-      this.suggestedFeeRecipient,
-    )
-
   fun TekuPayloadStatus.toDomain(): PayloadStatus =
     PayloadStatus(
       ExecutionPayloadStatus.valueOf(this.status.getOrNull().toString()), // TODO: Fix and test

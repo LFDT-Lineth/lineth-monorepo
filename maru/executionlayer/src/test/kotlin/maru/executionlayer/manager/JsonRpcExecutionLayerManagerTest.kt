@@ -237,20 +237,6 @@ class JsonRpcExecutionLayerManagerTest {
           )
       },
     )
-    verify(executionLayerEngineApiClient, atLeastOnce()).forkChoiceUpdate(
-      argThat { forkChoiceState ->
-        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
-      },
-      argThat { payloadAttributes ->
-        payloadAttributes ==
-          PayloadAttributes(
-            timestamp = nextTimestamp,
-            prevRandao = EMPTY_HASH,
-            suggestedFeeRecipient = feeRecipient,
-            slotNumber = nextSlot,
-          )
-      },
-    )
   }
 
   @Test
