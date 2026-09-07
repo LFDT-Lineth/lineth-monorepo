@@ -23,8 +23,10 @@ func TestCompile_Permutation_NoMessageBusesIsNoOp(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-empty")
 	sys.NewRound()
 
+	alpha, beta := busCoins(sys)
+
 	roundsBefore := len(sys.Rounds)
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, alpha, beta)
 	assert.Len(t, sys.Rounds, roundsBefore,
 		"Compile must not append rounds when there are no MessageBus queries")
 }
@@ -45,7 +47,8 @@ func TestCompile_Permutation_MixedOriginShardPanics(t *testing.T) {
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-shardB"), "shardB", "h", wiop.NewTable(colB.View()))
 
-	assert.Panics(t, func() { messagebus.Compile(sys) },
+	alpha, beta := busCoins(sys)
+	assert.Panics(t, func() { messagebus.Compile(sys, alpha, beta) },
 		"Compile must panic when MessageBus entries straddle different OriginShard values")
 }
 
@@ -579,7 +582,8 @@ func TestCompile_Permutation_SkipInShardCheck_MismatchPanics(t *testing.T) {
 	// Only the send entry opts out; the receive entry keeps the default (false).
 	send.SkipInShardCheck = true
 
-	assert.Panics(t, func() { messagebus.Compile(sys) },
+	alpha, beta := busCoins(sys)
+	assert.Panics(t, func() { messagebus.Compile(sys, alpha, beta) },
 		"Compile must panic when entries for the same handle disagree on SkipInShardCheck")
 }
 

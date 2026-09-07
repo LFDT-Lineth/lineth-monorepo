@@ -40,7 +40,8 @@ func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
 			wiop.NewFilteredTable(selR.View(), colR.View()),
 		)
 
-		messagebus.Compile(sys)
+		alpha, beta := busCoins(sys)
+		messagebus.Compile(sys, alpha, beta)
 		grandproduct.Compile(sys)
 
 		rt := wiop.NewRuntime(sys)
@@ -77,7 +78,8 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 			wiop.NewFilteredTable(selR.View(), colR.View()),
 		)
 
-		messagebus.Compile(sys)
+		alpha, beta := busCoins(sys)
+		messagebus.Compile(sys, alpha, beta)
 		grandproduct.Compile(sys)
 
 		rt := wiop.NewRuntime(sys)
@@ -118,7 +120,8 @@ func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
 			wiop.NewTable(hiR.View(), loR.View()),
 		)
 
-		messagebus.Compile(sys)
+		alpha, beta := busCoins(sys)
+		messagebus.Compile(sys, alpha, beta)
 		grandproduct.Compile(sys)
 
 		rt := wiop.NewRuntime(sys)

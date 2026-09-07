@@ -16,6 +16,14 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
+// busCoins declares the α and β the message bus folds rows with, as early as
+// they can be declared
+func busCoins(sys *wiop.System) (alpha, beta *wiop.CoinField) {
+	coinRound := sys.Rounds[0].EnsureNext()
+	return coinRound.NewCoinField(sys.Context.Childf("alpha")),
+		coinRound.NewCoinField(sys.Context.Childf("beta"))
+}
+
 // runRound executes every prover action registered on the runtime's current
 // round.
 func runRound(rt *wiop.Runtime) {

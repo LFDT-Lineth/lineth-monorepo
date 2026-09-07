@@ -60,27 +60,6 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
-// CompileOptions are options for [Compile].
-type CompileOptions struct {
-	// SharedRandomness makes the shard derive α and β from a γ handed to it from
-	// outside the proof instead of from its own Fiat-Shamir transcript, which is
-	// what lets several shards agree on those challenges. It declares γ and the
-	// shard's contribution to it as public inputs and wires the pre-sampling hook
-	// that seeds the transcript; see [registerSharedRandomness].
-	//
-	// Off by default: an unsharded protocol has no one to agree with and derives
-	// α and β from its own transcript. Turning it on obliges the prover to supply
-	// γ through [AssignSharedRandomnessSeed] — there is deliberately no default
-	// value, since a γ known in advance would hand the prover α and β before it
-	// commits to its bus columns.
-	//
-	// Setting it on a system with no message-bus entry does nothing: there is no
-	// coin round to seed. Nothing is registered, so [HasSharedRandomness] stays
-	// false and the prover has no γ to supply. A pipeline can therefore turn it on
-	// ahead of the entries it expects and have it engage the moment they arrive.
-	SharedRandomness bool
-}
-
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
 // collection of [wiop.GrandProduct] queries (one per handle) plus one
 // [wiop.VerifierAction] per handle that asserts the shard's product equals
@@ -115,12 +94,7 @@ type CompileOptions struct {
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
 // mixing shards in one call is a misuse — or if it is called a second time with
 // new entries.
-func Compile(sys *wiop.System, opts ...CompileOptions) {
-	opt := CompileOptions{}
-	if len(opts) > 0 {
-		opt = opts[0]
-	}
-
+func Compile(sys *wiop.System, alpha, beta *wiop.CoinField) {
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
 	// handle. Sort the handles for deterministic round/coin/cell ordering
 	// across runs.
@@ -197,18 +171,6 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 	// open-coding the lookup is what guarantees the caller's pre-allocation and
 	// this one agree: both are the same call.
 	coinRound := ensureCoinRound(sys)
-	// Declare α on that round — sampled by AdvanceRound, after any pre-sampling hook fires.
-	alpha := coinRound.NewCoinField(compCtx.Childf("alpha"))
-	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
-	beta := coinRound.NewCoinField(compCtx.Childf("beta"))
-
-	// Seed that Fiat-Shamir state from a cross-shard γ, if asked. This has to
-	// happen here rather than in a separate call by the caller: the hook must land
-	// on the round that carries α and β, and this is where that round is decided.
-	if opt.SharedRandomness {
-		registerSharedRandomness(sys, coinRound)
-	}
-
 	// The result round (where GrandProduct cells and the verifier action live)
 	// sits strictly after the coin round so the GrandProduct prover action sees
 	// α and β already sampled.

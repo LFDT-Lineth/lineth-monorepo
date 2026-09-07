@@ -58,7 +58,10 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys)
+	coinRound := sys.Rounds[0].EnsureNext()
+	messagebus.Compile(sys,
+		coinRound.NewCoinField(sys.Context.Childf("mb-alpha")),
+		coinRound.NewCoinField(sys.Context.Childf("mb-beta")))
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)

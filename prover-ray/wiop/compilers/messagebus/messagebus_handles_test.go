@@ -37,7 +37,8 @@ func TestCompileIsSingleInvocation(t *testing.T) {
 	// A second call carrying new entries is rejected.
 	sys, mod, r0 := newSys("second-batch")
 	newBusPair(sys, mod, r0, "alpha")
-	messagebus.Compile(sys)
+	alpha, beta := busCoins(sys)
+	messagebus.Compile(sys, alpha, beta)
 	require.Len(t, sys.PublicInputs, 1)
 
 	newBusPair(sys, mod, r0, "beta")
@@ -46,20 +47,21 @@ func TestCompileIsSingleInvocation(t *testing.T) {
 			"called again with new entries: \"single-invocation-second-batch/send-alpha\" (handle \"alpha\") "+
 			"is already reduced while \"single-invocation-second-batch/send-beta\" (handle \"beta\") is not. "+
 			"Declare every message-bus entry before the single Compile call.",
-		func() { messagebus.Compile(sys) },
+		func() { messagebus.Compile(sys, alpha, beta) },
 		"a second batch must be refused with the single-invocation message")
 
 	// Declaring both handles up front is the supported way to get the same result.
 	sysOK, modOK, r0OK := newSys("one-batch")
 	newBusPair(sysOK, modOK, r0OK, "alpha")
 	newBusPair(sysOK, modOK, r0OK, "beta")
-	messagebus.Compile(sysOK)
+	alphaOK, betaOK := busCoins(sysOK)
+	messagebus.Compile(sysOK, alphaOK, betaOK)
 	require.Equal(t, []string{"alpha", "beta"}, sysOK.MessageBusHandles())
 	require.Len(t, sysOK.PublicInputs, 2)
 
 	// A repeat call with nothing new stays a harmless no-op: no panic, and no
 	// second registration of the same accumulators.
-	require.NotPanics(t, func() { messagebus.Compile(sysOK) },
+	require.NotPanics(t, func() { messagebus.Compile(sysOK, alphaOK, betaOK) },
 		"a repeat call with no new entries must be a no-op")
 	require.Len(t, sysOK.PublicInputs, 2, "a no-op call must not register anything")
 	require.Len(t, sysOK.GrandProducts, 2, "a no-op call must not emit new GrandProducts")
@@ -117,7 +119,8 @@ func TestMessageBusHandles(t *testing.T) {
 	require.Less(t, len(handles), len(sys.MessageBuses),
 		"this fixture must actually distinguish the two counts")
 
-	messagebus.Compile(sys)
+	alpha, beta := busCoins(sys)
+	messagebus.Compile(sys, alpha, beta)
 
 	// One public input per bus, not per participation.
 	require.Len(t, sys.PublicInputs, len(handles))
