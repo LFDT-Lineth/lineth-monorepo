@@ -482,3 +482,72 @@ func TestDecodeUTypeSemanticInvalid(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// extractFields
+// ------------------------------------------------------------
+
+// extractFieldSpecs describes each field extractFields slices out: its inclusive
+// bit range [lo, hi] and an accessor. 
+var extractFieldSpecs = []struct {
+	name string
+	lo   int
+	hi   int
+	get  func(instructionFields) uint32
+}{
+	{"opcode", 0, 6, func(f instructionFields) uint32 { return f.opcode }},
+	{"rd", 7, 11, func(f instructionFields) uint32 { return f.rd }},
+	{"funct3", 12, 14, func(f instructionFields) uint32 { return f.funct3 }},
+	{"imm12", 20, 31, func(f instructionFields) uint32 { return f.imm12 }},
+	{"funct7", 25, 31, func(f instructionFields) uint32 { return f.funct7 }},
+}
+
+// assertExtractFields checks every field of extractFields(instr) against the
+// independent extractBits oracle for a single instruction word.
+func assertExtractFields(t *testing.T, instr uint32) {
+	t.Helper()
+	got := extractFields(instr)
+	for _, s := range extractFieldSpecs {
+		// check if the field (opcode, rd, funct3, imm12, funct7)
+		// is valid for the instruction
+		if v, want := s.get(got), extractBits(instr, s.lo, s.hi); v != want {
+			t.Fatalf("extractFields(%#010x).%s = %#x, want %#x", instr, s.name, v, want)
+		}
+	}
+}
+
+// TestExtractFields verifies extractFields against extractBits.
+// The full 32-bit word space (2^32) is too large to enumerate, so we exhaustively
+// sweep :
+// - every walking-one and walking-zero pattern
+// - each field's own value domain against both an all-zero and an all-ones background
+// (to catch mask bleed)
+func TestExtractFields(t *testing.T) {
+
+	// Walking ones / walking zeros: isolates every individual bit.
+	// 0b...00000001 (bit 0)
+	// 0b...00000010 (bit 1)
+	// 0b...00000100 (bit 2)
+	// To cover all areas, even the ones that are not explicitly listed in
+	// extractFieldSpecs (rs1, rs2).
+	for b := 0; b < 32; b++ {
+		assertExtractFields(t, uint32(1)<<uint(b))
+		assertExtractFields(t, ^(uint32(1) << uint(b)))
+	}
+
+	// Per-field full-domain sweep against zero and all-ones backgrounds.
+	for _, s := range extractFieldSpecs {
+		// number of bits in the field
+		width := uint(s.hi - s.lo + 1)
+		// mask to extract the field
+		mask := ((uint32(1) << width) - 1) << uint(s.lo)
+		// sweep the field's own value domain against both an all-zero and an all-ones background
+		for val := uint32(0); val < uint32(1)<<width; val++ {
+			field := val << uint(s.lo)
+			// first we test the shift is correct, with a zero background
+			assertExtractFields(t, field)       // value in field, zero background
+			// then we test the mask is correct, with an all-ones background
+			assertExtractFields(t, field|^mask) // value in field, all-ones background
+		}
+	}
+}

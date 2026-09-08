@@ -919,12 +919,39 @@ func decodeInstruction(decoded *bitWriter, instruction uint32) {
 	decoded.writeBits(operandRD, 5)
 }
 
+// instructionFields holds the raw RISC-V fields sliced out of a 32-bit
+// instruction word.
+type instructionFields struct {
+	opcode uint32
+	rd     uint32
+	funct3 uint32
+	imm12  uint32
+	funct7 uint32
+}
+
+// extractFields slices the standard RISC-V fields out of a raw instruction word.
+// Each field is shifted down to bit 0 and masked to its width; 
+//
+//	bit: 31       25 24    20 19    15 14   12 11    7 6         0
+//	    [  funct7  ][  rs2  ][  rs1  ][funct3][  rd  ][  opcode  ]  R-type view
+//	    [         imm12     ][  rs1  ][funct3][  rd  ][ opcode ]  I-type view
+func extractFields(instruction uint32) instructionFields {
+	return instructionFields{
+		opcode: instruction & 0x7f,
+		rd:     (instruction >> 7) & 0x1f,
+		funct3: (instruction >> 12) & 0x7,
+		imm12:  (instruction >> 20) & 0xfff,
+		funct7: (instruction >> 25) & 0x7f,
+	}
+}
+
 func classifyInstruction(instruction uint32) uint32 {
-	opcode := instruction & 0x7f
-	rd := (instruction >> 7) & 0x1f
-	funct3 := (instruction >> 12) & 0x7
-	imm12 := (instruction >> 20) & 0xfff
-	funct7 := (instruction >> 25) & 0x7f
+	fields := extractFields(instruction)
+	opcode := fields.opcode
+	rd := fields.rd
+	funct3 := fields.funct3
+	imm12 := fields.imm12
+	funct7 := fields.funct7
 	instructionType := instructionTypeFromOpcode(opcode)
 
 	itypeOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
