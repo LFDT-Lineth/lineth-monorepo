@@ -39,8 +39,11 @@ test("requires the full configured deployment gas budget", () => {
 });
 
 test("a gas-free L2 still requires the deterministic proxy funding amount", () => {
-  // Zero gas price must not be read as "no balance needed": the proxy step
-  // funds the keyless signer with ARACHNID_FUNDING_WEI even when gas is free.
+  // Zero gas price must not be read as "no balance needed": when the proxy
+  // still has to be installed, the proxy step funds the keyless signer with
+  // ARACHNID_FUNDING_WEI even when gas is free. runner.ts only passes this
+  // flatWei when the factory is absent on-chain; when the chain preinstalls it
+  // (e.g. Anvil) the send is skipped and flatWei is 0.
   assert.throws(
     () => assertDeployerCanPay("L2", DEPLOYER, 0n, { gasPrice: 0n }, 1n, ARACHNID_FUNDING_WEI),
     /requires at least 10000000000000000 wei/,

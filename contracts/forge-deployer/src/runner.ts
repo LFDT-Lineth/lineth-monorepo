@@ -407,8 +407,13 @@ async function executeStep(
       const fees = resolveL2DeployFeeOverrides();
       const balance = feeBudgetPricePerGas(fees) === 0n ? 0n : await context.l2Provider.getBalance(context.signers.l2);
       // Include the deterministic proxy's funding transfer to the keyless
-      // signer, which a later L2 step must send even on a gas-free chain.
-      assertDeployerCanPay("L2", context.signers.l2, balance, fees, PROFILE_DEPLOY_GAS_BUDGET, ARACHNID_FUNDING_WEI);
+      // signer only when the proxy still has to be installed. On chains that
+      // already carry the factory (e.g. Anvil's genesis preinstall) the send is
+      // skipped, so prefunding it here would wrongly demand balance an
+      // unfunded gas-free L2 deployer does not have.
+      const proxyStatus = await getDeterministicProxyCodeStatus(context.l2Provider);
+      const flatWei = proxyStatus === "absent" ? ARACHNID_FUNDING_WEI : 0n;
+      assertDeployerCanPay("L2", context.signers.l2, balance, fees, PROFILE_DEPLOY_GAS_BUDGET, flatWei);
     }
     fundingVerified[step.chain] = true;
   }
