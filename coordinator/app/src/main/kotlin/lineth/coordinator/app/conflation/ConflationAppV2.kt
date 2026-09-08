@@ -23,7 +23,7 @@ import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
-import lineth.coordinator.clients.prover.riscv.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository

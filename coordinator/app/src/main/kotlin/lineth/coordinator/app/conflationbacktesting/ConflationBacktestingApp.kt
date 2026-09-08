@@ -40,8 +40,8 @@ import lineth.coordinator.app.conflation.TracesClientFactory
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
-import lineth.coordinator.clients.prover.riscv.ProverClientFactory
-import lineth.coordinator.clients.prover.riscv.ProverConfig
+import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.TracesConfig.ClientApiConfig
