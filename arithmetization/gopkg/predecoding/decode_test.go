@@ -446,3 +446,39 @@ func TestDecodeRTypeSemanticInvalid(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// decodeUTypeSemantic
+// ------------------------------------------------------------
+
+// decodeUTypeVectors is the static truth table of the valid U-type opcodes, each
+// mapped to the local op decodeUTypeSemantic returns. Every opcode NOT listed
+// here must return utypeInvalid (asserted exhaustively by
+// TestDecodeUTypeSemanticInvalid).
+var decodeUTypeVectors = map[uint32]uint32{
+	opcodeLUI:   utypeLuiWB,   // lui
+	opcodeAUIPC: utypeAuipcWB, // auipc
+}
+
+// TestDecodeUTypeSemantic checks the valid opcodes against the
+// decodeUTypeVectors static truth table.
+func TestDecodeUTypeSemantic(t *testing.T) {
+	for opcode, want := range decodeUTypeVectors {
+		if got := decodeUTypeSemantic(opcode); got != want {
+			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, want)
+		}
+	}
+}
+
+// TestDecodeUTypeSemanticInvalid sweeps every opcode (0..127) NOT in
+// decodeUTypeVectors and asserts decodeUTypeSemantic returns utypeInvalid.
+func TestDecodeUTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		if _, ok := decodeUTypeVectors[opcode]; ok {
+			continue
+		}
+		if got := decodeUTypeSemantic(opcode); got != utypeInvalid {
+			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, utypeInvalid)
+		}
+	}
+}
