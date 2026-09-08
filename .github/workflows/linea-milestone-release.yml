@@ -127,7 +127,9 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     with:
       release_version: ${{ fromJson(needs.component-release-metadata.outputs.linea-besu-package).release_version }}
-      with_besu_fleet_plugin: true
+      # set it to false instead of true
+      # as fleet plugin needed to release with besu >= 26.8.1 with Vertx v5
+      with_besu_fleet_plugin: false
     secrets: inherit
 
   component-latest-docker-tags:
@@ -186,8 +188,6 @@ jobs:
     with:
       component-name: coordinator
       folder-name: coordinator
-      scopes: coordinator|deps|misc
-      include-path: coordinator/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
@@ -206,8 +206,6 @@ jobs:
     with:
       component-name: prover
       folder-name: prover
-      scopes: prover|deps|misc
-      include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
@@ -226,8 +224,6 @@ jobs:
     with:
       component-name: postman
       folder-name: postman
-      scopes: postman|deps|misc
-      include-path: postman/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
@@ -246,8 +242,6 @@ jobs:
     with:
       component-name: tx-exclusion-api
       folder-name: transaction-exclusion-api
-      scopes: tx-exclusion-api|deps|misc
-      include-path: transaction-exclusion-api/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
       draft_release: ${{ !inputs.pre_release }}
@@ -266,8 +260,6 @@ jobs:
     with:
       component-name: maru
       folder-name: maru
-      scopes: maru|deps|misc
-      include-path: maru/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
       draft_release: ${{ !inputs.pre_release }}
@@ -286,6 +278,9 @@ jobs:
     with:
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
+      # set it to true instead of false 
+      # as fleet plugin needed to release with besu >= 26.8.1 with Vertx v5
+      without_besu_fleet_plugin: true
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
       dry_run_release: ${{ inputs.dry_run_release }}

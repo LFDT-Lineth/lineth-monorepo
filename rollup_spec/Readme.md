@@ -754,11 +754,11 @@ These propagate through the proof tree symmetrically to the L1→L2 bridge field
 
 The guest processes FTXs in ascending `ftxNumber` order after completing normal block execution. For each FTX in the range:
 
-**Deadline constraint.** Assert:
+**Deadline constraint.** For a FTX handled in the block with number `handlingBlockNumber`, assert:
 ```
-ftx.deadlineBlockNumber >= prevLastBlockNumber
+ftx.deadlineBlockNumber >= handlingBlockNumber
 ```
-A FTX whose deadline falls before the start of this range was already expired; it must have been handled in a prior range. If it wasn't, finalization of the prior range would have been blocked.
+Handling a FTX after its deadline would break the forced-inclusion promise, so the declared outcome must land in a block at or before the deadline. This also subsumes range-level expiry: a FTX whose deadline falls before the start of this range was already expired and must have been handled in a prior range — otherwise finalization of the prior range would have been blocked.
 
 **Authenticity.** Re-derive the rolling hash step and assert it matches the L1-stored value:
 ```

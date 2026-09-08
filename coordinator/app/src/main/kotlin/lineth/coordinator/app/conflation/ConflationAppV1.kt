@@ -4,18 +4,14 @@ import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ExecutionProverClientV2
 import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.BlockHeaderSummary
-import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl
 import linea.ftx.ForcedTransactionsApp
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
 import linea.timer.VertxTimerFactory
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
@@ -48,12 +44,11 @@ import lineth.coordination.conflation.TracesConflationCoordinatorImpl
 import lineth.coordination.proofcreation.BatchProofHandlerImpl
 import lineth.coordination.proofcreation.ZkProofCreationCoordinatorImpl
 import lineth.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
-import lineth.coordinator.app.conflation.ConflationAppHelper.getLastConflatedAndAggregatedBlocks
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
-import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
-import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
+import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
+import lineth.coordinator.blockcreation.LatestL1FinalizedBlockProviderSync
 import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -86,7 +81,7 @@ class ConflationAppV1(
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
   private val forcedTransactionsDao: ForcedTransactionsDao,
-  private val lastFinalizedBlock: ULong,
+  private val lastProcessedBlocks: LastProcessedBlocks,
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
@@ -128,82 +123,7 @@ class ConflationAppV1(
       smartContractErrors = configs.smartContractErrors,
       smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
     ),
-  private val forcedTransactionsApp: ForcedTransactionsApp = run {
-    if (configs.forcedTransactions == null || configs.forcedTransactions.disabled) {
-      ForcedTransactionsApp.createDisabled()
-    } else {
-      check(configs.proversConfig.proverA.invalidity != null) {
-        "prover.invalidity config is required for forced transactions feature to work"
-      }
-
-      val ftxConfig = configs.forcedTransactions
-      val l1EthClient = createEthApiClient(
-        rpcUrl = ftxConfig.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.ftx"),
-        vertx = vertx,
-        requestRetryConfig = ftxConfig.l1RequestRetries,
-      )
-      val config = ForcedTransactionsApp.Config(
-        l1PollingInterval = ftxConfig.l1EventScraping.pollingInterval,
-        l1ContractAddress = configs.protocol.l1.contractAddress,
-        l1HighestBlockTag = configs.forcedTransactions.l1HighestBlockTag,
-        l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
-        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
-        ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
-        maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
-        ftxProcessingDelay = ftxConfig.processingDelay,
-        invalidityProofProcessingInterval = ftxConfig.invalidityProofCheckInterval,
-      )
-      val ftxClient = ForcedTransactionsJsonRpcClient(
-        vertx = vertx,
-        rpcClient = httpJsonRpcClientFactory.create(
-          endpoint = ftxConfig.sequencerEndpoint,
-          log = LogManager.getLogger("clients.l2.ftx.sequencer"),
-        ),
-        retryConfig = ftxConfig.sequencerRequestRetries.toJsonRpcRetry(),
-        log = LogManager.getLogger("clients.l2.ftx.sequencer"),
-      )
-      val l1Web3jClient = createWeb3jHttpClient(
-        rpcUrl = ftxConfig.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.ftx"),
-      )
-      val contractClient = Web3JLinethRollupSmartContractClientReadOnly(
-        contractAddress = configs.protocol.l1.contractAddress,
-        web3j = l1Web3jClient,
-        ethLogsSearcher = EthLogsSearcherImpl(
-          vertx = vertx,
-          ethApiClient = createEthApiClient(
-            web3jClient = l1Web3jClient,
-            requestRetryConfig = ftxConfig.l1RequestRetries,
-            vertx = vertx,
-          ),
-        ),
-        finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
-          ?: BlockParameter.Tag.EARLIEST,
-      )
-      ForcedTransactionsApp.create(
-        config = config,
-        vertx = vertx,
-        ftxDao = forcedTransactionsDao,
-        l1EthApiClient = l1EthClient,
-        l2EthApiClient = l2EthClient,
-        ftxClient = ftxClient,
-        finalizedStateProvider = contractClient,
-        contractVersionProvider = contractClient,
-        invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
-        stateManagerClient = zkStateClient,
-        accountProofClient = zkStateClient,
-        tracesClient = tracesClients.tracesConflationClient,
-        clock = clock,
-        metricsFacade = metricsFacade,
-      )
-    }
-  },
-  val lastProcessedBlocks: LastProcessedBlocks = getLastConflatedAndAggregatedBlocks(
-    lastFinalizedBlock,
-    aggregationsRepository,
-    l2EthClient,
-  ).get(),
+  private val forcedTransactionsApp: ForcedTransactionsApp,
   private val lastConflatedBlock: BlockHeaderSummary = lastProcessedBlocks.lastConflatedBlock.headerSummary,
   private val lastAggregatedBlock: BlockHeaderSummary = lastProcessedBlocks.lastAggregatedBlock.headerSummary,
   private val conflationCalculators: ConflationCalculators = CalculatorsFactory.create(
@@ -244,6 +164,10 @@ class ConflationAppV1(
     metricsFacade = metricsFacade,
     clock = clock,
   ),
+  private val targetCheckpointPauseController: ConflationTargetCheckpointPauseController,
+  private val lastProvenBlockNumberProviderSync: LastProvenBlockNumberProviderSync,
+  private val lastestL1FinalizedBlockProviderSync: LatestL1FinalizedBlockProviderSync,
+
 ) : LongRunningService {
   private val log = LogManager.getLogger("conflation.app")
 
@@ -296,33 +220,6 @@ class ConflationAppV1(
         } else {
           emptyList()
         },
-    )
-
-  private val lastProvenBlockNumberProvider = run {
-    val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
-      lastConflatedBlock.number.toLong(),
-      lastFinalizedBlock.toLong(),
-      batchesRepository,
-    )
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.BATCH,
-      name = "proven.highest.consecutive.block.number",
-      description = "Highest proven consecutive execution batch block number",
-      measurementSupplier = { lastProvenConsecutiveBatchBlockNumberProvider.getLastKnownProvenBlockNumber() },
-    )
-    lastProvenConsecutiveBatchBlockNumberProvider
-  }
-
-  private val targetCheckpointPauseController =
-    ConflationTargetCheckpointPauseController(
-      ConflationTargetCheckpointPauseController.Config(
-        initialLastImportedBlockTimestamp = lastConflatedBlock.timestamp,
-        targetEndBlocks = (configs.conflation.proofAggregation.targetEndBlocks ?: emptyList()).toSet(),
-        targetTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,
-        waitTargetBlockL1Finalization = configs.conflation.proofAggregation.waitTargetBlockL1Finalization,
-        waitApiResumeAfterTargetBlock = configs.conflation.proofAggregation.waitApiResumeAfterTargetBlock,
-      ),
-      latestL1FinalizedBlockProvider = lastProvenBlockNumberProvider,
     )
 
   private val conflationService: ConflationService =
@@ -432,7 +329,9 @@ class ConflationAppV1(
           },
           provenConsecutiveAggregationEndBlockNumberConsumer =
           { aggEndBlockNumber -> highestConsecutiveAggregationTracker(aggEndBlockNumber) },
-          lastFinalizedBlockNumberSupplier = { lastProvenBlockNumberProvider.getLatestL1FinalizedBlock().toULong() },
+          lastFinalizedBlockNumberSupplier = {
+            lastestL1FinalizedBlockProviderSync.getLatestL1FinalizedBlock().toULong()
+          },
         ),
         invalidityProofProvider = InvalidityProofProviderImpl(forcedTransactionsDao),
         aggregationL2StateProvider = AggregationL2StateProviderImpl(
@@ -522,26 +421,12 @@ class ConflationAppV1(
     )
   }
 
-  // This object acts as an independent periodic polling service which is responsible
-  // for monitoring the highest consecutive proven block number in the batch db
-  private val provenBlockNumberMonitor = object : VertxPeriodicPollingService(
-    vertx = vertx,
-    pollingIntervalMs = 1.seconds.inWholeMilliseconds,
-    log = log,
-    name = "ProvenBlockNumberMonitor",
-    timerSchedule = TimerSchedule.FIXED_DELAY,
-  ) {
-    override fun action(): SafeFuture<*> {
-      return lastProvenBlockNumberProvider.getLastProvenBlockNumber()
-    }
-  }
-
   private val blockCreationMonitor = BlockCreationMonitor(
     vertx = vertx,
     ethApi = l2EthClient,
     startingPoint = BlockCreationMonitor.StartingPoint.ByBlockNumberExclusive(lastConflatedBlock.number.toLong()),
     blockCreationListener = block2BatchCoordinator,
-    lastProvenBlockNumberProviderSync = lastProvenBlockNumberProvider,
+    lastProvenBlockNumberProviderSync = lastProvenBlockNumberProviderSync,
     config = BlockCreationMonitor.Config(
       pollingInterval = configs.conflation.blocksPollingInterval,
       blocksToFinalization = 0L,
@@ -574,8 +459,6 @@ class ConflationAppV1(
       .thenCompose { conflationCalculators.service.start() }
       .thenCompose { blockCreationMonitor.start() }
       .thenCompose { blobCompressionProofCoordinator.start() }
-      .thenCompose { forcedTransactionsApp.start() }
-      .thenCompose { provenBlockNumberMonitor.start() }
       .thenPeek {
         log.info("Conflation started")
       }
@@ -588,18 +471,8 @@ class ConflationAppV1(
       blockCreationMonitor.stop(),
       conflationCalculators.service.stop(),
       blobCompressionProofCoordinator.stop(),
-      forcedTransactionsApp.stop(),
-      provenBlockNumberMonitor.stop(),
     )
       .thenCompose { requestFileCleanup.cleanup() }
       .thenApply { log.info("Conflation Stopped") }
-  }
-
-  fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> {
-    return lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(blockNumber)
-  }
-
-  fun signalTargetCheckpointResumeFromApi(): Boolean {
-    return targetCheckpointPauseController.signalResumeFromApi()
   }
 }

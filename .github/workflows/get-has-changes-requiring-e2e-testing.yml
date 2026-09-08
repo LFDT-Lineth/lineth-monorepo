@@ -22,7 +22,9 @@ jobs:
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
-          base: ${{ github.ref }}
+          # On manual dispatch, diff against main so a stacked branch's e2e-relevant
+          # changes are detected (github.ref would diff the branch vs itself).
+          base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: json
           filters: |
             e2e-paths:

@@ -19,8 +19,8 @@ func TestWritePcsSystemZig(t *testing.T) {
 		NumQueries:       2,
 		NumBatches:       2,
 		Columns: []PcsColumnDesc{
-			{BatchIdx: 0, IsExt: false, SizeLog2: 3, Shifts: []int{0, 7}},
-			{BatchIdx: 1, IsExt: true, IsDynamic: true, DynamicIndex: 1, DynamicMinSizeLog2: 3, Shifts: []int{1}},
+			{BatchIdx: 0, IsExt: false, SizeLog2: 3, Shifts: []int{0, 7}, ClaimCells: []PcsCellRef{{Round: 1, Index: 0}, {Round: 1, Index: 1}}},
+			{BatchIdx: 1, IsExt: true, IsDynamic: true, DynamicIndex: 1, DynamicMinSizeLog2: 3, Shifts: []int{1}, ClaimCells: []PcsCellRef{{Round: 2, Index: 0}}},
 		},
 		MaxEntries:    2,
 		MaxSizeLog2:   22,
@@ -46,8 +46,8 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`const quotient_map = [_]pcs.ClaimRef{`,
 		`const batch_roots = [_]pcs.BatchRoot{`,
 		`pub const pcs_system_7 = pcs.System{`,
-		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 } },`,
-		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 } },`,
+		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, } },`,
+		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 2, .index = 0 }, } },`,
 		`.zeta_coin_index = 5,`,
 	} {
 		if !strings.Contains(out, want) {
@@ -141,61 +141,13 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 	}
 }
 
-// ExtractPcsOpening must REJECT a proof whose dynamic column is opened at two
-// shift offsets that alias mod its runtime size. prover-ray dedups such
-// openings (mod the size) to one, but the size-independent ColumnDesc schedule
-// keeps both, so the verifier would expect an extra (unauthenticated) claim and
-// double-count the DEEP quotient for THAT proof. A proof must itself be
-// representable at the size it was proved at, even though the baked System may
-// still enforce a stricter minimum runtime size for other proofs.
-func TestExtractPcsOpeningRejectsAliasingDynamicShifts(t *testing.T) {
-	sys := wiop.NewSystemf("dyn-alias")
-	r0 := sys.NewRound()
-	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), r0)
-	// Open the column at offsets 1 and 9: at the proving size 8 these alias
-	// (1 == 9 mod 8), so prover-ray produces one opening but the raw schedule two.
-	mod.NewVanishing(
-		sys.Context.Childf("alias"),
-		wiop.Sub(col.View().Shift(1), col.View().Shift(9)),
-	)
-
-	global.Compile(sys)
-	pcscompiler.Compile(sys)
-
-	// Prove at size 8 (where offsets 1 and 9 alias).
-	vals := make([]field.Element, 8)
-	for i := range vals {
-		vals[i].SetUint64(uint64(i + 1))
-	}
-	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(rt)
-		}
-	}
-
-	routing, err := BuildCoinRouting(sys)
-	if err != nil {
-		t.Fatalf("BuildCoinRouting() error = %v", err)
-	}
-	pcs, err := BuildPcsSystem(sys, routing)
-	if err != nil {
-		t.Fatalf("BuildPcsSystem() error = %v", err)
-	}
-	_, err = ExtractPcsOpening(pcs, rt)
-	if err == nil {
-		t.Fatalf("ExtractPcsOpening accepted aliasing dynamic-column shifts; want an error")
-	}
-	if !strings.Contains(err.Error(), "alias") {
-		t.Fatalf("ExtractPcsOpening error = %q, want an aliasing rejection", err.Error())
-	}
-}
+// A dynamic column's runtime size must be >= its baked min_size_log2, or two
+// distinct raw shifts alias mod the runtime size. That bound is enforced by
+// `src/query/pcs.zig`'s `reconstruct`, which returns
+// `error.DynamicModuleSizeBelowMinimum` for an aliasing size — covered by
+// verifier-ray's own `test/pcs_test.zig`. See
+// TestBuildPcsSystemRecordsMinimumSafeDynamicSize below for the
+// DynamicMinSizeLog2 computation itself.
 
 // BuildPcsSystem now supports dynamic multi-shift columns across a RANGE of
 // runtime sizes by baking the minimum safe size_log2 into the column metadata.

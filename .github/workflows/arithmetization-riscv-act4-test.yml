@@ -2,29 +2,35 @@ name: Tracer riscv ACT4 test
 
 on:
   pull_request:
-    branches:
-      - main
+    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/Makefile'
       - '.github/actions/setup-arithmetization-riscv/**'
+      - '.github/actions/setup-zig/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
     branches:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/build_common/**'
+     - 'riscv-guests/Makefile'
      - '.github/actions/setup-arithmetization-riscv/**'
+     - '.github/actions/setup-zig/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
         required: false
         type: string
 
@@ -34,6 +40,7 @@ permissions:
 
 jobs:
   act4-reference-tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     env:
       ZKC_EXEC_FLAGS: "--fast --gogen"
@@ -47,6 +54,8 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref }}
+          # Share caches for go.mod-pinned runs; custom ZKC refs must not write to shared caches.
+          cache-save: ${{ inputs.zkc-ref == '' }}
 
       - name: Install Sail
         run: make -C arithmetization install-sail
@@ -58,4 +67,3 @@ jobs:
       - name: Run ACT4 tests
         run: make act4-exec
         working-directory: arithmetization/src/test
-

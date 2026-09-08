@@ -22,12 +22,17 @@ pub const Error = error{
 /// proof, the branch carries the leaf itself: a FRI query reads the leaf
 /// value directly out of the authenticated branch rather than through a
 /// separate lookup.
+/// Fields are declared in descending alignment order so that declaration order
+/// matches the in-memory layout — see `proof_abi.zig`, which prover-ray's proof
+/// encoder targets. Declaring `leaf` first reads more naturally but puts the
+/// align-8 `siblings` slice at offset 0 anyway, silently disagreeing with the
+/// declaration.
 pub const Branch = struct {
-    /// The deepest leaf reachable through this branch.
-    leaf: poseidon2.Digest,
     /// Sibling digests from the shallowest (just below the root) to the
     /// deepest; `siblings[siblings.len - 1]` is `leaf`'s own conjugate.
     siblings: []const poseidon2.Digest,
+    /// The deepest leaf reachable through this branch.
+    leaf: poseidon2.Digest,
 
     /// Recovers the tree root by re-hashing `leaf` up to the root along
     /// `siblings`. `idx`'s bits, least significant first, decide at each

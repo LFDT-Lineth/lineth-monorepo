@@ -3,6 +3,11 @@ pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
 pub const profiling = @import("profiling.zig");
 
+/// Assertion-only: pins the proof types' in-memory layout, which prover-ray's
+/// proof encoder reproduces byte-for-byte. Exported so its comptime checks are
+/// analyzed on every build that uses the library.
+pub const proof_abi = @import("proof_abi.zig");
+
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");
     pub const koalabear_ext = @import("field/koalabear_ext.zig");
@@ -14,6 +19,7 @@ pub const crypto = struct {
     pub const fiat_shamir = @import("crypto/fiat_shamir.zig");
     pub const poseidon2 = @import("crypto/poseidon2.zig");
     pub const merkle = @import("crypto/merkle.zig");
+    pub const multiset_hashing = @import("crypto/multiset_hashing.zig");
 };
 
 pub const polynomial = struct {
@@ -26,6 +32,7 @@ pub const query = struct {
     pub const logderivativesum = @import("query/logderivativesum.zig");
     pub const grandproduct = @import("query/grandproduct.zig");
     pub const rowlimit = @import("query/rowlimit.zig");
+    pub const shared_randomness = @import("query/shared_randomness.zig");
     pub const fri = @import("query/fri.zig");
     pub const pcs = @import("query/pcs.zig");
 };

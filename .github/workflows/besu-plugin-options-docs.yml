@@ -1,13 +1,14 @@
 name: "Besu plugin options docs"
 
 # Extracts Linea-Besu plugin options with Java reflection, renders ephemeral MDX,
-# and publishes only docs/stack/reference/_generated/besu/ to Consensys/doc.linea.
+# and publishes only docs/stack/reference/_generated/besu/ to Consensys-Incorporated/doc.linea.
 
 permissions:
   contents: read
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/actions/setup-java-and-gradle/**"
       - ".github/workflows/besu-plugin-options-docs.yml"
@@ -57,6 +58,7 @@ concurrency:
 
 jobs:
   validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout monorepo
@@ -159,20 +161,20 @@ jobs:
           } > "$OUT"
           echo "Wrote $OUT"
 
-      - name: Generate App token for Consensys/doc.linea
+      - name: Generate App token for Consensys-Incorporated/doc.linea
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.DOC_LINEA_PR_APP_ID }}
           private-key: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}
-          owner: Consensys
+          owner: Consensys-Incorporated
           repositories: |
             doc.linea
 
       - name: Checkout doc.linea
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Consensys/doc.linea
+          repository: Consensys-Incorporated/doc.linea
           token: ${{ steps.app-token.outputs.token }}
           path: doc.linea
 

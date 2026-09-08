@@ -26,12 +26,12 @@ import lineth.metrics.HistogramMetrics;
 import lineth.sequencer.txselection.InvalidTransactionByLineCountCache;
 import lineth.utils.TransactionCompressor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.zktracer.LineCountingTracer;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
+import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
@@ -43,7 +43,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private static final Set<String> REJECTED_TX_STATUS_NAMES =
       Set.of("TX_MODULE_LINE_COUNT_OVERFLOW", "TX_MODULE_LINE_COUNT_OVERFLOW_CACHED");
 
-  private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
+  private Optional<TraceLineLimitTransactionSelector> traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
@@ -51,9 +51,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final SelectorsStateManager selectorsStateManager,
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
-      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
+      final Optional<LineCountingTracer> lineCountingTracer,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
@@ -70,9 +70,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             selectorsStateManager,
             blockchainService,
             txSelectorConfiguration,
-            l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
+            lineCountingTracer,
             maybeProfitabilityMetrics,
             invalidTransactionByLineCountCache,
             deniedEvents,
@@ -102,9 +102,9 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final SelectorsStateManager selectorsStateManager,
       final BlockchainService blockchainService,
       final LineaTransactionSelectorConfiguration txSelectorConfiguration,
-      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
+      final Optional<LineCountingTracer> lineCountingTracer,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
       final Map<Address, Set<TransactionEventFilter>> deniedEvents,
@@ -115,12 +115,13 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {
 
     traceLineLimitTransactionSelector =
-        new TraceLineLimitTransactionSelector(
-            selectorsStateManager,
-            blockchainService,
-            l1L2BridgeConfiguration,
-            tracerConfiguration,
-            invalidTransactionByLineCountCache);
+        lineCountingTracer.map(
+            tracer ->
+                new TraceLineLimitTransactionSelector(
+                    selectorsStateManager,
+                    tracerConfiguration,
+                    invalidTransactionByLineCountCache,
+                    tracer));
 
     final List<PluginTransactionSelector> selectorsList = new ArrayList<>();
     selectorsList.add(new AllowedAddressTransactionSelector(deniedAddresses));
@@ -156,7 +157,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     selectorsList.add(
         new MaxBundleGasPerBlockTransactionSelector(
             selectorsStateManager, txSelectorConfiguration.maxBundleGasPerBlock()));
-    selectorsList.add(traceLineLimitTransactionSelector);
+    traceLineLimitTransactionSelector.ifPresent(selectorsList::add);
     selectorsList.add(new TransactionEventSelector(deniedEvents, deniedBundleEvents));
 
     return List.copyOf(selectorsList);
@@ -214,7 +215,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     // if pending tx is not from a bundle, then we need to commit now
     if (!(evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx)) {
-      getOperationTracer().commitTransactionBundle();
+      commitTransactionBundle();
     }
 
     selectors.forEach(
@@ -234,7 +235,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
 
     // if pending tx is not from a bundle, then we need to rollback now
     if (!(evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx)) {
-      getOperationTracer().popTransactionBundle();
+      popTransactionBundle();
     }
 
     selectors.forEach(
@@ -263,8 +264,20 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @return the operation tracer
    */
   @Override
-  public LineCountingTracer getOperationTracer() {
-    return traceLineLimitTransactionSelector.getOperationTracer();
+  public BlockAwareOperationTracer getOperationTracer() {
+    return traceLineLimitTransactionSelector
+        .<BlockAwareOperationTracer>map(TraceLineLimitTransactionSelector::getOperationTracer)
+        .orElse(BlockAwareOperationTracer.NO_TRACING);
+  }
+
+  public void commitTransactionBundle() {
+    traceLineLimitTransactionSelector.ifPresent(
+        selector -> selector.getOperationTracer().commitTransactionBundle());
+  }
+
+  public void popTransactionBundle() {
+    traceLineLimitTransactionSelector.ifPresent(
+        selector -> selector.getOperationTracer().popTransactionBundle());
   }
 
   /**

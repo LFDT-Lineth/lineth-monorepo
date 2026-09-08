@@ -74,7 +74,7 @@ func compilePermutations(sys *wiop.System) {
 
 		// One instance serves both roles: it panics as a prover action and
 		// returns an error as a verifier action.
-		rowLimit := &rowLimitAction{query: q, limit: limit}
+		rowLimit := &RowLimitAction{Query: q, Limit: limit}
 		maxRound.RegisterAction(rowLimit)
 		maxRound.RegisterVerifierAction(rowLimit)
 	}

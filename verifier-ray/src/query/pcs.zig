@@ -31,6 +31,7 @@ pub const Error = merkle.Error || fri.Error || error{
     RowShapeMismatch,
     ConjugateRowShapeMismatch,
     ClaimPointOnQueryPoint,
+    InconsistentAliasedClaim,
     MissingTopLevelAux,
     BoundaryFinalSelfMismatch,
     BoundaryFinalSiblingMismatch,
@@ -72,6 +73,23 @@ pub const ColumnDesc = struct {
     /// size, so one baked System's shifts work at every dynamic size. May be
     /// negative (a back-shift).
     shifts: []const isize,
+    /// Where to read this column's claimed evaluation for the matching entry of
+    /// `shifts` — same length and order as `shifts`, so `claim_cells[k]` is the
+    /// `(round, index)` transcript cell carrying the claim for `shifts[k]`.
+    /// These cells are ordinary `rounds[*].cells` entries (the prover's
+    /// `LagrangeEval.EvaluationClaims`), absorbed into the Fiat-Shamir
+    /// transcript before the opening challenges are derived. Emitted by codegen.
+    claim_cells: []const CellRef = &.{},
+};
+
+/// Locates one claimed-evaluation cell in `rounds[*].cells` by its
+/// `(round, index)` coordinates — the same `ObjectID.Slot()` / `.Position()`
+/// encoding used by every other cell reference in this codebase (see
+/// `query/vanishing.zig`'s `ScalarRef`, `query/logderivativesum.zig`'s
+/// `ScalarRef`). Consumed via `protocol.Context.cell(round, index)`.
+pub const CellRef = struct {
+    round: usize,
+    index: usize,
 };
 
 /// Routes one vanishing witness/quotient claim to its authenticated value.
@@ -251,7 +269,19 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                if (sz < dyn.min_size_log2) return Error.DynamicModuleSizeBelowMinimum;
+                // dyn.min_size_log2 used to reject runtime sizes where two
+                // distinct RAW shifts of this column alias to the same domain
+                // point (e.g. offsets 0 and -1 both normalize to row 0 at
+                // runtime size 1). That rejection was overly conservative: an
+                // honest prover CAN legitimately run a module at an aliasing
+                // size (prover-ray's own RecoverBatchClaims dedupes such
+                // openings into a single FRI claim before batching, and
+                // reconstructQueryValueAt below dedupes the same way when
+                // summing the DEEP quotient), so aliasing sizes are safe to
+                // accept, not just aliasing-completeness gaps to reject. Kept
+                // as a documented field (still emitted by codegen) but no
+                // longer enforced here.
+                _ = dyn.min_size_log2;
                 break :blk sz;
             },
         };
@@ -302,6 +332,79 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
 
     r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Total number of (column, shift) claim slots across every column — the flat
+/// backing-array size `EntryClaims` needs to hold every column's claims
+/// contiguously. A comptime sum over `system.columns`, since each column's
+/// `shifts.len` (and hence `claim_cells.len`) is fixed at codegen time.
+fn totalClaimSlots(comptime system: System) usize {
+    comptime {
+        @setEvalBranchQuota(20_000_000);
+        var total: usize = 0;
+        for (system.columns) |col| total += col.shifts.len;
+        return total;
+    }
+}
+
+/// Stack storage for one proof's reconstructed `entry_claims`, built by
+/// `buildEntryClaims` from `rounds[*].cells`. Two levels, both
+/// envelope-max-sized so nothing is allocated: a flat backing array holding
+/// every column's claims contiguously (avoids a jagged 2D array, since
+/// columns' shift counts differ), and a per-entry slice array of views into
+/// it, in the SAME canonical entry order `Reconstructed` assigns — exactly the
+/// shape `pcs.verify`'s `VerifyInput.entry_claims` expects.
+pub fn EntryClaims(comptime system: System) type {
+    return struct {
+        const entry_cap = @max(system.max_entries, 1);
+        const slot_cap = @max(totalClaimSlots(system), 1);
+
+        backing: [slot_cap]ext.Ext = undefined,
+        entries: [entry_cap][]const ext.Ext = undefined,
+        num_entries: usize = 0,
+
+        pub fn slice(self: *const @This()) []const []const ext.Ext {
+            return self.entries[0..self.num_entries];
+        }
+    };
+}
+
+/// Fills `out` with the claimed evaluation of every opened column, in
+/// reconstructed canonical entry order, by reading each column's `claim_cells`
+/// out of `ctx`'s bound round messages — the SAME cells (and hence the SAME
+/// values) `replayWithTranscript` already absorbed into the Fiat-Shamir
+/// transcript before any opening challenge was derived. The canonical ORDER is
+/// rebuilt here from the codegen-emitted per-column `claim_cells` table
+/// (parallel to `shifts`); the values themselves are read straight out of the
+/// bound rounds.
+///
+/// `map_ctx` is any type exposing `cell(round: usize, index: usize) CellError!Scalar`
+/// — `protocol.Context` in production, a caller-supplied stub in tests — kept
+/// generic here so this stays independent of `protocol.zig`.
+pub fn buildEntryClaims(
+    comptime system: System,
+    recon: Reconstructed(system),
+    ctx: anytype,
+    out: *EntryClaims(system),
+) !void {
+    out.num_entries = recon.num_entries;
+    var next_slot: usize = 0;
+    // Guarded exactly like `reconstruct`'s own entry-walk loops: a column-free
+    // System (system.columns == &.{}) must not force Zig to analyze indexing
+    // into that empty slice, even though `recon.num_entries` is always 0 in
+    // that case and the loop body would never actually run.
+    if (comptime system.columns.len > 0) {
+        for (0..recon.num_entries) |e| {
+            const col = system.columns[recon.entry_col_decl_idx[e]];
+            if (col.claim_cells.len != col.shifts.len) return error.ClaimCellsShiftsLengthMismatch;
+            const start = next_slot;
+            for (col.claim_cells) |ref| {
+                out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
+                next_slot += 1;
+            }
+            out.entries[e] = out.backing[start..next_slot];
+        }
+    }
 }
 
 /// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,
@@ -669,17 +772,67 @@ fn reconstructQueryValueAt(
         const entry_value: ext.Ext = if (recon.entry_is_ext[i]) row.ext[row_idx] else ext.Ext.lift(row.base[row_idx]);
 
         const shifts = system.columns[recon.entry_col_decl_idx[i]].shifts;
-        var term = ext.Ext.zero();
-        for (shifts, 0..) |shift, k| {
-            const point = shiftedPoint(size_log2, shift, zeta);
-            const denom = x.sub(point);
-            if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
-            const numerator = entry_value.sub(entry_claims[i][k]);
-            term = term.add(numerator.mul(denom.inverse()));
-        }
+        const term = try entryDeepTerm(shifts, entry_claims[i], entry_value, size_log2, zeta, x);
         value = value.mul(alpha_deep).add(term);
     }
     return value;
+}
+
+/// Sums one entry's DEEP-quotient contribution over its shift schedule:
+/// sum over distinct claim points of (entry_value - claim) / (x - point).
+///
+/// Distinct RAW shifts baked at codegen time can alias to the SAME domain
+/// point at a smaller runtime module size (e.g. offsets 0 and -1 both
+/// normalize to row 0 when the runtime size is 1). prover-ray's own
+/// RecoverBatchClaims dedupes by the runtime-normalized shift before ever
+/// building the FRI batch, so an aliasing group contributes exactly ONE term
+/// to the DEEP quotient sum there. Skipping repeats of an already-seen point
+/// here reproduces that same single-term contribution instead of
+/// double-counting it.
+///
+/// The claims of an aliasing group come from DISTINCT transcript cells, so
+/// before a repeat is skipped it must be equality-bound to the claim that was
+/// kept: only the kept claim is authenticated against the commitment by the
+/// quotient reconstruction, while every cell independently reaches later
+/// consumers (routeClaims routes each raw-shift slot on its own). Skipping an
+/// unequal duplicate would let a malicious prover keep the first claim
+/// consistent with the commitment and route a second, different value into
+/// vanishing. An honest prover always produces equal claims for an aliasing
+/// group (wiop.LagrangeEval.evalPolynomials applies the shift via omega_n^k
+/// with n the RUNTIME size, so aliasing shifts evaluate at the same point);
+/// prover-ray's RecoverBatchClaims enforces the same equality on its side.
+/// Each repeat is compared against the group's first (kept) claim, which
+/// transitively binds the whole group.
+///
+/// pub rather than file-private: the aliasing path needs a module to run at an
+/// aliasing size, which no golden vector currently does, so the adversarial
+/// regression in test/pcs_test.zig drives this function directly.
+pub fn entryDeepTerm(
+    shifts: []const isize,
+    claims: []const ext.Ext,
+    entry_value: ext.Ext,
+    size_log2: u8,
+    zeta: ext.Ext,
+    x: ext.Ext,
+) Error!ext.Ext {
+    var term = ext.Ext.zero();
+    for (shifts, 0..) |shift, k| {
+        const point = shiftedPoint(size_log2, shift, zeta);
+        var already_seen = false;
+        for (shifts[0..k], 0..) |prior_shift, prior_k| {
+            if (shiftedPoint(size_log2, prior_shift, zeta).eql(point)) {
+                if (!claims[prior_k].eql(claims[k])) return Error.InconsistentAliasedClaim;
+                already_seen = true;
+                break;
+            }
+        }
+        if (already_seen) continue;
+        const denom = x.sub(point);
+        if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
+        const numerator = entry_value.sub(claims[k]);
+        term = term.add(numerator.mul(denom.inverse()));
+    }
+    return term;
 }
 
 /// zeta * omega_N^(offset mod N), omega_N the generator of the size-2^size_log2

@@ -1,5 +1,5 @@
 include "../memory.zkc"
-include "../utils/constants.zkc"
+include "../../common/constants.zkc"
 
 fn write_8<ram>(address:Address, value:u8) -> () {
     var boffset:u2

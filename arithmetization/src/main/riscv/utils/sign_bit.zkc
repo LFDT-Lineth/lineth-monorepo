@@ -1,4 +1,4 @@
-include "type.zkc"
+include "../../common/type.zkc"
 
 #[inline]
 fn sign_bit_of_double_word(a:DoubleWord) -> (a_sign:SignBit) {
