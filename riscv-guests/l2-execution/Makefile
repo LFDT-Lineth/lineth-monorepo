@@ -7,7 +7,7 @@
 #
 # Scope split: building + host-testing is proving-system-AGNOSTIC and lives here (`compile` links the
 # statically-linked rv64im ELF — the zkvm-standards artifact — via build_common). Only the ZKC run
-# itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
+# itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
 .PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
