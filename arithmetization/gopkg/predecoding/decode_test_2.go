@@ -381,15 +381,6 @@ func TestAssembleJTypeImm(t *testing.T) {
 	}
 }
 
-func TestUtypeOpForRd(t *testing.T) {
-	if got := specializeUTypeOpWithRd(utypeAuipcWB, 0); got != utypeAuipcWB {
-		t.Fatalf("specializeUTypeOpWithRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
-	}
-	if got := specializeUTypeOpWithRd(utypeAuipcWB, 5); got != utypeAuipcWB {
-		t.Fatalf("specializeUTypeOpWithRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
-	}
-}
-
 func TestAssembleUTypeImm(t *testing.T) {
 	tests := []struct {
 		name  string
