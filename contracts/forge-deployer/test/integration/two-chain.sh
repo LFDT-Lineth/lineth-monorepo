@@ -179,8 +179,15 @@ deployer_container() {
 
 run_deployer() {
   push_checkpoint
-  deployer_container --rm
+  # Capture the deployer's real exit status: pull_checkpoint always "succeeds"
+  # (it tolerates an empty/missing volume via `|| true`), so without this the
+  # function's return status would be pull_checkpoint's, silently swallowing a
+  # deployer failure. Still run pull_checkpoint unconditionally so the host
+  # staging dir reflects on-chain state even when the deployer fails.
+  local status=0
+  deployer_container --rm || status=$?
   pull_checkpoint
+  return "$status"
 }
 
 start_named_deployer() {
@@ -261,8 +268,11 @@ verify_happy_path() {
   # this shell test can't import the TS plan. Update alongside
   # test/checkpoint.test.ts (which derives it dynamically) if the plan changes.
   test "$(jq '.deployments | length' "$CHECKPOINT_DIR/checkpoint.json")" -eq 19
+  # SCHEMA_VERSION from src/checkpoint.ts; kept as a literal since this shell
+  # test can't import the TS constant. Update alongside test/checkpoint.test.ts
+  # (which asserts it dynamically) if the schema version changes.
   jq -e --arg digest "$DEPLOYER_IMAGE_DIGEST" \
-    '.schemaVersion == 3 and .artifactDigest == $digest and (.inFlightDeployments | length) == 0' \
+    '.schemaVersion == 4 and .artifactDigest == $digest and (.inFlightDeployments | length) == 0' \
     "$CHECKPOINT_DIR/checkpoint.json" >/dev/null
 
   # The deterministic deployment proxy factory must be installed on L2, and the
