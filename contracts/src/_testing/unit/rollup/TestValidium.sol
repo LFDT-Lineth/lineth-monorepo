@@ -24,8 +24,8 @@ contract TestValidium is Validium {
     _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
   }
 
-  function setupParentShnarf(bytes32 _dataRollingHash) external {
-    _blobShnarfExists[_dataRollingHash] = 1;
+  function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
+    _dataRollingHashExists[_dataRollingHash] = 1;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
@@ -36,8 +36,8 @@ contract TestValidium is Validium {
     currentFinalizedShnarf = _lastFinalizedPositionCommitment;
   }
 
-  function setShnarfFinalBlockNumber(bytes32 _dataRollingHash, uint256 _value) external {
-    _blobShnarfExists[_dataRollingHash] = _value;
+  function setDataRollingHashExistenceValue(bytes32 _dataRollingHash, uint256 _value) external {
+    _dataRollingHashExists[_dataRollingHash] = _value;
   }
 
   function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {

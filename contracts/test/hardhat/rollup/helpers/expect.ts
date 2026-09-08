@@ -96,7 +96,7 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
 
   await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
 
-  const dataRollingHashExists = await upgradedContract.blobShnarfExists(finalizationData.endDataRollingHash);
+  const dataRollingHashExists = await upgradedContract.dataRollingHashExists(finalizationData.endDataRollingHash);
   expect(dataRollingHashExists).to.equal(1n);
 
   const txData = [

@@ -31,8 +31,8 @@ contract LinethRollupTestHelper is LinethRollup, CalldataBlobAcceptor {
     return _computePositionCommitment(_dataRollingHash, _offset);
   }
 
-  function setupParentShnarf(bytes32 _dataRollingHash) external {
-    _blobShnarfExists[_dataRollingHash] = 1;
+  function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
+    _dataRollingHashExists[_dataRollingHash] = 1;
   }
 
   function renounceRole(
@@ -130,7 +130,7 @@ contract LinethRollupTest is Test {
     vm.prank(operator);
     linethRollup.submitDataAsCalldata(compressedData, parentDataRollingHash, expectedDataRollingHash);
 
-    uint256 exists = linethRollup.blobShnarfExists(expectedDataRollingHash);
+    uint256 exists = linethRollup.dataRollingHashExists(expectedDataRollingHash);
     assertEq(exists, 1, "Data rolling hash should be anchored after submission");
   }
 
@@ -275,12 +275,12 @@ contract LinethRollupTest is Test {
     linethRollup.finalizeBlocks(hex"01", 0, finalizationData);
   }
 
-  function testReinitializeLineaRollupV11BridgeRevertsOnMismatch() public {
+  function testReinitializeLineaRollupV10BridgeRevertsOnMismatch() public {
     // The live proxy's position-commitment slot holds the genesis commitment, so bridging against a
     // different value must revert with BridgedShnarfMismatch.
     bytes32 wrongLegacyShnarf = keccak256("legacy-finalized-shnarf");
     vm.expectRevert(); // BridgedShnarfMismatch
-    linethRollup.reinitializeLineaRollupV11(wrongLegacyShnarf);
+    linethRollup.reinitializeLineaRollupV10(wrongLegacyShnarf);
   }
 
   function testChangeVerifierNotAuthorized() public {

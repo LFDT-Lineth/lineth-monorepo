@@ -11,7 +11,7 @@ import { LinethRollupBase } from "../LinethRollupBase.sol";
  */
 abstract contract ShnarfDataAcceptorBase is LinethRollupBase, IShnarfDataAcceptorBase {
   /// @dev Value indicating a dataRollingHash is anchored.
-  uint256 internal constant SHNARF_EXISTS_DEFAULT_VALUE = 1;
+  uint256 internal constant DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE = 1;
 
   /**
    * @notice Accepts and anchors that a dataRollingHash exists.
@@ -22,10 +22,13 @@ abstract contract ShnarfDataAcceptorBase is LinethRollupBase, IShnarfDataAccepto
    * @param _dataRollingHash The dataRollingHash to anchor.
    */
   function _acceptShnarfData(bytes32 _parentDataRollingHash, bytes32 _dataRollingHash) internal virtual {
-    require(_blobShnarfExists[_parentDataRollingHash] != 0, ParentDataRollingHashNotAnchored(_parentDataRollingHash));
-    require(_blobShnarfExists[_dataRollingHash] == 0, DataRollingHashAlreadyAnchored(_dataRollingHash));
+    require(
+      _dataRollingHashExists[_parentDataRollingHash] != 0,
+      ParentDataRollingHashNotAnchored(_parentDataRollingHash)
+    );
+    require(_dataRollingHashExists[_dataRollingHash] == 0, DataRollingHashAlreadyAnchored(_dataRollingHash));
 
-    _blobShnarfExists[_dataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
+    _dataRollingHashExists[_dataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
 
     emit DataSubmittedV4(_parentDataRollingHash, _dataRollingHash);
   }

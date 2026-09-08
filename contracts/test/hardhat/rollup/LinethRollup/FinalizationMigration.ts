@@ -98,7 +98,7 @@ describe("LinethRollup finalization migration", () => {
     };
 
     // Anchor the end dataRollingHash so the FinalDataRollingHashNotAnchored check passes.
-    await linethRollup.setupParentShnarf(finalizationData.endDataRollingHash);
+    await linethRollup.setupParentDataRollingHash(finalizationData.endDataRollingHash);
 
     return finalizationData;
   }
