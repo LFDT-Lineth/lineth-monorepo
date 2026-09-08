@@ -284,3 +284,38 @@ func TestDecodeBTypeSemanticInvalid(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// decodeJTypeSemantic
+// ------------------------------------------------------------
+
+// decodeJTypeVectors is the static truth table of the valid J-type opcodes, each
+// mapped to the base compute op decodeJTypeSemantic returns. Every opcode NOT
+// listed here must return jtypeInvalid (asserted exhaustively by
+// TestDecodeJTypeSemanticInvalid).
+var decodeJTypeVectors = map[uint32]uint32{
+	opcodeJAL: jtypeJal, // jal
+}
+
+// TestDecodeJTypeSemantic checks the valid opcodes against the
+// decodeJTypeVectors static truth table.
+func TestDecodeJTypeSemantic(t *testing.T) {
+	for opcode, want := range decodeJTypeVectors {
+		if got := decodeJTypeSemantic(opcode); got != want {
+			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, want)
+		}
+	}
+}
+
+// TestDecodeJTypeSemanticInvalid sweeps every opcode (0..127) NOT in
+// decodeJTypeVectors and asserts decodeJTypeSemantic returns jtypeInvalid.
+func TestDecodeJTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		if _, ok := decodeJTypeVectors[opcode]; ok {
+			continue
+		}
+		if got := decodeJTypeSemantic(opcode); got != jtypeInvalid {
+			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, jtypeInvalid)
+		}
+	}
+}
