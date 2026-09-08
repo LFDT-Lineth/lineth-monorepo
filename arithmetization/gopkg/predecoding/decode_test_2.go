@@ -296,39 +296,21 @@ func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
 	}
 }
 
-func TestItypeOpForRd(t *testing.T) {
-	if got := itypeOpForRd(itypeOpAddiWB, 0); got != itypeOpAddiWB {
-		t.Fatalf("itypeOpForRd(addi, x0) = %d, want %d", got, itypeOpAddiWB)
-	}
-	if got := itypeOpForRd(itypeOpAddiWB, 5); got != itypeOpAddiWB {
-		t.Fatalf("itypeOpForRd(addi, x5) = %d, want %d", got, itypeOpAddiWB)
-	}
-	if got := itypeOpForRd(itypeJalr, 5); got != itypeJalrWB {
-		t.Fatalf("itypeOpForRd(jalr, x5) = %d, want %d", got, itypeJalrWB)
-	}
-	if got := itypeOpForRd(itypeEcall, 5); got != itypeEcall {
-		t.Fatalf("itypeOpForRd(ecall, x5) = %d, want %d", got, itypeEcall)
-	}
-	if got := itypeOpForRd(itypeInvalid, 5); got != itypeInvalid {
-		t.Fatalf("itypeOpForRd(invalid, x5) = %d, want %d", got, itypeInvalid)
-	}
-}
-
 func TestRtypeOpForRd(t *testing.T) {
-	if got := rtypeOpForRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
-		t.Fatalf("rtypeOpForRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
+	if got := specializeRTypeOpWithRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
+		t.Fatalf("specializeRTypeOpWithRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
 	}
-	if got := rtypeOpForRd(rtypeOpAddWB, 5); got != rtypeOpAddWB {
-		t.Fatalf("rtypeOpForRd(add, x5) = %d, want %d", got, rtypeOpAddWB)
+	if got := specializeRTypeOpWithRd(rtypeOpAddWB, 5); got != rtypeOpAddWB {
+		t.Fatalf("specializeRTypeOpWithRd(add, x5) = %d, want %d", got, rtypeOpAddWB)
 	}
-	if got := rtypeOpForRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
-		t.Fatalf("rtypeOpForRd(keccak, x5) = %d, want %d", got, rtypeOpKeccak)
+	if got := specializeRTypeOpWithRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
+		t.Fatalf("specializeRTypeOpWithRd(keccak, x5) = %d, want %d", got, rtypeOpKeccak)
 	}
-	if got := rtypeOpForRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
-		t.Fatalf("rtypeOpForRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
+	if got := specializeRTypeOpWithRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
+		t.Fatalf("specializeRTypeOpWithRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
 	}
-	if got := rtypeOpForRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
-		t.Fatalf("rtypeOpForRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
+	if got := specializeRTypeOpWithRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
+		t.Fatalf("specializeRTypeOpWithRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
 	}
 }
 
@@ -397,11 +379,11 @@ func TestAssembleBTypeImm(t *testing.T) {
 }
 
 func TestJtypeOpForRd(t *testing.T) {
-	if got := jtypeOpForRd(jtypeJal, 0); got != jtypeJal {
-		t.Fatalf("jtypeOpForRd(jal, x0) = %d, want %d", got, jtypeJal)
+	if got := specializeJTypeOpWithRd(jtypeJal, 0); got != jtypeJal {
+		t.Fatalf("specializeJTypeOpWithRd(jal, x0) = %d, want %d", got, jtypeJal)
 	}
-	if got := jtypeOpForRd(jtypeJal, 5); got != jtypeJalWB {
-		t.Fatalf("jtypeOpForRd(jal, x5) = %d, want %d", got, jtypeJalWB)
+	if got := specializeJTypeOpWithRd(jtypeJal, 5); got != jtypeJalWB {
+		t.Fatalf("specializeJTypeOpWithRd(jal, x5) = %d, want %d", got, jtypeJalWB)
 	}
 }
 
@@ -427,11 +409,11 @@ func TestAssembleJTypeImm(t *testing.T) {
 }
 
 func TestUtypeOpForRd(t *testing.T) {
-	if got := utypeOpForRd(utypeAuipcWB, 0); got != utypeAuipcWB {
-		t.Fatalf("utypeOpForRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
+	if got := specializeUTypeOpWithRd(utypeAuipcWB, 0); got != utypeAuipcWB {
+		t.Fatalf("specializeUTypeOpWithRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
 	}
-	if got := utypeOpForRd(utypeAuipcWB, 5); got != utypeAuipcWB {
-		t.Fatalf("utypeOpForRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
+	if got := specializeUTypeOpWithRd(utypeAuipcWB, 5); got != utypeAuipcWB {
+		t.Fatalf("specializeUTypeOpWithRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
 	}
 }
 
