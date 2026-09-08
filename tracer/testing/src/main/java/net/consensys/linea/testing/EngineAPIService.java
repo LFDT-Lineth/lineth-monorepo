@@ -126,10 +126,7 @@ public class EngineAPIService {
     ArrayNode expectedBlobVersionedHashes = mapper.createArrayNode();
     try (final Response getPayloadResponse = getPayloadRequest.execute()) {
       assertThat(getPayloadResponse.code()).isEqualTo(200);
-      final JsonNode result =
-          mapper
-              .readTree(getPayloadResponse.body().string())
-              .get("result"); // TODO: not working for OSAKA
+      final JsonNode result = mapper.readTree(getPayloadResponse.body().string()).get("result");
       executionPayload =
           (fork == Fork.PARIS) ? (ObjectNode) result : (ObjectNode) result.get("executionPayload");
       newBlockHash = executionPayload.get("blockHash").asText();
@@ -202,7 +199,7 @@ public class EngineAPIService {
     // Optionally construct the second param - EnginePayloadAttributesParameter
     if (maybeTimeStamp.isPresent()) {
       ObjectNode payloadAttributes = mapper.createObjectNode();
-      payloadAttributes.put("timestamp", blockTimestamp);
+      payloadAttributes.put("timestamp", "0x" + Long.toHexString(blockTimestamp));
       payloadAttributes.put("prevRandao", Hash.ZERO.getBytes().toHexString());
       payloadAttributes.put("suggestedFeeRecipient", Address.ZERO.getBytes().toHexString());
       // post Shanghai

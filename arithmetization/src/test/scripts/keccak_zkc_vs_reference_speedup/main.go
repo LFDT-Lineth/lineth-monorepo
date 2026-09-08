@@ -238,7 +238,7 @@ func writeSingleInputVector(inputBytes int) (string, func()) {
 		fatal("creating temporary vector file: %v", err)
 	}
 
-	// Hex inputs are reversed by elf_to_json_gen, so write payload first and length last
+	// Hex inputs are reversed by elf_to_json, so write payload first and length last
 	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", inputBytes), inputBytes)
 	if _, err := file.WriteString(line); err != nil {
 		_ = file.Close()

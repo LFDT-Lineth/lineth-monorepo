@@ -32,8 +32,7 @@ mockitoKotlin = "5.4.0"
 restassured = "5.3.0"
 wiremock = "3.13.2"
 logcaptor = "2.11.0"
-shomei = "3.2.3"
-besuShomeiPluginVersion = "v1.0.7"
+besuShomeiPluginVersion = "v1.0.8"
 undercouchDownload = "5.6.0"
 
 # Runtime
@@ -41,8 +40,8 @@ undercouchDownload = "5.6.0"
 # This is the single source of truth for the Besu version.
 # During task execution, linea-besu/besu/build.gradle resolves this commit,
 # writes linea-besu/besu/.besu-resolved, and read by dependent modules.
-# Besu version: 26.8.0
-besuCommit = "f2557d7cf650ea5595f3ddd46a260a3c16da7af8"
+# Besu version: 26.8.1
+besuCommit = "d97cbd61976a52bb109e637196fef9a8ebf2b617"
 blobCompressor = "4.0.1"
 commonsIo = "2.21.0"
 blobShnarfCalculator = "3.0.1"
@@ -73,14 +72,6 @@ guava = "33.5.0"
 
 # Maru
 discovery = "26.3.0"
-# The published build.linea.internal:vertx-helper artifact is on Vert.x 4.
-# Maru depends on it (rather than the local :jvm-libs:generic:vertx-helper, which is on
-# Vert.x 5) because Besu 26.5's bytecode references both removed Vert.x 4 internal
-# types (e.g. io.vertx.core.impl.ConcurrentHashSet) AND removed Vert.x 4 methods on
-# still-present types (e.g. Vertx.nettyEventLoopGroup). Class-level shims cover the
-# former but not the latter, so maru must run on Vert.x 4 at test runtime. Drop this
-# pin and switch back to :jvm-libs:generic:vertx-helper once Besu moves to Vert.x 5.
-lineaPackages = "0.0.1-v20260327160734"
 dockerComposeRule = "2.3.0"
 http4k = "6.15.1.0"
 javalin = "7.2.2"
