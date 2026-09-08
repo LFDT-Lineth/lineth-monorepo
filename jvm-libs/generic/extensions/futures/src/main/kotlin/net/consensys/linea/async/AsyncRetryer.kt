@@ -55,19 +55,20 @@ interface AsyncRetryer<T> {
       clock: Clock = Clock.systemUTC(),
       action: () -> SafeFuture<T>,
     ): SafeFuture<T> {
-      return SequentialAsyncActionRetryer<T>(
+      return SequentialAsyncRetryerFactory<T>(
         vertx = vertx,
         backoffDelay = backoffDelay,
         maxRetries = maxRetries,
         timeout = timeout,
         initialDelay = initialDelay,
-        stopRetriesPredicate = stopRetriesPredicate,
-        stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
-        exceptionConsumer = exceptionConsumer,
-        ignoreFirstExceptionsUntilTimeElapsed = ignoreFirstExceptionsUntilTimeElapsed,
         clock = clock,
-        action = action,
-      ).retry()
+      ).retry(
+        stopRetriesPredicate,
+        stopRetriesOnErrorPredicate,
+        exceptionConsumer,
+        ignoreFirstExceptionsUntilTimeElapsed,
+        action,
+      )
     }
   }
 }
