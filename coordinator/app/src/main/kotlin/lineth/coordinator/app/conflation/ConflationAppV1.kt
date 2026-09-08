@@ -50,6 +50,7 @@ import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseControlle
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.LatestL1FinalizedBlockProviderSync
 import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
@@ -88,6 +89,12 @@ class ConflationAppV1(
   private val proverClientFactory: ProverClientFactory = ProverClientFactory(
     vertx = vertx,
     config = configs.proversConfig,
+    metricsFacade = metricsFacade,
+  ),
+  private val riscvProverClientFactory: RiscvProverClientFactory = RiscvProverClientFactory(
+    vertx = vertx,
+    config = configs.proversConfig,
+    l2MessageServiceAddress = "",
     metricsFacade = metricsFacade,
   ),
   val l2EthClient: EthApiClient = createEthApiClient(
@@ -363,7 +370,7 @@ class ConflationAppV1(
         BatchProofHandlerImpl(batchesRepository)::acceptNewBatch,
       ),
     )
-    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient()
+    val executionProverClient: ExecutionProverClientV2 = riscvProverClientFactory.preRiscvExecutionProverClient()
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(
         tracesClients.tracesConflationClient,

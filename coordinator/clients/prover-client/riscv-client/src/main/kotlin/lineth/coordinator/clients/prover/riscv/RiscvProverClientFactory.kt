@@ -1,6 +1,7 @@
 package lineth.coordinator.clients.prover.riscv
 
 import io.vertx.core.Vertx
+import linea.clients.ExecutionProverClientV2
 import linea.clients.L2ExecutionProverClientV1
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.ABProverClientRouter
@@ -39,6 +40,20 @@ class RiscvProverClientFactory(
     ) { proverConfig ->
       buildL2ExecutionProverClient(proverConfig)
         .also { executionWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
+    return ABProverClientRouter.create(
+      proverAConfig = config.proverA.execution,
+      proverBConfig = config.proverB?.execution,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvExecutionProverClient(
+        config = proverConfig,
+        vertx = vertx,
+      ).also { executionWaitingResponsesMetric.addReporter(it) }
     }
   }
 

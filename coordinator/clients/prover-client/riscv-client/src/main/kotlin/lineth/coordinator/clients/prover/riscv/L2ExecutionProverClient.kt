@@ -97,7 +97,7 @@ typealias L2ExecutionProofTransport =
  * via [transport], so the same client works whether requests are written as JSON files or sent over REST.
  */
 class L2ExecutionProverClient(
-  private val transport: L2ExecutionProofTransport,
+  transport: L2ExecutionProofTransport,
   programVk: String,
   l2MessageServiceAddress: String,
   forkName: String,

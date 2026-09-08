@@ -73,6 +73,10 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
     return fetchJob(proofIndex).thenApply { job -> job?.provedResponseOrNull() }
   }
 
+  override fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean> {
+    return fetchJob(proofIndex).thenApply { job -> job?.status == STATUS_PROVED }
+  }
+
   override fun awaitResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto> {
     return AsyncRetryer.retry(
       vertx = vertx,

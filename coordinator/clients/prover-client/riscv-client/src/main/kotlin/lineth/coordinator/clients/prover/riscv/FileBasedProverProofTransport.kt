@@ -75,6 +75,11 @@ class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex :
       }
   }
 
+  override fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean> {
+    val responseFilePath = responseFilePath(proofIndex)
+    return fileMonitor.fileExists(responseFilePath)
+  }
+
   override fun awaitResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto> {
     val responseFilePath = responseFilePath(proofIndex)
     return fileMonitor.monitor(responseFilePath)

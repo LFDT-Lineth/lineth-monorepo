@@ -30,7 +30,7 @@ import java.util.function.Supplier
  * @param TProofIndex proof index uniquely identifying a request/response pair.
  */
 open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, TProofIndex>(
-  private val transport: ProverProofTransport<RequestDto, ResponseDto, TProofIndex>,
+  protected val transport: ProverProofTransport<RequestDto, ResponseDto, TProofIndex>,
   private val proofIndexProvider: (Request) -> TProofIndex,
   private val requestMapper: (Request) -> SafeFuture<RequestDto>,
   private val responseMapper: (ResponseDto) -> Response,
