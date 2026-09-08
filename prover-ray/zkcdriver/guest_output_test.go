@@ -62,9 +62,14 @@ func TestGuestPublicOutputs(t *testing.T) {
 	assert.NotNil(t, sys.LookupColumn(output.Address), "the address column must resolve")
 	assert.NotNil(t, sys.LookupColumn(output.Data), "the data column must resolve")
 
+	traces := driver.TraceZkcInputs(inputs)
+	if len(traces) > 1 {
+		t.Fatalf("the test fixture is expected to only use a single public inputs")
+	}
+
 	var got []koalafield.Element
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+		driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
 		got = risc5.GetGuestPublicOutputs(rt)
 	}, wiop.ProveOptions{CheckUnreducedQueries: true})
 
@@ -94,29 +99,34 @@ func TestGuestPublicOutputsWrongLength(t *testing.T) {
 	t.Run("the length constraints reject the proof", func(t *testing.T) {
 		sys, driver, inputs, _ := newGuestOutputSystem(t, zkcPath, inputHex)
 
-		assert.False(t, provesAndVerifies(t, sys, driver, inputs),
+		assert.False(t, provesAndVerifiesFirstShardOnly(t, sys, driver, inputs),
 			"a guest output whose length disagrees with the memory must not verify")
 	})
 
 	t.Run("the prover reports the mismatch", func(t *testing.T) {
 		sys, driver, inputs, _ := newGuestOutputSystem(t, zkcPath, inputHex)
 
+		traces := driver.TraceZkcInputs(inputs)
+		if len(traces) > 1 {
+			t.Fatalf("the test fixture is expected to only use a single public inputs")
+		}
+
 		assert.PanicsWithValue(t,
 			"risc5: GetGuestPublicOutputs: the guest wrote 9 outputs but the expected output size is 8",
 			func() {
 				sys.Prove(func(rt *wiop.Runtime) {
-					driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+					driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
 					risc5.GetGuestPublicOutputs(rt)
 				})
 			})
 	})
 }
 
-// provesAndVerifies reports whether sys produces a proof that verifies. A
+// provesAndVerifiesFirstShardOnly reports whether sys produces a proof that verifies. A
 // violated constraint can surface either as a verification error or as a panic
 // from the prover, so both count as a failure; the reason is logged so that a
 // rejection for an unrelated reason does not pass for the one under test.
-func provesAndVerifies(
+func provesAndVerifiesFirstShardOnly(
 	t *testing.T, sys *wiop.System, driver *zkcdriver.ZkCDriver, inputs *zkcdriver.PreReadInputs,
 ) (ok bool) {
 
@@ -129,8 +139,13 @@ func provesAndVerifies(
 		}
 	}()
 
+	traces := driver.TraceZkcInputs(inputs)
+	if len(traces) > 1 {
+		t.Fatalf("the test fixture is expected to only use a single public inputs")
+	}
+
 	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{})
+		driver.AssignTraceShard(rt, traces[0], koalafield.Octuplet{})
 	}, wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	if err := sys.Verify(proof, pub); err != nil {

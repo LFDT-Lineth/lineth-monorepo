@@ -1,9 +1,9 @@
 package lineth.conflation.calculators
-
 import linea.domain.BlockCounters
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import lineth.conflation.SafeBlockProvider
+import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.traces.fakeTracesCountersV2
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
@@ -197,6 +197,7 @@ class ConflationCalculatorByTimeDeadlineTest {
       blockTimestamp = timestamp,
       tracesCounters = fakeTracesCountersV2(1u),
       blockRLPEncoded = ByteArray(0),
+      coinbase = ZERO_COINBASE,
     )
   }
 }

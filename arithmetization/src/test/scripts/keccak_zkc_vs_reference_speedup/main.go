@@ -1,8 +1,8 @@
 package main
 
 // Examples, from the repository root:
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --intervals 10 --size 10
-//   GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536
+//   go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup --intervals 10 --size 10
+//   go -C arithmetization run ./src/test/scripts/keccak_zkc_vs_reference_speedup --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536
 
 import (
 	"bytes"
@@ -238,7 +238,7 @@ func writeSingleInputVector(inputBytes int) (string, func()) {
 		fatal("creating temporary vector file: %v", err)
 	}
 
-	// Hex inputs are reversed by elf_to_json_gen, so write payload first and length last
+	// Hex inputs are reversed by elf_to_json, so write payload first and length last
 	line := fmt.Sprintf("0x%s%016x\n", strings.Repeat("00", inputBytes), inputBytes)
 	if _, err := file.WriteString(line); err != nil {
 		_ = file.Close()
