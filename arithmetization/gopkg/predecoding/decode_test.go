@@ -319,3 +319,41 @@ func TestDecodeJTypeSemanticInvalid(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// decodeSTypeSemantic
+// ------------------------------------------------------------
+
+// decodeSTypeVectors is the static truth table of the valid S-type funct3
+// codes, each mapped to the store-width compute op decodeSTypeSemantic returns.
+// Every funct3 NOT listed here must return stypeInvalid (asserted exhaustively
+// by TestDecodeSTypeSemanticInvalid).
+var decodeSTypeVectors = map[uint32]uint32{
+	0b000: stypeStore8,  // sb
+	0b001: stypeStore16, // sh
+	0b010: stypeStore32, // sw
+	0b011: stypeStore64, // sd
+}
+
+// TestDecodeSTypeSemantic checks the valid store codes against the
+// decodeSTypeVectors static truth table.
+func TestDecodeSTypeSemantic(t *testing.T) {
+	for funct3, want := range decodeSTypeVectors {
+		if got := decodeSTypeSemantic(funct3); got != want {
+			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, want)
+		}
+	}
+}
+
+// TestDecodeSTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
+// decodeSTypeVectors and asserts decodeSTypeSemantic returns stypeInvalid.
+func TestDecodeSTypeSemanticInvalid(t *testing.T) {
+	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+		if _, ok := decodeSTypeVectors[funct3]; ok {
+			continue
+		}
+		if got := decodeSTypeSemantic(funct3); got != stypeInvalid {
+			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, stypeInvalid)
+		}
+	}
+}
