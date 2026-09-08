@@ -357,3 +357,92 @@ func TestDecodeSTypeSemanticInvalid(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// decodeRTypeSemantic
+// ------------------------------------------------------------
+
+// rTypeInput is a full (opcode, funct3, funct7) R-type decode input.
+type rTypeInput struct {
+	opcode uint32
+	funct3 uint32
+	funct7 uint32
+}
+
+// decodeRTypeVectors is the static truth table of every valid (opcode, funct3,
+// funct7) R-type combination mapped to the local op decodeRTypeSemantic returns.
+// It is the complete set of valid points: every input NOT listed here must
+// return rtypeInvalid (asserted exhaustively by TestDecodeRTypeSemanticInvalid).
+var decodeRTypeVectors = map[rTypeInput]uint32{
+	// OP, funct7 0000000: base integer.
+	{opcodeOP, 0b000, 0b0000000}: rtypeOpAddWB,
+	{opcodeOP, 0b001, 0b0000000}: rtypeOpSllWB,
+	{opcodeOP, 0b010, 0b0000000}: rtypeOpSltWB,
+	{opcodeOP, 0b011, 0b0000000}: rtypeOpSltuWB,
+	{opcodeOP, 0b100, 0b0000000}: rtypeOpXorWB,
+	{opcodeOP, 0b101, 0b0000000}: rtypeOpSrlWB,
+	{opcodeOP, 0b110, 0b0000000}: rtypeOpOrWB,
+	{opcodeOP, 0b111, 0b0000000}: rtypeOpAndWB,
+	// OP, funct7 0100000: sub/sra.
+	{opcodeOP, 0b000, 0b0100000}: rtypeOpSubWB,
+	{opcodeOP, 0b101, 0b0100000}: rtypeOpSraWB,
+	// OP, funct7 0000001: M extension.
+	{opcodeOP, 0b000, 0b0000001}: rtypeOpMulWB,
+	{opcodeOP, 0b001, 0b0000001}: rtypeOpMulhWB,
+	{opcodeOP, 0b010, 0b0000001}: rtypeOpMulhsuWB,
+	{opcodeOP, 0b011, 0b0000001}: rtypeOpMulhuWB,
+	{opcodeOP, 0b100, 0b0000001}: rtypeOpDivWB,
+	{opcodeOP, 0b101, 0b0000001}: rtypeOpDivuWB,
+	{opcodeOP, 0b110, 0b0000001}: rtypeOpRemWB,
+	{opcodeOP, 0b111, 0b0000001}: rtypeOpRemuWB,
+
+	// OP32, funct7 0000000: word base integer.
+	{opcodeOP32, 0b000, 0b0000000}: rtypeOpAddwWB,
+	{opcodeOP32, 0b001, 0b0000000}: rtypeOpSllwWB,
+	{opcodeOP32, 0b101, 0b0000000}: rtypeOpSrlwWB,
+	// OP32, funct7 0100000: word sub/sra.
+	{opcodeOP32, 0b000, 0b0100000}: rtypeOpSubwWB,
+	{opcodeOP32, 0b101, 0b0100000}: rtypeOpSrawWB,
+	// OP32, funct7 0000001: word M extension.
+	{opcodeOP32, 0b000, 0b0000001}: rtypeOpMulwWB,
+	{opcodeOP32, 0b100, 0b0000001}: rtypeOpDivwWB,
+	{opcodeOP32, 0b101, 0b0000001}: rtypeOpDivuwWB,
+	{opcodeOP32, 0b110, 0b0000001}: rtypeOpRemwWB,
+	{opcodeOP32, 0b111, 0b0000001}: rtypeOpRemuwWB,
+
+	// CUSTOM1, funct7 must be 0000000.
+	{opcodeCUSTOM1, 0b000, 0b0000000}: rtypeOpKeccak,
+	{opcodeCUSTOM1, 0b001, 0b0000000}: rtypeOpPoseidon2,
+	{opcodeCUSTOM1, 0b010, 0b0000000}: rtypeOpWriteOutput,
+}
+
+// TestDecodeRTypeSemantic checks every valid combination against the
+// decodeRTypeVectors static truth table.
+func TestDecodeRTypeSemantic(t *testing.T) {
+	for in, want := range decodeRTypeVectors {
+		if got := decodeRTypeSemantic(in.opcode, in.funct3, in.funct7); got != want {
+			t.Fatalf("decodeRTypeSemantic(op=%#09b, f3=%#03b, f7=%#09b) = %d, want %d",
+				in.opcode, in.funct3, in.funct7, got, want)
+		}
+	}
+}
+
+// TestDecodeRTypeSemanticInvalid sweeps the full (opcode, funct3, funct7)
+// universe (128 x 8 x 128) and asserts every combination NOT in
+// decodeRTypeVectors returns rtypeInvalid.
+func TestDecodeRTypeSemanticInvalid(t *testing.T) {
+	for opcode := uint32(0); opcode < 1<<7; opcode++ {
+		for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+			for funct7 := uint32(0); funct7 < 1<<7; funct7++ {
+				if _, ok := decodeRTypeVectors[rTypeInput{opcode, funct3, funct7}]; ok {
+					// if the combination is in the list of valid R-type combinations, skip
+					continue
+				}
+				if got := decodeRTypeSemantic(opcode, funct3, funct7); got != rtypeInvalid {
+					t.Fatalf("decodeRTypeSemantic(op=%#09b, f3=%#03b, f7=%#09b) = %d, want %d",
+						opcode, funct3, funct7, got, rtypeInvalid)
+				}
+			}
+		}
+	}
+}
