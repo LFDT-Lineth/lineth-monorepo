@@ -101,7 +101,8 @@ func TestImm12Uimm5(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// decodeITypeSemantic: local op
+// decodeITypeSemantic tests : translation of opcode and funct3 to computed op
+// (local op) and normalized imm12.
 // ------------------------------------------------------------
 
 // iTypeArm is an (opcode, funct3) pair.
@@ -134,53 +135,53 @@ type iTypeResult struct {
 // tests, so here we only pin the value passed through for each vector.
 var decodeITypeVectors = map[iTypeInput]iTypeResult{
 	// LOAD: op fixed by funct3, imm12 passed through (min + max sampled).
-	{opcodeLOAD, 0b000, 0x008}: {itypeRead8SgnWB, 0x008},
-	{opcodeLOAD, 0b000, 0xfff}: {itypeRead8SgnWB, 0xfff},
-	{opcodeLOAD, 0b001, 0x004}: {itypeRead16SgnWB, 0x004},
-	{opcodeLOAD, 0b010, 0x000}: {itypeRead32SgnWB, 0x000},
-	{opcodeLOAD, 0b011, 0x7ff}: {itypeRead64WB, 0x7ff},
-	{opcodeLOAD, 0b100, 0x001}: {itypeRead8ZextWB, 0x001},
-	{opcodeLOAD, 0b101, 0x002}: {itypeRead16ZextWB, 0x002},
-	{opcodeLOAD, 0b110, 0x003}: {itypeRead32ZextWB, 0x003},
+	{opcodeLOAD, 0b000, 0x008}: {itypeRead8SgnWB, 0x008},   // LB, read signed 8 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b000, 0xfff}: {itypeRead8SgnWB, 0xfff},   // LB, read signed 8 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b001, 0x004}: {itypeRead16SgnWB, 0x004},  // LH, read signed 16 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b010, 0x000}: {itypeRead32SgnWB, 0x000},  // LW, read signed 32 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b011, 0x7ff}: {itypeRead64WB, 0x7ff},     // LD, read signed 64 bits, sign extend to 64 bits
+	{opcodeLOAD, 0b100, 0x001}: {itypeRead8ZextWB, 0x001},  // LBU, read unsigned 8 bits, zero extend to 64 bits
+	{opcodeLOAD, 0b101, 0x002}: {itypeRead16ZextWB, 0x002}, // LHU, read unsigned 16 bits, zero extend to 64 bits
+	{opcodeLOAD, 0b110, 0x003}: {itypeRead32ZextWB, 0x003}, // LWU, read unsigned 32 bits, zero extend to 64 bits
 
 	// OPIMM non-shift: op fixed by funct3, imm12 passed through.
-	{opcodeOPIMM, 0b000, 0x02a}: {itypeOpAddiWB, 0x02a},
-	{opcodeOPIMM, 0b000, 0xfff}: {itypeOpAddiWB, 0xfff},
-	{opcodeOPIMM, 0b010, 0x005}: {itypeOpSltiWB, 0x005},
-	{opcodeOPIMM, 0b011, 0x007}: {itypeOpSltiuWB, 0x007},
-	{opcodeOPIMM, 0b100, 0x0ff}: {itypeOpXoriWB, 0x0ff},
-	{opcodeOPIMM, 0b110, 0x0f0}: {itypeOpOriWB, 0x0f0},
-	{opcodeOPIMM, 0b111, 0xabc}: {itypeOpAndiWB, 0xabc},
+	{opcodeOPIMM, 0b000, 0x02a}: {itypeOpAddiWB, 0x02a},  // ADDI
+	{opcodeOPIMM, 0b000, 0xfff}: {itypeOpAddiWB, 0xfff},  // ADDI
+	{opcodeOPIMM, 0b010, 0x005}: {itypeOpSltiWB, 0x005},  // SLTI
+	{opcodeOPIMM, 0b011, 0x007}: {itypeOpSltiuWB, 0x007}, // SLTIU
+	{opcodeOPIMM, 0b100, 0x0ff}: {itypeOpXoriWB, 0x0ff},  // XORI
+	{opcodeOPIMM, 0b110, 0x0f0}: {itypeOpOriWB, 0x0f0},   // ORI
+	{opcodeOPIMM, 0b111, 0xabc}: {itypeOpAndiWB, 0xabc},  // ANDI
 
 	// OPIMM shifts: op depends on funct6 (imm12[11:6]); srai strips to uimm6.
-	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000}, // funct6 0
-	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f}, // funct6 0, shamt 63
+	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000}, // funct6 0, SLLI
+	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f}, // funct6 0, SLLI, shamt 63
 	{opcodeOPIMM, 0b001, 0x040}: {itypeInvalid, 0x040},  // funct6 != 0
-	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003}, // funct6 000000
-	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f}, // funct6 000000, shamt 63
-	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005}, // funct6 010000 -> uimm6 5
-	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f}, // funct6 010000 -> uimm6 63
-	{opcodeOPIMM, 0b101, 0x100}: {itypeInvalid, 0x100},  // funct6 neither 0 nor 010000
+	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003}, // funct6 000000, SRLI
+	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f}, // funct6 000000, SRLI, shamt 63
+	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005}, // funct6 010000, SRAI -> uimm6 5
+	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f}, // funct6 010000, SRAI -> uimm6 63
+	{opcodeOPIMM, 0b101, 0x100}: {itypeInvalid, 0x100},  // funct6 neither 0 nor 010000, INVALID
 
 	// OPIMM32: word shifts depend on funct7 (imm12[11:5]); sraiw strips to uimm5.
-	{opcodeOPIMM32, 0b000, 0x007}: {itypeOpAddiwWB, 0x007},
-	{opcodeOPIMM32, 0b001, 0x000}: {itypeOpSlliwWB, 0x000}, // funct7 0
-	{opcodeOPIMM32, 0b001, 0x01f}: {itypeOpSlliwWB, 0x01f}, // funct7 0, shamt 31
-	{opcodeOPIMM32, 0b001, 0x020}: {itypeInvalid, 0x020},   // funct7 != 0
-	{opcodeOPIMM32, 0b101, 0x003}: {itypeOpSrliwWB, 0x003}, // funct7 0000000
-	{opcodeOPIMM32, 0b101, 0x01f}: {itypeOpSrliwWB, 0x01f}, // funct7 0000000, shamt 31
+	{opcodeOPIMM32, 0b000, 0x007}: {itypeOpAddiwWB, 0x007}, // ADDIW
+	{opcodeOPIMM32, 0b001, 0x000}: {itypeOpSlliwWB, 0x000}, // funct7 0, SLLIW
+	{opcodeOPIMM32, 0b001, 0x01f}: {itypeOpSlliwWB, 0x01f}, // funct7 0, SLLIW, shamt 31
+	{opcodeOPIMM32, 0b001, 0x020}: {itypeInvalid, 0x020},   // funct7 != 0, INVALID
+	{opcodeOPIMM32, 0b101, 0x003}: {itypeOpSrliwWB, 0x003}, // funct7 0000000, SRLIW
+	{opcodeOPIMM32, 0b101, 0x01f}: {itypeOpSrliwWB, 0x01f}, // funct7 0000000, SRLIW, shamt 31
 	{opcodeOPIMM32, 0b101, 0x405}: {itypeOpSraiwWB, 0x005}, // funct7 0100000 -> uimm5 5
 	{opcodeOPIMM32, 0b101, 0x41f}: {itypeOpSraiwWB, 0x01f}, // funct7 0100000 -> uimm5 31
-	{opcodeOPIMM32, 0b101, 0x200}: {itypeInvalid, 0x200},   // funct7 neither 0 nor 0100000
+	{opcodeOPIMM32, 0b101, 0x200}: {itypeInvalid, 0x200},   // funct7 neither 0 nor 0100000, INVALID
 
 	// JALR: op fixed, imm12 passed through.
-	{opcodeJALR, 0b000, 0x123}: {itypeJalr, 0x123},
-	{opcodeJALR, 0b000, 0xfff}: {itypeJalr, 0xfff},
+	{opcodeJALR, 0b000, 0x123}: {itypeJalr, 0x123}, // JALR
+	{opcodeJALR, 0b000, 0xfff}: {itypeJalr, 0xfff}, // JALR
 
 	// SYSTEM: op selected by funct12 (== imm12), passed through.
-	{opcodeSYSTEM, 0b000, funct12Ecall}:  {itypeEcall, funct12Ecall},
-	{opcodeSYSTEM, 0b000, funct12Ebreak}: {itypeEbreak, funct12Ebreak},
-	{opcodeSYSTEM, 0b000, 0x002}:         {itypeInvalid, 0x002}, // unknown funct12
+	{opcodeSYSTEM, 0b000, funct12Ecall}:  {itypeEcall, funct12Ecall},   // ECALL
+	{opcodeSYSTEM, 0b000, funct12Ebreak}: {itypeEbreak, funct12Ebreak}, // EBREAK
+	{opcodeSYSTEM, 0b000, 0x002}:         {itypeInvalid, 0x002},        // unknown funct12, INVALID
 }
 
 // validITypeArms is the static set of (opcode, funct3) pairs that can decode to
@@ -220,7 +221,7 @@ func TestDecodeITypeSemanticOp(t *testing.T) {
 }
 
 // TestDecodeITypeSemanticInvalidArms scans
-// - every opcode (0..127) 
+// - every opcode (0..127)
 // - every funct3 (0..7)
 // which pair is NOT in the list of validITypeArms and asserts
 // decodeITypeSemantic returns itypeInvalid with imm12 unchanged
@@ -239,6 +240,47 @@ func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 						opcode, funct3, imm12, gotOp, gotImm, itypeInvalid, imm12)
 				}
 			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// decodeBTypeSemantic
+// ------------------------------------------------------------
+
+// decodeBTypeVectors is the static truth table of the valid branch funct3
+// codes, each of which decodeBTypeSemantic returns unchanged. Every funct3 NOT
+// listed here must return btypeInvalid (asserted exhaustively by
+// TestDecodeBTypeSemanticInvalid).
+var decodeBTypeVectors = map[uint32]uint32{
+	0b000: 0b000, // beq
+	0b001: 0b001, // bne
+	0b100: 0b100, // blt
+	0b101: 0b101, // bge
+	0b110: 0b110, // bltu
+	0b111: 0b111, // bgeu
+}
+
+// TestDecodeBTypeSemantic checks the valid branch codes against the
+// decodeBTypeVectors static truth table.
+func TestDecodeBTypeSemantic(t *testing.T) {
+	for funct3, want := range decodeBTypeVectors {
+		if got := decodeBTypeSemantic(funct3); got != want {
+			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, want)
+		}
+	}
+}
+
+// TestDecodeBTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
+// decodeBTypeVectors and asserts decodeBTypeSemantic returns btypeInvalid.
+func TestDecodeBTypeSemanticInvalid(t *testing.T) {
+	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
+		if _, ok := decodeBTypeVectors[funct3]; ok {
+			// if the funct3 is in the list of validBTypeArms, skip
+			continue
+		}
+		if got := decodeBTypeSemantic(funct3); got != btypeInvalid {
+			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, btypeInvalid)
 		}
 	}
 }

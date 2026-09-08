@@ -444,27 +444,6 @@ func TestAssembleSTypeImm(t *testing.T) {
 	}
 }
 
-func TestDecodeBTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		funct3 uint32
-		wantOp uint32
-	}{
-		{name: "beq", funct3: 0b000, wantOp: 0b000},
-		{name: "bne", funct3: 0b001, wantOp: 0b001},
-		{name: "blt", funct3: 0b100, wantOp: 0b100},
-		{name: "invalid", funct3: 0b010, wantOp: btypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := decodeBTypeSemantic(tt.funct3)
-			if got != tt.wantOp {
-				t.Fatalf("decodeBTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, got, tt.wantOp)
-			}
-		})
-	}
-}
-
 func TestAssembleBTypeImm(t *testing.T) {
 	tests := []struct {
 		name   string
