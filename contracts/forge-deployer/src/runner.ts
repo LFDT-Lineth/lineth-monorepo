@@ -24,7 +24,7 @@ import {
 } from "./checkpoint";
 import { DeployerConfig, resolveRoleConfig, RoleConfig } from "./config";
 import { decideStepAction, WellKnownCodeStatus } from "./decision";
-import { assertDeployerCanPay } from "./funds";
+import { assertDeployerCanPay, requiresL2BalanceCheck } from "./funds";
 import { resolveGenesisTimestamp } from "./genesis";
 import { runBootstrapScript, runStepScript } from "./process-runner";
 import { CheckpointStore } from "./store";
@@ -32,11 +32,7 @@ import {
   ARACHNID_FUNDING_WEI,
   getDeterministicProxyCodeStatus,
 } from "../../common/helpers/deterministicDeploymentProxy";
-import {
-  feeBudgetPricePerGas,
-  resolveL2DeployFeeOverrides,
-  resolveOneModelFeeOverrides,
-} from "../../common/helpers/feeOverrides";
+import { resolveL2DeployFeeOverrides, resolveOneModelFeeOverrides } from "../../common/helpers/feeOverrides";
 
 interface ChainContext {
   l1Provider: JsonRpcProvider;
@@ -405,7 +401,6 @@ async function executeStep(
       assertDeployerCanPay("L1", context.signers.l1, balance, fees, PROFILE_DEPLOY_GAS_BUDGET);
     } else {
       const fees = resolveL2DeployFeeOverrides();
-      const balance = feeBudgetPricePerGas(fees) === 0n ? 0n : await context.l2Provider.getBalance(context.signers.l2);
       // Include the deterministic proxy's funding transfer to the keyless
       // signer only when the proxy still has to be installed. On chains that
       // already carry the factory (e.g. Anvil's genesis preinstall) the send is
@@ -413,6 +408,9 @@ async function executeStep(
       // unfunded gas-free L2 deployer does not have.
       const proxyStatus = await getDeterministicProxyCodeStatus(context.l2Provider);
       const flatWei = proxyStatus === "absent" ? ARACHNID_FUNDING_WEI : 0n;
+      const balance = requiresL2BalanceCheck(fees, flatWei)
+        ? await context.l2Provider.getBalance(context.signers.l2)
+        : 0n;
       assertDeployerCanPay("L2", context.signers.l2, balance, fees, PROFILE_DEPLOY_GAS_BUDGET, flatWei);
     }
     fundingVerified[step.chain] = true;

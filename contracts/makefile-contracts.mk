@@ -189,8 +189,8 @@ deploy-contracts: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
 deploy-contracts: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 deploy-contracts:
 	cd $(contracts_package_dir); \
-	export L1_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
-	export L2_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
+	export L1_NONCE=$$(pnpm --reporter=silent exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445 | tail -n1) && \
+	export L2_NONCE=$$(pnpm --reporter=silent exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545 | tail -n1) && \
 	cd .. && \
 	if [ "$(LINETH_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
 		$(MAKE) -j7 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \

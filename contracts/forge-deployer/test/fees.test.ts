@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { ARACHNID_FUNDING_WEI } from "../../common/helpers/deterministicDeploymentProxy";
 import { resolveL2DeployFeeOverrides } from "../../common/helpers/feeOverrides";
-import { assertDeployerCanPay, formatInsufficientFundsError } from "../src/funds";
+import { assertDeployerCanPay, formatInsufficientFundsError, requiresL2BalanceCheck } from "../src/funds";
 
 const DEPLOYER = "0x2000000000000000000000000000000000000002";
 
@@ -55,6 +55,25 @@ test("a gas-free L2 still requires the deterministic proxy funding amount", () =
   assert.doesNotThrow(() =>
     assertDeployerCanPay("L2", DEPLOYER, ARACHNID_FUNDING_WEI, { gasPrice: 0n }, 1n, ARACHNID_FUNDING_WEI),
   );
+});
+
+test("requiresL2BalanceCheck skips the balance RPC only when nothing is owed", () => {
+  // No gas cost and no flat transfer: a real balance can never be required,
+  // so callers may safely substitute 0 without fetching it.
+  assert.equal(requiresL2BalanceCheck({ gasPrice: 0n }, 0n), false);
+});
+
+test("requiresL2BalanceCheck requires the real balance on a gas-free L2 that still owes a flat transfer", () => {
+  // This is the exact bug scenario: a gas-free L2 (gasPrice 0) with the
+  // deterministic proxy absent still owes ARACHNID_FUNDING_WEI. Substituting
+  // a fake 0 balance here would make assertDeployerCanPay always throw, even
+  // when the deployer already holds enough to cover the flat transfer.
+  assert.equal(requiresL2BalanceCheck({ gasPrice: 0n }, ARACHNID_FUNDING_WEI), true);
+});
+
+test("requiresL2BalanceCheck requires the real balance whenever gas is not free", () => {
+  assert.equal(requiresL2BalanceCheck({ gasPrice: 1n }, 0n), true);
+  assert.equal(requiresL2BalanceCheck({ gasPrice: 1n }, ARACHNID_FUNDING_WEI), true);
 });
 
 test("flat funding wei is added on top of the gas budget on a fee-paying chain", () => {

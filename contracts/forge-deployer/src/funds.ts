@@ -1,5 +1,19 @@
 import { feeBudgetPricePerGas, FeeOverrides } from "../../common/helpers/feeOverrides";
 
+/**
+ * Whether an L2 preflight funding check needs the deployer's real on-chain
+ * balance. Zero gas price only means "no balance needed" when there is also
+ * no flat transfer to make (e.g. the deterministic proxy's funding send): a
+ * gas-free L2 that still owes `flatWei` must have its real balance checked,
+ * otherwise callers that substitute a fake zero balance for a zero-gas chain
+ * would always fail this check — even when the deployer already holds
+ * enough to cover `flatWei` — because zero can never satisfy a positive
+ * requirement.
+ */
+export function requiresL2BalanceCheck(fees: FeeOverrides, flatWei: bigint): boolean {
+  return feeBudgetPricePerGas(fees) !== 0n || flatWei !== 0n;
+}
+
 export function assertDeployerCanPay(
   chain: "L1" | "L2",
   deployerAddress: string,
