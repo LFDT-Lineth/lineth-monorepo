@@ -5,7 +5,7 @@ against its corresponding JSON Schema under `rollup_spec/prover_io/schemas/`.
 
 This test does NOT import the guest dataclasses (only the lightweight,
 dependency-free `rollup_spec` package root, to locate the data), so it has no
-native dependencies (`ckzg`/`coincurve`/`lz4`) — only `jsonschema`. It runs on
+native dependencies (`ckzg`/`coincurve`/`zstandard`) — only `jsonschema`. It runs on
 any Python and is the cheapest way to catch a fixture drifting from its schema.
 
 Fixture <-> schema pairing is by filename convention:

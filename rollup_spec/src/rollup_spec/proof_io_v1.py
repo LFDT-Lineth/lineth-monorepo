@@ -411,6 +411,9 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
         block_rlps=[
             _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
         ],
+        compressed_segment=_bytes_from_hex(
+            _require(obj, "compressedSegment", ctx), f"{ctx}compressedSegment"
+        ),
     )
 
 
