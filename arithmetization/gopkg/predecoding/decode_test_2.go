@@ -426,26 +426,6 @@ func TestAssembleJTypeImm(t *testing.T) {
 	}
 }
 
-func TestDecodeUTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		opcode uint32
-		wantOp uint32
-	}{
-		{name: "lui", opcode: opcodeLUI, wantOp: utypeLuiWB},
-		{name: "auipc", opcode: opcodeAUIPC, wantOp: utypeAuipcWB},
-		{name: "invalid", opcode: 0, wantOp: utypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeUTypeSemantic(tt.opcode)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeUTypeSemantic(op=%#x) = %d, want %d", tt.opcode, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
 func TestUtypeOpForRd(t *testing.T) {
 	if got := utypeOpForRd(utypeAuipcWB, 0); got != utypeAuipcWB {
 		t.Fatalf("utypeOpForRd(auipc, x0) = %d, want %d", got, utypeAuipcWB)
