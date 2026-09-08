@@ -24,7 +24,7 @@ import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
-class GenericFileBasedProverClientTest {
+class GenericRiscVProverClientTest {
   data class ProofRequest(override val startBlockNumber: ULong, override val endBlockNumber: ULong) : BlockInterval
   data class ProofResponse(val startBlockNumber: ULong, val endBlockNumber: ULong)
   data class ProofRequestDto(val blockNumberStart: ULong, val blockNumberEnd: ULong) {
@@ -60,7 +60,7 @@ class GenericFileBasedProverClientTest {
     }
   }
 
-  private lateinit var proverClient: GenericFileBasedProverClient<
+  private lateinit var proverClient: GenericRiscVProverClient<
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
@@ -72,24 +72,26 @@ class GenericFileBasedProverClientTest {
   private fun createProverClient(
     config: FileBasedProverConfig,
     vertx: Vertx,
-  ): GenericFileBasedProverClient<
+  ): GenericRiscVProverClient<
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
     ProofResponseDto,
     ProofIndexImpl,
     > {
-    return GenericFileBasedProverClient(
-      config = config,
-      vertx = vertx,
-      fileWriter = FileWriter(vertx, JsonSerialization.proofResponseMapperV1),
-      fileReader = FileReader(
-        vertx,
-        JsonSerialization.proofResponseMapperV1,
-        ProofResponseDto::class.java,
+    return GenericRiscVProverClient(
+      transport = FileBasedProverProofTransport(
+        config = config,
+        vertx = vertx,
+        fileWriter = FileWriter(vertx, JsonSerialization.proofResponseMapperV1),
+        fileReader = FileReader(
+          vertx,
+          JsonSerialization.proofResponseMapperV1,
+          ProofResponseDto::class.java,
+        ),
+        requestFileNameProvider = requestFileNameProvider,
+        responseFileNameProvider = responseFileNameProvider,
       ),
-      requestFileNameProvider = requestFileNameProvider,
-      responseFileNameProvider = responseFileNameProvider,
       requestMapper = { SafeFuture.completedFuture(ProofRequestDto.fromDomain(it)) },
       proofTypeLabel = "batch",
       responseMapper = ProofResponseDto::toDomain,
