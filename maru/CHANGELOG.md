@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### Additions and Improvements
+
+- Support Amsterdam execution-layer forks. Block-producing nodes must explicitly configure `qbft.target-gas-limit` before starting with Amsterdam scheduled; followers do not need this setting.
+
 ### 🚀 Features
 
 - *(maru)* Support Noise / Yamux (#3751)

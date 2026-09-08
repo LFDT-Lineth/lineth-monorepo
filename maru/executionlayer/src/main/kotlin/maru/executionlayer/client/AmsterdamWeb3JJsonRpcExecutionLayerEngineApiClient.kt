@@ -9,7 +9,6 @@
 package maru.executionlayer.client
 
 import maru.consensus.ElFork
-import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
@@ -31,7 +30,6 @@ import java.util.Optional
 class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
   web3jClient: Web3JClient,
   metricsFacade: MetricsFacade,
-  private val targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
 ) : BaseWeb3JJsonRpcExecutionLayerEngineApiClient(web3jClient = web3jClient, metricsFacade = metricsFacade) {
   override fun getFork(): ElFork = ElFork.Amsterdam
 
@@ -77,7 +75,7 @@ class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
     ).captureTime(
       web3jEngineClient.forkChoiceUpdatedV4(
         forkChoiceState,
-        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV4(targetGasLimit)),
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV4()),
       ),
     ).toSafeFuture()
 }

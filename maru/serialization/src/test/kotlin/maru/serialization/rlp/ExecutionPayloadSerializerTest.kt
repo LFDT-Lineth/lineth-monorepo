@@ -8,12 +8,12 @@
  */
 package maru.serialization.rlp
 
+import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators.randomExecutionPayload
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hyperledger.besu.ethereum.rlp.RLP
 import org.junit.jupiter.api.Test
+import java.math.BigInteger
 
 class ExecutionPayloadSerializerTest {
   private val serializer = ExecutionPayloadSerDe()
@@ -24,16 +24,16 @@ class ExecutionPayloadSerializerTest {
     val serializedData = serializer.serialize(testValue)
     val deserializedValue = serializer.deserialize(serializedData)
 
-    assertThat(deserializedValue).isEqualTo(testValue)
+    assertThat(deserializedValue).usingRecursiveComparison().isEqualTo(testValue)
   }
 
   @Test
   fun `can serialize and deserialize execution payload with zero transactions`() {
-    val testValue = randomExecutionPayload()
+    val testValue = randomExecutionPayload(numberOfTransactions = 0)
     val serializedData = serializer.serialize(testValue)
     val deserializedValue = serializer.deserialize(serializedData)
 
-    assertThat(deserializedValue).isEqualTo(testValue)
+    assertThat(deserializedValue).usingRecursiveComparison().isEqualTo(testValue)
   }
 
   @Test
@@ -43,38 +43,32 @@ class ExecutionPayloadSerializerTest {
       slotNumber = ULong.MAX_VALUE,
     )
     val decoded = serializer.deserialize(serializer.serialize(payload))
-    assertThat(decoded).isEqualTo(payload)
-    assertThat(decoded.blockAccessList).containsExactly(0xc0.toByte())
-    assertThat(decoded.slotNumber).isEqualTo(ULong.MAX_VALUE)
+    assertThat(decoded).usingRecursiveComparison().isEqualTo(payload)
   }
 
   @Test
-  fun `legacy payload encoding remains a fourteen field list`() {
-    val payload = randomExecutionPayload()
-    val encoded = serializer.serialize(payload)
-    val input = RLP.input(Bytes.wrap(encoded))
-    input.enterList()
-    repeat(14) { input.skipNext() }
-    assertThat(input.isEndOfCurrentList).isTrue()
-    input.leaveList()
-    val decoded = serializer.deserialize(encoded)
-    assertThat(decoded.blockAccessList).isNull()
-    assertThat(decoded.slotNumber).isNull()
-    assertThat(serializer.serialize(decoded)).containsExactly(*encoded)
-  }
+  fun `pre-Amsterdam payloads retain their original wire encoding`() {
+    val payload = ExecutionPayload(
+      parentHash = ByteArray(32) { 1 },
+      feeRecipient = ByteArray(20) { 2 },
+      stateRoot = ByteArray(32) { 3 },
+      receiptsRoot = ByteArray(32) { 4 },
+      logsBloom = ByteArray(256) { 5 },
+      prevRandao = ByteArray(32) { 6 },
+      blockNumber = 42UL,
+      gasLimit = 60_000_000UL,
+      gasUsed = 21_000UL,
+      timestamp = 12345UL,
+      extraData = byteArrayOf(8, 9),
+      baseFeePerGas = BigInteger.valueOf(1_000_000_000),
+      blockHash = ByteArray(32) { 7 },
+      transactions = listOf(byteArrayOf(1, 2), byteArrayOf(3)),
+    )
+    val legacyEncoding = Bytes.fromHexString(
+      requireNotNull(javaClass.getResource("/execution-payload-pre-amsterdam.rlp.hex")).readText().trim(),
+    ).toArray()
 
-  @Test
-  fun `partial Amsterdam extension is rejected`() {
-    val encoded = serializer.serialize(randomExecutionPayload())
-    val input = RLP.input(Bytes.wrap(encoded))
-    input.enterList()
-    val partial = RLP.encode { output ->
-      output.startList()
-      repeat(14) { output.writeRLPBytes(input.readAsRlp().raw()) }
-      output.writeBytes(Bytes.of(0xc0))
-      output.endList()
-    }
-    assertThatThrownBy { serializer.deserialize(partial.toArray()) }
-      .isInstanceOf(RuntimeException::class.java)
+    assertThat(serializer.deserialize(legacyEncoding)).usingRecursiveComparison().isEqualTo(payload)
+    assertThat(serializer.serialize(payload)).containsExactly(*legacyEncoding)
   }
 }

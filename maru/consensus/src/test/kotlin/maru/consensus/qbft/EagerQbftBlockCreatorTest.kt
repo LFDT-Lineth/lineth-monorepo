@@ -149,6 +149,7 @@ class EagerQbftBlockCreatorTest {
         config = EagerQbftBlockCreator.Config(
           minBlockBuildTime = 500.milliseconds,
           forkActivationTimestamp = forkActivationTimestamp,
+          targetGasLimit = 60_000_000UL,
         ),
         beaconChain = beaconChain,
       )
@@ -283,6 +284,7 @@ class EagerQbftBlockCreatorTest {
       feeRecipient = any(),
       prevRandao = any(),
       nextBlockSlotNumber = eq(1UL),
+      targetGasLimit = eq(60_000_000UL),
     )
   }
 
@@ -322,6 +324,7 @@ class EagerQbftBlockCreatorTest {
       feeRecipient = any(),
       prevRandao = any(),
       nextBlockSlotNumber = eq(1UL),
+      targetGasLimit = eq(60_000_000UL),
     )
     verify(delegate).createBlock(activationTimestamp.toLong(), parentHeader)
   }
@@ -369,6 +372,7 @@ class EagerQbftBlockCreatorTest {
       feeRecipient = any(),
       prevRandao = any(),
       nextBlockSlotNumber = eq(1UL),
+      targetGasLimit = eq(60_000_000UL),
     )
   }
 

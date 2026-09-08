@@ -39,7 +39,12 @@ class EagerQbftBlockCreator(
 
   data class Config(
     val minBlockBuildTime: Duration,
+    /**
+     * ProtocolStarter selects the fork using the anticipated next block timestamp, so this
+     * protocol can start before activation. Its first payload must not predate the fork.
+     */
     val forkActivationTimestamp: ULong = 0UL,
+    val targetGasLimit: ULong? = null,
   )
 
   override fun createBlock(
@@ -100,6 +105,7 @@ class EagerQbftBlockCreator(
             prevRandao = parentBeaconBlock.beaconBlockBody.executionPayload.prevRandao,
           ),
           nextBlockSlotNumber = beaconBlockHeader.number + 1UL,
+          targetGasLimit = config.targetGasLimit,
         ).get()
     log.debug(
       "Building new block, FCU result={}",

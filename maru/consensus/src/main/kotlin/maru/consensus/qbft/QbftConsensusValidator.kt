@@ -9,10 +9,10 @@
 package maru.consensus.qbft
 
 import maru.core.Protocol
-import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
 import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -27,7 +27,6 @@ class QbftConsensusValidator(
     val DEFAULT_SHUTDOWN_TIMEOUT: Duration = 30.seconds
   }
 
-  private val log = LogManager.getLogger(this.javaClass)
   private var isRunning = false
 
   @Synchronized
@@ -35,25 +34,28 @@ class QbftConsensusValidator(
     if (isRunning) {
       return
     }
-    eventProcessor.start()
+    val eventProcessorTask = eventProcessor.start()
     bftExecutors.start()
     qbftController.start()
-    eventQueueExecutor.execute(eventProcessor)
+    eventQueueExecutor.execute(eventProcessorTask)
     isRunning = true
   }
 
   @Synchronized
   override fun pause() {
-    val wasRunning = isRunning
-    isRunning = false
-    eventProcessor.stop()
-    // Returning before the in-flight block import commits lets ProtocolStarter start the next
-    // fork's protocol against a stale chain head, forking the chain at that height.
-    if (wasRunning && !eventProcessor.awaitStop(shutdownTimeout)) {
-      log.warn("BFT event processor did not stop within {}, proceeding with shutdown anyway", shutdownTimeout)
+    val completion = eventProcessor.stop()
+    try {
+      completion.get(shutdownTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+    } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
+      throw e
+    } finally {
+      if (completion.isDone) {
+        bftExecutors.stop()
+        qbftController.stop()
+        isRunning = false
+      }
     }
-    bftExecutors.stop()
-    qbftController.stop()
   }
 
   override fun close() {

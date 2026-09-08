@@ -12,6 +12,7 @@ import maru.core.ext.DataGenerators.randomExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV4
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import maru.executionlayer.mappers.Mappers.toPayloadAttributesV4
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -42,16 +43,29 @@ class AmsterdamMappersTest {
   }
 
   @Test
-  fun `Amsterdam attributes use supplied slot and reject absent slot`() {
+  fun `Amsterdam attributes use supplied slot and target and reject absent values`() {
     val attributes = PayloadAttributes(
       timestamp = 123UL,
       suggestedFeeRecipient = ByteArray(20),
       slotNumber = ULong.MAX_VALUE,
+      targetGasLimit = 60_000_000UL,
     )
-    assertThat(attributes.toPayloadAttributesV4(60_000_000UL).slotNumber).isEqualTo(UInt64.MAX_VALUE)
-    assertThat(attributes.toPayloadAttributesV4(60_000_000UL).targetGasLimit).isEqualTo(UInt64.valueOf(60_000_000))
-    assertThatThrownBy { attributes.copy(slotNumber = null).toPayloadAttributesV4(60_000_000UL) }
+    assertThat(attributes.toPayloadAttributesV4().slotNumber).isEqualTo(UInt64.MAX_VALUE)
+    assertThat(attributes.toPayloadAttributesV4().targetGasLimit).isEqualTo(UInt64.valueOf(60_000_000))
+    assertThatThrownBy { attributes.copy(slotNumber = null).toPayloadAttributesV4() }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("slotNumber")
+    assertThatThrownBy { attributes.copy(targetGasLimit = null).toPayloadAttributesV4() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("targetGasLimit")
+    assertThat(attributes.copy(targetGasLimit = ULong.MAX_VALUE).toPayloadAttributesV4().targetGasLimit)
+      .isEqualTo(UInt64.MAX_VALUE)
+  }
+
+  @Test
+  fun `legacy attributes ignore Amsterdam fields`() {
+    val attributes = PayloadAttributes(timestamp = 123UL, suggestedFeeRecipient = ByteArray(20))
+    assertThat(attributes.copy(slotNumber = 10UL, targetGasLimit = 60_000_000UL).toPayloadAttributesV1())
+      .isEqualTo(attributes.toPayloadAttributesV1())
   }
 }

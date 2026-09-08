@@ -145,6 +145,7 @@ class QbftValidatorFactory(
         eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(
           minBlockBuildTime = qbftOptions.minBlockBuildTime,
           forkActivationTimestamp = forkSpec.timestampSeconds,
+          targetGasLimit = qbftOptions.targetGasLimit,
         ),
         blockHashing = blockHashing,
       )
@@ -372,6 +373,7 @@ class QbftValidatorFactory(
         prevRandaoProvider = prevRandaoProvider,
         shouldBuildNextBlock = shouldBuildNextBlock,
         feeRecipient = feeRecipient,
+        targetGasLimit = qbftOptions.targetGasLimit,
       )
     return TransactionalSealedBeaconBlockImporter(
       beaconChain = beaconChain,

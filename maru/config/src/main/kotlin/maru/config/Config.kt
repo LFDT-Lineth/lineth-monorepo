@@ -15,8 +15,6 @@ import linea.domain.RetryConfig
 import linea.kotlin.assertIs20Bytes
 import linea.kotlin.encodeHex
 import maru.core.AMSTERDAM_MIN_TARGET_GAS_LIMIT
-import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
-import maru.core.AMSTERDAM_TARGET_GAS_LIMIT_TEXT
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path
@@ -334,14 +332,13 @@ data class QbftConfig(
   val feeRecipient: ByteArray,
   val validatorSigner: ValidatorSignerConfig = ValidatorSignerConfig(),
   @param:ConfigDoc(
-    description = "Target execution block gas limit requested from Amsterdam onward.",
-    default = AMSTERDAM_TARGET_GAS_LIMIT_TEXT,
+    description = "Target execution block gas limit. Required for block-producing nodes with Amsterdam scheduled.",
   )
-  val targetGasLimit: ULong = AMSTERDAM_TARGET_GAS_LIMIT,
+  val targetGasLimit: ULong? = null,
 ) {
   init {
     feeRecipient.assertIs20Bytes("feeRecipient")
-    require(targetGasLimit >= AMSTERDAM_MIN_TARGET_GAS_LIMIT) {
+    require(targetGasLimit == null || targetGasLimit >= AMSTERDAM_MIN_TARGET_GAS_LIMIT) {
       "targetGasLimit must be at least $AMSTERDAM_MIN_TARGET_GAS_LIMIT"
     }
   }
@@ -376,7 +373,7 @@ data class QbftConfig(
     result = 31 * result + roundExpiryCoefficient.hashCode()
     result = 31 * result + feeRecipient.contentHashCode()
     result = 31 * result + validatorSigner.hashCode()
-    result = 31 * result + targetGasLimit.hashCode()
+    result = 31 * result + (targetGasLimit?.hashCode() ?: 0)
     return result
   }
 

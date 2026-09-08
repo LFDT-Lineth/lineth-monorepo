@@ -283,6 +283,44 @@ class BesuGenesisFactoryTest {
     }
   }
 
+  @Test
+  fun `inferred timestamps preserve omitted repeated and future forks`() {
+    val validators = setOf(Validator(address = Random.nextBytes(20)))
+    fun configFor(vararg forks: Pair<ULong, ElFork>) =
+      objectMapper.readTree(
+        BesuGenesisFactory.createGenesisWithQBFT(
+          blockPeriodSeconds = 1u,
+          forks = ForksSchedule(
+            13u,
+            forks.map { (timestamp, fork) ->
+              ForkSpec(
+                timestampSeconds = timestamp,
+                blockTimeSeconds = 1u,
+                configuration = QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, fork)),
+              )
+            },
+          ),
+        ),
+      ).get("config")
+
+    val amsterdamOnly = configFor(1000UL to ElFork.Amsterdam)
+    for (key in listOf("shanghaiTime", "cancunTime", "pragueTime", "osakaTime")) {
+      assertIsNumberWithValue(amsterdamOnly.get(key), 0UL)
+    }
+    assertIsNumberWithValue(amsterdamOnly.get("amsterdamTime"), 1000UL)
+
+    val skippedAndRepeated = configFor(
+      0UL to ElFork.Cancun,
+      2000UL to ElFork.Osaka,
+      3000UL to ElFork.Osaka,
+    )
+    assertIsNumberWithValue(skippedAndRepeated.get("shanghaiTime"), 0UL)
+    assertIsNumberWithValue(skippedAndRepeated.get("cancunTime"), 0UL)
+    assertIsNumberWithValue(skippedAndRepeated.get("pragueTime"), 2000UL)
+    assertIsNumberWithValue(skippedAndRepeated.get("osakaTime"), 2000UL)
+    Assertions.assertThat(skippedAndRepeated.has("amsterdamTime")).isFalse()
+  }
+
   @Nested
   inner class EdgeCases {
     @Test

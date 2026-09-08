@@ -345,7 +345,7 @@ object Mappers {
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
     )
 
-  fun PayloadAttributes.toPayloadAttributesV4(targetGasLimit: ULong): PayloadAttributesV4 =
+  fun PayloadAttributes.toPayloadAttributesV4(): PayloadAttributesV4 =
     PayloadAttributesV4(
       UInt64.fromLongBits(this.timestamp.toLong()),
       Bytes32.wrap(this.prevRandao),
@@ -353,7 +353,7 @@ object Mappers {
       emptyList(),
       Bytes32.ZERO,
       UInt64.valueOf(requireNotNull(this.slotNumber) { "Amsterdam requires slotNumber" }.toString()),
-      UInt64.valueOf(targetGasLimit.toString()),
+      UInt64.valueOf(requireNotNull(this.targetGasLimit) { "Amsterdam requires targetGasLimit" }.toString()),
     )
 
   fun TekuPayloadStatus.toDomain(): PayloadStatus =

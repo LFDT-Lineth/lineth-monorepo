@@ -34,6 +34,7 @@ class JsonRpcExecutionLayerManager(
     feeRecipient: ByteArray,
     prevRandao: ByteArray,
     nextBlockSlotNumber: ULong?,
+    targetGasLimit: ULong?,
   ): SafeFuture<ForkChoiceUpdatedResult> {
     log.debug(
       "Trying to create a new block with timestamp={}, fork={}",
@@ -46,6 +47,7 @@ class JsonRpcExecutionLayerManager(
         suggestedFeeRecipient = feeRecipient,
         prevRandao = prevRandao,
         slotNumber = nextBlockSlotNumber,
+        targetGasLimit = targetGasLimit,
       )
     log.debug(
       "Starting block building with payloadAttributes={}, fork={}",

@@ -190,7 +190,7 @@ class JsonRpcExecutionLayerManagerTest {
   }
 
   @Test
-  fun `setHeadAndStartBlockBuilding passes Amsterdam slot number to FCU`() {
+  fun `setHeadAndStartBlockBuilding passes Amsterdam slot number and gas target to FCU`() {
     val newHeadHash = Bytes32.random()
     val newSafeHash = Bytes32.random()
     val newFinalizedHash = Bytes32.random()
@@ -209,6 +209,7 @@ class JsonRpcExecutionLayerManagerTest {
           nextBlockTimestamp = nextTimestamp,
           feeRecipient = feeRecipient,
           nextBlockSlotNumber = nextSlot,
+          targetGasLimit = 60_000_000UL,
         ).get()
 
     val expectedPayloadStatus =
@@ -234,6 +235,7 @@ class JsonRpcExecutionLayerManagerTest {
             prevRandao = EMPTY_HASH,
             suggestedFeeRecipient = feeRecipient,
             slotNumber = nextSlot,
+            targetGasLimit = 60_000_000UL,
           )
       },
     )

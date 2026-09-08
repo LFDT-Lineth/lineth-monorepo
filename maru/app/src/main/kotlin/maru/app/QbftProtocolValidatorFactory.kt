@@ -73,7 +73,6 @@ class QbftProtocolValidatorFactory(
         web3JEngineApiClient = validatorELNodeEngineApiWeb3JClient,
         elFork = qbftConsensusConfig.elFork,
         metricsFacade = metricsFacade,
-        targetGasLimit = qbftOptions.targetGasLimit,
       )
     val blockImportHandlers =
       Helpers.createBlockImportHandlers(
@@ -81,7 +80,6 @@ class QbftProtocolValidatorFactory(
         metricsFacade = metricsFacade,
         finalizationStateProvider = finalizationStateProvider,
         followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
-        targetGasLimit = qbftOptions.targetGasLimit,
       )
     val sealedBlockHandlers =
       mutableMapOf(

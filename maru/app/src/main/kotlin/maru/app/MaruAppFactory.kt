@@ -30,6 +30,7 @@ import maru.api.ApiServerImpl
 import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
+import maru.config.QbftConfig
 import maru.config.SyncingConfig
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
@@ -39,7 +40,6 @@ import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
-import maru.core.AMSTERDAM_TARGET_GAS_LIMIT
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
@@ -145,6 +145,8 @@ class MaruAppFactory(
   ): MaruApp {
     log.info("configs={}", config)
     log.info("beaconGenesisConfig={}", beaconGenesisConfig)
+
+    checkTargetGasLimitAndForks(config.qbft, beaconGenesisConfig)
 
     val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
 
@@ -270,7 +272,6 @@ class MaruAppFactory(
               web3JEngineApiClient = engineApiWeb3jClient,
               elFork = it,
               metricsFacade = metricsFacade,
-              targetGasLimit = config.qbft?.targetGasLimit ?: AMSTERDAM_TARGET_GAS_LIMIT,
             )
           JsonRpcExecutionLayerManager(engineApiClient)
         }
@@ -320,7 +321,6 @@ class MaruAppFactory(
           metricsFacade = metricsFacade,
           followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
           finalizationProvider = finalizationProvider,
-          targetGasLimit = config.qbft?.targetGasLimit ?: AMSTERDAM_TARGET_GAS_LIMIT,
         )
       // Validators manage EL sync through QBFT consensus itself.
       // Followers only use ELSyncService when an explicit polling interval is configured.
@@ -580,6 +580,20 @@ class MaruAppFactory(
       )
     val qbftConsensusConfig = qbftForkConfig.configuration as QbftConsensusConfig
     beaconChainInitialization.ensureDbIsInitialized(qbftConsensusConfig.validatorSet)
+  }
+
+  internal fun checkTargetGasLimitAndForks(
+    qbftConfig: QbftConfig?,
+    forksSchedule: ForksSchedule,
+  ) {
+    if (qbftConfig != null && forksSchedule.forks.any {
+        it.configuration.fork.elFork.version >= ElFork.Amsterdam.version
+      }
+    ) {
+      requireNotNull(qbftConfig.targetGasLimit) {
+        "qbft.target-gas-limit must be configured for block-producing nodes with Amsterdam scheduled"
+      }
+    }
   }
 
   internal fun checkL2EthApiEndpointAndForks(

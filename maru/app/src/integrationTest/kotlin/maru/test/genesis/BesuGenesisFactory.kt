@@ -104,48 +104,14 @@ class BesuGenesisFactory(
             (it.configuration as DifficultyAwareQbftConfig).terminalTotalDifficulty
           } ?: 0UL
 
-      var shanghaiTimestamp: ULong? = null
-      var cancunTimestamp: ULong? = null
-      var pragueTimestamp: ULong? = null
-      var osakaTimestamp: ULong? = null
-      var amsterdamTimestamp: ULong? = null
       val forksInAscendingOrder = forks.forks.sortedBy { it.timestampSeconds }
-      val forksInDescendingOrder = forksInAscendingOrder.reversed()
-      forksInDescendingOrder.forEach { forkSpec ->
-        when (forkSpec.configuration.fork.elFork) {
-          ElFork.Amsterdam -> {
-            shanghaiTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Shanghai) ?: 0UL
-            cancunTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Cancun) ?: 0UL
-            pragueTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Prague) ?: 0UL
-            osakaTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Osaka) ?: 0UL
-            amsterdamTimestamp = forkSpec.timestampSeconds
-          }
-
-          ElFork.Osaka -> {
-            shanghaiTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Shanghai) ?: 0UL
-            cancunTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Cancun) ?: 0UL
-            pragueTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Prague) ?: 0UL
-            osakaTimestamp = forkSpec.timestampSeconds
-          }
-
-          ElFork.Prague -> {
-            shanghaiTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Shanghai) ?: 0UL
-            cancunTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Cancun) ?: 0UL
-            pragueTimestamp = forkSpec.timestampSeconds
-          }
-
-          ElFork.Cancun -> {
-            shanghaiTimestamp = calculateForkTimestampOrNull(forksInAscendingOrder, ElFork.Shanghai) ?: 0UL
-            cancunTimestamp = forkSpec.timestampSeconds
-          }
-
-          ElFork.Shanghai -> {
-            shanghaiTimestamp = forkSpec.timestampSeconds
-          }
-
-          ElFork.Paris -> {} // nothing to do, terminalTotalDifficulty already set
+      val latestElForkVersion = forksInAscendingOrder.maxOfOrNull { it.configuration.fork.elFork.version }
+      fun timestampFor(elFork: ElFork): ULong? =
+        if (latestElForkVersion != null && elFork.version <= latestElForkVersion) {
+          calculateForkTimestampOrNull(forksInAscendingOrder, elFork) ?: 0UL
+        } else {
+          null
         }
-      }
 
       return createGenesisWithQBFT(
         genesisTemplate,
@@ -153,11 +119,11 @@ class BesuGenesisFactory(
         blockPeriodSeconds,
         terminalTotalDifficulty,
         createEmptyBlocks,
-        shanghaiTimestamp,
-        cancunTimestamp,
-        pragueTimestamp,
-        osakaTimestamp,
-        amsterdamTimestamp,
+        shanghaiTimestamp = timestampFor(ElFork.Shanghai),
+        cancunTimestamp = timestampFor(ElFork.Cancun),
+        pragueTimestamp = timestampFor(ElFork.Prague),
+        osakaTimestamp = timestampFor(ElFork.Osaka),
+        amsterdamTimestamp = timestampFor(ElFork.Amsterdam),
       )
     }
 

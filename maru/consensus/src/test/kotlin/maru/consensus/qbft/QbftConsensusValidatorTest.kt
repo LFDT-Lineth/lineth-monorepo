@@ -9,6 +9,7 @@
 package maru.consensus.qbft
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
@@ -20,23 +21,25 @@ import org.hyperledger.besu.consensus.qbft.core.types.QbftReceivedMessageEvent
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import java.util.concurrent.TimeoutException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class QbftConsensusValidatorTest {
-  /**
-   * Stands in for QbftController, whose block import runs synchronously on the event processor
-   * thread. [handleBlockTimerExpiry] mimics an import that is slow enough to still be in flight
-   * when the protocol is closed.
-   */
-  private class SlowImportEventHandler(
-    private val importDuration: Duration,
-  ) : QbftEventHandler {
+  private class BlockingImportEventHandler : QbftEventHandler {
     val importStarted = CountDownLatch(1)
+    val releaseImport = CountDownLatch(1)
 
     @Volatile var importFinished = false
 
@@ -52,7 +55,7 @@ class QbftConsensusValidatorTest {
 
     override fun handleBlockTimerExpiry(event: BlockTimerExpiry) {
       importStarted.countDown()
-      Thread.sleep(importDuration.inWholeMilliseconds)
+      check(releaseImport.await(30, TimeUnit.SECONDS))
       importFinished = true
     }
   }
@@ -61,10 +64,13 @@ class QbftConsensusValidatorTest {
   private val eventQueueExecutor = Executors.newSingleThreadExecutor()
   private val bftExecutors = BftExecutors.create(NoOpMetricsSystem(), BftExecutors.ConsensusType.QBFT)
 
-  private fun createValidator(eventHandler: QbftEventHandler): QbftConsensusValidator =
+  private fun createValidator(
+    eventHandler: QbftEventHandler,
+    processor: QbftEventProcessor = QbftEventProcessor(eventQueue, QbftEventMultiplexer(eventHandler)),
+  ): QbftConsensusValidator =
     QbftConsensusValidator(
       qbftController = eventHandler,
-      eventProcessor = QbftEventProcessor(eventQueue, QbftEventMultiplexer(eventHandler)),
+      eventProcessor = processor,
       bftExecutors = bftExecutors,
       eventQueueExecutor = eventQueueExecutor,
       shutdownTimeout = 30.seconds,
@@ -77,21 +83,39 @@ class QbftConsensusValidatorTest {
 
   @Test
   fun `pause blocks until the in-flight event has been fully handled`() {
-    val eventHandler = SlowImportEventHandler(importDuration = 500.milliseconds)
-    val validator = createValidator(eventHandler)
-    validator.start()
-    eventQueue.start()
-    eventQueue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, 0)))
-    assertThat(eventHandler.importStarted.await(30, TimeUnit.SECONDS)).isTrue()
+    val eventHandler = BlockingImportEventHandler()
+    val processor = spy(QbftEventProcessor(eventQueue, QbftEventMultiplexer(eventHandler)))
+    val stopRequested = CountDownLatch(1)
+    doAnswer {
+      val completion = it.callRealMethod()
+      stopRequested.countDown()
+      completion
+    }.whenever(processor).stop()
+    val validator = createValidator(eventHandler, processor)
+    val pauseExecutor = Executors.newSingleThreadExecutor()
+    try {
+      validator.start()
+      eventQueue.start()
+      eventQueue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, 0)))
+      assertThat(eventHandler.importStarted.await(30, TimeUnit.SECONDS)).isTrue()
 
-    validator.pause()
+      val paused = pauseExecutor.submit { validator.pause() }
+      assertThat(stopRequested.await(30, TimeUnit.SECONDS)).isTrue()
+      assertThatThrownBy { paused.get(100, TimeUnit.MILLISECONDS) }.isInstanceOf(TimeoutException::class.java)
+      eventHandler.releaseImport.countDown()
+      paused.get(30, TimeUnit.SECONDS)
 
-    assertThat(eventHandler.importFinished).isTrue()
+      assertThat(eventHandler.importFinished).isTrue()
+    } finally {
+      eventHandler.releaseImport.countDown()
+      pauseExecutor.shutdownNow()
+      validator.close()
+    }
   }
 
   @Test
   fun `pause returns promptly when the validator was never started`() {
-    val validator = createValidator(SlowImportEventHandler(importDuration = 500.milliseconds))
+    val validator = createValidator(BlockingImportEventHandler())
 
     val elapsed = System.nanoTime().let {
       validator.pause()
@@ -99,5 +123,46 @@ class QbftConsensusValidatorTest {
     }
 
     assertThat(elapsed).isLessThan(5.seconds.inWholeNanoseconds)
+  }
+
+  @Test
+  fun `repeated pause after timeout still waits for the processor before stopping resources`() {
+    val completion = SafeFuture<Unit>()
+    val processor = mock<QbftEventProcessor>()
+    whenever(processor.start()).thenReturn(Runnable {})
+    whenever(processor.stop()).thenReturn(completion)
+    val controller = mock<QbftEventHandler>()
+    val executors = mock<BftExecutors>()
+    val validator = QbftConsensusValidator(controller, processor, executors, {}, 1.milliseconds)
+    validator.start()
+
+    repeat(2) {
+      assertThatThrownBy { validator.pause() }.isInstanceOf(TimeoutException::class.java)
+    }
+    verify(controller, never()).stop()
+    verify(executors, never()).stop()
+    validator.start()
+    verify(processor).start()
+
+    completion.complete(Unit)
+    validator.pause()
+    verify(controller).stop()
+    verify(executors).stop()
+  }
+
+  @Test
+  fun `processor failure is propagated after stopping validator resources`() {
+    val failure = IllegalStateException("processor failed")
+    val processor = mock<QbftEventProcessor>()
+    whenever(processor.stop()).thenReturn(SafeFuture.failedFuture(failure))
+    val controller = mock<QbftEventHandler>()
+    val executors = mock<BftExecutors>()
+    val validator = QbftConsensusValidator(controller, processor, executors, {})
+
+    assertThatThrownBy { validator.pause() }
+      .isInstanceOf(ExecutionException::class.java)
+      .hasCause(failure)
+    verify(controller).stop()
+    verify(executors).stop()
   }
 }

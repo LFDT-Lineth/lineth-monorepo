@@ -11,72 +11,65 @@ package maru.consensus.qbft
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
 import org.hyperledger.besu.consensus.common.bft.events.BftEvent
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Optional
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
 
 class QbftEventProcessor(
   private val incomingQueue: BftEventQueue,
   private val eventMultiplexer: QbftEventMultiplexer,
-) : Runnable {
+) {
   private val log: org.apache.logging.log4j.Logger = LogManager.getLogger(this.javaClass)
-  private val shutdownLatch = CountDownLatch(1)
+  private var shutdownCompletion = SafeFuture.completedFuture(Unit)
 
   @Volatile private var shutdown = false
 
-  /**
-   * Indicate to the processor that it can be started
-   */
+  /** Prepare a new run after the previous one has stopped. */
   @Synchronized
-  fun start() {
+  fun start(): Runnable {
+    check(shutdownCompletion.isDone) { "The previous event processor run has not stopped" }
+    val completion = SafeFuture<Unit>()
+    shutdownCompletion = completion
     shutdown = false
+    return Runnable { run(completion) }
   }
 
-  /**
-   * Indicate to the processor that it should gracefully stop at its next opportunity
-   */
+  /** Complete once the current event has finished and the queue has stopped. */
   @Synchronized
-  fun stop() {
+  fun stop(): SafeFuture<Unit> {
     shutdown = true
+    return shutdownCompletion
   }
 
-  /**
-   * Await stop.
-   *
-   * @throws InterruptedException the interrupted exception
-   */
-  @Throws(InterruptedException::class)
-  fun awaitStop() {
-    shutdownLatch.await()
-  }
-
-  /**
-   * Await stop, returning false if it did not finish within [timeout].
-   *
-   * @throws InterruptedException the interrupted exception
-   */
-  @Throws(InterruptedException::class)
-  fun awaitStop(timeout: Duration): Boolean =
-    shutdownLatch.await(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-
-  override fun run() {
+  private fun run(completion: SafeFuture<Unit>) {
+    var failure: Throwable? = null
     try {
-      // Start the event queue. Until it is started it won't accept new events from peers
       incomingQueue.start()
-
       while (!shutdown) {
         nextEvent().ifPresent { eventMultiplexer.handleEvent(it) }
       }
-
-      incomingQueue.stop()
     } catch (t: Throwable) {
+      failure = t
       log.error("BFT Mining thread has suffered a fatal error, mining has been halted", t)
+    } finally {
+      try {
+        incomingQueue.stop()
+      } catch (t: Throwable) {
+        val processingFailure = failure
+        if (processingFailure == null) {
+          failure = t
+        } else {
+          processingFailure.addSuppressed(t)
+        }
+      } finally {
+        val shutdownFailure = failure
+        if (shutdownFailure == null) {
+          completion.complete(Unit)
+        } else {
+          completion.completeExceptionally(shutdownFailure)
+        }
+      }
     }
-
-    // Clean up the executor service the round timer has been utilising
-    log.info("Shutting down BFT event processor")
-    shutdownLatch.countDown()
   }
 
   private fun nextEvent(): Optional<BftEvent> =

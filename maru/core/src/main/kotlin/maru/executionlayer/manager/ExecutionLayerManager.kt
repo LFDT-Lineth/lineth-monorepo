@@ -49,6 +49,7 @@ data class PayloadAttributes(
   val prevRandao: ByteArray = EMPTY_HASH,
   val suggestedFeeRecipient: ByteArray,
   val slotNumber: ULong? = null,
+  val targetGasLimit: ULong? = null,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -60,6 +61,7 @@ data class PayloadAttributes(
     if (!prevRandao.contentEquals(other.prevRandao)) return false
     if (!suggestedFeeRecipient.contentEquals(other.suggestedFeeRecipient)) return false
     if (slotNumber != other.slotNumber) return false
+    if (targetGasLimit != other.targetGasLimit) return false
 
     return true
   }
@@ -69,12 +71,14 @@ data class PayloadAttributes(
     result = 31 * result + prevRandao.contentHashCode()
     result = 31 * result + suggestedFeeRecipient.contentHashCode()
     result = 31 * result + (slotNumber?.hashCode() ?: 0)
+    result = 31 * result + (targetGasLimit?.hashCode() ?: 0)
     return result
   }
 
   override fun toString(): String =
     "PayloadAttributes(timestamp=$timestamp, prevRandao=${prevRandao.encodeHex()}, " +
-      "suggestedFeeRecipient=${suggestedFeeRecipient.encodeHex()}, slotNumber=$slotNumber)"
+      "suggestedFeeRecipient=${suggestedFeeRecipient.encodeHex()}, " +
+      "slotNumber=$slotNumber, targetGasLimit=$targetGasLimit)"
 }
 
 data class LatestBlockMetadata(
@@ -111,6 +115,7 @@ interface ExecutionLayerManager {
     feeRecipient: ByteArray,
     prevRandao: ByteArray = EMPTY_HASH,
     nextBlockSlotNumber: ULong? = null,
+    targetGasLimit: ULong? = null,
   ): SafeFuture<ForkChoiceUpdatedResult>
 
   fun finishBlockBuilding(): SafeFuture<ExecutionPayload>
