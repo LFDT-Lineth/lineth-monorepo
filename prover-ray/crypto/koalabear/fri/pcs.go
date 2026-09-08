@@ -115,6 +115,7 @@
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
 //     that prover and verifier agree on the order.
+
 package fri
 
 import (

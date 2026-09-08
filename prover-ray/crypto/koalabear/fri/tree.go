@@ -81,9 +81,13 @@ type MerkleCap struct {
 	Aux   []*field.Octuplet
 }
 
-// merkleCapDepth selects the shared prefix for a plain binary tree. The
-// frontier has at most one node per query, and at least one branch step stays
-// per query for uniform value extraction.
+// merkleCapDepth returns the depth of the frontier shared by all query
+// branches. The cap holds the 2^depth frontier nodes; every branch meets that
+// frontier in exactly one node, so each branch is opened only below the
+// frontier and drops its top `depth` siblings. Descending one more level
+// doubles the cap and saves one sibling on each of the numQueries branches, so
+// the cost balances at 2^depth = numQueries. The height-1 bound keeps at least
+// one branch step per query, so value extraction stays uniform.
 func merkleCapDepth(numQueries uint, height int) int {
 	if numQueries <= 1 || height <= 1 {
 		return 0

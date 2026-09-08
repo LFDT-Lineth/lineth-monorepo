@@ -461,9 +461,16 @@ memory image is fine as a RAM witness and wrong as a network payload.
 Identical across all four programs, since they follow from the FRI parameters
 rather than the circuit: 229 queries, 4 input trees per query, opening depth 17,
 16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
-30,915 branch sibling digests, 1 final-poly coefficient. The cap structure is
+9,847 branch sibling digests, 1 final-poly coefficient. The cap structure is
 fixed by the FRI/input-tree parameters; `row data`, cap row data, and `cells`
 scale with the program.
+
+The sibling count follows from the cap depths. Running layer `j` has height
+`17 - j` and cap depth `min(8, 16 - j)`, so a branch retains 8, 7, ..., 1
+siblings over layers 1-8 and exactly one over layers 9-15: 43 per query against
+135 uncapped, giving `229 × 43 = 9,847`. The frontiers themselves cost 2,302
+digests and 2,287 auxiliary slots, shared across every query, so capping is a
+net saving of 18,766 digests on the running layers.
 
 Running-query branches now carry exactly the fields consumed by Zig (`siblings`
 and `leaf`). Merkle-cap auxiliary nodes are represented explicitly in each
