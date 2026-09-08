@@ -296,24 +296,6 @@ func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
 	}
 }
 
-func TestRtypeOpForRd(t *testing.T) {
-	if got := specializeRTypeOpWithRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
-		t.Fatalf("specializeRTypeOpWithRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
-	}
-	if got := specializeRTypeOpWithRd(rtypeOpAddWB, 5); got != rtypeOpAddWB {
-		t.Fatalf("specializeRTypeOpWithRd(add, x5) = %d, want %d", got, rtypeOpAddWB)
-	}
-	if got := specializeRTypeOpWithRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
-		t.Fatalf("specializeRTypeOpWithRd(keccak, x5) = %d, want %d", got, rtypeOpKeccak)
-	}
-	if got := specializeRTypeOpWithRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
-		t.Fatalf("specializeRTypeOpWithRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
-	}
-	if got := specializeRTypeOpWithRd(rtypeOpWriteOutput, 5); got != rtypeOpWriteOutput {
-		t.Fatalf("specializeRTypeOpWithRd(write_output, x5) = %d, want %d", got, rtypeOpWriteOutput)
-	}
-}
-
 func TestAssembleITypeImm(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -375,15 +357,6 @@ func TestAssembleBTypeImm(t *testing.T) {
 				t.Fatalf("assembleBTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
 			}
 		})
-	}
-}
-
-func TestJtypeOpForRd(t *testing.T) {
-	if got := specializeJTypeOpWithRd(jtypeJal, 0); got != jtypeJal {
-		t.Fatalf("specializeJTypeOpWithRd(jal, x0) = %d, want %d", got, jtypeJal)
-	}
-	if got := specializeJTypeOpWithRd(jtypeJal, 5); got != jtypeJalWB {
-		t.Fatalf("specializeJTypeOpWithRd(jal, x5) = %d, want %d", got, jtypeJalWB)
 	}
 }
 

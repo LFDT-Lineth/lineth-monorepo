@@ -488,7 +488,7 @@ func TestDecodeUTypeSemanticInvalid(t *testing.T) {
 // ------------------------------------------------------------
 
 // extractFieldSpecs describes each field extractFields slices out: its inclusive
-// bit range [lo, hi] and an accessor. 
+// bit range [lo, hi] and an accessor.
 var extractFieldSpecs = []struct {
 	name string
 	lo   int
@@ -545,7 +545,7 @@ func TestExtractFields(t *testing.T) {
 		for val := uint32(0); val < uint32(1)<<width; val++ {
 			field := val << uint(s.lo)
 			// first we test the shift is correct, with a zero background
-			assertExtractFields(t, field)       // value in field, zero background
+			assertExtractFields(t, field) // value in field, zero background
 			// then we test the mask is correct, with an all-ones background
 			assertExtractFields(t, field|^mask) // value in field, all-ones background
 		}
@@ -553,7 +553,7 @@ func TestExtractFields(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// specializeITypeOpWithRd
+// specializeITypeOpWithRd tests the specialization of I-type operations with rd.
 // ------------------------------------------------------------
 
 // specializeITypeVectors is the static truth table for specializeITypeOpWithRd:
@@ -603,6 +603,40 @@ func TestSpecializeITypeOpWithRd(t *testing.T) {
 			}
 			if got := specializeITypeOpWithRd(op, rd); got != expected {
 				t.Fatalf("specializeITypeOpWithRd(op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------
+// specializeJTypeOpWithRd tests the specialization of J-type operations with rd.	
+// ------------------------------------------------------------
+
+// specializeJTypeVectors is the static truth table for specializeJTypeOpWithRd:
+// for each J-type base op, the result expected when rd == x0 and when rd != x0.
+// Only jal differs between the two (it gains its write-back variant when a real
+// rd is written); jalWB and invalid are returned unchanged regardless of rd.
+var specializeJTypeVectors = map[uint32]struct {
+	whenRdZero    uint32
+	whenRdNonZero uint32
+}{
+	jtypeJal:     {jtypeJal, jtypeJalWB}, // gains WB variant when rd != x0
+	jtypeJalWB:   {jtypeJalWB, jtypeJalWB},
+	jtypeInvalid: {jtypeInvalid, jtypeInvalid},
+}
+
+// TestSpecializeJTypeOpWithRd sweeps every rd (0..31) against every J-type op in
+// specializeJTypeVectors and checks the result matches the table (rd == x0 vs
+// rd != x0 selects the column).
+func TestSpecializeJTypeOpWithRd(t *testing.T) {
+	for op, want := range specializeJTypeVectors {
+		for rd := uint32(0); rd < 1<<5; rd++ {
+			expected := want.whenRdNonZero
+			if rd == 0 {
+				expected = want.whenRdZero
+			}
+			if got := specializeJTypeOpWithRd(op, rd); got != expected {
+				t.Fatalf("specializeJTypeOpWithRd(op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
 			}
 		}
 	}
