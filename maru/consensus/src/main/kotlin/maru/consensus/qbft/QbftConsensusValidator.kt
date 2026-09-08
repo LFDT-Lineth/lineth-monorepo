@@ -11,6 +11,7 @@ package maru.consensus.qbft
 import maru.core.Protocol
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
@@ -28,11 +29,15 @@ class QbftConsensusValidator(
   }
 
   private var isRunning = false
+  private var pendingStop: SafeFuture<Unit>? = null
 
   @Synchronized
   override fun start() {
     if (isRunning) {
-      return
+      if (pendingStop?.isDone != true) {
+        return
+      }
+      pause()
     }
     val eventProcessorTask = eventProcessor.start()
     bftExecutors.start()
@@ -44,6 +49,7 @@ class QbftConsensusValidator(
   @Synchronized
   override fun pause() {
     val completion = eventProcessor.stop()
+    pendingStop = completion
     try {
       completion.get(shutdownTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
     } catch (e: InterruptedException) {
@@ -54,6 +60,7 @@ class QbftConsensusValidator(
         bftExecutors.stop()
         qbftController.stop()
         isRunning = false
+        pendingStop = null
       }
     }
   }

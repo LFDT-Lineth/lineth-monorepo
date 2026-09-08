@@ -35,14 +35,19 @@ class QbftConsensusValidatorTest {
   }
 
   @Test
-  fun `repeated pause after timeout waits for the in-flight event before stopping resources`() {
+  fun `restart after timed-out pause waits for the in-flight event and cleans up the previous run`() {
     val importStarted = CountDownLatch(1)
     val releaseImport = CountDownLatch(1)
     val importFinished = CountDownLatch(1)
-    val controller = FakeQbftEventHandler {
-      importStarted.countDown()
-      check(releaseImport.await(30, TimeUnit.SECONDS))
-      importFinished.countDown()
+    val restartedEventHandled = CountDownLatch(1)
+    val controller = FakeQbftEventHandler { event ->
+      if (event.roundIdentifier.sequenceNumber == 2L) {
+        restartedEventHandled.countDown()
+      } else {
+        importStarted.countDown()
+        check(releaseImport.await(30, TimeUnit.SECONDS))
+        importFinished.countDown()
+      }
     }
     val queue = BftEventQueue(1000)
     val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
@@ -63,10 +68,18 @@ class QbftConsensusValidatorTest {
 
       releaseImport.countDown()
       processor.stop().get(30, TimeUnit.SECONDS)
-      validator.pause()
+      validator.start()
 
       assertThat(importFinished.count).isZero()
       assertThat(controller.stops).isEqualTo(1)
+      assertThat(controller.starts).isEqualTo(2)
+      queue.add(BlockTimerExpiry(ConsensusRoundIdentifier(2, 0)))
+      assertThat(restartedEventHandled.await(30, TimeUnit.SECONDS)).isTrue()
+      bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS).get(30, TimeUnit.SECONDS)
+
+      processor.stop().get(30, TimeUnit.SECONDS)
+      validator.pause()
+      assertThat(controller.stops).isEqualTo(2)
       assertThatThrownBy { bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS) }
         .isInstanceOf(IllegalStateException::class.java)
     } finally {
