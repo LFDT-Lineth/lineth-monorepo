@@ -2,6 +2,7 @@ package net.consensys.linea.async
 
 import io.vertx.core.Vertx
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.time.Clock
 import java.time.Instant
 import java.util.function.Consumer
 import kotlin.time.Duration
@@ -29,6 +30,7 @@ interface AsyncRetryer<T> {
       maxRetries: Int? = null,
       timeout: Duration? = null,
       initialDelay: Duration? = null,
+      clock: Clock = Clock.systemUTC(),
     ): AsyncRetryer<T> {
       return SequentialAsyncRetryerFactory(
         vertx = vertx,
@@ -36,6 +38,7 @@ interface AsyncRetryer<T> {
         maxRetries = maxRetries,
         initialDelay = initialDelay,
         timeout = timeout,
+        clock = clock,
       )
     }
 
@@ -49,21 +52,22 @@ interface AsyncRetryer<T> {
       stopRetriesOnErrorPredicate: (Throwable) -> Boolean = ::alwaysFalsePredicate,
       exceptionConsumer: Consumer<Throwable>? = null,
       ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
+      clock: Clock = Clock.systemUTC(),
       action: () -> SafeFuture<T>,
     ): SafeFuture<T> {
-      return SequentialAsyncRetryerFactory<T>(
+      return SequentialAsyncActionRetryer<T>(
         vertx = vertx,
         backoffDelay = backoffDelay,
         maxRetries = maxRetries,
         timeout = timeout,
         initialDelay = initialDelay,
-      ).retry(
-        stopRetriesPredicate,
-        stopRetriesOnErrorPredicate,
-        exceptionConsumer,
-        ignoreFirstExceptionsUntilTimeElapsed,
-        action,
-      )
+        stopRetriesPredicate = stopRetriesPredicate,
+        stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
+        exceptionConsumer = exceptionConsumer,
+        ignoreFirstExceptionsUntilTimeElapsed = ignoreFirstExceptionsUntilTimeElapsed,
+        clock = clock,
+        action = action,
+      ).retry()
     }
   }
 }
@@ -81,6 +85,7 @@ internal class SequentialAsyncActionRetryer<T>(
   val stopRetriesOnErrorPredicate: (Throwable) -> Boolean = ::alwaysFalsePredicate,
   val exceptionConsumer: Consumer<Throwable>? = null,
   val ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
+  val clock: Clock = Clock.systemUTC(),
   val action: () -> SafeFuture<T>,
 ) {
   init {
@@ -103,17 +108,17 @@ internal class SequentialAsyncActionRetryer<T>(
 
   private val resultFuture = SafeFuture<T>()
   private var remainingRetries: Int? = maxRetries
-  private var startTime: Instant = Instant.now()
+  private var startTime: Instant = clock.instant()
   private var remainingTime: Long? = timeout?.inWholeMilliseconds
 
   fun retry(): SafeFuture<T> {
     if (initialDelay != null && initialDelay > 0.milliseconds) {
       vertx.setTimer(initialDelay.inWholeMilliseconds) {
-        startTime = Instant.now()
+        startTime = clock.instant()
         retryLoop()
       }
     } else {
-      startTime = Instant.now()
+      startTime = clock.instant()
       retryLoop()
     }
 
@@ -128,7 +133,7 @@ internal class SequentialAsyncActionRetryer<T>(
     }
 
     actionFuture.handle { result, throwable ->
-      val timeElapsedSinceStarted = (Instant.now().toEpochMilli() - startTime.toEpochMilli())
+      val timeElapsedSinceStarted = (clock.instant().toEpochMilli() - startTime.toEpochMilli())
       var errorThrowable = throwable
       remainingTime =
         timeout?.let { it.inWholeMilliseconds - timeElapsedSinceStarted }
@@ -189,6 +194,7 @@ private class SequentialAsyncRetryerFactory<T>(
   val maxRetries: Int? = null,
   val timeout: Duration? = null,
   val initialDelay: Duration? = null,
+  val clock: Clock = Clock.systemUTC(),
 ) : AsyncRetryer<T> {
   override fun retry(action: () -> SafeFuture<T>): SafeFuture<T> {
     return SequentialAsyncActionRetryer(
@@ -200,6 +206,7 @@ private class SequentialAsyncRetryerFactory<T>(
       stopRetriesPredicate = ::alwaysTruePredicate,
       exceptionConsumer = null,
       ignoreFirstExceptionsUntilTimeElapsed = null,
+      clock = clock,
       action = action,
     ).retry()
   }
@@ -221,6 +228,7 @@ private class SequentialAsyncRetryerFactory<T>(
       stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
       exceptionConsumer = exceptionConsumer,
       ignoreFirstExceptionsUntilTimeElapsed = ignoreFirstExceptionsUntilTimeElapsed,
+      clock = clock,
       action = action,
     ).retry()
   }
