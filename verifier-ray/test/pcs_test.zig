@@ -534,3 +534,8 @@ test "routeInputRoots deduplicates equal batch roots" {
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
 }
+
+test "input auxiliary table includes encoded size two" {
+    const depth = pcs.inputAuxDepth(1, 0, 1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), depth);
+}

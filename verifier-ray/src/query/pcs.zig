@@ -532,16 +532,16 @@ pub fn deriveChallenges(
     return challenges;
 }
 
-fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
+/// Depth of the auxiliary node carrying the rows of plaintext size
+/// `2^size_log2`, where `bottom_size_log2` is the tree's largest plaintext
+/// size. Returns null when those rows have no auxiliary level: rows at the
+/// bottom size occupy the leaves, and an encoded size of one has no aux above
+/// it.
+pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
     if (size_log2 >= bottom_size_log2) return null;
     const encoded_log = @as(usize, rate_log) + size_log2;
     if (encoded_log == 0) return null;
     return encoded_log - 1;
-}
-
-test "input auxiliary table includes encoded size two" {
-    const depth = inputAuxDepth(1, 0, 1) orelse return error.TestUnexpectedResult;
-    if (depth != 0) return error.TestUnexpectedResult;
 }
 
 fn buildInputCapInfo(comptime system: System, recon: Reconstructed(system), routing: InputRootRouting(system), tree_idx: usize) Error!InputCapInfo(system) {
