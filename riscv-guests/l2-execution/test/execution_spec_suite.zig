@@ -24,6 +24,7 @@ pub fn Suite(comptime Machine: type) type {
         fork_filter: ?[]const u8 = null,
         record_rejection: ?*const fn (?*anyopaque, []const u8) void = null,
         record_context: ?*anyopaque = null,
+        wrap_input: *const fn (std.mem.Allocator, []const u8) anyerror![]u8 = vanilla_wrap.wrapVanillaAsExtended,
 
         pub fn processFile(
             self: *Self,
@@ -79,7 +80,8 @@ pub fn Suite(comptime Machine: type) type {
                 }
 
                 const expected_accepted = block.expected_output[32] == 0x01;
-                const wrapped = vanilla_wrap.wrapVanillaAsExtended(alloc, block.input) catch {
+                const wrapped = self.wrap_input(alloc, block.input) catch |err| {
+                    if (err == error.OutOfMemory) return err;
                     if (expected_accepted) {
                         std.debug.print("FAIL {s}[{}] fixture=valid machine=rejected (WrapInputFailed)\n", .{ context.test_name, context.block_index });
                         contribution.failed += 1;
@@ -142,4 +144,43 @@ fn hasUnsupportedPolicyInput(alloc: std.mem.Allocator, input: []const u8) !bool 
 fn isAllowedRejection(reason: ?anyerror) bool {
     const err = reason orelse return false;
     return err == error.ExecutionRequestsNotSupported or err == error.WithdrawalsNotSupported;
+}
+
+test "out of memory while wrapping an invalid fixture aborts the suite" {
+    const Machine = struct {
+        fn run(_: *@This(), _: std.process.Init, _: std.mem.Allocator, _: []const u8) !@import("execution_machine").Result {
+            return error.MachineMustNotRun;
+        }
+    };
+    const Wrapper = struct {
+        fn wrap(_: std.mem.Allocator, _: []const u8) ![]u8 {
+            return error.OutOfMemory;
+        }
+    };
+
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    const fixture =
+        \\{"invalid_case":{"blocks":[{"statelessInputBytes":"0x00","statelessOutputBytes":"0x000000000000000000000000000000000000000000000000000000000000000000"}]}}
+    ;
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "invalid.json", .data = fixture });
+    const path = try std.fmt.allocPrint(std.testing.allocator, ".zig-cache/tmp/{s}/invalid.json", .{temp.sub_path});
+    defer std.testing.allocator.free(path);
+
+    var machine = Machine{};
+    var suite = Suite(Machine){
+        .machine = &machine,
+        .policy = .allow_linea_rejections,
+        .wrap_input = Wrapper.wrap,
+    };
+    const init = std.process.Init{
+        .minimal = undefined,
+        .arena = undefined,
+        .gpa = std.testing.allocator,
+        .io = std.testing.io,
+        .environ_map = undefined,
+        .preopens = undefined,
+    };
+
+    try std.testing.expectError(error.OutOfMemory, suite.processFile(init, path, null));
 }

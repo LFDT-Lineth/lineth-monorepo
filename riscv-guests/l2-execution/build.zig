@@ -350,6 +350,19 @@ pub fn build(b: *std.Build) void {
     vanilla_wrap_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
     vanilla_wrap_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
+    const execution_spec_suite_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/execution_spec_suite.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    execution_spec_suite_tests.root_module.addImport("execution_machine", execution_machine_mod);
+    execution_spec_suite_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    execution_spec_suite_tests.root_module.addImport("zlob", zlob_dep.module("zlob"));
+    linkNativeZesuCrypto(execution_spec_suite_tests, native_target, native_crypto);
+    test_step.dependOn(&b.addRunArtifact(execution_spec_suite_tests).step);
+
     // ── Vanilla StatelessInput SSZ encoder module (test/stateless_input_encode.zig) ─────────────────
     // Test-only SSZ encoder for zesu's vanilla StatelessInput — the byte-level inverse of
     // zesu_ssz_decode's decode, which ships with no matching encoder of its own. Wired as a shared
