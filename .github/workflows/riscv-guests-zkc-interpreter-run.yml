@@ -107,8 +107,8 @@ jobs:
       # ZKC_REF is step-scoped above, so elf-exec does not apply the override a second time.
       #
       # TODO: gogen is disabled until it start supporting native arithmetic
-      - name: Run l2-execution guest under zkc (fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+      - name: Run l2-execution guest under zkc (fast, accel keccak) and check guest_output
+        run: make -C riscv-guests/l2-execution zkc-smoke-exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
   # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
   # scope with reference-args.

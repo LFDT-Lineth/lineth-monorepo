@@ -25,6 +25,10 @@
         .build_common = .{ .path = "../build_common" },
         // Lineth zkVM accelerator wrappers (sibling path dependency).
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
+        .zlob = .{
+            .url = "https://github.com/dmtrKovalenko/zlob/archive/refs/tags/v1.6.5.tar.gz",
+            .hash = "zlob-1.6.5-zzE2lWoNCQCFLMTpuNAhGEPVNsyTbftabd_2_A6fEHob",
+        },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
         // Zig version this package pins. Test-only: gives the test-side vanilla StatelessInput
         // encoder a real implementation to serialize against instead of a hand-rolled

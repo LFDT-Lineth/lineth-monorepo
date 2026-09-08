@@ -1,208 +1,111 @@
-//! `extended-vanilla-runner` — reference-test guard: the extended guest, run through the dummy-fill
-//! wrap (`vanilla_wrap.wrapVanillaAsExtended`), must agree with the EF fixture's OWN expected
-//! validity verdict (`successful_validation`, byte 32 of the vanilla `SszStatelessValidationResult`
-//! — see zesu's `ssz_output.zig`) over the real EF zkevm corpus. This checks that same property
-//! cheaply on the host, instead of compiling to riscv64 and executing the real guest ELF via ZkC.
-//!
-//! Deliberately NOT a differential check against a second, independently-run implementation (e.g.
-//! re-running zesu's own `executor.executeStatelessInput` inline): a reference-test corpus's whole
-//! point is to BE the source of truth, so this checks the extended guest against the fixture's own
-//! expected result directly — that also catches a bug shared by both the extended and vanilla
-//! paths (they delegate to the same zesu executor), which a vanilla-vs-extended differential check
-//! never could, since both sides would agree while still being wrong.
-//!
-//! The allowed disagreements are `error.ExecutionRequestsNotSupported` (EF fixtures carrying
-//! EIP-7685 requests) and `error.WithdrawalsNotSupported` (EF fixtures carrying beacon-chain
-//! withdrawals) — both valid to vanilla Ethereum but rejected by Lineth policy. Any other
-//! disagreement fails the run.
-//!
-//! Reuses `spec_runner.zig`'s fixture walk; this file supplies only the `Adapter`, CLI, and
-//! histogram. Run via `zig build extended-vanilla`.
+//! Runs the extended host guest against execution-spec fixture validity.
 
 const std = @import("std");
 const spec_runner = @import("spec_runner.zig");
-const l2_execution = @import("l2_execution");
-const l2_execution_ssz = @import("l2_execution_ssz");
-const vanilla_wrap = @import("vanilla_wrap");
+const host_machine = @import("host_machine");
+const execution_spec_suite = @import("execution_spec_suite.zig");
 
-/// Error-name -> occurrence count, across every disagreement where the extended pipeline errored.
-/// File-scope: the comptime `Adapter` contract has no room for extra per-run state, and this tool
-/// runs its whole walk from a single `main()` invocation, so there is only ever one "session".
-var error_histogram: std.StringHashMap(u64) = undefined;
+const label = "extended guest vs execution-spec fixture ground truth";
+const usage =
+    \\usage: extended-vanilla-runner [options] PATH...
+    \\
+    \\PATH may be a file or a recursively traversed directory. Operands run in order; files within
+    \\directories run lexically. Patterns containing `/` match paths relative to the operand root;
+    \\patterns without `/` match basenames at any depth.
+    \\  --fork NAME      require an exact network name, case-insensitively
+    \\  --match GLOB     select files with *, ?, character classes, or recursive **; quote the glob
+    \\  --limit N        stop after N selected blocks
+    \\  -x               stop after the first failing file
+    \\  --report-only    report disagreements without a failing exit status
+    \\
+;
 
-fn recordError(name: []const u8) void {
-    const entry = error_histogram.getOrPut(name) catch return;
+fn recordRejection(context: ?*anyopaque, name: []const u8) void {
+    const histogram: *std.StringHashMap(u64) = @ptrCast(@alignCast(context.?));
+    const entry = histogram.getOrPut(name) catch return;
     if (!entry.found_existing) entry.value_ptr.* = 0;
     entry.value_ptr.* += 1;
 }
 
-const ExtendedVanillaAdapter = struct {
-    pub const label = "extended guest vs EF fixture ground truth (dummy-wrapped l2_execution.runL2Execution vs the fixture's own successful_validation)";
-
-    /// Skip any fixture exercising EIP-8025's fork-activation schedule (a populated
-    /// chain_config.activation_block/activation_timestamp): this guest is single-fork and fixed
-    /// (see vanilla_wrap.vanillaHasForkActivationSchedule's doc comment for why). Decode failure
-    /// belongs to `adaptInput`/`runAndCheck`'s coarse invalid-result handling — the malformed-SSZ
-    /// negative-test case — so it flows through there unchanged.
-    pub fn shouldSkip(
-        alloc: std.mem.Allocator,
-        ssz_stateless_input: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) bool {
-        _ = ctx;
-        return vanilla_wrap.vanillaHasForkActivationSchedule(alloc, ssz_stateless_input) catch false;
-    }
-
-    pub fn adaptInput(
-        alloc: std.mem.Allocator,
-        ssz_stateless_input: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) ?[]const u8 {
-        _ = ctx;
-        return vanilla_wrap.wrapVanillaAsExtended(alloc, ssz_stateless_input) catch null;
-    }
-
-    pub fn runAndCheck(
-        init: std.process.Init,
-        alloc: std.mem.Allocator,
-        guest_input: ?[]const u8,
-        expected_output: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) !bool {
-        _ = init;
-        // Ground truth: the fixture's OWN expected result, not a second, independently-run
-        // implementation (see the file header comment for why).
-        if (expected_output.len <= 32) {
-            std.debug.print("FAIL {s}[{}]  expected_output too short ({} bytes)\n", .{ ctx.test_name, ctx.block_index, expected_output.len });
-            return false;
-        }
-        const expected_valid = expected_output[32] == 0x01;
-        var extended_err_name: []const u8 = "";
-        const extended_valid = blk: {
-            const gi = guest_input orelse {
-                extended_err_name = "AdaptInputFailed";
-                break :blk false;
-            };
-            const extended_in = l2_execution_ssz.decodeInput(alloc, gi) catch |err| {
-                extended_err_name = @errorName(err);
-                break :blk false;
-            };
-            // The vanilla bytes are carried verbatim as the single payload's stateless_input_ssz.
-            std.debug.assert(extended_in.payloads.len == 1);
-            _ = l2_execution.runL2Execution(alloc, extended_in) catch |err| {
-                extended_err_name = @errorName(err);
-                break :blk false;
-            };
-            break :blk true;
-        };
-
-        if (extended_valid == expected_valid) return true;
-
-        // The allowed disagreements (see the file header comment): a fixture-valid block the
-        // extended guest rejects for a Lineth-policy reason (EIP-7685 requests or withdrawals).
-        if (!extended_valid and expected_valid and
-            (std.mem.eql(u8, extended_err_name, "ExecutionRequestsNotSupported") or
-                std.mem.eql(u8, extended_err_name, "WithdrawalsNotSupported")))
-        {
-            return true;
-        }
-
-        if (extended_valid) {
-            std.debug.print(
-                "FAIL {s}[{}]  disagree: fixture=invalid extended=valid\n",
-                .{ ctx.test_name, ctx.block_index },
-            );
-        } else {
-            recordError(extended_err_name);
-            std.debug.print(
-                "FAIL {s}[{}]  disagree: fixture=valid extended=invalid ({s})\n",
-                .{ ctx.test_name, ctx.block_index, extended_err_name },
-            );
-        }
-        return false;
-    }
-};
-
-const usage =
-    \\extended-vanilla-runner — reference-test guard: assert the dummy-wrapped extended l2-execution guest
-    \\(l2_execution.runL2Execution) agrees with the EF fixture's own expected validity verdict, over
-    \\EF zkevm stateless fixtures. The only allowed disagreement is a fixture-valid block whose
-    \\EIP-7685 execution requests the extended guest rejects by Lineth policy.
-    \\
-    \\usage: extended-vanilla-runner [--fixtures DIR] [--file FILE] [--fork NAME] [--match SUBSTR] [--limit N] [-x] [--report-only]
-    \\  --fixtures DIR   directory of blockchain_tests JSON fixtures (passed by `zig build extended-vanilla`)
-    \\  --file FILE      run a single fixture file instead of the whole directory
-    \\  --fork NAME      only run test cases whose network == NAME (case-insensitive), e.g. Amsterdam
-    \\  --match SUBSTR   only run fixture files whose path contains SUBSTR, e.g. eip7928_block_level_access_lists
-    \\  --limit N        stop after N blocks (dev speed)
-    \\  -x               stop on the first disagreeing block
-    \\  --report-only    print the summary but always exit 0 (otherwise: exit 1 if any block disagrees)
-    \\
-;
-
 pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
-
-    error_histogram = std.StringHashMap(u64).init(gpa);
-    defer error_histogram.deinit();
-
-    var opts = spec_runner.Options{ .fixtures_dir = "spec-tests/fixtures/zkevm/blockchain_tests" };
+    var operands = std.ArrayList([]const u8).empty;
+    defer operands.deinit(init.gpa);
+    var opts = spec_runner.Options{};
+    var fork_filter: ?[]const u8 = null;
     var report_only = false;
+    var options_enabled = true;
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
-        if (std.mem.eql(u8, arg, "--fixtures") and i + 1 < args.len) {
-            i += 1;
-            opts.fixtures_dir = args[i];
-        } else if (std.mem.eql(u8, arg, "--file") and i + 1 < args.len) {
-            i += 1;
-            opts.single_file = args[i];
-        } else if (std.mem.eql(u8, arg, "--fork") and i + 1 < args.len) {
-            i += 1;
-            opts.fork_filter = args[i];
-        } else if (std.mem.eql(u8, arg, "--match") and i + 1 < args.len) {
-            i += 1;
-            opts.path_match = args[i];
-        } else if (std.mem.eql(u8, arg, "--limit") and i + 1 < args.len) {
-            i += 1;
-            opts.limit = std.fmt.parseInt(u64, args[i], 10) catch {
-                std.debug.print("error: --limit expects an integer, got '{s}'\n", .{args[i]});
-                std.process.exit(2);
-            };
-        } else if (std.mem.eql(u8, arg, "-x")) {
+        if (options_enabled and std.mem.eql(u8, arg, "--")) {
+            options_enabled = false;
+        } else if (options_enabled and std.mem.eql(u8, arg, "--fork")) {
+            fork_filter = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--match")) {
+            opts.match_pattern = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--limit")) {
+            opts.limit = parseLimit(takeValue(args, &i, arg));
+        } else if (options_enabled and std.mem.eql(u8, arg, "-x")) {
             opts.stop_on_fail = true;
-        } else if (std.mem.eql(u8, arg, "--report-only")) {
+        } else if (options_enabled and std.mem.eql(u8, arg, "--report-only")) {
             report_only = true;
-        } else if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+        } else if (options_enabled and (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help"))) {
             std.debug.print("{s}", .{usage});
             return;
-        } else {
-            std.debug.print("error: unexpected argument '{s}'\n{s}", .{ arg, usage });
-            std.process.exit(2);
-        }
+        } else if (options_enabled and std.mem.startsWith(u8, arg, "-")) {
+            fatal(if (std.mem.eql(u8, arg, "-")) "stdin is not supported" else "unknown option");
+        } else try operands.append(init.gpa, arg);
     }
+    if (operands.items.len == 0) fatal("missing PATH operand");
 
-    std.debug.print("running {s}\n  over {s}\n", .{ ExtendedVanillaAdapter.label, opts.single_file orelse opts.fixtures_dir });
+    var histogram = std.StringHashMap(u64).init(init.gpa);
+    defer histogram.deinit();
+    var host = host_machine.HostMachine{};
+    var suite = execution_spec_suite.Suite(host_machine.HostMachine){
+        .machine = &host,
+        .policy = .allow_linea_rejections,
+        .fork_filter = fork_filter,
+        .record_rejection = recordRejection,
+        .record_context = &histogram,
+    };
 
-    const stats = try spec_runner.run(ExtendedVanillaAdapter, init, opts);
+    std.debug.print("running {s}\n", .{label});
+    const stats = spec_runner.run(&suite, init, operands.items, opts) catch |err| fatal(@errorName(err));
+    printSummary(stats, &histogram);
+    if (stats.contribution.failed > 0 and !report_only) std.process.exit(1);
+}
 
-    const total = stats.total();
-    const pct: u64 = if (total > 0) 100 * stats.passed / total else 0;
+fn printSummary(stats: spec_runner.Stats, histogram: *std.StringHashMap(u64)) void {
+    const values = stats.contribution;
+    const pct: u64 = if (stats.total() == 0) 0 else 100 * values.passed / stats.total();
     std.debug.print("\n============================================================\n", .{});
-    std.debug.print("  {s}\n", .{ExtendedVanillaAdapter.label});
+    std.debug.print("  {s}\n", .{label});
     std.debug.print("  files: {}   blocks: {}   agree: {}   disagree: {}   skipped: {}   ({}%)\n", .{
-        stats.files, stats.blocks, stats.passed, stats.failed, stats.skipped, pct,
+        values.files, values.cases, values.passed, values.failed, values.skipped, pct,
     });
-    if (error_histogram.count() > 0) {
-        std.debug.print("  disagreement error histogram (extended pipeline's error, when it errored):\n", .{});
-        var it = error_histogram.iterator();
-        while (it.next()) |entry| {
-            std.debug.print("    {s}: {}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
-        }
+    if (histogram.count() > 0) {
+        std.debug.print("  disagreement rejection histogram:\n", .{});
+        var iterator = histogram.iterator();
+        while (iterator.next()) |entry| std.debug.print("    {s}: {}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
     }
     std.debug.print("============================================================\n", .{});
+}
 
-    if (stats.failed > 0 and !report_only) std.process.exit(1);
+fn takeValue(args: []const []const u8, index: *usize, name: []const u8) []const u8 {
+    if (index.* + 1 >= args.len) fatal(name);
+    index.* += 1;
+    return args[index.*];
+}
+
+fn parseLimit(value: []const u8) u64 {
+    const limit = std.fmt.parseInt(u64, value, 10) catch fatal("--limit expects an integer");
+    if (limit == 0) fatal("--limit must be greater than zero");
+    return limit;
+}
+
+fn fatal(message: []const u8) noreturn {
+    std.debug.print("error: {s}\n{s}", .{ message, usage });
+    std.process.exit(2);
 }

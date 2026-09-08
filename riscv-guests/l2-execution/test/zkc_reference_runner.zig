@@ -1,241 +1,164 @@
-//! `zkc-reference-runner` — runs the EF zkevm corpus through the compiled guest ELF under zkc,
-//! instead of in-process. Ground truth, wrap, and skip semantics are the host reference-test's
-//! (spec_runner.zig supplies the corpus walk and reporting); the only difference is the verdict
-//! source: the guest's exit ecall surfaces through zkc as exit 0 on valid, or nonzero with an
-//! `EXIT CODE = <n>` marker on reject. A nonzero exit without that marker is a toolchain failure,
-//! not a verdict.
+//! Composes execution-spec validity and extended-SSZ differential suites for ZkC.
 
 const std = @import("std");
 const spec_runner = @import("spec_runner.zig");
-const vanilla_wrap = @import("vanilla_wrap");
+const host_machine = @import("host_machine");
+const zkc_machine = @import("zkc_machine");
+const execution_spec_suite = @import("execution_spec_suite.zig");
+const smoke_suite = @import("smoke_suite.zig");
 
+const label = "ZkC guest vs host and execution-spec fixture ground truth";
 const usage =
-    \\zkc-reference-runner — run the EF zkevm corpus through the compiled guest ELF under zkc.
+    \\usage: zkc-reference-runner [options] PATH...
     \\
-    \\usage: zkc-reference-runner --fixtures DIR --install-prefix DIR --makefile PATH [options]
-    \\  --fixtures DIR        the blockchain_tests/ JSON tree (same as extended-vanilla-runner)
-    \\  --install-prefix DIR  zig build install prefix; the guest ELF and l2-execution-wrap are
-    \\                        resolved as DIR/bin/evm_execution_guest and DIR/bin/l2-execution-wrap
-    \\  --makefile PATH       arithmetization test Makefile (defines the elf-exec target)
-    \\  --zkc-flags S         flags for `zkc exec` (default: --fast)
-    \\  --file FILE      run a single fixture file instead of walking the tree
-    \\  --fork NAME      only fixtures declaring "network": "NAME" (case-insensitive)
-    \\  --match SUBSTR   only fixture files whose path contains SUBSTR
-    \\  --limit N        stop after N blocks (dev speed)
-    \\  -x               stop on the first disagreeing block
-    \\  --report-only    print the summary but always exit 0
+    \\PATH may be a file or a recursively traversed directory. Operands run in order; files within
+    \\directories run lexically. Patterns containing `/` match paths relative to the operand root;
+    \\patterns without `/` match basenames at any depth.
+    \\  --install-prefix DIR  Zig install prefix containing the guest ELF
+    \\  --makefile PATH       arithmetization Makefile
+    \\  --zkc-target NAME     elf-exec (default) or elf-trace
+    \\  --zkc-flags TEXT      flags forwarded to ZkC
+    \\  --fork NAME           filter execution-spec network, case-insensitively
+    \\  --match GLOB          select with *, ?, character classes, or recursive **; quote the glob
+    \\  --limit N             stop after N selected cases
+    \\  -x                    stop after the first failing file
+    \\  --report-only         report disagreements without a failing exit status
     \\
 ;
 
-// Session state for the zkc subprocess, set once in main before the walk. The comptime Adapter
-// contract is stateless, so these live at file scope (same pattern as extended_vanilla_runner.zig's
-// error_histogram). Wrapped SSZ + elf_to_json JSON scratch go under tmp_dir, removed on exit.
-var elf: []const u8 = undefined;
-var wrap: []const u8 = undefined;
-var makefile: []const u8 = undefined;
-/// `zkc exec` runs the guest on the tail-call interpreter backend, which reuses one frame for the
-/// interpreter's per-instruction tail call. The gogen backend lowers that tail call to a native Go
-/// call, spending one Go stack frame per emulated instruction, so a corpus-scale block exhausts
-/// Go's 1 GB goroutine stack.
-var zkc_flags: []const u8 = "--fast";
-var tmp_dir: []const u8 = undefined;
+fn CompositeSuite(comptime ExecutionSpec: type, comptime Smoke: type) type {
+    return struct {
+        execution_spec: *ExecutionSpec,
+        smoke: *Smoke,
 
-const ZkcAdapter = struct {
-    pub const label = "zkc reference-test: guest ELF under zkc vs EF fixture ground truth";
-
-    /// The Linea-policy skips, all presence-detectable on the vanilla input (fork-activation
-    /// schedule, EIP-7685 execution requests, beacon-chain withdrawals). Keeping them here means a
-    /// wrapped block never policy-skips at run time: the wrap's exit 3 case is pre-empted.
-    pub fn shouldSkip(
-        alloc: std.mem.Allocator,
-        ssz_stateless_input: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) bool {
-        _ = ctx;
-        return (vanilla_wrap.vanillaHasForkActivationSchedule(alloc, ssz_stateless_input) catch false) or
-            (vanilla_wrap.vanillaHasExecutionRequests(alloc, ssz_stateless_input) catch false) or
-            (vanilla_wrap.vanillaHasWithdrawals(alloc, ssz_stateless_input) catch false);
-    }
-
-    /// The guest consumes the vanilla SSZ verbatim (the wrap happens as a subprocess at run time,
-    /// producing the extended bytes the ELF actually reads), so adaptation is the identity.
-    pub fn adaptInput(
-        alloc: std.mem.Allocator,
-        ssz_stateless_input: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) ?[]const u8 {
-        _ = alloc;
-        _ = ctx;
-        return ssz_stateless_input;
-    }
-
-    pub fn runAndCheck(
-        init: std.process.Init,
-        alloc: std.mem.Allocator,
-        guest_input: ?[]const u8,
-        expected_output: []const u8,
-        ctx: spec_runner.BlockContext,
-    ) !bool {
-        if (expected_output.len <= 32) {
-            std.debug.print("FAIL {s}[{}]  expected_output too short ({} bytes)\n", .{ ctx.test_name, ctx.block_index, expected_output.len });
-            return false;
+        pub fn processFile(self: *@This(), init: std.process.Init, path: []const u8, limit: ?u64) !spec_runner.FileResult {
+            const execution_spec_result = try self.execution_spec.processFile(init, path, limit);
+            if (execution_spec_result != .unrecognized) return execution_spec_result;
+            return self.smoke.processFile(init, path, limit);
         }
-        const expected_valid = expected_output[32] == 0x01;
-        const vanilla_ssz = guest_input orelse return false; // adaptInput never fails
-
-        const outcome = try runBlockUnderZkc(init, alloc, vanilla_ssz);
-        const guest_valid = outcome == .valid;
-        if (guest_valid == expected_valid) return true;
-
-        std.debug.print(
-            "FAIL {s}[{}]  disagree: fixture={s} zkc={s}\n",
-            .{ ctx.test_name, ctx.block_index, if (expected_valid) "valid" else "invalid", if (guest_valid) "valid" else "invalid" },
-        );
-        return false;
-    }
-};
-
-const Outcome = enum { valid, invalid };
-
-/// Wrap one vanilla block to a temp extended SSZ and run it under zkc via elf-exec; returns the
-/// guest's validity verdict (see the file header for the exit-code semantics).
-fn runBlockUnderZkc(
-    init: std.process.Init,
-    alloc: std.mem.Allocator,
-    vanilla_ssz: []const u8,
-) !Outcome {
-    const io = init.io;
-    const vanilla_path = try std.fs.path.join(alloc, &.{ tmp_dir, "in.ssz" });
-    const extended_path = try std.fs.path.join(alloc, &.{ tmp_dir, "in.ext.ssz" });
-    const json_path = try std.fs.path.join(alloc, &.{ tmp_dir, "in.ext.ssz.json" });
-
-    try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = vanilla_path, .data = vanilla_ssz });
-
-    // shouldSkip already filtered the wrap's policy-skip cases, so a nonzero wrap exit is a
-    // rejection the guest would also produce, surfaced as `invalid`.
-    const wrap_res = try std.process.run(alloc, io, .{
-        .argv = &.{ wrap, vanilla_path, extended_path },
-    });
-    switch (wrap_res.term) {
-        .exited => |code| if (code != 0) return .invalid,
-        else => return error.WrapCrashed,
-    }
-
-    const in_arg = try std.fmt.allocPrint(alloc, "IN_BYTES=@{s}", .{extended_path});
-    const elf_arg = try std.fmt.allocPrint(alloc, "BIN_EXT={s}", .{elf});
-    const json_arg = try std.fmt.allocPrint(alloc, "JSON_EXT={s}", .{json_path});
-    const flags_arg = try std.fmt.allocPrint(alloc, "ZKC_EXEC_FLAGS={s}", .{zkc_flags});
-    const makefile_arg = try std.fmt.allocPrint(alloc, "-f{s}", .{makefile});
-
-    const res = try std.process.run(alloc, io, .{
-        .argv = &.{ "make", "-s", makefile_arg, "elf-exec", elf_arg, in_arg, json_arg, flags_arg },
-    });
-    switch (res.term) {
-        .exited => |code| {
-            if (code == 0) return .valid;
-            const combined = try std.fmt.allocPrint(alloc, "{s}\n{s}", .{ res.stdout, res.stderr });
-            if (std.mem.indexOf(u8, combined, "EXIT CODE") != null) return .invalid;
-            std.debug.print("--- zkc toolchain failure ---\n{s}\n", .{combined});
-            return error.ToolchainFailed;
-        },
-        else => return error.ZkcCrashed,
-    }
+    };
 }
 
 pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;
-    const io = init.io;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
-
-    var fixtures_dir: ?[]const u8 = null;
-    var install_prefix: ?[]const u8 = null;
-    var makefile_arg: ?[]const u8 = null;
-    var opts = spec_runner.Options{ .fixtures_dir = "" };
+    var operands = std.ArrayList([]const u8).empty;
+    defer operands.deinit(init.gpa);
+    var opts = spec_runner.Options{};
+    var prefix: ?[]const u8 = null;
+    var makefile: ?[]const u8 = null;
+    var target: []const u8 = "elf-exec";
+    var flags: ?[]const u8 = null;
+    var fork_filter: ?[]const u8 = null;
     var report_only = false;
+    var options_enabled = true;
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
-        if (std.mem.eql(u8, arg, "--fixtures")) {
-            fixtures_dir = takeValue(args, &i, "--fixtures");
-        } else if (std.mem.eql(u8, arg, "--install-prefix")) {
-            install_prefix = takeValue(args, &i, "--install-prefix");
-        } else if (std.mem.eql(u8, arg, "--makefile")) {
-            makefile_arg = takeValue(args, &i, "--makefile");
-        } else if (std.mem.eql(u8, arg, "--zkc-flags")) {
-            zkc_flags = takeValue(args, &i, "--zkc-flags");
-        } else if (std.mem.eql(u8, arg, "--file")) {
-            opts.single_file = takeValue(args, &i, "--file");
-        } else if (std.mem.eql(u8, arg, "--fork")) {
-            opts.fork_filter = takeValue(args, &i, "--fork");
-        } else if (std.mem.eql(u8, arg, "--match")) {
-            opts.path_match = takeValue(args, &i, "--match");
-        } else if (std.mem.eql(u8, arg, "--limit")) {
-            const v = takeValue(args, &i, "--limit");
-            opts.limit = std.fmt.parseInt(u64, v, 10) catch {
-                std.debug.print("error: --limit expects an integer, got '{s}'\n", .{v});
-                std.process.exit(2);
-            };
-        } else if (std.mem.eql(u8, arg, "-x")) {
+        if (options_enabled and std.mem.eql(u8, arg, "--")) {
+            options_enabled = false;
+        } else if (options_enabled and std.mem.eql(u8, arg, "--install-prefix")) {
+            prefix = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--makefile")) {
+            makefile = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--zkc-target")) {
+            target = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--zkc-flags")) {
+            flags = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--fork")) {
+            fork_filter = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--match")) {
+            opts.match_pattern = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--limit")) {
+            opts.limit = parseLimit(takeValue(args, &i, arg));
+        } else if (options_enabled and std.mem.eql(u8, arg, "-x")) {
             opts.stop_on_fail = true;
-        } else if (std.mem.eql(u8, arg, "--report-only")) {
+        } else if (options_enabled and std.mem.eql(u8, arg, "--report-only")) {
             report_only = true;
-        } else if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+        } else if (options_enabled and (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help"))) {
             std.debug.print("{s}", .{usage});
             return;
-        } else {
-            std.debug.print("error: unexpected argument '{s}'\n{s}", .{ arg, usage });
-            std.process.exit(2);
-        }
+        } else if (options_enabled and std.mem.startsWith(u8, arg, "-")) {
+            fatal(if (std.mem.eql(u8, arg, "-")) "stdin is not supported" else "unknown option");
+        } else try operands.append(init.gpa, arg);
     }
-    opts.fixtures_dir = fixtures_dir orelse fatal("missing --fixtures");
-    const prefix = install_prefix orelse fatal("missing --install-prefix");
-    elf = try std.fs.path.join(gpa, &.{ prefix, "bin", "evm_execution_guest" });
-    wrap = try std.fs.path.join(gpa, &.{ prefix, "bin", "l2-execution-wrap" });
-    makefile = makefile_arg orelse fatal("missing --makefile");
+    if (operands.items.len == 0) fatal("missing PATH operand");
+    if (!std.mem.eql(u8, target, "elf-exec") and !std.mem.eql(u8, target, "elf-trace")) {
+        fatal("--zkc-target must be elf-exec or elf-trace");
+    }
 
-    tmp_dir = try makeTempDir(io, gpa);
-    defer cleanupTempDir(io, gpa, tmp_dir);
+    const install_prefix = prefix orelse fatal("missing --install-prefix");
+    const elf = try std.fs.path.join(init.gpa, &.{ install_prefix, "bin", "evm_execution_guest" });
+    defer init.gpa.free(elf);
+    const temp_dir = try makeTempDir(init);
+    defer cleanupTempDir(init, temp_dir);
 
-    std.debug.print("running {s}\n  over {s}\n", .{ ZkcAdapter.label, opts.single_file orelse opts.fixtures_dir });
+    var zkc = zkc_machine.ZkcMachine{
+        .elf = elf,
+        .makefile = makefile orelse fatal("missing --makefile"),
+        .target = target,
+        .flags = flags,
+        .temp_dir = temp_dir,
+    };
+    var host = host_machine.HostMachine{};
+    var execution_spec = execution_spec_suite.Suite(zkc_machine.ZkcMachine){
+        .machine = &zkc,
+        .policy = .skip_linea_unsupported,
+        .fork_filter = fork_filter,
+    };
+    var smoke = smoke_suite.Suite(host_machine.HostMachine, zkc_machine.ZkcMachine){ .host = &host, .candidate = &zkc };
+    var suite = CompositeSuite(@TypeOf(execution_spec), @TypeOf(smoke)){
+        .execution_spec = &execution_spec,
+        .smoke = &smoke,
+    };
 
-    const stats = try spec_runner.run(ZkcAdapter, init, opts);
+    std.debug.print("running {s}\n", .{label});
+    const stats = spec_runner.run(&suite, init, operands.items, opts) catch |err| fatal(@errorName(err));
+    printSummary(stats);
+    if (stats.contribution.failed > 0 and !report_only) std.process.exit(1);
+}
 
-    const total = stats.total();
-    const pct: u64 = if (total > 0) 100 * stats.passed / total else 0;
+fn printSummary(stats: spec_runner.Stats) void {
+    const values = stats.contribution;
+    const pct: u64 = if (stats.total() == 0) 0 else 100 * values.passed / stats.total();
     std.debug.print("\n============================================================\n", .{});
-    std.debug.print("  {s}\n", .{ZkcAdapter.label});
-    std.debug.print("  files: {}   blocks: {}   agree: {}   disagree: {}   skipped: {}   ({}%)\n", .{
-        stats.files, stats.blocks, stats.passed, stats.failed, stats.skipped, pct,
+    std.debug.print("  {s}\n", .{label});
+    std.debug.print("  files: {}   cases: {}   agree: {}   disagree: {}   skipped: {}   ({}%)\n", .{
+        values.files, values.cases, values.passed, values.failed, values.skipped, pct,
     });
     std.debug.print("============================================================\n", .{});
-
-    if (stats.failed > 0 and !report_only) std.process.exit(1);
 }
 
-fn takeValue(args: []const []const u8, i: *usize, name: []const u8) []const u8 {
-    if (i.* + 1 < args.len) {
-        i.* += 1;
-        return args[i.*];
-    }
-    std.debug.print("error: {s} expects a value\n{s}", .{ name, usage });
+fn takeValue(args: []const []const u8, index: *usize, name: []const u8) []const u8 {
+    if (index.* + 1 >= args.len) fatal(name);
+    index.* += 1;
+    return args[index.*];
+}
+
+fn parseLimit(value: []const u8) u64 {
+    const limit = std.fmt.parseInt(u64, value, 10) catch fatal("--limit expects an integer");
+    if (limit == 0) fatal("--limit must be greater than zero");
+    return limit;
+}
+
+fn fatal(message: []const u8) noreturn {
+    std.debug.print("error: {s}\n{s}", .{ message, usage });
     std.process.exit(2);
 }
 
-fn fatal(msg: []const u8) noreturn {
-    std.debug.print("error: {s}\n{s}", .{ msg, usage });
-    std.process.exit(2);
-}
-
-fn makeTempDir(io: std.Io, gpa: std.mem.Allocator) ![]const u8 {
-    const res = try std.process.run(gpa, io, .{ .argv = &.{ "mktemp", "-d" } });
-    switch (res.term) {
+fn makeTempDir(init: std.process.Init) ![]u8 {
+    const result = try std.process.run(init.gpa, init.io, .{ .argv = &.{ "mktemp", "-d" } });
+    defer init.gpa.free(result.stderr);
+    switch (result.term) {
         .exited => |code| if (code != 0) return error.MktempFailed,
         else => return error.MktempFailed,
     }
-    return std.mem.trim(u8, res.stdout, " \n\r\t");
+    const owned = try init.gpa.dupe(u8, std.mem.trim(u8, result.stdout, " \n\r\t"));
+    init.gpa.free(result.stdout);
+    return owned;
 }
 
-fn cleanupTempDir(io: std.Io, gpa: std.mem.Allocator, path: []const u8) void {
-    _ = std.process.run(gpa, io, .{ .argv = &.{ "rm", "-rf", path } }) catch {};
+fn cleanupTempDir(init: std.process.Init, path: []u8) void {
+    std.Io.Dir.cwd().deleteTree(init.io, path) catch {};
+    init.gpa.free(path);
 }
