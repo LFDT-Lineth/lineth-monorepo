@@ -14,8 +14,7 @@ fn allocator() *std.mem.Allocator {
     return @ptrCast(&guest_allocator);
 }
 
-// Over-allocates for alignment and leaves the payload behind the header. The fixed-buffer
-// allocator can reclaim the latest allocation; earlier over-aligned frees retain their slack.
+// Over-allocates for alignment and leaves the payload behind the header.
 fn allocImpl(size: usize, align_req: std.mem.Alignment) ?*anyopaque {
     const alignment: std.mem.Alignment = if (@intFromEnum(align_req) > @intFromEnum(MIN_ALIGN)) align_req else MIN_ALIGN;
     const total = alignment.toByteUnits() + HDR + size;
@@ -58,8 +57,7 @@ export fn calloc(n: usize, size: usize) ?*anyopaque {
 }
 
 export fn free(ptr: ?*anyopaque) void {
-    const p = ptr orelse return;
-    allocator().rawFree(payloadOf(p), MIN_ALIGN, 0);
+    _ = ptr;
 }
 
 export fn realloc(ptr: ?*anyopaque, size: usize) ?*anyopaque {
@@ -68,6 +66,5 @@ export fn realloc(ptr: ?*anyopaque, size: usize) ?*anyopaque {
     const np = allocImpl(size, MIN_ALIGN) orelse return null;
     const keep = @min(size, old.len - HDR);
     @memcpy(@as([*]u8, @ptrCast(np))[0..keep], @as([*]const u8, @ptrCast(p))[0..keep]);
-    allocator().rawFree(old, MIN_ALIGN, 0);
     return np;
 }

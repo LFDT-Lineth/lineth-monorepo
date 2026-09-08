@@ -4,19 +4,6 @@
 const std = @import("std");
 const gc = @import("guest_crypto");
 
-// Provides the allocator symbol expected by the static library. A fixed-buffer allocator avoids
-// recursively re-entering the shimmed C allocator.
-var host_fba = std.heap.FixedBufferAllocator.init(&[_]u8{});
-export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyopaque } = undefined;
-
-var host_heap: [64 * 1024 * 1024]u8 = undefined;
-
-test {
-    host_fba = std.heap.FixedBufferAllocator.init(&host_heap);
-    const a = host_fba.allocator();
-    guest_allocator = .{ .ptr = a.ptr, .vtable = @ptrCast(a.vtable) };
-}
-
 const Bls12G1MsmPair = extern struct { point: [96]u8, scalar: [32]u8 };
 const Bls12G2MsmPair = extern struct { point: [192]u8, scalar: [32]u8 };
 const Bls12PairingPair = extern struct { g1: [96]u8, g2: [192]u8 };

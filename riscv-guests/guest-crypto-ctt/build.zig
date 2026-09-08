@@ -81,11 +81,11 @@ fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.
 /// Shared `nim c` flags.
 fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const u8) *std.Build.Step.Run {
     const nim = b.addSystemCommand(&.{
-        tc.nim,             "c",                  "--cc:clang",
-        "--mm:arc",         "-d:useMalloc",       "--panics:on",
-        "-d:CTT_ASM=false", "--threads:on",       "--noMain",
-        "--app:staticlib",  "--nimMainPrefix:ctt_init_",
-        "-d:release",       "-d:danger",          "--opt:size",
+        tc.nim,             "c",                         "--cc:clang",
+        "--mm:arc",         "-d:useMalloc",              "--panics:on",
+        "-d:CTT_ASM=false", "--threads:on",              "--noMain",
+        "--app:staticlib",  "--nimMainPrefix:ctt_init_", "-d:release",
+        "-d:danger",        "--opt:size",
     });
     nim.setName(name);
     nim.setCwd(tree); // `config.nims` resolves relative paths from cwd
@@ -95,30 +95,22 @@ fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const 
 fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
     // The host archive backs the FFI unit test and its embedded KZG context.
-    nim.addArgs(&.{ "--os:macosx", "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
+    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
     _ = nimcache; // declared as a cache output
     const archive = nim.addPrefixedOutputFileArg("--out:", "libconstantine.host.a");
     nim.addFileArg(tree.join(b.allocator, NIM_BINDINGS) catch @panic("oom"));
 
-    const allocator_obj = b.addObject(.{
-        .name = "ctt_allocator_host",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("c_allocator.zig"),
-            .target = b.graph.host,
-            .optimize = .ReleaseSmall,
-        }),
-    });
-
-    return mergeArchive(b, tc, "constantine host", archive, allocator_obj.getEmittedBin(), "libguest_crypto_ctt_host.a").archive;
+    return archive;
 }
 
 /// Merges the allocator object into the Nim-built archive with an `llvm-ar` MRI script.
 const Merged = struct { step: *std.Build.Step.Run, archive: std.Build.LazyPath };
 
 fn mergeArchive(b: *std.Build, tc: Toolchain, name: []const u8, lib: std.Build.LazyPath, allocator_obj: std.Build.LazyPath, out_name: []const u8) Merged {
-    const merge = b.addSystemCommand(&.{ "sh", "-c",
+    const merge = b.addSystemCommand(&.{
+        "sh",                        "-c",
         \\"$1" -M <<EOF
         \\create $3
         \\addlib $2
@@ -126,7 +118,9 @@ fn mergeArchive(b: *std.Build, tc: Toolchain, name: []const u8, lib: std.Build.L
         \\save
         \\end
         \\EOF
-    , b.fmt("merge {s}", .{name}) });
+        ,
+        b.fmt("merge {s}", .{name}),
+    });
     merge.setName(b.fmt("archive + merge {s}", .{name}));
     merge.addArgs(&.{tc.llvm_ar}); // $1
     merge.addFileArg(lib); // $2

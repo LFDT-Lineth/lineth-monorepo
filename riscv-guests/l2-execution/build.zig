@@ -154,6 +154,7 @@ pub fn build(b: *std.Build) void {
     });
     guest_crypto_tests.root_module.addImport("guest_crypto", guest_crypto_native_mod);
     guest_crypto_tests.root_module.addObjectFile(guest_crypto_host_a);
+    guest_crypto_tests.root_module.link_libc = true;
     // EIP-196/197 smoke vectors straight from zesu's testdata (CSV: input,result,gas,notes;
     // hex without 0x; empty notes = success row).
     for ([_][2][]const u8{
