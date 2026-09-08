@@ -13,7 +13,6 @@ const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.
 const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
-const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;
 
@@ -98,7 +97,6 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
 const map_private: c_int = 2;
-const map_fixed: c_int = 0x10;
 const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
 
@@ -124,10 +122,10 @@ fn loadNativeInput() *const verifier.VerifyInput {
     if (image_len <= 0) exitNative(1);
 
     const mapped_addr = mmap(
-        @ptrFromInt(input_guest_base),
+        null,
         @intCast(image_len),
         prot_read,
-        map_private | map_fixed,
+        map_private,
         fd,
         0,
     );
