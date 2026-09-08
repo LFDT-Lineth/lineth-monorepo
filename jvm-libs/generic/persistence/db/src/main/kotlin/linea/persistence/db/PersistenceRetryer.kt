@@ -5,14 +5,14 @@ import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.time.Clock
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 open class PersistenceRetryer(
   private val vertx: Vertx,
   private val config: Config,
   private val log: Logger = LogManager.getLogger(PersistenceRetryer::class.java),
-  private val clock: Clock = Clock.systemUTC(),
+  private val clock: Clock = Clock.System,
 ) {
   data class Config(
     val backoffDelay: Duration,

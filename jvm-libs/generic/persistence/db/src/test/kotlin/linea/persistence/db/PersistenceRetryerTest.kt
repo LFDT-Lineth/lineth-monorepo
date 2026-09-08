@@ -3,6 +3,7 @@ package linea.persistence.db
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.pgclient.PgException
+import net.consensys.FakeFixedClock
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.test.appender.ListAppender
@@ -12,36 +13,18 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlin.time.toJavaDuration
-import java.time.Duration as JavaDuration
-
-private class MutableClock(
-  private var currentInstant: Instant,
-) : Clock() {
-  override fun getZone(): ZoneId = ZoneOffset.UTC
-
-  override fun withZone(zone: ZoneId?): Clock = this
-
-  override fun instant(): Instant = currentInstant
-
-  fun advanceBy(duration: JavaDuration) {
-    currentInstant = currentInstant.plus(duration)
-  }
-}
 
 @ExtendWith(VertxExtension::class)
 class PersistenceRetryerTest {
   private lateinit var persistenceRetryer: PersistenceRetryer
   private lateinit var listAppender: ListAppender
-  private lateinit var clock: MutableClock
+  private lateinit var clock: FakeFixedClock
 
   @BeforeEach
   fun setup(vertx: Vertx) {
@@ -49,7 +32,7 @@ class PersistenceRetryerTest {
     listAppender = ctx.configuration.getAppender("ListAppender") as ListAppender
     listAppender.clear()
 
-    clock = MutableClock(Instant.parse("2026-09-08T00:00:00Z"))
+    clock = FakeFixedClock(Instant.parse("2026-09-08T00:00:00Z"))
     persistenceRetryer = PersistenceRetryer(
       vertx = vertx,
       config = PersistenceRetryer.Config(
@@ -132,7 +115,7 @@ class PersistenceRetryerTest {
           when (callCounter.incrementAndGet()) {
             1 -> SafeFuture.failedFuture<Unit>(pgErrorBeforeMute)
             else -> {
-              clock.advanceBy(JavaDuration.ofMillis(100))
+              clock.advanceBy(100.milliseconds)
               SafeFuture.failedFuture<Unit>(pgErrorAfterMute)
             }
           }
