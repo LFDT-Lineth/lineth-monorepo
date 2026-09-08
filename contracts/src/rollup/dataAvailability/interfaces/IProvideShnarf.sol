@@ -13,5 +13,5 @@ interface IProvideShnarf {
    * @param _dataRollingHash The dataRollingHash being checked for existence.
    * @return dataRollingHashExists The dataRollingHash's existence value.
    */
-  function blobShnarfExists(bytes32 _dataRollingHash) external view returns (uint256 dataRollingHashExists);
+  function dataRollingHashExists(bytes32 _dataRollingHash) external view returns (uint256 dataRollingHashExists);
 }

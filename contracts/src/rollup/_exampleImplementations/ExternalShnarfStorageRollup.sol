@@ -31,8 +31,8 @@ contract ExternalShnarfStorageRollup is LinethRollupBase {
    * @param _dataRollingHash The dataRollingHash being checked for existence.
    * @return dataRollingHashExists The dataRollingHash's existence value.
    */
-  function blobShnarfExists(bytes32 _dataRollingHash) public view returns (uint256 dataRollingHashExists) {
-    dataRollingHashExists = shnarfProvider.blobShnarfExists(_dataRollingHash);
+  function dataRollingHashExists(bytes32 _dataRollingHash) public view returns (uint256 dataRollingHashExists) {
+    dataRollingHashExists = shnarfProvider.dataRollingHashExists(_dataRollingHash);
   }
 
   /**

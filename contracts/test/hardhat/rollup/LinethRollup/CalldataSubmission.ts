@@ -70,7 +70,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT }),
     ).to.not.be.reverted;
 
-    const dataRollingHashExists = await linethRollup.blobShnarfExists(EXPECTED_ONE);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(EXPECTED_ONE);
     expect(dataRollingHashExists).to.equal(1n);
   });
 
@@ -101,7 +101,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         ),
     ).to.not.be.reverted;
 
-    const dataRollingHashExists = await linethRollup.blobShnarfExists(submissions[0].expectedDataRollingHash);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(submissions[0].expectedDataRollingHash);
     expect(dataRollingHashExists).to.equal(1n);
   });
 

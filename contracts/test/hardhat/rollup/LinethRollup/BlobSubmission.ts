@@ -68,7 +68,7 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
 
     expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV4", expectedEventArgs);
 
-    const dataRollingHashExists = await linethRollup.blobShnarfExists(finalDataRollingHash);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(finalDataRollingHash);
     expect(dataRollingHashExists).to.equal(1n);
   });
 

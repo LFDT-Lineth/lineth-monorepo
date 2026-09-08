@@ -54,15 +54,15 @@ abstract contract LinethRollupBase is
   /// @notice This is the ABI version and not the reinitialize version.
   string private constant _CONTRACT_VERSION = "9.0";
 
-  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _dataRollingHashExists mapping.
   mapping(bytes32 dataHash => bytes32 finalStateRootHash) private dataFinalStateRootHashes_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _dataRollingHashExists mapping.
   mapping(bytes32 dataHash => bytes32 parentHash) private dataParents_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _dataRollingHashExists mapping.
   mapping(bytes32 dataHash => bytes32 shnarfHash) private dataShnarfHashes_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _dataRollingHashExists mapping.
   mapping(bytes32 dataHash => uint256 startingBlock) private dataStartingBlock_DEPRECATED;
-  /// @dev DEPRECATED in favor of the single _blobShnarfExists mapping.
+  /// @dev DEPRECATED in favor of the single _dataRollingHashExists mapping.
   mapping(bytes32 dataHash => uint256 endingBlock) private dataEndingBlock_DEPRECATED;
 
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
@@ -85,7 +85,7 @@ abstract contract LinethRollupBase is
    *   dataRollingHash of each submission is anchored; intermediate chunk folds are not persisted.
    *   Membership-only — execution continuity no longer travels with the DA accumulator.
    */
-  mapping(bytes32 dataRollingHash => uint256 exists) internal _blobShnarfExists;
+  mapping(bytes32 dataRollingHash => uint256 exists) internal _dataRollingHashExists;
 
   /**
    * @notice Hash of the L2 computed message number, its rolling hash,
@@ -593,7 +593,7 @@ abstract contract LinethRollupBase is
 
     // DA anchoring: the end dataRollingHash must have been anchored by a prior submission.
     require(
-      shnarfProvider.blobShnarfExists(_finalizationData.endDataRollingHash) != 0,
+      shnarfProvider.dataRollingHashExists(_finalizationData.endDataRollingHash) != 0,
       FinalDataRollingHashNotAnchored(_finalizationData.endDataRollingHash)
     );
 

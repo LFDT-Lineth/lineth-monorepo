@@ -25,7 +25,7 @@ contract LinethRollupClaimingV2 is LinethRollupBase, Eip4844BlobAcceptor, Callda
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
     bytes32 genesisDataRollingHash = EMPTY_HASH;
-    _blobShnarfExists[genesisDataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
+    _dataRollingHashExists[genesisDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
     bytes32 genesisPositionCommitment = _computePositionCommitment(genesisDataRollingHash, 0);
 
     __LinethRollup_init(_initializationData, genesisPositionCommitment);

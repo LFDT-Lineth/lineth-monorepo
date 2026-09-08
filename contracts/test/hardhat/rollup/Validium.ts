@@ -371,8 +371,8 @@ describe("Validium contract", () => {
         validium.connect(operator).acceptShnarfData(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
       ).to.not.be.reverted;
 
-      const blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
+      const dataRollingHashExists = await validium.dataRollingHashExists(expectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
     });
 
     it("Should successfully submit 2 compressed data chunks in two transactions", async () => {
@@ -384,10 +384,10 @@ describe("Validium contract", () => {
         validium.connect(operator).acceptShnarfData(expectedShnarf, secondExpectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
       ).to.not.be.reverted;
 
-      let blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
-      blobShnarfExists = await validium.blobShnarfExists(secondExpectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
+      let dataRollingHashExists = await validium.dataRollingHashExists(expectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
+      dataRollingHashExists = await validium.dataRollingHashExists(secondExpectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
     });
 
     it("Should emit an event while submitting 1 compressed data chunk", async () => {

@@ -7,7 +7,6 @@ import { ClaimMessageV1 } from "../messaging/l1/v1/ClaimMessageV1.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { LivenessRecovery } from "./LivenessRecovery.sol";
 import { IGenericErrors } from "../interfaces/IGenericErrors.sol";
-import { IAddressFilter } from "./forcedTransactions/interfaces/IAddressFilter.sol";
 import { LinethRollupYieldExtension } from "./LinethRollupYieldExtension.sol";
 import { InitializationVersionCheck } from "../common/InitializationVersionCheck.sol";
 
@@ -42,12 +41,12 @@ contract LinethRollup is
     BaseInitializationData calldata _initializationData,
     address _livenessRecoveryOperator,
     address _yieldManager
-  ) external onlyInitializedVersion(0) reinitializer(11) {
+  ) external onlyInitializedVersion(0) reinitializer(10) {
     // Genesis DA stream position: the genesis dataRollingHash is the empty accumulator
     // (no chunks folded yet), and the genesis offset is 0 (fresh start). The sealed genesis
     // position commitment is keccak256(genesisDataRollingHash || 0).
     bytes32 genesisDataRollingHash = EMPTY_HASH;
-    _blobShnarfExists[genesisDataRollingHash] = SHNARF_EXISTS_DEFAULT_VALUE;
+    _dataRollingHashExists[genesisDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
     bytes32 genesisPositionCommitment = _computePositionCommitment(genesisDataRollingHash, 0);
 
     __LinethRollup_init(_initializationData, genesisPositionCommitment);
@@ -69,41 +68,6 @@ contract LinethRollup is
   }
 
   /**
-   * @notice Sets forced transaction gateway and reinitializes the last finalized state including forced tx data.
-   * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
-   * @param _forcedTransactionFeeInWei The forced transaction fee in wei.
-   * @param _addressFilter The address of the address filter.
-   */
-  function reinitializeLineaRollupV9(
-    uint256 _forcedTransactionFeeInWei,
-    address _addressFilter
-  ) external reinitializer(9) nonReentrant {
-    require(_forcedTransactionFeeInWei > 0, IGenericErrors.ZeroValueNotAllowed());
-    require(_addressFilter != address(0), IGenericErrors.ZeroAddressNotAllowed());
-
-    forcedTransactionFeeInWei = _forcedTransactionFeeInWei;
-    addressFilter = IAddressFilter(_addressFilter);
-
-    emit ForcedTransactionFeeSet(_forcedTransactionFeeInWei);
-    emit AddressFilterChanged(address(0), _addressFilter);
-
-    nextForcedTransactionNumber = 1;
-
-    emit LineaRollupVersionChanged(bytes8("7.1"), bytes8("8.0"));
-  }
-
-  /**
-   * @notice Bumps the ABI version for the blockhash-centric (RISC-V) ABI cutover.
-   * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
-   * @dev Does not populate blockHashes for the last finalized block — the first post-upgrade finalization takes the migration path.
-   * @dev Verifier keys and SET_VERIFIER_KEY_ROLE / UNSET_VERIFIER_KEY_ROLE are configured separately via `grantRole` and
-   *   `setVerifierKeys` after upgrade (kept out of this reinitializer to minimize contract size).
-   */
-  function reinitializeLineaRollupV10() external reinitializer(10) {
-    emit LineaRollupVersionChanged(bytes8("8.0"), bytes8("9.0"));
-  }
-
-  /**
    * @notice Bridges the last finalized 3-arg shnarf into the blob-spanning dataRollingHash model.
    * @dev This function is a reinitializer and can only be called once per version. Should be called
    *   using an upgradeAndCall transaction to the ProxyAdmin for live-chain (in-place) upgrades.
@@ -118,7 +82,7 @@ contract LinethRollup is
    *   reverts if the live state has drifted from what governance approved.
    * @param _currentFinalizedShnarf The current finalized 3-arg shnarf value to bridge.
    */
-  function reinitializeLineaRollupV11(bytes32 _currentFinalizedShnarf) external reinitializer(11) nonReentrant {
+  function reinitializeLineaRollupV10(bytes32 _currentFinalizedShnarf) external reinitializer(10) nonReentrant {
     require(_currentFinalizedShnarf != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
     require(
       currentFinalizedShnarf == _currentFinalizedShnarf,
@@ -127,7 +91,7 @@ contract LinethRollup is
 
     // Reinterpret the last finalized shnarf as the previous end dataRollingHash and anchor it so
     // post-upgrade submissions can chain from it.
-    _blobShnarfExists[_currentFinalizedShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
+    _dataRollingHashExists[_currentFinalizedShnarf] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
 
     // Seal the bridged position (offset 0 == fresh start) into the position-commitment slot.
     currentFinalizedShnarf = _computePositionCommitment(_currentFinalizedShnarf, 0);
