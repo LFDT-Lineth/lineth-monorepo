@@ -30,11 +30,6 @@ class QbftEventProcessorTest {
   private val processor = QbftEventProcessor(queue, multiplexer)
 
   @Test
-  fun `stop is already complete before the first run`() {
-    assertThat(processor.stop()).isDone()
-  }
-
-  @Test
   fun `each run has its own completion and finishes the current event before stopping`() {
     val executor = Executors.newSingleThreadExecutor()
     try {

@@ -30,9 +30,7 @@ class AmsterdamMappersTest {
     assertThat(wirePayload.blockAccessList.toArray()).containsExactly(*payload.blockAccessList!!)
     assertThat(wirePayload.slotNumber).isEqualTo(UInt64.MAX_VALUE)
     val decoded = wirePayload.toDomainExecutionPayload()
-    assertThat(decoded).isEqualTo(payload)
-    assertThat(decoded.blockAccessList).containsExactly(*payload.blockAccessList!!)
-    assertThat(decoded.slotNumber).isEqualTo(ULong.MAX_VALUE)
+    assertThat(decoded).usingRecursiveComparison().isEqualTo(payload)
   }
 
   @Test

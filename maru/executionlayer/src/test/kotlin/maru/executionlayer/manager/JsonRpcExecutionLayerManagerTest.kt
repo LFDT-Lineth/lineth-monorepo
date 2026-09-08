@@ -20,6 +20,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.reset
@@ -142,60 +144,15 @@ class JsonRpcExecutionLayerManagerTest {
     verify(executionLayerEngineApiClient, atLeastOnce()).getPayload(eq(payloadId))
   }
 
-  @Test
-  fun `setHeadAndStartBlockBuilding passes arguments to FCU correctly`() {
+  @ParameterizedTest(name = "FCU argument propagation with Amsterdam attributes = {0}")
+  @ValueSource(booleans = [false, true])
+  fun `setHeadAndStartBlockBuilding passes arguments to FCU correctly`(amsterdam: Boolean) {
     val newHeadHash = Bytes32.random()
     val newSafeHash = Bytes32.random()
     val newFinalizedHash = Bytes32.random()
     val nextTimestamp = Random.nextULong(0U, ULong.MAX_VALUE)
-
-    val payloadId = Bytes8(Bytes.random(8))
-    val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
-
-    val result =
-      executionLayerManager
-        .setHeadAndStartBlockBuilding(
-          headHash = newHeadHash.toArray(),
-          safeHash = newSafeHash.toArray(),
-          finalizedHash = newFinalizedHash.toArray(),
-          nextBlockTimestamp = nextTimestamp,
-          feeRecipient = feeRecipient,
-        ).get()
-
-    val expectedPayloadStatus =
-      PayloadStatus(
-        ExecutionPayloadStatus.VALID,
-        latestValidHash = payloadStatus
-          .asInternalExecutionPayload()
-          .latestValidHash
-          .get()
-          .toArray(),
-        validationError = null,
-      )
-    val expectedResult = ForkChoiceUpdatedResult(expectedPayloadStatus, payloadId.wrappedBytes.toArray())
-    assertThat(result).isEqualTo(expectedResult)
-    verify(executionLayerEngineApiClient, atLeastOnce()).forkChoiceUpdate(
-      argThat { forkChoiceState ->
-        forkChoiceState == ForkChoiceStateV1(newHeadHash, newSafeHash, newFinalizedHash)
-      },
-      argThat { payloadAttributes ->
-        payloadAttributes ==
-          PayloadAttributes(
-            timestamp = nextTimestamp,
-            prevRandao = EMPTY_HASH,
-            suggestedFeeRecipient = feeRecipient,
-          )
-      },
-    )
-  }
-
-  @Test
-  fun `setHeadAndStartBlockBuilding passes Amsterdam slot number and gas target to FCU`() {
-    val newHeadHash = Bytes32.random()
-    val newSafeHash = Bytes32.random()
-    val newFinalizedHash = Bytes32.random()
-    val nextTimestamp = Random.nextULong(0U, ULong.MAX_VALUE)
-    val nextSlot = Random.nextULong(0U, ULong.MAX_VALUE)
+    val nextSlot = if (amsterdam) Random.nextULong(0U, ULong.MAX_VALUE) else null
+    val targetGasLimit = if (amsterdam) 60_000_000UL else null
 
     val payloadId = Bytes8(Bytes.random(8))
     val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
@@ -209,7 +166,7 @@ class JsonRpcExecutionLayerManagerTest {
           nextBlockTimestamp = nextTimestamp,
           feeRecipient = feeRecipient,
           nextBlockSlotNumber = nextSlot,
-          targetGasLimit = 60_000_000UL,
+          targetGasLimit = targetGasLimit,
         ).get()
 
     val expectedPayloadStatus =
@@ -235,7 +192,7 @@ class JsonRpcExecutionLayerManagerTest {
             prevRandao = EMPTY_HASH,
             suggestedFeeRecipient = feeRecipient,
             slotNumber = nextSlot,
-            targetGasLimit = 60_000_000UL,
+            targetGasLimit = targetGasLimit,
           )
       },
     )
