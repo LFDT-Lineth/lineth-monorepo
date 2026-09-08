@@ -32,7 +32,7 @@ class PreRiscvBlobCompressionProverClient(
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   log: Logger,
 ) :
-  GenericRiscVProverClient<
+  GenericProverClient<
     BlobCompressionProofRequest,
     BlobCompressionProof,
     BlobCompressionProofJsonRequest,

@@ -3,11 +3,11 @@ package lineth.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupAggregationProofRequestV1
-import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupAggregationProofResponseDto
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientTestFixtures.fileBasedProverConfig
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientTestFixtures.jsonMapper
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientTestFixtures.rollupAggregationProofRequestV1
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientTestFixtures.rollupAggregationProofResponseDto
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat

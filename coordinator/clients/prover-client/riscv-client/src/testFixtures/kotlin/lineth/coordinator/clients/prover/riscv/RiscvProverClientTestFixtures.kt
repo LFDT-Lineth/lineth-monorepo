@@ -28,7 +28,7 @@ import kotlin.time.Instant
  * Shared test fixtures (constants, domain/DTO builders, fake transports and REST/WireMock helpers) reused across the
  * RISC-V prover-client test suites (`FileBased*ProverClientTest` / `Restful*ProverClientTest`).
  */
-object RiscVProverClientTestFixtures {
+object RiscvProverClientTestFixtures {
   const val PROVER_VERSION = "4.0.0-riscv"
   const val CHAIN_ID = 59144L
   const val FORK_NAME = "Amsterdam"

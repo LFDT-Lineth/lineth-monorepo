@@ -15,10 +15,10 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.Logger
 
-class RiscvProverClientFactory(
+class ProverClientFactory(
   private val vertx: Vertx,
   private val config: ProversConfig,
-  private val l2MessageServiceAddress: String,
+  private val l2MessageServiceAddress: String? = null,
   metricsFacade: MetricsFacade,
 ) {
   private val executionWaitingResponsesMetric = GaugeAggregator()
@@ -138,6 +138,10 @@ class RiscvProverClientFactory(
   }
 
   private fun buildL2ExecutionProverClient(proverConfig: FileBasedProverConfig): L2ExecutionProverClient {
+    require(!l2MessageServiceAddress.isNullOrEmpty()) {
+      "l2MessageServiceAddress must be configured for the RISC-V execution prover"
+    }
+
     val transport = FileBasedProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,

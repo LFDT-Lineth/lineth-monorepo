@@ -40,8 +40,8 @@ import lineth.coordinator.app.conflation.TracesClientFactory
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
+import lineth.coordinator.clients.prover.riscv.ProverClientFactory
 import lineth.coordinator.clients.prover.riscv.ProverConfig
-import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.TracesConfig.ClientApiConfig
@@ -199,10 +199,9 @@ class ConflationBacktestingApp(
       log = log,
     )
 
-  private val riscvProverClientFactory = RiscvProverClientFactory(
+  private val preRiscvProverClientFactory = ProverClientFactory(
     vertx = vertx,
     config = backtestingCoordinatorConfig.proversConfig,
-    l2MessageServiceAddress = "",
     metricsFacade = metricsFacade,
   )
 
@@ -224,7 +223,7 @@ class ConflationBacktestingApp(
   )
 
   val proofGeneratingConflationHandlerImpl = run {
-    val executionProverClient: ExecutionProverClientV2 = riscvProverClientFactory.preRiscvExecutionProverClient()
+    val executionProverClient: ExecutionProverClientV2 = preRiscvProverClientFactory.preRiscvExecutionProverClient()
 
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(
@@ -284,7 +283,7 @@ class ConflationBacktestingApp(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobCompressionProverClient = riscvProverClientFactory.preRiscvBlobCompressionProverClient(log = log),
+      blobCompressionProverClient = preRiscvProverClientFactory.preRiscvBlobCompressionProverClient(log = log),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
           version = backtestingCoordinatorConfig.conflation.blobCompression.shnarfCalculatorVersion,
@@ -358,7 +357,7 @@ class ConflationBacktestingApp(
       ftxRollingInfoProvider = FtxRollingInfoProviderImpl(DisabledForcedTransactionsDao()),
     ),
     consecutiveProvenBlobsProvider = inMemoryProvenBlobsTracker,
-    proofAggregationClient = riscvProverClientFactory.preRiscvProofAggregationProverClient(),
+    proofAggregationClient = preRiscvProverClientFactory.preRiscvProofAggregationProverClient(),
     metricsFacade = metricsFacade,
   )
 

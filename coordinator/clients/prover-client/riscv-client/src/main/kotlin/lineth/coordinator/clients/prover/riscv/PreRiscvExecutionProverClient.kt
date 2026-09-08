@@ -109,7 +109,7 @@ class PreRiscvExecutionProverClient(
     ExecutionProofFileNameProvider,
   log: Logger = LOG,
 ) :
-  GenericRiscVProverClient<
+  GenericProverClient<
     BatchExecutionProofRequestV1,
     BatchExecutionProofResponse,
     BatchExecutionProofRequestDto,

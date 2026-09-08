@@ -121,7 +121,7 @@ class PreRiscvProofAggregationClient(
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   log: Logger,
 ) :
-  GenericRiscVProverClient<
+  GenericProverClient<
     ProofsToAggregate,
     ProofToFinalize,
     AggregationProofRequestDto,

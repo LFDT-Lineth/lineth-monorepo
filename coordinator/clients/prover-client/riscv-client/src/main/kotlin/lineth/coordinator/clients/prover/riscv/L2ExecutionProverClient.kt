@@ -107,7 +107,7 @@ class L2ExecutionProverClient(
     L2ExecutionProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
-) : GenericRiscVProverClient<
+) : GenericProverClient<
   L2ExecutionProofRequestV1,
   L2ExecutionProofResponseV1,
   L2ExecutionProofRequestDto,

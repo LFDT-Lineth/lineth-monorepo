@@ -24,7 +24,7 @@ import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
-class GenericRiscVProverClientTest {
+class GenericProverClientTest {
   data class ProofRequest(override val startBlockNumber: ULong, override val endBlockNumber: ULong) : BlockInterval
   data class ProofResponse(val startBlockNumber: ULong, val endBlockNumber: ULong)
   data class ProofRequestDto(val blockNumberStart: ULong, val blockNumberEnd: ULong) {
@@ -60,7 +60,7 @@ class GenericRiscVProverClientTest {
     }
   }
 
-  private lateinit var proverClient: GenericRiscVProverClient<
+  private lateinit var proverClient: GenericProverClient<
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
@@ -72,14 +72,14 @@ class GenericRiscVProverClientTest {
   private fun createProverClient(
     config: FileBasedProverConfig,
     vertx: Vertx,
-  ): GenericRiscVProverClient<
+  ): GenericProverClient<
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
     ProofResponseDto,
     ProofIndexImpl,
     > {
-    return GenericRiscVProverClient(
+    return GenericProverClient(
       transport = FileBasedProverProofTransport(
         config = config,
         vertx = vertx,

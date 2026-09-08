@@ -80,9 +80,50 @@ class ProverClientFactoryTest {
     )
   }
 
+  private fun executionConfig(
+    proverDir: Path,
+    programVk: String? = null,
+    forkName: String? = null,
+  ): FileBasedProverConfig {
+    return FileBasedProverConfig(
+      requestsDirectory = proverDir.resolve("execution/requests"),
+      responsesDirectory = proverDir.resolve("execution/responses"),
+      pollingInterval = 100.milliseconds,
+      pollingTimeout = 500.milliseconds,
+      inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
+      inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+      programVk = programVk,
+      forkName = forkName,
+    )
+  }
+
+  private fun buildProversConfigWithExecution(
+    tmpDir: Path,
+    programVk: String? = null,
+    forkName: String? = null,
+  ): ProversConfig {
+    return ProversConfig(
+      proverA = ProverConfig(
+        execution = executionConfig(tmpDir.resolve("prover/v2"), programVk, forkName),
+        proofAggregation = FileBasedProverConfig(
+          requestsDirectory = tmpDir.resolve("prover/v2/aggregation/requests"),
+          responsesDirectory = tmpDir.resolve("prover/v2/aggregation/responses"),
+          pollingInterval = 100.milliseconds,
+          pollingTimeout = 500.milliseconds,
+          inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+        ),
+      ),
+      switchBlockNumberInclusive = null,
+      switchBlockTimestamp = null,
+      proverB = null,
+      enableRequestFilesCleanup = false,
+    )
+  }
+
   private lateinit var meterRegistry: MeterRegistry
   private lateinit var metricsFacade: MetricsFacade
-  private lateinit var proverClientFactory: RiscvProverClientFactory
+  private lateinit var proverClientFactory: ProverClientFactory
   private lateinit var vertx: Vertx
   private lateinit var testTmpDir: Path
 
@@ -148,7 +189,80 @@ class ProverClientFactoryTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      RiscvProverClientFactory(vertx, buildProversConfig(testTmpDir, switchBlockNumber = 200), "", metricsFacade)
+      ProverClientFactory(
+        vertx = vertx,
+        config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
+        metricsFacade = metricsFacade,
+      )
+  }
+
+  @Test
+  fun `executionProverClient should build L2 execution prover client when programVk and forkName are set`() {
+    val factory = ProverClientFactory(
+      vertx = vertx,
+      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
+      l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      metricsFacade = metricsFacade,
+    )
+
+    val client = factory.executionProverClient()
+    assertThat(client).isNotNull
+  }
+
+  @Test
+  fun `executionProverClient should fail when l2MessageServiceAddress is not configured`() {
+    val factory = ProverClientFactory(
+      vertx = vertx,
+      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
+      l2MessageServiceAddress = null,
+      metricsFacade = metricsFacade,
+    )
+
+    assertThatThrownBy { factory.executionProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
+  }
+
+  @Test
+  fun `executionProverClient should fail when l2MessageServiceAddress is empty`() {
+    val factory = ProverClientFactory(
+      vertx = vertx,
+      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
+      l2MessageServiceAddress = "",
+      metricsFacade = metricsFacade,
+    )
+
+    assertThatThrownBy { factory.executionProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
+  }
+
+  @Test
+  fun `executionProverClient should fail when programVk is not configured`() {
+    val factory = ProverClientFactory(
+      vertx = vertx,
+      config = buildProversConfigWithExecution(testTmpDir, programVk = null, forkName = "cancun"),
+      l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      metricsFacade = metricsFacade,
+    )
+
+    assertThatThrownBy { factory.executionProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("programVk must be configured for the RISC-V execution prover")
+  }
+
+  @Test
+  fun `executionProverClient should fail when forkName is not configured`() {
+    val factory = ProverClientFactory(
+      vertx = vertx,
+      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = null),
+      l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      metricsFacade = metricsFacade,
+    )
+
+    assertThatThrownBy { factory.executionProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("forkName must be configured for the RISC-V execution prover")
   }
 
   @Test
@@ -176,11 +290,10 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      RiscvProverClientFactory(
-        vertx,
-        buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
-        "",
-        metricsFacade,
+      ProverClientFactory(
+        vertx = vertx,
+        config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        metricsFacade = metricsFacade,
       )
 
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
@@ -191,11 +304,10 @@ class ProverClientFactoryTest {
   @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
-      RiscvProverClientFactory(
-        vertx,
-        buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
-        "",
-        metricsFacade,
+      ProverClientFactory(
+        vertx = vertx,
+        config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        metricsFacade = metricsFacade,
       )
     val proverClient = factory.preRiscvProofAggregationProverClient()
     assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
@@ -219,15 +331,14 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      RiscvProverClientFactory(
-        vertx,
-        buildProversConfig(
+      ProverClientFactory(
+        vertx = vertx,
+        config = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
         ),
-        "",
-        metricsFacade,
+        metricsFacade = metricsFacade,
       )
 
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }

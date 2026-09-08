@@ -140,7 +140,7 @@ class FileBasedRollupProverClient(
     RollupProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
-) : GenericRiscVProverClient<
+) : GenericProverClient<
   RollupProofRequestV1,
   RollupProofResponseV1,
   FileBasedRollupProofRequestDto,
@@ -175,7 +175,7 @@ class RestfulRollupProverClient(
     RollupProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
-) : GenericRiscVProverClient<
+) : GenericProverClient<
   RollupProofRequestV1,
   RollupProofResponseV1,
   RestfulRollupProofRequestDto,

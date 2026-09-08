@@ -49,7 +49,7 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.LatestL1FinalizedBlockProviderSync
-import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
+import lineth.coordinator.clients.prover.riscv.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
@@ -85,12 +85,7 @@ class ConflationAppV1(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val riscvProverClientFactory: RiscvProverClientFactory = RiscvProverClientFactory(
-    vertx = vertx,
-    config = configs.proversConfig,
-    l2MessageServiceAddress = "",
-    metricsFacade = metricsFacade,
-  ),
+  private val proverClientFactory: ProverClientFactory,
   val l2EthClient: EthApiClient = createEthApiClient(
     rpcUrl = configs.conflation.l2Endpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth.conflation"),
@@ -250,7 +245,7 @@ class ConflationAppV1(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobCompressionProverClient = riscvProverClientFactory.preRiscvBlobCompressionProverClient(),
+      blobCompressionProverClient = proverClientFactory.preRiscvBlobCompressionProverClient(),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
           version = configs.conflation.blobCompression.shnarfCalculatorVersion,
@@ -341,7 +336,7 @@ class ConflationAppV1(
           ftxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
         ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
-        proofAggregationClient = riscvProverClientFactory.preRiscvProofAggregationProverClient(),
+        proofAggregationClient = proverClientFactory.preRiscvProofAggregationProverClient(),
         metricsFacade = metricsFacade,
       )
   }
@@ -364,7 +359,7 @@ class ConflationAppV1(
         BatchProofHandlerImpl(batchesRepository)::acceptNewBatch,
       ),
     )
-    val executionProverClient: ExecutionProverClientV2 = riscvProverClientFactory.preRiscvExecutionProverClient()
+    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.preRiscvExecutionProverClient()
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(
         tracesClients.tracesConflationClient,

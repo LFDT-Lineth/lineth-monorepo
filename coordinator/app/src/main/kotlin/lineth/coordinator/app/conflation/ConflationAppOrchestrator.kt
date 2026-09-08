@@ -16,7 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
+import lineth.coordinator.clients.prover.riscv.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
@@ -53,7 +53,6 @@ class ConflationAppOrchestrator(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val riscvProverClientFactory: RiscvProverClientFactory,
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
@@ -70,6 +69,12 @@ class ConflationAppOrchestrator(
       .thenApply { block -> Instant.fromEpochSeconds(block.timestamp.toLong()) }
       .get()
   }
+
+  private val preRiscvProverClientFactory = ProverClientFactory(
+    vertx = vertx,
+    config = configs.proversConfig,
+    metricsFacade = metricsFacade,
+  )
 
   private val forcedTransactionsApp: ForcedTransactionsApp = run {
     // Forced transactions are rollup-only for now; see ConflationAppHelper.forcedTransactionsEnabled.
@@ -145,7 +150,7 @@ class ConflationAppOrchestrator(
         ForcedTransactionsInvalidityProofService(
           ftxDao = forcedTransactionsDao,
           invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = riscvProverClientFactory.preRiscvInvalidityProverClient(),
+            invalidityProofClient = preRiscvProverClientFactory.preRiscvInvalidityProverClient(),
             stateManagerClient = zkStateClient,
             accountProofClient = zkStateClient,
             ethApiLogsSearcher = l1EthLogsSearcherForFtx,
@@ -244,8 +249,8 @@ class ConflationAppOrchestrator(
       forcedTransactionsDao = forcedTransactionsDao,
       configs = configs,
       metricsFacade = metricsFacade,
+      proverClientFactory = preRiscvProverClientFactory,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      riscvProverClientFactory = riscvProverClientFactory,
       l2EthClient = l2EthClient,
       zkStateClient = zkStateClient,
       tracesClients = tracesClients,
@@ -259,6 +264,12 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
+      val riscvProverClientFactory = ProverClientFactory(
+        vertx = vertx,
+        config = configs.riscvProversConfig!!,
+        l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+        metricsFacade = metricsFacade,
+      )
       ConflationAppV2(
         vertx = vertx,
         batchesRepository = batchesRepository,
@@ -266,6 +277,7 @@ class ConflationAppOrchestrator(
         forcedTransactionsApp = forcedTransactionsApp,
         forcedTransactionsDao = forcedTransactionsDao,
         metricsFacade = metricsFacade,
+        proverClientFactory = riscvProverClientFactory,
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,

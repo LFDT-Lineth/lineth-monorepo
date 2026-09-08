@@ -22,7 +22,7 @@ import kotlin.time.Instant
  * helper fields whose names start with an underscore (`_comment`, `_comment_*`). Field names are kept identical to
  * the JSON keys so they serialize without custom naming.
  *
- * The DTO <-> domain mapping lives in `RiscVProofDtos.kt`.
+ * The DTO <-> domain mapping lives in `RiscvProofDtos.kt`.
  */
 
 /** The 16-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
@@ -295,7 +295,7 @@ data class RollupAggregationProofResponseDto(
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
-// to/fromDomainObject helper functions between the RISC-V proof DTOs (RiscVProofDtos.kt) and their domain twins.
+// to/fromDomainObject helper functions between the RISC-V proof DTOs (RiscvProofDtos.kt) and their domain twins.
 // ---------------------------------------------------------------------------------------------------------------------
 
 internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofPublicInputs {

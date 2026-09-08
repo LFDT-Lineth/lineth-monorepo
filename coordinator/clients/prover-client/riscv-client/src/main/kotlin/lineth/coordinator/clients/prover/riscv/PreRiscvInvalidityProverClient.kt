@@ -56,7 +56,7 @@ class PreRiscvInvalidityProverClient(
   val vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
 ) :
-  GenericRiscVProverClient<
+  GenericProverClient<
     InvalidityProofRequest,
     InvalidityProofResponse,
     InvalidityProofRequestDto,

@@ -130,7 +130,7 @@ class FileBasedRollupAggregationProverClient(
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
-) : GenericRiscVProverClient<
+) : GenericProverClient<
   RollupAggregationProofRequestV1,
   RollupAggregationProofResponseV1,
   FileBasedRollupAggregationProofRequestDto,
@@ -164,7 +164,7 @@ class RestfulRollupAggregationProverClient(
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
-) : GenericRiscVProverClient<
+) : GenericProverClient<
   RollupAggregationProofRequestV1,
   RollupAggregationProofResponseV1,
   RestfulRollupAggregationProofRequestDto,

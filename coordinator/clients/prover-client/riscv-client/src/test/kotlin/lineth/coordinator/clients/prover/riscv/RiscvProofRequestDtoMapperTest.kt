@@ -25,13 +25,13 @@ import kotlin.time.Instant
  * (`programVk`, `metadata` block range, params) correctly. Covers the transport-free mappers; the file-based
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
-class RiscVProofRequestDtoMapperTest {
+class RiscvProofRequestDtoMapperTest {
 
-  private val programVk = RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
+  private val programVk = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_VK
   private val chainId = 59144L
   private val forkName = "Amsterdam"
   private val l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
-  private val coinbase = RiscVProverClientTestFixtures.COINBASE
+  private val coinbase = RiscvProverClientTestFixtures.COINBASE
 
   @Test
   fun `L2ExecutionProofRequestDtoMapper encodes every field`() {

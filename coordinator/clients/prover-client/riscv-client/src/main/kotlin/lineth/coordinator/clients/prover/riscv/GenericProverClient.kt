@@ -29,13 +29,13 @@ import java.util.function.Supplier
  * @param ResponseDto response payload returned by the transport and consumed by [responseMapper].
  * @param TProofIndex proof index uniquely identifying a request/response pair.
  */
-open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, TProofIndex>(
+open class GenericProverClient<Request, Response, RequestDto, ResponseDto, TProofIndex>(
   protected val transport: ProverProofTransport<RequestDto, ResponseDto, TProofIndex>,
   private val proofIndexProvider: (Request) -> TProofIndex,
   private val requestMapper: (Request) -> SafeFuture<RequestDto>,
   private val responseMapper: (ResponseDto) -> Response,
   private val proofTypeLabel: String,
-  private val log: Logger = LogManager.getLogger(GenericRiscVProverClient::class.java),
+  private val log: Logger = LogManager.getLogger(GenericProverClient::class.java),
 ) : ProverProofResponseChecker<Response, TProofIndex>,
   ProverProofRequestCreator<Request, TProofIndex>,
   Supplier<Number>

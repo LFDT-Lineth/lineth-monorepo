@@ -16,7 +16,7 @@ import kotlin.time.Instant
  * `ByteArray`, DTO `Long` -> domain `ULong`), and that a JSON response — as it would arrive from a file written by
  * the prover or from a REST response body — deserializes into the response DTO and maps onto the domain type.
  */
-class RiscVProofResponseDtoMapperTest {
+class RiscvProofResponseDtoMapperTest {
 
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
 
