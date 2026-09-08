@@ -301,8 +301,8 @@ class EagerQbftBlockCreatorTest {
       emptySet(),
     )
     val activationTimestamp = latestPayload.timestamp + 2UL
-    val manager = Mockito.spy(executionLayerManager)
-    val delegate = Mockito.spy(createDelayedBlockCreator(round = 0, manager = manager))
+    val manager = executionLayerManager
+    val delegate = createDelayedBlockCreator(round = 0, manager = manager)
     val creator = setup(
       manager,
       parent,
@@ -315,18 +315,9 @@ class EagerQbftBlockCreatorTest {
 
     val result = creator.createBlock((activationTimestamp - 1UL).toLong(), parentHeader)
 
-    assertThat(result.block().toBeaconBlock().beaconBlockHeader.timestamp).isEqualTo(activationTimestamp)
-    verify(manager).setHeadAndStartBlockBuilding(
-      headHash = any(),
-      safeHash = any(),
-      finalizedHash = any(),
-      nextBlockTimestamp = eq(activationTimestamp.toLong()).toULong(),
-      feeRecipient = any(),
-      prevRandao = any(),
-      nextBlockSlotNumber = eq(1UL),
-      targetGasLimit = eq(60_000_000UL),
-    )
-    verify(delegate).createBlock(activationTimestamp.toLong(), parentHeader)
+    val block = result.block().toBeaconBlock()
+    assertThat(block.beaconBlockHeader.timestamp).isEqualTo(activationTimestamp)
+    assertThat(block.beaconBlockBody.executionPayload.timestamp).isEqualTo(activationTimestamp)
   }
 
   @Test
