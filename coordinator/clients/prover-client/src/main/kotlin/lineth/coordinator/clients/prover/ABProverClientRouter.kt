@@ -101,6 +101,10 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
     return getProver(proofIndex).findProofResponse(proofIndex)
   }
 
+  override fun isProofAlreadyDone(proofIndex: TProofIndex): SafeFuture<Boolean> {
+    return getProver(proofIndex).isProofAlreadyDone(proofIndex)
+  }
+
   override fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse> {
     return getProver(proofRequest).requestProof(proofRequest)
   }
