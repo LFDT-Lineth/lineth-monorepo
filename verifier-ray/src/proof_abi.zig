@@ -245,6 +245,7 @@ comptime {
     expectField(ext.Ext, "B1", 8);
     expectField(ext.Ext, "B2", 16);
     expectSize(poseidon2.Digest, 32, 4);
+    expectSize(?poseidon2.Digest, 36, 4);
 
     // ---- round messages ------------------------------------------------------
     // A committed round is represented solely by its Merkle root; columns never
@@ -273,29 +274,42 @@ comptime {
     expectField(merkle.Branch, "siblings", 0);
     expectField(merkle.Branch, "leaf", 16);
 
+    expectSize(merkle.MerkleCap, 32, 8);
+    expectField(merkle.MerkleCap, "nodes", 0);
+    expectField(merkle.MerkleCap, "aux", 16);
+
+    expectSize(pcs.InputCap, 32, 8);
+    expectField(pcs.InputCap, "nodes", 0);
+    expectField(pcs.InputCap, "tables", 16);
+
+    expectSize(pcs.InputCapTable, 24, 8);
+    expectField(pcs.InputCapTable, "rows", 0);
+    expectField(pcs.InputCapTable, "size_log2", 16);
+
     // ---- FRI / PCS proof -----------------------------------------------------
-    expectSize(fri.Proof, 48, 8);
+    expectSize(fri.Proof, 64, 8);
     expectField(fri.Proof, "round_roots", 0);
-    expectField(fri.Proof, "final_poly", 16);
-    expectField(fri.Proof, "running_queries", 32);
+    expectField(fri.Proof, "round_caps", 16);
+    expectField(fri.Proof, "final_poly", 32);
+    expectField(fri.Proof, "running_queries", 48);
 
-    expectSize(pcs.OpeningProof, 64, 8);
+    expectSize(pcs.OpeningProof, 96, 8);
     expectField(pcs.OpeningProof, "input_queries", 0);
-    expectField(pcs.OpeningProof, "fri_proof", 16);
+    expectField(pcs.OpeningProof, "input_caps", 16);
+    expectField(pcs.OpeningProof, "fri_proof", 32);
 
-    expectSize(verifier.PcsOpening, 64, 8);
+    expectSize(verifier.PcsOpening, 96, 8);
     expectField(verifier.PcsOpening, "proof", 0);
 
     // ---- root ----------------------------------------------------------------
     // VerifyInput, NOT Proof, is what the loaders cast the input region to, so it
-    // is what must sit at image offset 0. Pinning only Proof was not enough: when
-    // the root became VerifyInput, Proof stayed 112 bytes and unchanged, so every
-    // assertion here still passed while the encoder was targeting the wrong root.
-    expectSize(verifier.VerifyInput, 112, 8);
+    // is what must sit at image offset 0. Pinning only Proof is insufficient:
+    // VerifyInput owns the public-input slice header that follows it.
+    expectSize(verifier.VerifyInput, 144, 8);
     expectField(verifier.VerifyInput, "proof", 0);
-    expectField(verifier.VerifyInput, "public_inputs", 96);
+    expectField(verifier.VerifyInput, "public_inputs", 128);
 
-    expectSize(verifier.Proof, 96, 8);
+    expectSize(verifier.Proof, 128, 8);
     expectField(verifier.Proof, "rounds", 0);
     expectField(verifier.Proof, "module_sizes", 16);
     expectField(verifier.Proof, "pcs_opening", 32);

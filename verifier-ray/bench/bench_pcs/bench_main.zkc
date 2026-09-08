@@ -1,0 +1,46 @@
+include "../../../arithmetization/src/main/riscv/interpreter.zkc"
+include "../../../arithmetization/src/main/riscv/ram/read.zkc"
+include "../../../arithmetization/src/main/riscv/ram/write.zkc"
+include "../../../arithmetization/src/main/riscv/utils/sign_extend.zkc"
+include "../../../arithmetization/src/main/riscv/utils/constants.zkc"
+include "../../../arithmetization/src/main/riscv/utils/signed_comparisons.zkc"
+include "../../../arithmetization/src/main/riscv/utils/absolute_value.zkc"
+include "../../../arithmetization/src/main/riscv/utils/bit_flip.zkc"
+include "../../../arithmetization/src/main/riscv/utils/negative.zkc"
+include "../../../arithmetization/src/main/riscv/utils/register_utils.zkc"
+include "../../../arithmetization/src/main/riscv/memory.zkc"
+
+// The repository-wide main.zkc prints one line per RISC-V instruction. That is
+// useful for debugging but makes a large proof benchmark I/O-bound. This entry
+// point keeps the same interpreter and cycle counter while leaving only guest
+// write syscalls (the phase markers) visible.
+fn main<registers, ram, keccak_state, poseidon2_state>() {
+    var instruction:Instruction
+    var clock_cycle:u32 = 0
+    var entry_point:Address
+    var blobs_count:u64
+    entry_point, blobs_count = entry_point_and_blobs_count[0]
+    var pc:Address = entry_point
+    var internal_offset:Length = 0
+    for i:u64 = 0; i<blobs_count; i = i + 1 {
+        var blob_offset:Address
+        var blob_size:Length
+        blob_offset, blob_size = blobs_offset_and_size[i]
+        for j:Address = 0; j<blob_size; j = j + 1 {
+            write_8(blob_offset + j, blobs_data[internal_offset + j])
+        }
+        internal_offset = internal_offset + blob_size
+    }
+
+    var output_write_address:OutputAddress = 0
+    while pc != MAX_UINT_64 {
+        instruction = read_32(pc) as Instruction
+        clock_cycle = clock_cycle + 1
+        // Only marker/exit syscalls need a visible cycle count. Printing here
+        // avoids the repository interpreter's per-instruction trace.
+        if instruction == 0x00000073 {
+            printf "clock cycle: %d\n", clock_cycle
+        }
+        pc, output_write_address = interpreter(instruction, pc, output_write_address)
+    }
+}
