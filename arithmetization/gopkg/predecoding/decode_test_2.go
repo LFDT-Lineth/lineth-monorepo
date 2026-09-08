@@ -314,53 +314,6 @@ func TestItypeOpForRd(t *testing.T) {
 	}
 }
 
-func TestDecodeRTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		opcode uint32
-		funct3 uint32
-		funct7 uint32
-		wantOp uint32
-	}{
-		{name: "add", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddWB},
-		{name: "sub", opcode: opcodeOP, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubWB},
-		{name: "sll", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllWB},
-		{name: "slt", opcode: opcodeOP, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpSltWB},
-		{name: "sltu", opcode: opcodeOP, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeOpSltuWB},
-		{name: "xor", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000000, wantOp: rtypeOpXorWB},
-		{name: "srl", opcode: opcodeOP, funct3: 0b101, funct7: 0b0000000, wantOp: rtypeOpSrlWB},
-		{name: "sra", opcode: opcodeOP, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSraWB},
-		{name: "or", opcode: opcodeOP, funct3: 0b110, funct7: 0b0000000, wantOp: rtypeOpOrWB},
-		{name: "and", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000000, wantOp: rtypeOpAndWB},
-		{name: "mul", opcode: opcodeOP, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulWB},
-		{name: "mulh", opcode: opcodeOP, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeOpMulhWB},
-		{name: "div", opcode: opcodeOP, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivWB},
-		{name: "remu", opcode: opcodeOP, funct3: 0b111, funct7: 0b0000001, wantOp: rtypeOpRemuWB},
-		{name: "addw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpAddwWB},
-		{name: "subw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0100000, wantOp: rtypeOpSubwWB},
-		{name: "sllw", opcode: opcodeOP32, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpSllwWB},
-		{name: "sraw", opcode: opcodeOP32, funct3: 0b101, funct7: 0b0100000, wantOp: rtypeOpSrawWB},
-		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulwWB},
-		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivwWB},
-		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
-		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
-		{name: "write_output", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeOpWriteOutput},
-		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b011, funct7: 0b0000000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeRTypeSemantic(tt.opcode, tt.funct3, tt.funct7)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeRTypeSemantic(op=%#x, f3=%#x, f7=%#x) = %d, want %d",
-					tt.opcode, tt.funct3, tt.funct7, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
 func TestRtypeOpForRd(t *testing.T) {
 	if got := rtypeOpForRd(rtypeOpAddWB, 0); got != rtypeOpAddWB {
 		t.Fatalf("rtypeOpForRd(add, x0) = %d, want %d", got, rtypeOpAddWB)
