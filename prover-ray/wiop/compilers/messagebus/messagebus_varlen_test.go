@@ -6,7 +6,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,37 +22,37 @@ import (
 // receiver's selector leaves exactly four active rows that reorder the sender's
 // multiset; the masked rows contribute the neutral grand-product factor 1.
 func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
-	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
-		t.Helper()
-		modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
-		colS := modS.NewColumn(sys.Context.Childf("S"), r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
-		selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
+	sys := wiop.NewSystemf("mb-varlen-perm-balanced")
+	r0 := sys.NewRound()
 
-		sys.NewMessageBusSend(
-			sys.Context.Childf("send-S"), "shard", "vl",
-			wiop.NewTable(colS.View()),
-		)
-		sys.NewMessageBusReceive(
-			sys.Context.Childf("recv-R"), "shard", "vl",
-			wiop.NewFilteredTable(selR.View(), colR.View()),
-		)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
+	modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+	colR := modR.NewColumn(sys.Context.Childf("R"), r0)
+	selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
 
-		alpha, beta := busCoins(sys)
-		messagebus.Compile(sys, alpha, beta)
-		grandproduct.Compile(sys)
+	sys.NewMessageBusSend(
+		sys.Context.Childf("send-S"), "shard", "vl",
+		wiop.NewTable(colS.View()),
+	)
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-R"), "shard", "vl",
+		wiop.NewFilteredTable(selR.View(), colR.View()),
+	)
 
-		rt := wiop.NewRuntime(sys)
+	alpha, beta := declareBusCoins(sys)
+	messagebus.Compile(sys, alpha, beta)
+	grandproduct.Compile(sys)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colS, makeVec(10, 20, 30, 40))
 		// Selected R rows = {40,10,30,20}, a reordering of S; the rest are junk.
 		rt.AssignColumn(colR, makeVec(40, 10, 77, 30, 66, 20, 55, 44))
 		rt.AssignColumn(selR, makeVec(1, 1, 0, 1, 0, 1, 0, 0))
-
-		drive(rt)
-		require.NoError(t, checkAllVerifierActions(rt),
-			"a balanced permutation bus with different-length participants must be accepted")
 	})
+
+	require.NoError(t, sys.Verify(proof, pub),
+		"a balanced permutation bus with different-length participants must be accepted")
 }
 
 // TestCompile_VariableLength_Permutation_Unbalanced: same different-length
@@ -61,37 +60,37 @@ func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
 // multiset, so the product accumulator is not one and the in-shard check
 // rejects.
 func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
-	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
-		t.Helper()
-		modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
-		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
-		colS := modS.NewColumn(sys.Context.Childf("S"), r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
-		selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
+	sys := wiop.NewSystemf("mb-varlen-perm-unbalanced")
+	r0 := sys.NewRound()
 
-		sys.NewMessageBusSend(
-			sys.Context.Childf("send-S"), "shard", "vl",
-			wiop.NewTable(colS.View()),
-		)
-		sys.NewMessageBusReceive(
-			sys.Context.Childf("recv-R"), "shard", "vl",
-			wiop.NewFilteredTable(selR.View(), colR.View()),
-		)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
+	modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+	colR := modR.NewColumn(sys.Context.Childf("R"), r0)
+	selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
 
-		alpha, beta := busCoins(sys)
-		messagebus.Compile(sys, alpha, beta)
-		grandproduct.Compile(sys)
+	sys.NewMessageBusSend(
+		sys.Context.Childf("send-S"), "shard", "vl",
+		wiop.NewTable(colS.View()),
+	)
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-R"), "shard", "vl",
+		wiop.NewFilteredTable(selR.View(), colR.View()),
+	)
 
-		rt := wiop.NewRuntime(sys)
+	alpha, beta := declareBusCoins(sys)
+	messagebus.Compile(sys, alpha, beta)
+	grandproduct.Compile(sys)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colS, makeVec(10, 20, 30, 40))
 		// Selected R rows = {40,10,30,88}: 88 does not appear in S.
 		rt.AssignColumn(colR, makeVec(40, 10, 77, 30, 66, 88, 55, 44))
 		rt.AssignColumn(selR, makeVec(1, 1, 0, 1, 0, 1, 0, 0))
-
-		drive(rt)
-		assert.Error(t, checkAllVerifierActions(rt),
-			"a permutation bus whose selected receiver multiset differs from the sender must be rejected")
 	})
+
+	require.Error(t, sys.Verify(proof, pub),
+		"a permutation bus whose selected receiver multiset differs from the sender must be rejected")
 }
 
 // TestCompile_MixedWidth_LeadingOneDoesNotAlias directly stresses the "leading
@@ -101,36 +100,36 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 // distinguishes them — so the product is not one and the bus is rejected,
 // confirming a data value of 1 cannot masquerade as a lower-width sentinel.
 func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
-	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
-		t.Helper()
-		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
-		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
-		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), r0)
-		loR := modR2.NewColumn(sys.Context.Childf("loR"), r0)
+	sys := wiop.NewSystemf("mb-mixed-width-leading-one")
+	r0 := sys.NewRound()
 
-		sys.NewMessageBusSend(
-			sys.Context.Childf("send-w1"), "shard", "one",
-			wiop.NewTable(colS1.View()),
-		)
-		// Width-2 receive with the leading (sentinel-adjacent) column pinned to 1,
-		// trying to consume the width-1 send as (1, v).
-		sys.NewMessageBusReceive(
-			sys.Context.Childf("recv-w2"), "shard", "one",
-			wiop.NewTable(hiR.View(), loR.View()),
-		)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+	modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+	hiR := modR2.NewColumn(sys.Context.Childf("hiR"), r0)
+	loR := modR2.NewColumn(sys.Context.Childf("loR"), r0)
 
-		alpha, beta := busCoins(sys)
-		messagebus.Compile(sys, alpha, beta)
-		grandproduct.Compile(sys)
+	sys.NewMessageBusSend(
+		sys.Context.Childf("send-w1"), "shard", "one",
+		wiop.NewTable(colS1.View()),
+	)
+	// Width-2 receive with the leading (sentinel-adjacent) column pinned to 1,
+	// trying to consume the width-1 send as (1, v).
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-w2"), "shard", "one",
+		wiop.NewTable(hiR.View(), loR.View()),
+	)
 
-		rt := wiop.NewRuntime(sys)
+	alpha, beta := declareBusCoins(sys)
+	messagebus.Compile(sys, alpha, beta)
+	grandproduct.Compile(sys)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colS1, makeVec(5, 6))
 		rt.AssignColumn(hiR, makeVec(1, 1)) // leading coordinate = 1
 		rt.AssignColumn(loR, makeVec(5, 6))
-
-		drive(rt)
-		assert.Error(t, checkAllVerifierActions(rt),
-			"a data value of 1 in the sentinel-adjacent column must not alias a lower-width sentinel")
 	})
+
+	require.Error(t, sys.Verify(proof, pub),
+		"a data value of 1 in the sentinel-adjacent column must not alias a lower-width sentinel")
 }

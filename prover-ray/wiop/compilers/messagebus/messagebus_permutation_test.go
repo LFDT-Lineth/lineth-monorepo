@@ -25,7 +25,7 @@ import (
 // into one tuple does depend on it -- with α = 0 a tuple collapses onto its
 // first column -- and must use [compilePermutationBusWithPCS] instead.
 func compilePermutationBus(sys *wiop.System) {
-	alpha, beta := busCoins(sys)
+	alpha, beta := declareBusCoins(sys)
 	messagebus.Compile(sys, alpha, beta)
 	grandproduct.Compile(sys)
 }
@@ -50,56 +50,54 @@ func compilePermutationBusWithPCS(sys *wiop.System) {
 // permutation Receive whose row multisets coincide (B is a reordering of A).
 // The shard's product accumulator is one and the verifier accepts.
 func TestCompile_Permutation_Balanced(t *testing.T) {
-	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
-		t.Helper()
-		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
-		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	sys := wiop.NewSystemf("mb-perm-balanced")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
-		sys.NewMessageBusSend(
-			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
-		sys.NewMessageBusReceive(
-			sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
+	sys.NewMessageBusSend(
+		sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
 
-		compilePermutationBus(sys)
+	compilePermutationBus(sys)
 
-		rt := wiop.NewRuntime(sys)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(40, 10, 30, 20)) // a reordering of A
-
-		drive(rt)
-		require.NoError(t, checkAllVerifierActions(rt),
-			"a balanced permutation must be accepted")
 	})
+
+	require.NoError(t, sys.Verify(proof, pub),
+		"a balanced permutation must be accepted")
 }
 
 // TestCompile_Permutation_Unbalanced: the receive multiset differs from the
 // send multiset on one row, so the product accumulator is not one and the
 // in-shard check rejects.
 func TestCompile_Permutation_Unbalanced(t *testing.T) {
-	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
-		t.Helper()
-		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
-		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	sys := wiop.NewSystemf("mb-perm-unbalanced")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
-		sys.NewMessageBusSend(
-			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
-		sys.NewMessageBusReceive(
-			sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
+	sys.NewMessageBusSend(
+		sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
 
-		compilePermutationBus(sys)
+	compilePermutationBus(sys)
 
-		rt := wiop.NewRuntime(sys)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(40, 10, 30, 99)) // 20 replaced by 99
-
-		drive(rt)
-		assert.Error(t, checkAllVerifierActions(rt),
-			"a non-permutation must be rejected")
 	})
+
+	require.Error(t, sys.Verify(proof, pub),
+		"a non-permutation must be rejected")
 }
 
 // TestCompile_Permutation_WithSelectorBalanced: selectors restrict
@@ -124,16 +122,16 @@ func TestCompile_Permutation_WithSelectorBalanced(t *testing.T) {
 
 	compilePermutationBus(sys)
 
-	rt := wiop.NewRuntime(sys)
-	// Selected A rows = {10, 20}; unselected rows carry junk that must not matter.
-	rt.AssignColumn(colA, makeVec(10, 20, 77, 88))
-	rt.AssignColumn(selA, makeVec(1, 1, 0, 0))
-	// Selected B rows = {20, 10}; unselected rows differ from A's.
-	rt.AssignColumn(colB, makeVec(66, 20, 10, 55))
-	rt.AssignColumn(selB, makeVec(0, 1, 1, 0))
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		// Selected A rows = {10, 20}; unselected rows carry junk that must not matter.
+		rt.AssignColumn(colA, makeVec(10, 20, 77, 88))
+		rt.AssignColumn(selA, makeVec(1, 1, 0, 0))
+		// Selected B rows = {20, 10}; unselected rows differ from A's.
+		rt.AssignColumn(colB, makeVec(66, 20, 10, 55))
+		rt.AssignColumn(selB, makeVec(0, 1, 1, 0))
+	})
 
-	drive(rt)
-	require.NoError(t, checkAllVerifierActions(rt),
+	require.NoError(t, sys.Verify(proof, pub),
 		"a filtered permutation with matching selected multisets must be accepted")
 }
 
@@ -159,14 +157,14 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 
 	compilePermutationBus(sys)
 
-	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
-	rt.AssignColumn(selA, makeVec(1, 1, 0, 0)) // selected {10, 20}
-	rt.AssignColumn(colB, makeVec(10, 30, 20, 40))
-	rt.AssignColumn(selB, makeVec(1, 1, 0, 0)) // selected {10, 30} ≠ {10, 20}
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
+		rt.AssignColumn(selA, makeVec(1, 1, 0, 0)) // selected {10, 20}
+		rt.AssignColumn(colB, makeVec(10, 30, 20, 40))
+		rt.AssignColumn(selB, makeVec(1, 1, 0, 0)) // selected {10, 30} ≠ {10, 20}
+	})
 
-	drive(rt)
-	assert.Error(t, checkAllVerifierActions(rt),
+	require.Error(t, sys.Verify(proof, pub),
 		"a filtered permutation with mismatched selected multisets must be rejected")
 }
 

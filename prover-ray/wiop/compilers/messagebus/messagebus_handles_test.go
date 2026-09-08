@@ -37,7 +37,7 @@ func TestCompileIsSingleInvocation(t *testing.T) {
 	// A second call carrying new entries is rejected.
 	sys, mod, r0 := newSys("second-batch")
 	newBusPair(sys, mod, r0, "alpha")
-	alpha, beta := busCoins(sys)
+	alpha, beta := declareBusCoins(sys)
 	messagebus.Compile(sys, alpha, beta)
 	require.Len(t, sys.PublicInputs, 1)
 
@@ -54,7 +54,7 @@ func TestCompileIsSingleInvocation(t *testing.T) {
 	sysOK, modOK, r0OK := newSys("one-batch")
 	newBusPair(sysOK, modOK, r0OK, "alpha")
 	newBusPair(sysOK, modOK, r0OK, "beta")
-	alphaOK, betaOK := busCoins(sysOK)
+	alphaOK, betaOK := declareBusCoins(sysOK)
 	messagebus.Compile(sysOK, alphaOK, betaOK)
 	require.Equal(t, []string{"alpha", "beta"}, sysOK.MessageBusHandles())
 	require.Len(t, sysOK.PublicInputs, 2)
@@ -119,7 +119,7 @@ func TestMessageBusHandles(t *testing.T) {
 	require.Less(t, len(handles), len(sys.MessageBuses),
 		"this fixture must actually distinguish the two counts")
 
-	alpha, beta := busCoins(sys)
+	alpha, beta := declareBusCoins(sys)
 	messagebus.Compile(sys, alpha, beta)
 
 	// One public input per bus, not per participation.

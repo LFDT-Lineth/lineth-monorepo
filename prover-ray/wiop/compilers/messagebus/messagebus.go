@@ -95,6 +95,10 @@ const PublicInputTag wiop.PublicInputTag = "MessageBus"
 // mixing shards in one call is a misuse — or if it is called a second time with
 // new entries.
 func Compile(sys *wiop.System, alpha, beta *wiop.CoinField) {
+	if alpha == nil || beta == nil {
+		panic("wiop/compilers/messagebus: Compile requires non-nil α and β coins")
+	}
+
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
 	// handle. Sort the handles for deterministic round/coin/cell ordering
 	// across runs.
@@ -155,26 +159,14 @@ func Compile(sys *wiop.System, alpha, beta *wiop.CoinField) {
 	sort.Strings(handles)
 
 	compCtx := sys.Context.Childf("message-bus")
-
-	// Allocate the shared (α, β) coins on a fresh — or pre-existing — coin
-	// round immediately after the latest participant round. A sharded
-	// protocol typically pre-allocates this round so it can register a
-	// PreSamplingHook that seeds FS with cross-shard shared randomness;
-	// ensureRoundAfter reuses any tail round already at this position
-	// rather than appending a duplicate.
-
-	// Pick the slot directly after the participants — allocate a fresh round if
-	// empty, reuse any round already sitting there. The reuse path is what lands
-	// α/β on the *same* round a sharded caller pre-allocated for a
-	// PreSamplingHook, so the hook's SetFSState fires immediately before this
-	// round's coin sampling. Going through ensureCoinRound rather than
-	// open-coding the lookup is what guarantees the caller's pre-allocation and
-	// this one agree: both are the same call.
-	coinRound := ensureCoinRound(sys)
 	// The result round (where GrandProduct cells and the verifier action live)
-	// sits strictly after the coin round so the GrandProduct prover action sees
-	// α and β already sampled.
-	resultRound := ensureRoundAfter(sys, coinRound)
+	// sits strictly after every round the reduction reads: the coins AND all
+	// participants.
+	resultRound := ensureRoundAfter(sys, latestRound(
+		alpha.Round(),
+		beta.Round(),
+		latestUnreducedParticipantRound(sys),
+	))
 
 	// No cross-participant width check: foldDenominator binds each row's width
 	// into its fold via an α^w length sentinel, so participants of one handle
