@@ -16,7 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
@@ -53,7 +53,7 @@ class ConflationAppOrchestrator(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val proverClientFactory: ProverClientFactory,
+  private val riscvProverClientFactory: RiscvProverClientFactory,
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
@@ -145,7 +145,7 @@ class ConflationAppOrchestrator(
         ForcedTransactionsInvalidityProofService(
           ftxDao = forcedTransactionsDao,
           invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
+            invalidityProofClient = riscvProverClientFactory.preRiscvInvalidityProverClient(),
             stateManagerClient = zkStateClient,
             accountProofClient = zkStateClient,
             ethApiLogsSearcher = l1EthLogsSearcherForFtx,
@@ -245,7 +245,7 @@ class ConflationAppOrchestrator(
       configs = configs,
       metricsFacade = metricsFacade,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      proverClientFactory = proverClientFactory,
+      riscvProverClientFactory = riscvProverClientFactory,
       l2EthClient = l2EthClient,
       zkStateClient = zkStateClient,
       tracesClients = tracesClients,

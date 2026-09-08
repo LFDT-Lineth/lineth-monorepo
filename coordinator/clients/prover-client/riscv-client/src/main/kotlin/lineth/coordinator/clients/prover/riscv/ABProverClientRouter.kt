@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.InvalidityProofRequest

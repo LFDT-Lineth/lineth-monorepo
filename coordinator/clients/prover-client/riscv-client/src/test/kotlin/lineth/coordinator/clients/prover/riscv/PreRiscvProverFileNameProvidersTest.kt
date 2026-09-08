@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import linea.domain.AggregationProofIndex
 import linea.domain.CompressionProofIndex
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant
 
-class ProverFileNameProvidersTest {
+class PreRiscvProverFileNameProvidersTest {
 
   @Test
   fun test_getExecutionProof_fileName() {

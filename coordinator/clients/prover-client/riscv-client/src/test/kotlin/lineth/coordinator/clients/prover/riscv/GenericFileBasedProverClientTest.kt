@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension

@@ -7,13 +7,10 @@ import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.BatchExecutionProofResponse
 import linea.clients.ExecutionProverClientV2
 import linea.clients.ProverFileNameProvider
-import linea.clients.ProverProofTransport
 import linea.domain.EthLog
 import linea.domain.ExecutionProofIndex
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexString
-import lineth.coordinator.clients.prover.ExecutionProofFileNameProvider
-import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.encoding.BlockEncoder
 import lineth.encoding.BlockRLPEncoder
@@ -89,9 +86,6 @@ internal class ExecutionProofRequestDtoMapper(
   }
 }
 
-typealias PreRiscvExecutionProverTransport =
-  ProverProofTransport<BatchExecutionProofRequestDto, Any, ExecutionProofIndex>
-
 /**
  * Implementation of interface with the Execution Prover through Files.
  *
@@ -122,11 +116,7 @@ class PreRiscvExecutionProverClient(
     Any,
     ExecutionProofIndex,
     >(
-    transport = FileBasedProverProofTransport<
-      BatchExecutionProofRequestDto,
-      Any,
-      ExecutionProofIndex,
-      >(
+    transport = FileBasedProverProofTransport(
       config = config,
       vertx = vertx,
       fileWriter = FileWriter(vertx, jsonObjectMapper),
@@ -148,46 +138,7 @@ class PreRiscvExecutionProverClient(
     proofTypeLabel = "batch",
     log = log,
   ),
-  // GenericFileBasedProverClient<
-  //        BatchExecutionProofRequestV1,
-  //        BatchExecutionProofResponse,
-  //        BatchExecutionProofRequestDto,
-  //        Any,
-  //        ExecutionProofIndex,
-  //        >(
-  //  config = config,
-  //  vertx = vertx,
-  //  fileWriter = FileWriter(vertx, jsonObjectMapper),
-  //  // This won't be used in practice because we don't parse the response
-  //  fileReader = FileReader(vertx, jsonObjectMapper, Any::class.java),
-  //  requestFileNameProvider = executionProofRequestFileNameProvider,
-  //  responseFileNameProvider = executionProofResponseFileNameProvider,
-  //  requestMapper = ExecutionProofRequestDtoMapper(),
-  //  proofIndexProvider = { request ->
-  //    ExecutionProofIndex(
-  //      startBlockNumber = request.startBlockNumber,
-  //      endBlockNumber = request.endBlockNumber,
-  //      startBlockTimestamp = request.startBlockTimestamp,
-  //    )
-  //  },
-  //  responseMapper = {
-  //    throw UnsupportedOperationException("Batch execution proof response shall not be parsed!")
-  //  },
-  //  proofTypeLabel = "batch",
-  //  log = log,
-  // ),
   ExecutionProverClientV2 {
-
-  // override fun parseResponse(responseDto: ResponseDto): BatchExecutionProofResponse {
-  //  return BatchExecutionProofResponse(
-  //      startBlockNumber = proofIndex.startBlockNumber,
-  //      endBlockNumber = proofIndex.endBlockNumber,
-  //    )
-  // }
-
-  override fun isProofAlreadyDone(proofIndex: ExecutionProofIndex): SafeFuture<Boolean> {
-    return transport.isResponseAlreadyExisted(proofIndex)
-  }
 
   companion object {
     val LOG: Logger = LogManager.getLogger(PreRiscvExecutionProverClient::class.java)

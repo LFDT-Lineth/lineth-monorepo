@@ -49,7 +49,6 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.LatestL1FinalizedBlockProviderSync
-import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -86,11 +85,6 @@ class ConflationAppV1(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val proverClientFactory: ProverClientFactory = ProverClientFactory(
-    vertx = vertx,
-    config = configs.proversConfig,
-    metricsFacade = metricsFacade,
-  ),
   private val riscvProverClientFactory: RiscvProverClientFactory = RiscvProverClientFactory(
     vertx = vertx,
     config = configs.proversConfig,
@@ -256,7 +250,7 @@ class ConflationAppV1(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(),
+      blobCompressionProverClient = riscvProverClientFactory.preRiscvBlobCompressionProverClient(),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
           version = configs.conflation.blobCompression.shnarfCalculatorVersion,
@@ -347,7 +341,7 @@ class ConflationAppV1(
           ftxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
         ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
-        proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
+        proofAggregationClient = riscvProverClientFactory.preRiscvProofAggregationProverClient(),
         metricsFacade = metricsFacade,
       )
   }

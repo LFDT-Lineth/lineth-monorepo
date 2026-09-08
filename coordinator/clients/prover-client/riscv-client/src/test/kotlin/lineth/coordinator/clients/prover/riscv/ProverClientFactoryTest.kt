@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -82,7 +82,7 @@ class ProverClientFactoryTest {
 
   private lateinit var meterRegistry: MeterRegistry
   private lateinit var metricsFacade: MetricsFacade
-  private lateinit var proverClientFactory: ProverClientFactory
+  private lateinit var proverClientFactory: RiscvProverClientFactory
   private lateinit var vertx: Vertx
   private lateinit var testTmpDir: Path
 
@@ -148,12 +148,12 @@ class ProverClientFactoryTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      ProverClientFactory(vertx, buildProversConfig(testTmpDir, switchBlockNumber = 200), metricsFacade)
+      RiscvProverClientFactory(vertx, buildProversConfig(testTmpDir, switchBlockNumber = 200), "", metricsFacade)
   }
 
   @Test
   fun `should create a prover with routing when switch is defined`() {
-    val proverClient = proverClientFactory.proofAggregationProverClient()
+    val proverClient = proverClientFactory.preRiscvProofAggregationProverClient()
     assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
 
     // swallow timeout exception because responses are not available
@@ -176,13 +176,14 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      RiscvProverClientFactory(
         vertx,
         buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        "",
         metricsFacade,
       )
 
-    assertThatThrownBy { factory.proofAggregationProverClient() }
+    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
   }
@@ -190,12 +191,13 @@ class ProverClientFactoryTest {
   @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
-      ProverClientFactory(
+      RiscvProverClientFactory(
         vertx,
         buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        "",
         metricsFacade,
       )
-    val proverClient = factory.proofAggregationProverClient()
+    val proverClient = factory.preRiscvProofAggregationProverClient()
     assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
 
     kotlin.runCatching { proverClient.requestProof(request1).get() }
@@ -217,25 +219,26 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      RiscvProverClientFactory(
         vertx,
         buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
         ),
+        "",
         metricsFacade,
       )
 
-    assertThatThrownBy { factory.proofAggregationProverClient() }
+    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
   }
 
   @Test
   fun `should create metrics gauge and aggregate them`() {
-    val proverClientI1 = proverClientFactory.proofAggregationProverClient()
-    val proverClientI2 = proverClientFactory.proofAggregationProverClient()
+    val proverClientI1 = proverClientFactory.preRiscvProofAggregationProverClient()
+    val proverClientI2 = proverClientFactory.preRiscvProofAggregationProverClient()
 
     kotlin.runCatching { proverClientI1.requestProof(request1).get() }
     kotlin.runCatching { proverClientI2.requestProof(request2).get() }

@@ -30,6 +30,9 @@ class FakeL2ExecutionProofTransport(
     requestDto: L2ExecutionProofRequestDto,
   ): SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
 
+  override fun isResponseAlreadyExisted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =
+    findResponse(proofIndex).thenApply { it != null }
+
   override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<L2ExecutionProofResponseDto?> =
     SafeFuture.completedFuture(response(proofIndex))
 
@@ -75,6 +78,9 @@ class FakeRollupProofTransport(
     proofIndex: BlockIntervalProofIndex,
     requestDto: FileBasedRollupProofRequestDto,
   ): SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
+
+  override fun isResponseAlreadyExisted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> =
+    findResponse(proofIndex).thenApply { it != null }
 
   override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<RollupProofResponseDto?> =
     SafeFuture.completedFuture(response(proofIndex))

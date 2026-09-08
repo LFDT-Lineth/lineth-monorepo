@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
@@ -15,6 +15,7 @@ import linea.domain.ProofsToAggregate
 import linea.kotlin.encodeHex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
+import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
@@ -108,7 +109,7 @@ internal class AggregationRequestDtoMapper(
  *
  * So, this class will need to watch the file system and wait for the output proof to be generated
  */
-class FileBasedProofAggregationClientV2(
+class PreRiscvProofAggregationClient(
   vertx: Vertx,
   val config: FileBasedProverConfig,
   val invalidityProverConfig: FileBasedProverConfig? = null,
@@ -120,23 +121,25 @@ class FileBasedProofAggregationClientV2(
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   log: Logger,
 ) :
-  GenericFileBasedProverClient<
+  GenericRiscVProverClient<
     ProofsToAggregate,
     ProofToFinalize,
     AggregationProofRequestDto,
     ProofToFinalizeJsonResponse,
     AggregationProofIndex,
     >(
-    config = config,
-    vertx = vertx,
-    fileWriter = FileWriter(vertx, jsonObjectMapper),
-    fileReader = FileReader(
-      vertx,
-      jsonObjectMapper,
-      ProofToFinalizeJsonResponse::class.java,
+    transport = FileBasedProverProofTransport(
+      config = config,
+      vertx = vertx,
+      fileWriter = FileWriter(vertx, jsonObjectMapper),
+      fileReader = FileReader(
+        vertx,
+        jsonObjectMapper,
+        ProofToFinalizeJsonResponse::class.java,
+      ),
+      requestFileNameProvider = AggregationProofFileNameProvider,
+      responseFileNameProvider = AggregationProofFileNameProvider,
     ),
-    requestFileNameProvider = AggregationProofFileNameProvider,
-    responseFileNameProvider = AggregationProofFileNameProvider,
     proofIndexProvider = createProofIndexProviderFn(hashFunction),
     requestMapper = AggregationRequestDtoMapper(
       executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
@@ -148,6 +151,11 @@ class FileBasedProofAggregationClientV2(
     log = log,
   ),
   ProofAggregationProverClientV2 {
+
+  private val fileMonitor: FileMonitor = FileMonitor(
+    vertx,
+    FileMonitor.Config(config.pollingInterval, config.pollingTimeout),
+  )
 
   override fun createProofRequest(proofRequest: ProofsToAggregate): SafeFuture<AggregationProofIndex> {
     return awaitInvalidityProofResponses(proofRequest).thenCompose {
@@ -175,7 +183,7 @@ class FileBasedProofAggregationClientV2(
   }
 
   companion object {
-    val LOG: Logger = LogManager.getLogger(FileBasedProofAggregationClientV2::class.java)
+    val LOG: Logger = LogManager.getLogger(PreRiscvProofAggregationClient::class.java)
 
     fun createProofIndexProviderFn(
       hashFunction: HashFunction,

@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -14,7 +14,6 @@ import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.nio.file.Path
 
 data class InvalidityProofRequestDto(
   val ftxRLP: String,
@@ -52,29 +51,31 @@ data class InvalidityProofRequestDto(
   }
 }
 
-class FileBasedInvalidityProverClient(
+class PreRiscvInvalidityProverClient(
   val config: FileBasedProverConfig,
   val vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
 ) :
-  GenericFileBasedProverClient<
+  GenericRiscVProverClient<
     InvalidityProofRequest,
     InvalidityProofResponse,
     InvalidityProofRequestDto,
     InvalidityProofResponse,
     InvalidityProofIndex,
     >(
-    config = config,
-    vertx = vertx,
-    fileWriter = FileWriter(vertx, jsonObjectMapper),
-    fileReader = FileReader(
-      vertx,
-      jsonObjectMapper,
-      InvalidityProofResponse::class.java,
+    transport = FileBasedProverProofTransport(
+      config = config,
+      vertx = vertx,
+      fileWriter = FileWriter(vertx, jsonObjectMapper),
+      fileReader = FileReader(
+        vertx,
+        jsonObjectMapper,
+        InvalidityProofResponse::class.java,
+      ),
+      requestFileNameProvider = InvalidityProofFileNameProvider,
+      responseFileNameProvider = InvalidityProofFileNameProvider,
     ),
-    requestFileNameProvider = InvalidityProofFileNameProvider,
-    responseFileNameProvider = InvalidityProofFileNameProvider,
-    proofIndexProvider = FileBasedInvalidityProverClient::invalidityProofIndex,
+    proofIndexProvider = PreRiscvInvalidityProverClient::invalidityProofIndex,
     requestMapper = { invalidityProofRequest ->
       SafeFuture.completedFuture(
         InvalidityProofRequestDto.fromDomainObject(invalidityProofRequest),
@@ -84,15 +85,8 @@ class FileBasedInvalidityProverClient(
     proofTypeLabel = "invalidity",
   ),
   InvalidityProverClientV1 {
-  override fun parseResponse(
-    responseFilePath: Path,
-    proofIndex: InvalidityProofIndex,
-  ): SafeFuture<InvalidityProofResponse> {
-    return SafeFuture.completedFuture(
-      InvalidityProofResponse(
-        ftxNumber = proofIndex.ftxNumber,
-      ),
-    )
+  override fun parseResponse(responseDto: InvalidityProofResponse): InvalidityProofResponse {
+    return responseDto
   }
 
   companion object {

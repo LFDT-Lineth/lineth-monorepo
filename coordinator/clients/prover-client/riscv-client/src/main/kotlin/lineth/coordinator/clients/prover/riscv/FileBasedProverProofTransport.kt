@@ -8,8 +8,6 @@ import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.domain.ProofIndex
 import linea.error.ErrorResponse
-import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.GenericFileBasedProverClient
 import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
@@ -18,6 +16,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
+import kotlin.io.path.notExists
 
 /**
  * File-based [ProverProofTransport]: the request DTO is written as a JSON file into [FileBasedProverConfig.requestsDirectory]
@@ -38,9 +37,26 @@ class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex :
   private val log: Logger = LogManager.getLogger(FileBasedProverProofTransport::class.java),
 ) : ProverProofTransport<RequestDto, ResponseDto, TProofIndex> {
 
+  fun createDirectoryIfNotExists(
+    directory: Path,
+  ) {
+    try {
+      if (directory.notExists()) {
+        val dirCreated = directory.toFile().mkdirs()
+        if (!dirCreated) {
+          log.error("Failed to create directory {}!", directory)
+          throw RuntimeException("Failed to create directory $directory")
+        }
+      }
+    } catch (e: Exception) {
+      log.error("Failed to create directory {}!", directory, e)
+      throw e
+    }
+  }
+
   init {
-    GenericFileBasedProverClient.createDirectoryIfNotExists(config.requestsDirectory, log)
-    GenericFileBasedProverClient.createDirectoryIfNotExists(config.responsesDirectory, log)
+    createDirectoryIfNotExists(config.requestsDirectory)
+    createDirectoryIfNotExists(config.responsesDirectory)
   }
 
   private fun responseFilePath(proofIndex: TProofIndex): Path =

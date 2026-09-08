@@ -1,7 +1,7 @@
 package lineth.coordinator.config.v2
 
 import linea.web3j.SmartContractErrors
-import lineth.coordinator.clients.prover.ProversConfig
+import lineth.coordinator.clients.prover.riscv.ProversConfig
 
 data class CoordinatorConfig(
   val protocol: ProtocolConfig,

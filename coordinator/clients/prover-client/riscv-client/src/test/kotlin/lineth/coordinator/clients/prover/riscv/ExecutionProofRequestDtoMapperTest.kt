@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import com.fasterxml.jackson.databind.node.ArrayNode
 import linea.clients.BatchExecutionProofRequestV1

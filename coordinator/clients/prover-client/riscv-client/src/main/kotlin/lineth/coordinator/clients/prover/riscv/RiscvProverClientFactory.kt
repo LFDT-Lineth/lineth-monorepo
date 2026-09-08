@@ -1,18 +1,19 @@
 package lineth.coordinator.clients.prover.riscv
 
 import io.vertx.core.Vertx
+import linea.clients.BlobCompressionProverClientV2
 import linea.clients.ExecutionProverClientV2
+import linea.clients.InvalidityProverClientV1
 import linea.clients.L2ExecutionProverClientV1
+import linea.clients.ProofAggregationProverClientV2
 import linea.domain.BlockIntervalProofIndex
-import lineth.coordinator.clients.prover.ABProverClientRouter
-import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.ProversConfig
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import lineth.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
+import org.apache.logging.log4j.Logger
 
 class RiscvProverClientFactory(
   private val vertx: Vertx,
@@ -21,6 +22,9 @@ class RiscvProverClientFactory(
   metricsFacade: MetricsFacade,
 ) {
   private val executionWaitingResponsesMetric = GaugeAggregator()
+  private val blobWaitingResponsesMetric = GaugeAggregator()
+  private val aggregationWaitingResponsesMetric = GaugeAggregator()
+  private val invalidityWaitingResponsesMetric = GaugeAggregator()
 
   init {
     metricsFacade.createGauge(
@@ -28,6 +32,24 @@ class RiscvProverClientFactory(
       name = "prover.waiting",
       description = "Number of RISC-V execution proof waiting responses",
       measurementSupplier = executionWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BLOB,
+      name = "prover.waiting",
+      description = "Number of blob compression proof waiting responses",
+      measurementSupplier = blobWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.AGGREGATION,
+      name = "prover.waiting",
+      description = "Number of aggregation proof waiting responses",
+      measurementSupplier = aggregationWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.FORCED_TRANSACTION,
+      name = "prover.waiting",
+      description = "Number of invalidity proof waiting responses",
+      measurementSupplier = invalidityWaitingResponsesMetric,
     )
   }
 
@@ -54,6 +76,64 @@ class RiscvProverClientFactory(
         config = proverConfig,
         vertx = vertx,
       ).also { executionWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvBlobCompressionProverClient(
+    log: Logger = PreRiscvBlobCompressionProverClient.LOG,
+  ): BlobCompressionProverClientV2 {
+    return ABProverClientRouter.create(
+      proverAConfig = requireNotNull(config.proverA.blobCompression) {
+        "proverA.blobCompression must be configured to use blobCompressionProverClient"
+      },
+      proverBConfig = config.proverB?.blobCompression,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvBlobCompressionProverClient(
+        config = proverConfig,
+        vertx = vertx,
+        log = log,
+      )
+        .also { blobWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvProofAggregationProverClient(
+    log: Logger = PreRiscvProofAggregationClient.LOG,
+  ): ProofAggregationProverClientV2 {
+    return ABProverClientRouter.create(
+      proverAConfig = config.proverA,
+      proverBConfig = config.proverB,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvProofAggregationClient(
+        config = proverConfig.proofAggregation,
+        invalidityProverConfig = proverConfig.invalidity,
+        vertx = vertx,
+        log = log,
+      )
+        .also { aggregationWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
+    if (config.proverA.invalidity == null) {
+      throw IllegalStateException("Invalidity prover config is not configured")
+    }
+
+    return ABProverClientRouter.create(
+      proverAConfig = config.proverA,
+      proverBConfig = config.proverB,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvInvalidityProverClient(
+        config = proverConfig.invalidity!!,
+        vertx = vertx,
+      )
+        .also { invalidityWaitingResponsesMetric.addReporter(it) }
     }
   }
 

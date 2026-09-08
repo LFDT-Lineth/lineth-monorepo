@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
@@ -26,31 +26,33 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  *
  * So, this class will need to watch the file system and wait for the output proof to be generated
  */
-class FileBasedBlobCompressionProverClientV2(
+class PreRiscvBlobCompressionProverClient(
   val config: FileBasedProverConfig,
   val vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   log: Logger,
 ) :
-  GenericFileBasedProverClient<
+  GenericRiscVProverClient<
     BlobCompressionProofRequest,
     BlobCompressionProof,
     BlobCompressionProofJsonRequest,
     BlobCompressionProofJsonResponse,
     CompressionProofIndex,
     >(
-    config = config,
-    vertx = vertx,
-    fileWriter = FileWriter(vertx, jsonObjectMapper),
-    fileReader = FileReader(
-      vertx,
-      jsonObjectMapper,
-      BlobCompressionProofJsonResponse::class.java,
+    transport = FileBasedProverProofTransport(
+      config = config,
+      vertx = vertx,
+      fileWriter = FileWriter(vertx, jsonObjectMapper),
+      fileReader = FileReader(
+        vertx,
+        jsonObjectMapper,
+        BlobCompressionProofJsonResponse::class.java,
+      ),
+      requestFileNameProvider = CompressionProofRequestFileNameProvider,
+      responseFileNameProvider = CompressionProofResponseFileNameProvider,
     ),
-    requestFileNameProvider = CompressionProofRequestFileNameProvider,
-    responseFileNameProvider = CompressionProofResponseFileNameProvider,
-    proofIndexProvider = FileBasedBlobCompressionProverClientV2::blobFileIndex,
-    requestMapper = FileBasedBlobCompressionProverClientV2::requestDtoMapper,
+    proofIndexProvider = PreRiscvBlobCompressionProverClient::blobFileIndex,
+    requestMapper = PreRiscvBlobCompressionProverClient::requestDtoMapper,
     responseMapper = BlobCompressionProofJsonResponse::toDomainObject,
     proofTypeLabel = "blob",
     log = log,
@@ -58,7 +60,7 @@ class FileBasedBlobCompressionProverClientV2(
   BlobCompressionProverClientV2 {
 
   companion object {
-    val LOG: Logger = LogManager.getLogger(FileBasedBlobCompressionProverClientV2::class.java)
+    val LOG: Logger = LogManager.getLogger(PreRiscvBlobCompressionProverClient::class.java)
 
     fun blobFileIndex(request: BlobCompressionProofRequest): CompressionProofIndex {
       return CompressionProofIndex(

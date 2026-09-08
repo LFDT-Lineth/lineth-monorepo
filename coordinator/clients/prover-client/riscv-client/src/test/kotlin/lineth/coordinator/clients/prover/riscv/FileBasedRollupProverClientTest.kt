@@ -3,7 +3,6 @@ package lineth.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
-import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex

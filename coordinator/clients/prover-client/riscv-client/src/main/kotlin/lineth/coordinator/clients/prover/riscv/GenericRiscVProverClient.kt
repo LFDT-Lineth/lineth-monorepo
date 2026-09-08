@@ -50,6 +50,10 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
       .thenApply { responseDto -> responseDto?.let { parseResponse(it) } }
   }
 
+  override fun isProofAlreadyDone(proofIndex: TProofIndex): SafeFuture<Boolean> {
+    return transport.isResponseAlreadyExisted(proofIndex)
+  }
+
   override fun getProofIndex(proofRequest: Request): TProofIndex = proofIndexProvider(proofRequest)
 
   override fun createProofRequest(proofRequest: Request): SafeFuture<TProofIndex> {
@@ -101,9 +105,6 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
             .thenApply { responseDto ->
               responsesWaiting.decrementAndGet()
               parseResponse(responseDto)
-            }
-            .whenException {
-              responsesWaiting.decrementAndGet()
             }
         }
       }

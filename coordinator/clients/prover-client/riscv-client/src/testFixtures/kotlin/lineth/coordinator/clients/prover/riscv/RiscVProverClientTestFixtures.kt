@@ -16,7 +16,6 @@ import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
-import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import java.math.BigInteger

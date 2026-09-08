@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.clients.prover.riscv
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.getOrElse
