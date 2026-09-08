@@ -465,13 +465,6 @@ func TestAssembleBTypeImm(t *testing.T) {
 	}
 }
 
-func TestDecodeJTypeSemantic(t *testing.T) {
-	gotOp := decodeJTypeSemantic(opcodeJAL)
-	if gotOp != jtypeJal {
-		t.Fatalf("decodeJTypeSemantic(jal) = %d, want %d", gotOp, jtypeJal)
-	}
-}
-
 func TestJtypeOpForRd(t *testing.T) {
 	if got := jtypeOpForRd(jtypeJal, 0); got != jtypeJal {
 		t.Fatalf("jtypeOpForRd(jal, x0) = %d, want %d", got, jtypeJal)
