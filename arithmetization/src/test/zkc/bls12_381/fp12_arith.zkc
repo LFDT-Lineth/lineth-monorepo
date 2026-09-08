@@ -1,0 +1,91 @@
+// ===================================================================
+// Unit test for BLS12-381 Fp6/Fp12 arithmetic
+// (arithmetization/src/main/lib/bls12_381/fp12.zkc).
+//
+// Fp12 values live in the bls_fp12_mem scratch memory (they cannot be
+// passed by value -- see the header of fp12.zkc), so the harness loads
+// the fixtures into fixed slots and compares the results cell by cell.
+//
+// The last check is the important one: the sparse line multiply is
+// verified against a DENSE fp12_mul with the same line materialised in
+// full. A sparse formula that is merely self-consistent would sail
+// through fixed expected values; agreeing with the dense path on
+// arbitrary inputs is a much stronger statement.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/fp12.zkc"
+
+// 12 cells each, in the layout described in fp12.zkc
+pub input a(address:u4) -> (v:u384)
+pub input b(address:u4) -> (v:u384)
+// the three non-zero Fp2 coefficients of a line: L0, L3, L5
+pub input l(address:u3) -> (v:u384)
+
+pub input want_mul(address:u4) -> (v:u384)
+pub input want_sqr(address:u4) -> (v:u384)
+pub input want_conj(address:u4) -> (v:u384)
+pub input want_line(address:u4) -> (v:u384)
+
+const A:u9 = 0
+const B:u9 = 12
+const R:u9 = 24
+const LFULL:u9 = 36
+const DENSE:u9 = 48
+
+fn main<bls_fp12_mem>() {
+    for i:u5 = 0; i < 12; i = i + 1 {
+        bls_fp12_mem[A + (i as u9)] = a[i as u4]
+        bls_fp12_mem[B + (i as u9)] = b[i as u4]
+    }
+
+    // dense multiply
+    fp12_mul_bls12_381(A, B, R)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[R + (i as u9)] != want_mul[i as u4] {
+            fail
+        }
+    }
+
+    // squaring has its own formula (2 Fp6 muls, not 3), so it is checked
+    // independently of mul rather than as mul(a, a)
+    fp12_sqr_bls12_381(A, R)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[R + (i as u9)] != want_sqr[i as u4] {
+            fail
+        }
+    }
+
+    fp12_conj_bls12_381(A, R)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[R + (i as u9)] != want_conj[i as u4] {
+            fail
+        }
+    }
+
+    // sparse line multiply
+    fp12_mul_by_line_bls12_381(A, l[0], l[1], l[2], l[3], l[4], l[5], R)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[R + (i as u9)] != want_line[i as u4] {
+            fail
+        }
+    }
+
+    // ... and the same product computed densely, from the line written out in
+    // full: c0 = (L0, 0, 0), c1 = (0, L3, L5)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        bls_fp12_mem[LFULL + (i as u9)] = 0
+    }
+    bls_fp12_mem[LFULL] = l[0]
+    bls_fp12_mem[LFULL + 1] = l[1]
+    bls_fp12_mem[LFULL + 8] = l[2]
+    bls_fp12_mem[LFULL + 9] = l[3]
+    bls_fp12_mem[LFULL + 10] = l[4]
+    bls_fp12_mem[LFULL + 11] = l[5]
+
+    fp12_mul_bls12_381(A, LFULL, DENSE)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[DENSE + (i as u9)] != bls_fp12_mem[R + (i as u9)] {
+            fail
+        }
+    }
+}

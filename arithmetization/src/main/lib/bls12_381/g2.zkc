@@ -179,8 +179,10 @@ fn fp2_mul_by_b3_bls12_381_g2(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
 //
 // WHY MIXED RATHER THAN GENERAL. zkc caps a call at 255 *split* registers, and
 // at KOALABEAR_16 a u384 splits into 24 limbs, so a function takes at most TEN
-// u384 arguments -- 11 panics with "too many call arguments" at execution time
-// (note: `zkc compile` does NOT catch this). A general projective+projective
+// u384 arguments -- 11 panics with "too many call arguments" during bytecode
+// encoding, i.e. at the start of `zkc execute`/`zkc trace` and NOT at `zkc
+// compile` or even `compile --bci` (see the fuller note in fp12.zkc). A general
+// projective+projective
 // addition needs 12, which is unrepresentable. Mixed needs 6 + 4 = 10, exactly
 // at the limit, and every caller wants mixed anyway: the ladder below always
 // adds the fixed affine base point, and the Miller loop always adds the fixed

@@ -1,0 +1,220 @@
+include "fp12.zkc"
+include "g2.zkc"
+
+// ============================================================================
+// BLS12-381 optimal Ate Miller loop.
+//
+//     e(P, Q) = f_{x, Q}(P) ^ ((p^12 - 1) / r)
+//
+// This file computes the Miller function f_{x,Q}(P); the final exponentiation
+// is separate. The seed x is NEGATIVE, x = -0xd201000000010000, so the loop
+// runs over |x| and the result is conjugated at the end. Conjugating before the
+// final exponentiation is equivalent to inverting after its easy part, because
+// f^(p^6-1) = conj(f)/f.
+//
+// |x| has just SIX set bits (63, 62, 60, 57, 48, 16), so of the 63 iterations
+// only five perform an addition step. zkc traces only the path actually taken,
+// so the untaken addition arms cost nothing.
+//
+// LINE PLACEMENT. This is the part that is easy to get wrong and hard to
+// notice. BLS12-381 has an M-twist: matching coefficients on y^2 = x^3 + b*xi
+// gives s^6 = xi^-1, so the untwist is (x', y') -> (x'/w^2, y'/w^3), NOT
+// (x'w^2, y'w^3). With w^6 = xi, clearing denominators by the Fp2 factor xi
+// (which the final exponentiation kills, as it does any subfield element):
+//
+//     xi * l(P) = xi*yP  +  (lam*X - Y) * w^3  +  (-lam*xP) * w^5
+//
+// and since w^2 = v the Fp12 coordinates are
+//
+//     c0 = (xi*yP, 0, 0)          c1 = (0, lam*X - Y, -lam*xP)
+//
+// so exactly three of the six Fp2 coefficients are non-zero: c0.0, c1.1, c1.2.
+//
+// SCALING. Each step returns its line pre-scaled by an Fp2 factor (2YZ^2 for
+// doubling, B*Z for addition). Rescaling a line by an element of a proper
+// subfield does not change the pairing, since the final exponentiation contains
+// (p^6-1)(p^2+1) and any c in Fp2 has c^(p^2-1) = 1.
+// ============================================================================
+
+// Low 64 bits of |x|. Held as a u64 rather than a u384 so the loop can peel
+// bits with a narrow split instead of a wide variable shift.
+const BLS12_381_SEED_BITS:u64 = 0xd201000000010000
+
+// Miller-loop scratch, kept below FP12_SCRATCH (256) and clear of the caller's
+// slots. The output address must not overlap [ML_F, ML_F+24).
+const ML_F:u9 = 208
+const ML_T:u9 = 220
+
+// ----- line + point steps -----
+//
+// Both steps return the line as three Fp2 coefficients in a P-independent form:
+// C0 and C5 still need scaling by yP and xP respectively (both in Fp, so that
+// is fp2_mul_by_fp, two mulmods each). Splitting it this way keeps the addition
+// step at ten arguments -- passing P as well would be twelve, over the cap.
+
+// Tangent at T = (X : Y : Z), plus 2T.
+//   line, scaled by 2*Y*Z^2:  C0 = xi*2*Y*Z^2,  A3 = 3X^3 - 2Y^2Z,  C5 = -3X^2Z
+fn miller_double_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384)
+        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+
+    var xs0:u384, xs1:u384
+    xs0, xs1 = fp2_sqr_bls12_381(X0, X1)
+    var ys0:u384, ys1:u384
+    ys0, ys1 = fp2_sqr_bls12_381(Y0, Y1)
+    var zs0:u384, zs1:u384
+    zs0, zs1 = fp2_sqr_bls12_381(Z0, Z1)
+
+    // C0 = xi * (2 * Y * Z^2)
+    var yz0:u384, yz1:u384
+    yz0, yz1 = fp2_mul_bls12_381(Y0, Y1, zs0, zs1)
+    var d0:u384, d1:u384
+    d0, d1 = fp2_add_bls12_381(yz0, yz1, yz0, yz1)
+    C00, C01 = fp2_mul_by_nonresidue_bls12_381(d0, d1)
+
+    // A3 = 3*X^3 - 2*Y^2*Z
+    var xc0:u384, xc1:u384
+    xc0, xc1 = fp2_mul_bls12_381(xs0, xs1, X0, X1)
+    var t0:u384, t1:u384
+    t0, t1 = fp2_add_bls12_381(xc0, xc1, xc0, xc1)
+    var x3a0:u384, x3a1:u384
+    x3a0, x3a1 = fp2_add_bls12_381(t0, t1, xc0, xc1)
+    var yz20:u384, yz21:u384
+    yz20, yz21 = fp2_mul_bls12_381(ys0, ys1, Z0, Z1)
+    var yz2d0:u384, yz2d1:u384
+    yz2d0, yz2d1 = fp2_add_bls12_381(yz20, yz21, yz20, yz21)
+    A30, A31 = fp2_sub_bls12_381(x3a0, x3a1, yz2d0, yz2d1)
+
+    // C5 = -3 * X^2 * Z
+    var xz0:u384, xz1:u384
+    xz0, xz1 = fp2_mul_bls12_381(xs0, xs1, Z0, Z1)
+    t0, t1 = fp2_add_bls12_381(xz0, xz1, xz0, xz1)
+    t0, t1 = fp2_add_bls12_381(t0, t1, xz0, xz1)
+    C50, C51 = fp2_neg_bls12_381(t0, t1)
+
+    nX0, nX1, nY0, nY1, nZ0, nZ1 = double_projective_bls12_381_g2(X0, X1, Y0, Y1, Z0, Z1)
+}
+
+// Chord through T = (X : Y : Z) and the fixed affine Q, plus T + Q.
+//   A = Qy*Z - Y,  B = Qx*Z - X
+//   line, scaled by B*Z:  C0 = xi*B*Z,  A3 = A*X - B*Y,  C5 = -A*Z
+//   T + Q:  t = A^2 Z - B^3 - 2 B^2 X,  X3 = B*t,
+//           Y3 = A*(B^2 X - t) - B^3 Y,  Z3 = B^3 Z
+fn miller_add_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384,
+                             qx0:u384, qx1:u384, qy0:u384, qy1:u384)
+        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+
+    var t0:u384, t1:u384
+    t0, t1 = fp2_mul_bls12_381(qy0, qy1, Z0, Z1)
+    var A0:u384, A1:u384
+    A0, A1 = fp2_sub_bls12_381(t0, t1, Y0, Y1)
+
+    t0, t1 = fp2_mul_bls12_381(qx0, qx1, Z0, Z1)
+    var B0:u384, B1:u384
+    B0, B1 = fp2_sub_bls12_381(t0, t1, X0, X1)
+
+    // C0 = xi * B * Z
+    var bz0:u384, bz1:u384
+    bz0, bz1 = fp2_mul_bls12_381(B0, B1, Z0, Z1)
+    C00, C01 = fp2_mul_by_nonresidue_bls12_381(bz0, bz1)
+
+    // A3 = A*X - B*Y
+    var ax0:u384, ax1:u384
+    ax0, ax1 = fp2_mul_bls12_381(A0, A1, X0, X1)
+    var by0:u384, by1:u384
+    by0, by1 = fp2_mul_bls12_381(B0, B1, Y0, Y1)
+    A30, A31 = fp2_sub_bls12_381(ax0, ax1, by0, by1)
+
+    // C5 = -A*Z
+    var az0:u384, az1:u384
+    az0, az1 = fp2_mul_bls12_381(A0, A1, Z0, Z1)
+    C50, C51 = fp2_neg_bls12_381(az0, az1)
+
+    // T + Q
+    var b20:u384, b21:u384
+    b20, b21 = fp2_sqr_bls12_381(B0, B1)
+    var b30:u384, b31:u384
+    b30, b31 = fp2_mul_bls12_381(b20, b21, B0, B1)
+    var a20:u384, a21:u384
+    a20, a21 = fp2_sqr_bls12_381(A0, A1)
+
+    var b2x0:u384, b2x1:u384
+    b2x0, b2x1 = fp2_mul_bls12_381(b20, b21, X0, X1)
+
+    var s0:u384, s1:u384
+    s0, s1 = fp2_mul_bls12_381(a20, a21, Z0, Z1)
+    s0, s1 = fp2_sub_bls12_381(s0, s1, b30, b31)
+    var dbl0:u384, dbl1:u384
+    dbl0, dbl1 = fp2_add_bls12_381(b2x0, b2x1, b2x0, b2x1)
+    s0, s1 = fp2_sub_bls12_381(s0, s1, dbl0, dbl1)
+
+    nX0, nX1 = fp2_mul_bls12_381(B0, B1, s0, s1)
+
+    var u0:u384, u1:u384
+    u0, u1 = fp2_sub_bls12_381(b2x0, b2x1, s0, s1)
+    u0, u1 = fp2_mul_bls12_381(A0, A1, u0, u1)
+    var w0:u384, w1:u384
+    w0, w1 = fp2_mul_bls12_381(b30, b31, Y0, Y1)
+    nY0, nY1 = fp2_sub_bls12_381(u0, u1, w0, w1)
+
+    nZ0, nZ1 = fp2_mul_bls12_381(b30, b31, Z0, Z1)
+}
+
+// ----- the loop -----
+
+// f_{|x|, Q}(P), conjugated for the negative seed, written to `out` (12 cells).
+//
+// P is an affine G1 point, Q an affine G2 point; both are assumed already
+// validated (on curve, in subgroup, not the identity). `out` must lie outside
+// [ML_F, ML_F + 24) and outside the fp12 scratch at 256 and above.
+fn miller_loop_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
+                                       qx0:u384, qx1:u384, qy0:u384, qy1:u384,
+                                       out:u9) {
+    fp12_set_one_bls12_381(ML_F)
+
+    // T = Q in projective coordinates
+    var TX0:u384 = qx0
+    var TX1:u384 = qx1
+    var TY0:u384 = qy0
+    var TY1:u384 = qy1
+    var TZ0:u384 = 1
+    var TZ1:u384 = 0
+
+    // The MSB (bit 63) is the implicit initialisation T = Q, f = 1, so start
+    // one bit down: shifting left by one puts bit 62 at the top of `acc`.
+    var acc:u64 = BLS12_381_SEED_BITS << 1
+
+    var C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384
+    var L00:u384, L01:u384, L50:u384, L51:u384
+
+    for j:u7 = 0; j < 63; j = j + 1 {
+        var bit:u1
+        var rest:u63
+        bit::rest = acc
+        acc = (rest as u64) << 1
+
+        // f <- f^2 * l_{T,T}(P);  T <- 2T
+        TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
+            miller_double_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1)
+        L00, L01 = fp2_mul_by_fp_bls12_381(C00, C01, yP)
+        L50, L51 = fp2_mul_by_fp_bls12_381(C50, C51, xP)
+
+        fp12_sqr_bls12_381(ML_F, ML_T)
+        fp12_mul_by_line_bls12_381(ML_T, L00, L01, A30, A31, L50, L51, ML_F)
+
+        if bit == 1 {
+            // f <- f * l_{T,Q}(P);  T <- T + Q
+            TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
+                miller_add_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1, qx0, qx1, qy0, qy1)
+            L00, L01 = fp2_mul_by_fp_bls12_381(C00, C01, yP)
+            L50, L51 = fp2_mul_by_fp_bls12_381(C50, C51, xP)
+
+            fp12_mul_by_line_bls12_381(ML_F, L00, L01, A30, A31, L50, L51, ML_T)
+            fp12_copy_bls12_381(ML_T, ML_F)
+        }
+    }
+
+    // the seed is negative
+    fp12_conj_bls12_381(ML_F, out)
+}

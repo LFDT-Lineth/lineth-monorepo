@@ -11,13 +11,14 @@
 # Cost notes (these are dev targets, not CI -- the whole run is ~20 minutes):
 #   - every affine result costs one Fermat inversion, ~613 mulmod_384 on its
 #     own, which dominates the group law it follows;
-#   - g2_subgroup runs the real 64-bit seed ladder and is the slowest at ~20s
-#     per fixture, against ~11s for everything else.
+#   - g2_subgroup runs the real 64-bit seed ladder, ~20s per fixture;
+#   - miller is the most expensive by far: 8776 mulmod_384 and ~151M trace
+#     cells for a single loop, ~35s per fixture under -c.
 # Harnesses are ordered cheapest-first so a regression surfaces early.
 
 SHELL := /bin/sh
 
-HARNESSES := fp2_arith fp2_inv g1_add g1_mul g2_add g2_mul g2_subgroup
+HARNESSES := fp2_arith fp2_inv fp12_arith g1_add g1_mul g2_add g2_mul g2_subgroup miller
 FIELD     := KOALABEAR_16
 ZKC       ?= zkc
 
