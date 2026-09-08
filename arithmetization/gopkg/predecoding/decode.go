@@ -126,6 +126,7 @@ func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
 }
 
 // I-type semantic micro-op local indices. Unified value = computeITypeBase + index.
+// WB means Write Back, when the result is written back to the register file.
 const (
 	itypeRead8SgnWB   = 0 // LB, read signed 8 bits, sign extend to 64 bits
 	itypeRead16SgnWB  = 1 // LH
@@ -154,12 +155,10 @@ const (
 	itypeInvalid      = 63 // INVALID
 )
 
-// itypeOpForRd selects ITYPE_JALR_WB when rd != x0; other ops already use *_WB indices.
-func itypeOpForRd(localOp, rd uint32) uint32 {
-	if rd == 0 || localOp == itypeEcall || localOp == itypeEbreak || localOp == itypeInvalid {
-		return localOp
-	}
-	if localOp == itypeJalr {
+// specializeITypeOpWithRd selects ITYPE_JALR_WB when rd != x0;
+// other ops already use *_WB indices.
+func specializeITypeOpWithRd(localOp, rd uint32) uint32 {
+	if rd != 0 && localOp == itypeJalr {
 		return itypeJalrWB
 	}
 	return localOp
@@ -201,10 +200,6 @@ const (
 	rtypeInvalid       = 63
 )
 
-func rtypeOpForRd(localOp, rd uint32) uint32 {
-	return localOp
-}
-
 // S-type semantic micro-op constants. These MUST match constants.zkc.
 const (
 	stypeStore8  = 0
@@ -227,11 +222,8 @@ const (
 	jtypeInvalid = 63
 )
 
-func jtypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == jtypeInvalid {
-		return baseOp
-	}
-	if baseOp == jtypeJal {
+func specializeJTypeOpWithRd(baseOp, rd uint32) uint32 {
+	if rd != 0 && baseOp == jtypeJal {
 		return jtypeJalWB
 	}
 	return baseOp
@@ -243,10 +235,6 @@ const (
 	utypeAuipcWB = 1
 	utypeInvalid = 63
 )
-
-func utypeOpForRd(localOp, rd uint32) uint32 {
-	return localOp
-}
 
 const (
 	funct12Ecall  = 0b000000000000
@@ -954,34 +942,67 @@ func classifyInstruction(instruction uint32) uint32 {
 	funct7 := fields.funct7
 	instructionType := instructionTypeFromOpcode(opcode)
 
+	// ------------------------------------------------------------
+	// I-type instruction
+	// ------------------------------------------------------------
+
+	// Decode the word as if the instruction was an I-type instruction.
+	// As a classic RISCV interpreter would do.
 	itypeOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
+	// Check if the instruction is not an I-type instruction.
 	if instructionType != iType {
 		itypeOp = itypeInvalid
 	}
-	itypeOp = itypeOpForRd(itypeOp, rd)
+	// Determine if itypeJalr or itypeJalrWB 
+	itypeOp = specializeITypeOpWithRd(itypeOp, rd)
+
+	// ------------------------------------------------------------
+	// R-type instruction
+	// ------------------------------------------------------------
+
 	rtypeOp := decodeRTypeSemantic(opcode, funct3, funct7)
 	if instructionType != rType {
 		rtypeOp = rtypeInvalid
 	}
-	rtypeOp = rtypeOpForRd(rtypeOp, rd)
+	// No need to specialize R-type operations with rd
+	// because all R-type operations use *_WB (Write Back) variants.
+
+	// ------------------------------------------------------------
+	// S-type instruction
+	// ------------------------------------------------------------
+
 	stypeOp := decodeSTypeSemantic(funct3)
 	if instructionType != sType {
 		stypeOp = stypeInvalid
 	}
+
+	// ------------------------------------------------------------
+	// B-type instruction
+	// ------------------------------------------------------------
+
 	btypeOp := decodeBTypeSemantic(funct3)
 	if instructionType != bType {
 		btypeOp = btypeInvalid
 	}
+
+	// ------------------------------------------------------------
+	// J-type instruction
+	// ------------------------------------------------------------
+
 	jtypeOp := decodeJTypeSemantic(opcode)
 	if instructionType != jType {
 		jtypeOp = jtypeInvalid
 	}
-	jtypeOp = jtypeOpForRd(jtypeOp, rd)
+	jtypeOp = specializeJTypeOpWithRd(jtypeOp, rd)
+
+	// ------------------------------------------------------------
+	// U-type instruction
+	// ------------------------------------------------------------
+
 	utypeOp := decodeUTypeSemantic(opcode)
 	if instructionType != uType {
 		utypeOp = utypeInvalid
 	}
-	utypeOp = utypeOpForRd(utypeOp, rd)
 
 	localOp := uint32(itypeInvalid)
 	switch instructionType {

@@ -551,3 +551,59 @@ func TestExtractFields(t *testing.T) {
 		}
 	}
 }
+
+// ------------------------------------------------------------
+// specializeITypeOpWithRd
+// ------------------------------------------------------------
+
+// specializeITypeVectors is the static truth table for specializeITypeOpWithRd:
+// for each I-type local op, the result expected when rd == x0 and when rd != x0.
+// Only jalr differs between the two (it gains its write-back variant when a real
+// rd is written); every other op is returned unchanged regardless of rd.
+var specializeITypeVectors = map[uint32]struct {
+	whenRdZero    uint32
+	whenRdNonZero uint32
+}{
+	itypeRead8SgnWB:   {itypeRead8SgnWB, itypeRead8SgnWB},
+	itypeRead16SgnWB:  {itypeRead16SgnWB, itypeRead16SgnWB},
+	itypeRead32SgnWB:  {itypeRead32SgnWB, itypeRead32SgnWB},
+	itypeRead64WB:     {itypeRead64WB, itypeRead64WB},
+	itypeRead8ZextWB:  {itypeRead8ZextWB, itypeRead8ZextWB},
+	itypeRead16ZextWB: {itypeRead16ZextWB, itypeRead16ZextWB},
+	itypeRead32ZextWB: {itypeRead32ZextWB, itypeRead32ZextWB},
+	itypeOpAddiWB:     {itypeOpAddiWB, itypeOpAddiWB},
+	itypeOpSltiWB:     {itypeOpSltiWB, itypeOpSltiWB},
+	itypeOpSltiuWB:    {itypeOpSltiuWB, itypeOpSltiuWB},
+	itypeOpXoriWB:     {itypeOpXoriWB, itypeOpXoriWB},
+	itypeOpOriWB:      {itypeOpOriWB, itypeOpOriWB},
+	itypeOpAndiWB:     {itypeOpAndiWB, itypeOpAndiWB},
+	itypeOpSlliWB:     {itypeOpSlliWB, itypeOpSlliWB},
+	itypeOpSrliWB:     {itypeOpSrliWB, itypeOpSrliWB},
+	itypeOpSraiWB:     {itypeOpSraiWB, itypeOpSraiWB},
+	itypeOpAddiwWB:    {itypeOpAddiwWB, itypeOpAddiwWB},
+	itypeOpSlliwWB:    {itypeOpSlliwWB, itypeOpSlliwWB},
+	itypeOpSrliwWB:    {itypeOpSrliwWB, itypeOpSrliwWB},
+	itypeOpSraiwWB:    {itypeOpSraiwWB, itypeOpSraiwWB},
+	itypeJalr:         {itypeJalr, itypeJalrWB}, // gains WB variant when rd != x0
+	itypeJalrWB:       {itypeJalrWB, itypeJalrWB},
+	itypeEcall:        {itypeEcall, itypeEcall},
+	itypeEbreak:       {itypeEbreak, itypeEbreak},
+	itypeInvalid:      {itypeInvalid, itypeInvalid},
+}
+
+// TestSpecializeITypeOpWithRd sweeps every rd (0..31) against every I-type op in
+// specializeITypeVectors and checks the result matches the table (rd == x0 vs
+// rd != x0 selects the column).
+func TestSpecializeITypeOpWithRd(t *testing.T) {
+	for op, want := range specializeITypeVectors {
+		for rd := uint32(0); rd < 1<<5; rd++ {
+			expected := want.whenRdNonZero
+			if rd == 0 {
+				expected = want.whenRdZero
+			}
+			if got := specializeITypeOpWithRd(op, rd); got != expected {
+				t.Fatalf("specializeITypeOpWithRd(op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
+			}
+		}
+	}
+}

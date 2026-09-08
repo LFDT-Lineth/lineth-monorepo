@@ -55,7 +55,7 @@
 //   - `imm`, `rs1`, `rd` — operands (shift amounts are normalized at decode time;
 //     `imm` is the sign-extended 12-bit immediate)
 //
-// When `rd != x0`, `itypeOpForRd` selects the matching `*_WB` variant via
+// When `rd != x0`, `specializeITypeOpWithRd` selects the matching `*_WB` variant via
 // `finalizeComputeOp`. When `rd == x0`, inert paths map to `NO_OP`.
 //
 // At runtime, the interpreter's flat `switch compute_op` handles these cases
@@ -64,7 +64,7 @@
 //
 // Constants for `compute_op` live in `arithmetization/src/main/common/constants.zkc`
 // and are mirrored in `decode.go` (`itypeOpAddi`, `itypeOpAddiWB`, …). See
-// `decode_test.go` for `decodeITypeSemantic` and `itypeOpForRd` coverage.
+// `decode_test.go` for `decodeITypeSemantic` and `specializeITypeOpWithRd` coverage.
 //
 // # S-type semantic micro-ops (store width folded)
 //
@@ -84,7 +84,7 @@
 //
 // # J-type semantic micro-ops (compute + writeback folded)
 //
-// `decodeJTypeSemantic` maps JAL to base `JTYPE_JAL`; `jtypeOpForRd` selects
+// `decodeJTypeSemantic` maps JAL to base `JTYPE_JAL`; `specializeJTypeOpWithRd` selects
 // `JTYPE_JAL_WB` when `rd != x0`. The 21-bit jump offset is reassembled and
 // sign-extended into `imm` at ELF time. At runtime, the interpreter's flat
 // `switch compute_op` has separate `JTYPE_JAL` and `JTYPE_JAL_WB` cases; the `_WB`
@@ -131,7 +131,7 @@
 // `FUNCT3_*` / `FUNCT7_*` constants are used by the pre-decoding verifier (see
 // below); redundant per-instruction `FUNCT7_*` aliases that duplicated
 // `FUNCT7_ADD` or `FUNCT7_MUL` have been removed from `constants.zkc`. See
-// `decode_test.go` for `decodeRTypeSemantic` and `rtypeOpForRd` coverage.
+// `decode_test.go` for `decodeRTypeSemantic` and `specializeRTypeOpWithRd` coverage.
 //
 // # rd=x0 → NO_OP
 //
@@ -175,7 +175,7 @@
 //  4. Decode each word. Read the little-endian 32-bit instruction and extract
 //     fields with shifts/masks. `classifyInstruction` in `decode.go` derives the
 //     instruction type (`instructionTypeFromOpcode`), applies the semantic
-//     `decode*Semantic` map, folds writeback (`*OpForRd`) and rd=`x0` no-ops into a
+//     `decode*Semantic` map, folds writeback (`specialize*TypeOpWithRd`) and rd=`x0` no-ops into a
 //     single unified `compute_op`, and `unifiedOperands` packs the operands.
 //  5. Bit-pack each record into the `decoded` stream (see below).
 //  6. Return the packed bytes. The elf_to_json command hex-encodes them for
