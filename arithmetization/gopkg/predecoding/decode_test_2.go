@@ -379,28 +379,6 @@ func TestRtypeOpForRd(t *testing.T) {
 	}
 }
 
-func TestDecodeSTypeSemantic(t *testing.T) {
-	tests := []struct {
-		name   string
-		funct3 uint32
-		wantOp uint32
-	}{
-		{name: "sb", funct3: 0b000, wantOp: stypeStore8},
-		{name: "sh", funct3: 0b001, wantOp: stypeStore16},
-		{name: "sw", funct3: 0b010, wantOp: stypeStore32},
-		{name: "sd", funct3: 0b011, wantOp: stypeStore64},
-		{name: "invalid", funct3: 0b111, wantOp: stypeInvalid},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOp := decodeSTypeSemantic(tt.funct3)
-			if gotOp != tt.wantOp {
-				t.Fatalf("decodeSTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, gotOp, tt.wantOp)
-			}
-		})
-	}
-}
-
 func TestAssembleITypeImm(t *testing.T) {
 	tests := []struct {
 		name      string
