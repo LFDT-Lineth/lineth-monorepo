@@ -76,6 +76,10 @@ runs:
         shell: bash
         run: make -C riscv-guests install-native-crypto-deps
 
+      - name: Install Constantine build deps
+        shell: bash
+        run: make -C riscv-guests install-constantine-deps
+
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
         # Use the xpack-dev-tools/riscv-none-elf-gcc-xpack for riscv64-none-elf-gcc
