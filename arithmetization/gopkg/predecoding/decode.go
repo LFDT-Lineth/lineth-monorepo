@@ -75,54 +75,54 @@ func instructionTypeFromOpcode(opcode uint32) uint32 {
 	}
 }
 
-// shouldUseNoOp reports whether a valid instruction with rd=x0 should emit
-// NO_OP at ELF time. Control-flow, side-effect, and syscall
-// instructions keep their semantic compute_op even when rd is x0.
-func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
+// checkNoOp folds the destination register into the already-unified compute op.
+// rd is the only field that changes the op after format decoding:
+//
+//   - rd != x0: the two link ops gain their writeback variant
+//     (JALR -> JALR_WB, JAL -> JAL_WB). Every other writeback op is already
+//     stored as its *_WB value, so it is returned unchanged.
+//   - rd == x0: architecturally inert writeback ops (loads, ALU imm/reg,
+//     LUI/AUIPC) collapse to NO_OP, since their only effect is writing
+//     registers[rd] and x0 is hardwired to zero. Control-flow, memory, syscall,
+//     and precompile ops keep their semantic op, and COMPUTE_INVALID stays
+//     invalid.
+func checkNoOp(instrType, op, rd uint32) uint32 {
 	if rd != 0 {
-		return false
+		switch op {
+		case itypeJalr:
+			return itypeJalrWB
+		case jtypeJal:
+			return jtypeJalWB
+		}
+		return op
 	}
+
+	// rd == x0: collapse inert writeback ops to NO_OP.
 	switch instrType {
 	case miscMemType:
-		return true
+		return computeNoOp
 	case iType:
-		if localOp == computeInvalid {
-			return false
-		}
-		switch localOp {
-		case itypeJalr, itypeEcall, itypeEbreak:
-			return false
+		switch op {
+		case computeInvalid, itypeJalr, itypeEcall, itypeEbreak:
+			return op
 		default:
-			return true
+			return computeNoOp
 		}
 	case rType:
-		if localOp == computeInvalid {
-			return false
-		}
-		switch localOp {
-		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
-			return false
+		switch op {
+		case computeInvalid, rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
+			return op
 		default:
-			return true
+			return computeNoOp
 		}
 	case uType:
-		return localOp != computeInvalid
-	case jType:
-		return false
-	default:
-		return false
-	}
-}
-
-// finalizeComputeOp takes the already-unified compute op selected for the
-// instruction's format and collapses inert (rd == x0) writeback paths to NO_OP.
-// Invalid words fall through unchanged: shouldUseNoOp returns false for every
-// *Invalid sentinel, so COMPUTE_INVALID is preserved by the final return.
-func finalizeComputeOp(instrType, op, rd, opcode uint32) uint32 {
-	if shouldUseNoOp(instrType, rd, op, opcode) {
+		if op == computeInvalid {
+			return op
+		}
 		return computeNoOp
+	default: // sType, bType, jType, undefined
+		return op
 	}
-	return op
 }
 
 // I-type semantic compute_op values. These are the unified ComputeOp codes and
@@ -154,15 +154,6 @@ const (
 	itypeEcall        = 23 // ECALL
 	itypeEbreak       = 24 // EBREAK
 )
-
-// specializeITypeOpWithRd selects ITYPE_JALR_WB when rd != x0;
-// other ops already use *_WB indices.
-func specializeITypeOpWithRd(localOp, rd uint32) uint32 {
-	if rd != 0 && localOp == itypeJalr {
-		return itypeJalrWB
-	}
-	return localOp
-}
 
 // R-type semantic compute_op values. These are the unified ComputeOp codes and
 // MUST match constants.zkc.
@@ -227,15 +218,6 @@ const (
 	jtypeJal   = 66
 	jtypeJalWB = 67
 )
-
-// specializeJTypeOpWithRd selects JTYPE_JAL_WB when rd != x0;
-// other ops already use *_WB indices.
-func specializeJTypeOpWithRd(baseOp, rd uint32) uint32 {
-	if rd != 0 && baseOp == jtypeJal {
-		return jtypeJalWB
-	}
-	return baseOp
-}
 
 // U-type semantic compute_op values. These are the unified ComputeOp codes and
 // MUST match constants.zkc.
@@ -918,8 +900,6 @@ func classifyInstruction(instruction uint32) uint32 {
 	if instructionType != iType {
 		itypeOp = computeInvalid
 	}
-	// Determine if itypeJalr or itypeJalrWB
-	itypeOp = specializeITypeOpWithRd(itypeOp, rd)
 
 	// ------------------------------------------------------------
 	// R-type instruction
@@ -958,7 +938,6 @@ func classifyInstruction(instruction uint32) uint32 {
 	if instructionType != jType {
 		jtypeOp = computeInvalid
 	}
-	jtypeOp = specializeJTypeOpWithRd(jtypeOp, rd)
 
 	// ------------------------------------------------------------
 	// U-type instruction
@@ -986,5 +965,5 @@ func classifyInstruction(instruction uint32) uint32 {
 	case uType:
 		localOp = utypeOp
 	}
-	return finalizeComputeOp(instructionType, localOp, rd, opcode)
+	return checkNoOp(instructionType, localOp, rd)
 }
