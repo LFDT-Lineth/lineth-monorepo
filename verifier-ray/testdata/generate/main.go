@@ -549,6 +549,12 @@ type fixtureCase struct {
 	// different dynamic-module size, verified against the same baked
 	// PcsSystem.
 	alt *proofFixture
+	// altSameStatement is a second honest proof of the same compiled protocol
+	// carrying the SAME public-input statement as honest (as opposed to alt,
+	// which deliberately differs) — the positive counterpart to alt, pinning
+	// that verifyPair accepts two independently-proven proofs whose statements
+	// genuinely agree, not just when both happen to be empty.
+	altSameStatement *proofFixture
 }
 
 type vanishingProofView struct {
@@ -768,6 +774,19 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 		cases[last].alt = &altFixture
+
+		// altSameStatement is a THIRD independently-proven proof — different
+		// witness rounds/openings from honest (a distinct proving run, not a
+		// copy), but assigned to open the SAME cell value (30). Pins that
+		// verifyPair accepts a pair of genuinely different proofs whose public
+		// statements happen to agree, closing the gap the empty-statement
+		// multi-size cases (which agree only trivially) cannot cover.
+		altSameAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(11, 21, 30, 41))) }
+		altSameFixture, err := buildProofFixture(sys, altSameAssign, "PublicInput", "OpenedCellPublicInput", "altSameStatement")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].altSameStatement = &altSameFixture
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
@@ -1625,6 +1644,12 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.alt != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt)
 	}
+	// The altSameStatement honest proof: an independent proving run whose
+	// public-input statement matches honest's, verified against the SAME
+	// System's .pcs.
+	if tc.altSameStatement != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt_same_statement", idx), *tc.altSameStatement)
+	}
 	fmt.Fprintf(
 		out,
 		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .grandproduct = system_%d_grandproduct, .rowlimit = system_%d_rowlimit, .shared_randomness = system_%d_shared_randomness, .pcs = %s };\n",
@@ -1859,6 +1884,34 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		fmt.Fprintf(out, "        %d => %t,\n", i, tc.alt != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// getInputAltSameStatement returns a case's independently-proven proof
+	// whose public-input statement matches the primary (honest) proof's;
+	// hasAltSameStatement gates it. Checked against the SAME case systems as
+	// the primary proof, like getInputAlt.
+	fmt.Fprintln(out, "pub fn getInputAltSameStatement(comptime index: usize) verifier.VerifyInput {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.altSameStatement != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_alt_same_statement_input,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no altSameStatement input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	fmt.Fprintln(out, "pub fn hasAltSameStatement(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.altSameStatement != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")

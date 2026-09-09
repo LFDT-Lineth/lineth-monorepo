@@ -13943,6 +13943,40 @@ const verify_case_62_alt_input = verifier.VerifyInput{
     .public_inputs = &verify_case_62_alt_public_inputs,
 };
 
+const verify_case_62_alt_same_statement_module_sizes = [_]usize{};
+
+const verify_case_62_alt_same_statement_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_62_alt_same_statement_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_62_alt_same_statement_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 456563761 }, .a1 = .{ .value = 1729629675 } }, .B1 = .{ .a0 = .{ .value = 303487403 }, .a1 = .{ .value = 1105513070 } }, .B2 = .{ .a0 = .{ .value = 881158618 }, .a1 = .{ .value = 684482905 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1102739509 }, .a1 = .{ .value = 1547465901 } }, .B1 = .{ .a0 = .{ .value = 841480526 }, .a1 = .{ .value = 1145007172 } }, .B2 = .{ .a0 = .{ .value = 192923944 }, .a1 = .{ .value = 2084184601 } } } },
+};
+
+const verify_case_62_alt_same_statement_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 1703615867 }, .{ .value = 571469468 }, .{ .value = 585257603 }, .{ .value = 185792232 }, .{ .value = 57185510 }, .{ .value = 2093531408 }, .{ .value = 1898652866 }, .{ .value = 979340427 } }, .cells = &verify_case_62_alt_same_statement_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1830632864 }, .{ .value = 2071736815 }, .{ .value = 534168470 }, .{ .value = 42523500 }, .{ .value = 290319612 }, .{ .value = 292477922 }, .{ .value = 1980662929 }, .{ .value = 1261969127 } }, .cells = &verify_case_62_alt_same_statement_round_1_cells },
+    .{ .cells = &verify_case_62_alt_same_statement_round_2_cells },
+};
+
+const verify_case_62_alt_same_statement_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1337479431 }, .{ .value = 1454188100 }, .{ .value = 2092505576 }, .{ .value = 1232013065 }, .{ .value = 2028480963 }, .{ .value = 913287690 }, .{ .value = 94543831 }, .{ .value = 1403828501 } }, commitment.Commitment{ .{ .value = 1199759328 }, .{ .value = 1692485910 }, .{ .value = 54932867 }, .{ .value = 2034238034 }, .{ .value = 324072293 }, .{ .value = 678106296 }, .{ .value = 1630786114 }, .{ .value = 986512461 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 21 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 41 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1702619466 }, .{ .value = 341751877 }, .{ .value = 1291962725 }, .{ .value = 1022746991 }, .{ .value = 93345330 }, .{ .value = 1869075080 }, .{ .value = 1896358369 }, .{ .value = 1532428793 } }, commitment.Commitment{ .{ .value = 636453872 }, .{ .value = 1020876116 }, .{ .value = 1386027059 }, .{ .value = 556080759 }, .{ .value = 481399691 }, .{ .value = 45984162 }, .{ .value = 1428113394 }, .{ .value = 335945596 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2111905793 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 509698051 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1216251131 }, .{ .value = 621601830 }, .{ .value = 466481378 }, .{ .value = 428903217 }, .{ .value = 381317234 }, .{ .value = 1286018366 }, .{ .value = 507033789 }, .{ .value = 2034954968 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 605804195 }, .a1 = .{ .value = 340670084 } }, .B1 = .{ .a0 = .{ .value = 1996784318 }, .a1 = .{ .value = 273664212 } }, .B2 = .{ .a0 = .{ .value = 1837605681 }, .a1 = .{ .value = 1191760319 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 664305124 }, .{ .value = 1665419561 }, .{ .value = 1201445467 }, .{ .value = 1453011051 }, .{ .value = 2062813099 }, .{ .value = 426104403 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 151880257 }, .{ .value = 690385616 }, .{ .value = 77119533 }, .{ .value = 1552886433 }, .{ .value = 647666572 }, .{ .value = 1424309427 }, .{ .value = 835981201 }, .{ .value = 968811776 } }, commitment.Commitment{ .{ .value = 1896775121 }, .{ .value = 1665419561 }, .{ .value = 1201445467 }, .{ .value = 1453011051 }, .{ .value = 2062813099 }, .{ .value = 426104403 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_62_alt_same_statement_proof = verifier.Proof{
+    .rounds = &verify_case_62_alt_same_statement_rounds,
+    .module_sizes = &verify_case_62_alt_same_statement_module_sizes,
+    .pcs_opening = verify_case_62_alt_same_statement_pcs_opening,
+};
+
+const verify_case_62_alt_same_statement_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 30 } },
+};
+
+const verify_case_62_alt_same_statement_input = verifier.VerifyInput{
+    .proof = verify_case_62_alt_same_statement_proof,
+    .public_inputs = &verify_case_62_alt_same_statement_public_inputs,
+};
+
 const verify_case_62_systems = verifier.Systems{ .public_input = system_62_public_input, .vanishing = system_62, .logderivativesum = system_62_logderiv, .grandproduct = system_62_grandproduct, .rowlimit = system_62_rowlimit, .shared_randomness = system_62_shared_randomness, .pcs = verify_case_62_pcs_system };
 
 pub const system_63_spec = protocol.Spec{
@@ -17177,6 +17211,156 @@ pub fn hasAlt(comptime index: usize) bool {
         28 => false,
         29 => true,
         30 => true,
+        31 => false,
+        32 => false,
+        33 => false,
+        34 => false,
+        35 => false,
+        36 => false,
+        37 => false,
+        38 => false,
+        39 => false,
+        40 => false,
+        41 => false,
+        42 => false,
+        43 => false,
+        44 => false,
+        45 => false,
+        46 => false,
+        47 => false,
+        48 => false,
+        49 => false,
+        50 => false,
+        51 => false,
+        52 => false,
+        53 => false,
+        54 => false,
+        55 => false,
+        56 => false,
+        57 => false,
+        58 => false,
+        59 => false,
+        60 => false,
+        61 => false,
+        62 => true,
+        63 => false,
+        64 => false,
+        65 => false,
+        66 => false,
+        67 => false,
+        68 => false,
+        else => false,
+    };
+}
+
+pub fn getInputAltSameStatement(comptime index: usize) verifier.VerifyInput {
+    return switch (index) {
+        0 => @compileError("verifier fixture case 0 (BooleanColumn) has no altSameStatement input"),
+        1 => @compileError("verifier fixture case 1 (Fibonacci) has no altSameStatement input"),
+        2 => @compileError("verifier fixture case 2 (GeometricProgression) has no altSameStatement input"),
+        3 => @compileError("verifier fixture case 3 (ConditionalCounter) has no altSameStatement input"),
+        4 => @compileError("verifier fixture case 4 (PythagoreanTriplet) has no altSameStatement input"),
+        5 => @compileError("verifier fixture case 5 (DynamicFibonacci) has no altSameStatement input"),
+        6 => @compileError("verifier fixture case 6 (ConstantColumn) has no altSameStatement input"),
+        7 => @compileError("verifier fixture case 7 (ForwardShiftConstant) has no altSameStatement input"),
+        8 => @compileError("verifier fixture case 8 (BooleanCube) has no altSameStatement input"),
+        9 => @compileError("verifier fixture case 9 (LinearCombination) has no altSameStatement input"),
+        10 => @compileError("verifier fixture case 10 (LargeFibonacci) has no altSameStatement input"),
+        11 => @compileError("verifier fixture case 11 (MultipleVanishingsSameRatio) has no altSameStatement input"),
+        12 => @compileError("verifier fixture case 12 (MixedRatioVanishings) has no altSameStatement input"),
+        13 => @compileError("verifier fixture case 13 (MultiModule) has no altSameStatement input"),
+        14 => @compileError("verifier fixture case 14 (ManualCancellation) has no altSameStatement input"),
+        15 => @compileError("verifier fixture case 15 (PrecomputedSelector) has no altSameStatement input"),
+        16 => @compileError("verifier fixture case 16 (CellLeaf) has no altSameStatement input"),
+        17 => @compileError("verifier fixture case 17 (CoinScaled) has no altSameStatement input"),
+        18 => @compileError("verifier fixture case 18 (ThreeStepRecurrence) has no altSameStatement input"),
+        19 => @compileError("verifier fixture case 19 (Quartic) has no altSameStatement input"),
+        20 => @compileError("verifier fixture case 20 (LeftPadDynamic) has no altSameStatement input"),
+        21 => @compileError("verifier fixture case 21 (CubicWithBackShift) has no altSameStatement input"),
+        22 => @compileError("verifier fixture case 22 (MixedHighRatio) has no altSameStatement input"),
+        23 => @compileError("verifier fixture case 23 (MultiModuleHighRatio) has no altSameStatement input"),
+        24 => @compileError("verifier fixture case 24 (SizeThirtyTwoCubic) has no altSameStatement input"),
+        25 => @compileError("verifier fixture case 25 (LargeForwardShift) has no altSameStatement input"),
+        26 => @compileError("verifier fixture case 26 (BackAndForwardShift) has no altSameStatement input"),
+        27 => @compileError("verifier fixture case 27 (DynamicQuadratic) has no altSameStatement input"),
+        28 => @compileError("verifier fixture case 28 (QuarticWithBackShift) has no altSameStatement input"),
+        29 => @compileError("verifier fixture case 29 (DynamicFibonacciMultiSize) has no altSameStatement input"),
+        30 => @compileError("verifier fixture case 30 (DynamicFibonacciTwoModules) has no altSameStatement input"),
+        31 => @compileError("verifier fixture case 31 (SingleFractionAllOnes) has no altSameStatement input"),
+        32 => @compileError("verifier fixture case 32 (PartialFilter) has no altSameStatement input"),
+        33 => @compileError("verifier fixture case 33 (AllZeroFilter) has no altSameStatement input"),
+        34 => @compileError("verifier fixture case 34 (FilterMasksZeroDenominator) has no altSameStatement input"),
+        35 => @compileError("verifier fixture case 35 (Packing4Fractions) has no altSameStatement input"),
+        36 => @compileError("verifier fixture case 36 (MultiModuleBucketing) has no altSameStatement input"),
+        37 => @compileError("verifier fixture case 37 (SizeOneModule) has no altSameStatement input"),
+        38 => @compileError("verifier fixture case 38 (ConditionalLookupShape) has no altSameStatement input"),
+        39 => @compileError("verifier fixture case 39 (ManyFractions) has no altSameStatement input"),
+        40 => @compileError("verifier fixture case 40 (SizeTwoModule) has no altSameStatement input"),
+        41 => @compileError("verifier fixture case 41 (MultipleQueries) has no altSameStatement input"),
+        42 => @compileError("verifier fixture case 42 (VectorDenominator) has no altSameStatement input"),
+        43 => @compileError("verifier fixture case 43 (AllFiltersOnesPacked) has no altSameStatement input"),
+        44 => @compileError("verifier fixture case 44 (SingleColumnNoFilters) has no altSameStatement input"),
+        45 => @compileError("verifier fixture case 45 (FilterOnIncluded) has no altSameStatement input"),
+        46 => @compileError("verifier fixture case 46 (FilterOnIncluding) has no altSameStatement input"),
+        47 => @compileError("verifier fixture case 47 (DoubleConditional) has no altSameStatement input"),
+        48 => @compileError("verifier fixture case 48 (MultiColumn) has no altSameStatement input"),
+        49 => @compileError("verifier fixture case 49 (SharedTable) has no altSameStatement input"),
+        50 => @compileError("verifier fixture case 50 (DistinctTables) has no altSameStatement input"),
+        51 => @compileError("verifier fixture case 51 (MultiColumnFilterOnIncluding) has no altSameStatement input"),
+        52 => @compileError("verifier fixture case 52 (RepeatedValueInTable) has no altSameStatement input"),
+        53 => @compileError("verifier fixture case 53 (ShiftedAColumn) has no altSameStatement input"),
+        54 => @compileError("verifier fixture case 54 (ShiftedBColumn) has no altSameStatement input"),
+        55 => @compileError("verifier fixture case 55 (MultipleAFragments) has no altSameStatement input"),
+        56 => @compileError("verifier fixture case 56 (WidthThree) has no altSameStatement input"),
+        57 => @compileError("verifier fixture case 57 (SizeOne) has no altSameStatement input"),
+        58 => @compileError("verifier fixture case 58 (PrecomputedTable) has no altSameStatement input"),
+        59 => @compileError("verifier fixture case 59 (RepeatedSValues) has no altSameStatement input"),
+        60 => @compileError("verifier fixture case 60 (EmptySelected) has no altSameStatement input"),
+        61 => @compileError("verifier fixture case 61 (DistinctBounds) has no altSameStatement input"),
+        62 => verify_case_62_alt_same_statement_input,
+        63 => @compileError("verifier fixture case 63 (OpenedCellPublicInputDynamic) has no altSameStatement input"),
+        64 => @compileError("verifier fixture case 64 (LagrangeSelectorBoundary) has no altSameStatement input"),
+        65 => @compileError("verifier fixture case 65 (DynamicLagrangeSelectorBoundary) has no altSameStatement input"),
+        66 => @compileError("verifier fixture case 66 (MultiColumnBench) has no altSameStatement input"),
+        67 => @compileError("verifier fixture case 67 (GrandProductPermutation) has no altSameStatement input"),
+        68 => @compileError("verifier fixture case 68 (SharedRandomnessContribution) has no altSameStatement input"),
+        else => @compileError("unknown verifier fixture case index"),
+    };
+}
+
+pub fn hasAltSameStatement(comptime index: usize) bool {
+    return switch (index) {
+        0 => false,
+        1 => false,
+        2 => false,
+        3 => false,
+        4 => false,
+        5 => false,
+        6 => false,
+        7 => false,
+        8 => false,
+        9 => false,
+        10 => false,
+        11 => false,
+        12 => false,
+        13 => false,
+        14 => false,
+        15 => false,
+        16 => false,
+        17 => false,
+        18 => false,
+        19 => false,
+        20 => false,
+        21 => false,
+        22 => false,
+        23 => false,
+        24 => false,
+        25 => false,
+        26 => false,
+        27 => false,
+        28 => false,
+        29 => false,
+        30 => false,
         31 => false,
         32 => false,
         33 => false,

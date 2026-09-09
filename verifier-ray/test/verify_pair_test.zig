@@ -97,6 +97,36 @@ test "two individually valid proofs with different statements are rejected" {
     try std.testing.expect(rejected > 0);
 }
 
+test "two independently proven proofs with the same non-trivial statement verify as a pair" {
+    // The multi-size cases (DynamicFibonacciMultiSize/TwoModules) only agree
+    // trivially — both statements are empty, so equality holds vacuously.
+    // This sweeps every case carrying an altSameStatement fixture: an
+    // independently re-proven proof (different witness rounds/openings, NOT a
+    // copy of honest) whose public-input statement genuinely matches honest's
+    // non-empty statement. Confirms verifyPair accepts a pair on real
+    // statement equality, not just on both sides being empty.
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasAltSameStatement(i)) {
+            const case = comptime vf.get(i);
+            const honest = vf.getInput(i);
+            const altSame = vf.getInputAltSameStatement(i);
+            try std.testing.expect(honest.public_inputs.len > 0);
+            try std.testing.expect(statementsAgree(honest.public_inputs, altSame.public_inputs));
+            checked += 1;
+            verifier.verifyPair(case.spec, case.systems, honest, altSame) catch |err| {
+                std.debug.print(
+                    "pair case {d} ({s}) same-statement pair failed: {s}\n",
+                    .{ i, case.name, @errorName(err) },
+                );
+                return err;
+            };
+        }
+    }
+    // Guard against the sweep silently losing its positive member.
+    try std.testing.expect(checked > 0);
+}
+
 test "consistency: statements of different lengths are rejected" {
     const one = [_]protocol.Scalar{.{ .base = field.Element.init(7) }};
     try std.testing.expectError(
