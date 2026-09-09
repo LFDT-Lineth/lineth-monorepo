@@ -2,7 +2,7 @@ name: "Coordinator config docs"
 
 # Generates the committed Coordinator config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/coordinator/ to Consensys/doc.linea.
+# docs/stack/reference/_generated/coordinator/ to Consensys-Incorporated/doc.linea.
 #
 # Publishing is release-gated: automatic publishing fires only when a
 # `releases/coordinator/*` tag is cut, so doc.linea always reflects a released
@@ -56,7 +56,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Coordinator config docs to Consensys/doc.linea"
+        description: "Publish generated Coordinator config docs to Consensys-Incorporated/doc.linea"
         required: false
         type: boolean
         default: false

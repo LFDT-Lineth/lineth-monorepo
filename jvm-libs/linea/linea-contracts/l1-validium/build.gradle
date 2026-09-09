@@ -20,9 +20,11 @@ dependencies {
 web3jContractWrappers {
   def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
   def validiumV1Abi = contractsDir.file("ValidiumV1.0.abi").asFile.absolutePath
+  def validiumV2Abi = contractsDir.file("ValidiumV2.0.abi").asFile.absolutePath
 
   contractsPackage = "linea.contract"
   contracts = [
-    "$validiumV1Abi": "ValidiumV1"
+    "$validiumV1Abi": "ValidiumV1",
+    "$validiumV2Abi": "ValidiumV2",
   ]
 }

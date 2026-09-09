@@ -2,7 +2,7 @@ name: 'Publish config docs to doc.linea'
 description: >-
   Reusable publishing for any component using the shared `config-docs` engine.
   Downloads the artifact produced by `validate-config-docs`, checks out
-  `Consensys/doc.linea` with a GitHub App token, atomically swaps the component's
+  `Consensys-Incorporated/doc.linea` with a GitHub App token, atomically swaps the component's
   generated namespace into place, refuses any change that escapes the
   namespace, and opens a pull request against doc.linea's main branch.
 
@@ -11,9 +11,9 @@ description: >-
 
 inputs:
   docs-owner:
-    description: 'Owner of the target docs repository. Defaults to Consensys.'
+    description: 'Owner of the target docs repository. Defaults to Consensys-Incorporated.'
     required: false
-    default: 'Consensys'
+    default: 'Consensys-Incorporated'
   docs-repo-name:
     description: 'Name of the target docs repository. Defaults to doc.linea.'
     required: false

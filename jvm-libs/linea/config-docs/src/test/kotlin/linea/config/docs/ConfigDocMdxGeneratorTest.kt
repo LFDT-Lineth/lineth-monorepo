@@ -37,7 +37,7 @@ class ConfigDocMdxGeneratorTest {
     val mdx = ConfigDocMdxGenerator.generate(files, detector, "./gradlew generateDocs")
     assertThat(mdx).contains("## sample")
     assertThat(mdx).contains("### `nested`")
-    assertThat(mdx).contains("| `nested.max-attempts` | `UInt` | no | `3` | active | Max attempts. |")
+    assertThat(mdx).contains("| `nested.max-attempts` | Max attempts. | `UInt` | no | `3` | active |")
     assertThat(mdx).contains("The hostname. Example: `localhost`.")
   }
 
@@ -68,7 +68,7 @@ class ConfigDocMdxGeneratorTest {
       detector,
       "cmd",
     )
-    assertThat(mdx).contains("| `value` | `String` | no | `a&#96;b` | active | A value. |")
+    assertThat(mdx).contains("| `value` | A value. | `String` | no | `a&#96;b` | active |")
   }
 
   @Test

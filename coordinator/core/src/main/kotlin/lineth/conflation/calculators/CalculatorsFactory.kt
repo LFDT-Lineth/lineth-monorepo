@@ -4,9 +4,13 @@ import linea.DisabledService
 import linea.LongRunningService
 import linea.blob.BlobCompressor
 import linea.timer.TimerFactory
+import lineth.conflation.ConflationSafeBlockNumberProvider
+import lineth.conflation.ConflationService
 import lineth.conflation.SafeBlockProvider
+import lineth.coordination.conflation.ConflationServiceImpl
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCounters
+import net.consensys.linea.traces.TracesCountersV2
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.concurrent.ConcurrentSkipListSet
@@ -23,6 +27,11 @@ data class ConflationCalculators(
 data class AggregationCalculators(
   val aggregationCalculator: AggregationCalculator,
   val service: LongRunningService,
+)
+
+data class RiscVConflationCalculators(
+  val conflationCalculator: GlobalBlockConflationCalculator,
+  val conflationService: ConflationService,
 )
 
 object CalculatorsFactory {
@@ -196,27 +205,74 @@ object CalculatorsFactory {
     )
   }
 
+  fun createForRiscV(
+    lastConflatedBlockNumber: ULong,
+    lastConflatedTimestamp: Instant,
+    blocksPerBatch: UInt,
+    metricsFacade: MetricsFacade,
+    safeBlockNumberProvider: ConflationSafeBlockNumberProvider,
+    timestampBasedHardForks: List<Instant>,
+    extraSyncCalculators: List<ConflationTriggerCalculator>,
+    aggregationTargetEndBlockNumbers: Set<ULong>,
+    log: Logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java),
+  ): RiscVConflationCalculators {
+    val syncCalculators = createConflationTriggerCalculators(
+      tracesCountersLimit = null,
+      blocksLimit = blocksPerBatch,
+      timestampBasedHardForks = timestampBasedHardForks,
+      compressedBlobCalculator = null,
+      lastConflatedTimestamp = lastConflatedTimestamp,
+      aggregationTargetEndBlockNumbers = ConcurrentSkipListSet(aggregationTargetEndBlockNumbers),
+      logger = log,
+      metricsFacade = metricsFacade,
+    ).also {
+      it.filterIsInstance<ConflationTriggerCalculatorByHardForkTimestamp>().forEach { calculator ->
+        log.info("Added timestamp-based hard fork calculator={} ", calculator)
+      }
+    }
+    val conflationCalculator = GlobalBlockConflationCalculator(
+      lastBlockNumber = lastConflatedBlockNumber,
+      syncCalculators = syncCalculators + listOf(ConflationTriggerCalculatorByCoinbase()) + extraSyncCalculators,
+      deferredTriggerConflationCalculators = emptyList(),
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+    )
+    val conflationService = ConflationServiceImpl(
+      calculator = conflationCalculator,
+      safeBlockNumberProvider = safeBlockNumberProvider,
+      metricsFacade = metricsFacade,
+    )
+    return RiscVConflationCalculators(
+      conflationCalculator = conflationCalculator,
+      conflationService = conflationService,
+    )
+  }
+
   private fun createConflationTriggerCalculators(
-    tracesCountersLimit: TracesCounters,
+    tracesCountersLimit: TracesCounters?,
     blocksLimit: UInt?,
     timestampBasedHardForks: List<Instant> = emptyList(),
-    compressedBlobCalculator: ConflationTriggerCalculatorByDataCompressed,
+    compressedBlobCalculator: ConflationTriggerCalculatorByDataCompressed?,
     lastConflatedTimestamp: Instant,
     aggregationTargetEndBlockNumbers: MutableSet<ULong>,
     logger: Logger,
     metricsFacade: MetricsFacade,
   ): List<ConflationTriggerCalculator> {
-    val calculators: MutableList<ConflationTriggerCalculator> =
-      mutableListOf(
+    val calculators: MutableList<ConflationTriggerCalculator> = mutableListOf(
+      ConflationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = aggregationTargetEndBlockNumbers),
+    )
+    if (tracesCountersLimit != null) {
+      calculators.add(
         ConflationTriggerCalculatorByExecutionTraces(
           tracesCountersLimit = tracesCountersLimit,
           emptyTracesCounters = tracesCountersLimit.emptyTracesCounters,
           metricsFacade = metricsFacade,
           log = logger,
         ),
-        ConflationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = aggregationTargetEndBlockNumbers),
-        compressedBlobCalculator,
       )
+    }
+    if (compressedBlobCalculator != null) {
+      calculators.add(compressedBlobCalculator)
+    }
     if (blocksLimit != null) {
       calculators.add(ConflationTriggerCalculatorByBlockLimit(blockLimit = blocksLimit))
     }

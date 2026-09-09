@@ -19,11 +19,10 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
-// ReadExpandedTraces parses the provided trace file, expands it and returns the
-// corset object holding the expanded traces.
-func AssignFromTrace(
+// AssignFromTraceShard expands and assigns the trace to the given runtime.
+func AssignFromTraceShard(
 	run *wiop.Runtime,
-	traces trace.Trace[koalabear.Element],
+	shard trace.Shard[koalabear.Element],
 	schema air.Schema[koalabear.Element],
 	sharedRandomness field.Octuplet,
 ) {
@@ -36,12 +35,13 @@ func AssignFromTrace(
 		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
 	}
 
-	// Parallelize across modules
 	eg := &errgroup.Group{}
-	for modID := range traces.Width() {
+
+	// Parallelize across modules
+	for modID := range shard.Width() {
 		eg.Go(func() error {
 
-			trMod := traces.Module(modID)
+			trMod := shard.Module(modID)
 			scMod := schema.Module(modID)
 
 			if scMod.IsStatic() {
@@ -60,43 +60,37 @@ func AssignFromTrace(
 						sys         = run.System
 						columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
 						col         = trMod.Column(uint(id))
-						moduleName  = trMod.Name().String()
-						name        = qualifiedCorsetName(moduleName, col.Name())
+						moduleName  = trMod.Name()
+						name        = qualifiedCorsetName(moduleName, trMod.Descriptor().Columns[id].Name)
 					)
 
 					if _, ok := columnIDMap[name]; !ok {
 						logrus.Debugf("zkcdriver: AssignFromTrace: skipping unknown column %q", name)
 						continue
 					}
-
-					var (
-						wCol    = sys.LookupColumn(columnIDMap[name])
-						padding field.Element
-						data    = col.Data()
-					)
+					wCol := sys.LookupColumn(columnIDMap[name])
 
 					// Use unsafe cast to avoid per-element Bytes()/SetBytes()
 					// round-trip.
-					plain := make([]field.Element, data.Len())
+					plain := make([]field.Element, col.Len())
 					for i := range plain {
-						v := data.Get(uint(i))
+						v := col.Get(uint(i))
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
-
-					// Configure padding value
-					pad := col.Padding()
-					padding = *(*field.Element)(unsafe.Pointer(&pad))
 
 					// Done
 					run.AssignColumn(
 						wCol,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(plain), Padding: padding},
+						&wiop.ConcreteVector{
+							Plain: field.VecFromBase(plain),
+						},
 					)
 				}
 			})
 			return nil
 		})
 	}
+
 	if err := eg.Wait(); err != nil {
 		logrus.Panicf("zkcdriver: AssignFromTrace failed: %v", err)
 	}

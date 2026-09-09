@@ -12,11 +12,9 @@ import static lineth.txselection.LineaTransactionSelectionResult.BLOCK_MODULE_LI
 import static lineth.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_INVALID_COUNT;
 import static lineth.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflow;
 import static lineth.txselection.LineaTransactionSelectionResult.txModuleLineCountOverflowCached;
-import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTION_CANCELLED;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,15 +26,10 @@ import lineth.sequencer.modulelimit.ModuleLimitsValidationResult;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
 import lineth.sequencer.txselection.InvalidTransactionByLineCountCache;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.LineCountingTracer;
-import net.consensys.linea.zktracer.ZkCounter;
-import net.consensys.linea.zktracer.ZkTracer;
 import net.consensys.linea.zktracer.container.module.Module;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -50,7 +43,6 @@ import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
-import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.AbstractStatefulPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
@@ -73,10 +65,9 @@ public class TraceLineLimitTransactionSelector
 
   public TraceLineLimitTransactionSelector(
       final SelectorsStateManager stateManager,
-      final BlockchainService blockchainService,
-      final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
+      final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
+      final LineCountingTracer lineCountingTracer) {
     super(
         stateManager,
         tracerConfiguration.moduleLimitsMap().keySet().stream()
@@ -86,17 +77,15 @@ public class TraceLineLimitTransactionSelector
     this.tracerConfiguration = tracerConfiguration;
     this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
 
-    lineCountingTracer =
-        new LineCountingTracerWithLog(
-            tracerConfiguration, l1L2BridgeConfiguration, blockchainService);
-    for (Module m : lineCountingTracer.getModulesToCount()) {
+    this.lineCountingTracer = new LineCountingTracerWithLog(lineCountingTracer);
+    for (Module m : this.lineCountingTracer.getModulesToCount()) {
       if (!tracerConfiguration.moduleLimitsMap().containsKey(m.moduleKey().name())) {
         throw new IllegalStateException(
             "Limit for module %s not defined in %s"
                 .formatted(m.moduleKey(), tracerConfiguration.moduleLimitsFilePath()));
       }
     }
-    lineCountingTracer.traceStartConflation(1L);
+    this.lineCountingTracer.traceStartConflation(1L);
     moduleLineCountValidator = new ModuleLineCountValidator(tracerConfiguration.moduleLimitsMap());
   }
 
@@ -242,21 +231,8 @@ public class TraceLineLimitTransactionSelector
   private class LineCountingTracerWithLog implements LineCountingTracer {
     private final LineCountingTracer delegate;
 
-    public LineCountingTracerWithLog(
-        final LineaTracerConfiguration tracerConfiguration,
-        final LineaL1L2BridgeSharedConfiguration bridgeConfiguration,
-        final BlockchainService blockchainService) {
-
-      final Fork forkId =
-          fromMainnetHardforkIdToTracerFork(
-              (HardforkId.MainnetHardforkId)
-                  blockchainService.getNextBlockHardforkId(
-                      blockchainService.getChainHeadHeader(), Instant.now().getEpochSecond()));
-
-      this.delegate =
-          tracerConfiguration.isLimitless()
-              ? new ZkCounter(bridgeConfiguration, forkId)
-              : new ZkTracer(forkId, bridgeConfiguration, blockchainService.getChainId().get());
+    public LineCountingTracerWithLog(final LineCountingTracer delegate) {
+      this.delegate = delegate;
     }
 
     @Override

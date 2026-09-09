@@ -9,6 +9,7 @@ import linea.clients.TracesServiceErrorType
 import linea.domain.Block
 import linea.domain.BlockCounters
 import linea.error.ErrorResponse
+import linea.kotlin.encodeHex
 import lineth.conflation.ConflationService
 import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
@@ -56,6 +57,7 @@ class BlockToBatchSubmissionCoordinator(
             blockRLPEncoded = blockRLPEncoded,
             numOfTransactions = blockEvent.block.transactions.size.toUInt(),
             gasUsed = blockEvent.block.gasUsed,
+            coinbase = blockEvent.block.miner.encodeHex(),
           ),
         )
       }.whenException { th ->

@@ -20,11 +20,11 @@ on:
         required: false
         type: string
         default: ''
-      without_besu_fleet_plugin:
-        description: 'Type "true" to exclude besu-fleet-plugin in the release'
-        required: false
-        type: string
-        default: ''
+      # without_besu_fleet_plugin:
+      #   description: 'Type "true" to exclude besu-fleet-plugin in the release'
+      #   required: false
+      #   type: string
+      #   default: ''
       pre_release:
         description: 'Pre Release if checked; Draft release otherwise'
         required: false
@@ -78,7 +78,9 @@ jobs:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     with:
       release_version: ${{ needs.compute-linea-besu-release-metadata.outputs.release_version }}
-      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+      # set it to false instead of inputs.without_besu_fleet_plugin 
+      # as fleet plugin needed to release with besu >= 26.8.1 with Vertx v5
+      with_besu_fleet_plugin: false
     secrets: inherit
 
   run-test:
@@ -101,7 +103,9 @@ jobs:
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
-      e2e-tests-with-besu-fleet: ${{ inputs.without_besu_fleet_plugin != 'true' }}
+      # set it to false instead of inputs.without_besu_fleet_plugin 
+      # as fleet plugin needed to release with besu >= 26.8.1 with Vertx v5
+      e2e-tests-with-besu-fleet: false
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
@@ -111,7 +115,9 @@ jobs:
     with:
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
-      without_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin }}
+      # set it to true instead of inputs.without_besu_fleet_plugin 
+      # as fleet plugin needed to release with besu >= 26.8.1 with Vertx v5
+      without_besu_fleet_plugin: true
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit

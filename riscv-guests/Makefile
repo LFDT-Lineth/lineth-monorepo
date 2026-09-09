@@ -62,7 +62,7 @@ install-native-crypto-deps:
 		$$sudo cp /tmp/blst-src/libblst.a "$$prefix/lib/"; \
 		$$sudo cp /tmp/blst-src/bindings/blst.h /tmp/blst-src/bindings/blst_aux.h "$$prefix/include/"; \
 	fi; \
-	if [ -f "$$prefix/lib/libmcl.so" ] || [ -f "$$prefix/lib/libmcl.dylib" ]; then \
+	if { [ -f "$$prefix/lib/libmcl.so" ] || [ -f "$$prefix/lib/libmcl.dylib" ]; } && { [ "$$uname_s" != "Darwin" ] || [ -f "$$prefix/lib/libmcl.a" ]; }; then \
 		echo "mcl already installed under $$prefix/lib"; \
 	else \
 		echo "Building mcl from source ($(MCL_SHA))..."; \
@@ -72,7 +72,8 @@ install-native-crypto-deps:
 		$(MAKE) -C /tmp/mcl-src; \
 		$$sudo mkdir -p "$$prefix/lib" "$$prefix/include"; \
 		if [ "$$uname_s" = "Darwin" ]; then \
-			$$sudo cp /tmp/mcl-src/lib/libmcl.dylib "$$prefix/lib/" 2>/dev/null || $$sudo cp /tmp/mcl-src/lib/libmcl.a "$$prefix/lib/"; \
+			$$sudo cp /tmp/mcl-src/lib/libmcl.dylib "$$prefix/lib/" 2>/dev/null || true; \
+			$$sudo cp /tmp/mcl-src/lib/libmcl.a "$$prefix/lib/" 2>/dev/null || true; \
 		else \
 			$$sudo rm -f "$$prefix/lib/libmcl.a"; \
 			$$sudo cp /tmp/mcl-src/lib/libmcl.so "$$prefix/lib/"; \
