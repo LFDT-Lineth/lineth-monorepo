@@ -552,90 +552,88 @@ func TestExtractFields(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// specializeITypeOpWithRd tests the specialization of I-type operations with rd.
+// checkNoOp — I-type
 // ------------------------------------------------------------
 
-// specializeITypeVectors is the static truth table for specializeITypeOpWithRd:
-// for each I-type local op, the result expected when rd == x0 and when rd != x0.
-// Only jalr differs between the two (it gains its write-back variant when a real
-// rd is written); every other op is returned unchanged regardless of rd.
-var specializeITypeVectors = map[uint32]struct {
+// checkNoOpITypeVectors is the static truth table for checkNoOp applied to
+// I-type ops: for each op, the result expected when rd == x0 and when rd != x0.
+// When rd != x0, writeback ops keep their *_WB value and JALR is promoted to
+// JALR_WB. When rd == x0, inert writeback ops collapse to NO_OP while
+// control/syscall ops (JALR, ECALL, EBREAK) and COMPUTE_INVALID are preserved.
+var checkNoOpITypeVectors = map[uint32]struct {
 	whenRdZero    uint32
 	whenRdNonZero uint32
 }{
-	itypeRead8SgnWB:   {itypeRead8SgnWB, itypeRead8SgnWB},
-	itypeRead16SgnWB:  {itypeRead16SgnWB, itypeRead16SgnWB},
-	itypeRead32SgnWB:  {itypeRead32SgnWB, itypeRead32SgnWB},
-	itypeRead64WB:     {itypeRead64WB, itypeRead64WB},
-	itypeRead8ZextWB:  {itypeRead8ZextWB, itypeRead8ZextWB},
-	itypeRead16ZextWB: {itypeRead16ZextWB, itypeRead16ZextWB},
-	itypeRead32ZextWB: {itypeRead32ZextWB, itypeRead32ZextWB},
-	itypeOpAddiWB:     {itypeOpAddiWB, itypeOpAddiWB},
-	itypeOpSltiWB:     {itypeOpSltiWB, itypeOpSltiWB},
-	itypeOpSltiuWB:    {itypeOpSltiuWB, itypeOpSltiuWB},
-	itypeOpXoriWB:     {itypeOpXoriWB, itypeOpXoriWB},
-	itypeOpOriWB:      {itypeOpOriWB, itypeOpOriWB},
-	itypeOpAndiWB:     {itypeOpAndiWB, itypeOpAndiWB},
-	itypeOpSlliWB:     {itypeOpSlliWB, itypeOpSlliWB},
-	itypeOpSrliWB:     {itypeOpSrliWB, itypeOpSrliWB},
-	itypeOpSraiWB:     {itypeOpSraiWB, itypeOpSraiWB},
-	itypeOpAddiwWB:    {itypeOpAddiwWB, itypeOpAddiwWB},
-	itypeOpSlliwWB:    {itypeOpSlliwWB, itypeOpSlliwWB},
-	itypeOpSrliwWB:    {itypeOpSrliwWB, itypeOpSrliwWB},
-	itypeOpSraiwWB:    {itypeOpSraiwWB, itypeOpSraiwWB},
-	itypeJalr:         {itypeJalr, itypeJalrWB}, // gains WB variant when rd != x0
-	itypeJalrWB:       {itypeJalrWB, itypeJalrWB},
+	itypeRead8SgnWB:   {computeNoOp, itypeRead8SgnWB},
+	itypeRead16SgnWB:  {computeNoOp, itypeRead16SgnWB},
+	itypeRead32SgnWB:  {computeNoOp, itypeRead32SgnWB},
+	itypeRead64WB:     {computeNoOp, itypeRead64WB},
+	itypeRead8ZextWB:  {computeNoOp, itypeRead8ZextWB},
+	itypeRead16ZextWB: {computeNoOp, itypeRead16ZextWB},
+	itypeRead32ZextWB: {computeNoOp, itypeRead32ZextWB},
+	itypeOpAddiWB:     {computeNoOp, itypeOpAddiWB},
+	itypeOpSltiWB:     {computeNoOp, itypeOpSltiWB},
+	itypeOpSltiuWB:    {computeNoOp, itypeOpSltiuWB},
+	itypeOpXoriWB:     {computeNoOp, itypeOpXoriWB},
+	itypeOpOriWB:      {computeNoOp, itypeOpOriWB},
+	itypeOpAndiWB:     {computeNoOp, itypeOpAndiWB},
+	itypeOpSlliWB:     {computeNoOp, itypeOpSlliWB},
+	itypeOpSrliWB:     {computeNoOp, itypeOpSrliWB},
+	itypeOpSraiWB:     {computeNoOp, itypeOpSraiWB},
+	itypeOpAddiwWB:    {computeNoOp, itypeOpAddiwWB},
+	itypeOpSlliwWB:    {computeNoOp, itypeOpSlliwWB},
+	itypeOpSrliwWB:    {computeNoOp, itypeOpSrliwWB},
+	itypeOpSraiwWB:    {computeNoOp, itypeOpSraiwWB},
+	itypeJalr:         {itypeJalr, itypeJalrWB}, // promoted when rd != x0
 	itypeEcall:        {itypeEcall, itypeEcall},
 	itypeEbreak:       {itypeEbreak, itypeEbreak},
 	computeInvalid:    {computeInvalid, computeInvalid},
 }
 
-// TestSpecializeITypeOpWithRd sweeps every rd (0..31) against every I-type op in
-// specializeITypeVectors and checks the result matches the table (rd == x0 vs
+// TestCheckNoOpIType sweeps every rd (0..31) against every I-type op in
+// checkNoOpITypeVectors and checks checkNoOp matches the table (rd == x0 vs
 // rd != x0 selects the column).
-func TestSpecializeITypeOpWithRd(t *testing.T) {
-	for op, want := range specializeITypeVectors {
+func TestCheckNoOpIType(t *testing.T) {
+	for op, want := range checkNoOpITypeVectors {
 		for rd := uint32(0); rd < 1<<5; rd++ {
 			expected := want.whenRdNonZero
 			if rd == 0 {
 				expected = want.whenRdZero
 			}
-			if got := specializeITypeOpWithRd(op, rd); got != expected {
-				t.Fatalf("specializeITypeOpWithRd(op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
+			if got := checkNoOp(iType, op, rd); got != expected {
+				t.Fatalf("checkNoOp(iType, op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
 			}
 		}
 	}
 }
 
 // ------------------------------------------------------------
-// specializeJTypeOpWithRd tests the specialization of J-type operations with rd.
+// checkNoOp — J-type
 // ------------------------------------------------------------
 
-// specializeJTypeVectors is the static truth table for specializeJTypeOpWithRd:
-// for each J-type base op, the result expected when rd == x0 and when rd != x0.
-// Only jal differs between the two (it gains its write-back variant when a real
-// rd is written); jalWB and invalid are returned unchanged regardless of rd.
-var specializeJTypeVectors = map[uint32]struct {
+// checkNoOpJTypeVectors is the static truth table for checkNoOp applied to
+// J-type ops. JAL is control flow: it is promoted to JAL_WB when rd != x0 and
+// kept (never collapsed) when rd == x0. COMPUTE_INVALID is preserved.
+var checkNoOpJTypeVectors = map[uint32]struct {
 	whenRdZero    uint32
 	whenRdNonZero uint32
 }{
-	jtypeJal:       {jtypeJal, jtypeJalWB}, // gains WB variant when rd != x0
-	jtypeJalWB:     {jtypeJalWB, jtypeJalWB},
+	jtypeJal:       {jtypeJal, jtypeJalWB}, // promoted when rd != x0
 	computeInvalid: {computeInvalid, computeInvalid},
 }
 
-// TestSpecializeJTypeOpWithRd sweeps every rd (0..31) against every J-type op in
-// specializeJTypeVectors and checks the result matches the table (rd == x0 vs
+// TestCheckNoOpJType sweeps every rd (0..31) against every J-type op in
+// checkNoOpJTypeVectors and checks checkNoOp matches the table (rd == x0 vs
 // rd != x0 selects the column).
-func TestSpecializeJTypeOpWithRd(t *testing.T) {
-	for op, want := range specializeJTypeVectors {
+func TestCheckNoOpJType(t *testing.T) {
+	for op, want := range checkNoOpJTypeVectors {
 		for rd := uint32(0); rd < 1<<5; rd++ {
 			expected := want.whenRdNonZero
 			if rd == 0 {
 				expected = want.whenRdZero
 			}
-			if got := specializeJTypeOpWithRd(op, rd); got != expected {
-				t.Fatalf("specializeJTypeOpWithRd(op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
+			if got := checkNoOp(jType, op, rd); got != expected {
+				t.Fatalf("checkNoOp(jType, op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
 			}
 		}
 	}
