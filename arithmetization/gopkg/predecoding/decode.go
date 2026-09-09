@@ -86,7 +86,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 	case miscMemType:
 		return true
 	case iType:
-		if localOp == itypeInvalid {
+		if localOp == computeInvalid {
 			return false
 		}
 		switch localOp {
@@ -96,7 +96,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return true
 		}
 	case rType:
-		if localOp == rtypeInvalid {
+		if localOp == computeInvalid {
 			return false
 		}
 		switch localOp {
@@ -106,7 +106,7 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return true
 		}
 	case uType:
-		return localOp != utypeInvalid
+		return localOp != computeInvalid
 	case jType:
 		return false
 	default:
@@ -115,12 +115,10 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 }
 
 // finalizeComputeOp takes the already-unified compute op selected for the
-// instruction's format and applies the two post-decode steps: invalid words stay
-// COMPUTE_INVALID, and inert (rd == x0) writeback paths collapse to NO_OP.
+// instruction's format and collapses inert (rd == x0) writeback paths to NO_OP.
+// Invalid words fall through unchanged: shouldUseNoOp returns false for every
+// *Invalid sentinel, so COMPUTE_INVALID is preserved by the final return.
 func finalizeComputeOp(instrType, op, rd, opcode uint32) uint32 {
-	if op == computeInvalid {
-		return computeInvalid
-	}
 	if shouldUseNoOp(instrType, rd, op, opcode) {
 		return computeNoOp
 	}
@@ -155,7 +153,6 @@ const (
 	itypeJalrWB       = 22 // JALR_WB
 	itypeEcall        = 23 // ECALL
 	itypeEbreak       = 24 // EBREAK
-	itypeInvalid      = computeInvalid
 )
 
 // specializeITypeOpWithRd selects ITYPE_JALR_WB when rd != x0;
@@ -201,7 +198,6 @@ const (
 	rtypeOpKeccak      = 53
 	rtypeOpPoseidon2   = 54
 	rtypeOpWriteOutput = 55
-	rtypeInvalid       = computeInvalid
 )
 
 // S-type semantic compute_op values. These are the unified ComputeOp codes and
@@ -211,28 +207,25 @@ const (
 	stypeStore16 = 57
 	stypeStore32 = 58
 	stypeStore64 = 59
-	stypeInvalid = computeInvalid
 )
 
 // B-type semantic compute_op values. These are the unified ComputeOp codes and
 // MUST match constants.zkc. COMPUTE_INVALID marks non-B slots and unrecognised
 // funct3 values.
 const (
-	btypeBeq     = 60 // BEQ  (funct3 0b000)
-	btypeBne     = 61 // BNE  (funct3 0b001)
-	btypeBlt     = 62 // BLT  (funct3 0b100)
-	btypeBge     = 63 // BGE  (funct3 0b101)
-	btypeBltu    = 64 // BLTU (funct3 0b110)
-	btypeBgeu    = 65 // BGEU (funct3 0b111)
-	btypeInvalid = computeInvalid
+	btypeBeq  = 60 // BEQ  (funct3 0b000)
+	btypeBne  = 61 // BNE  (funct3 0b001)
+	btypeBlt  = 62 // BLT  (funct3 0b100)
+	btypeBge  = 63 // BGE  (funct3 0b101)
+	btypeBltu = 64 // BLTU (funct3 0b110)
+	btypeBgeu = 65 // BGEU (funct3 0b111)
 )
 
 // J-type semantic compute_op values. These are the unified ComputeOp codes and
 // MUST match constants.zkc.
 const (
-	jtypeJal     = 66
-	jtypeJalWB   = 67
-	jtypeInvalid = computeInvalid
+	jtypeJal   = 66
+	jtypeJalWB = 67
 )
 
 // specializeJTypeOpWithRd selects JTYPE_JAL_WB when rd != x0;
@@ -249,7 +242,6 @@ func specializeJTypeOpWithRd(baseOp, rd uint32) uint32 {
 const (
 	utypeLuiWB   = 68
 	utypeAuipcWB = 69
-	utypeInvalid = computeInvalid
 )
 
 const (
@@ -307,7 +299,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 		case 0b110:
 			return itypeRead32ZextWB, imm12
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeOPIMM:
 		switch funct3 {
@@ -325,7 +317,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			return itypeOpAndiWB, imm12
 		case 0b001:
 			if funct6 != 0b000000 {
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 			return itypeOpSlliWB, uimm6
 		case 0b101:
@@ -335,10 +327,10 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case 0b010000:
 				return itypeOpSraiWB, uimm6
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeOPIMM32:
 		switch funct3 {
@@ -346,7 +338,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			return itypeOpAddiwWB, imm12
 		case 0b001:
 			if funct7FromImm != 0b0000000 {
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 			return itypeOpSlliwWB, uimm5
 		case 0b101:
@@ -356,14 +348,14 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case 0b0100000:
 				return itypeOpSraiwWB, uimm5
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	case opcodeJALR:
 		if funct3 != 0b000 {
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 		return itypeJalr, imm12
 	case opcodeSYSTEM:
@@ -375,13 +367,13 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			case funct12Ebreak:
 				return itypeEbreak, imm12
 			default:
-				return itypeInvalid, imm12
+				return computeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, imm12
+			return computeInvalid, imm12
 		}
 	default:
-		return itypeInvalid, imm12
+		return computeInvalid, imm12
 	}
 }
 
@@ -436,7 +428,7 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 				return rtypeOpSraWB
 			}
 		}
-		return rtypeInvalid
+		return computeInvalid
 	case opcodeOP32:
 		switch funct7 {
 		case 0b0000001:
@@ -469,10 +461,10 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 				return rtypeOpSrawWB
 			}
 		}
-		return rtypeInvalid
+		return computeInvalid
 	case opcodeCUSTOM1:
 		if funct7 != 0b0000000 {
-			return rtypeInvalid
+			return computeInvalid
 		}
 		switch funct3 {
 		case 0b000:
@@ -482,10 +474,10 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		case 0b010:
 			return rtypeOpWriteOutput
 		default:
-			return rtypeInvalid
+			return computeInvalid
 		}
 	default:
-		return rtypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -501,7 +493,7 @@ func decodeSTypeSemantic(funct3 uint32) (computeOp uint32) {
 	case 0b011:
 		return stypeStore64
 	default:
-		return stypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -521,7 +513,7 @@ func decodeBTypeSemantic(funct3 uint32) uint32 {
 	case 0b111:
 		return btypeBgeu
 	default:
-		return btypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -530,7 +522,7 @@ func decodeJTypeSemantic(opcode uint32) (computeOp uint32) {
 	if opcode == opcodeJAL {
 		return jtypeJal
 	}
-	return jtypeInvalid
+	return computeInvalid
 }
 
 // assembleJTypeImm reassembles the split J-type immediate from a raw instruction
@@ -595,7 +587,7 @@ func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	case opcodeAUIPC:
 		return utypeAuipcWB
 	default:
-		return utypeInvalid
+		return computeInvalid
 	}
 }
 
@@ -924,7 +916,7 @@ func classifyInstruction(instruction uint32) uint32 {
 	itypeOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
 	// Check if the instruction is not an I-type instruction.
 	if instructionType != iType {
-		itypeOp = itypeInvalid
+		itypeOp = computeInvalid
 	}
 	// Determine if itypeJalr or itypeJalrWB
 	itypeOp = specializeITypeOpWithRd(itypeOp, rd)
@@ -935,7 +927,7 @@ func classifyInstruction(instruction uint32) uint32 {
 
 	rtypeOp := decodeRTypeSemantic(opcode, funct3, funct7)
 	if instructionType != rType {
-		rtypeOp = rtypeInvalid
+		rtypeOp = computeInvalid
 	}
 	// No need to specialize R-type operations with rd
 	// because all R-type operations use *_WB (Write Back) variants.
@@ -946,7 +938,7 @@ func classifyInstruction(instruction uint32) uint32 {
 
 	stypeOp := decodeSTypeSemantic(funct3)
 	if instructionType != sType {
-		stypeOp = stypeInvalid
+		stypeOp = computeInvalid
 	}
 
 	// ------------------------------------------------------------
@@ -955,7 +947,7 @@ func classifyInstruction(instruction uint32) uint32 {
 
 	btypeOp := decodeBTypeSemantic(funct3)
 	if instructionType != bType {
-		btypeOp = btypeInvalid
+		btypeOp = computeInvalid
 	}
 
 	// ------------------------------------------------------------
@@ -964,7 +956,7 @@ func classifyInstruction(instruction uint32) uint32 {
 
 	jtypeOp := decodeJTypeSemantic(opcode)
 	if instructionType != jType {
-		jtypeOp = jtypeInvalid
+		jtypeOp = computeInvalid
 	}
 	jtypeOp = specializeJTypeOpWithRd(jtypeOp, rd)
 
@@ -974,10 +966,10 @@ func classifyInstruction(instruction uint32) uint32 {
 
 	utypeOp := decodeUTypeSemantic(opcode)
 	if instructionType != uType {
-		utypeOp = utypeInvalid
+		utypeOp = computeInvalid
 	}
 
-	localOp := uint32(itypeInvalid)
+	localOp := uint32(computeInvalid)
 	switch instructionType {
 	case miscMemType:
 		localOp = 0

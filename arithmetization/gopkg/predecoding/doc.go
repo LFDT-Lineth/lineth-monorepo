@@ -117,7 +117,7 @@
 //	0b000   rtypeOpKeccak (RTYPE_KECCAK, 53)      keccak(...)
 //	0b001   rtypeOpPoseidon2 (RTYPE_POSEIDON2, 54) poseidon2(...)
 //
-// Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
+// Any other `(funct3, funct7)` pair on Custom-1 maps to `COMPUTE_INVALID`
 // (255) in the `decoded` table.
 //
 // At runtime, the interpreter's flat `switch compute_op` handles the base `RTYPE_*`

@@ -230,7 +230,7 @@ func TestShouldUseNoOp(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(tt.instr)
-			var localOp uint32 = itypeInvalid
+			var localOp uint32 = computeInvalid
 			switch instrType {
 			case iType:
 				localOp, _ = decodeITypeSemantic(opcode, funct3, imm12)
