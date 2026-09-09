@@ -129,6 +129,38 @@ func TestSignExtend12(t *testing.T) {
 	}
 }
 
+// signExtend13_oracle is a shift-free reference for 13-bit two's-complement sign
+// extension: it keeps the low 13 bits (via modulo, not masking) and subtracts
+// 2^13 = 8192 when bit 12 is set (value >= 2^12 = 4096), independent of the
+// <<19/>>19 idiom signExtend13 uses.
+func signExtend13_oracle(x uint32) int64 {
+	// keep the low 13 bits
+	v := int64(x % 8192)
+	// if bit 12 is set
+	if v >= 4096 {
+		// subtract 2^13 = 8192
+		v -= 8192
+	}
+	return v
+}
+
+// TestSignExtend13 checks signExtend13 over the full 13-bit domain against
+// signExtend13_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 12 are ignored (masked) and only bit 12 drives the
+// sign, so the result always lands in [-4096, 4095].
+func TestSignExtend13(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xffffe000, 0xaaaaa000, 0x55554000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<13; low++ {
+			x := bg | low
+			want := signExtend13_oracle(x)
+			if got := signExtend13(x); got != want {
+				t.Fatalf("signExtend13(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
 // ------------------------------------------------------------
 // decodeITypeSemantic tests : translation of opcode and funct3 to computed op
 // (local op) and normalized imm12.
