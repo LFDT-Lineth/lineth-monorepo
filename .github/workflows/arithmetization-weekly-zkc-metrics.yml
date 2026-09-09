@@ -99,10 +99,12 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/wzm"
 
       # The guest ELF needs Zig and the riscv toolchain; the measurement jobs only need Go.
+      # cache-save off when measuring a dispatcher-supplied monorepo-ref.
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref || 'main' }}
+          cache-save: ${{ inputs.monorepo-ref == '' }}
 
       # Expand short hashes through the API so every measurement job resolves the same zkc revision.
       # Branches and tags pass through untouched.

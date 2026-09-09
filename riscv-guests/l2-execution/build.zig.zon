@@ -29,6 +29,9 @@
             .url = "https://github.com/dmtrKovalenko/zlob/archive/refs/tags/v1.6.5.tar.gz",
             .hash = "zlob-1.6.5-zzE2lWoNCQCFLMTpuNAhGEPVNsyTbftabd_2_A6fEHob",
         },
+        // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
+        // primitives l2_execution_ssz.zig's container codec builds on.
+        .guest_common = .{ .path = "../guest-common" },
         // A generic SSZ serialize/deserialize library over plain Zig structs, targeting the same
         // Zig version this package pins. Test-only: gives the test-side vanilla StatelessInput
         // encoder a real implementation to serialize against instead of a hand-rolled

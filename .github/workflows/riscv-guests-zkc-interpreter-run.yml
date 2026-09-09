@@ -1,10 +1,10 @@
-# Guest-in-ZKC-interpreter CI for the l2-execution RISC-V guest.
+# Guest-in-ZKC-interpreter CI for the RISC-V guest programs.
 #
-# Builds the guest as a statically-linked rv64im ELF (KECCAK_ACCEL=true — the prover-accelerated
-# custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
-# under zkc via the existing `exec` entry point. Execution runs in fast mode (--fast): this gate only
-# needs to prove the guest runs, and skipping tracing keeps it cheap. Tracing and constraint checking
-# are measured by arithmetization-weekly-zkc-metrics.yml.
+# Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
+# prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
+# input, and executes it under zkc in fast mode (--fast). This gate only needs to prove each guest
+# runs, and skipping tracing keeps it cheap. Tracing and constraint checking are measured by
+# arithmetization-weekly-zkc-metrics.yml.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
@@ -20,40 +20,40 @@ on:
     # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - 'riscv-guests/**'
-      - 'arithmetization/src/main/riscv/**'      # main.zkc — the interpreter (ZKC_MAIN)
-      - 'arithmetization/src/main/lib/**'         # zkc stdlib used by the interpreter
-      - 'arithmetization/src/test/Makefile'       # elf-exec / elf-to-json / linker-script
-      - 'arithmetization/cmd/elf_to_json/**'
-      - 'arithmetization/gopkg/elfmapping/**'
-      - 'arithmetization/gopkg/predecoding/**'
-      - 'arithmetization/go.mod'
-      - 'arithmetization/go.sum'
-      - 'arithmetization/Makefile'                # prepare-zkc / ZKC_REF
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
+      - "riscv-guests/**"
+      - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
+      - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
+      - "arithmetization/src/test/Makefile" # elf-exec / elf-to-json / linker-script
+      - "arithmetization/cmd/elf_to_json/**"
+      - "arithmetization/gopkg/elfmapping/**"
+      - "arithmetization/gopkg/predecoding/**"
+      - "arithmetization/go.mod"
+      - "arithmetization/go.sum"
+      - "arithmetization/Makefile" # prepare-zkc / ZKC_REF
+      - ".github/actions/setup-riscv-guests/**"
+      - ".github/actions/setup-zig/**"
+      - ".github/workflows/riscv-guests-zkc-interpreter-run.yml"
   push:
     branches:
       - main
     paths:
-      - 'riscv-guests/**'
-      - 'arithmetization/src/main/riscv/**'
-      - 'arithmetization/src/main/lib/**'
-      - 'arithmetization/src/test/Makefile'
-      - 'arithmetization/cmd/elf_to_json/**'
-      - 'arithmetization/gopkg/elfmapping/**'
-      - 'arithmetization/gopkg/predecoding/**'
-      - 'arithmetization/go.mod'
-      - 'arithmetization/go.sum'
-      - 'arithmetization/Makefile'
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-zkc-interpreter-run.yml'
+      - "riscv-guests/**"
+      - "arithmetization/src/main/riscv/**"
+      - "arithmetization/src/main/lib/**"
+      - "arithmetization/src/test/Makefile"
+      - "arithmetization/cmd/elf_to_json/**"
+      - "arithmetization/gopkg/elfmapping/**"
+      - "arithmetization/gopkg/predecoding/**"
+      - "arithmetization/go.mod"
+      - "arithmetization/go.sum"
+      - "arithmetization/Makefile"
+      - ".github/actions/setup-riscv-guests/**"
+      - ".github/actions/setup-zig/**"
+      - ".github/workflows/riscv-guests-zkc-interpreter-run.yml"
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        description: "Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)"
         required: false
         type: string
       reference-args:
@@ -63,7 +63,7 @@ on:
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        description: "Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)"
         required: false
         type: string
       reference-args:
@@ -77,7 +77,7 @@ permissions:
 
 jobs:
   zkc-interpreter-run:
-    name: l2-execution guest in ZKC interpreter (accel)
+    name: guests in ZKC interpreter (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # Fast-mode execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
@@ -100,23 +100,29 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25.7'
+          go-version: "1.25.7"
           cache-dependency-path: "**/*.sum"
+          cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       # Apply an optional zkc override up front. With no override, go.mod's pinned tool is used.
       - name: Prepare zkc interpreter CLI
         env:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
-      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast): a
-      # runnability check, so it skips tracing to stay light. Tracing and constraint checking are
-      # measured weekly instead — see arithmetization-weekly-zkc-metrics.yml. Uses exec's default
+      # Execute the guest under zkc in fast mode (--fast): a runnability check, so it skips tracing
+      # to stay light. Tracing and constraint checking are measured weekly instead — see
+      # arithmetization-weekly-zkc-metrics.yml. Uses exec's default
       # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
       # ZKC_REF is step-scoped above, so elf-exec does not apply the override a second time.
-      #
-      # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (fast, accel keccak) and check guest_output
         run: make -C riscv-guests/l2-execution zkc-smoke-exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+
+      # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
+      # output. Running it here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
+      # end-to-end for an additional guest program. KECCAK_ACCEL=true matches the production
+      # proving configuration; its keccak use is comptime-only in this stub.
+      - name: Run rollup guest under zkc (fast, accel keccak)
+        run: make -C riscv-guests/rollup exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
   # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
   # scope with reference-args.
@@ -136,7 +142,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25.7'
+          go-version: "1.25.7"
           cache-dependency-path: "**/*.sum"
 
       # Apply an optional zkc override up front. With no override, go.mod's pinned tool is used.
@@ -147,4 +153,3 @@ jobs:
 
       - name: Run zkc reference-test
         run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast" REFERENCE_ARGS="${{ inputs.reference-args }}"
-
