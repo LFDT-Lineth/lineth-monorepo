@@ -51,7 +51,7 @@ class LocalStackConfigsParsingTest {
       assertThat(configs.conflation.riscvStartingBlockTimestampInclusive).isEqualTo(Instant.fromEpochSeconds(0))
       assertThat(configs.conflation.proofAggregation.timestampBasedHardForks)
         .containsExactly(Instant.fromEpochSeconds(0))
-      assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Osaka")
+      assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Amsterdam")
       assertThat(configs.riscvProversConfig?.proverA?.execution?.requestsDirectory)
         .isEqualTo(Path.of("/data/prover/riscv/execution/requests"))
       assertThat(requireNotNull(configs.traces.counters).endpoints.map { it.toExternalForm() })

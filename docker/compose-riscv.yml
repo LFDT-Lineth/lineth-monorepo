@@ -50,6 +50,11 @@ services:
       file: compose-spec-l2-services.yml
       service: l2-genesis-initialization
     container_name: linea-riscv-l2-genesis-initialization
+    entrypoint: ["sh", "/riscv/init.sh"]
+    volumes:
+      - ./config/riscv/init.sh:/riscv/init.sh:ro
+      - ./config/l2-genesis-initialization:/templates:ro
+      - ../tmp/riscv/genesis:/initialization:rw
 
   maru:
     extends:
@@ -60,6 +65,7 @@ services:
       LINETH_USE_MARU_OVERRIDE_CONFIG: "true"
     ports: !override []
     volumes:
+      - ../tmp/riscv/genesis:/initialization:ro
       - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
     networks:
       l1network:
@@ -71,15 +77,16 @@ services:
       file: compose-spec-l2-services.yml
       service: sequencer
     container_name: linea-riscv-sequencer
+    volumes:
+      - ../tmp/riscv/genesis:/initialization:ro
     command:
       - --config-file=/var/lib/besu/sequencer.config.toml
       - --node-private-key-file=/var/lib/besu/key
       - --plugin-linea-node-type=SEQUENCER
       - --plugin-linea-liveness-enabled=false
-      - >-
-        --plugins=LineaEstimateGasEndpointPlugin,LineaExtraDataPlugin,
-        LineaTransactionPoolValidatorPlugin,LineaBundleEndpointsPlugin,
-        LineaSetExtraDataEndpointPlugin,LineaTransactionSelectorPlugin
+      - --data-storage-format=BONSAI
+      - --target-gas-limit=30000000
+      - --plugins=LineaExtraDataPlugin,LineaTransactionPoolValidatorPlugin,LineaBundleEndpointsPlugin,LineaSetExtraDataEndpointPlugin
     ports: !override
       - "8545:8545"
     networks:
@@ -111,7 +118,7 @@ services:
     container_name: linea-riscv-coordinator
     hostname: coordinator
     image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-local}
-    platform: linux/amd64
+    platform: ${RISCV_PLATFORM:-linux/amd64}
     profiles: ["l2"]
     depends_on:
       l2-genesis-initialization:

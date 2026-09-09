@@ -112,6 +112,9 @@ application {
 
 jar {
   archiveBaseName = 'coordinator'
+  inputs.property('runtimeClasspathJarNames', provider {
+    configurations.runtimeClasspath.collect { it.name }.findAll { it.endsWith('.jar') }
+  })
   // Move Class-Path computation back to execution time and don’t resolve runtimeClasspath at configuration time
   doFirst {
     manifest {
