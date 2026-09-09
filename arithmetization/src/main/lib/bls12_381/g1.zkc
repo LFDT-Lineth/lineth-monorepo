@@ -167,3 +167,61 @@ fn scalar_mul_affine_bls12_381_g1(k:u384, Px:u384, Py:u384) -> (Qx:u384, Qy:u384
 
     Qx, Qy = projective_to_affine_bls12_381_g1(QX, QY, QZ)
 }
+
+// ----- subgroup check -----
+
+// A primitive cube root of unity in Fp. It defines the GLV endomorphism
+// phi(x, y) = (beta*x, y), which acts on the prime-order subgroup as
+// multiplication by lambda = x^2 - 1.
+const BLS12_381_BETA:u384 = 0x1a0111ea397fe699ec02408663d4de85aa0d857d89759ad4897d29650fb85f9b409427eb4f49fffd8bfd00000000aaac
+
+// x^2, the square of the curve seed. Sign is irrelevant here: (-|x|)^2 = |x|^2.
+const BLS12_381_SEED_SQ:u384 = 0xac45a4010001a4020000000100000000
+
+// Prime-order subgroup membership, required by PAIRING_CHECK (and by G1MSM),
+// but NOT by G1ADD -- G1's cofactor is not 1, so "on the curve" is strictly
+// weaker than "in the subgroup".
+//
+// Uses the endomorphism identity [x^2] phi(P) == -P rather than the naive
+// [r]P == O. r is 255 bits and x^2 is 128, so this halves the ladder.
+//
+// The comparison is done PROJECTIVELY, cross-multiplying by Z instead of
+// converting the ladder output to affine. That trades one invmod_384 -- a
+// Fermat exponentiation, ~613 mulmod_384 on its own -- for two mulmods.
+//
+// Unlike G2, there is no free ride available here: the Miller loop accumulates
+// multiples of Q, never of P, so this ladder cannot be shared with anything.
+// (For G2 the pairing skips the equivalent function entirely -- see
+// t_matches_psi_bls12_381 in pairing.zkc.)
+//
+// PRECONDITION: the caller has already established that (x, y) is on the curve.
+// This predicate only tests subgroup membership.
+fn is_in_subgroup_affine_bls12_381_g1(x:u384, y:u384) -> (res:u1) {
+    res = 0
+    if is_infinity_affine_bls12_381_g1(x, y) == 1 {
+        // the identity is in every subgroup
+        res = 1
+        return
+    }
+
+    // phi(P) = (beta*x, y)
+    var px:u384 = mulmod_384(BLS12_381_BETA, x, BLS12_381_P)
+
+    var RX:u384, RY:u384, RZ:u384
+    RX, RY, RZ = sw_scalar_mul_projective_384(BLS12_381_SEED_SQ, px, y, 1,
+                                              BLS12_381_P, BLS12_381_B3)
+
+    // P is finite and of order > 1 here, so -P is finite: an infinite [x^2]phi(P)
+    // cannot match it.
+    if RZ == 0 {
+        return
+    }
+
+    // (RX : RY : RZ) == (x, -y)  <=>  RX == x*RZ  and  RY == -y*RZ
+    var ny:u384 = submod_384(0, y, BLS12_381_P)
+    var ex:u384 = mulmod_384(x, RZ, BLS12_381_P)
+    var ey:u384 = mulmod_384(ny, RZ, BLS12_381_P)
+    if (RX == ex) && (RY == ey) {
+        res = 1
+    }
+}

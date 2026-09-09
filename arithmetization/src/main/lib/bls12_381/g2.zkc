@@ -454,6 +454,13 @@ fn psi_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (rx0:u384, rx1:u384, 
 // what is already one of the more expensive parts of validating a pairing input.
 //
 // The seed is negative, so [x]Q = -[|x|]Q.
+//
+// NOTE: the PAIRING does not call this. It gets the same answer for almost
+// nothing from t_matches_psi_bls12_381, because its Miller loop already computes
+// [|x|]Q. This standalone version re-runs the ladder from scratch and converts
+// to affine, so it costs an extra ~2,900 mulmod_384; it is kept for callers with
+// no Miller loop to piggyback on, which is G2MSM.
+//
 // PRECONDITION: the caller has already established that (x, y) is on the twist.
 // This predicate only tests subgroup membership.
 fn is_in_subgroup_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u1) {

@@ -29,13 +29,13 @@ pub input qy1(address:u1) -> (v:u384)
 
 pub input want(address:u4) -> (v:u384)
 
-const OUT:u9 = 0
+const OUT:u12 = 0
 
 fn main<bls_fp12_mem>() {
     miller_loop_bls12_381(px[0], py[0], qx0[0], qx1[0], qy0[0], qy1[0], OUT)
 
     for i:u5 = 0; i < 12; i = i + 1 {
-        if bls_fp12_mem[OUT + (i as u9)] != want[i as u4] {
+        if bls_fp12_mem[OUT + (i as u12)] != want[i as u4] {
             fail
         }
     }
