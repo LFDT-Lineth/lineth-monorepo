@@ -53,6 +53,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_e2e_test:
+        description: 'Skip the run-e2e-tests job'
+        required: false
+        type: boolean
+        default: false
     outputs:
       tag_changed:
         description: "Indicate whether the release tag of the component has changed"
@@ -155,6 +160,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'coordinator' &&
       (github.ref_name == 'main' || needs.run-test-coordinator.result == 'success')
     uses: ./.github/workflows/coordinator-build-and-publish.yml
@@ -169,6 +175,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'postman' &&
       (github.ref_name == 'main' || needs.run-test-postman.result == 'success')
     uses: ./.github/workflows/postman-build-and-publish.yml
@@ -183,6 +190,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'prover' &&
       (github.ref_name == 'main' || needs.run-test-prover.result == 'success')
     uses: ./.github/workflows/prover-build-and-publish.yml
@@ -197,6 +205,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'maru' &&
       (github.ref_name == 'main' || needs.run-test-maru.result == 'success')
     uses: ./.github/workflows/maru-build-and-publish.yml
@@ -211,6 +220,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       inputs.component-name == 'tx-exclusion-api' &&
       (github.ref_name == 'main' || needs.run-test-transaction-exclusion-api.result == 'success')
     uses: ./.github/workflows/transaction-exclusion-api-build-and-publish.yml
@@ -225,6 +235,7 @@ jobs:
     if: >
       always() && !cancelled() &&
       needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      !inputs.skip_e2e_test &&
       (needs.build-local-coordinator.result       == 'success' ||
        needs.build-local-postman.result           == 'success' ||
        needs.build-local-prover.result            == 'success' ||
@@ -239,8 +250,12 @@ jobs:
     secrets: inherit
 
   push-tag-update-changelog-and-gh-release:
-    needs: [run-e2e-tests]
-    if: always() && !cancelled() && needs.run-e2e-tests.result == 'success'
+    needs: [compute-release-metadata, run-e2e-tests]
+    if: >
+      always() && !cancelled() &&
+      needs.compute-release-metadata.outputs.tag_changed == 'true' &&
+      (needs.run-e2e-tests.result == 'success' ||
+       (needs.run-e2e-tests.result == 'skipped' && inputs.skip_e2e_test))
     uses: ./.github/workflows/reusable-component-gh-release.yml
     with:
       component-name: ${{ inputs.component-name }}
