@@ -222,6 +222,8 @@ const (
 	jtypeInvalid = 63
 )
 
+// specializeJTypeOpWithRd selects JTYPE_JAL_WB when rd != x0;
+// other ops already use *_WB indices.
 func specializeJTypeOpWithRd(baseOp, rd uint32) uint32 {
 	if rd != 0 && baseOp == jtypeJal {
 		return jtypeJalWB
