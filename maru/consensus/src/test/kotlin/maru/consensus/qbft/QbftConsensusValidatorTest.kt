@@ -28,6 +28,8 @@ import org.hyperledger.besu.consensus.common.bft.events.BlockTimerExpiry
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -97,6 +99,46 @@ class QbftConsensusValidatorTest {
     } finally {
       releaseImport.countDown()
       processor.stop().get(30, TimeUnit.SECONDS)
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [false, true])
+  fun `timed-out close cleans up after the event finishes without a lifecycle retry`(failEvent: Boolean) {
+    val eventStarted = CountDownLatch(1)
+    val releaseEvent = CountDownLatch(1)
+    val controller = FakeQbftEventHandler {
+      eventStarted.countDown()
+      check(releaseEvent.await(30, TimeUnit.SECONDS))
+      if (failEvent) {
+        throw AssertionError("event failed")
+      }
+    }
+    val queue = BftEventQueue(1000)
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors, eventQueueExecutor, 10.milliseconds)
+    try {
+      validator.start()
+      queue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, 0)))
+      assertThat(eventStarted.await(30, TimeUnit.SECONDS)).isTrue()
+
+      repeat(2) {
+        assertThatThrownBy { validator.close() }.isInstanceOf(TimeoutException::class.java)
+      }
+      assertThat(controller.stops).isZero()
+      bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS).get(30, TimeUnit.SECONDS)
+
+      releaseEvent.countDown()
+      eventQueueExecutor.submit {}.get(30, TimeUnit.SECONDS)
+
+      assertThat(controller.stops).isEqualTo(1)
+      assertThatThrownBy { bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS) }
+        .isInstanceOf(IllegalStateException::class.java)
+      validator.close()
+      assertThat(controller.stops).isEqualTo(1)
+    } finally {
+      releaseEvent.countDown()
+      eventQueueExecutor.submit {}.get(30, TimeUnit.SECONDS)
     }
   }
 

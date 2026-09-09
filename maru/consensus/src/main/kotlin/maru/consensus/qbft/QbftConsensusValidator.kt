@@ -9,6 +9,7 @@
 package maru.consensus.qbft
 
 import maru.core.Protocol
+import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -28,6 +29,7 @@ class QbftConsensusValidator(
     val DEFAULT_SHUTDOWN_TIMEOUT: Duration = 30.seconds
   }
 
+  private val log = LogManager.getLogger(this.javaClass)
   private var isRunning = false
   private var pendingStop: SafeFuture<Unit>? = null
 
@@ -60,8 +62,30 @@ class QbftConsensusValidator(
       throw e
     } finally {
       if (completion.isDone) {
-        bftExecutors.stop()
+        completeStop(completion)
+      } else {
+        completion.whenComplete { _, _ ->
+          try {
+            completeStop(completion)
+          } catch (error: Exception) {
+            log.error("Failed to clean up QBFT validator after event processor shutdown", error)
+          }
+        }
+      }
+    }
+  }
+
+  @Synchronized
+  private fun completeStop(completion: SafeFuture<Unit>) {
+    if (pendingStop !== completion) {
+      return
+    }
+    try {
+      bftExecutors.stop()
+    } finally {
+      try {
         qbftController.stop()
+      } finally {
         isRunning = false
         pendingStop = null
       }
