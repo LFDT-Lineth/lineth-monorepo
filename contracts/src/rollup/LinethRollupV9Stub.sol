@@ -12,14 +12,12 @@ import { LinethRollup } from "./LinethRollup.sol";
 contract LinethRollupV9Stub is LinethRollup {
   /**
    * @notice No-op placeholder for EIP-4844 blob submission.
-   * @param _blobFinalBlockHashes The final L2 block hash for each blob being submitted.
-   * @param _parentShnarf The parent shnarf used in continuity checks.
-   * @param _finalBlobShnarf The expected final shnarf post computation of all the blob shnarfs.
+   * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
+   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
    */
   function submitBlobs(
-    bytes32[] calldata _blobFinalBlockHashes,
-    bytes32 _parentShnarf,
-    bytes32 _finalBlobShnarf
+    bytes32 _parentDataRollingHash,
+    bytes32 _finalDataRollingHash
   ) public override whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {}
 
   /**
@@ -31,6 +29,6 @@ contract LinethRollupV9Stub is LinethRollup {
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV5 calldata _finalizationData
+    FinalizationDataV6 calldata _finalizationData
   ) external override whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE) {}
 }

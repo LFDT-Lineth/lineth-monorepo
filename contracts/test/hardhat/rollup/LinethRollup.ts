@@ -35,7 +35,6 @@ import {
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
   SIX_MONTHS_IN_SECONDS,
   LINETH_ROLLUP_INITIALIZE_SIGNATURE,
-  FORCED_TRANSACTION_FEE,
   SET_ADDRESS_FILTER_ROLE,
   INITIALIZED_ALREADY_MESSAGE,
 } from "../common/constants";
@@ -47,11 +46,11 @@ import {
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
-  generateBlobParentShnarfData,
+  generateBlobParentDataRollingHash,
   calculateLastFinalizedState,
   expectNoEvent,
   expectEventDirectFromReceiptData,
-  computeGenesisShnarf,
+  computePositionCommitment,
 } from "../common/helpers";
 import { LinethRollupInitializationData, PauseTypeRole } from "../common/types";
 
@@ -244,12 +243,19 @@ describe("Lineth Rollup contract", () => {
 
       const receipt = await linethRollup.deploymentTransaction()?.wait();
 
+      // Locate the init event by topic rather than a fixed log index; the number of preceding
+      // RoleGranted/initialization logs changes as init logic evolves.
+      const initTopic = linethRollup.interface.getEvent("LineaRollupBaseInitialized")!.topicHash;
+      const initLogIndex = receipt!.logs.findIndex((log) => log.topics[0] === initTopic);
+      expect(initLogIndex, "LineaRollupBaseInitialized log present").to.be.greaterThanOrEqual(0);
+
       await expectEventDirectFromReceiptData(
         linethRollup,
         receipt!,
         "LineaRollupBaseInitialized",
-        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
-        38,
+        // Genesis position commitment is keccak256(EMPTY_HASH || 0): the empty accumulator at offset 0.
+        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computePositionCommitment(HASH_ZERO, 0n)],
+        initLogIndex,
       );
 
       expect(await linethRollup.blockHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
@@ -323,144 +329,79 @@ describe("Lineth Rollup contract", () => {
     });
   });
 
-  describe("Upgrading / reinitialisation", () => {
+  describe("Upgrading / reinitialisation V10", () => {
+    const legacyFinalizedShnarf = generateRandomBytes(32);
+
     beforeEach(async () => {
-      // Simulate a pre-upgrade state by lowering the initialized version to allow reinitializer(9) to run
-      await linethRollup.setSlotValue(0, 8);
+      // Simulate a pre-upgrade state: lower the initialized version so reinitializer(10) can run,
+      // and seed the legacy finalized shnarf slot with the value the bridge will migrate.
+      await linethRollup.setSlotValue(0, 9);
+      await linethRollup.setLastFinalizedShnarf(legacyFinalizedShnarf);
     });
 
-    it("Should revert if the forced transaction fee is zero", async () => {
+    it("Should revert when the bridged shnarf is the zero hash", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [0n, addressFilterAddress],
+        "reinitializeLineaRollupV10",
+        [HASH_ZERO],
       );
 
-      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroValueNotAllowed");
+      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroHashNotAllowed");
     });
 
-    it("Should revert if the address filter address is zero address", async () => {
+    it("Should revert when the supplied shnarf does not match live state", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, ADDRESS_ZERO],
+        "reinitializeLineaRollupV10",
+        [generateRandomBytes(32)],
       );
 
-      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroAddressNotAllowed");
+      await expectRevertWithCustomError(linethRollup, upgradeCall, "BridgedShnarfMismatch");
     });
 
-    it("Should set the next forced transaction number to 1", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
+    it("Should anchor the bridged shnarf as a dataRollingHash", async () => {
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", [
+        legacyFinalizedShnarf,
       ]);
 
-      expect(await linethRollup.nextForcedTransactionNumber()).to.equal(1n);
+      expect(await linethRollup.dataRollingHashExists(legacyFinalizedShnarf)).to.equal(1n);
     });
 
-    it("Should emit the AddressFilterChanged event when the address filter is set", async () => {
-      await expectEvent(
-        linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-          FORCED_TRANSACTION_FEE,
-          addressFilterAddress,
-        ]),
-        "AddressFilterChanged",
-        [ADDRESS_ZERO, addressFilterAddress],
-      );
-    });
-
-    it("Should emit the ForcedTransactionFeeSet event when the address filter is set", async () => {
-      await expectEvent(
-        linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-          FORCED_TRANSACTION_FEE,
-          addressFilterAddress,
-        ]),
-        "ForcedTransactionFeeSet",
-        [FORCED_TRANSACTION_FEE],
-      );
-    });
-
-    it("Should set the address filter", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
+    it("Should reseal the finalized shnarf slot as a fresh-start position commitment", async () => {
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", [
+        legacyFinalizedShnarf,
       ]);
 
-      expect(await linethRollup.addressFilter()).to.equal(addressFilterAddress);
+      expect(await linethRollup.currentFinalizedShnarf()).to.equal(computePositionCommitment(legacyFinalizedShnarf, 0));
     });
 
-    it("CONTRACT_VERSION reflects ABI 9.0 after bytecode upgrade", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
-      ]);
-
-      expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
-    });
-
-    it("Should emit LineaRollupVersionChanged 7.1 to 8.0 for V9 reinit", async () => {
+    it("Should emit LineaRollupVersionChanged 9.0 to 10.0", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, addressFilterAddress],
+        "reinitializeLineaRollupV10",
+        [legacyFinalizedShnarf],
       );
 
-      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("7.1"), 8);
-      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("10.0"), 8);
 
       await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
+      expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
     });
 
     it("Fails to reinitialize twice", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", [
+        legacyFinalizedShnarf,
       ]);
 
       const secondUpgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, addressFilterAddress],
-      );
-
-      await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
-    });
-  });
-
-  describe("Upgrading / reinitialisation V10", () => {
-    beforeEach(async () => {
-      await linethRollup.setSlotValue(0, 9);
-    });
-
-    it("Should emit LineaRollupVersionChanged 8.0 to 9.0", async () => {
-      const upgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
         "reinitializeLineaRollupV10",
-        [],
-      );
-
-      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
-      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
-
-      await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
-      expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
-    });
-
-    it("Fails to reinitialize V10 twice", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", []);
-
-      const secondUpgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
-        "reinitializeLineaRollupV10",
-        [],
+        [legacyFinalizedShnarf],
       );
 
       await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
@@ -854,7 +795,7 @@ describe("Lineth Rollup contract", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
       });

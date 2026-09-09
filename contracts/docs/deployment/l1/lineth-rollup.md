@@ -46,12 +46,11 @@ VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_A
 
 ## Upgrade Deployments
 
-Upgrade order for live proxies moving to ABI `"9.0"`:
+Live proxies moving to ABI `"9.0"` perform a single cutover:
 
-1. **Forced-tx cutover** — `LinethRollupV8WithReinitialization` → `reinitializeLineaRollupV9` (`reinitializer(9)`, ABI `"7.1"`→`"8.0"`).
-2. **Blockhash / RISC-V cutover** — `LineaRollupV9WithReinitialization` → `reinitializeLineaRollupV10` (`reinitializer(10)`, ABI `"8.0"`→`"9.0"`).
+- **Blob-spanning cutover** — `LinethRollupV10WithReinitialization` → `reinitializeLineaRollupV10(bytes32)` (`reinitializer(10)`, ABI `"9.0"`→`"10.0"`).
 
-OZ `reinitializer(9)` is consumed by the forced-tx step; the blockhash ABI bump requires a new OZ slot (`10`).
+The bridge reinterprets the finalized 3-arg shnarf slot as the previous end dataRollingHash, anchors it, and reseals the slot as a fresh-start position commitment `keccak256(shnarf ‖ 0)`. The caller MUST supply the exact current `currentFinalizedShnarf` value; the bridge reverts with `BridgedShnarfMismatch` if live state has drifted from what governance approved.
 
 ### LinethRollupWithReinitialization
 
@@ -69,34 +68,18 @@ pnpm exec hardhat deploy --network sepolia --tags LinethRollupWithReinitializati
 
 <br />
 
-### LinethRollupV8WithReinitialization
+### LinethRollupV10WithReinitialization
 
-Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV9` (forced transactions). Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
+Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV10(bytes32)` (blob-spanning dataRollingHash cutover). Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
+
+`reinitializeLineaRollupV10` anchors the bridged finalized shnarf as a dataRollingHash, reseals the position-commitment slot, and emits `LineaRollupVersionChanged("9.0", "10.0")`. Verifier keys and `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` are configured separately after upgrade via `grantRole` and `setVerifierKeys`.
 
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|
 | \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
 | LINETH_ROLLUP_ADDRESS | registry\|env | address | Existing LinethRollup proxy address. Read from registry on stable networks; env var used as fallback. |
-| LINETH_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI | true | uint256 | Forced transaction fee in wei (must be > 0) |
-| LINETH_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
+| LINETH_ROLLUP_CURRENT_FINALIZED_SHNARF | true | bytes32 | The exact on-chain `currentFinalizedShnarf` value at upgrade time; the bridge reverts with `BridgedShnarfMismatch` on drift. |
 
 ```shell
-pnpm exec hardhat deploy --network sepolia --tags LinethRollupV8WithReinitialization
-```
-
-<br />
-
-### LineaRollupV9WithReinitialization
-
-Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV10` (blockhash-centric / RISC-V ABI cutover). Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
-
-`reinitializeLineaRollupV10` only bumps the ABI version and emits `LineaRollupVersionChanged("8.0", "9.0")`. Does **not** populate `blockHashes[currentL2BlockNumber]` — the first post-upgrade finalization takes the one-way migration path from `stateRootHashes`. Verifier keys and `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` are configured separately after upgrade via `grantRole` and `setVerifierKeys`.
-
-| Parameter name | Required | Input value | Description |
-|---|---|---|---|
-| \**DEPLOYER_PRIVATE_KEY* | true | key | Network-specific private key |
-| LINEA_ROLLUP_ADDRESS | registry\|env | address | Existing LinethRollup proxy address. Read from registry on stable networks; env var used as fallback. |
-
-```shell
-pnpm exec hardhat deploy --network sepolia --tags LineaRollupV9WithReinitialization
+pnpm exec hardhat deploy --network sepolia --tags LinethRollupV10WithReinitialization
 ```

@@ -1,36 +1,36 @@
 export type BlobSubmission = {
-  /** Final L2 block hash for this blob (submitBlobs argument). */
-  finalBlockHash: string;
-  /** EIP-4844 versioned blob hash (blobhash(i)); used when computing expected shnarf. */
+  /** EIP-4844 versioned blob hash (blobhash(i)); folded into the dataRollingHash on-chain. */
   dataHash: string;
   compressedData: string;
   /** Kept for fixture/debug; not sent on-chain. */
   kzgCommitment?: string;
 };
 
-export type ParentAndExpectedShnarf = {
-  parentShnarf: string;
-  expectedShnarf: string;
+/** A single chunk in the DA stream, tracking the running dataRollingHash accumulator. */
+export type DataRollingChainEntry = {
+  compressedData: string;
+  /** Chunk hash folded into the accumulator (keccak256(compressedData) for calldata, blobhash(i) for blobs). */
+  chunkHash: string;
+  /** Accumulator value before folding this chunk. */
+  parentDataRollingHash: string;
+  /** Accumulator value after folding this chunk. */
+  dataRollingHash: string;
+  /** Byte length of compressedData (used to derive stream offsets). */
+  byteLength: number;
 };
 
-/** Legacy 5-field shnarf layout retained as FinalizationDataV5 ABI padding. */
-export type ShnarfData = {
-  parentShnarf: string;
-  snarkHash: string;
-  finalStateRootHash: string;
-  dataEvaluationPoint: string;
-  dataEvaluationClaim: string;
+export type ParentAndExpectedDataRollingHash = {
+  parentDataRollingHash: string;
+  expectedDataRollingHash: string;
 };
 
 export type CalldataSubmissionData = {
-  blockHash: string;
   compressedData: string;
 };
 
 export type FinalizationData = {
   aggregatedProof: string;
   endBlockNumber: bigint;
-  shnarfData: ShnarfData;
   parentStateRootHash: string;
   parentBlockHash: string;
   lastFinalizedTimestamp: bigint;
@@ -47,11 +47,19 @@ export type FinalizationData = {
   finalForcedTransactionNumber: bigint;
   lastFinalizedForcedTransactionRollingHash: string;
   finalBlockHash: string;
-  finalBlobHash: string;
+  prevDataRollingHash: string;
+  prevOffset: bigint;
+  parentDataRollingHash: string;
+  endDataRollingHash: string;
+  startOffset: bigint;
+  endOffset: bigint;
   verifierKeys: string[];
 };
 
-export type ShnarfDataGenerator = (blobParentShnarfIndex: number, isMultiple?: boolean) => ShnarfData;
+export type ShnarfDataGenerator = (
+  blobParentShnarfIndex: number,
+  isMultiple?: boolean,
+) => ParentAndExpectedDataRollingHash;
 
 export type Eip1559Transaction = {
   nonce: bigint;

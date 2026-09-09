@@ -43,29 +43,27 @@ interface ILinethRollupBase {
   }
 
   /**
-   * @notice Shnarf data supplied during finalization.
-   * @dev Only parentShnarf is used by V5 finalization. The remaining fields preserve the transition ABI layout.
-   * @param parentShnarf is the parent computed shnarf.
-   * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
-   * @param finalStateRootHash is the final state root hash.
-   * @param dataEvaluationPoint is the data evaluation point.
-   * @param dataEvaluationClaim is the data evaluation claim.
+   * @notice Data-availability stream position supplied during finalization.
+   * @dev A stream position is the (dataRollingHash, offset) pair from the blob-spanning spec:
+   *   the dataRollingHash is the 2-input accumulator after folding every chunk up to and including the
+   *   one containing the position; the offset is the number of bytes consumed of that last-folded chunk.
+   *   The previously-finalized position is supplied as calldata so the contract can open the stored
+   *   position commitment (keccak256(dataRollingHash || offset)) rather than storing it in the clear.
+   * @param prevDataRollingHash The previously-finalized end dataRollingHash (parent position accumulator).
+   * @param prevOffset The previously-finalized end offset within its chunk (0 == fresh-start sentinel).
    */
-  struct ShnarfData {
-    bytes32 parentShnarf;
-    bytes32 snarkHash;
-    bytes32 finalStateRootHash;
-    bytes32 dataEvaluationPoint;
-    bytes32 dataEvaluationClaim;
+  struct StreamPosition {
+    bytes32 prevDataRollingHash;
+    uint256 prevOffset;
   }
 
   /**
    * @notice Supporting data for finalization with proof.
    * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
+   * @dev V6 replaces the shnarf linkage with the blob-spanning dataRollingHash stream-position model.
    * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
-   * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Used as a soft continuity check on the new (post-migration) path only — the on-chain blockHashes mapping is the authoritative source of truth.
+   * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Execution-rooting continuity check.
    * @param endBlockNumber is the end block finalizing until.
-   * @param shnarfData contains data about the last data submission's shnarf. V5 finalization uses parentShnarf only.
    * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
    * @param finalTimestamp is the timestamp of the last block being finalized.
    * @param lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
@@ -77,17 +75,21 @@ interface ILinethRollupBase {
    * @param finalForcedTransactionNumber is the final forced transaction being finalized.
    * @param lastFinalizedForcedTransactionRollingHash is the last proven forced transaction rolling hash.
    * @param finalBlockHash The L2 final block hash that the current finalization ends on.
-   * @param finalBlobHash The blob hash of the final blob used in the new-path shnarf computation.
+   * @param prevDataRollingHash The previously-finalized end dataRollingHash supplied to open the stored position commitment.
+   * @param prevOffset The previously-finalized end offset within its chunk (0 == fresh-start sentinel).
+   * @param parentDataRollingHash The parent dataRollingHash this finalization range starts from.
+   * @param endDataRollingHash The end dataRollingHash this finalization range finishes at. Must have been anchored by a prior submission.
+   * @param startOffset The starting stream offset of this finalization range.
+   * @param endOffset The ending stream offset of this finalization range (bytes consumed of the last chunk).
    * @param l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
    * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
    * @param verifierKeys is an array of guest-program verifier keys used in this finalization batch.
    * @param l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events.
    */
-  struct FinalizationDataV5 {
+  struct FinalizationDataV6 {
     bytes32 parentStateRootHash;
     bytes32 parentBlockHash;
     uint256 endBlockNumber;
-    ShnarfData shnarfData;
     uint256 lastFinalizedTimestamp;
     uint256 finalTimestamp;
     bytes32 lastFinalizedL1RollingHash;
@@ -99,7 +101,12 @@ interface ILinethRollupBase {
     uint256 finalForcedTransactionNumber;
     bytes32 lastFinalizedForcedTransactionRollingHash;
     bytes32 finalBlockHash;
-    bytes32 finalBlobHash;
+    bytes32 prevDataRollingHash;
+    uint256 prevOffset;
+    bytes32 parentDataRollingHash;
+    bytes32 endDataRollingHash;
+    uint256 startOffset;
+    uint256 endOffset;
     bytes32[] l2MerkleRoots;
     address[] filteredAddresses;
     bytes32[] verifierKeys;
@@ -146,7 +153,8 @@ interface ILinethRollupBase {
    * @notice Emitted when L2 blocks have been finalized on L1.
    * @param startBlockNumber The indexed L2 block number indicating which block the finalization the data starts from.
    * @param endBlockNumber The indexed L2 block number indicating which block the finalization the data ends on.
-   * @param shnarf The indexed shnarf being set as currentFinalizedShnarf in the current finalization.
+   * @param endDataRollingHash The indexed end dataRollingHash of the finalized DA stream position.
+   * @param endOffset The end offset within the last-folded chunk of the finalized DA stream position.
    * @param parentBlockHash The parent L2 block hash that the current finalization starts from.
    *   Will be EMPTY_HASH on the first post-upgrade finalization (migration marker).
    * @param finalBlockHash The L2 block hash that the current finalization ends on.
@@ -154,7 +162,8 @@ interface ILinethRollupBase {
   event DataFinalizedV4(
     uint256 indexed startBlockNumber,
     uint256 indexed endBlockNumber,
-    bytes32 indexed shnarf,
+    bytes32 indexed endDataRollingHash,
+    uint256 endOffset,
     bytes32 parentBlockHash,
     bytes32 finalBlockHash
   );
@@ -224,9 +233,29 @@ interface ILinethRollupBase {
   error MissingRollingHashForMessageNumber(uint256 messageNumber);
 
   /**
-   * @dev Thrown when a final shnarf being finalized does not exist.
+   * @dev Thrown when a final dataRollingHash being finalized was not anchored by a prior submission.
    */
-  error FinalShnarfNotSubmitted(bytes32 shnarf);
+  error FinalDataRollingHashNotAnchored(bytes32 dataRollingHash);
+
+  /**
+   * @dev Thrown when the supplied previous stream position does not open the stored position commitment.
+   */
+  error PositionCommitmentMismatch(bytes32 expected, bytes32 value);
+
+  /**
+   * @dev Thrown when the parent dataRollingHash does not continue the previously-finalized position.
+   */
+  error DataRollingHashNotContinuous(bytes32 expected, bytes32 value);
+
+  /**
+   * @dev Thrown when the start offset neither continues the previously-finalized offset nor is a fresh start.
+   */
+  error StartOffsetNotContinuous(uint256 previousOffset, uint256 startOffset);
+
+  /**
+   * @dev Thrown when the shnarf supplied to the migration bridge does not match the live finalized value.
+   */
+  error BridgedShnarfMismatch(bytes32 expected, bytes32 value);
 
   /**
    * @dev Thrown when the rollup is missing a forced transaction in the finalization block range.
@@ -298,6 +327,6 @@ interface ILinethRollupBase {
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV5 calldata _finalizationData
+    FinalizationDataV6 calldata _finalizationData
   ) external;
 }
