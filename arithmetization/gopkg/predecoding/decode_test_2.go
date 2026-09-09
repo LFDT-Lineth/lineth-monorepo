@@ -201,11 +201,11 @@ func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12,
 	return
 }
 
-func TestShouldUseNoOp(t *testing.T) {
+func TestCheckNoOp(t *testing.T) {
 	tests := []struct {
 		name  string
 		instr uint32
-		want  bool
+		want  bool // whether checkNoOp collapses the rd=x0 word to NO_OP
 	}{
 		{name: "addi x0 x0 0", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: true},
 		{name: "addi x0 t0 5", instr: encodeIType(opcodeOPIMM, 0b000, 0, 5, 5), want: true},
@@ -239,9 +239,9 @@ func TestShouldUseNoOp(t *testing.T) {
 			case uType:
 				localOp = decodeUTypeSemantic(opcode)
 			}
-			got := shouldUseNoOp(instrType, rd, localOp, opcode)
+			got := checkNoOp(instrType, localOp, rd) == computeNoOp
 			if got != tt.want {
-				t.Fatalf("shouldUseNoOp(%#x) = %v, want %v", tt.instr, got, tt.want)
+				t.Fatalf("checkNoOp(%#x) noop=%v, want %v", tt.instr, got, tt.want)
 			}
 		})
 	}
