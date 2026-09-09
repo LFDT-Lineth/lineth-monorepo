@@ -11,8 +11,6 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
-const riscvMainZkcPath = "../../arithmetization/src/main/riscv/main.zkc"
-
 // TestRisc5InstructionCoverageGuest traces minimalelf.AllInOneElfProgram
 // through the real main.zkc interpreter and checks the resulting trace against
 // every compiled constraint. The single guest exercises the full RV64I +
@@ -24,9 +22,9 @@ const riscvMainZkcPath = "../../arithmetization/src/main/riscv/main.zkc"
 // prove/verify pipeline, which is already covered by
 // verifier-ray/codegen/riscv_bootstrap.go.
 func TestRisc5InstructionCoverageGuest(t *testing.T) {
-	binf, err := compileBinaryConstraints(riscvMainZkcPath)
+	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
-		t.Fatalf("failed to compile zkc source: %v", err)
+		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
 	}
 
 	inputsMap, err := predecoding.PrepareInputs(minimalelf.AllInOneElfProgram, nil)
