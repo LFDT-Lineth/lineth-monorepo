@@ -1,8 +1,16 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
+
 ### 🐛 Bug Fixes
 
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
 ## [2.2.0] - 2026-08-21
 
 ### 🚀 Features

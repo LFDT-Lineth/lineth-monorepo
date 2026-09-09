@@ -53,6 +53,48 @@ test "all fixture cases: tampered proofs are rejected" {
     try std.testing.expect(checked > 0);
 }
 
+// False-statement (malicious-prover) sub-verifier coverage. The shared
+// .invalid fixtures above are TAMPERED proofs — a valid proof with a byte
+// flipped after the fact — so they are internally inconsistent and get
+// rejected at the PCS/vanishing stage, BEFORE later sub-verifiers
+// (grandproduct, logderivativesum) run. They cannot demonstrate that those
+// sub-verifiers are actually wired into verifier.Systems.
+//
+// The .invalidVerify fixtures are different in kind: not tampered, but
+// SELF-CONSISTENT proofs of a FALSE statement, produced by running the real
+// prover end-to-end on a witness that violates the relation (e.g. an A/B pair
+// that is not a permutation). Such a proof is well-formed — PCS- and
+// vanishing-valid — so the earlier stages have nothing to catch, and it is
+// rejected specifically by the sub-verifier that checks the mathematical
+// claim. Asserting the EXACT error pins which sub-verifier fires — e.g. the
+// grandproduct permutation fixture must fail with error.ResultMismatch —
+// proving that sub-verifier is exercised as the point of rejection.
+test "self-consistent false-statement fixtures fail in the targeted sub-verifier" {
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasFailingVerify(i)) {
+            checked += 1;
+            const case = comptime vf.get(i);
+            const input = vf.getInputFailingVerify(i);
+            const expected = comptime vf.failingVerifyError(i);
+            const res = verifier.verify(case.spec, case.systems, input.proof, input.public_inputs);
+            if (res) |_| {
+                // A well-formed proof of a false statement was accepted: the
+                // targeted sub-verifier did not fire (its wiring is dead).
+                std.debug.print("case {d} ({s}): self-consistent false-statement proof was ACCEPTED\n", .{ i, case.name });
+                return error.FalseStatementAccepted;
+            } else |err| {
+                const got = @errorName(err);
+                if (!std.mem.eql(u8, got, expected)) {
+                    std.debug.print("case {d} ({s}): expected {s}, got {s}\n", .{ i, case.name, expected, got });
+                    return error.UnexpectedSubVerifierError;
+                }
+            }
+        }
+    }
+    try std.testing.expect(checked > 0);
+}
+
 test "multi-size: one baked System verifies proofs of two dynamic sizes" {
     // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
     // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs

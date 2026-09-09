@@ -7,28 +7,33 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// rowLimitAction enforces the per-permutation row bound for a single
+// RowLimitAction enforces the per-permutation row bound for a single
 // permutation query on both sides of the protocol. As a prover action it panics
 // (the prover is trusted code about to build an unsound witness); as a verifier
 // action it returns an error so the verifier rejects the proof gracefully.
 //
-// limit is the effective per-side bound for this query: [wiop.MaxPermutationRows]
+// Limit is the effective per-side bound for this query: [wiop.MaxPermutationRows]
 // divided by the accumulator budget it shares with the permutations compiled
 // alongside it (see compilePermutations).
-type rowLimitAction struct {
-	query *wiop.TableRelationQuery
-	limit uint64
+//
+// Exported (with exported fields) so out-of-package consumers — notably the
+// verifier-ray codegen — can read the guarded permutation query (and, through
+// its A/B sides, the module partitioning) and the limit, the same way it
+// already reads [lookuptologderivsum.RowLimitVerifierAction] for lookups.
+type RowLimitAction struct {
+	Query *wiop.TableRelationQuery
+	Limit uint64
 }
 
 // Run implements [wiop.ProverAction]: it panics on an over-limit permutation.
-func (a *rowLimitAction) Run(rt *wiop.Runtime) {
-	a.query.CheckRowLimit(rt, a.limit)
+func (a *RowLimitAction) Run(rt *wiop.Runtime) {
+	a.Query.CheckRowLimit(rt, a.Limit)
 }
 
 // Check implements [wiop.VerifierAction]: it returns an error on an over-limit
 // permutation so the verifier rejects the proof.
-func (a *rowLimitAction) Check(rt *wiop.Runtime) error {
-	return a.query.ValidateRowLimit(rt, a.limit)
+func (a *RowLimitAction) Check(rt *wiop.Runtime) error {
+	return a.Query.ValidateRowLimit(rt, a.Limit)
 }
 
 // assignResultAction assigns the grand-product Result cell to the value the

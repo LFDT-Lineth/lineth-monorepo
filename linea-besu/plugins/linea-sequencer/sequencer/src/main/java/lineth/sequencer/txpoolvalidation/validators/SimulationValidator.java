@@ -10,7 +10,6 @@ package lineth.sequencer.txpoolvalidation.validators;
 
 import static lineth.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static lineth.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
-import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
 import static org.hyperledger.besu.plugin.services.TransactionSimulationService.SimulationParameters.ALLOW_FUTURE_NONCE;
 
 import java.time.Instant;
@@ -23,15 +22,13 @@ import lineth.jsonrpc.JsonRpcManager;
 import lineth.jsonrpc.JsonRpcRequestBuilder;
 import lineth.sequencer.modulelimit.ModuleLimitsValidationResult;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
+import lineth.sequencer.tracing.LineaTracerFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.LineCountingTracer;
-import net.consensys.linea.zktracer.ZkCounter;
-import net.consensys.linea.zktracer.ZkTracer;
 import net.consensys.linea.zktracer.exceptions.TracingExceptions;
-import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Transaction;
+import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionSimulationResult;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -45,12 +42,11 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
  */
 @Slf4j
 public class SimulationValidator implements PluginTransactionPoolValidator {
-  private final BlockchainService blockchainService;
   private final WorldStateService worldStateService;
   private final TransactionSimulationService transactionSimulationService;
   private final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
-  private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
+  private final LineaTracerFactory tracerFactory;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
   public SimulationValidator(
@@ -61,12 +57,13 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
       final LineaTracerConfiguration tracerConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
-    this.blockchainService = blockchainService;
     this.worldStateService = worldStateService;
     this.transactionSimulationService = transactionSimulationService;
     this.txPoolValidatorConf = txPoolValidatorConf;
-    this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.tracerConfiguration = tracerConfiguration;
+    this.tracerFactory =
+        LineaTracerFactory.fromBlockchainService(
+            blockchainService, tracerConfiguration, l1L2BridgeConfiguration);
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
   }
 
@@ -90,32 +87,45 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
       final ModuleLineCountValidator moduleLineCountValidator =
           new ModuleLineCountValidator(tracerConfiguration.moduleLimitsMap());
       final var pendingBlockHeader = transactionSimulationService.simulatePendingBlockHeader();
-
-      final var lineCountingTracer =
-          createLineCountingTracer(pendingBlockHeader, blockchainService);
+      final var lineCountingTracer = tracerFactory.create(pendingBlockHeader.getTimestamp());
+      lineCountingTracer.ifPresent(tracer -> initializeTracer(tracer, pendingBlockHeader));
+      final OperationTracer operationTracer =
+          lineCountingTracer
+              .<OperationTracer>map(tracer -> tracer)
+              .orElse(OperationTracer.NO_TRACING);
       final var maybeSimulationResults =
           transactionSimulationService.simulate(
               transaction,
               Optional.empty(),
               pendingBlockHeader,
-              lineCountingTracer,
+              operationTracer,
               EnumSet.of(ALLOW_FUTURE_NONCE));
 
-      ModuleLimitsValidationResult moduleLimitResult;
-      try {
-        moduleLimitResult =
-            moduleLineCountValidator.validate(lineCountingTracer.getModulesLineCount());
-      } catch (TracingExceptions e) {
-        log.warn(
-            "Tracer failed during simulation of tx {}: {}", transaction.getHash(), e.getMessage());
-        return Optional.of("Tracer error during simulation: " + e.getMessage());
+      final Optional<ModuleLimitsValidationResult> moduleLimitResult;
+      if (lineCountingTracer.isPresent()) {
+        try {
+          moduleLimitResult =
+              Optional.of(
+                  moduleLineCountValidator.validate(
+                      lineCountingTracer.get().getModulesLineCount()));
+        } catch (TracingExceptions e) {
+          log.warn(
+              "Tracer failed during simulation of tx {}: {}",
+              transaction.getHash(),
+              e.getMessage());
+          return Optional.of("Tracer error during simulation: " + e.getMessage());
+        }
+      } else {
+        moduleLimitResult = Optional.empty();
       }
 
       logSimulationResult(
           transaction, isLocal, hasPriority, maybeSimulationResults, moduleLimitResult);
 
-      if (moduleLimitResult.getResult() != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
-        final String reason = handleModuleOverLimit(transaction, moduleLimitResult);
+      if (moduleLimitResult.isPresent()
+          && moduleLimitResult.get().getResult()
+              != ModuleLineCountValidator.ModuleLineCountResult.VALID) {
+        final String reason = handleModuleOverLimit(transaction, moduleLimitResult.orElseThrow());
         reportRejectedTransaction(transaction, reason);
         return Optional.of(reason);
       }
@@ -163,7 +173,7 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
       final boolean isLocal,
       final boolean hasPriority,
       final Optional<TransactionSimulationResult> maybeSimulationResults,
-      final ModuleLimitsValidationResult moduleLimitResult) {
+      final Optional<ModuleLimitsValidationResult> moduleLimitResult) {
     log.atTrace()
         .setMessage(
             "Result of simulation validation for tx with hash={}, isLocal={}, hasPriority={}, is {}, module line counts {}")
@@ -175,22 +185,12 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
         .log();
   }
 
-  private LineCountingTracer createLineCountingTracer(
-      final ProcessableBlockHeader pendingBlockHeader, BlockchainService blockchainService) {
-    final Fork forkId =
-        fromMainnetHardforkIdToTracerFork(
-            (HardforkId.MainnetHardforkId)
-                blockchainService.getNextBlockHardforkId(
-                    blockchainService.getChainHeadHeader(), Instant.now().getEpochSecond()));
-
-    final LineCountingTracer lineCountingTracer =
-        tracerConfiguration.isLimitless()
-            ? new ZkCounter(l1L2BridgeConfiguration, forkId)
-            : new ZkTracer(forkId, l1L2BridgeConfiguration, blockchainService.getChainId().get());
+  private void initializeTracer(
+      final LineCountingTracer lineCountingTracer,
+      final ProcessableBlockHeader pendingBlockHeader) {
     lineCountingTracer.traceStartConflation(1L);
     lineCountingTracer.traceStartBlock(
         worldStateService.getWorldView(), pendingBlockHeader, pendingBlockHeader.getCoinbase());
-    return lineCountingTracer;
   }
 
   private String handleModuleOverLimit(
