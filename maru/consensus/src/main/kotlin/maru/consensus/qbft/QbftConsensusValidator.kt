@@ -48,6 +48,9 @@ class QbftConsensusValidator(
 
   @Synchronized
   override fun pause() {
+    if (!isRunning) {
+      return
+    }
     val completion = eventProcessor.stop()
     pendingStop = completion
     try {

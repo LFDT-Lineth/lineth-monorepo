@@ -103,6 +103,18 @@ class ExecutionPayloadBlockNumberValidator(
   }
 }
 
+object ExecutionPayloadSlotNumberValidator : BlockValidator {
+  override fun validateBlock(block: BeaconBlock): SafeFuture<Result<Unit, BlockValidationError>> {
+    val slotNumber = block.beaconBlockBody.executionPayload.slotNumber
+    return SafeFuture.completedFuture(
+      BlockValidator.require(slotNumber == null || slotNumber == block.beaconBlockHeader.number) {
+        "Execution payload slot number does not match beacon block number " +
+          "slotNumber=$slotNumber blockNumber=${block.beaconBlockHeader.number}"
+      },
+    )
+  }
+}
+
 class TimestampValidator(
   private val parentBlockHeader: BeaconBlockHeader,
 ) : BlockValidator {

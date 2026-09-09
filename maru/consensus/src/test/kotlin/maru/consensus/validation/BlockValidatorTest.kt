@@ -146,6 +146,41 @@ class BlockValidatorTest {
   }
 
   @Test
+  fun `composite validation checks payload slot without execution layer validation`() {
+    for (slotNumber in listOf(null, newBlockNumber, 0UL, newBlockNumber - 1UL, newBlockNumber + 1UL, ULong.MAX_VALUE)) {
+      val body = validNewBlockBody.copy(
+        executionPayload = validNewBlockBody.executionPayload.copy(
+          slotNumber = slotNumber,
+          blockAccessList = slotNumber?.let { byteArrayOf(0xc0.toByte()) },
+        ),
+      )
+      val stateRootHeader = validNewBlockStateRootHeader.copy(bodyRoot = HashUtil.bodyRoot(body))
+      val header = stateRootHeader.copy(
+        stateRoot = blockHashing.stateRoot(BeaconState(stateRootHeader, validators.toSortedSet())),
+      )
+      val block = BeaconBlock(header, body)
+      val validator = BeaconBlockValidatorFactoryImpl(
+        beaconChain = beaconChain,
+        proposerSelector = proposerSelector,
+        stateTransition = stateTransition,
+        executionLayerManager = null,
+        allowEmptyBlocks = false,
+        blockHashing = blockHashing,
+      ).createValidatorForBlock(header)
+      val expected = if (slotNumber == null || slotNumber == newBlockNumber) {
+        BlockValidator.ok()
+      } else {
+        error(
+          "Execution payload slot number does not match beacon block number " +
+            "slotNumber=$slotNumber blockNumber=$newBlockNumber",
+        )
+      }
+
+      assertThat(validator.validateBlock(block).get()).describedAs("slotNumber=%s", slotNumber).isEqualTo(expected)
+    }
+  }
+
+  @Test
   fun `test invalid state root`() {
     val invalidNewBlockHeader = validNewBlockHeader.copy(stateRoot = validNewStateRoot.reversedArray())
     val invalidNewBlock = validNewBlock.copy(beaconBlockHeader = invalidNewBlockHeader)

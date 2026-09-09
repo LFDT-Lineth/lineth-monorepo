@@ -8,6 +8,17 @@
  */
 package maru.consensus.qbft
 
+import linea.timer.TestablePeriodicTimerFactory
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.ProtocolFactory
+import maru.consensus.ProtocolStarter
+import maru.consensus.QbftConsensusConfig
+import maru.core.ext.DataGenerators
+import maru.subscription.InOrderFanoutSubscriptionManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
@@ -23,6 +34,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class QbftConsensusValidatorTest {
   private val eventQueueExecutor = Executors.newSingleThreadExecutor()
@@ -100,7 +112,50 @@ class QbftConsensusValidatorTest {
   }
 
   @Test
-  fun `processor failure is propagated after stopping validator resources`() {
+  fun `fork transition retries successfully after failed event processor cleanup`() {
+    val failure = IllegalStateException("queue failed to start")
+    val queue = object : BftEventQueue(1000) {
+      override fun start() {
+        throw failure
+      }
+    }
+    val controller = FakeQbftEventHandler()
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
+    val failedValidator = QbftConsensusValidator(controller, processor, bftExecutors, { it.run() })
+    val nextController = FakeQbftEventHandler()
+    val nextProcessor = QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(nextController))
+    val nextValidator = QbftConsensusValidator(nextController, nextProcessor, bftExecutors, eventQueueExecutor)
+    val validators = DataGenerators.randomValidators()
+    val oldFork = ForkSpec(0UL, 1u, QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, ElFork.Osaka)))
+    val nextFork = ForkSpec(10UL, 1u, QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, ElFork.Amsterdam)))
+    var nextTimestamp = 0UL
+    val starter = ProtocolStarter(
+      forksSchedule = ForksSchedule(1337u, listOf(oldFork, nextFork)),
+      protocolFactory = object : ProtocolFactory {
+        override fun create(forkSpec: ForkSpec) = if (forkSpec == oldFork) failedValidator else nextValidator
+      },
+      nextBlockTimestampProvider = { nextTimestamp },
+      forkTransitionCheckInterval = 1.seconds,
+      timerFactory = TestablePeriodicTimerFactory(),
+      forkTransitionNotifier = InOrderFanoutSubscriptionManager(),
+    )
+    try {
+      starter.start()
+      nextTimestamp = nextFork.timestampSeconds
+      assertThatThrownBy { starter.start() }.isInstanceOf(ExecutionException::class.java).hasCause(failure)
+
+      starter.start()
+
+      assertThat(starter.currentProtocolWithForkReference.get().fork).isEqualTo(nextFork)
+      assertThat(nextController.starts).isEqualTo(1)
+      assertThat(controller.stops).isEqualTo(1)
+    } finally {
+      starter.close()
+    }
+  }
+
+  @Test
+  fun `processor failure is propagated once and subsequent shutdowns succeed`() {
     val failure = IllegalStateException("queue failed to start")
     val queue = object : BftEventQueue(1000) {
       override fun start() {
@@ -115,6 +170,10 @@ class QbftConsensusValidatorTest {
     assertThatThrownBy { validator.pause() }
       .isInstanceOf(ExecutionException::class.java)
       .hasCause(failure)
+    repeat(2) {
+      validator.close()
+      validator.pause()
+    }
     assertThat(controller.stops).isEqualTo(1)
     assertThatThrownBy { bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS) }
       .isInstanceOf(IllegalStateException::class.java)
