@@ -99,7 +99,7 @@ class RestfulRollupAggregationProverClientTest {
     wiremock.stubFor(
       WireMock.get(
         WireMock.urlEqualTo(
-          "/v1/jobs/$CHAIN_ID/$proofType/1000501/1000567",
+          "/v1/jobs/$CHAIN_ID/$proofType/1000501/1000567?includeResponse=true",
         ),
       ).willReturn(
         WireMock.okJson(

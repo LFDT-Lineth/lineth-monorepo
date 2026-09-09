@@ -2,7 +2,6 @@ package lineth.coordinator.app.conflation
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
-import linea.clients.ExecutionProverClientV2
 import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
@@ -53,7 +52,6 @@ import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
-import lineth.fileio.DirectoryCleaner
 import lineth.metrics.LineaMetricsCategory
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
@@ -187,36 +185,18 @@ class ConflationAppV1(
     )
   }
 
-  private val requestFileCleanup =
-    DirectoryCleaner(
-      vertx = vertx,
-      directories =
-      listOfNotNull(
-        configs.proversConfig.proverA.execution.requestsDirectory,
-        configs.proversConfig.proverA.blobCompression?.requestsDirectory,
-        configs.proversConfig.proverA.proofAggregation.requestsDirectory,
-        configs.proversConfig.proverB?.execution?.requestsDirectory,
-        configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
-        configs.proversConfig.proverB?.proofAggregation?.requestsDirectory,
-      ),
-      fileFilters =
-      DirectoryCleaner.getSuffixFileFilters(
-        listOfNotNull(
-          configs.proversConfig.proverA.execution.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverA.blobCompression?.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
-        ),
-      ) +
-        if (configs.proversConfig.enableRequestFilesCleanup) {
-          // Will delete prover request .json files from all the directories
-          listOf(DirectoryCleaner.JSON_FILE_FILTER)
-        } else {
-          emptyList()
-        },
-    )
+  val executionProverClient = proverClientFactory.preRiscvExecutionProverClient()
+  val blobCompressionProverClient = proverClientFactory.preRiscvBlobCompressionProverClient()
+  val proofAggregationClient = proverClientFactory.preRiscvProofAggregationProverClient()
+
+  private fun requestFileCleanup(): SafeFuture<Unit> {
+    return executionProverClient.removeRequests()
+      .thenCompose {
+        blobCompressionProverClient.removeRequests()
+      }.thenCompose {
+        proofAggregationClient.removeRequests()
+      }
+  }
 
   private val conflationService: ConflationService =
     ConflationServiceImpl(
@@ -245,7 +225,7 @@ class ConflationAppV1(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobCompressionProverClient = proverClientFactory.preRiscvBlobCompressionProverClient(),
+      blobCompressionProverClient = blobCompressionProverClient,
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
           version = configs.conflation.blobCompression.shnarfCalculatorVersion,
@@ -336,7 +316,7 @@ class ConflationAppV1(
           ftxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
         ),
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
-        proofAggregationClient = proverClientFactory.preRiscvProofAggregationProverClient(),
+        proofAggregationClient = proofAggregationClient,
         metricsFacade = metricsFacade,
       )
   }
@@ -359,7 +339,7 @@ class ConflationAppV1(
         BatchProofHandlerImpl(batchesRepository)::acceptNewBatch,
       ),
     )
-    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.preRiscvExecutionProverClient()
+    val executionProverClient = executionProverClient
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(
         tracesClients.tracesConflationClient,
@@ -449,7 +429,7 @@ class ConflationAppV1(
       batchesRepository = batchesRepository,
       blobsRepository = blobsRepository,
       aggregationsRepository = aggregationsRepository,
-    ).thenCompose { requestFileCleanup.cleanup() }
+    ).thenCompose { requestFileCleanup() }
       .thenCompose { proofGeneratingConflationHandlerImpl.start() }
       .thenCompose { proofAggregationCoordinatorService.start() }
       .thenCompose { conflationCalculators.service.start() }
@@ -468,7 +448,7 @@ class ConflationAppV1(
       conflationCalculators.service.stop(),
       blobCompressionProofCoordinator.stop(),
     )
-      .thenCompose { requestFileCleanup.cleanup() }
+      .thenCompose { requestFileCleanup() }
       .thenApply { log.info("Conflation Stopped") }
   }
 }

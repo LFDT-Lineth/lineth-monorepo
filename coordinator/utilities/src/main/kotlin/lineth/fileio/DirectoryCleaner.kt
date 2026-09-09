@@ -63,5 +63,14 @@ class DirectoryCleaner(
         }
       }
     }
+
+    fun getStartBlockNumberFileFilter(
+      startBlockNumberGte: Long,
+      fileNameStartBlockNumberProvider: (fileName: String) -> Long,
+    ): FileFilter {
+      return FileFilter { fileName: File ->
+        startBlockNumberGte >= fileNameStartBlockNumberProvider(fileName.name)
+      }
+    }
   }
 }
