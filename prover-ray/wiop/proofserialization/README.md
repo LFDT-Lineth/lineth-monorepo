@@ -409,8 +409,8 @@ circuit. All four programs above happened to have 4 trees and depth 17, which is
 what made it look constant.
 
 Measured across the 29 `wioptest` circuits (`TestImageShapeIsCircuitDependent`),
-leaf slots per query ranges **6 to 12** — a 2× spread — and overhead runs **54%
-to 72%** of the image on those small circuits, against 3–4% on the larger
+leaf slots per query ranges **6 to 12** — a 2× spread — and overhead runs **68%
+to 89%** of the image on those small circuits, against 3–4% on the larger
 programs above. The ratio improves as row data grows, but nothing about it is
 constant.
 
@@ -421,7 +421,7 @@ withdrawn.
 
 **The space tradeoff is a non-issue at production circuit sizes.** For the larger
 programs the image costs **3–4% over a packed encoding**, so zero-cost decoding
-is bought for a rounding error. On small circuits the ratio is much worse (54–72%)
+is bought for a rounding error. On small circuits the ratio is much worse (68–89%)
 because the fixed FRI structure dominates a tiny payload — but a proof that small
 is not worth optimising.
 
@@ -448,7 +448,8 @@ own.
 of which the flag-plus-padding is 125 KB and null slots are 148–577 KB depending
 on the program. §4.4's question — can the verifier derive presence from the
 reconstructed layout? — is worth roughly 1% of the image. Worth asking, not worth
-blocking on.
+blocking on. The top 8 of the 17 slots are null in every branch, where presence
+is a function of the cap depth alone, which the verifier already derives.
 
 **Fits the guest comfortably.** At 43 MiB the largest measured image uses 4% of
 the 1 GiB `IN` region (§5.1).
@@ -459,18 +460,17 @@ memory image is fine as a RAM witness and wrong as a network payload.
 ### 11.2 Structural constants
 
 Identical across all four programs, since they follow from the FRI parameters
-rather than the circuit: 229 queries, 4 input trees per query, opening depth 17,
-16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
+rather than the circuit: 229 queries, 4 input trees per query, input tree height
+17 (so 17 `?RowPair` slots per branch, the top 8 of them null under a depth-8
+cap), 16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
 9,847 branch sibling digests, 1 final-poly coefficient. The cap structure is
 fixed by the FRI/input-tree parameters; `row data`, cap row data, and `cells`
 scale with the program.
 
-The sibling count follows from the cap depths. Running layer `j` has height
-`17 - j` and cap depth `min(8, 16 - j)`, so a branch retains 8, 7, ..., 1
-siblings over layers 1-8 and exactly one over layers 9-15: 43 per query against
-135 uncapped, giving `229 × 43 = 9,847`. The frontiers themselves cost 2,302
-digests and 2,287 auxiliary slots, shared across every query, so capping is a
-net saving of 18,766 digests on the running layers.
+The sibling count follows from the cap depths: running layer `j` has height
+`17 - j` and cap depth `min(8, 16 - j)`, leaving 43 siblings per query. The
+frontiers cost 2,302 digests and 2,287 auxiliary slots once, shared across every
+query.
 
 Running-query branches now carry exactly the fields consumed by Zig (`siblings`
 and `leaf`). Merkle-cap auxiliary nodes are represented explicitly in each
@@ -654,7 +654,8 @@ verifier-ray/wiop design questions, not serialization ones:
   the literal byte assertions have power there — which is the argument for
   keeping both, and for the cross-language golden test still outstanding.
 
-  `abi_agreement_test.go` closes the drift direction nothing else covered:
+  verifier-ray's `codegen/abicheck` closes the drift direction nothing else
+  covered:
   `proof_abi.zig` catches Zig's layout moving, and the encoder's own tests catch
   Go bugs against Go's constants, but neither notices the two sides' *numbers*
   diverging. It parses `proof_abi.zig` and compares every pinned size, offset and
@@ -687,8 +688,8 @@ verifier-ray/wiop design questions, not serialization ones:
   `MAP_FIXED` fails at `0x08800000`, `0x30000000` and `0x100000000` but succeeds
   at `0x400000000`, so the fixture image is relocated there.
 
-  `wiop/proofserialization/abi_agreement_test.go` writes
-  `verifier-ray/testdata/proof_image.bin` (1176 B) and fails if it goes stale;
+  verifier-ray's `codegen/abicheck` writes
+  `verifier-ray/testdata/proof_image.bin` (856 B) and fails if it goes stale;
   `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
   `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
   every variant: both `Scalar` discriminants, both `Vector` discriminants, both
