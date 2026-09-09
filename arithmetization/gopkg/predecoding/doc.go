@@ -93,8 +93,8 @@
 //
 // # U-type semantic micro-ops (writeback folded)
 //
-// `decodeUTypeSemantic` maps LUI/AUIPC to local op indices; `finalizeComputeOp`
-// selects `UTYPE_*_WB` when `rd != x0` or `NO_OP` when `rd == x0`.
+// `decodeUTypeSemantic` maps LUI/AUIPC directly to their `UTYPE_*_WB` compute
+// ops; `finalizeComputeOp` collapses them to `NO_OP` when `rd == x0`.
 // The upper immediate is sign-extended into `imm` at ELF time. At runtime, the
 // interpreter's flat `switch compute_op` handles `UTYPE_*_WB` cases. Invalid
 // opcodes (including `UTYPE_INVALID`) are handled by the `default` arm.
@@ -103,7 +103,7 @@
 //
 // For an R-type instruction, the `decoded` record does not replay raw `funct3` /
 // `funct7` / opcode bits. Instead, `decodeRTypeSemantic` maps each R-type encoding
-// to a local op index; `finalizeComputeOp` selects `RTYPE_*_WB` when `rd != x0` or
+// directly to its `RTYPE_*_WB` compute op; `finalizeComputeOp` collapses it to
 // `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
 // keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
 // `RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
@@ -113,9 +113,9 @@
 //
 // Both use `funct7 = 0b0000000`. `decodeRTypeSemantic` discriminates on `funct3`:
 //
-//	funct3  Local operation          Unified compute_op     Runtime handler
-//	0b000   rtypeOpKeccak (28)       RTYPE_KECCAK (53)      keccak(...)
-//	0b001   rtypeOpPoseidon2 (29)    RTYPE_POSEIDON2 (54)   poseidon2(...)
+//	funct3  compute_op                    Runtime handler
+//	0b000   rtypeOpKeccak (RTYPE_KECCAK, 53)      keccak(...)
+//	0b001   rtypeOpPoseidon2 (RTYPE_POSEIDON2, 54) poseidon2(...)
 //
 // Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
 // (255) in the `decoded` table.

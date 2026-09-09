@@ -12,7 +12,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 )
 
-// TODO: do we want a max ? 
+// TODO: do we want a max ?
 const DefaultMaxDecodedRecords uint64 = 2_000_000
 
 const (
@@ -30,8 +30,8 @@ const (
 	bType         = 4
 	uType         = 5
 	jType         = 6
-	// TODO : should be renamed 
-	miscMemType   = 7
+	// TODO : should be renamed
+	miscMemType = 7
 )
 
 // RISC-V opcodes (low 7 bits), mirroring the Opcode constants in constants.zkc.
@@ -114,45 +114,48 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 	}
 }
 
-func finalizeComputeOp(instrType, localOp, rd, opcode uint32) uint32 {
-	op := unifiedComputeOp(instrType, localOp)
+// finalizeComputeOp takes the already-unified compute op selected for the
+// instruction's format and applies the two post-decode steps: invalid words stay
+// COMPUTE_INVALID, and inert (rd == x0) writeback paths collapse to NO_OP.
+func finalizeComputeOp(instrType, op, rd, opcode uint32) uint32 {
 	if op == computeInvalid {
 		return computeInvalid
 	}
-	if shouldUseNoOp(instrType, rd, localOp, opcode) {
+	if shouldUseNoOp(instrType, rd, op, opcode) {
 		return computeNoOp
 	}
 	return op
 }
 
-// I-type semantic micro-op local indices. Unified value = computeITypeBase + index.
-// WB means Write Back, when the result is written back to the register file.
+// I-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc. WB means Write Back, when the result is written back
+// to the register file.
 const (
-	itypeRead8SgnWB   = 0 // LB, read signed 8 bits, sign extend to 64 bits
-	itypeRead16SgnWB  = 1 // LH
-	itypeRead32SgnWB  = 2 // LW
-	itypeRead64WB     = 3 // LD
-	itypeRead8ZextWB  = 4 // LBU, read unsigned 8 bits, zero extend to 64 bits
-	itypeRead16ZextWB = 5 // LHU
-	itypeRead32ZextWB = 6 // LWU		
-	itypeOpAddiWB     = 7 // ADDI						
-	itypeOpSltiWB     = 8 // SLTI
-	itypeOpSltiuWB    = 9 // SLTIU
-	itypeOpXoriWB     = 10 // XORI
-	itypeOpOriWB      = 11 // ORI
-	itypeOpAndiWB     = 12 // ANDI
-	itypeOpSlliWB     = 13 // SLLI
-	itypeOpSrliWB     = 14 // SRLI
-	itypeOpSraiWB     = 15 // SRAI
-	itypeOpAddiwWB    = 16 // ADDIW
-	itypeOpSlliwWB    = 17 // SLLIW
-	itypeOpSrliwWB    = 18 // SRLIW
-	itypeOpSraiwWB    = 19 // SRAIW
-	itypeJalr         = 20 // JALR	
-	itypeJalrWB       = 21 // JALR_WB
-	itypeEcall        = 22 // ECALL
-	itypeEbreak       = 23 // EBREAK
-	itypeInvalid      = 63 // INVALID
+	itypeRead8SgnWB   = 1  // LB, read signed 8 bits, sign extend to 64 bits
+	itypeRead16SgnWB  = 2  // LH
+	itypeRead32SgnWB  = 3  // LW
+	itypeRead64WB     = 4  // LD
+	itypeRead8ZextWB  = 5  // LBU, read unsigned 8 bits, zero extend to 64 bits
+	itypeRead16ZextWB = 6  // LHU
+	itypeRead32ZextWB = 7  // LWU
+	itypeOpAddiWB     = 8  // ADDI
+	itypeOpSltiWB     = 9  // SLTI
+	itypeOpSltiuWB    = 10 // SLTIU
+	itypeOpXoriWB     = 11 // XORI
+	itypeOpOriWB      = 12 // ORI
+	itypeOpAndiWB     = 13 // ANDI
+	itypeOpSlliWB     = 14 // SLLI
+	itypeOpSrliWB     = 15 // SRLI
+	itypeOpSraiWB     = 16 // SRAI
+	itypeOpAddiwWB    = 17 // ADDIW
+	itypeOpSlliwWB    = 18 // SLLIW
+	itypeOpSrliwWB    = 19 // SRLIW
+	itypeOpSraiwWB    = 20 // SRAIW
+	itypeJalr         = 21 // JALR
+	itypeJalrWB       = 22 // JALR_WB
+	itypeEcall        = 23 // ECALL
+	itypeEbreak       = 24 // EBREAK
+	itypeInvalid      = computeInvalid
 )
 
 // specializeITypeOpWithRd selects ITYPE_JALR_WB when rd != x0;
@@ -164,62 +167,72 @@ func specializeITypeOpWithRd(localOp, rd uint32) uint32 {
 	return localOp
 }
 
-// R-type semantic micro-op local indices. Unified value = computeRTypeBase + index.
+// R-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	rtypeOpAddWB       = 0
-	rtypeOpSubWB       = 1
-	rtypeOpSllWB       = 2
-	rtypeOpSltWB       = 3
-	rtypeOpSltuWB      = 4
-	rtypeOpXorWB       = 5
-	rtypeOpSrlWB       = 6
-	rtypeOpSraWB       = 7
-	rtypeOpOrWB        = 8
-	rtypeOpAndWB       = 9
-	rtypeOpMulWB       = 10
-	rtypeOpMulhWB      = 11
-	rtypeOpMulhsuWB    = 12
-	rtypeOpMulhuWB     = 13
-	rtypeOpDivWB       = 14
-	rtypeOpDivuWB      = 15
-	rtypeOpRemWB       = 16
-	rtypeOpRemuWB      = 17
-	rtypeOpAddwWB      = 18
-	rtypeOpSubwWB      = 19
-	rtypeOpSllwWB      = 20
-	rtypeOpSrlwWB      = 21
-	rtypeOpSrawWB      = 22
-	rtypeOpMulwWB      = 23
-	rtypeOpDivwWB      = 24
-	rtypeOpDivuwWB     = 25
-	rtypeOpRemwWB      = 26
-	rtypeOpRemuwWB     = 27
-	rtypeOpKeccak      = 28
-	rtypeOpPoseidon2   = 29
-	rtypeOpWriteOutput = 30
-	rtypeInvalid       = 63
+	rtypeOpAddWB       = 25
+	rtypeOpSubWB       = 26
+	rtypeOpSllWB       = 27
+	rtypeOpSltWB       = 28
+	rtypeOpSltuWB      = 29
+	rtypeOpXorWB       = 30
+	rtypeOpSrlWB       = 31
+	rtypeOpSraWB       = 32
+	rtypeOpOrWB        = 33
+	rtypeOpAndWB       = 34
+	rtypeOpMulWB       = 35
+	rtypeOpMulhWB      = 36
+	rtypeOpMulhsuWB    = 37
+	rtypeOpMulhuWB     = 38
+	rtypeOpDivWB       = 39
+	rtypeOpDivuWB      = 40
+	rtypeOpRemWB       = 41
+	rtypeOpRemuWB      = 42
+	rtypeOpAddwWB      = 43
+	rtypeOpSubwWB      = 44
+	rtypeOpSllwWB      = 45
+	rtypeOpSrlwWB      = 46
+	rtypeOpSrawWB      = 47
+	rtypeOpMulwWB      = 48
+	rtypeOpDivwWB      = 49
+	rtypeOpDivuwWB     = 50
+	rtypeOpRemwWB      = 51
+	rtypeOpRemuwWB     = 52
+	rtypeOpKeccak      = 53
+	rtypeOpPoseidon2   = 54
+	rtypeOpWriteOutput = 55
+	rtypeInvalid       = computeInvalid
 )
 
-// S-type semantic micro-op constants. These MUST match constants.zkc.
+// S-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	stypeStore8  = 0
-	stypeStore16 = 1
-	stypeStore32 = 2
-	stypeStore64 = 3
-	stypeInvalid = 63
+	stypeStore8  = 56
+	stypeStore16 = 57
+	stypeStore32 = 58
+	stypeStore64 = 59
+	stypeInvalid = computeInvalid
 )
 
-// B-type funct3 constants. Valid branch funct3 values are stored directly in
-// decoded_btype; BTYPE_INVALID (63) marks non-B slots and unrecognised funct3.
+// B-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc. COMPUTE_INVALID marks non-B slots and unrecognised
+// funct3 values.
 const (
-	btypeInvalid = 63
+	btypeBeq     = 60 // BEQ  (funct3 0b000)
+	btypeBne     = 61 // BNE  (funct3 0b001)
+	btypeBlt     = 62 // BLT  (funct3 0b100)
+	btypeBge     = 63 // BGE  (funct3 0b101)
+	btypeBltu    = 64 // BLTU (funct3 0b110)
+	btypeBgeu    = 65 // BGEU (funct3 0b111)
+	btypeInvalid = computeInvalid
 )
 
-// J-type semantic micro-op constants. These MUST match constants.zkc.
+// J-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	jtypeJal     = 0
-	jtypeJalWB   = 1
-	jtypeInvalid = 63
+	jtypeJal     = 66
+	jtypeJalWB   = 67
+	jtypeInvalid = computeInvalid
 )
 
 // specializeJTypeOpWithRd selects JTYPE_JAL_WB when rd != x0;
@@ -231,11 +244,12 @@ func specializeJTypeOpWithRd(baseOp, rd uint32) uint32 {
 	return baseOp
 }
 
-// U-type semantic micro-op local indices. Unified value = computeUTypeBase + index.
+// U-type semantic compute_op values. These are the unified ComputeOp codes and
+// MUST match constants.zkc.
 const (
-	utypeLuiWB   = 0
-	utypeAuipcWB = 1
-	utypeInvalid = 63
+	utypeLuiWB   = 68
+	utypeAuipcWB = 69
+	utypeInvalid = computeInvalid
 )
 
 const (
@@ -243,67 +257,14 @@ const (
 	funct12Ebreak = 0b000000000001
 )
 
-// Unified compute_op bases. These MUST match the ComputeOp constants in
-// arithmetization/src/main/common/constants.zkc.
+// Unified compute_op sentinels. These MUST match the ComputeOp constants in
+// arithmetization/src/main/common/constants.zkc. All semantic ops are assigned
+// their unified ComputeOp value directly in the per-format const blocks above,
+// so the decoders already return unified codes.
 const (
-	computeNoOp      = 0
-	computeITypeBase = 1
-	computeRTypeBase = 25
-	computeSTypeBase = 56
-	computeBTypeBase = 60
-	computeJTypeBase = 66
-	computeUTypeBase = 68
-	computeInvalid   = 255
+	computeNoOp    = 0
+	computeInvalid = 255
 )
-
-var bTypeUnifiedIndex = map[uint32]uint32{
-	0b000: 0,
-	0b001: 1,
-	0b100: 2,
-	0b101: 3,
-	0b110: 4,
-	0b111: 5,
-}
-
-func unifiedComputeOp(instrType, localOp uint32) uint32 {
-	switch instrType {
-	case miscMemType:
-		return computeNoOp
-	case iType:
-		if localOp == itypeInvalid {
-			return computeInvalid
-		}
-		return computeITypeBase + localOp
-	case rType:
-		if localOp == rtypeInvalid {
-			return computeInvalid
-		}
-		return computeRTypeBase + localOp
-	case sType:
-		if localOp == stypeInvalid {
-			return computeInvalid
-		}
-		return computeSTypeBase + localOp
-	case bType:
-		idx, ok := bTypeUnifiedIndex[localOp]
-		if !ok {
-			return computeInvalid
-		}
-		return computeBTypeBase + idx
-	case jType:
-		if localOp == jtypeInvalid {
-			return computeInvalid
-		}
-		return computeJTypeBase + localOp
-	case uType:
-		if localOp == utypeInvalid {
-			return computeInvalid
-		}
-		return computeUTypeBase + localOp
-	default:
-		return computeInvalid
-	}
-}
 
 // imm12Funct6 extracts the funct6 field (imm12[11:6]) that validates RV64
 // immediate shifts (slli/srli/srai).
@@ -319,7 +280,7 @@ func imm12Uimm6(imm12 uint32) uint32 { return imm12 & 0x3f }
 // imm12Uimm5 extracts the 5-bit shift amount (imm12[4:0]) for RV64 word shifts.
 func imm12Uimm5(imm12 uint32) uint32 { return imm12 & 0x1f }
 
-// decodeITypeSemantic maps a raw I-type encoding to a local op index and normalized immediate.
+// decodeITypeSemantic maps a raw I-type encoding to a unified compute op and normalized immediate.
 // Shift amounts are stripped to their low uimm6/uimm5 bits; funct6/funct7
 // validation happens here.
 func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm12 uint32) {
@@ -424,7 +385,7 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 	}
 }
 
-// decodeRTypeSemantic maps a raw R-type encoding to a local op index.
+// decodeRTypeSemantic maps a raw R-type encoding to a unified compute op.
 func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeOP:
@@ -547,8 +508,18 @@ func decodeSTypeSemantic(funct3 uint32) (computeOp uint32) {
 // decodeBTypeSemantic returns the branch funct3 when valid, otherwise BTYPE_INVALID.
 func decodeBTypeSemantic(funct3 uint32) uint32 {
 	switch funct3 {
-	case 0b000, 0b001, 0b100, 0b101, 0b110, 0b111:
-		return funct3
+	case 0b000:
+		return btypeBeq
+	case 0b001:
+		return btypeBne
+	case 0b100:
+		return btypeBlt
+	case 0b101:
+		return btypeBge
+	case 0b110:
+		return btypeBltu
+	case 0b111:
+		return btypeBgeu
 	default:
 		return btypeInvalid
 	}
@@ -616,7 +587,7 @@ func assembleITypeImm(normImm12 uint32) uint64 {
 	return assembleSTypeImm(normImm12)
 }
 
-// decodeUTypeSemantic maps a raw U-type opcode to a local op index.
+// decodeUTypeSemantic maps a raw U-type opcode to a unified compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeLUI:
@@ -920,7 +891,7 @@ type instructionFields struct {
 }
 
 // extractFields slices the standard RISC-V fields out of a raw instruction word.
-// Each field is shifted down to bit 0 and masked to its width; 
+// Each field is shifted down to bit 0 and masked to its width;
 //
 //	bit: 31       25 24    20 19    15 14   12 11    7 6         0
 //	    [  funct7  ][  rs2  ][  rs1  ][funct3][  rd  ][  opcode  ]  R-type view
@@ -955,7 +926,7 @@ func classifyInstruction(instruction uint32) uint32 {
 	if instructionType != iType {
 		itypeOp = itypeInvalid
 	}
-	// Determine if itypeJalr or itypeJalrWB 
+	// Determine if itypeJalr or itypeJalrWB
 	itypeOp = specializeITypeOpWithRd(itypeOp, rd)
 
 	// ------------------------------------------------------------

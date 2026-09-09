@@ -248,17 +248,16 @@ func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 // decodeBTypeSemantic
 // ------------------------------------------------------------
 
-// decodeBTypeVectors is the static truth table of the valid branch funct3
-// codes, each of which decodeBTypeSemantic returns unchanged. Every funct3 NOT
-// listed here must return btypeInvalid (asserted exhaustively by
-// TestDecodeBTypeSemanticInvalid).
+// decodeBTypeVectors is the static truth table mapping each valid branch funct3
+// code to its unified B-type compute op. Every funct3 NOT listed here must
+// return btypeInvalid (asserted exhaustively by TestDecodeBTypeSemanticInvalid).
 var decodeBTypeVectors = map[uint32]uint32{
-	0b000: 0b000, // beq
-	0b001: 0b001, // bne
-	0b100: 0b100, // blt
-	0b101: 0b101, // bge
-	0b110: 0b110, // bltu
-	0b111: 0b111, // bgeu
+	0b000: btypeBeq,
+	0b001: btypeBne,
+	0b100: btypeBlt,
+	0b101: btypeBge,
+	0b110: btypeBltu,
+	0b111: btypeBgeu,
 }
 
 // TestDecodeBTypeSemantic checks the valid branch codes against the
@@ -609,7 +608,7 @@ func TestSpecializeITypeOpWithRd(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// specializeJTypeOpWithRd tests the specialization of J-type operations with rd.	
+// specializeJTypeOpWithRd tests the specialization of J-type operations with rd.
 // ------------------------------------------------------------
 
 // specializeJTypeVectors is the static truth table for specializeJTypeOpWithRd:
