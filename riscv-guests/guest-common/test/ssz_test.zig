@@ -77,7 +77,7 @@ test "decodeVariableList: rejects a first offset past the end of the buffer" {
     try std.testing.expectError(error.InvalidSsz, ssz.decodeVariableList(std.testing.allocator, &data, 16));
 }
 
-test "decodeVariableList: rejects an element count above max_len" {
+test "decodeVariableList: rejects an element count above max_items" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -88,17 +88,8 @@ test "decodeVariableList: rejects an element count above max_len" {
 }
 
 test "decodeVariableList: rejects a non-monotonic (overlapping) offset table" {
-    // Two elements: table[0]=8 (past table[1], i.e. element 0 would start after its own end). The
-    // element-slice array is allocated before this bound is checked, so — like every other
-    // decodeVariableList caller in this tree — an arena is used here rather than a leak-checking
-    // allocator: decodeVariableList does not free that partial allocation on this error path, only
-    // its caller's allocator lifetime does.
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
     const data = [_]u8{ 0x08, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00 };
-    try std.testing.expectError(error.InvalidSsz, ssz.decodeVariableList(alloc, &data, 16));
+    try std.testing.expectError(error.InvalidSsz, ssz.decodeVariableList(std.testing.allocator, &data, 16));
 }
 
 test "decodeVariableList: rejects a huge offset without attempting a giant allocation" {

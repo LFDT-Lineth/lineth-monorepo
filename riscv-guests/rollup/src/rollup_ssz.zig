@@ -143,6 +143,19 @@ const writeU32 = guest_common.ssz.writeU32;
 const writeU64 = guest_common.ssz.writeU64;
 const decodeVariableList = guest_common.ssz.decodeVariableList;
 
+fn checkedAdd(a: usize, b: usize) !usize {
+    return std.math.add(usize, a, b) catch error.InvalidSsz;
+}
+
+fn checkedMul(a: usize, b: usize) !usize {
+    return std.math.mul(usize, a, b) catch error.InvalidSsz;
+}
+
+fn sszOffset(value: usize) !u32 {
+    if (value > std.math.maxInt(u32)) return error.InvalidSsz;
+    return @intCast(value);
+}
+
 inline fn getHash(bytes: []const u8, pos: *usize) [32]u8 {
     var out: [32]u8 = undefined;
     @memcpy(&out, bytes[pos.*..][0..32]);
@@ -170,32 +183,34 @@ inline fn putU64(out: []u8, pos: *usize, value: u64) void {
 // SSZ encodes `List[FixedSizeType, N]` as the plain concatenation of its elements — no offset
 // table — so element count is the region's byte length divided by the element size.
 
-fn decodeBytes32List(alloc: std.mem.Allocator, data: []const u8, max_len: usize) ![]const [32]u8 {
+fn decodeBytes32List(alloc: std.mem.Allocator, data: []const u8, max_items: usize) ![]const [32]u8 {
     if (data.len % 32 != 0) return error.InvalidSsz;
     const n = data.len / 32;
-    if (n > max_len) return error.BoundsViolation;
+    if (n > max_items) return error.BoundsViolation;
     const out = try alloc.alloc([32]u8, n);
     for (0..n) |i| @memcpy(&out[i], data[i * 32 ..][0..32]);
     return out;
 }
 
 fn encodeBytes32List(alloc: std.mem.Allocator, items: []const [32]u8) ![]u8 {
-    const out = try alloc.alloc(u8, items.len * 32);
+    const byte_len = try checkedMul(items.len, 32);
+    const out = try alloc.alloc(u8, byte_len);
     for (items, 0..) |item, i| @memcpy(out[i * 32 ..][0..32], &item);
     return out;
 }
 
-fn decodeAddressList(alloc: std.mem.Allocator, data: []const u8, max_len: usize) ![]const [20]u8 {
+fn decodeAddressList(alloc: std.mem.Allocator, data: []const u8, max_items: usize) ![]const [20]u8 {
     if (data.len % 20 != 0) return error.InvalidSsz;
     const n = data.len / 20;
-    if (n > max_len) return error.BoundsViolation;
+    if (n > max_items) return error.BoundsViolation;
     const out = try alloc.alloc([20]u8, n);
     for (0..n) |i| @memcpy(&out[i], data[i * 20 ..][0..20]);
     return out;
 }
 
 fn encodeAddressList(alloc: std.mem.Allocator, items: []const [20]u8) ![]u8 {
-    const out = try alloc.alloc(u8, items.len * 20);
+    const byte_len = try checkedMul(items.len, 20);
+    const out = try alloc.alloc(u8, byte_len);
     for (items, 0..) |item, i| @memcpy(out[i * 20 ..][0..20], &item);
     return out;
 }
@@ -380,27 +395,37 @@ fn encodeExecPublicInput(alloc: std.mem.Allocator, v: L2ExecutionProofPublicInpu
 }
 
 fn encodeL2ExecutionProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ![]u8 {
+    if (v.proof.len > MAX_PROOF_BYTES or
+        v.l2_l1_messages.len > MAX_L2_L1_MESSAGES_PER_EXEC_PROOF or
+        v.tx_froms.len > MAX_TX_FROMS_PER_EXEC_PROOF or
+        v.filtered_addresses.len > MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF)
+    {
+        return error.BoundsViolation;
+    }
+
     const pi_bytes = try encodeExecPublicInput(alloc, v.public_inputs);
     const messages_bytes = try encodeBytes32List(alloc, v.l2_l1_messages);
     const tx_froms_bytes = try encodeAddressList(alloc, v.tx_froms);
     const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
 
     const off_proof = EXEC_PROOF_FIXED_SIZE;
-    const off_messages = off_proof + v.proof.len;
-    const off_tx_froms = off_messages + messages_bytes.len;
-    const off_filtered = off_tx_froms + tx_froms_bytes.len;
+    const off_messages = try checkedAdd(off_proof, v.proof.len);
+    const off_tx_froms = try checkedAdd(off_messages, messages_bytes.len);
+    const off_filtered = try checkedAdd(off_tx_froms, tx_froms_bytes.len);
+    const total_len = try checkedAdd(off_filtered, filtered_bytes.len);
+    _ = try sszOffset(total_len);
 
-    const out = try alloc.alloc(u8, off_filtered + filtered_bytes.len);
+    const out = try alloc.alloc(u8, total_len);
     @memcpy(out[0..EXEC_PI_FIXED_SIZE], pi_bytes);
     var pos: usize = EXEC_PI_FIXED_SIZE;
     putU64(out, &pos, v.start_block_number);
-    writeU32(out, pos, @intCast(off_proof));
+    writeU32(out, pos, try sszOffset(off_proof));
     pos += 4;
-    writeU32(out, pos, @intCast(off_messages));
+    writeU32(out, pos, try sszOffset(off_messages));
     pos += 4;
-    writeU32(out, pos, @intCast(off_tx_froms));
+    writeU32(out, pos, try sszOffset(off_tx_froms));
     pos += 4;
-    writeU32(out, pos, @intCast(off_filtered));
+    writeU32(out, pos, try sszOffset(off_filtered));
     pos += 4;
     std.debug.assert(pos == EXEC_PROOF_FIXED_SIZE);
     @memcpy(out[off_proof..][0..v.proof.len], v.proof);
@@ -412,17 +437,25 @@ fn encodeL2ExecutionProof(alloc: std.mem.Allocator, v: L2ExecutionProof) ![]u8 {
 
 fn encodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, v: VerifiableL2ExecutionProof) ![]u8 {
     const proof_bytes = try encodeL2ExecutionProof(alloc, v.proof);
-    const out = try alloc.alloc(u8, VERIFIABLE_EXEC_PROOF_FIXED_SIZE + proof_bytes.len);
-    writeU32(out, 0, @intCast(VERIFIABLE_EXEC_PROOF_FIXED_SIZE));
+    const total_len = try checkedAdd(VERIFIABLE_EXEC_PROOF_FIXED_SIZE, proof_bytes.len);
+    _ = try sszOffset(total_len);
+    const out = try alloc.alloc(u8, total_len);
+    writeU32(out, 0, try sszOffset(VERIFIABLE_EXEC_PROOF_FIXED_SIZE));
     @memcpy(out[4..36], &v.program_vk);
     @memcpy(out[36..], proof_bytes);
     return out;
 }
 
 fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8 {
+    if (v.block_rlps.len > MAX_BLOCK_RLPS_PER_CONFLATION) return error.BoundsViolation;
+    for (v.block_rlps) |rlp| {
+        if (rlp.len > MAX_BYTES_PER_BLOCK_RLP) return error.BoundsViolation;
+    }
     const list_bytes = try guest_common.ssz.encodeVariableList(alloc, v.block_rlps);
-    const out = try alloc.alloc(u8, CONFLATION_WITNESS_FIXED_SIZE + list_bytes.len);
-    writeU32(out, 0, @intCast(CONFLATION_WITNESS_FIXED_SIZE));
+    const total_len = try checkedAdd(CONFLATION_WITNESS_FIXED_SIZE, list_bytes.len);
+    _ = try sszOffset(total_len);
+    const out = try alloc.alloc(u8, total_len);
+    writeU32(out, 0, try sszOffset(CONFLATION_WITNESS_FIXED_SIZE));
     @memcpy(out[CONFLATION_WITNESS_FIXED_SIZE..], list_bytes);
     return out;
 }
@@ -432,6 +465,15 @@ fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8
 /// kept so the input codec's byte-exact round-trip can be asserted against `decodeInput` in this
 /// guest's own tests, from literal readable Zig values rather than an externally-produced fixture.
 pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
+    if (v.conflations.len > MAX_CONFLATIONS_PER_ROLLUP or
+        v.chunks.len > MAX_CHUNKS_PER_ROLLUP or
+        v.l2_execution_proofs.len > MAX_L2_EXECUTION_PROOFS_PER_ROLLUP or
+        v.opaque_prefix_bytes.len > BLOB_BYTES_LENGTH or
+        v.opaque_suffix_bytes.len > BLOB_BYTES_LENGTH)
+    {
+        return error.BoundsViolation;
+    }
+
     const conflation_blobs = try alloc.alloc([]const u8, v.conflations.len);
     for (v.conflations, 0..) |c, i| conflation_blobs[i] = try encodeConflationWitness(alloc, c);
     const conflations_bytes = try guest_common.ssz.encodeVariableList(alloc, conflation_blobs);
@@ -450,14 +492,16 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
     const boundary_bytes = try encodeBytes32List(alloc, boundary_slice);
 
     const off_conflations = INPUT_FIXED_SIZE;
-    const off_chunks = off_conflations + conflations_bytes.len;
-    const off_proofs = off_chunks + chunks_bytes.len;
-    const off_prefix = off_proofs + proofs_bytes.len;
-    const off_suffix = off_prefix + v.opaque_prefix_bytes.len;
-    const off_boundary = off_suffix + v.opaque_suffix_bytes.len;
-    const body_len = off_boundary + boundary_bytes.len;
+    const off_chunks = try checkedAdd(off_conflations, conflations_bytes.len);
+    const off_proofs = try checkedAdd(off_chunks, chunks_bytes.len);
+    const off_prefix = try checkedAdd(off_proofs, proofs_bytes.len);
+    const off_suffix = try checkedAdd(off_prefix, v.opaque_prefix_bytes.len);
+    const off_boundary = try checkedAdd(off_suffix, v.opaque_suffix_bytes.len);
+    const body_len = try checkedAdd(off_boundary, boundary_bytes.len);
+    _ = try sszOffset(body_len);
 
-    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + body_len);
+    const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
+    const out = try alloc.alloc(u8, frame_len);
     std.mem.writeInt(u16, out[0..2], INPUT_SCHEMA_ID, .big);
     const body = out[SCHEMA_ID_SIZE..];
 
@@ -465,17 +509,17 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
     putHash(body, &pos, v.parent_data_rolling_hash);
     putU64(body, &pos, v.start_offset);
     putU64(body, &pos, v.chain_id);
-    writeU32(body, pos, @intCast(off_conflations));
+    writeU32(body, pos, try sszOffset(off_conflations));
     pos += 4;
-    writeU32(body, pos, @intCast(off_chunks));
+    writeU32(body, pos, try sszOffset(off_chunks));
     pos += 4;
-    writeU32(body, pos, @intCast(off_proofs));
+    writeU32(body, pos, try sszOffset(off_proofs));
     pos += 4;
-    writeU32(body, pos, @intCast(off_prefix));
+    writeU32(body, pos, try sszOffset(off_prefix));
     pos += 4;
-    writeU32(body, pos, @intCast(off_suffix));
+    writeU32(body, pos, try sszOffset(off_suffix));
     pos += 4;
-    writeU32(body, pos, @intCast(off_boundary));
+    writeU32(body, pos, try sszOffset(off_boundary));
     pos += 4;
     std.debug.assert(pos == INPUT_FIXED_SIZE);
 
@@ -525,8 +569,11 @@ fn decodeRollupPublicInput(alloc: std.mem.Allocator, bytes: []const u8) !RollupP
 }
 
 fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8 {
+    if (v.program_vks.len > MAX_PROGRAM_VKS) return error.BoundsViolation;
     const vks_bytes = try encodeBytes32List(alloc, v.program_vks);
-    const out = try alloc.alloc(u8, ROLLUP_PI_FIXED_SIZE + vks_bytes.len);
+    const total_len = try checkedAdd(ROLLUP_PI_FIXED_SIZE, vks_bytes.len);
+    _ = try sszOffset(total_len);
+    const out = try alloc.alloc(u8, total_len);
 
     var pos: usize = 0;
     putU64(out, &pos, v.end_block_number);
@@ -548,7 +595,7 @@ fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8
     putHash(out, &pos, v.end_block_hash);
     putU64(out, &pos, v.start_offset);
     putU64(out, &pos, v.end_offset);
-    writeU32(out, pos, @intCast(ROLLUP_PI_FIXED_SIZE));
+    writeU32(out, pos, try sszOffset(ROLLUP_PI_FIXED_SIZE));
     pos += 4;
     std.debug.assert(pos == ROLLUP_PI_FIXED_SIZE);
     @memcpy(out[ROLLUP_PI_FIXED_SIZE..], vks_bytes);
@@ -563,21 +610,26 @@ const OUTPUT_FIXED_SIZE: usize = 4 + 8 + 4 + 4;
 /// Encode the rollup guest's actual wire output: the 0x1801 schema id followed by the SSZ
 /// `SszRollupOutput`.
 pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
+    if (v.l2_l1_roots.len > MAX_L2_L1_ROOTS or v.filtered_addresses.len > MAX_FILTERED_ADDRESSES) {
+        return error.BoundsViolation;
+    }
     const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);
     const roots_bytes = try encodeBytes32List(alloc, v.l2_l1_roots);
     const filtered_bytes = try encodeAddressList(alloc, v.filtered_addresses);
 
-    const body_len = OUTPUT_FIXED_SIZE + pi_bytes.len + roots_bytes.len + filtered_bytes.len;
-    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + body_len);
+    const off_roots = try checkedAdd(OUTPUT_FIXED_SIZE, pi_bytes.len);
+    const off_filtered = try checkedAdd(off_roots, roots_bytes.len);
+    const body_len = try checkedAdd(off_filtered, filtered_bytes.len);
+    _ = try sszOffset(body_len);
+    const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
+    const out = try alloc.alloc(u8, frame_len);
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
     const body = out[SCHEMA_ID_SIZE..];
 
-    const off_roots = OUTPUT_FIXED_SIZE + pi_bytes.len;
-    const off_filtered = off_roots + roots_bytes.len;
-    writeU32(body, 0, @intCast(OUTPUT_FIXED_SIZE));
+    writeU32(body, 0, try sszOffset(OUTPUT_FIXED_SIZE));
     writeU64(body, 4, v.start_block_number);
-    writeU32(body, 12, @intCast(off_roots));
-    writeU32(body, 16, @intCast(off_filtered));
+    writeU32(body, 12, try sszOffset(off_roots));
+    writeU32(body, 16, try sszOffset(off_filtered));
 
     @memcpy(body[OUTPUT_FIXED_SIZE..][0..pi_bytes.len], pi_bytes);
     @memcpy(body[off_roots..][0..roots_bytes.len], roots_bytes);

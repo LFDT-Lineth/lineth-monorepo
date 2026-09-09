@@ -54,6 +54,50 @@ test "run: copied fields echo the mapped source (first/last l2_execution_proofs,
     try std.testing.expectEqualSlices(u8, &support.PROOF1_FILTERED_ADDRESS_1, &out.filtered_addresses[3]);
 }
 
+test "run: output program_vks are distinct and sorted for unsorted duplicate inputs" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var input = try sampleInput(alloc);
+    var proofs = [_]rollup_ssz.VerifiableL2ExecutionProof{
+        input.l2_execution_proofs[0],
+        input.l2_execution_proofs[1],
+        input.l2_execution_proofs[0],
+        input.l2_execution_proofs[1],
+    };
+    proofs[0].program_vk = repeat32(0xcc);
+    proofs[1].program_vk = repeat32(0xaa);
+    proofs[2].program_vk = repeat32(0xcc);
+    proofs[3].program_vk = repeat32(0xbb);
+    input.l2_execution_proofs = &proofs;
+
+    const out = try rollup.run(alloc, input);
+    try std.testing.expectEqualSlices([32]u8, &[_][32]u8{
+        repeat32(0xaa),
+        repeat32(0xbb),
+        repeat32(0xcc),
+    }, out.public_inputs.program_vks);
+}
+
+test "run: rejects filtered addresses exceeding the aggregate output bound" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var input = try sampleInput(alloc);
+    const addresses = try alloc.alloc([20]u8, rollup_ssz.MAX_FILTERED_ADDRESSES + 1);
+    var proofs = [_]rollup_ssz.VerifiableL2ExecutionProof{
+        input.l2_execution_proofs[0],
+        input.l2_execution_proofs[1],
+    };
+    proofs[0].proof.filtered_addresses = addresses[0..rollup_ssz.MAX_FILTERED_ADDRESSES];
+    proofs[1].proof.filtered_addresses = addresses[rollup_ssz.MAX_FILTERED_ADDRESSES..];
+    input.l2_execution_proofs = &proofs;
+
+    try std.testing.expectError(error.BoundsViolation, rollup.run(std.testing.allocator, input));
+}
+
 test "run: sentinel fields equal their pinned constants exactly" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();

@@ -39,14 +39,27 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
     const first = input.l2_execution_proofs[0];
     const last = input.l2_execution_proofs[input.l2_execution_proofs.len - 1];
 
+    var filtered_address_count: usize = 0;
+    for (input.l2_execution_proofs) |p| {
+        if (filtered_address_count > rollup_ssz.MAX_FILTERED_ADDRESSES) return error.BoundsViolation;
+        const remaining = rollup_ssz.MAX_FILTERED_ADDRESSES - filtered_address_count;
+        if (p.proof.filtered_addresses.len > remaining) return error.BoundsViolation;
+        filtered_address_count += p.proof.filtered_addresses.len;
+    }
+
     const program_vks = try dedupSortedProgramVks(alloc, input.l2_execution_proofs);
+    errdefer alloc.free(program_vks);
 
     var filtered_addresses: std.ArrayListUnmanaged([20]u8) = .empty;
+    defer filtered_addresses.deinit(alloc);
+    try filtered_addresses.ensureTotalCapacityPrecise(alloc, filtered_address_count);
     for (input.l2_execution_proofs) |p| {
-        for (p.proof.filtered_addresses) |addr| try filtered_addresses.append(alloc, addr);
+        try filtered_addresses.appendSlice(alloc, p.proof.filtered_addresses);
     }
 
     const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{L2_L1_ROOTS_ELEMENT});
+    errdefer alloc.free(l2_l1_roots);
+    const owned_filtered_addresses = try filtered_addresses.toOwnedSlice(alloc);
 
     return .{
         .public_inputs = .{
@@ -73,7 +86,7 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
         },
         .start_block_number = first.proof.start_block_number,
         .l2_l1_roots = l2_l1_roots,
-        .filtered_addresses = try filtered_addresses.toOwnedSlice(alloc),
+        .filtered_addresses = owned_filtered_addresses,
     };
 }
 
@@ -83,13 +96,19 @@ fn lessThanBytes32(_: void, a: [32]u8, b: [32]u8) bool {
 
 /// Every `l2_execution_proofs` element's `program_vk`, deduplicated and sorted ascending bytewise.
 fn dedupSortedProgramVks(alloc: std.mem.Allocator, proofs: []const rollup_ssz.VerifiableL2ExecutionProof) ![]const [32]u8 {
+    if (proofs.len == 0) return alloc.alloc([32]u8, 0);
+
     const vks = try alloc.alloc([32]u8, proofs.len);
+    errdefer alloc.free(vks);
     for (proofs, 0..) |p, i| vks[i] = p.program_vk;
     std.mem.sort([32]u8, vks, {}, lessThanBytes32);
 
-    var out: std.ArrayListUnmanaged([32]u8) = .empty;
-    for (vks, 0..) |vk, i| {
-        if (i == 0 or !std.mem.eql(u8, &vk, &vks[i - 1])) try out.append(alloc, vk);
+    var unique_count: usize = 0;
+    for (vks) |vk| {
+        if (unique_count == 0 or !std.mem.eql(u8, &vk, &vks[unique_count - 1])) {
+            vks[unique_count] = vk;
+            unique_count += 1;
+        }
     }
-    return out.toOwnedSlice(alloc);
+    return try alloc.realloc(vks, unique_count);
 }
