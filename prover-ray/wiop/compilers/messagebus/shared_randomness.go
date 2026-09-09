@@ -17,31 +17,20 @@ const (
 )
 
 // registerSharedRandomness appends the round carrying α and β — the coins the
-// bus folds rows with — and returns them.
+// bus uses — and returns them.
 //
-// With [CompileOptions.SharedRandomness] set it also declares the two inputs a
-// sharded protocol takes from the orchestrator as public inputs: γ, the seed
+// With [CompileOptions.SharedRandomness] set it also declares two types of public inputs: γ, the seed
 // every shard shares, and this shard's contribution to it.
-//
-// γ gets [NumSharedRandomness] cells on round 0, each registered under
-// [SharedRandomnessSeedPI] with its limb index as numeric suffix. Round 0 is
-// where it has to live: being absorbed into Fiat-Shamir on the way out of that
-// round is what lets the challenges drawn later depend on it. The prover writes
-// it with [AssignSharedRandomnessSeed]; the verifier reads it back from the
-// public-input vector.
-//
-// The contribution gets [NumSharedRandomnessContribution] cells on the coin
-// round, under [SharedRandomnessSeedContributionPI], written by
-// [SharedRandomnessContributionAssigner] and checked by
-// [SharedRandomnessContributionChecker].
+// Round 0 is
+// where  γ has to live: being absorbed into Fiat-Shamir on the way out of that
+// round is what lets the challenges drawn later depend on it.
 func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta *wiop.CoinField) {
 	compCtx := sys.Context.Childf("message-bus")
 
-	// The coins land on the round immediately after the seed — which is also
-	// where the preflight data lands.
+	// The coins for the message bus land on the round immediately after the seed — which is also
+	// where the preflight data lands. This draws the bus coins via standard fiat-shamir, as far as the round 0 (and precomputed round) carries the same data over shards, all shards samples the same bus coins.
 	coinRound := sys.NewRound()
 	alpha = coinRound.NewCoinField(compCtx.Childf("alpha"))
-	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
 	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
 
 	if opt.SharedRandomness {
@@ -53,10 +42,7 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 			sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
 		}
 
-		// The contribution cells sit on coinRound rather than beside γ: their value is
-		// a function of the commitments of every round before coinRound, which do not
-		// exist until the runtime has advanced past those rounds. On round 0 they would
-		// be demanded by AdvanceRound long before anything could compute them.
+		// the shard specific preflight data lands on the same round as bus coins, this allows the shard to generate its contribution in the shared randomness  γ.
 		for i := range NumSharedRandomnessContribution {
 			cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
 			sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
@@ -144,14 +130,9 @@ type SharedRandomnessContributionAssigner struct{}
 type SharedRandomnessContributionChecker struct{}
 
 // sharedRandomnessContribution returns this shard's contribution to the shared
-// randomness: the multiset hash of the commitment of the round the calling
-// action runs on.
-//
-// It reads that one round rather than every preceding one because the preflight
-// columns are assumed isolated on it — an assumption the backend enforces. The
-// prover action and its verifier analog both go through here, so neither can
-// drift from the other's preimage: [wiop.Runtime.CurrentRound] is the round the
-// running action was registered on, on both sides.
+// randomness.
+// The preflight
+// columns are assumed isolated all landed on the same round — an assumption the backend enforces.
 func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 	if !rt.CurrentRound().HasCommitment {
 		logrus.Warnf(
