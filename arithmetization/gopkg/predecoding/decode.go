@@ -559,7 +559,7 @@ func signExtend12(x uint32) int64 {
 
 // assembleITypeImm sign-extends the normalized 12-bit I-type immediate to 64 bits.
 func assembleITypeImm(normImm12 uint32) uint64 {
-	return assembleSTypeImm(normImm12)
+	return uint64(signExtend12(normImm12))
 }
 
 // decodeUTypeSemantic maps a raw U-type opcode to a unified compute op.

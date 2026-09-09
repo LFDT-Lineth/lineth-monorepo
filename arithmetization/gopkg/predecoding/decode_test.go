@@ -105,7 +105,7 @@ func TestImm12Uimm5(t *testing.T) {
 // 2^12 = 4096 when bit 11 is set (value >= 2^11 = 2048), independent of the
 // <<20/>>20 idiom signExtend12 uses.
 func signExtend12_oracle(x uint32) int64 {
-	// keep the low 12 bits	
+	// keep the low 12 bits
 	v := int64(x % 4096)
 	// if bit 11 is set
 	if v >= 2048 {
