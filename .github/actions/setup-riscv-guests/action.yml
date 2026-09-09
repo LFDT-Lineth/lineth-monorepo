@@ -41,7 +41,9 @@ runs:
     # Install Nim and clang for the freestanding Constantine build.
     - name: Install constantine build deps (nim, clang)
       shell: bash
-      run: make -C riscv-guests install-constantine-deps
+      run: |
+        make -C riscv-guests install-constantine-deps
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
