@@ -756,6 +756,18 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		invalid.view.publicInputs = append([]runtimeTraceCell(nil), invalid.view.publicInputs...)
 		invalid.view.publicInputs[0] = baseTraceCell(elem(99))
 		cases[last].invalid = &invalid
+
+		// alt is a SECOND HONEST proof — genuinely reproven, not tampered — whose
+		// opened cell is 31 instead of 30. verifyPair's consistency check must
+		// reject (honest, alt) even though each individually verifies: this is
+		// the only fixture that exercises the "two individually valid proofs,
+		// different statements" rejection path (see verify_pair_test.zig).
+		altAssign := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 31, 40))) }
+		altFixture, err := buildProofFixture(sys, altAssign, "PublicInput", "OpenedCellPublicInput", "alt")
+		if err != nil {
+			return nil, nil, err
+		}
+		cases[last].alt = &altFixture
 	}
 	// Dynamic-module twin of the public-input scenario. The opened cell is still
 	// carried only in `public_inputs`, but the module size now round-trips
