@@ -19,6 +19,7 @@ runs:
       with:
         version: ${{ steps.zigversion.outputs.version }}
         dependency-hash-paths: riscv-guests/*/build.zig.zon
+        cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
     # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
     # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
