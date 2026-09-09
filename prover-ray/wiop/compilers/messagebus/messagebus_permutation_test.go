@@ -25,8 +25,7 @@ import (
 // into one tuple does depend on it -- with α = 0 a tuple collapses onto its
 // first column -- and must use [compilePermutationBusWithPCS] instead.
 func compilePermutationBus(sys *wiop.System) {
-	alpha, beta := declareBusCoins(sys)
-	messagebus.Compile(sys, alpha, beta)
+	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 }
 

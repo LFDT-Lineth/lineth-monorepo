@@ -26,10 +26,7 @@ func compileFullPipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	coinRound := sys.Rounds[0].EnsureNext()
-	messagebus.Compile(sys,
-		coinRound.NewCoinField(sys.Context.Childf("mb-alpha")),
-		coinRound.NewCoinField(sys.Context.Childf("mb-beta")))
+	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
@@ -79,10 +76,7 @@ func TestMeasure_NoPCS(t *testing.T) {
 	nonnative.Compile(sc.Sys)
 	rangecheck.Compile(sc.Sys)
 	lookuptologderivsum.Compile(sc.Sys)
-	coinRound := sc.Sys.Rounds[0].EnsureNext()
-	messagebus.Compile(sc.Sys,
-		coinRound.NewCoinField(sc.Sys.Context.Childf("mb-alpha")),
-		coinRound.NewCoinField(sc.Sys.Context.Childf("mb-beta")))
+	messagebus.Compile(sc.Sys)
 	grandproduct.Compile(sc.Sys)
 	logderivativesum.Compile(sc.Sys)
 	localvanishing.Compile(sc.Sys)

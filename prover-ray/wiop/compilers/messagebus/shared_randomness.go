@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
@@ -17,63 +16,58 @@ const (
 	SharedRandomnessSeedContributionPI wiop.PublicInputTag = "SharedRandomnessSeedContribution"
 )
 
-// registerSharedRandomness declares γ and this shard's contribution to it as
-// public inputs and wires γ into coinRound. It is the implementation of
-// [CompileOptions.SharedRandomness] and is called by [Compile] once coinRound is
-// fixed; it is deliberately not exported, because a caller invoking it around
-// [Compile] rather than through it could attach the hook to a round that does not
-// end up carrying α and β.
+// registerSharedRandomness declares the two inputs a sharded protocol takes
+// from the orchestrator as public inputs: γ, the seed every shard shares, and
+// this shard's contribution to it. Both are supplied from outside the proof by
+// [AssignSharedRandomness] — the prover writes them, the verifier reads them
+// back from the public-input vector — and neither is derived in-shard.
 //
 // γ gets [NumSharedRandomness] cells on round 0, each registered under
-// [SharedRandomnessSeedPI] with its limb index as numeric suffix, plus a
-// [wiop.Round.RegisterPreSamplingHook] on coinRound that replaces the
-// Fiat-Shamir state with γ just before α and β are drawn. Because
-// [wiop.Runtime.AdvanceRound] fires pre-sampling hooks on the prover and the
-// verifier alike, both sides derive the same challenges with no extra verifier
-// action. Round 0 is where γ has to live: it is assigned there — by the prover
-// through [AssignSharedRandomnessSeed], by the verifier from the public-input
-// vector — before the runtime ever advances into coinRound and the hook reads it.
+// [SharedRandomnessSeedPI] with its limb index as numeric suffix. Round 0 is
+// where it has to live: being absorbed into Fiat-Shamir on the way out of that
+// round is what lets the challenges drawn later depend on it.
 //
-// The contribution gets [NumSharedRandomnessContribution] cells on coinRound,
-// under [SharedRandomnessSeedContributionPI], written by
-// [SharedRandomnessContributionAssigner] and checked by
-// [SharedRandomnessContributionChecker].
-//
-// Panics if coinRound is round 0, since there is then no earlier round to carry
-// γ. That happens when no message-bus entry references a round-bearing column.
-func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round) {
-	if coinRound.ID == 0 {
-		panic(
-			"wiop/compilers/messagebus: the message-bus coin round is round 0, " +
-				"so there is no earlier round to carry γ. This means no message-bus " +
-				"entry references a round-bearing column.",
-		)
+// The contribution gets [NumSharedRandomnessContribution] cells on the round
+// this function appends, under [SharedRandomnessSeedContributionPI]. That round
+// also carries [SharedRandomnessChecker], which checks both groups
+// of cells are declared and base-field.
+func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta *wiop.CoinField) {
+
+	compCtx := sys.Context.Childf("message-bus")
+	sys.NewRound()
+	coinRound := sys.CurrentRound() // coins for the bus message are generated in the round imidiatly after the seed, this is also  where preflight dtata lands
+	alpha = coinRound.NewCoinField(compCtx.Childf("alpha"))
+	// Declare β on the same round, drawn from the same Fiat–Shamir state as α.
+	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
+
+	if opt.SharedRandomness {
+
+		ctx := sys.Context.Childf("shared-randomness")
+		seedRound := sys.Rounds[0]
+
+		for i := range NumSharedRandomness {
+			cell := seedRound.NewCell(ctx.Childf("gamma-%d", i), false)
+			sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
+		}
+
+		// The contribution cells sit on coinRound rather than beside γ: their value is
+		// a function of the commitments of every round before coinRound, which do not
+		// exist until the runtime has advanced past those rounds. On round 0 they would
+		// be demanded by AdvanceRound long before anything could compute them.
+		for i := range NumSharedRandomnessContribution {
+			cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
+			sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
+		}
+		// register prover and verifier actions of the preflight round
+		coinRound.RegisterAction(&SharedRandomnessContributionAssigner{})
+		coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
 	}
 
-	ctx := sys.Context.Childf("shared-randomness")
-	seedRound := sys.Rounds[0]
-
-	for i := range NumSharedRandomness {
-		cell := seedRound.NewCell(ctx.Childf("gamma-%d", i), false)
-		sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
-	}
-
-	// The contribution cells sit on coinRound rather than beside γ: their value is
-	// a function of the commitments of every round before coinRound, which do not
-	// exist until the runtime has advanced past those rounds. On round 0 they would
-	// be demanded by AdvanceRound long before anything could compute them.
-	for i := range NumSharedRandomnessContribution {
-		cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
-		sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
-	}
-
-	coinRound.RegisterPreSamplingHook(&SharedRandomnessSeedHook{})
-	coinRound.RegisterAction(&SharedRandomnessContributionAssigner{})
-	coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
+	return alpha, beta
 }
 
 // GetSharedRandomnessSeed returns the god-given value of the shared randomness
-// that was provided by [AssignSharedRandomnessSeed].
+// that was provided by [AssignSharedRandomness].
 func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 	var gamma field.Octuplet
 	for i := range gamma {
@@ -88,15 +82,9 @@ func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 	return gamma
 }
 
-// HasSharedRandomness reports whether sys was compiled with
-// [CompileOptions.SharedRandomness] and therefore carries a γ to assign.
-//
-// An assignment path that does not itself choose the compiler options — the zkc
-// driver, say, which is handed a system somebody else compiled — uses this to
-// decide whether [AssignSharedRandomnessSeed] applies. Skipping the assignment
-// when this is false is safe rather than silently degrading: with the option off
-// there is no γ cell, and no hook reading one, so the shard derives α and β from
-// its own transcript as an unsharded protocol should.
+// HasSharedRandomness reports whether [registerSharedRandomness] ran on sys and
+// it therefore carries a γ to assign.
+
 func HasSharedRandomness(sys *wiop.System) bool {
 	_, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedPI, 0)
 	return pos >= 0
@@ -146,26 +134,20 @@ type SharedRandomnessContributionAssigner struct{}
 // [SharedRandomnessContributionAssigner].
 type SharedRandomnessContributionChecker struct{}
 
-// sharedRandomnessContribution hashes every commitment preceding the round the
-// caller is running on into a multiset hash. The prover action and its verifier
-// analog both go through here, so neither can drift from the other's preimage:
-// [wiop.Runtime.CurrentRound] is the round the running action was registered on
-// on both sides.
+// sharedRandomnessContribution generates the contribution of the shard in the shardrandomness,
+// the assumtion is that preflight columns are isolated and would land on the same round, alowing to calculate the contribution from this round.
+// the assumption is inforced in the backend level
 func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
-	hasher := poseidon2.NewMDHasher()
-	for i := range rt.CurrentRound().ID {
-		if !rt.System.Rounds[i].HasCommitment {
-			logrus.Warnf(
-				"No commitment found for round: %v. Did you use a message bus? "+
-					"And did you reduce the current system using a PCS?", i)
-			continue
-		}
 
-		com := rt.Commitments[i]
-		hasher.WriteElements(com[:]...)
+	if !rt.CurrentRound().HasCommitment {
+		logrus.Warnf(
+			"No commitment found for round: %v. Did you use a message bus? "+
+				"And did you reduce the current system using a PCS?", rt.CurrentRound().ID)
 	}
 
-	return multisethashing.Hash(hasher.SumDigest())
+	com := rt.Commitments[rt.CurrentRound().ID]
+
+	return multisethashing.Hash(com)
 }
 
 // contributionCell returns the public-input cell carrying limb i of the shared
@@ -202,18 +184,4 @@ func (*SharedRandomnessContributionChecker) Check(rt *wiop.Runtime) error {
 	}
 
 	return nil
-}
-
-// SharedRandomnessSeedHook is the [wiop.ProverAction] registered as a
-// pre-sampling hook on the message-bus coin round. It reads γ from the
-// public-input cells and installs it as the Fiat-Shamir state, so that the α
-// and β sampled immediately afterwards are a function of γ alone and therefore
-// identical on every shard that was given the same γ.
-type SharedRandomnessSeedHook struct{}
-
-// Run implements [wiop.ProverAction]. It also runs on the verifier, which
-// reaches it through [wiop.System.Verify]'s transcript replay.
-func (h *SharedRandomnessSeedHook) Run(rt *wiop.Runtime) {
-	seed := GetSharedRandomnessSeed(rt)
-	rt.SetFSState(seed)
 }
