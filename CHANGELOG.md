@@ -156,3 +156,4 @@
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(coordinator)* Consolidate prover clients (#3944)

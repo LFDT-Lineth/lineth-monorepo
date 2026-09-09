@@ -24,7 +24,6 @@ import lineth.coordinator.app.conflation.ConflationAppOrchestrator
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import lineth.coordinator.app.conflation.TracesClients
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
-import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
@@ -232,12 +231,6 @@ class CoordinatorApp(
     consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
   ).getLastFinalizedBlock().get()
 
-  private val proverClientFactory: ProverClientFactory = ProverClientFactory(
-    vertx = vertx,
-    config = configs.proversConfig,
-    metricsFacade = micrometerMetricsFacade,
-  )
-
   private val l2EthClientForConflation = createEthApiClient(
     rpcUrl = configs.conflation.l2Endpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth.conflation"),
@@ -272,7 +265,6 @@ class CoordinatorApp(
     configs = configs,
     metricsFacade = micrometerMetricsFacade,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-    proverClientFactory = proverClientFactory,
     l2EthClient = l2EthClientForConflation,
     zkStateClient = zkStateClient,
     tracesClients = tracesClients,
