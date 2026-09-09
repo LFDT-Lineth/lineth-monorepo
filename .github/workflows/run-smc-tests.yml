@@ -77,19 +77,25 @@ jobs:
       - name: Run smart contracts tests and generate coverage report
         # @openzeppelin/upgrades-core hardcodes a ~7s lock-acquisition retry budget around
         # its os.tmpdir()-based manifest lock (one lock file, shared by every
-        # deployProxy/upgradeProxy call for the whole run). On this runner, plain /tmp is
-        # slow enough that coverage's instrumented (much slower) execution reliably loses
-        # that race, throwing "Lock file is already being held" -- not a real test/code
-        # failure. Point TMPDIR at tmpfs so the lock's mkdir/rmdir churn is fast again;
-        # Node's os.tmpdir() honors TMPDIR before falling back to /tmp.
-        env:
-          TMPDIR: /dev/shm
-        run: pnpm -F contracts run coverage
+        # deployProxy/upgradeProxy call for the whole run). On this Linux runner, plain
+        # /tmp is slow enough that coverage's instrumented (much slower) execution
+        # reliably loses that race, throwing "Lock file is already being held" -- not a
+        # real test/code failure. TMPDIR is pointed at tmpfs only for this CI-only,
+        # Linux-only step (kept out of contracts/package.json, which must stay portable
+        # to other OSes) and only around the hardhat invocation, not the preceding
+        # Go-based autoupdate step, which needs far more scratch space than tmpfs
+        # typically has. Node's os.tmpdir() honors TMPDIR before falling back to /tmp.
+        # Guard on /dev/shm actually existing: setting TMPDIR to a missing path breaks
+        # pnpm/Node's own tempdir resolution outright, not just this workaround.
+        run: |
+          pnpm -F contracts run autoupdate
+          [ -d /dev/shm ] && export TMPDIR=/dev/shm || true
+          SOLIDITY_COVERAGE=true pnpm -F contracts exec hardhat coverage --solcoverjs ./.solcover.js
 
       - name: Clean up tmpfs coverage lock artifacts
         # Always run (even on failure) so this self-hosted runner doesn't accumulate
         # /dev/shm state across jobs; @openzeppelin/upgrades-core writes its manifest/lock
-        # files under <TMPDIR>/openzeppelin-upgrades (see TMPDIR override above).
+        # files under <TMPDIR>/openzeppelin-upgrades (see the TMPDIR override above).
         if: always()
         run: rm -rf /dev/shm/openzeppelin-upgrades
 
