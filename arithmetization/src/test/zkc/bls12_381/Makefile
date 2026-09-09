@@ -32,7 +32,12 @@ SHELL := /bin/sh
 HARNESSES := fp2_arith fp2_inv fp12_arith fp12_ops g1_add g1_mul g1_subgroup \
              g2_add g2_mul g2_subgroup miller final_exp pairing_check
 FIELD     := KOALABEAR_16
-ZKC       ?= zkc
+
+# Default to the zkc version pinned in arithmetization/go.mod, as the poseidon2
+# harness does. A bare `zkc` off PATH is whatever the developer last installed
+# globally, which silently tests against the wrong compiler. Override with
+# ZKC=path/to/zkc to try an unreleased build.
+ZKC       ?= go tool zkc
 
 .PHONY: test
 test:
