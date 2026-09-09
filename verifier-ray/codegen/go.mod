@@ -29,3 +29,8 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Temporary: abicheck maps ABI numbers that the stacked prover-ray branch adds
+// and no released version carries yet. Drop this and bump the pin above once
+// the prover-ray half is merged.
+replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../prover-ray
