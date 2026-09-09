@@ -35,7 +35,7 @@ compile test fetch clean:
 # below when updating (keep in sync with any CI cache key that also names them).
 BLST_SHA := e7f90de551e8df682f3cc99067d204d8b90d27ad
 MCL_SHA  := 0499298adcfad3bbcebf77f17700ebbe97166060
-NIM_VERSION := 2.2.0
+NIM_VERSION := 2.2.10
 CHOOSENIM_VERSION := 0.8.16
 CHOOSENIM_LINUX_X64_SHA256 := 1034e03564b3e5b5321646f9ce290cc4d3cdff0cf0e9b523d43f0db8b9a45c74
 
