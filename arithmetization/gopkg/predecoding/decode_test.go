@@ -105,8 +105,11 @@ func TestImm12Uimm5(t *testing.T) {
 // 2^12 = 4096 when bit 11 is set (value >= 2^11 = 2048), independent of the
 // <<20/>>20 idiom signExtend12 uses.
 func signExtend12_oracle(x uint32) int64 {
+	// keep the low 12 bits	
 	v := int64(x % 4096)
+	// if bit 11 is set
 	if v >= 2048 {
+		// subtract 2^12 = 4096 to get the two's-complement sign extension
 		v -= 4096
 	}
 	return v
@@ -138,7 +141,7 @@ func signExtend13_oracle(x uint32) int64 {
 	v := int64(x % 8192)
 	// if bit 12 is set
 	if v >= 4096 {
-		// subtract 2^13 = 8192
+		// subtract 2^13 = 8192 to get the two's-complement sign extension
 		v -= 8192
 	}
 	return v
@@ -156,6 +159,38 @@ func TestSignExtend13(t *testing.T) {
 			want := signExtend13_oracle(x)
 			if got := signExtend13(x); got != want {
 				t.Fatalf("signExtend13(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
+// signExtend21_oracle is a shift-free reference for 21-bit two's-complement sign
+// extension: it keeps the low 21 bits (via modulo, not masking) and subtracts
+// 2^21 = 2097152 when bit 20 is set (value >= 2^20 = 1048576), independent of
+// the <<11/>>11 idiom signExtend21 uses.
+func signExtend21_oracle(x uint32) int64 {
+	// keep the low 21 bits
+	v := int64(x % 2097152)
+	// if bit 20 is set
+	if v >= 1048576 {
+		// subtract 2^21 = 2097152 to get the two's-complement sign extension
+		v -= 2097152
+	}
+	return v
+}
+
+// TestSignExtend21 checks signExtend21 over the full 21-bit domain against
+// signExtend21_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 20 are ignored (masked) and only bit 20 drives the
+// sign, so the result always lands in [-1048576, 1048575].
+func TestSignExtend21(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xffe00000, 0xaaa00000, 0x55400000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<21; low++ {
+			x := bg | low
+			want := signExtend21_oracle(x)
+			if got := signExtend21(x); got != want {
+				t.Fatalf("signExtend21(%#x) = %d, want %d", x, got, want)
 			}
 		}
 	}
