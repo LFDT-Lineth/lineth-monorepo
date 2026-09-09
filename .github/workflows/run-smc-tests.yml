@@ -75,21 +75,23 @@ jobs:
         run: pnpm -F contracts run build
 
       - name: Run smart contracts tests and generate coverage report
-        # @openzeppelin/upgrades-core hardcodes 3 lock-acquisition retries (~7s) around a
-        # 10s staleness threshold when guarding its gitignored contracts/.openzeppelin
-        # manifest. Under coverage's instrumented (slower) execution this occasionally
-        # loses the race against a legitimately (not abandoned) held lock and throws
-        # "Lock file is already being held", not a real test/code failure. Retry the
-        # whole run, wiping the ephemeral manifest first so a stale lock can't persist
-        # across attempts.
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 3
-          retry_on: error
-          timeout_minutes: 15
-          command: |
-            rm -rf contracts/.openzeppelin
-            pnpm -F contracts run coverage
+        # @openzeppelin/upgrades-core hardcodes a ~7s lock-acquisition retry budget around
+        # its os.tmpdir()-based manifest lock (one lock file, shared by every
+        # deployProxy/upgradeProxy call for the whole run). On this runner, plain /tmp is
+        # slow enough that coverage's instrumented (much slower) execution reliably loses
+        # that race, throwing "Lock file is already being held" -- not a real test/code
+        # failure. Point TMPDIR at tmpfs so the lock's mkdir/rmdir churn is fast again;
+        # Node's os.tmpdir() honors TMPDIR before falling back to /tmp.
+        env:
+          TMPDIR: /dev/shm
+        run: pnpm -F contracts run coverage
+
+      - name: Clean up tmpfs coverage lock artifacts
+        # Always run (even on failure) so this self-hosted runner doesn't accumulate
+        # /dev/shm state across jobs; @openzeppelin/upgrades-core writes its manifest/lock
+        # files under <TMPDIR>/openzeppelin-upgrades (see TMPDIR override above).
+        if: always()
+        run: rm -rf /dev/shm/openzeppelin-upgrades
 
       - name: Upload coverage report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
