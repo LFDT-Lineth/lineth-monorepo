@@ -73,7 +73,10 @@ test "two individually valid proofs with different statements are rejected" {
             const alt = vf.getInputAlt(i);
             if (statementsAgree(honest.public_inputs, alt.public_inputs)) {
                 verifier.verifyPair(case.spec, case.systems, honest, alt) catch |err| {
-                    std.debug.print("pair case {d} ({s}) consistent alt pair failed: {s}\n", .{ i, case.name, @errorName(err) });
+                    std.debug.print(
+                        "pair case {d} ({s}) consistent alt pair failed: {s}\n",
+                        .{ i, case.name, @errorName(err) },
+                    );
                     return err;
                 };
             } else {
