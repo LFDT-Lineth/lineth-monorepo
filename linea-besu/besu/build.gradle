@@ -38,23 +38,51 @@ dependencies {
   api("${besuArtifactGroup}.internal:besu-crypto-algorithms") {
     transitive = false
   }
+  api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
+    transitive = false
+  }
+  // The umbrella besu-plugin-api holds org.hyperledger.besu.plugin.services.* types that stayed
+  // top-level (BesuEvents, TransactionValidatorService, ...). It is kept transitive=false (like
+  // everything else here) to keep Besu's transitive graph (tuweni, jackson, netty, ...) off
+  // consumers' classpaths.
   api("${besuArtifactGroup}:besu-plugin-api") {
     transitive = false
   }
-  api("${besuArtifactGroup}:besu-plugin-api-core") {
-    transitive = false
-  }
-  api("${besuArtifactGroup}:besu-plugin-api-metrics") {
-    transitive = false
-  }
-  api("${besuArtifactGroup}:besu-plugin-api-security") {
-    transitive = false
-  }
-  api("${besuArtifactGroup}:besu-plugin-api-permissioning") {
-    transitive = false
-  }
-  api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
-    transitive = false
+  // Besu 26.8.1 split the plugin API into fine submodules, each hosting some of the
+  // org.hyperledger.besu.plugin.services.* types that downstream plugins reference directly.
+  // Because the umbrella is transitive=false, every submodule a consumer uses must be enumerated
+  // here explicitly — the umbrella pom's own dependency list is NOT followed. Current usage:
+  //   core           -> BesuService, PicoCLIOptions
+  //   metrics        -> MetricsSystem, metrics.*
+  //   security       -> securitymodule.*
+  //   permissioning  -> permissioning.*
+  //   storage        -> BesuConfiguration, storage.*
+  //   worldstate     -> WorldStateService
+  //   p2p            -> p2p.P2PService
+  //   txpool         -> TransactionPoolValidatorService, transactionpool.*, txvalidator.*
+  //   sync           -> sync.SynchronizationService
+  //   rpc            -> RpcEndpointService, rpc.*, exception.PluginRpcEndpointException
+  //   chain          -> BlockchainService
+  //   execution      -> BlockSimulationService, TransactionSimulationService
+  //   blockproduction-> mining.MiningService, TransactionSelectionService, txselection.*
+  [
+    'core',
+    'metrics',
+    'security',
+    'permissioning',
+    'storage',
+    'worldstate',
+    'p2p',
+    'txpool',
+    'sync',
+    'rpc',
+    'chain',
+    'execution',
+    'blockproduction',
+  ].each { submodule ->
+    api("${besuArtifactGroup}:besu-plugin-api-${submodule}") {
+      transitive = false
+    }
   }
 }
 

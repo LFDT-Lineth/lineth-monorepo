@@ -1,8 +1,8 @@
 package lineth.conflation.calculators
-
 import linea.domain.BlockCounters
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
+import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
@@ -32,6 +32,7 @@ class GlobalBlockConflationCalculatorTest {
       blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
       tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(0),
+      coinbase = ZERO_COINBASE,
     )
   val block2Counters =
     BlockCounters(
@@ -39,6 +40,7 @@ class GlobalBlockConflationCalculatorTest {
       blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
       tracesCounters = fakeTracesCountersV2(20u),
       blockRLPEncoded = ByteArray(0),
+      coinbase = ZERO_COINBASE,
     )
 
   private lateinit var conflations: MutableList<ConflationCalculationResult>

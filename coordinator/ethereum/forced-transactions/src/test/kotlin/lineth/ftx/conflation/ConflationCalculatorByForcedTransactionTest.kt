@@ -48,6 +48,7 @@ class ConflationCalculatorByForcedTransactionTest {
     blockTimestamp = timestamp,
     tracesCounters = TracesCountersV4.EMPTY_TRACES_COUNT,
     blockRLPEncoded = ByteArray(0),
+    coinbase = "0x0000000000000000000000000000000000000000",
   )
 
   @Test

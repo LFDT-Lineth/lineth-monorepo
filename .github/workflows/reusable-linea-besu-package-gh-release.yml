@@ -21,7 +21,7 @@ on:
         type: string
         default: ''
       without_besu_fleet_plugin:
-        description: 'Type "true" to exclude besu-fleet-plugin in the release'
+        description: 'Set "true" to exclude besu-fleet-plugin in the release'
         required: false
         type: string
         default: ''

@@ -3,7 +3,7 @@ module github.com/consensys/linea-monorepo/verifier-ray/testdata/generate
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260827095445-9c51af6cc3b1
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0
 	github.com/consensys/linea-monorepo/verifier-ray/codegen v0.0.0
 )
 

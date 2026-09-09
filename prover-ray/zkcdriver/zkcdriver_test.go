@@ -34,6 +34,11 @@ var (
 	zkcCfg   = codegen.DEFAULT_CONFIG
 )
 
+var (
+	// XXX(ivokub): use non-zero shared randomness until we start running preflight to get the shared randomness across shards
+	placeholderSharedRandomness = koalafield.NewOctupletFromStrings([8]string{"1", "0", "0", "0", "0", "0", "0", "0"})
+)
+
 func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
 	// recover panics. ZKC tends to panic when it fails compiling, so we want to catch those and return them as errors.
 	defer func() {
@@ -48,7 +53,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
 	}
 	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
 	if len(errs) > 0 {
 		for i := range errs {
 			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
@@ -62,7 +67,7 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 		}
 		return nil, fmt.Errorf("failed to compile zkc source")
 	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticHeight(), ir)
+	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
 	return binfile, nil
 }
 
@@ -87,10 +92,10 @@ func parseTestCase(
 	// the input file also has outputs what the zkc program produces. Lets
 	// filter them out for tracing purposes, so that we can sanity-check the
 	// inputs of the test-case.
-	filteredInputs := vm.FilterInputs(binF.Program(), inputs.Inputs)
+	filteredInputs, _ := vm.FilterInputs(binF.TracingProgram(), inputs.Inputs)
 
 	// This sanity-checks the corset inputs of the test-case
-	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
+	outputs, err = traceZkc(binF, vm.DEFAULT_TRACE_CONFIG, filteredInputs, withTraceCheck)
 	if err != nil {
 		return nil, nil, fmt.Errorf("constraint check failed: %w", err)
 	}
@@ -100,7 +105,7 @@ func parseTestCase(
 
 func traceZkc(
 	binFile *constraints.BinaryFile[koalabear.Element],
-	tracingCfg constraints.TraceConfig,
+	tracingCfg vm.TraceConfig,
 	input map[string][]byte,
 	withCheck bool,
 ) (outputs map[string][]byte, err error) {
@@ -112,14 +117,14 @@ func traceZkc(
 	}()
 
 	// trace program with given input
-	outputs, _, tr, errs := binFile.Trace(input, tracingCfg)
+	outputs, tr, errs := binFile.Trace(input, tracingCfg)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
 
 	if withCheck {
 		// check the traces work
-		if errsSchema := binFile.Check(tr, tracingCfg); len(errsSchema) > 0 {
+		if errsSchema := binFile.Check(tracingCfg, tr); len(errsSchema) > 0 {
 			errs := make([]error, len(errsSchema))
 			for i, e := range errsSchema {
 				errs[i] = errors.New(e.Message())
@@ -140,20 +145,14 @@ func proverCompilePipeline(sys *wiop.System) {
 	// deliberately: once the arithmetization emits bus entries, the seeded path
 	// engages here on its own and any gap in the γ wiring surfaces as a failing
 	// test rather than staying hidden behind a flag nobody remembers to flip.
+	//
+	// See the variable placeholderSharedRandomness above: it is a non-zero octuplet to ensure that the
+	// shared randomness is not all zero, which would be a degenerate case.
 	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	// XXX(ivokub): we have disabled pcs compiler for now as zkc compiler doesn't generate lookup constraints.
-	// in that case we would have columns which are not constrained at all and we would get a panic in the
-	// pcs compiler due to shifts not defined.
-	//
-	// replug when zkc start emitting lookup constraints, see https://github.com/LFDT-Lineth/zkc/issues/2013
-	//
-	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
-	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
-	// test case. We should also do it in the pipeline test then.
 	pcs.Compile(sys)
 }
 
@@ -181,14 +180,27 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	// Run the prover compile pipeline, which will compile the system and prepare it for proof generation
 	proverCompilePipeline(sys)
 
-	// Run the ZkC driver to produce a proof and public inputs
-	proof, pub := sys.Prove(
-		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs, koalafield.Octuplet{}) },
-		wiop.ProveOptions{CheckUnreducedQueries: true})
+	var (
+		traces = driver.TraceZkcInputs(inputs)
+		proofs = make([]wiop.Proof, len(traces))
+		pubs   = make([]wiop.PublicInput, len(traces))
+	)
 
-	// Verify the proof and public inputs
-	if err := sys.Verify(proof, pub); err != nil {
-		return fmt.Errorf("verification failed: %w", err)
+	for i, shard := range traces {
+
+		proofs[i], pubs[i] = sys.Prove(
+			func(rt *wiop.Runtime) {
+				driver.AssignTraceShard(rt, shard, placeholderSharedRandomness)
+			},
+			wiop.ProveOptions{CheckUnreducedQueries: true})
 	}
+
+	for i := range proofs {
+
+		if err := sys.Verify(proofs[i], pubs[i]); err != nil {
+			return fmt.Errorf("verification failed: %w", err)
+		}
+	}
+
 	return nil
 }

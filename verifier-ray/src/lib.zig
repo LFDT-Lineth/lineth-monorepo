@@ -19,6 +19,7 @@ pub const crypto = struct {
     pub const fiat_shamir = @import("crypto/fiat_shamir.zig");
     pub const poseidon2 = @import("crypto/poseidon2.zig");
     pub const merkle = @import("crypto/merkle.zig");
+    pub const multiset_hashing = @import("crypto/multiset_hashing.zig");
 };
 
 pub const polynomial = struct {
@@ -31,6 +32,7 @@ pub const query = struct {
     pub const logderivativesum = @import("query/logderivativesum.zig");
     pub const grandproduct = @import("query/grandproduct.zig");
     pub const rowlimit = @import("query/rowlimit.zig");
+    pub const shared_randomness = @import("query/shared_randomness.zig");
     pub const fri = @import("query/fri.zig");
     pub const pcs = @import("query/pcs.zig");
 };

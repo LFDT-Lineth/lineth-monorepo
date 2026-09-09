@@ -1,3 +1,7 @@
+@file:Suppress(
+  "DEPRECATION",
+)
+
 package lineth.staterecovery.plugin
 
 import lineth.staterecovery.RecoveryStatusPersistence

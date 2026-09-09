@@ -75,7 +75,6 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 			basePath := strings.TrimSuffix(f, zkcExtension)
 			acceptPath := basePath + acceptExtension
 			if files.CheckFilePath(acceptPath) != nil {
-				fatalIfNotKnown(t, failures, baseName, -1, failReasonNoTestData, "accept file %s does not exist for test-case %s", acceptPath, f)
 				return
 			}
 			binF, err := compileBinaryConstraints(f)

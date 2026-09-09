@@ -1,11 +1,11 @@
 package lineth.coordination.conflation
-
 import linea.domain.BlockCounters
 import linea.domain.BlocksConflation
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.domain.createBlock
 import lineth.conflation.AlwaysSafeBlockNumberProvider
+import lineth.conflation.ZERO_COINBASE
 import lineth.conflation.calculators.BlockConflationCalculator
 import lineth.conflation.calculators.ConflationTriggerCalculatorByBlockLimit
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
@@ -62,6 +62,7 @@ class ConflationServiceImplTest {
         payload1Time.plus(0.seconds),
         tracesCounters = fakeTracesCountersV2(40u),
         blockRLPEncoded = ByteArray(0),
+        coinbase = ZERO_COINBASE,
       )
     val payloadCounters2 =
       BlockCounters(
@@ -69,6 +70,7 @@ class ConflationServiceImplTest {
         payload1Time.plus(2.seconds),
         tracesCounters = fakeTracesCountersV2(40u),
         blockRLPEncoded = ByteArray(0),
+        coinbase = ZERO_COINBASE,
       )
     val payloadCounters3 =
       BlockCounters(
@@ -76,6 +78,7 @@ class ConflationServiceImplTest {
         payload1Time.plus(4.seconds),
         tracesCounters = fakeTracesCountersV2(100u),
         blockRLPEncoded = ByteArray(0),
+        coinbase = ZERO_COINBASE,
       )
 
     val conflationEvents = mutableListOf<BlocksConflation>()
@@ -134,6 +137,7 @@ class ConflationServiceImplTest {
               blockTimestamp = blockTime,
               tracesCounters = fixedTracesCounters,
               blockRLPEncoded = ByteArray(0),
+              coinbase = ZERO_COINBASE,
             ),
           )
         }
@@ -178,6 +182,7 @@ class ConflationServiceImplTest {
           blockTimestamp = blockTime,
           tracesCounters = fixedTracesCounters,
           blockRLPEncoded = ByteArray(0),
+          coinbase = ZERO_COINBASE,
         ),
       )
     }.isEqualTo(expectedException)

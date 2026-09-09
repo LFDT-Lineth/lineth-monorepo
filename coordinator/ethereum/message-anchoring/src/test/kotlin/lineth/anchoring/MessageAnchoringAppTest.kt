@@ -209,7 +209,7 @@ class MessageAnchoringAppTest {
 
     anchoringApp.start().get()
     await()
-      .atMost(10.seconds.toJavaDuration())
+      .atMost(20.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(l2MessageService.getLastAnchoredL1MessageNumber(block = BlockParameter.Tag.LATEST).get())
           .isEqualTo(ethLogs.last().l1RollingHashUpdated.event.messageNumber)

@@ -70,6 +70,7 @@ proving_key.bin
 .externalToolBuilders/
 .gradle/
 .idea/
+.kotlin/
 .next/
 .recommenders/
 .idea_modules/
