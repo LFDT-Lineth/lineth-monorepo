@@ -24,16 +24,11 @@
 // is asserted by its own verifier action. See [wiop.MessageBus] for the
 // per-entry semantics.
 //
-// The pass allocates α and β itself, via [Round.NewCoinField] on a fresh
-// (or reused) coin round immediately after the latest participant round.
-// In a sharded protocol the caller is expected to pre-allocate that coin
-// round and register a [Round.RegisterPreSamplingHook] entry on it that
-// calls [Runtime.SetFSState] with shared randomness derived from a
-// cross-shard handoff. The compiler's ensureRoundAfter reuses any
-// pre-existing tail round at the right position, so messagebus's coin
-// allocation lands on the same round the hook is registered on — and every
-// shard's α, β therefore derive from the seeded FS state instead of the
-// local transcript.
+// The pass allocates α and β itself, on a coin round it appends. They are
+// drawn from the ordinary Fiat-Shamir transcript. Shards therefore agree on α and β exactly when they
+// reach that round with identical transcripts — which is what
+// [CompileOptions.SharedRandomness] arranges, by putting the cross-shard seed γ
+// on round 0 where it is absorbed before the coins are drawn.
 //
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
@@ -94,13 +89,11 @@ type CompileOptions struct {
 // on different rounds, which silently desynchronizes the shards rather than
 // failing.
 //
-// The pass appends up to two fresh interactive rounds to sys.Rounds: a
-// coin round where the shared α and β are declared, and a result round
-// where the [wiop.GrandProduct] result cells and the per-handle verifier
-// action live. Either round may already exist at the right position (e.g.
-// when a sharded protocol pre-allocates the coin round to attach a
-// [Round.RegisterPreSamplingHook]); ensureRoundAfter reuses existing tail
-// rounds rather than appending duplicates.
+// The pass appends up to two fresh interactive rounds to sys.Rounds: a coin
+// round where α and β are declared, and a result round where the
+// [wiop.GrandProduct] result cells and the per-handle verifier action live. The
+// result round may already exist at the right position; ensureRoundAfter reuses
+// an existing tail round rather than appending a duplicate.
 //
 // Compile must be invoked at most once per system: it tags each handle's
 // accumulator public input with the handle's index in this call's alphabetical
