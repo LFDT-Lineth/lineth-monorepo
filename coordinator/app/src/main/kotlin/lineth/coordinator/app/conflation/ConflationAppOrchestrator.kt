@@ -134,7 +134,7 @@ class ConflationAppOrchestrator(
           ?: BlockParameter.Tag.EARLIEST,
       )
 
-      val ftxInvalidityProofService: LongRunningService = if (riscVCutoverCrossed()) {
+      val ftxInvalidityProofService: LongRunningService = if (riscvCutoverCrossed()) {
         log.info(
           "FTX invalidity proof service disabled: already past RISC-V cutover. " +
             "lastFinalizedBlockTimestamp={}, cutover={}",
@@ -180,8 +180,8 @@ class ConflationAppOrchestrator(
     }
   }
 
-  private val lastProcessedBlocks = if (riscVCutoverCrossed()) {
-    ConflationAppHelper.getLastRiscVProcessedBlocks(lastFinalizedBlock, l2EthClient).get()
+  private val lastProcessedBlocks = if (riscvCutoverCrossed()) {
+    ConflationAppHelper.getLastRiscvProcessedBlocks(lastFinalizedBlock, l2EthClient).get()
   } else {
     ConflationAppHelper.getLastConflatedAndAggregatedBlocks(
       lastFinalizedBlock = lastFinalizedBlock,
@@ -237,7 +237,7 @@ class ConflationAppOrchestrator(
   private val targetCheckpointPauseControllerV1 = newTargetCheckpointPauseController()
   private val targetCheckpointPauseControllerV2 = newTargetCheckpointPauseController()
 
-  private val conflationAppV1: LongRunningService = if (riscVCutoverCrossed()) {
+  private val conflationAppV1: LongRunningService = if (riscvCutoverCrossed()) {
     DisabledService("conflation-app-v1")
   } else {
     ConflationAppV1(
@@ -297,7 +297,7 @@ class ConflationAppOrchestrator(
       .thenCompose { provenBlockNumberMonitor.start() }
       .thenCompose { conflationAppV1.start() }
       .thenCompose {
-        if (riscVCutoverCrossed()) {
+        if (riscvCutoverCrossed()) {
           // Already past cutover: V2 resumes from a known block number, completes quickly.
           conflationAppV2.start()
         } else {
@@ -321,7 +321,7 @@ class ConflationAppOrchestrator(
       .thenCompose { provenBlockNumberMonitor.stop() }
   }
 
-  fun riscVCutoverCrossed(): Boolean =
+  fun riscvCutoverCrossed(): Boolean =
     riscvCutoverTimestamp != null && lastFinalizedBlockTimestamp >= riscvCutoverTimestamp
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> =

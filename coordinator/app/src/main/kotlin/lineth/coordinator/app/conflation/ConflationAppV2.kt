@@ -86,7 +86,7 @@ class ConflationAppV2(
       "conflation.blocksLimit must be set when riscv is enabled"
     }
 
-    val riscvCalculators = CalculatorsFactory.createForRiscV(
+    val riscvCalculators = CalculatorsFactory.createForRiscv(
       lastConflatedBlockNumber = lastProcessedBlocks.lastConflatedBlock.number,
       lastConflatedTimestamp = maxOf(
         configs.conflation.riscvStartingBlockTimestampInclusive!!,
