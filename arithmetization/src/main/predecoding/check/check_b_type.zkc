@@ -11,7 +11,7 @@ fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
     // Verify the raw funct3 field actually encodes the claimed branch compute_op.
-    // Mapping (see elf_to_json_gen unifiedComputeOp / bTypeUnifiedIndex):
+    // Mapping (see the Go predecoding package):
     //   BEQ=0b000, BNE=0b001, BLT=0b100, BGE=0b101, BLTU=0b110, BGEU=0b111
     switch funct3 {
         case FUNCT3_BEQ: {
@@ -51,7 +51,7 @@ fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
             }
         }
         default: {
-            // Unrecognised branch funct3 → elf_to_json_gen maps to COMPUTE_INVALID.
+            // Unrecognised branch funct3 maps to COMPUTE_INVALID.
             if compute_op != COMPUTE_INVALID {
                 printf "[ERROR] invalid B-type funct3 requires COMPUTE_INVALID (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
                 fail
@@ -77,4 +77,3 @@ fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         fail
     }
 }
-

@@ -4,6 +4,7 @@ const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
 const grandproduct = @import("query/grandproduct.zig");
 const rowlimit = @import("query/rowlimit.zig");
+const shared_randomness = @import("query/shared_randomness.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
@@ -26,6 +27,14 @@ pub const Systems = struct {
     /// bounds dynamic-module runtime sizes rather than checking a polynomial
     /// identity, so it needs only `proof.module_sizes`, never claims or coins.
     rowlimit: rowlimit.System = .{},
+    /// Shared-randomness contribution check: this shard's public-input
+    /// contribution digest must equal the Poseidon2 sponge hash over every
+    /// committed round preceding the message-bus coin round. Verifier-side
+    /// counterpart to prover-ray's messagebus.SharedRandomnessContributionChecker.
+    /// Empty (`.{}`) for a protocol compiled without
+    /// messagebus.CompileOptions.SharedRandomness, in which case the check is a
+    /// no-op.
+    shared_randomness: shared_randomness.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
     /// challenges, query positions) from the shared Fiat-Shamir transcript and
@@ -222,6 +231,8 @@ pub fn verify(
     try grandproduct.verify(systems.grandproduct, ctx);
 
     try rowlimit.verify(systems.rowlimit, proof.module_sizes);
+
+    try shared_randomness.verify(systems.shared_randomness, ctx);
 
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }

@@ -17,6 +17,7 @@ import lineth.metrics.LineaMetricCategory.SEQUENCER_FORCED_TX
 import lineth.metrics.LineaMetricCategory.SEQUENCER_LIVENESS
 import lineth.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY
 import lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY
+import lineth.plugin.acc.test.LineaPluginTestBase.Companion.RECEIPT_FETCH_MAX_RETRIES
 import lineth.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken
 import lineth.plugin.acc.test.tests.web3j.generated.BLS12_MAP_FP_TO_G1
 import lineth.plugin.acc.test.tests.web3j.generated.DummyAdder
@@ -36,6 +37,7 @@ import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt32
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.hyperledger.besu.consensus.clique.CliqueExtraData
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration
@@ -60,6 +62,7 @@ import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction
 import org.web3j.crypto.TransactionEncoder
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.protocol.exceptions.TransactionException
 import org.web3j.tx.RawTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
@@ -71,7 +74,11 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.*
+import java.util.Objects
+import java.util.Optional
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** Base class for plugin tests. */
 abstract class LineaPluginTestBase : AcceptanceTestBase() {
@@ -81,6 +88,9 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     val MAX_TX_GAS_LIMIT: Int = DefaultGasProvider.GAS_LIMIT.toInt()
     const val CHAIN_ID = 1337L
     const val BLOCK_PERIOD_SECONDS = 5
+    const val RECEIPT_FETCH_MAX_CONCURRENCY = 4
+    const val RECEIPT_FETCH_MAX_RETRIES = 2
+    const val RECEIPT_FETCH_RETRY_DELAY_MILLIS = 200L
     val DEFAULT_REQUESTED_PLUGINS = listOf(
       "LineaExtraDataPlugin",
       "LineaEstimateGasEndpointPlugin",
@@ -138,6 +148,17 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
   protected open fun getBlockPeriodSeconds(): Int = BLOCK_PERIOD_SECONDS
 
+  /**
+   * Milliseconds Besu may spend selecting transactions for one block.
+   *
+   * Besu picks between the PoA and PoS variants of this budget via `protocolSpec.isPoS()` (see
+   * `MiningConfiguration.getBlockTxsSelectionMaxTime`), so both are configured from this value.
+   * When the budget is exhausted mid-batch Besu returns `BLOCK_SELECTION_TIMEOUT` and seals the
+   * block with whatever it had evaluated so far, splitting a batch a test expects in one block.
+   * Tests whose transactions are expensive to evaluate (e.g. EcPairing) should override this.
+   */
+  protected open fun getBlockTxsSelectionMaxTimeMillis(): Int = getBlockPeriodSeconds() * 1000
+
   @AfterEach
   protected open fun stop() {
     cluster.stop()
@@ -169,9 +190,17 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
         // enable mining
         // allow for a single iteration to take all the slot time
         // set plugin max selection time to 5% of slot time
+        //
+        // Note both PoA and PoS budgets are set: Besu picks between them via
+        // protocolSpec.isPoS() (see MiningConfiguration.getBlockTxsSelectionMaxTime). These tests
+        // run a clique-to-PoS genesis and build blocks through the engine API, so the PoS value is
+        // the one that actually applies; the PoA value is kept for the pre-merge phase.
         ImmutableMiningConfiguration.builder()
           .poaBlockTxsSelectionMaxTime(
-            PositiveNumber.fromInt(getBlockPeriodSeconds() * 1000),
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
+          )
+          .posBlockTxsSelectionMaxTime(
+            PositiveNumber.fromInt(getBlockTxsSelectionMaxTimeMillis()),
           )
           .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
           .mutableInitValues(
@@ -272,26 +301,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
   }
 
   private fun assertTransactionsInCorrectBlocks(web3j: Web3j, hashes: List<String>, num: Int) {
-    val txMap = hashMapOf<Long, Int>()
-    val receiptProcessor = createReceiptProcessor(web3j)
-
     // CallData for the transaction for empty String is 68 and grows in steps of 32 with (String
     // size / 32)
     val maxTxs = MAX_CALLDATA_SIZE / (68 + ((num + 31) / 32) * 32)
 
-    // Wait for transaction to be mined and check that there are no more than maxTxs per block
-    hashes.forEach { h ->
-      val transactionReceipt = try {
-        receiptProcessor.waitForTransactionReceipt(h)
-      } catch (e: IOException) {
-        throw RuntimeException(e)
-      } catch (e: TransactionException) {
-        throw RuntimeException(e)
-      }
-
-      val blockNumber = transactionReceipt.blockNumber.toLong()
+    // Wait for transactions to be mined and check that there are no more than maxTxs per block
+    val txMap = hashMapOf<Long, Int>()
+    getReceiptsInParallel(web3j, hashes).forEach { receipt ->
+      val blockNumber = receipt.blockNumber.toLong()
       txMap.compute(blockNumber) { _, n -> (n ?: 0) + 1 }
-
       // make sure that no block contained more than maxTxs
       assertThat(txMap[blockNumber]).isLessThanOrEqualTo(maxTxs)
     }
@@ -420,33 +438,164 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     return deploy.send()
   }
 
-  protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
+  /**
+   * Waits for the receipt of every transaction in [hashes] in parallel and returns them in input
+   * order. Each [org.web3j.tx.response.TransactionReceiptProcessor.waitForTransactionReceipt] call
+   * is a blocking network poll that can take up to `getBlockPeriodSeconds()`, so running them
+   * sequentially would add that latency per hash; since the lookups are independent they are run on
+   * a bounded thread pool instead.
+   */
+  protected fun getReceiptsInParallel(
+    web3j: Web3j,
+    hashes: List<String>,
+  ): List<TransactionReceipt> {
     val receiptProcessor = createReceiptProcessor(web3j)
-
-    val blockNumbers = hashSetOf<Long>()
-    for (hash in hashes) {
-      val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-      assertThat(receipt).isNotNull
-      val isAdded = blockNumbers.add(receipt.blockNumber.toLong())
-      assertThat(isAdded).isEqualTo(true)
+    val executor = Executors.newFixedThreadPool(minOf(hashes.size, RECEIPT_FETCH_MAX_CONCURRENCY))
+    try {
+      val futures = hashes.map { hash ->
+        executor.submit(
+          Callable<TransactionReceipt> {
+            waitForTransactionReceiptWithRetry(receiptProcessor, hash)
+          },
+        )
+      }
+      return futures.map { it.get() }
+    } finally {
+      executor.shutdownNow()
     }
   }
 
-  protected fun assertTransactionsMinedInSameBlock(web3j: Web3j, hashes: List<String>) {
-    val receiptProcessor = createReceiptProcessor(web3j)
-    val blockNumbers = hashes.map { hash ->
+  /**
+   * Polls for [hash]'s receipt, retrying on [IOException] up to [RECEIPT_FETCH_MAX_RETRIES] times.
+   * Under CI load, concurrent polls against the single local node can hit a connection torn down
+   * mid-request by the node's HTTP server (surfaces as OkHttp "unexpected end of stream"); a retry
+   * lets that transient failure self-heal instead of failing the whole batch.
+   */
+  private fun waitForTransactionReceiptWithRetry(
+    receiptProcessor: TransactionReceiptProcessor,
+    hash: String,
+  ): TransactionReceipt {
+    var attempt = 0
+    while (true) {
       try {
-        val receipt = receiptProcessor.waitForTransactionReceipt(hash)
-        assertThat(receipt).isNotNull
-        receipt.blockNumber.toLong()
+        return receiptProcessor.waitForTransactionReceipt(hash)
       } catch (e: IOException) {
-        throw RuntimeException(e)
+        attempt++
+        if (attempt > RECEIPT_FETCH_MAX_RETRIES) throw RuntimeException(e)
+        Thread.sleep(RECEIPT_FETCH_RETRY_DELAY_MILLIS)
       } catch (e: TransactionException) {
         throw RuntimeException(e)
       }
+    }
+  }
+
+  protected fun assertTransactionsMinedInSeparateBlocks(web3j: Web3j, hashes: List<String>) {
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
+
+    val uniqueBlockNumbers = blockNumbers.toSet()
+    assertThat(uniqueBlockNumbers.size)
+      .withFailMessage {
+        "Expected transactions to be mined in separate blocks, got block numbers $blockNumbers"
+      }
+      .isEqualTo(blockNumbers.size)
+  }
+
+  protected fun assertTransactionsMinedInSameBlock(web3j: Web3j, hashes: List<String>) {
+    val blockNumbers = getReceiptsInParallel(web3j, hashes).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
     }.toSet()
 
     assertThat(blockNumbers.size).isEqualTo(1)
+  }
+
+  /**
+   * Asserts that all [fittingHashes] were mined together in one block, and that [overflowHash] was
+   * mined in a strictly later block. This is the ordering-based form of the limit tests: what
+   * matters is that the fitting transactions were accepted together and the overflowing one came
+   * after — not the exact block numbers, which can shift by a block under block-build timing jitter
+   * (e.g. the Vert.x 5 migration in Besu 26.8.1 slowed selection enough that an exact
+   * single-block-vs-next-block layout is no longer guaranteed on a loaded CI runner).
+   */
+  protected fun assertFittingTransactionsMinedBeforeOverflow(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+  ) {
+    val allHashes = fittingHashes + overflowHash
+    val receipts = getReceiptsInParallel(web3j, allHashes)
+    val blockNumbers = receipts.map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }
+
+    val fittingBlocks = blockNumbers.dropLast(1).toSet()
+    val overflowBlock = blockNumbers.last()
+
+    assertThat(fittingBlocks)
+      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .hasSize(1)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting block " +
+          "${fittingBlocks.single()}, got $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+  }
+
+  /**
+   * Asserts the module-line-count limit semantics for a batch of [fittingHashes] plus one
+   * [overflowHash]:
+   *  1. the fitting transactions were mined together in a single block;
+   *  2. the overflowing transaction was mined in a strictly later block; and
+   *  3. the sequencer logged that it stopped selection because adding the overflowing transaction
+   *     pushed [moduleName]'s cumulated line count to [attemptedCount], above [moduleLimit].
+   *
+   * Why this ordering: the rejection log line is only emitted during the block-building selection
+   * round that evaluates (and rejects) the overflowing transaction.
+   */
+  protected fun assertModuleLimitOverflowed(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+    moduleName: String,
+    moduleLimit: Int,
+    attemptedCount: Int,
+  ) {
+    val receipts = getReceiptsInParallel(web3j, fittingHashes + overflowHash)
+    val fittingBlocks = receipts.dropLast(1).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }.toSet()
+    val overflowBlock = receipts.last().blockNumber.toLong()
+
+    assertThat(fittingBlocks)
+      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .hasSize(1)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting block " +
+          "${fittingBlocks.single()}, got $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+
+    // The rejection round has already run (proven by the overflow receipt above); only the async
+    // appender flush can still be pending, so poll for the line.
+    val target =
+      "Cumulated line count for module $moduleName=$attemptedCount is above the limit " +
+        "$moduleLimit, stopping selection"
+    await()
+      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted {
+        assertThat(getLog())
+          .withFailMessage { "Expected Besu logs to contain '$target'" }
+          .contains(target)
+      }
+    getAndResetLog()
   }
 
   protected fun assertTransactionNotInThePool(hash: String) {
@@ -466,23 +615,6 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       maxOf(1000L, getBlockPeriodSeconds() * 1000L / 5),
       getBlockPeriodSeconds() * 6,
     )
-  }
-
-  protected fun sendTransactionWithGivenLengthPayload(
-    account: String,
-    web3j: Web3j,
-    num: Int,
-  ): String {
-    val to = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
-    val txManager = RawTransactionManager(web3j, Credentials.create(account))
-
-    return txManager.sendTransaction(
-      DefaultGasProvider.GAS_PRICE,
-      BigInteger.valueOf(MAX_TX_GAS_LIMIT.toLong()),
-      to,
-      RandomStringUtils.secure().nextAlphabetic(num),
-      BigInteger.ZERO,
-    ).transactionHash
   }
 
   protected fun createExtraDataPricingField(
@@ -647,14 +779,5 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     )
 
     return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow())
-  }
-
-  fun asserLogsContain(
-    target: String,
-    logs: String = getAndResetLog(),
-  ) {
-    assertThat(logs)
-      .withFailMessage { "Expected Besu logs to contain '$target'" }
-      .contains(target)
   }
 }

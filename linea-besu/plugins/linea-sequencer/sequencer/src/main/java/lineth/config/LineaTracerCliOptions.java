@@ -9,6 +9,7 @@
 package lineth.config;
 
 import com.google.common.base.MoreObjects;
+import java.util.OptionalLong;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
@@ -18,6 +19,7 @@ public class LineaTracerCliOptions implements LineaCliOptions {
 
   public static final String MODULE_LIMIT_FILE_PATH = "--plugin-linea-module-limit-file-path";
   public static final String DEFAULT_MODULE_LIMIT_FILE_PATH = "moduleLimitFile.toml";
+  public static final String TRACING_END_TIMESTAMP = "--plugin-linea-tracing-end-timestamp";
 
   @CommandLine.Option(
       names = {MODULE_LIMIT_FILE_PATH},
@@ -26,6 +28,13 @@ public class LineaTracerCliOptions implements LineaCliOptions {
       description =
           "Path to the toml file containing the module limits (default: ${DEFAULT-VALUE})")
   private String moduleLimitFilePath = DEFAULT_MODULE_LIMIT_FILE_PATH;
+
+  @CommandLine.Option(
+      names = {TRACING_END_TIMESTAMP},
+      paramLabel = "<UNIX_EPOCH_SECONDS>",
+      description =
+          "Stop sequencer bespoke tracing at this pending block timestamp (default: unset)")
+  private Long tracingEndTimestamp;
 
   private LineaTracerCliOptions() {}
 
@@ -47,6 +56,8 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   public static LineaTracerCliOptions fromConfig(final LineaTracerConfiguration config) {
     final LineaTracerCliOptions options = create();
     options.moduleLimitFilePath = config.moduleLimitsFilePath();
+    options.tracingEndTimestamp =
+        config.tracingEndTimestamp().isPresent() ? config.tracingEndTimestamp().getAsLong() : null;
     return options;
   }
 
@@ -57,9 +68,17 @@ public class LineaTracerCliOptions implements LineaCliOptions {
    */
   @Override
   public LineaTracerLineLimitConfiguration toDomainObject() {
+    if (tracingEndTimestamp != null && tracingEndTimestamp < 0) {
+      throw new IllegalArgumentException(TRACING_END_TIMESTAMP + " must be zero or greater");
+    }
+
     return LineaTracerLineLimitConfiguration.builder()
         .moduleLimitsFilePath(moduleLimitFilePath)
         .moduleLimitsMap(ModuleLineCountValidator.createLimitModules(moduleLimitFilePath))
+        .tracingEndTimestamp(
+            tracingEndTimestamp == null
+                ? OptionalLong.empty()
+                : OptionalLong.of(tracingEndTimestamp))
         .build();
   }
 
@@ -67,6 +86,7 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(MODULE_LIMIT_FILE_PATH, moduleLimitFilePath)
+        .add(TRACING_END_TIMESTAMP, tracingEndTimestamp)
         .toString();
   }
 }

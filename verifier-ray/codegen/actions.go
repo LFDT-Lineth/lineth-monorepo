@@ -55,10 +55,20 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - grandproduct.CheckResultIsOne             → BuildGrandProductSystem / grandproduct
 //     sub-verifier (permutation Result == 1, folded into the same query's
 //     `expected` field)
+//   - grandproduct.RowLimitAction               → BuildRowLimitSystem / rowlimit
+//     sub-verifier (permutation per-side row bound, analogous to
+//     lookuptologderivsum.RowLimitVerifierAction but guarding MaxPermutationRows
+//     for a single permutation query's A/B sides instead of MaxLookupRows for a
+//     lookup subgroup)
 //   - messagebus.CheckHandleSumInShard          → BuildGrandProductSystem / grandproduct
 //     sub-verifier (message-bus handle Result == expected, folded into the
 //     same query's `expected` field; absent entirely when SkipInShardCheck
 //     leaves it to a downstream cross-shard layer)
+//   - messagebus.SharedRandomnessContributionChecker → BuildSharedRandomnessSystem /
+//     shared_randomness sub-verifier (this shard's public-input contribution
+//     digest == the Poseidon2 sponge hash over every committed round preceding
+//     the message-bus coin round; present only when the shard was compiled with
+//     messagebus.CompileOptions.SharedRandomness)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem
 //     (performs no boundary check the Zig side must re-emit — the whole PCS
 //     opening, including the claimed evaluations, is reconstructed at verify
@@ -98,7 +108,11 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 		return true
 	case *grandproduct.CheckResultIsOne:
 		return true
+	case *grandproduct.RowLimitAction:
+		return true
 	case *messagebus.CheckHandleSumInShard:
+		return true
+	case *messagebus.SharedRandomnessContributionChecker:
 		return true
 	}
 	return false

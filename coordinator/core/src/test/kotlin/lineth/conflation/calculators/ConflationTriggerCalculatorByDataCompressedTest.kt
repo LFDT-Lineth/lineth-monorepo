@@ -1,9 +1,9 @@
 package lineth.conflation.calculators
-
 import linea.blob.BlobCompressionException
 import linea.blob.BlobCompressor
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
+import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -200,5 +200,6 @@ class ConflationTriggerCalculatorByDataCompressedTest {
     blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),
     tracesCounters = fakeTracesCountersV2(0u),
     blockRLPEncoded = rlpRawData,
+    coinbase = ZERO_COINBASE,
   )
 }
