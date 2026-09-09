@@ -48,7 +48,7 @@ start-env-with-riscv:
 		LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
-	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
+	$(RISCV_COMPOSE) up --detach --no-deps --wait --wait-timeout 600 \
 		riscv-proof-responder \
 		coordinator
 
