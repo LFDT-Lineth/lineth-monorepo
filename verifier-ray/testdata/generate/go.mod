@@ -3,11 +3,13 @@ module github.com/consensys/linea-monorepo/verifier-ray/testdata/generate
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260907102024-e1ed771dd796
 	github.com/consensys/linea-monorepo/verifier-ray/codegen v0.0.0
 )
 
 require (
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0 // indirect
+	github.com/LFDT-Lineth/zkc v1.2.32 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
@@ -26,3 +28,10 @@ require (
 )
 
 replace github.com/consensys/linea-monorepo/verifier-ray/codegen => ../../codegen
+
+// Mirrors codegen/go.mod: prover-ray's zkc-r5 backend pulls in
+// arithmetization/gopkg/{elfmapping,predecoding} behind the placeholder
+// arithmetization v0.0.0, which prover-ray resolves with a relative-path
+// replace that does not apply outside its own module. Keep this revision in
+// step with codegen's.
+replace github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0 => github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907102024-e1ed771dd796

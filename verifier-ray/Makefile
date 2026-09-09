@@ -11,26 +11,16 @@ include ../riscv-guests/build_common/Makefile
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
+PROOF_IMAGE := testdata/riscv_proof_image.bin
 
-# Input is currently embedded into the binary at build time (we don't have input
-# serialization yet), selected via `-Dembedded-input=<valid|invalid>` and a fixture
-# index `-Dembedded-spec=<N>`. The passing.bin/failing.bin fixtures and the
-# file/mmap input-parsing path below are kept for later reintroduction once
-# serialization lands, but are no longer used by the run/zkc targets.
+# Optional legacy embedded-fixture mode, still used by the profiling targets.
+# The default smoke-test run/zkc path loads the committed real proof image.
 EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
 NATIVE_BIN := zig-out/bin/verifier-ray
 
-# elf-to-json expects a big-endian hex string or `@path/to/in_bytes` for the input bytes. We currently
-# embed the input in the binary so we pass one byte of placeholder. But the guest right now never reads.
-IN_BYTES := 0x00
-
-# Legacy file-based input plumbing (unused for now, kept for reintroduction).
-PASSING_INPUT_FILE := testdata/inputs/passing.bin
-FAILING_INPUT_FILE := testdata/inputs/failing.bin
-INPUT_FILE ?= $(PASSING_INPUT_FILE)
-NATIVE_INPUT_FILE := zig-out/input.bin
-IN_BYTES_FILE ?= zig-out/input.hex
+# elf-to-json accepts @path for raw bytes placed directly at `_in_start`.
+IN_BYTES := @$(PROOF_IMAGE)
 
 DISABLE_ACCELERATORS ?= false
 
@@ -47,9 +37,9 @@ help:
 		'  build                 Build verifier-ray natively' \
 		'  build-release         Build verifier-ray natively with ReleaseSmall and stripped symbols' \
 		'  build-r5              Build verifier-ray for the Lineth R5 zkVM target' \
-		'  run                   Run verifier-ray natively with embedded EMBEDDED_INPUT' \
-		'  run-passing           Run verifier-ray natively with embedded valid input' \
-		'  run-failing           Run verifier-ray natively with embedded invalid input (exits non-zero)' \
+		'  run                   Run verifier-ray natively against testdata/riscv_proof_image.bin' \
+		'  run-passing           Alias for run' \
+		'  run-failing           Run verifier-ray natively with an invalid embedded fixture (exits non-zero)' \
 		'  run-failing-expected  Run native invalid input and require it to fail' \
 		'  test                  Run Zig tests and Go codegen tests' \
 		'  test-zig              Generate testdata and run Zig tests' \
@@ -57,17 +47,12 @@ help:
 		'  generate-testdata     Generate testdata for Zig tests' \
 		'  verify-testdata       Verify generated testdata is up to date with git (for CI)' \
 		'  zkc-build             Build the R5 ELF and generate the zkc JSON input' \
-		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter with embedded EMBEDDED_INPUT' \
-		'  zkc-verify-passing    Run zkc with embedded valid input' \
-		'  zkc-verify-failing    Run zkc with embedded invalid input (exits non-zero)' \
+		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter against testdata/riscv_proof_image.bin' \
+		'  zkc-verify-passing    Alias for zkc-verify' \
+		'  zkc-verify-failing    Run zkc with an invalid embedded fixture (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
 		'  profile-zkc           Profile every generated verifier case and write a compact CSV report' \
 		'  clean                 Remove Zig build artifacts' \
-		'' \
-		'input variables:' \
-		'  EMBEDDED_INPUT        Embedded input fixture kind: valid or invalid, default valid' \
-		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
-		'' \
 		'zkc variables:' \
 		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
 		'' \
@@ -92,19 +77,19 @@ build-zig:
 	zig build
 
 build-release:
-	zig build --release=small -Dstrip=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC)
+	zig build --release=small -Dstrip=true
 
 build-r5:
-	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
+	zig build --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
 run:
-	zig build run -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC)
+	zig build run
 
 run-passing:
-	$(MAKE) run EMBEDDED_INPUT=valid
+	$(MAKE) run
 
 run-failing:
-	$(MAKE) run EMBEDDED_INPUT=invalid
+	zig build run -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC)
 
 run-failing-expected:
 	@if $(MAKE) run-failing; then \
@@ -128,17 +113,10 @@ test-codegen:
 generate-testdata:
 	cd testdata/generate && go run .
 	cd testdata/generate/fri && go run .
+	cd codegen/generate-riscv-system && go run .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/*.zig
-
-# Legacy file-based input transport, unused while inputs are embedded; kept for
-# reintroduction once input serialization lands.
-prepare-zkc-input:
-	@# The ELF-to-JSON helper treats 0x input as a big-endian integer and reverses it
-	@# before writing guest RAM, so encode binary fixtures in reverse transport order.
-	mkdir -p $(dir $(IN_BYTES_FILE))
-	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
+	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
 
 zkc-build: build-r5
 	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
@@ -147,10 +125,12 @@ zkc-verify: zkc-build
 	zkc exec $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-passing:
-	$(MAKE) zkc-verify EMBEDDED_INPUT=valid
+	$(MAKE) zkc-verify
 
 zkc-verify-failing:
-	$(MAKE) zkc-verify EMBEDDED_INPUT=invalid
+	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC) -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
+	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
+	zkc exec $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-failing-expected:
 	@if $(MAKE) zkc-verify-failing; then \

@@ -2,9 +2,13 @@ module github.com/consensys/linea-monorepo/verifier-ray/codegen
 
 go 1.25.7
 
-require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0
+require (
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260907102024-e1ed771dd796
+	github.com/LFDT-Lineth/zkc v1.2.32
+)
 
 require (
+	github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
@@ -21,3 +25,12 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 )
+
+// prover-ray's zkc-r5 backend imports arithmetization/gopkg/{elfmapping,predecoding},
+// and prover-ray/go.mod requires arithmetization at the placeholder v0.0.0,
+// resolving it with a relative-path replace (=> ../arithmetization). Go applies
+// replace directives only from the main module, so that placeholder is
+// unresolvable here and has to be mapped to a real revision. Pinned to the same
+// commit as prover-ray above so both come from one monorepo snapshot; bump the
+// two together.
+replace github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0 => github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907102024-e1ed771dd796
