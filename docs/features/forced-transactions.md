@@ -49,7 +49,18 @@ The `ForcedTransactionsSafeBlockNumberManager` adjusts the safe block number use
 - `coordinator/clients/forced-transactions/` — Client interfaces
 - `coordinator/persistence/` — DAO for forced transaction records
 
+## Gateway Configuration
+
+The `ForcedTransactionGateway` is deployed with several configurable immutables. Two are worth highlighting:
+
+- **`MIN_GAS_LIMIT`** — the minimum gas limit enforced per forced transaction. Must cover the worst-case Osaka intrinsic gas for the configured calldata limit (e.g. 70,000 for a 1,000-byte limit). If the network's calldata byte limit or per-byte gas costs change, this value and the prover's RLP-byte-size configuration must be updated together.
+- **`MINIMUM_BASE_GAS_FEE`** — the minimum `maxFeePerGas` accepted. Set to zero for gasless networks, which disables the zero-fee and base-fee-floor checks entirely. When non-zero, `maxFeePerGas` must be ≥ this value.
+
+See the [deployment guide](../../contracts/docs/deployment/l1/forced-transaction-gateway.md) for the full parameter list and the [architecture document](../forced-transactions-architecture.md#intrinsic-gas-derivation-for-min_gas_limit) for the intrinsic gas derivation.
+
 ## Related Documentation
 
+- [Architecture: Forced Transactions](../forced-transactions-architecture.md) — Full contract design, submission flow, rolling hash, finalization guarantees
+- [Deployment: ForcedTransactionGateway](../../contracts/docs/deployment/l1/forced-transaction-gateway.md) — Environment variables and CLI
 - [Coordinator Feature](coordinator.md) — Conflation pipeline (affected by forced transactions)
 - [Tech: Coordinator Component](../tech/components/coordinator.md) — Database schema, build/run

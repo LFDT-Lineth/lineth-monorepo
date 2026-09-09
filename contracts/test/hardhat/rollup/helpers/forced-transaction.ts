@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import { encodeData } from "contracts/common/helpers";
 import { LinethRollup, Mimc } from "contracts/typechain-types";
-import { AccessListish, ethers, Transaction } from "ethers";
+import { ethers, Transaction } from "ethers";
 
 import { THREE_DAYS_IN_SECONDS } from "../../common/constants";
 import { Eip1559Transaction } from "../../common/types";
@@ -107,7 +107,7 @@ const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): strin
     to: tx.to === ethers.ZeroAddress ? null : tx.to,
     value: tx.value,
     data: tx.input,
-    accessList: tx.accessList.map((a) => [a.contractAddress, a.storageKeys]) as AccessListish,
+    accessList: [],
   });
 
   return unsignedTx.unsignedHash;
