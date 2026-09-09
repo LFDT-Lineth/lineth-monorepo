@@ -247,8 +247,8 @@ fn loadNativePairInput() verifier.AggregatorInput {
     // The pair header itself is two absolute pointers (offsets 0 and 8); rebase
     // those, then rebase each sub-image they now point into.
     const mapped_base = @intFromPtr(buf_addr);
-    const a_off = patchHeaderPtr(buf, len, 0, input_guest_base, mapped_base);
-    const b_off = patchHeaderPtr(buf, len, 8, input_guest_base, mapped_base);
+    const a_off = patchPtr(buf, len, 0, input_guest_base, mapped_base);
+    const b_off = patchPtr(buf, len, 8, input_guest_base, mapped_base);
     rebaseImagePointers(buf + a_off, len - a_off, input_guest_base + a_off, mapped_base + a_off);
     rebaseImagePointers(buf + b_off, len - b_off, input_guest_base + b_off, mapped_base + b_off);
 
@@ -275,15 +275,23 @@ const AggregatorHeader = extern struct {
     b: u64,
 };
 
-fn patchHeaderPtr(
+// Patches a single absolute pointer at byte offset `off` in the image, from
+// its encoded address to the equivalent mapped host address, and returns the
+// pointer's payload offset within the image. Shared by the aggregator
+// header's two root pointers (no trailing length field) and
+// rebaseImagePointers' slice pointers (ptr followed by an 8-byte length) — the
+// 16-byte bounds window is a safe superset for both, and a header root
+// pointer is never the null-slice sentinel this also guards against.
+fn patchPtr(
     img: [*]u8,
     len: usize,
     off: usize,
     encoded_base: usize,
     mapped_base: usize,
 ) usize {
-    if (off + 8 > len) exitNative(1);
+    if (off + 16 > len) exitNative(1);
     const old_ptr = readU64(img, off);
+    if (old_ptr == 0) return 0; // malformed null slice
     const image_offset = image_relocation.imageOffset(old_ptr, encoded_base) catch exitNative(1);
     const new_ptr = image_relocation.relocatePointer(old_ptr, encoded_base, mapped_base) catch exitNative(1);
     writeU64(img, off, @intCast(new_ptr));
@@ -325,26 +333,6 @@ fn rebaseImagePointers(
     encoded_addr: usize,
     mapped_addr: usize,
 ) void {
-    // Patch a single slice-pointer at byte offset `off` in the image.
-    const patchPtr = struct {
-        fn f(
-            image: [*]u8,
-            len: usize,
-            off: usize,
-            encoded_base: usize,
-            mapped_base: usize,
-        ) usize {
-            if (off + 16 > len) return 0; // bounds check
-            const old_ptr = readU64(image, off);
-            if (old_ptr == 0) return 0; // malformed null slice
-            const payload_offset = image_relocation.imageOffset(old_ptr, encoded_base) catch exitNative(1);
-            const new_ptr = image_relocation.relocatePointer(old_ptr, encoded_base, mapped_base) catch exitNative(1);
-            writeU64(image, off, @intCast(new_ptr));
-            // Return the payload offset (for callers that need to walk into it).
-            return payload_offset;
-        }
-    }.f;
-
     // Returns the slice count stored at `off + 8`.
     const sliceLen = struct {
         fn f(image: [*]u8, off: usize) usize {

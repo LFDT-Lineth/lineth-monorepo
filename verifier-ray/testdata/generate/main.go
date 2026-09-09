@@ -1862,17 +1862,30 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out)
 
 	// getInputAlt returns a case's SECOND-size honest verifier input (multi-size
-	// cases
-	// only); hasAlt gates it. The alt verifier input is checked against the SAME
-	// case systems (verify_case_i_systems.pcs) as the primary proof — the
-	// runtime-size-reconstructed-layout property: one baked System, two sizes.
-	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {")
+	// cases only); hasAlt gates it. getInputAltSameStatement is its positive
+	// counterpart: a second independently-proven proof whose statement matches
+	// the primary (honest) proof's. Both are checked against the SAME case
+	// systems (verify_case_i_systems.pcs) as the primary proof — one baked
+	// System verifying a second, differently-shaped or differently-witnessed
+	// proof.
+	writeAltGetter(out, cases, "Alt", "alt", "alt input", func(tc fixtureCase) *proofFixture { return tc.alt })
+	writeAltGetter(out, cases, "AltSameStatement", "alt_same_statement", "altSameStatement input", func(tc fixtureCase) *proofFixture { return tc.altSameStatement })
+}
+
+// writeAltGetter emits a `getInput<suffix>`/`has<suffix>` pair gated by
+// whether `get(tc)` is non-nil for each case, mirroring the shape of
+// getInputAlt/hasAlt and getInputAltSameStatement/hasAltSameStatement — the
+// only difference between those two pairs is the suffix, the zig identifier
+// field prefix baked into their `_input` const names (written by
+// writeVerifyProof), and the compile-error label.
+func writeAltGetter(out *bytes.Buffer, cases []fixtureCase, suffix, fieldPrefix, missingLabel string, get func(fixtureCase) *proofFixture) {
+	fmt.Fprintf(out, "pub fn getInput%s(comptime index: usize) verifier.VerifyInput {\n", suffix)
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		if tc.alt != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_alt_input,\n", i, i)
+		if get(tc) != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_%s_input,\n", i, i, fieldPrefix)
 		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no alt input\"),\n", i, i, codegen.ZigString(tc.name))
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no %s\"),\n", i, i, codegen.ZigString(tc.name), missingLabel)
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
@@ -1880,42 +1893,15 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 
-	fmt.Fprintln(out, "pub fn hasAlt(comptime index: usize) bool {")
+	fmt.Fprintf(out, "pub fn has%s(comptime index: usize) bool {\n", suffix)
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		fmt.Fprintf(out, "        %d => %t,\n", i, tc.alt != nil)
+		fmt.Fprintf(out, "        %d => %t,\n", i, get(tc) != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
-
-	// getInputAltSameStatement returns a case's independently-proven proof
-	// whose public-input statement matches the primary (honest) proof's;
-	// hasAltSameStatement gates it. Checked against the SAME case systems as
-	// the primary proof, like getInputAlt.
-	fmt.Fprintln(out, "pub fn getInputAltSameStatement(comptime index: usize) verifier.VerifyInput {")
-	fmt.Fprintln(out, "    return switch (index) {")
-	for i, tc := range cases {
-		if tc.altSameStatement != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_alt_same_statement_input,\n", i, i)
-		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no altSameStatement input\"),\n", i, i, codegen.ZigString(tc.name))
-		}
-	}
-	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
-	fmt.Fprintln(out, "    };")
-	fmt.Fprintln(out, "}")
-	fmt.Fprintln(out)
-
-	fmt.Fprintln(out, "pub fn hasAltSameStatement(comptime index: usize) bool {")
-	fmt.Fprintln(out, "    return switch (index) {")
-	for i, tc := range cases {
-		fmt.Fprintf(out, "        %d => %t,\n", i, tc.altSameStatement != nil)
-	}
-	fmt.Fprintln(out, "        else => false,")
-	fmt.Fprintln(out, "    };")
-	fmt.Fprintln(out, "}")
 }
 
 func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {

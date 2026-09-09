@@ -33,11 +33,6 @@ const aggregatorHeaderSize = 16
 // EncodeAggregatorPair lays a and b out as one aggregator pair image relocated
 // for base. See the layout comment above. base carries Encode's own
 // constraints (8-aligned, non-zero); Encode re-checks them for each sub-image.
-//
-// TODO: once codegen/go.mod's prover-ray pin picks up the AlignUp8/
-// CheckImageSize exports added to wiop/proofserialization alongside this
-// change, switch to those instead of the local copies below, so this can't
-// drift from encoder.alloc's padding/size-limit rules independently.
 func EncodeAggregatorPair(a, b proofserialization.VerifyInput, base uint64) ([]byte, error) {
 	imageA, err := proofserialization.Encode(a, base+aggregatorHeaderSize)
 	if err != nil {
