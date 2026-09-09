@@ -24,7 +24,7 @@ class ExecutionPayloadSerializerTest {
     val serializedData = serializer.serialize(testValue)
     val deserializedValue = serializer.deserialize(serializedData)
 
-    assertThat(deserializedValue).usingRecursiveComparison().isEqualTo(testValue)
+    assertThat(deserializedValue).isEqualTo(testValue)
   }
 
   @Test
@@ -33,7 +33,7 @@ class ExecutionPayloadSerializerTest {
     val serializedData = serializer.serialize(testValue)
     val deserializedValue = serializer.deserialize(serializedData)
 
-    assertThat(deserializedValue).usingRecursiveComparison().isEqualTo(testValue)
+    assertThat(deserializedValue).isEqualTo(testValue)
   }
 
   @Test
@@ -43,7 +43,7 @@ class ExecutionPayloadSerializerTest {
       slotNumber = ULong.MAX_VALUE,
     )
     val decoded = serializer.deserialize(serializer.serialize(payload))
-    assertThat(decoded).usingRecursiveComparison().isEqualTo(payload)
+    assertThat(decoded).isEqualTo(payload)
   }
 
   @Test
@@ -68,7 +68,7 @@ class ExecutionPayloadSerializerTest {
       requireNotNull(javaClass.getResource("/execution-payload-pre-amsterdam.rlp.hex")).readText().trim(),
     ).toArray()
 
-    assertThat(serializer.deserialize(legacyEncoding)).usingRecursiveComparison().isEqualTo(payload)
+    assertThat(serializer.deserialize(legacyEncoding)).isEqualTo(payload)
     assertThat(serializer.serialize(payload)).containsExactly(*legacyEncoding)
   }
 }

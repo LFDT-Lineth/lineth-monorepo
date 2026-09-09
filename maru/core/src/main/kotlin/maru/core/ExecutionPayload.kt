@@ -8,6 +8,8 @@
  */
 package maru.core
 
+import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
 import java.math.BigInteger
 
 /**
@@ -45,6 +47,7 @@ data class ExecutionPayload(
     other as ExecutionPayload
 
     if (!parentHash.contentEquals(other.parentHash)) return false
+    if (!feeRecipient.contentEquals(other.feeRecipient)) return false
     if (!stateRoot.contentEquals(other.stateRoot)) return false
     if (!receiptsRoot.contentEquals(other.receiptsRoot)) return false
     if (!logsBloom.contentEquals(other.logsBloom)) return false
@@ -58,13 +61,14 @@ data class ExecutionPayload(
     if (!blockHash.contentEquals(other.blockHash)) return false
     if (!blockAccessList.contentEquals(other.blockAccessList)) return false
     if (slotNumber != other.slotNumber) return false
-    if (!transactions.zip(other.transactions).all { it.first.contentEquals(it.second) }) return false
+    if (!transactions.byteArrayListEquals(other.transactions)) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = parentHash.contentHashCode()
+    result = 31 * result + feeRecipient.contentHashCode()
     result = 31 * result + stateRoot.contentHashCode()
     result = 31 * result + receiptsRoot.contentHashCode()
     result = 31 * result + logsBloom.contentHashCode()
@@ -76,7 +80,7 @@ data class ExecutionPayload(
     result = 31 * result + extraData.contentHashCode()
     result = 31 * result + baseFeePerGas.hashCode()
     result = 31 * result + blockHash.contentHashCode()
-    result = 31 * result + transactions.hashCode()
+    result = 31 * result + transactions.byteArrayListHashCode()
     result = 31 * result + (blockAccessList?.contentHashCode() ?: 0)
     result = 31 * result + (slotNumber?.hashCode() ?: 0)
     return result
