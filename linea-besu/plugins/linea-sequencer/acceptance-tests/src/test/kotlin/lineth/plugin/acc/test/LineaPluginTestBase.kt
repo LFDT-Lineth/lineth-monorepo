@@ -17,6 +17,7 @@ import lineth.metrics.LineaMetricCategory.SEQUENCER_FORCED_TX
 import lineth.metrics.LineaMetricCategory.SEQUENCER_LIVENESS
 import lineth.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY
 import lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY
+import lineth.plugin.acc.test.LineaPluginTestBase.Companion.RECEIPT_FETCH_MAX_RETRIES
 import lineth.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken
 import lineth.plugin.acc.test.tests.web3j.generated.BLS12_MAP_FP_TO_G1
 import lineth.plugin.acc.test.tests.web3j.generated.DummyAdder
@@ -73,7 +74,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.*
+import java.util.Objects
+import java.util.Optional
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -544,6 +546,58 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       .isGreaterThan(fittingBlocks.single())
   }
 
+  /**
+   * Asserts the module-line-count limit semantics for a batch of [fittingHashes] plus one
+   * [overflowHash]:
+   *  1. the fitting transactions were mined together in a single block;
+   *  2. the overflowing transaction was mined in a strictly later block; and
+   *  3. the sequencer logged that it stopped selection because adding the overflowing transaction
+   *     pushed [moduleName]'s cumulated line count to [attemptedCount], above [moduleLimit].
+   *
+   * Why this ordering: the rejection log line is only emitted during the block-building selection
+   * round that evaluates (and rejects) the overflowing transaction.
+   */
+  protected fun assertModuleLimitOverflowed(
+    web3j: Web3j,
+    fittingHashes: List<String>,
+    overflowHash: String,
+    moduleName: String,
+    moduleLimit: Int,
+    attemptedCount: Int,
+  ) {
+    val receipts = getReceiptsInParallel(web3j, fittingHashes + overflowHash)
+    val fittingBlocks = receipts.dropLast(1).map { receipt ->
+      assertThat(receipt).isNotNull
+      receipt.blockNumber.toLong()
+    }.toSet()
+    val overflowBlock = receipts.last().blockNumber.toLong()
+
+    assertThat(fittingBlocks)
+      .withFailMessage { "Expected fitting transactions to be mined in a single block, got $fittingBlocks" }
+      .hasSize(1)
+    assertThat(overflowBlock)
+      .withFailMessage {
+        "Expected overflow transaction to be mined strictly after the fitting block " +
+          "${fittingBlocks.single()}, got $overflowBlock"
+      }
+      .isGreaterThan(fittingBlocks.single())
+
+    // The rejection round has already run (proven by the overflow receipt above); only the async
+    // appender flush can still be pending, so poll for the line.
+    val target =
+      "Cumulated line count for module $moduleName=$attemptedCount is above the limit " +
+        "$moduleLimit, stopping selection"
+    await()
+      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
+      .pollInterval(100, TimeUnit.MILLISECONDS)
+      .untilAsserted {
+        assertThat(getLog())
+          .withFailMessage { "Expected Besu logs to contain '$target'" }
+          .contains(target)
+      }
+    getAndResetLog()
+  }
+
   protected fun assertTransactionNotInThePool(hash: String) {
     minerNode.verify(
       TxPoolConditions(TxPoolTransactions())
@@ -561,23 +615,6 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       maxOf(1000L, getBlockPeriodSeconds() * 1000L / 5),
       getBlockPeriodSeconds() * 6,
     )
-  }
-
-  protected fun sendTransactionWithGivenLengthPayload(
-    account: String,
-    web3j: Web3j,
-    num: Int,
-  ): String {
-    val to = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
-    val txManager = RawTransactionManager(web3j, Credentials.create(account))
-
-    return txManager.sendTransaction(
-      DefaultGasProvider.GAS_PRICE,
-      BigInteger.valueOf(MAX_TX_GAS_LIMIT.toLong()),
-      to,
-      RandomStringUtils.secure().nextAlphabetic(num),
-      BigInteger.ZERO,
-    ).transactionHash
   }
 
   protected fun createExtraDataPricingField(
@@ -742,20 +779,5 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
     )
 
     return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow())
-  }
-
-  fun assertLogsContain(target: String) {
-    // The log line can be written to MemoryAppender slightly after the block that triggered it is
-    // confirmed (e.g. via a receipt), so a single synchronous read can race with the log write.
-    // Poll instead of reading once.
-    await()
-      .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
-      .pollInterval(100, TimeUnit.MILLISECONDS)
-      .untilAsserted {
-        assertThat(getLog())
-          .withFailMessage { "Expected Besu logs to contain '$target'" }
-          .contains(target)
-      }
-    getAndResetLog()
   }
 }
