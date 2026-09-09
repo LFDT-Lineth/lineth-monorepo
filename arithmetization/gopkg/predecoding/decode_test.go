@@ -100,6 +100,35 @@ func TestImm12Uimm5(t *testing.T) {
 	}
 }
 
+// signExtend12_oracle is a shift-free reference for 12-bit two's-complement sign
+// extension: it keeps the low 12 bits (via modulo, not masking) and subtracts
+// 2^12 = 4096 when bit 11 is set (value >= 2^11 = 2048), independent of the
+// <<20/>>20 idiom signExtend12 uses.
+func signExtend12_oracle(x uint32) int64 {
+	v := int64(x % 4096)
+	if v >= 2048 {
+		v -= 4096
+	}
+	return v
+}
+
+// TestSignExtend12 checks signExtend12 over the full 12-bit domain against
+// signExtend12_oracle. Each value is tested under several high-bit backgrounds to
+// confirm bits above bit 11 are ignored (masked) and only bit 11 drives the
+// sign, so the result always lands in [-2048, 2047].
+func TestSignExtend12(t *testing.T) {
+	backgrounds := []uint32{0x00000000, 0xfffff000, 0xaaaaa000, 0x55555000}
+	for _, bg := range backgrounds {
+		for low := uint32(0); low < 1<<12; low++ {
+			x := bg | low
+			want := signExtend12_oracle(x)
+			if got := signExtend12(x); got != want {
+				t.Fatalf("signExtend12(%#x) = %d, want %d", x, got, want)
+			}
+		}
+	}
+}
+
 // ------------------------------------------------------------
 // decodeITypeSemantic tests : translation of opcode and funct3 to computed op
 // (local op) and normalized imm12.
@@ -552,89 +581,168 @@ func TestExtractFields(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// checkNoOp — I-type
+// checkNoOp — writeback promotion (rd != x0)
 // ------------------------------------------------------------
 
-// checkNoOpITypeVectors is the static truth table for checkNoOp applied to
-// I-type ops: for each op, the result expected when rd == x0 and when rd != x0.
-// When rd != x0, writeback ops keep their *_WB value and JALR is promoted to
-// JALR_WB. When rd == x0, inert writeback ops collapse to NO_OP while
-// control/syscall ops (JALR, ECALL, EBREAK) and COMPUTE_INVALID are preserved.
-var checkNoOpITypeVectors = map[uint32]struct {
-	whenRdZero    uint32
-	whenRdNonZero uint32
+// checkNoOpPromoteVectors is the truth table for the rd != x0 branch of
+// checkNoOp. That branch is independent of instruction type: only the two link
+// ops are promoted to their *_WB variant; every other op passes through
+// unchanged.
+var checkNoOpPromoteVectors = []struct {
+	name string
+	op   uint32
+	want uint32
 }{
-	itypeRead8SgnWB:   {computeNoOp, itypeRead8SgnWB},
-	itypeRead16SgnWB:  {computeNoOp, itypeRead16SgnWB},
-	itypeRead32SgnWB:  {computeNoOp, itypeRead32SgnWB},
-	itypeRead64WB:     {computeNoOp, itypeRead64WB},
-	itypeRead8ZextWB:  {computeNoOp, itypeRead8ZextWB},
-	itypeRead16ZextWB: {computeNoOp, itypeRead16ZextWB},
-	itypeRead32ZextWB: {computeNoOp, itypeRead32ZextWB},
-	itypeOpAddiWB:     {computeNoOp, itypeOpAddiWB},
-	itypeOpSltiWB:     {computeNoOp, itypeOpSltiWB},
-	itypeOpSltiuWB:    {computeNoOp, itypeOpSltiuWB},
-	itypeOpXoriWB:     {computeNoOp, itypeOpXoriWB},
-	itypeOpOriWB:      {computeNoOp, itypeOpOriWB},
-	itypeOpAndiWB:     {computeNoOp, itypeOpAndiWB},
-	itypeOpSlliWB:     {computeNoOp, itypeOpSlliWB},
-	itypeOpSrliWB:     {computeNoOp, itypeOpSrliWB},
-	itypeOpSraiWB:     {computeNoOp, itypeOpSraiWB},
-	itypeOpAddiwWB:    {computeNoOp, itypeOpAddiwWB},
-	itypeOpSlliwWB:    {computeNoOp, itypeOpSlliwWB},
-	itypeOpSrliwWB:    {computeNoOp, itypeOpSrliwWB},
-	itypeOpSraiwWB:    {computeNoOp, itypeOpSraiwWB},
-	itypeJalr:         {itypeJalr, itypeJalrWB}, // promoted when rd != x0
-	itypeEcall:        {itypeEcall, itypeEcall},
-	itypeEbreak:       {itypeEbreak, itypeEbreak},
-	computeInvalid:    {computeInvalid, computeInvalid},
+	{"jalr -> jalr_wb", itypeJalr, itypeJalrWB},
+	{"jal -> jal_wb", jtypeJal, jtypeJalWB},
+	{"jalr_wb passthrough", itypeJalrWB, itypeJalrWB},
+	{"jal_wb passthrough", jtypeJalWB, jtypeJalWB},
+	{"load passthrough", itypeRead8SgnWB, itypeRead8SgnWB},
+	{"addi passthrough", itypeOpAddiWB, itypeOpAddiWB},
+	{"rtype passthrough", rtypeOpAddWB, rtypeOpAddWB},
+	{"keccak passthrough", rtypeOpKeccak, rtypeOpKeccak},
+	{"store passthrough", stypeStore8, stypeStore8},
+	{"branch passthrough", btypeBeq, btypeBeq},
+	{"lui passthrough", utypeLuiWB, utypeLuiWB},
+	{"ecall passthrough", itypeEcall, itypeEcall},
+	{"ebreak passthrough", itypeEbreak, itypeEbreak},
+	{"invalid passthrough", computeInvalid, computeInvalid},
 }
 
-// TestCheckNoOpIType sweeps every rd (0..31) against every I-type op in
-// checkNoOpITypeVectors and checks checkNoOp matches the table (rd == x0 vs
-// rd != x0 selects the column).
-func TestCheckNoOpIType(t *testing.T) {
-	for op, want := range checkNoOpITypeVectors {
-		for rd := uint32(0); rd < 1<<5; rd++ {
-			expected := want.whenRdNonZero
-			if rd == 0 {
-				expected = want.whenRdZero
-			}
-			if got := checkNoOp(iType, op, rd); got != expected {
-				t.Fatalf("checkNoOp(iType, op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
+// TestCheckNoOpRdNonZero exercises the rd != x0 branch of checkNoOp: link ops
+// gain their writeback variant, every other op passes through, and the result is
+// independent of the instruction type for every rd in 1..31.
+func TestCheckNoOpRdNonZero(t *testing.T) {
+	instrTypes := []uint32{
+		undefinedType, iType, rType, sType, bType, jType, uType, miscMemType,
+	}
+	for _, tv := range checkNoOpPromoteVectors {
+		for _, instrType := range instrTypes {
+			for rd := uint32(1); rd < 1<<5; rd++ {
+				if got := checkNoOp(instrType, tv.op, rd); got != tv.want {
+					t.Fatalf("%s: checkNoOp(instrType=%d, op=%d, rd=%d) = %d, want %d",
+						tv.name, instrType, tv.op, rd, got, tv.want)
+				}
 			}
 		}
 	}
 }
 
 // ------------------------------------------------------------
-// checkNoOp — J-type
+// checkNoOp — rd == x0 collapse (full truth table)
 // ------------------------------------------------------------
 
-// checkNoOpJTypeVectors is the static truth table for checkNoOp applied to
-// J-type ops. JAL is control flow: it is promoted to JAL_WB when rd != x0 and
-// kept (never collapsed) when rd == x0. COMPUTE_INVALID is preserved.
-var checkNoOpJTypeVectors = map[uint32]struct {
-	whenRdZero    uint32
-	whenRdNonZero uint32
+// checkNoOpRdZeroVectors is the full truth table for checkNoOp when rd == x0.
+// Writeback-only ops collapse to NO_OP; control-flow, memory, syscall, and
+// precompile ops keep their semantic op, and COMPUTE_INVALID stays invalid.
+var checkNoOpRdZeroVectors = []struct {
+	name      string
+	instrType uint32
+	op        uint32
+	want      uint32
 }{
-	jtypeJal:       {jtypeJal, jtypeJalWB}, // promoted when rd != x0
-	computeInvalid: {computeInvalid, computeInvalid},
+	// misc-mem (FENCE / FENCE.I): always NO_OP.
+	{"fence", miscMemType, computeNoOp, computeNoOp},
+
+	// I-type loads: inert when rd == x0.
+	{"lb", iType, itypeRead8SgnWB, computeNoOp},
+	{"lh", iType, itypeRead16SgnWB, computeNoOp},
+	{"lw", iType, itypeRead32SgnWB, computeNoOp},
+	{"ld", iType, itypeRead64WB, computeNoOp},
+	{"lbu", iType, itypeRead8ZextWB, computeNoOp},
+	{"lhu", iType, itypeRead16ZextWB, computeNoOp},
+	{"lwu", iType, itypeRead32ZextWB, computeNoOp},
+	// I-type ALU-immediate: inert when rd == x0.
+	{"addi", iType, itypeOpAddiWB, computeNoOp},
+	{"slti", iType, itypeOpSltiWB, computeNoOp},
+	{"sltiu", iType, itypeOpSltiuWB, computeNoOp},
+	{"xori", iType, itypeOpXoriWB, computeNoOp},
+	{"ori", iType, itypeOpOriWB, computeNoOp},
+	{"andi", iType, itypeOpAndiWB, computeNoOp},
+	{"slli", iType, itypeOpSlliWB, computeNoOp},
+	{"srli", iType, itypeOpSrliWB, computeNoOp},
+	{"srai", iType, itypeOpSraiWB, computeNoOp},
+	{"addiw", iType, itypeOpAddiwWB, computeNoOp},
+	{"slliw", iType, itypeOpSlliwWB, computeNoOp},
+	{"srliw", iType, itypeOpSrliwWB, computeNoOp},
+	{"sraiw", iType, itypeOpSraiwWB, computeNoOp},
+	// I-type control / syscall: kept even when rd == x0.
+	{"jalr", iType, itypeJalr, itypeJalr},
+	{"ecall", iType, itypeEcall, itypeEcall},
+	{"ebreak", iType, itypeEbreak, itypeEbreak},
+	{"itype invalid", iType, computeInvalid, computeInvalid},
+
+	// R-type ALU: inert when rd == x0.
+	{"add", rType, rtypeOpAddWB, computeNoOp},
+	{"sub", rType, rtypeOpSubWB, computeNoOp},
+	{"sll", rType, rtypeOpSllWB, computeNoOp},
+	{"slt", rType, rtypeOpSltWB, computeNoOp},
+	{"sltu", rType, rtypeOpSltuWB, computeNoOp},
+	{"xor", rType, rtypeOpXorWB, computeNoOp},
+	{"srl", rType, rtypeOpSrlWB, computeNoOp},
+	{"sra", rType, rtypeOpSraWB, computeNoOp},
+	{"or", rType, rtypeOpOrWB, computeNoOp},
+	{"and", rType, rtypeOpAndWB, computeNoOp},
+	{"mul", rType, rtypeOpMulWB, computeNoOp},
+	{"mulh", rType, rtypeOpMulhWB, computeNoOp},
+	{"mulhsu", rType, rtypeOpMulhsuWB, computeNoOp},
+	{"mulhu", rType, rtypeOpMulhuWB, computeNoOp},
+	{"div", rType, rtypeOpDivWB, computeNoOp},
+	{"divu", rType, rtypeOpDivuWB, computeNoOp},
+	{"rem", rType, rtypeOpRemWB, computeNoOp},
+	{"remu", rType, rtypeOpRemuWB, computeNoOp},
+	{"addw", rType, rtypeOpAddwWB, computeNoOp},
+	{"subw", rType, rtypeOpSubwWB, computeNoOp},
+	{"sllw", rType, rtypeOpSllwWB, computeNoOp},
+	{"srlw", rType, rtypeOpSrlwWB, computeNoOp},
+	{"sraw", rType, rtypeOpSrawWB, computeNoOp},
+	{"mulw", rType, rtypeOpMulwWB, computeNoOp},
+	{"divw", rType, rtypeOpDivwWB, computeNoOp},
+	{"divuw", rType, rtypeOpDivuwWB, computeNoOp},
+	{"remw", rType, rtypeOpRemwWB, computeNoOp},
+	{"remuw", rType, rtypeOpRemuwWB, computeNoOp},
+	// R-type Custom-1 precompiles: kept (memory side effects).
+	{"keccak", rType, rtypeOpKeccak, rtypeOpKeccak},
+	{"poseidon2", rType, rtypeOpPoseidon2, rtypeOpPoseidon2},
+	{"write_output", rType, rtypeOpWriteOutput, rtypeOpWriteOutput},
+	{"rtype invalid", rType, computeInvalid, computeInvalid},
+
+	// S-type stores: side effects, kept.
+	{"sb", sType, stypeStore8, stypeStore8},
+	{"sh", sType, stypeStore16, stypeStore16},
+	{"sw", sType, stypeStore32, stypeStore32},
+	{"sd", sType, stypeStore64, stypeStore64},
+	{"stype invalid", sType, computeInvalid, computeInvalid},
+
+	// B-type branches: control flow, kept.
+	{"beq", bType, btypeBeq, btypeBeq},
+	{"bne", bType, btypeBne, btypeBne},
+	{"blt", bType, btypeBlt, btypeBlt},
+	{"bge", bType, btypeBge, btypeBge},
+	{"bltu", bType, btypeBltu, btypeBltu},
+	{"bgeu", bType, btypeBgeu, btypeBgeu},
+	{"btype invalid", bType, computeInvalid, computeInvalid},
+
+	// J-type: control flow, kept (JAL not collapsed even into x0).
+	{"jal", jType, jtypeJal, jtypeJal},
+	{"jtype invalid", jType, computeInvalid, computeInvalid},
+
+	// U-type: inert when rd == x0.
+	{"lui", uType, utypeLuiWB, computeNoOp},
+	{"auipc", uType, utypeAuipcWB, computeNoOp},
+	{"utype invalid", uType, computeInvalid, computeInvalid},
+
+	// Unknown opcode: invalid stays invalid.
+	{"undefined", undefinedType, computeInvalid, computeInvalid},
 }
 
-// TestCheckNoOpJType sweeps every rd (0..31) against every J-type op in
-// checkNoOpJTypeVectors and checks checkNoOp matches the table (rd == x0 vs
-// rd != x0 selects the column).
-func TestCheckNoOpJType(t *testing.T) {
-	for op, want := range checkNoOpJTypeVectors {
-		for rd := uint32(0); rd < 1<<5; rd++ {
-			expected := want.whenRdNonZero
-			if rd == 0 {
-				expected = want.whenRdZero
-			}
-			if got := checkNoOp(jType, op, rd); got != expected {
-				t.Fatalf("checkNoOp(jType, op=%d, rd=%d) = %d, want %d", op, rd, got, expected)
-			}
+// TestCheckNoOpRdZero verifies the rd == x0 collapse across every instruction
+// type and op using the full truth table.
+func TestCheckNoOpRdZero(t *testing.T) {
+	for _, tv := range checkNoOpRdZeroVectors {
+		if got := checkNoOp(tv.instrType, tv.op, 0); got != tv.want {
+			t.Fatalf("%s: checkNoOp(instrType=%d, op=%d, rd=0) = %d, want %d",
+				tv.name, tv.instrType, tv.op, got, tv.want)
 		}
 	}
 }

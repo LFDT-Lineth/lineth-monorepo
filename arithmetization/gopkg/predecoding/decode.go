@@ -889,81 +889,22 @@ func classifyInstruction(instruction uint32) uint32 {
 	funct7 := fields.funct7
 	instructionType := instructionTypeFromOpcode(opcode)
 
-	// ------------------------------------------------------------
-	// I-type instruction
-	// ------------------------------------------------------------
-
-	// Decode the word as if the instruction was an I-type instruction.
-	// As a classic RISCV interpreter would do.
-	itypeOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
-	// Check if the instruction is not an I-type instruction.
-	if instructionType != iType {
-		itypeOp = computeInvalid
-	}
-
-	// ------------------------------------------------------------
-	// R-type instruction
-	// ------------------------------------------------------------
-
-	rtypeOp := decodeRTypeSemantic(opcode, funct3, funct7)
-	if instructionType != rType {
-		rtypeOp = computeInvalid
-	}
-	// No need to specialize R-type operations with rd
-	// because all R-type operations use *_WB (Write Back) variants.
-
-	// ------------------------------------------------------------
-	// S-type instruction
-	// ------------------------------------------------------------
-
-	stypeOp := decodeSTypeSemantic(funct3)
-	if instructionType != sType {
-		stypeOp = computeInvalid
-	}
-
-	// ------------------------------------------------------------
-	// B-type instruction
-	// ------------------------------------------------------------
-
-	btypeOp := decodeBTypeSemantic(funct3)
-	if instructionType != bType {
-		btypeOp = computeInvalid
-	}
-
-	// ------------------------------------------------------------
-	// J-type instruction
-	// ------------------------------------------------------------
-
-	jtypeOp := decodeJTypeSemantic(opcode)
-	if instructionType != jType {
-		jtypeOp = computeInvalid
-	}
-
-	// ------------------------------------------------------------
-	// U-type instruction
-	// ------------------------------------------------------------
-
-	utypeOp := decodeUTypeSemantic(opcode)
-	if instructionType != uType {
-		utypeOp = computeInvalid
-	}
-
-	localOp := uint32(computeInvalid)
+	var op uint32
 	switch instructionType {
 	case miscMemType:
-		localOp = 0
+		op = computeNoOp
 	case iType:
-		localOp = itypeOp
+		op, _ = decodeITypeSemantic(opcode, funct3, imm12)
 	case rType:
-		localOp = rtypeOp
+		op = decodeRTypeSemantic(opcode, funct3, funct7)
 	case sType:
-		localOp = stypeOp
+		op = decodeSTypeSemantic(funct3)
 	case bType:
-		localOp = btypeOp
+		op = decodeBTypeSemantic(funct3)
 	case jType:
-		localOp = jtypeOp
+		op = decodeJTypeSemantic(opcode)
 	case uType:
-		localOp = utypeOp
+		op = decodeUTypeSemantic(opcode)
 	}
-	return checkNoOp(instructionType, localOp, rd)
+	return checkNoOp(instructionType, op, rd)
 }
