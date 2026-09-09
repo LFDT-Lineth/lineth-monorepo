@@ -154,25 +154,25 @@ var decodeITypeVectors = map[iTypeInput]iTypeResult{
 	{opcodeOPIMM, 0b111, 0xabc}: {itypeOpAndiWB, 0xabc},  // ANDI
 
 	// OPIMM shifts: op depends on funct6 (imm12[11:6]); srai strips to uimm6.
-	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000}, // funct6 0, SLLI
-	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f}, // funct6 0, SLLI, shamt 63
-	{opcodeOPIMM, 0b001, 0x040}: {itypeInvalid, 0x040},  // funct6 != 0
-	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003}, // funct6 000000, SRLI
-	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f}, // funct6 000000, SRLI, shamt 63
-	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005}, // funct6 010000, SRAI -> uimm6 5
-	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f}, // funct6 010000, SRAI -> uimm6 63
-	{opcodeOPIMM, 0b101, 0x100}: {itypeInvalid, 0x100},  // funct6 neither 0 nor 010000, INVALID
+	{opcodeOPIMM, 0b001, 0x000}: {itypeOpSlliWB, 0x000},  // funct6 0, SLLI
+	{opcodeOPIMM, 0b001, 0x03f}: {itypeOpSlliWB, 0x03f},  // funct6 0, SLLI, shamt 63
+	{opcodeOPIMM, 0b001, 0x040}: {computeInvalid, 0x040}, // funct6 != 0
+	{opcodeOPIMM, 0b101, 0x003}: {itypeOpSrliWB, 0x003},  // funct6 000000, SRLI
+	{opcodeOPIMM, 0b101, 0x03f}: {itypeOpSrliWB, 0x03f},  // funct6 000000, SRLI, shamt 63
+	{opcodeOPIMM, 0b101, 0x405}: {itypeOpSraiWB, 0x005},  // funct6 010000, SRAI -> uimm6 5
+	{opcodeOPIMM, 0b101, 0x43f}: {itypeOpSraiWB, 0x03f},  // funct6 010000, SRAI -> uimm6 63
+	{opcodeOPIMM, 0b101, 0x100}: {computeInvalid, 0x100}, // funct6 neither 0 nor 010000, INVALID
 
 	// OPIMM32: word shifts depend on funct7 (imm12[11:5]); sraiw strips to uimm5.
 	{opcodeOPIMM32, 0b000, 0x007}: {itypeOpAddiwWB, 0x007}, // ADDIW
 	{opcodeOPIMM32, 0b001, 0x000}: {itypeOpSlliwWB, 0x000}, // funct7 0, SLLIW
 	{opcodeOPIMM32, 0b001, 0x01f}: {itypeOpSlliwWB, 0x01f}, // funct7 0, SLLIW, shamt 31
-	{opcodeOPIMM32, 0b001, 0x020}: {itypeInvalid, 0x020},   // funct7 != 0, INVALID
+	{opcodeOPIMM32, 0b001, 0x020}: {computeInvalid, 0x020}, // funct7 != 0, INVALID
 	{opcodeOPIMM32, 0b101, 0x003}: {itypeOpSrliwWB, 0x003}, // funct7 0000000, SRLIW
 	{opcodeOPIMM32, 0b101, 0x01f}: {itypeOpSrliwWB, 0x01f}, // funct7 0000000, SRLIW, shamt 31
 	{opcodeOPIMM32, 0b101, 0x405}: {itypeOpSraiwWB, 0x005}, // funct7 0100000 -> uimm5 5
 	{opcodeOPIMM32, 0b101, 0x41f}: {itypeOpSraiwWB, 0x01f}, // funct7 0100000 -> uimm5 31
-	{opcodeOPIMM32, 0b101, 0x200}: {itypeInvalid, 0x200},   // funct7 neither 0 nor 0100000, INVALID
+	{opcodeOPIMM32, 0b101, 0x200}: {computeInvalid, 0x200}, // funct7 neither 0 nor 0100000, INVALID
 
 	// JALR: op fixed, imm12 passed through.
 	{opcodeJALR, 0b000, 0x123}: {itypeJalr, 0x123}, // JALR
@@ -181,7 +181,7 @@ var decodeITypeVectors = map[iTypeInput]iTypeResult{
 	// SYSTEM: op selected by funct12 (== imm12), passed through.
 	{opcodeSYSTEM, 0b000, funct12Ecall}:  {itypeEcall, funct12Ecall},   // ECALL
 	{opcodeSYSTEM, 0b000, funct12Ebreak}: {itypeEbreak, funct12Ebreak}, // EBREAK
-	{opcodeSYSTEM, 0b000, 0x002}:         {itypeInvalid, 0x002},        // unknown funct12, INVALID
+	{opcodeSYSTEM, 0b000, 0x002}:         {computeInvalid, 0x002},      // unknown funct12, INVALID
 }
 
 // validITypeArms is the static set of (opcode, funct3) pairs that can decode to
@@ -224,7 +224,7 @@ func TestDecodeITypeSemanticOp(t *testing.T) {
 // - every opcode (0..127)
 // - every funct3 (0..7)
 // which pair is NOT in the list of validITypeArms and asserts
-// decodeITypeSemantic returns itypeInvalid with imm12 unchanged
+// decodeITypeSemantic returns computeInvalid with imm12 unchanged
 // for all imm12 (0..4095).
 func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
@@ -235,9 +235,9 @@ func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 			}
 			for imm12 := uint32(0); imm12 < 1<<12; imm12++ {
 				gotOp, gotImm := decodeITypeSemantic(opcode, funct3, imm12)
-				if gotOp != itypeInvalid || gotImm != imm12 {
+				if gotOp != computeInvalid || gotImm != imm12 {
 					t.Fatalf("decodeITypeSemantic(op=%#x, f3=%#03b, imm=%#05x) = (%d, %#x), want (%d, %#x)",
-						opcode, funct3, imm12, gotOp, gotImm, itypeInvalid, imm12)
+						opcode, funct3, imm12, gotOp, gotImm, computeInvalid, imm12)
 				}
 			}
 		}
@@ -250,7 +250,7 @@ func TestDecodeITypeSemanticInvalidArms(t *testing.T) {
 
 // decodeBTypeVectors is the static truth table mapping each valid branch funct3
 // code to its unified B-type compute op. Every funct3 NOT listed here must
-// return btypeInvalid (asserted exhaustively by TestDecodeBTypeSemanticInvalid).
+// return computeInvalid (asserted exhaustively by TestDecodeBTypeSemanticInvalid).
 var decodeBTypeVectors = map[uint32]uint32{
 	0b000: btypeBeq,
 	0b001: btypeBne,
@@ -271,15 +271,15 @@ func TestDecodeBTypeSemantic(t *testing.T) {
 }
 
 // TestDecodeBTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
-// decodeBTypeVectors and asserts decodeBTypeSemantic returns btypeInvalid.
+// decodeBTypeVectors and asserts decodeBTypeSemantic returns computeInvalid.
 func TestDecodeBTypeSemanticInvalid(t *testing.T) {
 	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
 		if _, ok := decodeBTypeVectors[funct3]; ok {
 			// if the funct3 is in the list of validBTypeArms, skip
 			continue
 		}
-		if got := decodeBTypeSemantic(funct3); got != btypeInvalid {
-			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, btypeInvalid)
+		if got := decodeBTypeSemantic(funct3); got != computeInvalid {
+			t.Fatalf("decodeBTypeSemantic(%#03b) = %d, want %d", funct3, got, computeInvalid)
 		}
 	}
 }
@@ -290,7 +290,7 @@ func TestDecodeBTypeSemanticInvalid(t *testing.T) {
 
 // decodeJTypeVectors is the static truth table of the valid J-type opcodes, each
 // mapped to the base compute op decodeJTypeSemantic returns. Every opcode NOT
-// listed here must return jtypeInvalid (asserted exhaustively by
+// listed here must return computeInvalid (asserted exhaustively by
 // TestDecodeJTypeSemanticInvalid).
 var decodeJTypeVectors = map[uint32]uint32{
 	opcodeJAL: jtypeJal, // jal
@@ -307,14 +307,14 @@ func TestDecodeJTypeSemantic(t *testing.T) {
 }
 
 // TestDecodeJTypeSemanticInvalid sweeps every opcode (0..127) NOT in
-// decodeJTypeVectors and asserts decodeJTypeSemantic returns jtypeInvalid.
+// decodeJTypeVectors and asserts decodeJTypeSemantic returns computeInvalid.
 func TestDecodeJTypeSemanticInvalid(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
 		if _, ok := decodeJTypeVectors[opcode]; ok {
 			continue
 		}
-		if got := decodeJTypeSemantic(opcode); got != jtypeInvalid {
-			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, jtypeInvalid)
+		if got := decodeJTypeSemantic(opcode); got != computeInvalid {
+			t.Fatalf("decodeJTypeSemantic(%#09b) = %d, want %d", opcode, got, computeInvalid)
 		}
 	}
 }
@@ -325,7 +325,7 @@ func TestDecodeJTypeSemanticInvalid(t *testing.T) {
 
 // decodeSTypeVectors is the static truth table of the valid S-type funct3
 // codes, each mapped to the store-width compute op decodeSTypeSemantic returns.
-// Every funct3 NOT listed here must return stypeInvalid (asserted exhaustively
+// Every funct3 NOT listed here must return computeInvalid (asserted exhaustively
 // by TestDecodeSTypeSemanticInvalid).
 var decodeSTypeVectors = map[uint32]uint32{
 	0b000: stypeStore8,  // sb
@@ -345,14 +345,14 @@ func TestDecodeSTypeSemantic(t *testing.T) {
 }
 
 // TestDecodeSTypeSemanticInvalid sweeps every funct3 (0..7) NOT in
-// decodeSTypeVectors and asserts decodeSTypeSemantic returns stypeInvalid.
+// decodeSTypeVectors and asserts decodeSTypeSemantic returns computeInvalid.
 func TestDecodeSTypeSemanticInvalid(t *testing.T) {
 	for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
 		if _, ok := decodeSTypeVectors[funct3]; ok {
 			continue
 		}
-		if got := decodeSTypeSemantic(funct3); got != stypeInvalid {
-			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, stypeInvalid)
+		if got := decodeSTypeSemantic(funct3); got != computeInvalid {
+			t.Fatalf("decodeSTypeSemantic(%#03b) = %d, want %d", funct3, got, computeInvalid)
 		}
 	}
 }
@@ -371,7 +371,7 @@ type rTypeInput struct {
 // decodeRTypeVectors is the static truth table of every valid (opcode, funct3,
 // funct7) R-type combination mapped to the local op decodeRTypeSemantic returns.
 // It is the complete set of valid points: every input NOT listed here must
-// return rtypeInvalid (asserted exhaustively by TestDecodeRTypeSemanticInvalid).
+// return computeInvalid (asserted exhaustively by TestDecodeRTypeSemanticInvalid).
 var decodeRTypeVectors = map[rTypeInput]uint32{
 	// OP, funct7 0000000: base integer.
 	{opcodeOP, 0b000, 0b0000000}: rtypeOpAddWB,
@@ -428,7 +428,7 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 
 // TestDecodeRTypeSemanticInvalid sweeps the full (opcode, funct3, funct7)
 // universe (128 x 8 x 128) and asserts every combination NOT in
-// decodeRTypeVectors returns rtypeInvalid.
+// decodeRTypeVectors returns computeInvalid.
 func TestDecodeRTypeSemanticInvalid(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
 		for funct3 := uint32(0); funct3 < 1<<3; funct3++ {
@@ -437,9 +437,9 @@ func TestDecodeRTypeSemanticInvalid(t *testing.T) {
 					// if the combination is in the list of valid R-type combinations, skip
 					continue
 				}
-				if got := decodeRTypeSemantic(opcode, funct3, funct7); got != rtypeInvalid {
+				if got := decodeRTypeSemantic(opcode, funct3, funct7); got != computeInvalid {
 					t.Fatalf("decodeRTypeSemantic(op=%#09b, f3=%#03b, f7=%#09b) = %d, want %d",
-						opcode, funct3, funct7, got, rtypeInvalid)
+						opcode, funct3, funct7, got, computeInvalid)
 				}
 			}
 		}
@@ -452,7 +452,7 @@ func TestDecodeRTypeSemanticInvalid(t *testing.T) {
 
 // decodeUTypeVectors is the static truth table of the valid U-type opcodes, each
 // mapped to the local op decodeUTypeSemantic returns. Every opcode NOT listed
-// here must return utypeInvalid (asserted exhaustively by
+// here must return computeInvalid (asserted exhaustively by
 // TestDecodeUTypeSemanticInvalid).
 var decodeUTypeVectors = map[uint32]uint32{
 	opcodeLUI:   utypeLuiWB,   // lui
@@ -470,14 +470,14 @@ func TestDecodeUTypeSemantic(t *testing.T) {
 }
 
 // TestDecodeUTypeSemanticInvalid sweeps every opcode (0..127) NOT in
-// decodeUTypeVectors and asserts decodeUTypeSemantic returns utypeInvalid.
+// decodeUTypeVectors and asserts decodeUTypeSemantic returns computeInvalid.
 func TestDecodeUTypeSemanticInvalid(t *testing.T) {
 	for opcode := uint32(0); opcode < 1<<7; opcode++ {
 		if _, ok := decodeUTypeVectors[opcode]; ok {
 			continue
 		}
-		if got := decodeUTypeSemantic(opcode); got != utypeInvalid {
-			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, utypeInvalid)
+		if got := decodeUTypeSemantic(opcode); got != computeInvalid {
+			t.Fatalf("decodeUTypeSemantic(%#09b) = %d, want %d", opcode, got, computeInvalid)
 		}
 	}
 }
@@ -587,7 +587,7 @@ var specializeITypeVectors = map[uint32]struct {
 	itypeJalrWB:       {itypeJalrWB, itypeJalrWB},
 	itypeEcall:        {itypeEcall, itypeEcall},
 	itypeEbreak:       {itypeEbreak, itypeEbreak},
-	itypeInvalid:      {itypeInvalid, itypeInvalid},
+	computeInvalid:    {computeInvalid, computeInvalid},
 }
 
 // TestSpecializeITypeOpWithRd sweeps every rd (0..31) against every I-type op in
@@ -619,9 +619,9 @@ var specializeJTypeVectors = map[uint32]struct {
 	whenRdZero    uint32
 	whenRdNonZero uint32
 }{
-	jtypeJal:     {jtypeJal, jtypeJalWB}, // gains WB variant when rd != x0
-	jtypeJalWB:   {jtypeJalWB, jtypeJalWB},
-	jtypeInvalid: {jtypeInvalid, jtypeInvalid},
+	jtypeJal:       {jtypeJal, jtypeJalWB}, // gains WB variant when rd != x0
+	jtypeJalWB:     {jtypeJalWB, jtypeJalWB},
+	computeInvalid: {computeInvalid, computeInvalid},
 }
 
 // TestSpecializeJTypeOpWithRd sweeps every rd (0..31) against every J-type op in
