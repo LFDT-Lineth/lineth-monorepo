@@ -69,7 +69,7 @@ class DirectoryCleaner(
       fileNameStartBlockNumberProvider: (fileName: String) -> Long,
     ): FileFilter {
       return FileFilter { fileName: File ->
-        startBlockNumberGte >= fileNameStartBlockNumberProvider(fileName.name)
+        startBlockNumberGte <= fileNameStartBlockNumberProvider(fileName.name)
       }
     }
   }
