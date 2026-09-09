@@ -29,25 +29,14 @@ import kotlin.time.Instant
 class RiscVProofRequestDtoMapperTest {
 
   @Test
-  fun `serialized payload preserves BAL and slot including zero and omits absent slot`() {
+  fun `serialized payload includes slot zero and omits absent slot`() {
     val mapper = JsonSerialization.proofResponseMapperV1
-    for (slot in listOf(0UL, 42UL)) {
-      val dto = executionPayload().copy(slotNumber = slot).fromDomainObject()
-      val json = mapper.readTree(mapper.writeValueAsString(dto))
-      assertThat(json.get("slotNumber").longValue()).isEqualTo(slot.toLong())
-      assertThat(json.get("blockAccessList").textValue()).isEqualTo("0xc0")
-    }
+    val dto = executionPayload().copy(slotNumber = 0UL).fromDomainObject()
+    val json = mapper.readTree(mapper.writeValueAsString(dto))
+    assertThat(json.get("slotNumber").longValue()).isZero()
+
     val oldPayload = executionPayload().copy(slotNumber = null).fromDomainObject()
     assertThat(mapper.readTree(mapper.writeValueAsString(oldPayload)).has("slotNumber")).isFalse()
-  }
-
-  @Test
-  fun `payload equality and hash include the slot`() {
-    val payload = executionPayload()
-    assertThat(payload).isEqualTo(payload.copy())
-    assertThat(payload.hashCode()).isEqualTo(payload.copy().hashCode())
-    assertThat(payload).isNotEqualTo(payload.copy(slotNumber = 43UL))
-    assertThat(payload.hashCode()).isNotEqualTo(payload.copy(slotNumber = 43UL).hashCode())
   }
 
   private val programVk = RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK

@@ -50,4 +50,4 @@ class Web3jExecutionPayloadClient(
     }
 }
 
-class RawDataResponse : Response<String>()
+private class RawDataResponse : Response<String>()

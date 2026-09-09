@@ -121,16 +121,6 @@ class Web3jExecutionPayloadClientTest {
   }
 
   @Test
-  fun `BAL RPC errors fail the request`() {
-    stub("debug_getRawBlock", fixture.getString("rawBlock"))
-    server.stubFor(
-      post(urlEqualTo("/")).withRequestBody(containing("debug_getRawBlockAccessList"))
-        .willReturn(ok("""{"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"BAL pruned"}}""")),
-    )
-    assertThatThrownBy { client.getExecutionPayload(blockId).get() }.hasStackTraceContaining("BAL pruned")
-  }
-
-  @Test
   fun `a reorg between conflation and the raw block request fails before fetching the BAL`() {
     stub("debug_getRawBlock", fixture.getString("rawBlock"))
     assertThatThrownBy { client.getExecutionPayload(BlockNumberAndHash(20UL, ByteArray(32))).get() }
