@@ -13,6 +13,7 @@ import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexString
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,28 @@ import kotlin.time.Instant
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
 class RiscVProofRequestDtoMapperTest {
+
+  @Test
+  fun `serialized payload preserves BAL and slot including zero and omits absent slot`() {
+    val mapper = JsonSerialization.proofResponseMapperV1
+    for (slot in listOf(0UL, 42UL)) {
+      val dto = executionPayload().copy(slotNumber = slot).fromDomainObject()
+      val json = mapper.readTree(mapper.writeValueAsString(dto))
+      assertThat(json.get("slotNumber").longValue()).isEqualTo(slot.toLong())
+      assertThat(json.get("blockAccessList").textValue()).isEqualTo("0xc0")
+    }
+    val oldPayload = executionPayload().copy(slotNumber = null).fromDomainObject()
+    assertThat(mapper.readTree(mapper.writeValueAsString(oldPayload)).has("slotNumber")).isFalse()
+  }
+
+  @Test
+  fun `payload equality and hash include the slot`() {
+    val payload = executionPayload()
+    assertThat(payload).isEqualTo(payload.copy())
+    assertThat(payload.hashCode()).isEqualTo(payload.copy().hashCode())
+    assertThat(payload).isNotEqualTo(payload.copy(slotNumber = 43UL))
+    assertThat(payload.hashCode()).isNotEqualTo(payload.copy(slotNumber = 43UL).hashCode())
+  }
 
   private val programVk = RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
   private val chainId = 59144L
@@ -324,7 +347,8 @@ class RiscVProofRequestDtoMapperTest {
     ),
     blobGasUsed = 0UL,
     excessBlobGas = 0UL,
-    blockAccessList = byteArrayOf(),
+    blockAccessList = byteArrayOf(0xc0.toByte()),
+    slotNumber = 42UL,
   )
 
   private fun expectedExecutionPayloadDto(payload: ExecutionPayload): ExecutionPayloadDto = ExecutionPayloadDto(
@@ -353,6 +377,7 @@ class RiscVProofRequestDtoMapperTest {
     blobGasUsed = payload.blobGasUsed.toLong(),
     excessBlobGas = payload.excessBlobGas.toLong(),
     blockAccessList = payload.blockAccessList.encodeHex(),
+    slotNumber = payload.slotNumber?.toLong(),
   )
 
   private fun blockIntervalProofIndex(start: ULong, end: ULong): BlockIntervalProofIndex = BlockIntervalProofIndex(
