@@ -113,9 +113,9 @@ pub fn main(init: std.process.Init) !void {
     };
 
     std.debug.print("running {s}\n", .{label});
-    const stats = spec_runner.run(&suite, init, operands.items, opts) catch |err| fatal(@errorName(err));
+    const stats = try spec_runner.run(&suite, init, operands.items, opts);
     printSummary(stats);
-    if (stats.contribution.failed > 0 and !report_only) std.process.exit(1);
+    if (stats.contribution.failed > 0 and !report_only) return error.DisagreementsDetected;
 }
 
 fn printSummary(stats: spec_runner.Stats) void {

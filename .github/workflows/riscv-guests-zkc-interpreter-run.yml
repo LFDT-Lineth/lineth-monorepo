@@ -152,4 +152,6 @@ jobs:
         run: make -C arithmetization prepare-zkc
 
       - name: Run zkc reference-test
-        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast" REFERENCE_ARGS="${{ inputs.reference-args }}"
+        env:
+          REFERENCE_ARGS: ${{ inputs.reference-args }}
+        run: make -C riscv-guests/l2-execution reference-test-zkc KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
