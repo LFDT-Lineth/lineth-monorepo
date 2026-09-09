@@ -52,7 +52,7 @@ func TestPredecodeDenseExecutableSpan(t *testing.T) {
 		t.Errorf("InstructionBase = %#x, want 0x1000", decoded.InstructionBase)
 	}
 	ops := decodeComputeOpsFromHex(hex.EncodeToString(decoded.Decoded), 3)
-	want := []uint32{computeITypeBase + itypeOpAddiWB, computeInvalid, computeITypeBase + itypeOpAddiWB}
+	want := []uint32{itypeOpAddiWB, computeInvalid, itypeOpAddiWB}
 	for i := range want {
 		if ops[i] != want[i] {
 			t.Errorf("compute op %d = %d, want %d", i, ops[i], want[i])
@@ -461,11 +461,11 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "ld x0", instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0), want: computeNoOp},
 		{name: "auipc x0", instr: encodeUType(opcodeAUIPC, 0, 0), want: computeNoOp},
 		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeNoOp},
-		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
+		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: itypeOpAddiWB},
 		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
-		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
-		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
-		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
+		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: rtypeOpKeccak},
+		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: rtypeOpPoseidon2},
+		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: rtypeOpWriteOutput},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
