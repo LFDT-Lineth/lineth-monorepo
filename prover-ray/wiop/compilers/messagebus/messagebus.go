@@ -116,7 +116,6 @@ type CompileOptions struct {
 // mixing shards in one call is a misuse — or if it is called a second time with
 // new entries.
 func Compile(sys *wiop.System, opts ...CompileOptions) {
-
 	opt := CompileOptions{}
 	if len(opts) > 0 {
 		opt = opts[0]

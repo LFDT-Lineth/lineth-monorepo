@@ -144,7 +144,3 @@ func (sys *System) NewDynamicModule(ctx *ContextFrame, pd PaddingDirection) *Mod
 	m.isDynamic = true
 	return m
 }
-
-func (sys *System) CurrentRound() *Round {
-	return sys.Rounds[len(sys.Rounds)-1]
-}

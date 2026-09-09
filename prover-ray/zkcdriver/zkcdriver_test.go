@@ -135,7 +135,12 @@ func proverCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys)
+	// Shared randomness is requested even though the zkc driver declares no
+	// message-bus entry yet, so today this registers nothing. It is left on
+	// deliberately: once the arithmetization emits bus entries, the seeded path
+	// engages here on its own and any gap in the γ wiring surfaces as a failing
+	// test rather than staying hidden behind a flag nobody remembers to flip.
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
