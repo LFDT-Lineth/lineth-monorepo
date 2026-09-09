@@ -5,10 +5,10 @@ package proofserialization
 //
 // verifier-ray/src/proof_abi.zig is the authority. It asserts these numbers
 // against the Zig types at compile time, so Zig's layout cannot move out from
-// under them silently. abi_agreement_test.go checks the other direction — that
-// the numbers here still match the ones pinned there — because a pin updated on
-// one side only would produce an image that still casts cleanly while the
-// verifier reads misplaced bytes.
+// under them silently. verifier-ray's codegen/abicheck checks the other direction
+// — that the numbers here still match the ones pinned there — because a pin
+// updated on one side only would produce an image that still casts cleanly while
+// the verifier reads misplaced bytes.
 //
 // Nothing here may be inferred from the Go struct layouts in types.go: Go orders
 // its own fields and would disagree.

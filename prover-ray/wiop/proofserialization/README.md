@@ -654,7 +654,8 @@ verifier-ray/wiop design questions, not serialization ones:
   the literal byte assertions have power there — which is the argument for
   keeping both, and for the cross-language golden test still outstanding.
 
-  `abi_agreement_test.go` closes the drift direction nothing else covered:
+  verifier-ray's `codegen/abicheck` closes the drift direction nothing else
+  covered:
   `proof_abi.zig` catches Zig's layout moving, and the encoder's own tests catch
   Go bugs against Go's constants, but neither notices the two sides' *numbers*
   diverging. It parses `proof_abi.zig` and compares every pinned size, offset and
@@ -687,8 +688,8 @@ verifier-ray/wiop design questions, not serialization ones:
   `MAP_FIXED` fails at `0x08800000`, `0x30000000` and `0x100000000` but succeeds
   at `0x400000000`, so the fixture image is relocated there.
 
-  `wiop/proofserialization/abi_agreement_test.go` writes
-  `verifier-ray/testdata/proof_image.bin` (1176 B) and fails if it goes stale;
+  verifier-ray's `codegen/abicheck` writes
+  `verifier-ray/testdata/proof_image.bin` (856 B) and fails if it goes stale;
   `verifier-ray/test/proof_image_test.zig` maps it and casts it to a real
   `verifier.Proof` — mmap, cast, read, with no Zig-side parsing — then asserts
   every variant: both `Scalar` discriminants, both `Vector` discriminants, both
