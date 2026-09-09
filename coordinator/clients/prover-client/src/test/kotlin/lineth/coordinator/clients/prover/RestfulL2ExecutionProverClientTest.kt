@@ -102,7 +102,7 @@ class RestfulL2ExecutionProverClientTest {
     val responseDto = l2ExecutionProofResponseDto(1000501L, 1000503L)
     wiremock.stubFor(
       WireMock.get(
-        WireMock.urlEqualTo("/v1/jobs/$CHAIN_ID/$proofType/1000501/1000503"),
+        WireMock.urlEqualTo("/v1/jobs/$CHAIN_ID/$proofType/1000501/1000503?includeResponse=true"),
       ).willReturn(
         WireMock.okJson(
           proverJobResponseBody(

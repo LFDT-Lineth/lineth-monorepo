@@ -72,6 +72,8 @@ data class RollupProofPublicInputsDto(
 data class MetaDataDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
+  val startBlockTimestamp: Long,
+  val totalGasUsed: Long? = null,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------

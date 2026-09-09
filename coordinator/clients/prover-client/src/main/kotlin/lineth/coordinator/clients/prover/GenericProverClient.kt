@@ -1,6 +1,7 @@
 package lineth.coordinator.clients.prover
 
 import linea.clients.ProverProofRequestCreator
+import linea.clients.ProverProofRequestRemover
 import linea.clients.ProverProofResponseChecker
 import linea.clients.ProverProofTransport
 import linea.domain.ProofIndex
@@ -38,6 +39,7 @@ open class GenericProverClient<Request, Response, RequestDto, ResponseDto, TProo
   private val log: Logger = LogManager.getLogger(GenericProverClient::class.java),
 ) : ProverProofResponseChecker<Response, TProofIndex>,
   ProverProofRequestCreator<Request, TProofIndex>,
+  ProverProofRequestRemover,
   Supplier<Number>
   where TProofIndex : ProofIndex, Request : Any, RequestDto : Any {
 
@@ -118,6 +120,9 @@ open class GenericProverClient<Request, Response, RequestDto, ResponseDto, TProo
         )
       }
   }
+
+  override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> =
+    transport.removeRequests(startBlockNumberGte)
 
   /**
    * Parses a response DTO obtained from the transport into the domain response.

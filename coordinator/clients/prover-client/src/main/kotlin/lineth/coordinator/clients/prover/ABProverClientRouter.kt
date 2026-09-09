@@ -2,7 +2,7 @@ package lineth.coordinator.clients.prover
 
 import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.InvalidityProofRequest
-import linea.clients.ProverClient
+import linea.clients.ProverClientV2
 import linea.domain.AggregationProofIndex
 import linea.domain.BlobCompressionProofRequest
 import linea.domain.BlockInterval
@@ -50,10 +50,10 @@ class StartBlockTimestampBasedSwitchPredicate(
 }
 
 class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex>(
-  private val proverA: ProverClient<ProofRequest, ProofResponse, TProofIndex>,
-  private val proverB: ProverClient<ProofRequest, ProofResponse, TProofIndex>,
+  private val proverA: ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+  private val proverB: ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
   private val switchToProverBPredicate: (Any) -> Boolean,
-) : ProverClient<ProofRequest, ProofResponse, TProofIndex> {
+) : ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
 
   companion object {
     fun <TProverConfig, ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> create(
@@ -61,8 +61,8 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
       proverBConfig: TProverConfig?,
       switchBlockNumberInclusive: ULong?,
       switchBlockTimestamp: Instant?,
-      clientBuilder: (TProverConfig) -> ProverClient<ProofRequest, ProofResponse, TProofIndex>,
-    ): ProverClient<ProofRequest, ProofResponse, TProofIndex> {
+      clientBuilder: (TProverConfig) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+    ): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
       return when {
         switchBlockNumberInclusive != null -> {
           require(proverBConfig != null) {
@@ -89,7 +89,7 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
     }
   }
 
-  private fun getProver(proofRequestOrIndex: Any): ProverClient<ProofRequest, ProofResponse, TProofIndex> {
+  private fun getProver(proofRequestOrIndex: Any): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
     return if (switchToProverBPredicate(proofRequestOrIndex)) {
       proverB
     } else {
@@ -114,5 +114,11 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
 
   override fun createProofRequest(proofRequest: ProofRequest): SafeFuture<TProofIndex> {
     return getProver(proofRequest).createProofRequest(proofRequest)
+  }
+
+  override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
+    return proverA.removeRequests(startBlockNumberGte).thenCompose {
+      proverB.removeRequests(startBlockNumberGte)
+    }
   }
 }

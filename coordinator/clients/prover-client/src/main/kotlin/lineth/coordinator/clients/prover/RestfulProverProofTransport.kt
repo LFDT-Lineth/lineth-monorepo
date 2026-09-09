@@ -69,8 +69,26 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
     }
   }
 
+  override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
+    val path = "/v1/jobs/dequeue"
+    val body = DequeueJobRequest(
+      startBlockGte = startBlockNumberGte,
+      proofType = proofType,
+    )
+    val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
+    log.debug("Dequeuing proof requests. POST {}", path)
+    return restClient.post(path, buffer).thenApply { result ->
+      when (result) {
+        is Ok -> Unit
+        is Err -> throw RuntimeException(
+          "Failed to dequeue proof requests: path=$path error=${result.error.type} message=${result.error.message}",
+        )
+      }
+    }
+  }
+
   override fun findResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto?> {
-    return fetchJob(proofIndex).thenApply { job -> job?.provedResponseOrNull() }
+    return fetchJob(proofIndex, true).thenApply { job -> job?.provedResponseOrNull() }
   }
 
   override fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean> {
@@ -93,9 +111,16 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
    * `GET`s the job. Returns the parsed job on a 2xx response, or null when the job is not available yet (e.g. a 404
    * before it is created, or any non-success status), so callers can treat "not found" as "not ready".
    */
-  private fun fetchJob(proofIndex: TProofIndex): SafeFuture<ProverJobResponse?> {
+  private fun fetchJob(proofIndex: TProofIndex, includeResponse: Boolean = false): SafeFuture<ProverJobResponse?> {
     val path = jobPathProvider(proofIndex)
-    return restClient.get(path).thenApply { result ->
+    val params = if (includeResponse) {
+      listOf(
+        "includeResponse" to "true",
+      )
+    } else {
+      emptyList()
+    }
+    return restClient.get(path, params).thenApply { result ->
       when (result) {
         is Ok -> {
           @Suppress("UNCHECKED_CAST")
@@ -124,6 +149,14 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   private data class SubmitJobRequest(
     @get:JsonProperty("proof_request")
     val proofRequest: JsonNode,
+  )
+
+  /** Body of `POST /v1/jobs/dequeue` */
+  private data class DequeueJobRequest(
+    @get:JsonProperty("start_block_gte")
+    val startBlockGte: Long? = null,
+    @get:JsonProperty("proof_type")
+    val proofType: String? = null,
   )
 
   /** Subset of the `GET /v1/jobs/...` response body this transport relies on. */

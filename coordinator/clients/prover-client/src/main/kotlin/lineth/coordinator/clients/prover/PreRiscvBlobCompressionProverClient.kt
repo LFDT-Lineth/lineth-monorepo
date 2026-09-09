@@ -30,6 +30,7 @@ class PreRiscvBlobCompressionProverClient(
   val config: FileBasedProverConfig,
   val vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+  enableRequestFilesCleanup: Boolean = false,
   log: Logger,
 ) :
   GenericProverClient<
@@ -50,6 +51,7 @@ class PreRiscvBlobCompressionProverClient(
       ),
       requestFileNameProvider = CompressionProofRequestFileNameProvider,
       responseFileNameProvider = CompressionProofResponseFileNameProvider,
+      enableRequestFilesCleanup = enableRequestFilesCleanup,
     ),
     proofIndexProvider = PreRiscvBlobCompressionProverClient::blobFileIndex,
     requestMapper = PreRiscvBlobCompressionProverClient::requestDtoMapper,

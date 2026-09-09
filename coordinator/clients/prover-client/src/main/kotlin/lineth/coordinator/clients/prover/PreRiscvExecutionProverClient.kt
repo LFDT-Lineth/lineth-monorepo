@@ -107,6 +107,7 @@ class PreRiscvExecutionProverClient(
     ExecutionProofFileNameProvider,
   executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
     ExecutionProofFileNameProvider,
+  enableRequestFilesCleanup: Boolean = false,
   log: Logger = LOG,
 ) :
   GenericProverClient<
@@ -123,6 +124,7 @@ class PreRiscvExecutionProverClient(
       fileReader = FileReader(vertx, jsonObjectMapper, Any::class.java),
       requestFileNameProvider = executionProofRequestFileNameProvider,
       responseFileNameProvider = executionProofResponseFileNameProvider,
+      enableRequestFilesCleanup = enableRequestFilesCleanup,
     ),
     proofIndexProvider = { request ->
       ExecutionProofIndex(
