@@ -91,7 +91,7 @@ install-constantine-deps:
 	else \
 		sudo=$$(command -v sudo >/dev/null 2>&1 && echo sudo || echo ""); \
 		$$sudo apt-get update -qq; \
-		$$sudo apt-get install -y --no-install-recommends nim clang git python3; \
+		$$sudo apt-get install -y --no-install-recommends nim clang llvm git python3; \
 	fi
 
 # Formatting spans build_common + all guests, so it lives here (not fanned out). `fmt` rewrites in
