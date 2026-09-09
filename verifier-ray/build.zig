@@ -57,6 +57,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .strip = strip,
     });
+    const image_relocation_mod = b.addModule("image_relocation", .{
+        .root_source_file = b.path("src/image_relocation.zig"),
+        .target = target,
+        .optimize = optimize,
+        .strip = strip,
+    });
     // conditionally import the Lineth zkVM accelerator module for supported target and when requested
     if (!disable_accelerators) {
         verifier_mod.addImport("lineth_accelerators", lineth_mod);
@@ -146,6 +152,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "embedded_data", .module = embedded_data_mod },
             .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
             .{ .name = "main_config", .module = main_opts.createModule() },
+            .{ .name = "image_relocation", .module = image_relocation_mod },
             .{ .name = "riscv_system", .module = riscv_system_mod },
         },
     });
@@ -183,6 +190,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
                     .{ .name = "test_verify", .module = test_verify_mod },
                     .{ .name = "riscv_system", .module = riscv_system_mod },
+                    .{ .name = "image_relocation", .module = image_relocation_mod },
                 },
             }),
             .filters = test_filters,

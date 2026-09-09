@@ -135,6 +135,45 @@ test "consistency: statements of different lengths are rejected" {
     );
 }
 
+test "pair validates both statement lengths before comparing elements" {
+    const no_public_inputs_index = 0;
+    const no_public_inputs_case = comptime vf.get(no_public_inputs_index);
+    const no_public_inputs = vf.getInput(no_public_inputs_index);
+    try std.testing.expectEqual(@as(usize, 0), no_public_inputs_case.systems.public_input.refs.len);
+
+    const one = [_]protocol.Scalar{.{ .base = field.Element.init(1) }};
+    const two = [_]protocol.Scalar{.{ .base = field.Element.init(2) }};
+    var invalid_a = no_public_inputs;
+    invalid_a.public_inputs = &one;
+    var invalid_b = no_public_inputs;
+    invalid_b.public_inputs = &two;
+
+    // If consistency ran first, these different elements would instead return
+    // InconsistentPublicInputs. The compiled statement count takes precedence.
+    try std.testing.expectError(
+        error.InvalidPublicInputCount,
+        verifier.verifyPair(no_public_inputs_case.spec, no_public_inputs_case.systems, invalid_a, invalid_b),
+    );
+
+    const one_public_input_index = 62;
+    const one_public_input_case = comptime vf.get(one_public_input_index);
+    const valid = vf.getInput(one_public_input_index);
+    try std.testing.expectEqual(@as(usize, 1), one_public_input_case.systems.public_input.refs.len);
+    var missing = valid;
+    missing.public_inputs = &.{};
+
+    // Exercise each side independently so neither can reach the consistency
+    // comparison or proof verification with an invalid statement length.
+    try std.testing.expectError(
+        error.InvalidPublicInputCount,
+        verifier.verifyPair(one_public_input_case.spec, one_public_input_case.systems, missing, valid),
+    );
+    try std.testing.expectError(
+        error.InvalidPublicInputCount,
+        verifier.verifyPair(one_public_input_case.spec, one_public_input_case.systems, valid, missing),
+    );
+}
+
 test "consistency: equality is over field values, not wire encoding" {
     // The same value may travel base-encoded in one statement and lifted into
     // the extension field in the other; they are the same statement.

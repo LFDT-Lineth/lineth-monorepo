@@ -144,6 +144,14 @@ pub fn verifyPair(
     a: VerifyInput,
     b: VerifyInput,
 ) !void {
+    // Validate both untrusted slice lengths before comparing any elements. The
+    // consistency walk must not let a pair image choose its runtime cost (or
+    // trigger an out-of-bounds read) before verify's normal count check runs.
+    if (a.public_inputs.len != systems.public_input.refs.len or
+        b.public_inputs.len != systems.public_input.refs.len)
+    {
+        return error.InvalidPublicInputCount;
+    }
     try checkPublicInputConsistency(a.public_inputs, b.public_inputs);
     try verify(spec, systems, a.proof, a.public_inputs);
     try verify(spec, systems, b.proof, b.public_inputs);
