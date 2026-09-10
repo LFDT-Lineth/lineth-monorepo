@@ -593,6 +593,8 @@ var extractFieldSpecs = []struct {
 	{"opcode", 0, 6, func(f instructionFields) uint32 { return f.opcode }},
 	{"rd", 7, 11, func(f instructionFields) uint32 { return f.rd }},
 	{"funct3", 12, 14, func(f instructionFields) uint32 { return f.funct3 }},
+	{"rs1", 15, 19, func(f instructionFields) uint32 { return f.rs1 }},
+	{"rs2", 20, 24, func(f instructionFields) uint32 { return f.rs2 }},
 	{"imm12", 20, 31, func(f instructionFields) uint32 { return f.imm12 }},
 	{"funct7", 25, 31, func(f instructionFields) uint32 { return f.funct7 }},
 }
@@ -603,7 +605,7 @@ func assertExtractFields(t *testing.T, instr uint32) {
 	t.Helper()
 	got := extractFields(instr)
 	for _, s := range extractFieldSpecs {
-		// check if the field (opcode, rd, funct3, imm12, funct7)
+		// check if the field (opcode, rd, funct3, rs1, rs2, imm12, funct7)
 		// is valid for the instruction
 		if v, want := s.get(got), extractBits(instr, s.lo, s.hi); v != want {
 			t.Fatalf("extractFields(%#010x).%s = %#x, want %#x", instr, s.name, v, want)
@@ -612,24 +614,10 @@ func assertExtractFields(t *testing.T, instr uint32) {
 }
 
 // TestExtractFields verifies extractFields against extractBits.
-// The full 32-bit word space (2^32) is too large to enumerate, so we exhaustively
-// sweep :
-// - every walking-one and walking-zero pattern
-// - each field's own value domain against both an all-zero and an all-ones background
-// (to catch mask bleed)
+// The full 32-bit word space (2^32) is too large to enumerate, so we sweep each
+// field's own value domain against both an all-zero and an all-ones background
+// (to catch mask bleed).
 func TestExtractFields(t *testing.T) {
-
-	// Walking ones / walking zeros: isolates every individual bit.
-	// 0b...00000001 (bit 0)
-	// 0b...00000010 (bit 1)
-	// 0b...00000100 (bit 2)
-	// To cover all areas, even the ones that are not explicitly listed in
-	// extractFieldSpecs (rs1, rs2).
-	for b := 0; b < 32; b++ {
-		assertExtractFields(t, uint32(1)<<uint(b))
-		assertExtractFields(t, ^(uint32(1) << uint(b)))
-	}
-
 	// Per-field full-domain sweep against zero and all-ones backgrounds.
 	for _, s := range extractFieldSpecs {
 		// number of bits in the field
