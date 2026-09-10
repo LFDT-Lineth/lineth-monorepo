@@ -1,5 +1,6 @@
 package lineth.coordinator.clients.prover
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import linea.clients.ConflationWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
@@ -69,6 +70,7 @@ data class RollupProofPublicInputsDto(
   val programVks: List<String>,
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class MetaDataDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
