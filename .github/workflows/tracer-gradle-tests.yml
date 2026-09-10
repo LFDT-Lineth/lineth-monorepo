@@ -50,7 +50,7 @@ jobs:
           JAVA_OPTS: -Xmx2g
 
       - name: Run Spotless Check
-        run: ./gradlew spotlessCheck
+        run: ./gradlew spotlessCheck --stacktrace
 
       - name: Compile all Java/Kotlin code in tracer module
         run: ./gradlew :tracer:classes :tracer:testClasses
