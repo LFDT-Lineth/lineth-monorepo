@@ -9,6 +9,7 @@ import org.hyperledger.besu.crypto.SECP256K1
 import org.hyperledger.besu.crypto.SECPSignature
 import org.hyperledger.besu.datatypes.AccessListEntry
 import org.hyperledger.besu.datatypes.Address
+import org.hyperledger.besu.datatypes.BlobGas
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.datatypes.LogsBloomFilter
 import org.hyperledger.besu.datatypes.Wei
@@ -17,11 +18,38 @@ import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder
 import org.hyperledger.besu.ethereum.core.CodeDelegation
 import org.hyperledger.besu.ethereum.core.Difficulty
 import org.hyperledger.besu.ethereum.core.Transaction
+import org.hyperledger.besu.ethereum.core.encoding.EncodingContext
+import org.hyperledger.besu.ethereum.core.encoding.TransactionEncoder
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions
 import java.math.BigInteger
+import java.util.Optional
 
 fun Block.toBesu(): org.hyperledger.besu.ethereum.core.Block = mapToBesu(this)
 fun linea.domain.Transaction.toBesu(): Transaction = mapToBesu(this)
+
+fun Block.toExecutionPayload(blockAccessList: ByteArray): ExecutionPayload = ExecutionPayload(
+  parentHash = parentHash,
+  feeRecipient = miner,
+  stateRoot = stateRoot,
+  receiptsRoot = receiptsRoot,
+  logsBloom = logsBloom,
+  prevRandao = mixHash,
+  blockNumber = number,
+  gasLimit = gasLimit,
+  gasUsed = gasUsed,
+  timestamp = timestamp,
+  extraData = extraData,
+  baseFeePerGas = baseFeePerGas?.toBigInteger() ?: BigInteger.ZERO,
+  blockHash = hash,
+  transactions = transactions.mapIndexed { index, tx ->
+    TransactionEncoder.encodeOpaqueBytes(mapToBesu(number, index, tx), EncodingContext.BLOCK_BODY).toArray()
+  },
+  withdrawals = emptyList(),
+  blobGasUsed = 0UL,
+  excessBlobGas = 0UL,
+  blockAccessList = blockAccessList,
+  slotNumber = slotNumber,
+)
 
 object MapperLineaDomainToBesu {
   private val secp256k1 = SECP256K1()
@@ -76,6 +104,18 @@ object MapperLineaDomainToBesu {
         .mixHash(Hash.wrap(Bytes32.wrap(block.mixHash)))
         .nonce(block.nonce.toLong())
         .baseFee(block.baseFeePerGas?.toWei())
+        .apply {
+          if (block.slotNumber != null) {
+            // Lineth Amsterdam headers: withdrawals, blobs, beacon roots and requests are unsupported.
+            withdrawalsRoot(Hash.EMPTY_TRIE_HASH)
+            blobGasUsed(0L)
+            excessBlobGas(BlobGas.of(0L))
+            parentBeaconBlockRoot(Bytes32.ZERO)
+            requestsHash(Hash.EMPTY_REQUESTS_HASH)
+            balHash(Hash.wrap(Bytes32.wrap(block.blockAccessListHash!!)))
+            slotNumber(block.slotNumber!!.toLong())
+          }
+        }
         .blockHeaderFunctions(blockHeaderFunctions)
         .buildBlockHeader()
 
@@ -89,7 +129,11 @@ object MapperLineaDomainToBesu {
         throw IllegalStateException("Uncles are not supported: block=${block.number}")
       }
 
-      val body = BlockBody(transactions, emptyList())
+      val body = BlockBody(
+        transactions,
+        emptyList(),
+        if (block.slotNumber != null) Optional.of(emptyList()) else Optional.empty(),
+      )
 
       return org.hyperledger.besu.ethereum.core.Block(header, body)
     }.getOrElse { th ->

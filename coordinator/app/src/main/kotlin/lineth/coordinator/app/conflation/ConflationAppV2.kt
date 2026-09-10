@@ -12,6 +12,7 @@ import linea.web3j.createWeb3jHttpService
 import linea.web3j.ethapi.Web3jExecutionPayloadClient
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.ethapi.validateLinethBlock
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
@@ -78,6 +79,7 @@ class ConflationAppV2(
     log = LogManager.getLogger("clients.l2.eth.conflation"),
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
+    blockValidator = ::validateLinethBlock,
   )
 
   private val chainId: ULong = l2EthClient.ethChainId().get()

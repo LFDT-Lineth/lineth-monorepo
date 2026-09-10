@@ -3,7 +3,6 @@ package lineth.coordination.riscv.execution
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
-import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
 import linea.domain.ExecutionPayload
@@ -34,8 +33,8 @@ class L2ExecutionRequestBuilderImpl(
     val ftxStateFuture = ftxRollingInfoProvider.getFtxRollingHashByBlockNumber(parentBlockNumber)
     val allExecutionsListFuture = SafeFuture.collectAll(
       conflation.blocks.map { block ->
-        val payloadFuture = executionPayloadClient.getExecutionPayload(BlockNumberAndHash(block.number, block.hash))
         val witnessFuture = executionWitnessClient.getExecutionWitness(BlockParameter.fromHash(block.hash))
+        val payloadFuture = executionPayloadClient.getExecutionPayload(block)
         payloadFuture.thenCombine(witnessFuture) { payload, witness ->
           payload to requireNotNull(witness) { "No execution witness available for block ${block.number}" }
         }

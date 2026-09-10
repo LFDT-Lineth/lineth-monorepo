@@ -4,8 +4,10 @@ import linea.domain.Block
 import linea.domain.BlockData
 import linea.domain.BlockWithTxHashes
 import linea.domain.Transaction
+import linea.domain.uLongFromPrefixedHex
 import linea.kotlin.decodeHex
 import linea.kotlin.toULong
+import linea.web3j.EthBlockExtended
 import org.web3j.protocol.core.methods.response.EthBlock
 
 fun EthBlock.Block.toDomain(): Block = mapToDomain(this)
@@ -59,6 +61,8 @@ fun <TxData> mapToDomain(web3jBlock: EthBlock.Block, txsMapper: (EthBlock.Block)
     ommers = web3jBlock.uncles.map { it.decodeHex() }, // List of uncle block hashes
     transactions = txsMapper(web3jBlock), // List of transactions
     size = web3jBlock.size.toULong(),
+    slotNumber = (web3jBlock as? EthBlockExtended.Block)?.slotNumber?.uLongFromPrefixedHex(),
+    blockAccessListHash = (web3jBlock as? EthBlockExtended.Block)?.blockAccessListHash?.decodeHex(),
   )
   return block
 }
