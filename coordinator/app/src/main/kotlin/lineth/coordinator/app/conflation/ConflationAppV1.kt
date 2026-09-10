@@ -190,11 +190,14 @@ class ConflationAppV1(
   val proofAggregationClient = proverClientFactory.preRiscvProofAggregationProverClient()
 
   private fun requestFileCleanup(): SafeFuture<Unit> {
-    return executionProverClient.removeRequests()
-      .thenCompose {
-        blobCompressionProverClient.removeRequests()
-      }.thenCompose {
-        proofAggregationClient.removeRequests()
+    return SafeFuture.allOf(
+      executionProverClient.removeRequests(),
+      blobCompressionProverClient.removeRequests(),
+      proofAggregationClient.removeRequests(),
+    )
+      .thenApply { }
+      .thenPeek {
+        log.info("requestFileCleanup all done")
       }
   }
 
