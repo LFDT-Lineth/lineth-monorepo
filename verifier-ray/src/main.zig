@@ -6,6 +6,7 @@ const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
+const image_relocation = verifier_ray.image_relocation;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
@@ -167,115 +168,10 @@ fn loadNativeInput() *const verifier.VerifyInput {
         remaining -= @intCast(n);
     }
 
-    rebaseImagePointers(buf, @intCast(image_len), @intFromPtr(buf_addr));
+    image_relocation.rebase(buf, @intCast(image_len), input_guest_base, @intFromPtr(buf_addr));
     return @ptrCast(@alignCast(buf_addr));
 }
 
-fn readU64(img: [*]const u8, off: usize) u64 {
-    return @as(u64, img[off]) |
-        (@as(u64, img[off + 1]) << 8) |
-        (@as(u64, img[off + 2]) << 16) |
-        (@as(u64, img[off + 3]) << 24) |
-        (@as(u64, img[off + 4]) << 32) |
-        (@as(u64, img[off + 5]) << 40) |
-        (@as(u64, img[off + 6]) << 48) |
-        (@as(u64, img[off + 7]) << 56);
-}
-
-fn writeU64(img: [*]u8, off: usize, v: u64) void {
-    img[off + 0] = @truncate(v);
-    img[off + 1] = @truncate(v >> 8);
-    img[off + 2] = @truncate(v >> 16);
-    img[off + 3] = @truncate(v >> 24);
-    img[off + 4] = @truncate(v >> 32);
-    img[off + 5] = @truncate(v >> 40);
-    img[off + 6] = @truncate(v >> 48);
-    img[off + 7] = @truncate(v >> 56);
-}
-
-// rebaseImagePointers patches every slice-pointer in the image from its encoded
-// guest address (input_guest_base + offset) to the equivalent host address
-// (mapped_addr + offset). The image layout is fully determined by the
-// proofserialization layout constants mirrored in verifier-ray/src/proof_abi.zig;
-// every []const T header is a {ptr: u64le, len: u64le} pair and only the ptr
-// field needs adjustment. We walk the structure typed, never scanning raw bytes,
-// so non-pointer u64s (lengths, field values) are never touched.
-fn rebaseImagePointers(img: [*]u8, img_len: usize, mapped_addr: usize) void {
-    const delta: i64 = @as(i64, @intCast(mapped_addr)) - @as(i64, @intCast(input_guest_base));
-
-    // Patch a single slice-pointer at byte offset `off` in the image.
-    const patchPtr = struct {
-        fn f(image: [*]u8, len: usize, off: usize, d: i64) usize {
-            if (off + 16 > len) return 0; // bounds check
-            const old_ptr = readU64(image, off);
-            if (old_ptr == 0) return 0; // null / empty-slice sentinel below guest_base
-            const new_ptr = @as(u64, @intCast(@as(i64, @intCast(old_ptr)) + d));
-            writeU64(image, off, new_ptr);
-            // Return the payload offset (for callers that need to walk into it).
-            return @intCast(@as(i64, @intCast(old_ptr - input_guest_base)));
-        }
-    }.f;
-
-    // Returns the slice count stored at `off + 8`.
-    const sliceLen = struct {
-        fn f(image: [*]u8, off: usize) usize {
-            return @intCast(readU64(image, off + 8));
-        }
-    }.f;
-
-    // VerifyInput offsets (from proof_abi.zig / layout.go):
-    //   proof @ 0 (96 bytes), public_inputs @ 96 (slice of Scalar — no nested ptrs)
-    _ = patchPtr(img, img_len, 96, delta); // public_inputs.ptr
-
-    // Proof offsets: rounds @ 0, module_sizes @ 16, pcs_opening @ 32
-    const rounds_ptr = patchPtr(img, img_len, 0, delta);
-    const n_rounds = sliceLen(img, 0);
-    _ = patchPtr(img, img_len, 16, delta); // module_sizes.ptr (scalar elements, no nesting)
-
-    // Each RoundMessage is 56 bytes: cells @ 0, commitment @ 16.
-    // cells is []Scalar (no nested ptrs), commitment is inline optional.
-    for (0..n_rounds) |i| {
-        const rm_off = rounds_ptr + i * 56;
-        _ = patchPtr(img, img_len, rm_off + 0, delta); // cells.ptr
-    }
-
-    // PcsOpening @ 32: one field `proof` (OpeningProof) @ 32+0=32.
-    // OpeningProof: input_queries @ 32, fri_proof @ 48.
-
-    // input_queries: [][]InputTreeOpening
-    const iq_outer_ptr = patchPtr(img, img_len, 32 + 0, delta);
-    const n_iq = sliceLen(img, 32 + 0);
-    for (0..n_iq) |i| {
-        const inner_hdr = iq_outer_ptr + i * 16;
-        const iq_inner_ptr = patchPtr(img, img_len, inner_hdr, delta);
-        const n_ito = sliceLen(img, inner_hdr);
-        // InputTreeOpening: siblings @ 0, leaves @ 16
-        for (0..n_ito) |j| {
-            const ito_off = iq_inner_ptr + j * 32;
-            _ = patchPtr(img, img_len, ito_off + 0, delta); // siblings.ptr
-            // leaves: []*?RowPair — no nested ptrs (?RowPair is inline)
-            _ = patchPtr(img, img_len, ito_off + 16, delta); // leaves.ptr
-        }
-    }
-
-    // FriProof @ 48: round_roots @ 48, final_poly @ 64, running_queries @ 80.
-    _ = patchPtr(img, img_len, 48 + 0, delta); // round_roots.ptr (scalar)
-    _ = patchPtr(img, img_len, 48 + 16, delta); // final_poly.ptr (scalar)
-
-    // running_queries: [][]Branch
-    const rq_outer_ptr = patchPtr(img, img_len, 48 + 32, delta);
-    const n_rq = sliceLen(img, 48 + 32);
-    for (0..n_rq) |i| {
-        const inner_hdr = rq_outer_ptr + i * 16;
-        const rq_inner_ptr = patchPtr(img, img_len, inner_hdr, delta);
-        const n_br = sliceLen(img, inner_hdr);
-        // Branch: siblings @ 0, leaf @ 16 (inline Digest — no ptr)
-        for (0..n_br) |j| {
-            const br_off = rq_inner_ptr + j * 48;
-            _ = patchPtr(img, img_len, br_off + 0, delta); // siblings.ptr
-        }
-    }
-}
 
 fn loadR5Input() *const verifier.VerifyInput {
     if (comptime !is_r5_zkvm) {

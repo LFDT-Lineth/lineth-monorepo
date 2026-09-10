@@ -22,29 +22,17 @@ const riscv_system = @import("riscv_system");
 
 const verifier = verifier_ray.verifier;
 
-/// The address the image is relocated for. Pointers in the image are absolute,
-/// so it can only be read here.
-///
-/// codegen/abicheck's abi_agreement_test.go must use the same constant. It is not the
-/// production GuestBase (0x08800000) because macOS refuses MAP_FIXED in the low
-/// address space; 0x400000000 maps on both hosts.
-const fixture_base: usize = 0x400000000;
+// The base address at which riscv_proof_image.bin was encoded.
+// Must match GuestBase in prover-ray/wiop/proofserialization/layout.go.
+const encoded_base: usize = 0x08800000;
 
 const image_path = "testdata/riscv_proof_image.bin";
 
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
+const prot_write: c_int = 2;
 const map_private: c_int = 2;
-// MAP_FIXED_NOREPLACE (not MAP_FIXED): this test shares a process with every
-// other test in test/all.zig, and Zig randomizes test order per run, so
-// whatever else has already been placed in the address space by the time
-// this test runs varies run to run. Plain MAP_FIXED would silently overlap
-// (and corrupt) anything already mapped at fixture_base, producing a
-// non-reproducible verify() outcome keyed to test order/ASLR rather than to
-// the (proof, public_inputs) actually under test. _NOREPLACE fails the
-// syscall instead — surfaced below as MapFixedUnavailable, the same skip path
-// already used for the "environment refuses low-address mappings" case.
-const map_fixed_noreplace: c_int = 0x10 | 0x100000;
+const map_anon: c_int = if (@import("builtin").target.os.tag == .macos) 0x1000 else 0x20;
 const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
 
@@ -52,29 +40,41 @@ extern fn open(path: [*:0]const u8, flags: c_int) c_int;
 extern fn mmap(address: ?*anyopaque, length: usize, prot: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn close(fd: c_int) c_int;
 extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
+extern fn read(fd: c_int, buf: [*]u8, count: usize) isize;
 
-fn mapFixtureImage() !*const verifier.VerifyInput {
+fn loadFixtureImage() !*const verifier.VerifyInput {
     const fd = open(image_path, o_rdonly);
     if (fd < 0) return error.ImageMissing;
     defer _ = close(fd);
 
     const image_len = lseek(fd, 0, seek_end);
     if (image_len <= 0) return error.ImageMissing;
+    const img_len: usize = @intCast(image_len);
 
-    const p = mmap(@ptrFromInt(fixture_base), @intCast(image_len), prot_read, map_private | map_fixed_noreplace, fd, 0);
-    if (@intFromPtr(p) == map_failed) return error.MapFixedUnavailable;
+    // Allocate anonymous read-write memory at any address the OS picks, then
+    // read the file into it and rebase all pointers from encoded_base to the
+    // actual mapped address. This works on Linux and macOS without MAP_FIXED.
+    const p = mmap(null, img_len, prot_read | prot_write, map_private | map_anon, -1, 0);
+    if (@intFromPtr(p) == map_failed) return error.MmapFailed;
+
+    const buf: [*]u8 = @ptrCast(p);
+    var total: usize = 0;
+    _ = lseek(fd, 0, 0); // seek back to start (SEEK_SET = 0)
+    while (total < img_len) {
+        const n = read(fd, buf + total, img_len - total);
+        if (n <= 0) return error.ReadFailed;
+        total += @intCast(n);
+    }
+
+    verifier_ray.image_relocation.rebase(buf, img_len, encoded_base, @intFromPtr(p));
 
     return @ptrCast(@alignCast(p));
 }
 
 test "a Go-encoded honest proof image verifies against the real riscv system" {
-    const input = mapFixtureImage() catch |err| switch (err) {
+    const input = loadFixtureImage() catch |err| switch (err) {
         error.ImageMissing => return error.SkipZigTest,
-        // Either the environment refuses low-address fixed mappings outright,
-        // or (MAP_FIXED_NOREPLACE) fixture_base was already occupied by
-        // something else in this test binary's process — an environment/test-
-        // ordering limitation, not a proof-image format failure.
-        error.MapFixedUnavailable => return error.SkipZigTest,
+        else => return err,
     };
 
     try std.testing.expect(input.proof.rounds.len > 0);
