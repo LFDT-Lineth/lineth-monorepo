@@ -23,7 +23,7 @@ import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
-import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository
@@ -54,6 +54,7 @@ class ConflationAppV2(
   val forcedTransactionsApp: ForcedTransactionsApp,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val metricsFacade: MetricsFacade,
+  private val proverClientFactory: ProverClientFactory,
   private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
   private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val lastProcessedBlocks: LastProcessedBlocks,
@@ -80,19 +81,12 @@ class ConflationAppV2(
 
   private val chainId: ULong = l2EthClient.ethChainId().get()
 
-  private val riscvProverClientFactory = RiscvProverClientFactory(
-    vertx = vertx,
-    config = configs.riscvProversConfig!!,
-    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
-    metricsFacade = metricsFacade,
-  )
-
   private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
       "conflation.blocksLimit must be set when riscv is enabled"
     }
 
-    val riscvCalculators = CalculatorsFactory.createForRiscV(
+    val riscvCalculators = CalculatorsFactory.createForRiscv(
       lastConflatedBlockNumber = lastProcessedBlocks.lastConflatedBlock.number,
       lastConflatedTimestamp = maxOf(
         configs.conflation.riscvStartingBlockTimestampInclusive!!,
@@ -108,7 +102,7 @@ class ConflationAppV2(
     val conflationCalculator = riscvCalculators.conflationCalculator
     val conflationService = riscvCalculators.conflationService
 
-    val l2ExecutionProverClient = riscvProverClientFactory.executionProverClient()
+    val l2ExecutionProverClient = proverClientFactory.executionProverClient()
 
     val executionWitnessClient = Web3jExecutionWitnessClient(
       web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString()),
