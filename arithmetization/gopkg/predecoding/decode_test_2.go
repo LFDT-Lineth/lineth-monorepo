@@ -201,6 +201,13 @@ func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12,
 	return
 }
 
+// classifyWord extracts the fields of a raw instruction word and classifies it,
+// mirroring how decodeInstruction calls classifyInstruction.
+func classifyWord(instr uint32) uint32 {
+	opcode, instrType, rd, _, _, funct3, imm12, funct7 := decodeFields(instr)
+	return classifyInstruction(instrType, opcode, funct3, funct7, imm12, rd)
+}
+
 func TestCheckNoOp(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -440,7 +447,7 @@ func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
 	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
 	for i := range nRecords {
 		instr := binary.LittleEndian.Uint32(image[i*4:])
-		got := classifyInstruction(instr)
+		got := classifyWord(instr)
 		want := ops[i]
 		if got != want {
 			t.Fatalf("index %d instr=%#x: classify=%d decoded=%d", i, instr, got, want)
@@ -469,8 +476,8 @@ func TestClassifyInstructionExamples(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := classifyInstruction(tt.instr); got != tt.want {
-				t.Fatalf("classifyInstruction(%#x) = %d, want %d", tt.instr, got, tt.want)
+			if got := classifyWord(tt.instr); got != tt.want {
+				t.Fatalf("classifyWord(%#x) = %d, want %d", tt.instr, got, tt.want)
 			}
 		})
 	}
@@ -500,7 +507,7 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		if instrType != iType {
 			normImm12 = imm12
 		}
-		decodedBits.writeBits(uint64(classifyInstruction(instr)), 8)
+		decodedBits.writeBits(uint64(classifyWord(instr)), 8)
 		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
 		decodedBits.writeBits(uint64(rs1), 5)
 		decodedBits.writeBits(0, 5)

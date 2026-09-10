@@ -824,12 +824,15 @@ func decodeImage(image []byte, records uint64) []byte {
 }
 
 func decodeInstruction(decoded *bitWriter, instruction uint32) {
-	opcode := instruction & 0x7f
-	rd := (instruction >> 7) & 0x1f
-	funct3 := (instruction >> 12) & 0x7
-	rs1 := (instruction >> 15) & 0x1f
-	rs2 := (instruction >> 20) & 0x1f
-	imm12 := (instruction >> 20) & 0xfff
+	fields := extractFields(instruction)
+	opcode := fields.opcode
+	rd := fields.rd
+	funct3 := fields.funct3
+	rs1 := fields.rs1
+	rs2 := fields.rs2
+	imm12 := fields.imm12
+	funct7 := fields.funct7
+
 	instructionType := instructionTypeFromOpcode(opcode)
 	simm12 := (((instruction >> 31) & 1) << 11) |
 		(((instruction >> 25) & 0x3f) << 5) |
@@ -839,7 +842,7 @@ func decodeInstruction(decoded *bitWriter, instruction uint32) {
 		normalizedImm12 = imm12
 	}
 
-	decoded.writeBits(uint64(classifyInstruction(instruction)), 8)
+	decoded.writeBits(uint64(classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd)), 8)
 	imm, operandRS1, operandRS2, operandRD := unifiedOperands(
 		instructionType,
 		normalizedImm12,
@@ -863,6 +866,8 @@ type instructionFields struct {
 	opcode uint32
 	rd     uint32
 	funct3 uint32
+	rs1    uint32
+	rs2    uint32
 	imm12  uint32
 	funct7 uint32
 }
@@ -878,20 +883,14 @@ func extractFields(instruction uint32) instructionFields {
 		opcode: instruction & 0x7f,
 		rd:     (instruction >> 7) & 0x1f,
 		funct3: (instruction >> 12) & 0x7,
+		rs1:    (instruction >> 15) & 0x1f,
+		rs2:    (instruction >> 20) & 0x1f,
 		imm12:  (instruction >> 20) & 0xfff,
 		funct7: (instruction >> 25) & 0x7f,
 	}
 }
 
-func classifyInstruction(instruction uint32) uint32 {
-	fields := extractFields(instruction)
-	opcode := fields.opcode
-	rd := fields.rd
-	funct3 := fields.funct3
-	imm12 := fields.imm12
-	funct7 := fields.funct7
-	instructionType := instructionTypeFromOpcode(opcode)
-
+func classifyInstruction(instructionType, opcode, funct3, funct7, imm12, rd uint32) uint32 {
 	var op uint32
 	switch instructionType {
 	case miscMemType:
