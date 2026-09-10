@@ -137,6 +137,7 @@ overrides:
   zod: 4.4.3
 
 patchedDependencies:
+  '@openzeppelin/upgrades-core@1.44.2': 7d9f441fe0461895daec5f026e896d7b3d7149bf3c922d320404fffd46ef0c70
   cosmiconfig@5.2.1: e7860e009c9f9267122ef812e4a0286c7baf7370714d0b1a823cac77624a10db
   read-yaml-file@1.1.0: 488393f543748b1b0a4fbe3524f9536a55b385493bcf9c0c7c94a2e624ebf4f6
   sc-istanbul@0.4.6: dd6bd8bee8b14bb03bdba0ee52103b2ce89537d4889ecd61ded2f72c901adfc0
@@ -13893,7 +13894,7 @@ snapshots:
       '@openzeppelin/defender-base-client': 1.54.6(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)
       '@openzeppelin/defender-sdk-base-client': 1.15.2(encoding@0.1.13)
       '@openzeppelin/defender-sdk-deploy-client': 1.15.2(debug@4.4.3(supports-color@8.1.1))(encoding@0.1.13)
-      '@openzeppelin/upgrades-core': 1.44.2(supports-color@8.1.1)
+      '@openzeppelin/upgrades-core': 1.44.2(patch_hash=7d9f441fe0461895daec5f026e896d7b3d7149bf3c922d320404fffd46ef0c70)(supports-color@8.1.1)
       chalk: 4.1.2
       debug: 4.4.3(supports-color@8.1.1)
       ethereumjs-util: 7.1.5
@@ -13916,7 +13917,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@openzeppelin/upgrades-core@1.44.2(supports-color@8.1.1)':
+  '@openzeppelin/upgrades-core@1.44.2(patch_hash=7d9f441fe0461895daec5f026e896d7b3d7149bf3c922d320404fffd46ef0c70)(supports-color@8.1.1)':
     dependencies:
       '@nomicfoundation/slang': 0.18.3
       bignumber.js: 9.3.1

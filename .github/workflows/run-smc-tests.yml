@@ -74,6 +74,14 @@ jobs:
       - name: Pre-compile contracts to cache solc
         run: pnpm -F contracts run build
 
+      - name: Pre-coverage cleanup of stale OZ upgrade lock files
+        # Self-hosted runners persist /dev/shm across jobs; a previously aborted coverage
+        # run can leave a stale @openzeppelin/upgrades-core manifest lock that the new run
+        # cannot acquire, causing "Lock file is already being held" before a single test
+        # has run.  Removing the directory here is safe: the lock files are ephemeral
+        # build artefacts recreated on demand by @openzeppelin/upgrades-core.
+        run: rm -rf /dev/shm/openzeppelin-upgrades /tmp/openzeppelin-upgrades
+
       - name: Run smart contracts tests and generate coverage report
         # @openzeppelin/upgrades-core hardcodes a ~7s lock-acquisition retry budget around
         # its os.tmpdir()-based manifest lock (one lock file, shared by every
