@@ -153,3 +153,19 @@ test("awaitParentCheckpoint rejects when the parent disconnects before acknowled
     process.emit("disconnect");
     await assert.rejects(pending, /disconnected before acknowledging/);
   }));
+
+test("a later intent rejects after the checkpoint parent is lost mid-run", { concurrency: false }, async () => {
+  // One successful ack round-trip marks the process as checkpoint-parented;
+  // once the parent is gone, later intents must fail closed instead of
+  // no-op'ing and broadcasting uncheckpointed. Mutates module-level state,
+  // so it must not run concurrently with the other tests in this file.
+  await withMockedIpcParent(async (sent) => {
+    const intent = awaitParentDeploymentIntent("LinethRollupV8");
+    await new Promise((resolve) => setImmediate(resolve));
+    const request = sent[0]!.message as { type: string; id: string };
+    process.emit("message", { type: "lineth-deployment-intent-ack", id: request.id }, undefined);
+    await intent;
+  });
+
+  await assert.rejects(awaitParentDeploymentIntent("LinethRollupV9"), /checkpoint parent lost/);
+});

@@ -293,3 +293,29 @@ test("a durable bootstrap intent permits the record and resolves in-flight state
   assert.deepEqual(control.durableSnapshots[1]!.inFlightBootstrap, {});
   assert.ok(control.durableSnapshots[1]!.bootstrap["bootstrap.fund-relayer"]);
 });
+
+test("rejects a bootstrap child that exits 0 after recording only a subset of pending items", async () => {
+  // Mirrors runStepScript's record-count invariant: a clean exit with fewer
+  // records than pending items would otherwise leave the rest unmarked and
+  // silently eligible to run again on a rerun.
+  const control = controlledStore();
+  const value = checkpoint();
+  await assert.rejects(
+    runBootstrapScript({
+      scriptPath: path.join(__dirname, "fixtures/bootstrap-intent-record-child.cjs"),
+      environment: {
+        TEST_BOOTSTRAP_INTENT: JSON.stringify({ itemId: "fund-relayer", kind: "sign", chain: "l2", nonce: 7 }),
+        TEST_BOOTSTRAP_RECORD: JSON.stringify(BOOTSTRAP_RECORD),
+      },
+      checkpoint: value,
+      store: control.store,
+      sensitiveValues: [],
+      pendingItemKeys: ["bootstrap.fund-relayer", "bootstrap.second-item"],
+    }),
+    /bootstrap step completed 1 of 2 pending items/,
+  );
+  // The one recorded item stays durable; the unrecorded one stays pending.
+  assert.equal(control.saveCount(), 2);
+  assert.ok(value.bootstrap["bootstrap.fund-relayer"]);
+  assert.equal(value.bootstrap["bootstrap.second-item"], undefined);
+});

@@ -291,6 +291,8 @@ interface RunBootstrapScriptInput {
 // an in-flight record first (fail-closed on rerun); each completed item then
 // arrives via `lineth-bootstrap-record`, which atomically replaces the intent.
 export async function runBootstrapScript(input: RunBootstrapScriptInput): Promise<void> {
+  const recordedKeys = new Set<string>();
+
   await runChildScript({
     scriptPath: input.scriptPath,
     environment: input.environment,
@@ -345,6 +347,7 @@ export async function runBootstrapScript(input: RunBootstrapScriptInput): Promis
         };
         delete input.checkpoint.inFlightBootstrap[key];
         await input.store.save(input.checkpoint);
+        recordedKeys.add(key);
         child.send({ type: "lineth-bootstrap-record-ack", id });
       } catch (error) {
         child.send({
@@ -356,4 +359,11 @@ export async function runBootstrapScript(input: RunBootstrapScriptInput): Promis
       }
     },
   });
+
+  // Mirror runStepScript's post-run invariant: a child that exits 0 after
+  // recording only a subset of the pending items must not be treated as
+  // successful, or the unmarked items would silently run again on a rerun.
+  if (recordedKeys.size !== input.pendingItemKeys.length) {
+    throw new Error(`bootstrap step completed ${recordedKeys.size} of ${input.pendingItemKeys.length} pending items`);
+  }
 }

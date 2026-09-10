@@ -30,6 +30,10 @@ const DEPLOYMENT_RECORD_PATTERN =
   /^contract=(\S+) deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\d+) chainId=(\d+) txHash=(0x[0-9a-fA-F]{64})$/;
 let recordSequence = 0;
 let intentSequence = 0;
+// Set once any ack round-trip completes with a checkpoint parent. Lets
+// sendAndAwaitAck distinguish "never had an IPC parent" (standalone run:
+// proceed) from "had one and lost it" (must not broadcast uncheckpointed).
+let hasSeenAck = false;
 
 export function formatDeploymentRecord(record: DeploymentRecordInput): string {
   return (
@@ -58,12 +62,17 @@ function isMatchingAckEnvelope(message: unknown, id: string, ackType: string): m
 }
 
 /**
- * Sends an IPC message to the connected parent process (a no-op when there is
- * none) and waits for a matching acknowledgement of `ackType`, rejecting on
- * an error payload or a parent disconnect. Shared by
+ * Sends an IPC message to the connected parent process (a no-op when there
+ * never was one) and waits for a matching acknowledgement of `ackType`,
+ * rejecting on an error payload or a parent disconnect. Shared by
  * `awaitParentDeploymentIntent`/`awaitParentCheckpoint` (which differ only in
  * the message/ack type names, payload shape, and id generation) and by
  * `bootstrap.ts`'s `awaitBootstrapRecord`.
+ *
+ * The no-op guard distinguishes two cases via `hasSeenAck`: a process that
+ * never had an IPC parent (standalone Hardhat script) proceeds unchecked,
+ * while a checkpoint child whose parent was lost mid-run rejects instead of
+ * broadcasting further transactions without durable checkpoint records.
  */
 export async function sendAndAwaitAck(
   buildMessage: (id: string) => { type: string; id: string } & Record<string, unknown>,
@@ -71,7 +80,12 @@ export async function sendAndAwaitAck(
   generateId: () => string,
   disconnectErrorMessage: string,
 ): Promise<void> {
-  if (!process.send || !process.connected) return;
+  if (!process.send || !process.connected) {
+    if (hasSeenAck) {
+      throw new Error("checkpoint parent lost before sending; refusing to continue without durable checkpointing");
+    }
+    return;
+  }
 
   const id = generateId();
   const message = buildMessage(id);
@@ -84,7 +98,10 @@ export async function sendAndAwaitAck(
       if (!isMatchingAckEnvelope(received, id, ackType)) return;
       cleanup();
       if (received.error) reject(new Error(received.error));
-      else resolve();
+      else {
+        hasSeenAck = true;
+        resolve();
+      }
     };
     const onDisconnect = () => {
       cleanup();
