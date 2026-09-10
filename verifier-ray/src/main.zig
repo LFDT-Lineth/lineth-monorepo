@@ -172,7 +172,6 @@ fn loadNativeInput() *const verifier.VerifyInput {
     return @ptrCast(@alignCast(buf_addr));
 }
 
-
 fn loadR5Input() *const verifier.VerifyInput {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 verifier path currently supports only R5 zkVM target");

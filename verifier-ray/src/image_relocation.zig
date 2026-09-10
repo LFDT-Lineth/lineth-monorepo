@@ -57,14 +57,14 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
         for (0..n_ito) |j| {
             const ito_off = iq_inner_ptr + j * 32;
             _ = patchPtr(img, img_len, ito_off + 0, encoded_base, delta); // siblings.ptr
-            // leaves: []*?RowPair
+            // leaves: []?RowPair — inline 72-byte values, not pointers, so the
+            // elements are walked at that stride with no dereference. Each is
+            // [2]RowOpening then a presence flag at +64; RowOpening is
+            // {base: []Scalar @0, ext: []Scalar @16}.
             const leaves_ptr = patchPtr(img, img_len, ito_off + 16, encoded_base, delta);
             const n_leaves = sliceLen(img, ito_off + 16);
-            // Each element is a pointer-to-?RowPair (72 bytes: [2]RowOpening + flag byte).
-            // RowOpening = {base: []Scalar @0, ext: []Scalar @16} = 32 bytes.
             for (0..n_leaves) |k| {
-                const leaf_off = patchPtr(img, img_len, leaves_ptr + k * 8, encoded_base, delta);
-                if (leaf_off == 0) continue;
+                const leaf_off = leaves_ptr + k * 72;
                 if (leaf_off + 65 > img_len) continue;
                 if (img[leaf_off + 64] == 0) continue; // absent ?RowPair
                 // RowPair[0]: base.ptr @0, ext.ptr @16
