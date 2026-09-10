@@ -1,0 +1,58 @@
+name: 'Setup Go with shared cache'
+description: 'Keep setup-go caching on main and restore the same caches without saving on other refs.'
+inputs:
+  go-version:
+    description: 'Go version to install'
+    required: true
+  architecture:
+    description: 'Optional target architecture for setup-go'
+    default: ''
+  cache:
+    description: 'Set false to disable both cache restore and save.'
+    default: 'true'
+  cache-save:
+    description: 'Allow saving on main; false keeps custom-ref builds restore-only.'
+    default: 'true'
+  cache-dependency-path:
+    description: 'Files hashed for the dependency cache, matching setup-go.'
+    default: 'go.mod'
+outputs:
+  go-version:
+    description: 'Installed Go version'
+    value: ${{ steps.go.outputs.go-version }}
+  cache-hit:
+    description: 'Whether the exact cache key was restored'
+    value: ${{ steps.go.outputs.cache-hit || steps.restore.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      id: go
+      with:
+        go-version: ${{ inputs.go-version }}
+        architecture: ${{ inputs.architecture }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        cache: ${{ inputs.cache == 'true' && inputs.cache-save == 'true' && github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
+    - name: Locate the setup-go cache
+      id: cache
+      if: ${{ inputs.cache == 'true' && (inputs.cache-save != 'true' || github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request')) }}
+      shell: bash
+      run: |
+        # Match setup-go v6: runtime architecture (not the target Go architecture),
+        # ImageOS on Linux, and GOMODCACHE then GOCACHE in that order.
+        arch=$(printf '%s' "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')
+        image=""
+        if [ "$RUNNER_OS" = Linux ]; then image="${ImageOS:-undefined}-"; fi
+        {
+          echo "prefix=setup-go-${RUNNER_OS}-${arch}-${image}go-"
+          echo 'paths<<CACHE_PATHS'
+          go env GOMODCACHE
+          go env GOCACHE
+          echo CACHE_PATHS
+        } >> "$GITHUB_OUTPUT"
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      id: restore
+      if: ${{ steps.cache.outcome == 'success' && hashFiles(inputs.cache-dependency-path) != '' }}
+      with:
+        path: ${{ steps.cache.outputs.paths }}
+        key: ${{ steps.cache.outputs.prefix }}${{ steps.go.outputs.go-version }}-${{ hashFiles(inputs.cache-dependency-path) }}

@@ -37,10 +37,8 @@ runs:
     # monorepo-ref can only be set by someone dispatching the workflow, which already requires write
     # access. The mitigation that matters is kept structural: the jobs that build and run the measured
     # tree never mint the GitHub App token. Only the report job holds it, and it checks out the tooling
-    # ref alone. Do not add a measured checkout to that job. The measured jobs' Go module/build cache
-    # never saves (setup-go has no restore-only mode, so it is off entirely), and the Zig cache is
-    # restored through actions/cache/restore, which has no save phase: a dispatched run reads caches
-    # but has no step that can write into the refs/heads/main-scoped cache namespace.
+    # ref alone. Do not add a measured checkout to that job. Keep cache-save disabled for custom
+    # source refs so their Go module/build caches can be restored but cannot be saved to main.
     - name: Checkout the monorepo commit under measurement
       if: ${{ inputs.monorepo-ref != '' }}
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -64,11 +62,11 @@ runs:
     # Only Go is needed here: building zkc and, in the report job, running the renderer. The guest ELF
     # needs Zig and the riscv toolchain, which is why only `prepare` uses setup-arithmetization-riscv.
     - name: Install Go
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      uses: ./.github/actions/setup-go
       with:
         go-version: '1.25.7'
         cache-dependency-path: "**/*.sum"
-        cache: ${{ inputs.cache-save }}
+        cache-save: ${{ inputs.cache-save }}
 
     - name: Prepare the pinned zkc tool
       shell: bash

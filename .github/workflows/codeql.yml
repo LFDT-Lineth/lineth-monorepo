@@ -104,7 +104,8 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
           config-file: .github/codeql/codeql-config.yml
-          dependency-caching: false
+          # Only main populates shared dependencies; PRs restore without saving duplicates.
+          dependency-caching: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && 'full' || 'restore' }}
 
       - name: Setup Java
         if: matrix.language == 'java-kotlin'

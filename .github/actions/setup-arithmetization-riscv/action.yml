@@ -26,12 +26,11 @@ runs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
-          # setup-go has no restore-only mode, so read-only here means the Go cache is off entirely.
-          cache: ${{ inputs.cache-save }}
+          cache-save: ${{ inputs.cache-save }}
 
       - name: Install Zig
         uses: ./.github/actions/setup-zig
@@ -62,7 +61,7 @@ runs:
       # (l2-execution-wrap, l2-execution-runner) link them via the default `zig build` step this job
       # also runs, even though the benchmark itself only consumes the freestanding riscv64 ELF.
       - name: Cache blst + mcl builds
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: ./.github/actions/cache
         with:
           path: |
             /usr/local/lib/libblst.a
@@ -70,6 +69,7 @@ runs:
             /usr/local/include/blst.h
             /usr/local/include/blst_aux.h
             /usr/local/include/mcl
+          cache-save: ${{ inputs.cache-save }}
           key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
 
       - name: Install native crypto deps (blst, mcl)
