@@ -31,3 +31,28 @@ test "extension lift stores base element in the first limb" {
     try std.testing.expect(lifted.B1.isZero());
     try std.testing.expect(lifted.B2.isZero());
 }
+
+test "koalabear element halve matches multiplying by the modular inverse of two" {
+    const two_inv = field.Element.init(2).inverse();
+    const even = field.Element.init(4);
+    const odd = field.Element.init(5);
+    try std.testing.expect(even.halve().eql(even.mul(two_inv)));
+    try std.testing.expect(odd.halve().eql(odd.mul(two_inv)));
+}
+
+test "koalabear element halve is the inverse of double" {
+    const values = [_]field.Element{
+        field.Element.zero(),
+        field.Element.one(),
+        field.Element.init(field.modulus - 1),
+        field.Element.init(field.modulus - 2),
+    };
+    for (values) |v| {
+        try std.testing.expect(v.halve().double().eql(v));
+    }
+}
+
+test "extension halve matches dividing by the base field's two" {
+    const e = ext.Ext.fromUints(.{ 1, 2, 3, 4, 5, 6 });
+    try std.testing.expect(e.halve().eql(e.divByBase(field.Element.init(2))));
+}
