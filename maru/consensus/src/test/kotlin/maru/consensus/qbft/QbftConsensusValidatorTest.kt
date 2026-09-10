@@ -64,8 +64,8 @@ class QbftConsensusValidatorTest {
       }
     }
     val queue = BftEventQueue(1000)
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
-    val validator = QbftConsensusValidator(controller, processor, bftExecutors, eventQueueExecutor, 10.milliseconds)
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller), eventQueueExecutor)
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors, 10.milliseconds)
     try {
       validator.start()
       queue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, 0)))
@@ -115,8 +115,8 @@ class QbftConsensusValidatorTest {
       }
     }
     val queue = BftEventQueue(1000)
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
-    val validator = QbftConsensusValidator(controller, processor, bftExecutors, eventQueueExecutor, 10.milliseconds)
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller), eventQueueExecutor)
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors, 10.milliseconds)
     try {
       validator.start()
       queue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, 0)))
@@ -145,8 +145,8 @@ class QbftConsensusValidatorTest {
   @Test
   fun `pause completes when the validator was never started`() {
     val controller = FakeQbftEventHandler()
-    val processor = QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(controller))
-    val validator = QbftConsensusValidator(controller, processor, bftExecutors, eventQueueExecutor, 10.milliseconds)
+    val processor = QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(controller), eventQueueExecutor)
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors, 10.milliseconds)
 
     validator.pause()
 
@@ -162,11 +162,13 @@ class QbftConsensusValidatorTest {
       }
     }
     val controller = FakeQbftEventHandler()
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
-    val failedValidator = QbftConsensusValidator(controller, processor, bftExecutors, { it.run() })
+    val failedEventQueueExecutor = Executors.newSingleThreadExecutor()
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller), failedEventQueueExecutor)
+    val failedValidator = QbftConsensusValidator(controller, processor, bftExecutors)
     val nextController = FakeQbftEventHandler()
-    val nextProcessor = QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(nextController))
-    val nextValidator = QbftConsensusValidator(nextController, nextProcessor, bftExecutors, eventQueueExecutor)
+    val nextProcessor =
+      QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(nextController), eventQueueExecutor)
+    val nextValidator = QbftConsensusValidator(nextController, nextProcessor, bftExecutors)
     val validators = DataGenerators.randomValidators()
     val oldFork = ForkSpec(0UL, 1u, QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, ElFork.Osaka)))
     val nextFork = ForkSpec(10UL, 1u, QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, ElFork.Amsterdam)))
@@ -193,6 +195,7 @@ class QbftConsensusValidatorTest {
       assertThat(controller.stops).isEqualTo(1)
     } finally {
       starter.close()
+      failedEventQueueExecutor.shutdownNow()
     }
   }
 
@@ -205,8 +208,9 @@ class QbftConsensusValidatorTest {
       }
     }
     val controller = FakeQbftEventHandler()
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller))
-    val validator = QbftConsensusValidator(controller, processor, bftExecutors, { it.run() })
+    val failedEventQueueExecutor = Executors.newSingleThreadExecutor()
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(controller), failedEventQueueExecutor)
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors)
     validator.start()
 
     assertThatThrownBy { validator.pause() }
@@ -219,5 +223,6 @@ class QbftConsensusValidatorTest {
     assertThat(controller.stops).isEqualTo(1)
     assertThatThrownBy { bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS) }
       .isInstanceOf(IllegalStateException::class.java)
+    failedEventQueueExecutor.shutdownNow()
   }
 }

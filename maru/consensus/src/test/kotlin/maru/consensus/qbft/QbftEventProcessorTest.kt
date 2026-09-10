@@ -17,6 +17,7 @@ import org.hyperledger.besu.consensus.common.bft.events.RoundExpiry
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 
 class QbftEventProcessorTest {
@@ -29,16 +30,15 @@ class QbftEventProcessorTest {
       eventStarted.countDown()
       check(releaseEvent.await(30, TimeUnit.SECONDS))
     }
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(handler))
     val executor = Executors.newSingleThreadExecutor()
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(handler), executor)
     try {
       repeat(2) { run ->
         eventStarted = CountDownLatch(1)
         releaseEvent = CountDownLatch(1)
         val previousCompletion = processor.stop()
-        val task = processor.start()
+        processor.start()
         queue.add(BlockTimerExpiry(ConsensusRoundIdentifier(1, run)))
-        val execution = executor.submit(task)
         try {
           assertThat(eventStarted.await(30, TimeUnit.SECONDS)).isTrue()
           val completion = processor.stop()
@@ -48,7 +48,7 @@ class QbftEventProcessorTest {
         } finally {
           releaseEvent.countDown()
         }
-        execution.get(30, TimeUnit.SECONDS)
+        executor.submit {}.get(30, TimeUnit.SECONDS)
         assertThat(processor.stop()).isCompletedWithValue(Unit)
         queue.add(RoundExpiry(ConsensusRoundIdentifier(1, run)))
         assertThat(queue.isEmpty).isTrue()
@@ -68,16 +68,37 @@ class QbftEventProcessorTest {
       override fun start() {
         throw processingFailure
       }
+
       override fun stop() {
         throw cleanupFailure
       }
     }
-    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(FakeQbftEventHandler()))
+    val executor = Executors.newSingleThreadExecutor()
+    val processor = QbftEventProcessor(queue, QbftEventMultiplexer(FakeQbftEventHandler()), executor)
+    try {
+      processor.start()
 
-    processor.start().run()
+      assertThat(processor.stop()).isCompletedExceptionally()
+      assertThatThrownBy { processor.stop().get() }.hasCause(processingFailure)
+      assertThat(processingFailure.suppressed).containsExactly(cleanupFailure)
+    } finally {
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `executor rejection completes stop exceptionally`() {
+    val executor = Executors.newSingleThreadExecutor().also { it.shutdown() }
+    val processor =
+      QbftEventProcessor(
+        BftEventQueue(1000),
+        QbftEventMultiplexer(FakeQbftEventHandler()),
+        executor,
+      )
+
+    assertThatThrownBy { processor.start() }.isInstanceOf(RejectedExecutionException::class.java)
 
     assertThat(processor.stop()).isCompletedExceptionally()
-    assertThatThrownBy { processor.stop().get() }.hasCause(processingFailure)
-    assertThat(processingFailure.suppressed).containsExactly(cleanupFailure)
+    assertThatThrownBy { processor.stop().get() }.hasCauseInstanceOf(RejectedExecutionException::class.java)
   }
 }
