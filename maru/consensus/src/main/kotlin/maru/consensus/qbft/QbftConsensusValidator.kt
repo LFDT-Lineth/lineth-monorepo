@@ -39,10 +39,21 @@ class QbftConsensusValidator(
       }
       pause()
     }
-    bftExecutors.start()
-    qbftController.start()
-    eventProcessor.start()
-    isRunning = true
+    try {
+      bftExecutors.start()
+      qbftController.start()
+      eventProcessor.start()
+      isRunning = true
+    } catch (failure: Throwable) {
+      cleanUpAfterFailedStart()
+      throw failure
+    }
+  }
+
+  private fun cleanUpAfterFailedStart() {
+    runCatching { bftExecutors.stop() }
+    runCatching { qbftController.stop() }
+    runCatching { eventProcessor.stop() }
   }
 
   @Synchronized

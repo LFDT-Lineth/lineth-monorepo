@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration.Companion.milliseconds
@@ -151,6 +152,23 @@ class QbftConsensusValidatorTest {
     validator.pause()
 
     assertThat(processor.stop()).isCompletedWithValue(Unit)
+  }
+
+  @Test
+  fun `start cleans up when the event processor rejects execution`() {
+    val controller = FakeQbftEventHandler()
+    val rejectedExecutor = Executors.newSingleThreadExecutor().also { it.shutdown() }
+    val processor = QbftEventProcessor(BftEventQueue(1000), QbftEventMultiplexer(controller), rejectedExecutor)
+    val validator = QbftConsensusValidator(controller, processor, bftExecutors)
+
+    assertThatThrownBy { validator.start() }.isInstanceOf(RejectedExecutionException::class.java)
+
+    assertThat(controller.starts).isEqualTo(1)
+    assertThat(controller.stops).isEqualTo(1)
+    assertThatThrownBy { bftExecutors.scheduleTask({}, 0, TimeUnit.MILLISECONDS) }
+      .isInstanceOf(IllegalStateException::class.java)
+    validator.close()
+    assertThat(controller.stops).isEqualTo(1)
   }
 
   @Test

@@ -78,8 +78,9 @@ class QbftEventProcessorTest {
     try {
       processor.start()
 
-      assertThat(processor.stop()).isCompletedExceptionally()
-      assertThatThrownBy { processor.stop().get() }.hasCause(processingFailure)
+      val completion = processor.stop()
+      assertThatThrownBy { completion.get(30, TimeUnit.SECONDS) }.hasCause(processingFailure)
+      assertThat(completion).isCompletedExceptionally()
       assertThat(processingFailure.suppressed).containsExactly(cleanupFailure)
     } finally {
       executor.shutdownNow()
