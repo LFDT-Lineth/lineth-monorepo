@@ -1,5 +1,6 @@
 package lineth.coordinator.clients.prover
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -72,8 +73,10 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
     val path = "/v1/jobs/dequeue"
     val body = DequeueJobRequest(
-      startBlockGte = startBlockNumberGte,
-      proofType = proofType,
+      criteria = JobCriteriaDto(
+        startBlockGte = startBlockNumberGte,
+        proofType = proofType,
+      ),
     )
     val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
     log.debug("Dequeuing proof requests. POST {}", path)
@@ -152,7 +155,14 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   )
 
   /** Body of `POST /v1/jobs/dequeue` */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private data class DequeueJobRequest(
+    @get:JsonProperty("criteria")
+    val criteria: JobCriteriaDto? = null,
+  )
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private data class JobCriteriaDto(
     @get:JsonProperty("start_block_gte")
     val startBlockGte: Long? = null,
     @get:JsonProperty("proof_type")
