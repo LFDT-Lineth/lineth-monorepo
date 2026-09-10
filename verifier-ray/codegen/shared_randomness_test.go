@@ -24,8 +24,6 @@ func newSharedRandomnessMessageBusHandle(t *testing.T) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("mb-sr-codegen")
 	r0 := sys.NewRound()
-	sys.NewRound() // coin round for alpha/beta/gamma-hook, following the column round
-	sys.NewRound() // result round, following the coin round
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
 	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
@@ -40,6 +38,7 @@ func newSharedRandomnessMessageBusHandle(t *testing.T) *wiop.System {
 	pcscompiler.Compile(sys)
 	return sys
 }
+
 
 func TestBuildSharedRandomnessSystemExtractsContribution(t *testing.T) {
 	sys := newSharedRandomnessMessageBusHandle(t)
@@ -57,17 +56,15 @@ func TestBuildSharedRandomnessSystemExtractsContribution(t *testing.T) {
 		t.Fatalf("expected %d contribution refs, got %d", messagebus.NumSharedRandomnessContribution, len(sr.ContributionRefs))
 	}
 
-	// gamma lives on round 0, so the coin round (which carries the contribution
-	// PI cells and the checker) must be round 1 — the message-bus column round
-	// (round 0, which committed colA/colB) is the sole round preceding it.
-	if len(sr.Rounds) != 1 {
-		t.Fatalf("expected exactly one preceding round, got %d: %+v", len(sr.Rounds), sr.Rounds)
+	// The coin round is round 1 (alpha/beta are declared there by
+	// registerSharedRandomness). Verify the codegen faithfully mirrors the
+	// actual wiop.Round state rather than hard-coding a value.
+	if sr.CommitmentRound.RoundIndex != 1 {
+		t.Fatalf("expected CommitmentRound.RoundIndex = 1, got %d", sr.CommitmentRound.RoundIndex)
 	}
-	if sr.Rounds[0].RoundIndex != 0 {
-		t.Fatalf("expected the sole preceding round to be round 0, got %d", sr.Rounds[0].RoundIndex)
-	}
-	if !sr.Rounds[0].HasCommitment {
-		t.Fatalf("round 0 committed colA/colB via pcs.Compile, so HasCommitment must be true")
+	if got, want := sr.CommitmentRound.HasCommitment, sys.Rounds[sr.CommitmentRound.RoundIndex].HasCommitment; got != want {
+		t.Fatalf("CommitmentRound.HasCommitment = %v, want %v (wiop.Round.HasCommitment for round %d)",
+			got, want, sr.CommitmentRound.RoundIndex)
 	}
 
 	// Every contribution ref must land strictly before the last wiop round
@@ -105,7 +102,7 @@ func TestBuildSharedRandomnessSystemAbsentWithoutOption(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSharedRandomnessSystem() error = %v", err)
 	}
-	if len(sr.Rounds) != 0 || len(sr.ContributionRefs) != 0 {
+	if sr.CommitmentRound != (CommitmentRoundCtx{}) || len(sr.ContributionRefs) != 0 {
 		t.Fatalf("expected an empty SharedRandomnessSystem without the option, got %+v", sr)
 	}
 }
@@ -124,8 +121,8 @@ func TestWriteSharedRandomnessSystemZigRendersContribution(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"const shared_randomness = @import",
-		"system_0_shared_randomness_rounds = [_]shared_randomness.Round{",
-		".{ .has_commitment = true, .round = 0 }",
+		// coin round is round 1, carries no columns so has_commitment = false
+		".commitment_round = .{ .round = 1, .has_commitment = false }",
 		"system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{",
 		"system_0_shared_randomness = shared_randomness.System{",
 	} {
@@ -141,7 +138,13 @@ func TestWriteSharedRandomnessSystemZigRendersEmptySystem(t *testing.T) {
 		t.Fatalf("WriteSharedRandomnessSystemZig() error = %v", err)
 	}
 	got := out.String()
-	if !strings.Contains(got, "system_0_shared_randomness_rounds = [_]shared_randomness.Round{\n};") {
-		t.Fatalf("expected an empty rounds array literal:\n%s", got)
+	if !strings.Contains(got, "system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{\n};") {
+		t.Fatalf("expected an empty contribution-refs array literal:\n%s", got)
+	}
+	// An absent system must not name a commitment round to hash: the zero
+	// Round leaves has_commitment false, and verify() returns early anyway
+	// because contribution_refs is empty.
+	if !strings.Contains(got, ".commitment_round = .{ .round = 0, .has_commitment = false }") {
+		t.Fatalf("expected a zero commitment round:\n%s", got)
 	}
 }

@@ -18,8 +18,6 @@ func newSinglePermutation(t *testing.T) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("gp-codegen")
 	r0 := sys.NewRound()
-	sys.NewRound() // coin round for beta, following the column round
-	sys.NewRound() // result round, following the coin round
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
 	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
@@ -42,8 +40,6 @@ func newSingleMessageBusHandle(t *testing.T, skipInShard bool) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("mb-codegen")
 	r0 := sys.NewRound()
-	sys.NewRound() // coin round for alpha/beta, following the column round
-	sys.NewRound() // result round, following the coin round
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
 	colA := modA.NewColumn(sys.Context.Childf("A"), r0)

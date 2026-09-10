@@ -1,4 +1,5 @@
 const protocol = @import("../protocol/root.zig");
+const field = @import("../field/koalabear.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
 const multiset_hashing = @import("../crypto/multiset_hashing.zig");
 
@@ -17,58 +18,56 @@ pub const ScalarRef = struct {
     index: usize,
 };
 
-/// One round contributing to the shared-randomness sponge preimage. Mirrors
-/// prover-ray's `for i := range rt.CurrentRound().ID { if
-/// !rt.System.Rounds[i].HasCommitment { continue } ... }` loop: a round with
-/// has_commitment == false carries no Octuplet to hash and is skipped
-/// entirely, in round order.
+/// The round whose PCS commitment is the hash preimage. Mirrors prover-ray's
+/// `com := rt.Commitments[rt.CurrentRound().ID]`: the coin round's own
+/// commitment, and nothing else. `has_commitment == false` means that round
+/// committed no column, in which case the Go map lookup yields the zero
+/// Octuplet and the prover hashes that — so the verifier must too.
 pub const Round = struct {
-    round: usize,
-    has_commitment: bool,
+    round: usize = 0,
+    has_commitment: bool = false,
 };
 
 /// System is the compiled metadata for a single
-/// messagebus.SharedRandomnessContributionChecker: the ordered rounds whose
-/// commitments feed the sponge, and the transcript cells carrying the claimed
-/// multiset-hash contribution, one per limb (`multiset_hashing.size` limbs).
+/// messagebus.SharedRandomnessContributionChecker: the round whose commitment
+/// is hashed, and the transcript cells carrying the claimed multiset-hash
+/// contribution, one per limb (`multiset_hashing.size` limbs).
 pub const System = struct {
-    rounds: []const Round = &.{},
+    commitment_round: Round = .{},
     contribution_refs: []const ScalarRef = &.{},
 };
 
 /// Verifies that the shared-randomness contribution public-input cells equal
-/// `multisethashing.Hash` of the Poseidon2 Merkle-Damgård sponge digest over
-/// every committed round preceding the message-bus coin round — the
-/// verifier-side counterpart to prover-ray's `sharedRandomnessContribution` /
-/// `SharedRandomnessContributionChecker.Check`.
+/// `multisethashing.Hash` of the message-bus coin round's own PCS commitment —
+/// the verifier-side counterpart to prover-ray's
+/// `sharedRandomnessContribution` / `SharedRandomnessContributionChecker.Check`.
 ///
-/// Both the round commitments and the claimed-contribution cells are read
-/// from `ctx` (the adversary's transcript), never from a baked-in
-/// honest-prover value: `ctx.rounds[r].commitment` is the transcript-bound
-/// Merkle root for round r (or null if that round never committed), and
-/// `system.contribution_refs` name the (round, index) cells the claimed
-/// digest limbs occupy — already merged from the public-input statement into
-/// `ctx.rounds[*].cells` by `verifier.verify`'s call to `bindRoundMessages`
-/// before any sub-verifier runs.
+/// Both the commitment and the claimed-contribution cells are read from `ctx`
+/// (the adversary's transcript), never from a baked-in honest-prover value:
+/// `ctx.rounds[r].commitment` is the transcript-bound Merkle root for round r
+/// (or null if that round never committed), and `system.contribution_refs` name
+/// the (round, index) cells the claimed digest limbs occupy — already merged
+/// from the public-input statement into `ctx.rounds[*].cells` by
+/// `verifier.verify`'s call to `bindRoundMessages` before any sub-verifier runs.
 ///
-/// A `System{}` zero value (no rounds, no contribution_refs) verifies
-/// trivially: a protocol compiled without
-/// messagebus.CompileOptions.SharedRandomness registers no checker and has
-/// nothing for this sub-verifier to enforce.
+/// A `System{}` zero value (no contribution_refs) verifies trivially: a
+/// protocol compiled without messagebus.CompileOptions.SharedRandomness
+/// registers no checker and has nothing for this sub-verifier to enforce.
 pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
     if (system.contribution_refs.len != multiset_hashing.size)
         @compileError("shared_randomness: contribution_refs must match multiset_hashing.size");
 
-    var hasher = poseidon2.MDHasher.init();
-    inline for (system.rounds) |round| {
-        if (!round.has_commitment) continue;
-        if (round.round >= ctx.rounds.len) return error.MissingRoundCommitment;
-        const commitment = ctx.rounds[round.round].commitment orelse return error.MissingRoundCommitment;
-        hasher.writeElements(&commitment);
+    // A round that committed no column has no Octuplet to hash; prover-ray's
+    // `rt.Commitments[...]` map lookup yields the zero value there, so hash
+    // zeroes rather than erroring, or the two sides disagree.
+    var commitment: poseidon2.Digest = @splat(field.Element.zero());
+    if (system.commitment_round.has_commitment) {
+        if (system.commitment_round.round >= ctx.rounds.len) return error.MissingRoundCommitment;
+        commitment = ctx.rounds[system.commitment_round.round].commitment orelse
+            return error.MissingRoundCommitment;
     }
-    const digest = hasher.sumDigest();
-    const contribution = multiset_hashing.hash(digest);
+    const contribution = multiset_hashing.hash(commitment);
 
     inline for (system.contribution_refs, 0..) |ref, i| {
         // The contribution limbs are base-field by protocol contract:
