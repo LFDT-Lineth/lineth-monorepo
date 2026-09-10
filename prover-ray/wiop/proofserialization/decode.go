@@ -142,6 +142,19 @@ func (d *decoder) digest(off int) Digest {
 	return g
 }
 
+func (d *decoder) optionalDigest(off int, what string) (*Digest, error) {
+	switch flag := d.buf[off+OffOptDigestFlag]; flag {
+	case TagOptCommitmentNull:
+		return nil, nil
+	case TagOptCommitmentPresent:
+		digest := d.digest(off + OffOptDigestPayload)
+		return &digest, nil
+	default:
+		return nil, fmt.Errorf("proofserialization: %s: presence flag %d is neither null (%d) nor present (%d)",
+			what, flag, TagOptCommitmentNull, TagOptCommitmentPresent)
+	}
+}
+
 func (d *decoder) elements(off int, what string) ([]Element, error) {
 	p, n, err := d.slice(off, SizeElement, SizeElement, what)
 	if err != nil || n == 0 {
@@ -216,16 +229,8 @@ func (d *decoder) roundMessage(off int) (RoundMessage, error) {
 	var r RoundMessage
 	var err error
 
-	commitment := off + OffRoundMessageCommitment
-	switch flag := d.buf[commitment+OffOptCommitmentFlag]; flag {
-	case TagOptCommitmentNull:
-		r.Commitment = nil
-	case TagOptCommitmentPresent:
-		digest := d.digest(commitment + OffOptCommitmentPayload)
-		r.Commitment = &digest
-	default:
-		return r, fmt.Errorf("proofserialization: RoundMessage.commitment: presence flag %d "+
-			"is neither null (%d) nor present (%d)", flag, TagOptCommitmentNull, TagOptCommitmentPresent)
+	if r.Commitment, err = d.optionalDigest(off+OffRoundMessageCommitment, "RoundMessage.commitment"); err != nil {
+		return r, err
 	}
 
 	cellsOff, n, err := d.slice(off+OffRoundMessageCells, SizeScalar, SizeElement, "RoundMessage.cells")
@@ -259,6 +264,19 @@ func (d *decoder) scalar(off int) (Scalar, error) {
 func (d *decoder) openingProof(off int) (OpeningProof, error) {
 	var p OpeningProof
 	var err error
+
+	capsOff, n, err := d.slice(off+OffOpeningProofInputCaps, SizeInputCap, 8, "OpeningProof.input_caps")
+	if err != nil {
+		return p, err
+	}
+	if n > 0 {
+		p.InputCaps = make([]InputCap, n)
+		for i := range p.InputCaps {
+			if p.InputCaps[i], err = d.inputCap(capsOff + i*SizeInputCap); err != nil {
+				return p, err
+			}
+		}
+	}
 
 	queriesOff, n, err := d.slice(off+OffOpeningProofInputQueries, SizeSlice, 8, "OpeningProof.input_queries")
 	if err != nil {
@@ -294,6 +312,18 @@ func (d *decoder) friProof(off int) (FriProof, error) {
 	if p.RoundRoots, err = d.digests(off+OffFriProofRoundRoots, "fri.Proof.round_roots"); err != nil {
 		return p, err
 	}
+	capsOff, n, err := d.slice(off+OffFriProofRoundCaps, SizeMerkleCap, 8, "fri.Proof.round_caps")
+	if err != nil {
+		return p, err
+	}
+	if n > 0 {
+		p.RoundCaps = make([]MerkleCap, n)
+		for i := range p.RoundCaps {
+			if p.RoundCaps[i], err = d.merkleCap(capsOff + i*SizeMerkleCap); err != nil {
+				return p, err
+			}
+		}
+	}
 	if p.FinalPoly, err = d.exts(off+OffFriProofFinalPoly, "fri.Proof.final_poly"); err != nil {
 		return p, err
 	}
@@ -321,6 +351,67 @@ func (d *decoder) friProof(off int) (FriProof, error) {
 		}
 	}
 	return p, nil
+}
+
+func (d *decoder) merkleCap(off int) (MerkleCap, error) {
+	var treeCap MerkleCap
+	var err error
+	if treeCap.Nodes, err = d.digests(off+OffMerkleCapNodes, "merkle.MerkleCap.nodes"); err != nil {
+		return treeCap, err
+	}
+	auxOff, n, err := d.slice(off+OffMerkleCapAux, SizeOptDigest, 4, "merkle.MerkleCap.aux")
+	if err != nil {
+		return treeCap, err
+	}
+	if n > 0 {
+		treeCap.Aux = make([]*Digest, n)
+		for i := range treeCap.Aux {
+			if treeCap.Aux[i], err = d.optionalDigest(auxOff+i*SizeOptDigest, "merkle.MerkleCap.aux[i]"); err != nil {
+				return treeCap, err
+			}
+		}
+	}
+	return treeCap, nil
+}
+
+func (d *decoder) inputCap(off int) (InputCap, error) {
+	var treeCap InputCap
+	var err error
+	if treeCap.Nodes, err = d.digests(off+OffInputCapNodes, "pcs.InputCap.nodes"); err != nil {
+		return treeCap, err
+	}
+	tablesOff, n, err := d.slice(off+OffInputCapTables, SizeInputCapTable, 8, "pcs.InputCap.tables")
+	if err != nil {
+		return treeCap, err
+	}
+
+	if n > 0 {
+		treeCap.Tables = make([]InputCapTable, n)
+		for i := range treeCap.Tables {
+			if treeCap.Tables[i], err = d.inputCapTable(tablesOff + i*SizeInputCapTable); err != nil {
+				return treeCap, err
+			}
+		}
+	}
+	return treeCap, nil
+}
+
+func (d *decoder) inputCapTable(off int) (InputCapTable, error) {
+	var table InputCapTable
+	table.SizeLog2 = d.buf[off+OffInputCapTableSizeLog2]
+	rowsOff, n, err := d.slice(off+OffInputCapTableRows, SizeRowOpening, 8, "pcs.InputCapTable.rows")
+	if err != nil {
+		return table, err
+	}
+	if n > 0 {
+		table.Rows = make([]RowOpening, n)
+		for i := range table.Rows {
+			if table.Rows[i], err = d.rowOpening(rowsOff + i*SizeRowOpening); err != nil {
+				return table, err
+			}
+		}
+	}
+	return table, nil
 }
 
 func (d *decoder) branch(off int) (Branch, error) {
