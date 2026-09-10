@@ -13,6 +13,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapError
 import linea.kotlin.encodeHex
+import maru.consensus.ElFork
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
 import maru.consensus.state.StateTransition
@@ -103,9 +104,14 @@ class ExecutionPayloadBlockNumberValidator(
   }
 }
 
-object ExecutionPayloadSlotNumberValidator : BlockValidator {
+class ExecutionPayloadSlotNumberValidator(
+  private val elFork: ElFork,
+) : BlockValidator {
   override fun validateBlock(block: BeaconBlock): SafeFuture<Result<Unit, BlockValidationError>> {
     val slotNumber = block.beaconBlockBody.executionPayload.slotNumber
+    if (elFork.version >= ElFork.Amsterdam.version && slotNumber == null) {
+      return SafeFuture.completedFuture(BlockValidator.error("Amsterdam execution payload requires slot number"))
+    }
     return SafeFuture.completedFuture(
       BlockValidator.require(slotNumber == null || slotNumber == block.beaconBlockHeader.number) {
         "Execution payload slot number does not match beacon block number " +

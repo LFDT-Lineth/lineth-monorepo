@@ -206,6 +206,7 @@ class QbftValidatorFactory(
         executionLayerManager = if (payloadValidationEnabled) executionLayerManager else null,
         allowEmptyBlocks = allowEmptyBlocks,
         blockHashing = blockHashing,
+        elFork = protocolConfig.elFork,
       )
     val protocolSchedule =
       QbftProtocolScheduleAdapter(

@@ -12,6 +12,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getError
 import linea.kotlin.encodeHex
+import maru.consensus.ElFork
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
@@ -33,6 +34,8 @@ import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.BftHelpers
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -139,14 +142,16 @@ class BlockValidatorTest {
         executionLayerManager = executionLayerEngineApiClient,
         allowEmptyBlocks = false,
         blockHashing = blockHashing,
+        elFork = ElFork.Osaka,
       ).createValidatorForBlock(validNewBlock.beaconBlockHeader)
     blockValidator.also {
       assertThat(it.validateBlock(block = validNewBlock).get()).isEqualTo(BlockValidator.ok())
     }
   }
 
-  @Test
-  fun `composite validation checks payload slot without execution layer validation`() {
+  @ParameterizedTest
+  @EnumSource(value = ElFork::class, names = ["Osaka", "Amsterdam"])
+  fun `composite validation checks payload slot without execution layer validation`(elFork: ElFork) {
     for (slotNumber in listOf(null, newBlockNumber, 0UL, newBlockNumber - 1UL, newBlockNumber + 1UL, ULong.MAX_VALUE)) {
       val body = validNewBlockBody.copy(
         executionPayload = validNewBlockBody.executionPayload.copy(
@@ -166,8 +171,11 @@ class BlockValidatorTest {
         executionLayerManager = null,
         allowEmptyBlocks = false,
         blockHashing = blockHashing,
+        elFork = elFork,
       ).createValidatorForBlock(header)
-      val expected = if (slotNumber == null || slotNumber == newBlockNumber) {
+      val expected = if (elFork == ElFork.Amsterdam && slotNumber == null) {
+        error("Amsterdam execution payload requires slot number")
+      } else if (slotNumber == null || slotNumber == newBlockNumber) {
         BlockValidator.ok()
       } else {
         error(

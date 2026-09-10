@@ -8,6 +8,7 @@
  */
 package maru.consensus.validation
 
+import maru.consensus.ElFork
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.state.StateTransition
 import maru.core.BeaconBlockHeader
@@ -26,7 +27,9 @@ class BeaconBlockValidatorFactoryImpl(
   executionLayerManager: ExecutionLayerManager?,
   val allowEmptyBlocks: Boolean,
   blockHashing: ForkAwareBlockHashing,
+  elFork: ElFork,
 ) : BeaconBlockValidatorFactory {
+  private val executionPayloadSlotNumberValidator = ExecutionPayloadSlotNumberValidator(elFork)
   private val stateRootValidator = StateRootValidator(stateTransition, blockHashing::stateRoot)
   private val bodyRootValidator = BodyRootValidator()
   private val executionPayloadValidator =
@@ -47,7 +50,7 @@ class BeaconBlockValidatorFactoryImpl(
           stateRootValidator,
           BlockNumberValidator(parentHeader),
           ExecutionPayloadBlockNumberValidator(parentBlock.beaconBlock.beaconBlockBody.executionPayload),
-          ExecutionPayloadSlotNumberValidator,
+          executionPayloadSlotNumberValidator,
           TimestampValidator(parentHeader),
           proposerValidator,
           ParentRootValidator(parentHeader),
