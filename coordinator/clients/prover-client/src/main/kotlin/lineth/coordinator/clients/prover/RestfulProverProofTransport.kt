@@ -39,9 +39,10 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   private val proofType: String,
   private val startBlockProvider: (TProofIndex) -> ULong,
   private val endBlockProvider: (TProofIndex) -> ULong,
-  private val jobPathProvider: (TProofIndex) -> String = { proofIndex: TProofIndex ->
-    "/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
+  private val jobsPathProvider: (proofIndex: TProofIndex) -> String = { proofIndex: TProofIndex ->
+    "/api/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
   },
+  private val dequeuePathProvider: String = "/api/v1/jobs/dequeue",
   private val responseDtoClass: Class<ResponseDto>,
   private val pollingInterval: Duration,
   private val pollingTimeout: Duration,
@@ -56,7 +57,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   }
 
   override fun submitRequest(proofIndex: TProofIndex, requestDto: RequestDto): SafeFuture<Unit> {
-    val path = jobPathProvider(proofIndex)
+    val path = jobsPathProvider(proofIndex)
     val body = SubmitJobRequest(proofRequest = objectMapper.valueToTree(requestDto))
     val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
     log.debug("Submitting proof request. POST {}", path)
@@ -71,7 +72,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   }
 
   override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
-    val path = "/v1/jobs/dequeue"
+    val path = dequeuePathProvider
     val body = DequeueJobRequest(
       criteria = JobCriteriaDto(
         startBlockGte = startBlockNumberGte,
@@ -106,7 +107,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
       stopRetriesPredicate = { responseDto -> responseDto != null },
       action = { findResponse(proofIndex) },
     ).thenApply { responseDto ->
-      responseDto ?: throw RuntimeException("Timeout waiting for proof response. job=${jobPathProvider(proofIndex)}")
+      responseDto ?: throw RuntimeException("Timeout waiting for proof response. job=${jobsPathProvider(proofIndex)}")
     }
   }
 
@@ -115,7 +116,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
    * before it is created, or any non-success status), so callers can treat "not found" as "not ready".
    */
   private fun fetchJob(proofIndex: TProofIndex, includeResponse: Boolean = false): SafeFuture<ProverJobResponse?> {
-    val path = jobPathProvider(proofIndex)
+    val path = jobsPathProvider(proofIndex)
     val params = if (includeResponse) {
       listOf(
         "includeResponse" to "true",
