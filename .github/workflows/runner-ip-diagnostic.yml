@@ -1,0 +1,82 @@
+name: runner-ip-diagnostic
+
+on:
+  push:
+    branches:
+      - experiment/runner-ip-diagnostic
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runner-ip-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        label:
+          - gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+          - gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+          - gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+          - gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    timeout-minutes: 15
+    steps:
+      - name: Print runner and public IPs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          hostname="$(hostname)"
+          uname_a="$(uname -a)"
+          runner_name="${RUNNER_NAME:-unknown}"
+          runner_os="${RUNNER_OS:-unknown}"
+          runner_arch="${RUNNER_ARCH:-unknown}"
+          workflow="${GITHUB_WORKFLOW:-unknown}"
+          run_id="${GITHUB_RUN_ID:-unknown}"
+          run_attempt="${GITHUB_RUN_ATTEMPT:-unknown}"
+          job_name="${GITHUB_JOB:-unknown}"
+          ref="${GITHUB_REF:-unknown}"
+          sha="${GITHUB_SHA:-unknown}"
+
+          ipify="$(curl -fsS --max-time 10 https://api.ipify.org || true)"
+          ifconfig_me="$(curl -fsS --max-time 10 https://ifconfig.me/ip || true)"
+          aws_checkip="$(curl -fsS --max-time 10 https://checkip.amazonaws.com || true)"
+          curl_trace="$(curl -fsS --max-time 10 -o /dev/null -w 'dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} starttransfer=%{time_starttransfer} total=%{time_total}' https://api.ipify.org || true)"
+
+          {
+            echo "# Runner IP diagnostic"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Timestamp (UTC) | ${timestamp} |"
+            echo "| Workflow | ${workflow} |"
+            echo "| Job | ${job_name} |"
+            echo "| Runner label | ${{ matrix.label }} |"
+            echo "| Runner name | ${runner_name} |"
+            echo "| Runner OS | ${runner_os} |"
+            echo "| Runner arch | ${runner_arch} |"
+            echo "| Hostname | ${hostname} |"
+            echo "| Ref | ${ref} |"
+            echo "| SHA | ${sha} |"
+            echo "| Public IP (ipify) | ${ipify:-unavailable} |"
+            echo "| Public IP (ifconfig.me) | ${ifconfig_me:-unavailable} |"
+            echo "| Public IP (checkip.amazonaws.com) | ${aws_checkip:-unavailable} |"
+            echo "| Curl trace (ipify) | ${curl_trace:-unavailable} |"
+            echo
+            echo '```'
+            echo "${uname_a}"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          printf 'runner=%s ipify=%s ifconfig_me=%s checkip=%s\n' \
+            "${{ matrix.label }}" \
+            "${ipify:-unavailable}" \
+            "${ifconfig_me:-unavailable}" \
+            "${aws_checkip:-unavailable}"
