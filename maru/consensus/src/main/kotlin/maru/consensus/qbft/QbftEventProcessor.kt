@@ -9,29 +9,40 @@
 package maru.consensus.qbft
 
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
 import org.hyperledger.besu.consensus.common.bft.events.BftEvent
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Optional
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
 class QbftEventProcessor(
   private val incomingQueue: BftEventQueue,
   private val eventMultiplexer: QbftEventMultiplexer,
+  private val executor: ExecutorService,
 ) {
-  private val log: org.apache.logging.log4j.Logger = LogManager.getLogger(this.javaClass)
+  private val log: Logger = LogManager.getLogger(this.javaClass)
   private var shutdownCompletion = SafeFuture.completedFuture(Unit)
 
   @Volatile private var shutdown = false
 
-  /** Prepare a new run after the previous one has stopped. */
-  @Synchronized
-  fun start(): Runnable {
-    check(shutdownCompletion.isDone) { "The previous event processor run has not stopped" }
-    val completion = SafeFuture<Unit>()
-    shutdownCompletion = completion
-    shutdown = false
-    return Runnable { run(completion) }
+  /** Start a new run after the previous one has stopped. */
+  fun start() {
+    val completion =
+      synchronized(this) {
+        check(shutdownCompletion.isDone) { "The previous event processor run has not stopped" }
+        SafeFuture<Unit>().also {
+          shutdownCompletion = it
+          shutdown = false
+        }
+      }
+    try {
+      executor.execute { run(completion) }
+    } catch (t: Throwable) {
+      completion.completeExceptionally(t)
+      throw t
+    }
   }
 
   /** Complete once the current event has finished and the queue has stopped. */

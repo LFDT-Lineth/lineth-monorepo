@@ -296,7 +296,6 @@ class QbftValidatorFactory(
       QbftEventMultiplexer(qbftController).also {
         it.onBlockTimerFired = onBlockTimerFired
       }
-    val eventProcessor = QbftEventProcessor(bftEventQueue, eventMultiplexer)
     val eventQueueExecutor =
       Executors.newSingleThreadExecutor(
         Thread
@@ -305,6 +304,7 @@ class QbftValidatorFactory(
           .daemon(true)
           .factory(),
       )
+    val eventProcessor = QbftEventProcessor(bftEventQueue, eventMultiplexer, eventQueueExecutor)
 
     val messageDecoder = MinimalQbftMessageDecoder(SecpCrypto)
     val qbftMessageProcessor =
@@ -333,7 +333,6 @@ class QbftValidatorFactory(
       qbftController = qbftController,
       eventProcessor = eventProcessor,
       bftExecutors = bftExecutors,
-      eventQueueExecutor = eventQueueExecutor,
     )
   }
 

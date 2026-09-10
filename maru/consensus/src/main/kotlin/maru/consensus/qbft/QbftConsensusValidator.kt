@@ -13,7 +13,6 @@ import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -22,7 +21,6 @@ class QbftConsensusValidator(
   private val qbftController: QbftEventHandler,
   private val eventProcessor: QbftEventProcessor,
   private val bftExecutors: BftExecutors,
-  private val eventQueueExecutor: Executor,
   private val shutdownTimeout: Duration = DEFAULT_SHUTDOWN_TIMEOUT,
 ) : Protocol {
   companion object {
@@ -41,11 +39,21 @@ class QbftConsensusValidator(
       }
       pause()
     }
-    val eventProcessorTask = eventProcessor.start()
-    bftExecutors.start()
-    qbftController.start()
-    eventQueueExecutor.execute(eventProcessorTask)
-    isRunning = true
+    try {
+      bftExecutors.start()
+      qbftController.start()
+      eventProcessor.start()
+      isRunning = true
+    } catch (failure: Throwable) {
+      cleanUpAfterFailedStart()
+      throw failure
+    }
+  }
+
+  private fun cleanUpAfterFailedStart() {
+    runCatching { bftExecutors.stop() }
+    runCatching { qbftController.stop() }
+    runCatching { eventProcessor.stop() }
   }
 
   @Synchronized
