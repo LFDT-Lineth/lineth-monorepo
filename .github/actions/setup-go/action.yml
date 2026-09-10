@@ -10,19 +10,9 @@ inputs:
   cache:
     description: 'Set false to disable both cache restore and save.'
     default: 'true'
-  cache-save:
-    description: 'Allow saving on main; false keeps custom-ref builds restore-only.'
-    default: 'true'
   cache-dependency-path:
     description: 'Files hashed for the dependency cache, matching setup-go.'
     default: 'go.mod'
-outputs:
-  go-version:
-    description: 'Installed Go version'
-    value: ${{ steps.go.outputs.go-version }}
-  cache-hit:
-    description: 'Whether the exact cache key was restored'
-    value: ${{ steps.go.outputs.cache-hit || steps.restore.outputs.cache-hit }}
 runs:
   using: composite
   steps:
@@ -32,10 +22,10 @@ runs:
         go-version: ${{ inputs.go-version }}
         architecture: ${{ inputs.architecture }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
-        cache: ${{ inputs.cache == 'true' && inputs.cache-save == 'true' && github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
+        cache: ${{ inputs.cache == 'true' && github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
     - name: Locate the setup-go cache
       id: cache
-      if: ${{ inputs.cache == 'true' && (inputs.cache-save != 'true' || github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request')) }}
+      if: ${{ inputs.cache == 'true' && (github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request')) }}
       shell: bash
       run: |
         # Match setup-go v6: runtime architecture (not the target Go architecture),

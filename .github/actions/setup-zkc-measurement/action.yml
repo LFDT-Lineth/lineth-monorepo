@@ -37,8 +37,10 @@ runs:
     # monorepo-ref can only be set by someone dispatching the workflow, which already requires write
     # access. The mitigation that matters is kept structural: the jobs that build and run the measured
     # tree never mint the GitHub App token. Only the report job holds it, and it checks out the tooling
-    # ref alone. Do not add a measured checkout to that job. Keep cache-save disabled for custom
-    # source refs so their Go module/build caches can be restored but cannot be saved to main.
+    # ref alone. Do not add a measured checkout to that job. The measured jobs' Go module/build cache
+    # never saves (the cache remains disabled for custom refs), and the Zig cache is
+    # restored through actions/cache/restore, which has no save phase: a dispatched run reads caches
+    # but has no step that can write into the refs/heads/main-scoped cache namespace.
     - name: Checkout the monorepo commit under measurement
       if: ${{ inputs.monorepo-ref != '' }}
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -66,7 +68,7 @@ runs:
       with:
         go-version: '1.25.7'
         cache-dependency-path: "**/*.sum"
-        cache-save: ${{ inputs.cache-save }}
+        cache: ${{ inputs.cache-save }}
 
     - name: Prepare the pinned zkc tool
       shell: bash

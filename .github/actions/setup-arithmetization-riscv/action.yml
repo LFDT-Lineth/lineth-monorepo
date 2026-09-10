@@ -30,7 +30,8 @@ runs:
         with:
           go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
-          cache-save: ${{ inputs.cache-save }}
+          # Preserve the existing opt-out for builds of custom refs.
+          cache: ${{ inputs.cache-save }}
 
       - name: Install Zig
         uses: ./.github/actions/setup-zig
@@ -69,7 +70,6 @@ runs:
             /usr/local/include/blst.h
             /usr/local/include/blst_aux.h
             /usr/local/include/mcl
-          cache-save: ${{ inputs.cache-save }}
           key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
 
       - name: Install native crypto deps (blst, mcl)

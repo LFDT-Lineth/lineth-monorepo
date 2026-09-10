@@ -10,13 +10,6 @@ inputs:
   cache-dependency-path:
     description: 'Lockfiles hashed for the dependency cache'
     default: 'pnpm-lock.yaml'
-outputs:
-  node-version:
-    description: 'Installed Node version'
-    value: ${{ steps.node.outputs.node-version }}
-  cache-hit:
-    description: 'Whether the exact cache key was restored'
-    value: ${{ steps.node.outputs.cache-hit || steps.restore.outputs.cache-hit }}
 runs:
   using: composite
   steps:
