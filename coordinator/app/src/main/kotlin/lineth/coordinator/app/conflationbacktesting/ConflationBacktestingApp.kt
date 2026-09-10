@@ -199,7 +199,7 @@ class ConflationBacktestingApp(
       log = log,
     )
 
-  private val proverClientFactory = ProverClientFactory(
+  private val preRiscvProverClientFactory = ProverClientFactory(
     vertx = vertx,
     config = backtestingCoordinatorConfig.proversConfig,
     metricsFacade = metricsFacade,
@@ -223,7 +223,7 @@ class ConflationBacktestingApp(
   )
 
   val proofGeneratingConflationHandlerImpl = run {
-    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(log = log)
+    val executionProverClient: ExecutionProverClientV2 = preRiscvProverClientFactory.preRiscvExecutionProverClient()
 
     ProofGeneratingConflationHandlerImpl(
       tracesProductionCoordinator = TracesConflationCoordinatorImpl(
@@ -283,7 +283,7 @@ class ConflationBacktestingApp(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(log = log),
+      blobCompressionProverClient = preRiscvProverClientFactory.preRiscvBlobCompressionProverClient(log = log),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
           version = backtestingCoordinatorConfig.conflation.blobCompression.shnarfCalculatorVersion,
@@ -357,7 +357,7 @@ class ConflationBacktestingApp(
       ftxRollingInfoProvider = FtxRollingInfoProviderImpl(DisabledForcedTransactionsDao()),
     ),
     consecutiveProvenBlobsProvider = inMemoryProvenBlobsTracker,
-    proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
+    proofAggregationClient = preRiscvProverClientFactory.preRiscvProofAggregationProverClient(),
     metricsFacade = metricsFacade,
   )
 
