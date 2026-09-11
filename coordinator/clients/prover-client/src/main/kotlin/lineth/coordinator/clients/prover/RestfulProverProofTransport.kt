@@ -179,11 +179,11 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   )
 
   companion object {
-    private const val STATUS_PENDING = "pending"
+    private const val STATUS_QUEUED = "queued"
     private const val STATUS_CLAIMED = "claimed"
     private const val STATUS_PROVED = "proved"
 
     /** Statuses indicating a job already exists for a proof index (so a new request must not be submitted). */
-    private val ACTIVE_JOB_STATUSES = setOf(STATUS_PENDING, STATUS_CLAIMED, STATUS_PROVED)
+    private val ACTIVE_JOB_STATUSES = setOf(STATUS_QUEUED, STATUS_CLAIMED, STATUS_PROVED)
   }
 }
