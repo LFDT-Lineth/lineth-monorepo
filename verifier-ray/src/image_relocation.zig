@@ -1,3 +1,56 @@
+const merkle = @import("crypto/merkle.zig");
+const protocol = @import("protocol/types.zig");
+const fri = @import("query/fri.zig");
+const pcs = @import("query/pcs.zig");
+const verifier = @import("verifier.zig");
+
+/// Every stride and offset the walk needs, derived from the types rather than
+/// written out as literals. proof_abi.zig pins these same numbers and the
+/// encoder mirrors them in prover-ray's layout.go, but neither checks this
+/// walk: deriving them means a field added to any of these structs shifts the
+/// walk with it, instead of leaving it patching stale offsets. That failure is
+/// silent — a mis-patched image still casts cleanly, and the bad pointers only
+/// surface deep inside verify().
+const abi = struct {
+    /// A slice header is {ptr: u64, len: u64}; only ptr needs adjusting.
+    const slice_hdr = @sizeOf([]const u8);
+    const slice_len_off = slice_hdr / 2;
+
+    const public_inputs = @offsetOf(verifier.VerifyInput, "public_inputs");
+    const rounds = @offsetOf(verifier.Proof, "rounds");
+    const module_sizes = @offsetOf(verifier.Proof, "module_sizes");
+
+    const round_message = @sizeOf(protocol.RoundMessage);
+    const round_cells = @offsetOf(protocol.RoundMessage, "cells");
+
+    /// OpeningProof lives at Proof.pcs_opening + PcsOpening.proof.
+    const opening = @offsetOf(verifier.Proof, "pcs_opening") +
+        @offsetOf(verifier.PcsOpening, "proof");
+    const input_queries = opening + @offsetOf(pcs.OpeningProof, "input_queries");
+
+    const ito = @sizeOf(merkle.InputTreeOpening);
+    const ito_siblings = @offsetOf(merkle.InputTreeOpening, "siblings");
+    const ito_leaves = @offsetOf(merkle.InputTreeOpening, "leaves");
+
+    /// leaves holds inline ?RowPair values: the RowPair payload, then a
+    /// presence flag. An optional's layout is not introspectable, so the flag
+    /// is taken to sit just past the payload — the pairing proof_abi.zig pins
+    /// (?RowPair is 72 bytes, RowPair is 64).
+    const opt_row_pair = @sizeOf(?merkle.RowPair);
+    const row_pair_flag = @sizeOf(merkle.RowPair);
+    const row_opening = @sizeOf(merkle.RowOpening);
+    const row_base = @offsetOf(merkle.RowOpening, "base");
+    const row_ext = @offsetOf(merkle.RowOpening, "ext");
+
+    const fri_proof = opening + @offsetOf(pcs.OpeningProof, "fri_proof");
+    const round_roots = fri_proof + @offsetOf(fri.Proof, "round_roots");
+    const final_poly = fri_proof + @offsetOf(fri.Proof, "final_poly");
+    const running_queries = fri_proof + @offsetOf(fri.Proof, "running_queries");
+
+    const branch = @sizeOf(merkle.Branch);
+    const branch_siblings = @offsetOf(merkle.Branch, "siblings");
+};
+
 /// image_relocation patches every slice-pointer in a VerifyInput image from its
 /// encoded guest address (encoded_base + offset) to the equivalent host address
 /// (mapped_base + offset). The image layout is fully determined by the
@@ -17,7 +70,7 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
     // which callers use to walk into the pointed-to data.
     const patchPtr = struct {
         fn f(image: [*]u8, len: usize, off: usize, enc_base: usize, d: i64) usize {
-            if (off + 16 > len) return 0;
+            if (off + abi.slice_hdr > len) return 0;
             const old_ptr = readU64(image, off);
             if (old_ptr == 0) return 0; // null / empty-slice sentinel
             const new_ptr = @as(u64, @intCast(@as(i64, @intCast(old_ptr)) + d));
@@ -27,69 +80,69 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
     }.f;
 
     const sliceLen = struct {
-        fn f(image: [*]u8, off: usize) usize {
-            return @intCast(readU64(image, off + 8));
+        fn f(image: [*]u8, hdr: usize) usize {
+            return @intCast(readU64(image, hdr + abi.slice_len_off));
         }
     }.f;
 
-    // VerifyInput: proof @ 0 (96 bytes), public_inputs @ 96 ([]Scalar — no nested ptrs)
-    _ = patchPtr(img, img_len, 96, encoded_base, delta);
+    // VerifyInput.public_inputs: []Scalar, no nested pointers.
+    _ = patchPtr(img, img_len, abi.public_inputs, encoded_base, delta);
 
-    // Proof: rounds @ 0, module_sizes @ 16, pcs_opening @ 32
-    const rounds_ptr = patchPtr(img, img_len, 0, encoded_base, delta);
-    const n_rounds = sliceLen(img, 0);
-    _ = patchPtr(img, img_len, 16, encoded_base, delta); // module_sizes.ptr (scalar)
+    // Proof.rounds and Proof.module_sizes ([]u64, no nested pointers).
+    const rounds_ptr = patchPtr(img, img_len, abi.rounds, encoded_base, delta);
+    const n_rounds = sliceLen(img, abi.rounds);
+    _ = patchPtr(img, img_len, abi.module_sizes, encoded_base, delta);
 
-    // RoundMessage: 56 bytes, cells @ 0 ([]Scalar — no nested ptrs)
+    // RoundMessage.cells: []Scalar. commitment is an inline optional.
     for (0..n_rounds) |i| {
-        _ = patchPtr(img, img_len, rounds_ptr + i * 56, encoded_base, delta);
+        const rm = rounds_ptr + i * abi.round_message;
+        _ = patchPtr(img, img_len, rm + abi.round_cells, encoded_base, delta);
     }
 
-    // PcsOpening.proof (OpeningProof): input_queries @ 32, fri_proof @ 48
-    // input_queries: [][]InputTreeOpening
-    const iq_outer_ptr = patchPtr(img, img_len, 32 + 0, encoded_base, delta);
-    const n_iq = sliceLen(img, 32 + 0);
+    // OpeningProof.input_queries: [][]InputTreeOpening.
+    const iq_outer_ptr = patchPtr(img, img_len, abi.input_queries, encoded_base, delta);
+    const n_iq = sliceLen(img, abi.input_queries);
     for (0..n_iq) |i| {
-        const inner_hdr = iq_outer_ptr + i * 16;
+        const inner_hdr = iq_outer_ptr + i * abi.slice_hdr;
         const iq_inner_ptr = patchPtr(img, img_len, inner_hdr, encoded_base, delta);
         const n_ito = sliceLen(img, inner_hdr);
-        // InputTreeOpening: siblings @ 0, leaves @ 16
         for (0..n_ito) |j| {
-            const ito_off = iq_inner_ptr + j * 32;
-            _ = patchPtr(img, img_len, ito_off + 0, encoded_base, delta); // siblings.ptr
-            // leaves: []?RowPair — inline 72-byte values, not pointers, so the
-            // elements are walked at that stride with no dereference. Each is
-            // [2]RowOpening then a presence flag at +64; RowOpening is
-            // {base: []Scalar @0, ext: []Scalar @16}.
-            const leaves_ptr = patchPtr(img, img_len, ito_off + 16, encoded_base, delta);
-            const n_leaves = sliceLen(img, ito_off + 16);
+            const ito_off = iq_inner_ptr + j * abi.ito;
+            _ = patchPtr(img, img_len, ito_off + abi.ito_siblings, encoded_base, delta);
+
+            // leaves: []?RowPair — inline values, not pointers, so the elements
+            // are walked at that stride with no dereference.
+            const leaves_hdr = ito_off + abi.ito_leaves;
+            const leaves_ptr = patchPtr(img, img_len, leaves_hdr, encoded_base, delta);
+            const n_leaves = sliceLen(img, leaves_hdr);
             for (0..n_leaves) |k| {
-                const leaf_off = leaves_ptr + k * 72;
-                if (leaf_off + 65 > img_len) continue;
-                if (img[leaf_off + 64] == 0) continue; // absent ?RowPair
-                // RowPair[0]: base.ptr @0, ext.ptr @16
-                _ = patchPtr(img, img_len, leaf_off + 0, encoded_base, delta);
-                _ = patchPtr(img, img_len, leaf_off + 16, encoded_base, delta);
-                // RowPair[1]: base.ptr @32, ext.ptr @48
-                _ = patchPtr(img, img_len, leaf_off + 32, encoded_base, delta);
-                _ = patchPtr(img, img_len, leaf_off + 48, encoded_base, delta);
+                const leaf_off = leaves_ptr + k * abi.opt_row_pair;
+                if (leaf_off + abi.row_pair_flag + 1 > img_len) continue;
+                if (img[leaf_off + abi.row_pair_flag] == 0) continue; // absent
+                // Both RowOpenings of the pair, each {base, ext}.
+                for (0..2) |r| {
+                    const row = leaf_off + r * abi.row_opening;
+                    _ = patchPtr(img, img_len, row + abi.row_base, encoded_base, delta);
+                    _ = patchPtr(img, img_len, row + abi.row_ext, encoded_base, delta);
+                }
             }
         }
     }
 
-    // FriProof: round_roots @ 48 (scalar), final_poly @ 64 (scalar), running_queries @ 80
-    _ = patchPtr(img, img_len, 48 + 0, encoded_base, delta);
-    _ = patchPtr(img, img_len, 48 + 16, encoded_base, delta);
+    // FriProof.round_roots and .final_poly: both scalar element slices.
+    _ = patchPtr(img, img_len, abi.round_roots, encoded_base, delta);
+    _ = patchPtr(img, img_len, abi.final_poly, encoded_base, delta);
 
-    // running_queries: [][]Branch; Branch: siblings @ 0, leaf @ 16 (inline Digest)
-    const rq_outer_ptr = patchPtr(img, img_len, 48 + 32, encoded_base, delta);
-    const n_rq = sliceLen(img, 48 + 32);
+    // FriProof.running_queries: [][]Branch. Branch.leaf is an inline Digest.
+    const rq_outer_ptr = patchPtr(img, img_len, abi.running_queries, encoded_base, delta);
+    const n_rq = sliceLen(img, abi.running_queries);
     for (0..n_rq) |i| {
-        const inner_hdr = rq_outer_ptr + i * 16;
+        const inner_hdr = rq_outer_ptr + i * abi.slice_hdr;
         const rq_inner_ptr = patchPtr(img, img_len, inner_hdr, encoded_base, delta);
         const n_br = sliceLen(img, inner_hdr);
         for (0..n_br) |j| {
-            _ = patchPtr(img, img_len, rq_inner_ptr + j * 48, encoded_base, delta);
+            const br = rq_inner_ptr + j * abi.branch;
+            _ = patchPtr(img, img_len, br + abi.branch_siblings, encoded_base, delta);
         }
     }
 }
