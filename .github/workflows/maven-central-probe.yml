@@ -1,0 +1,23 @@
+name: Maven Central connectivity probe
+on:
+  push:
+    branches: [codex/maven-central-probe]
+permissions: {}
+jobs:
+  probe:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    timeout-minutes: 3
+    steps:
+      - name: Check previously blocked Maven artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in \
+            de/undercouch/gradle-download-task/5.6.0/gradle-download-task-5.6.0.jar \
+            dev/equo/ide/solstice/1.8.1/solstice-1.8.1.pom \
+            com/diffplug/durian/durian-swt.os/4.3.1/durian-swt.os-4.3.1.pom; do
+            date -u '+%Y-%m-%dT%H:%M:%SZ'
+            curl --silent --show-error --output /dev/null --connect-timeout 10 --max-time 30 \
+              --write-out "HTTP %{http_code} ${artifact}\n" \
+              "https://repo.maven.apache.org/maven2/${artifact}"
+          done
