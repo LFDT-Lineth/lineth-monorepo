@@ -591,8 +591,15 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
       .atMost(getBlockPeriodSeconds().toLong(), TimeUnit.SECONDS)
       .pollInterval(100, TimeUnit.MILLISECONDS)
       .untilAsserted {
-        assertThat(getLog())
-          .withFailMessage { "Expected Besu logs to contain '$target'" }
+        val log = getLog()
+        assertThat(log)
+          .withFailMessage {
+            val relatedLines = log.lineSequence()
+              .filter { it.contains("line count") || it.contains("stopping selection") }
+              .joinToString("\n")
+            "Expected Besu logs to contain '$target'.\n" +
+              "Related log lines captured instead:\n$relatedLines"
+          }
           .contains(target)
       }
     getAndResetLog()
