@@ -23,7 +23,22 @@ runs:
 
     # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
     # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
-    # Cache /usr/local's result directly so a hit skips straight to a no-op inside that target.
+    # Restore needs temporary write access to these root-owned installation paths.
+    - name: Prepare native crypto cache destinations
+      id: crypto-cache-permissions
+      shell: bash
+      run: |
+        sudo mkdir -p /usr/local/lib /usr/local/include/mcl
+        echo "lib-owner=$(stat -c '%u:%g' /usr/local/lib)" >> "$GITHUB_OUTPUT"
+        echo "include-owner=$(stat -c '%u:%g' /usr/local/include)" >> "$GITHUB_OUTPUT"
+        owner="$(id -u):$(id -g)"
+        sudo chown "$owner" /usr/local/lib /usr/local/include
+        sudo chown -R "$owner" /usr/local/include/mcl
+        # Do not create placeholders: make treats an existing library as installed.
+        for path in /usr/local/lib/libblst.a /usr/local/lib/libmcl.so /usr/local/include/blst.h /usr/local/include/blst_aux.h; do
+          if [ -e "$path" ]; then sudo chown "$owner" "$path"; fi
+        done
+
     - name: Cache blst + mcl builds
       uses: ./.github/actions/cache
       with:
@@ -35,9 +50,24 @@ runs:
           /usr/local/include/mcl
         key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
 
+    - name: Restore native crypto destination ownership
+      if: ${{ always() && steps.crypto-cache-permissions.outputs.lib-owner != '' }}
+      shell: bash
+      env:
+        LIB_OWNER: ${{ steps.crypto-cache-permissions.outputs.lib-owner }}
+        INCLUDE_OWNER: ${{ steps.crypto-cache-permissions.outputs.include-owner }}
+      run: |
+        for path in /usr/local/lib/libblst.a /usr/local/lib/libmcl.so /usr/local/include/blst.h /usr/local/include/blst_aux.h /usr/local/include/mcl; do
+          if [ -e "$path" ]; then sudo chown -R root:root "$path"; fi
+        done
+        sudo chown "$LIB_OWNER" /usr/local/lib
+        sudo chown "$INCLUDE_OWNER" /usr/local/include
+
     - name: Install native crypto deps (blst, mcl)
       shell: bash
-      run: make -C riscv-guests install-native-crypto-deps
+      run: |
+        make -C riscv-guests install-native-crypto-deps
+        sudo ldconfig
 
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
