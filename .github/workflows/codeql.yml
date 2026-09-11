@@ -63,21 +63,26 @@ jobs:
               - '**/Pipfile'
       - name: Build matrix
         id: set-matrix
+        env:
+          ANALYZE_JVM: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
         run: |
-          # Scheduled and manual runs analyze all languages
+          # Scheduled and manual runs analyze all eligible languages.
+          analyze_all=false
           if [ "${{ github.event_name }}" == "schedule" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo 'languages=["go","java-kotlin","javascript-typescript","actions","python"]' >> $GITHUB_OUTPUT
-            exit 0
+            analyze_all=true
           fi
 
           languages=()
-          if [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
-          if [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; then languages+=("\"java-kotlin\""); fi
-          if [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
-          if [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
-          if [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
+          # JVM builds share a Maven Central IP; analyze on main to reduce dependency traffic.
+          if [ "$ANALYZE_JVM" == "true" ] && { [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; }; then
+            languages+=("\"java-kotlin\"")
+          fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
+          if [ "$analyze_all" == "true" ] || [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
 
-          echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> $GITHUB_OUTPUT
+          echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> "$GITHUB_OUTPUT"
 
   analyze:
     name: Analyze
@@ -104,6 +109,8 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
           config-file: .github/codeql/codeql-config.yml
+          # Only main populates shared dependencies; PRs restore without saving duplicates.
+          dependency-caching: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && 'full' || 'restore' }}
 
       - name: Setup Java
         if: matrix.language == 'java-kotlin'
