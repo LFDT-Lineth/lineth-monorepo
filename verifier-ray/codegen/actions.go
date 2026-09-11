@@ -66,8 +66,8 @@ func (e *UnhandledVerifierActionError) Error() string {
 //     leaves it to a downstream cross-shard layer)
 //   - messagebus.SharedRandomnessContributionChecker → BuildSharedRandomnessSystem /
 //     shared_randomness sub-verifier (this shard's public-input contribution
-//     digest == the Poseidon2 sponge hash over every committed round preceding
-//     the message-bus coin round; present only when the shard was compiled with
+//     digest == the multiset hash of the message-bus coin round's own PCS
+//     commitment; present only when the shard was compiled with
 //     messagebus.CompileOptions.SharedRandomness)
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem
 //     (performs no boundary check the Zig side must re-emit — the whole PCS

@@ -52,24 +52,14 @@ test "replay absorbs a commitment and cells, then squeezes coins" {
 }
 
 // A two-round spec where round 0 carries an 8-limb γ octuplet as its round
-// cells, and round 1 (index 2 in round_coin_counts, since index 0 is the
-// pre-round-1 phase) is the shared-randomness coin round that must derive its
-// coin from γ instead of from the transcript state accumulated so far.
+// cells and round 1 (index 2 in round_coin_counts, since index 0 is the
+// pre-round-1 phase) squeezes the message-bus coin. γ reaches that coin by
+// ordinary absorption — bound as round-0 cells before round 1's coin is
+// squeezed — with no transcript override involved.
 const shared_randomness_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0 },
     .total_round_coins = 1,
-    .shared_randomness_coin_round = 2,
-    .shared_randomness_gamma_refs = &[_]protocol.SharedRandomnessGammaRef{
-        .{ .round = 0, .index = 0 },
-        .{ .round = 0, .index = 1 },
-        .{ .round = 0, .index = 2 },
-        .{ .round = 0, .index = 3 },
-        .{ .round = 0, .index = 4 },
-        .{ .round = 0, .index = 5 },
-        .{ .round = 0, .index = 6 },
-        .{ .round = 0, .index = 7 },
-    },
 };
 
 fn gammaCells(seed: u32) [8]protocol.Scalar {
@@ -78,28 +68,7 @@ fn gammaCells(seed: u32) [8]protocol.Scalar {
     return cells;
 }
 
-test "shared-randomness coin round derives its coin from gamma, not the prior transcript state" {
-    const cells = gammaCells(1);
-    const rounds = [_]protocol.RoundMessage{
-        .{ .commitment = null, .cells = &cells },
-        .{ .commitment = null, .cells = &.{} },
-    };
-
-    var transcript_a = fiat_shamir.Transcript.init();
-    transcript_a.updateElement(field.Element.init(0xDEADBEEF));
-    const coins_a = try protocol.replayWithTranscript(&transcript_a, shared_randomness_spec, &rounds, &.{});
-
-    var transcript_b = fiat_shamir.Transcript.init();
-    transcript_b.updateElement(field.Element.init(0xCAFEF00D));
-    const coins_b = try protocol.replayWithTranscript(&transcript_b, shared_randomness_spec, &rounds, &.{});
-
-    // Two verifiers with divergent pre-existing transcript state (as they
-    // would have on independent shards) must still agree on the coin, because
-    // it is derived from the shared gamma, not from either shard's own state.
-    try std.testing.expect(coins_a[0].eql(coins_b[0]));
-}
-
-test "shared-randomness coin round is sensitive to gamma" {
+test "message-bus coin is sensitive to gamma" {
     const cells_1 = gammaCells(1);
     const rounds_1 = [_]protocol.RoundMessage{
         .{ .commitment = null, .cells = &cells_1 },
@@ -117,18 +86,9 @@ test "shared-randomness coin round is sensitive to gamma" {
     var transcript_2 = fiat_shamir.Transcript.init();
     const coins_2 = try protocol.replayWithTranscript(&transcript_2, shared_randomness_spec, &rounds_2, &.{});
 
+    // Two shards handed different γ draw different coins: γ is bound as round-0
+    // cells, so it feeds the transcript the coin is squeezed from. Conversely,
+    // shards handed the same γ with the same round-0 message agree — which is
+    // what makes their folds comparable, and what the override used to force.
     try std.testing.expect(!coins_1[0].eql(coins_2[0]));
-}
-
-test "shared-randomness gamma refs must resolve to base-field cells within bounds" {
-    const rounds = [_]protocol.RoundMessage{
-        .{ .commitment = null, .cells = &.{} }, // too few cells for the gamma refs
-        .{ .commitment = null, .cells = &.{} },
-    };
-
-    var transcript = fiat_shamir.Transcript.init();
-    try std.testing.expectError(
-        error.InvalidSharedRandomnessGamma,
-        protocol.replayWithTranscript(&transcript, shared_randomness_spec, &rounds, &.{}),
-    );
 }
