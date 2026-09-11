@@ -23,22 +23,31 @@ interface ProverProofRequestCreator<ProofRequest : Any, TProofIndex : ProofIndex
   fun createProofRequest(proofRequest: ProofRequest): SafeFuture<TProofIndex>
 }
 
+interface ProverProofRequestRemover {
+  fun removeRequests(startBlockNumberGte: Long? = null): SafeFuture<Unit>
+}
+
 interface ProverClient<ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> :
   ProverProofResponseChecker<ProofResponse, TProofIndex>,
   ProverProofRequestCreator<ProofRequest, TProofIndex> {
   fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse>
 }
 
+interface ProverClientV2<ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> :
+  ProverClient<ProofRequest, ProofResponse, TProofIndex>, ProverProofRequestRemover
+
 typealias BlobCompressionProverClientV2 =
-  ProverClient<BlobCompressionProofRequest, BlobCompressionProof, CompressionProofIndex>
-typealias ProofAggregationProverClientV2 = ProverClient<ProofsToAggregate, ProofToFinalize, AggregationProofIndex>
+  ProverClientV2<BlobCompressionProofRequest, BlobCompressionProof, CompressionProofIndex>
+typealias ProofAggregationProverClientV2 =
+  ProverClientV2<ProofsToAggregate, ProofToFinalize, AggregationProofIndex>
 typealias ExecutionProverClientV2 =
-  ProverClient<BatchExecutionProofRequestV1, BatchExecutionProofResponse, ExecutionProofIndex>
-typealias InvalidityProverClientV1 = ProverClient<InvalidityProofRequest, InvalidityProofResponse, InvalidityProofIndex>
+  ProverClientV2<BatchExecutionProofRequestV1, BatchExecutionProofResponse, ExecutionProofIndex>
+typealias InvalidityProverClientV1 =
+  ProverClientV2<InvalidityProofRequest, InvalidityProofResponse, InvalidityProofIndex>
 
 typealias L2ExecutionProverClientV1 =
-  ProverClient<L2ExecutionProofRequestV1, L2ExecutionProofResponseV1, BlockIntervalProofIndex>
+  ProverClientV2<L2ExecutionProofRequestV1, L2ExecutionProofResponseV1, BlockIntervalProofIndex>
 typealias RollupProverClientV1 =
-  ProverClient<RollupProofRequestV1, RollupProofResponseV1, BlockIntervalProofIndex>
+  ProverClientV2<RollupProofRequestV1, RollupProofResponseV1, BlockIntervalProofIndex>
 typealias RollupAggregationProverClientV1 =
-  ProverClient<RollupAggregationProofRequestV1, RollupAggregationProofResponseV1, BlockIntervalProofIndex>
+  ProverClientV2<RollupAggregationProofRequestV1, RollupAggregationProofResponseV1, BlockIntervalProofIndex>

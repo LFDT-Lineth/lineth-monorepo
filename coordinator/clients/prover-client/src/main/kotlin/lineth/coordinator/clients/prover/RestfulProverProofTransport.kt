@@ -1,5 +1,6 @@
 package lineth.coordinator.clients.prover
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -38,9 +39,10 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   private val proofType: String,
   private val startBlockProvider: (TProofIndex) -> ULong,
   private val endBlockProvider: (TProofIndex) -> ULong,
-  private val jobPathProvider: (TProofIndex) -> String = { proofIndex: TProofIndex ->
-    "/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
+  private val jobsPathProvider: (proofIndex: TProofIndex) -> String = { proofIndex: TProofIndex ->
+    "/api/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
   },
+  private val dequeuePathProvider: String = "/api/v1/jobs/dequeue",
   private val responseDtoClass: Class<ResponseDto>,
   private val pollingInterval: Duration,
   private val pollingTimeout: Duration,
@@ -55,7 +57,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   }
 
   override fun submitRequest(proofIndex: TProofIndex, requestDto: RequestDto): SafeFuture<Unit> {
-    val path = jobPathProvider(proofIndex)
+    val path = jobsPathProvider(proofIndex)
     val body = SubmitJobRequest(proofRequest = objectMapper.valueToTree(requestDto))
     val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
     log.debug("Submitting proof request. POST {}", path)
@@ -69,8 +71,28 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
     }
   }
 
+  override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
+    val path = dequeuePathProvider
+    val body = DequeueJobRequest(
+      criteria = JobCriteriaDto(
+        startBlockGte = startBlockNumberGte,
+        proofType = proofType,
+      ),
+    )
+    val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
+    log.debug("Dequeuing proof requests. POST {}", path)
+    return restClient.post(path, buffer).thenApply { result ->
+      when (result) {
+        is Ok -> Unit
+        is Err -> throw RuntimeException(
+          "Failed to dequeue proof requests: path=$path error=${result.error.type} message=${result.error.message}",
+        )
+      }
+    }
+  }
+
   override fun findResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto?> {
-    return fetchJob(proofIndex).thenApply { job -> job?.provedResponseOrNull() }
+    return fetchJob(proofIndex, true).thenApply { job -> job?.provedResponseOrNull() }
   }
 
   override fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean> {
@@ -85,7 +107,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
       stopRetriesPredicate = { responseDto -> responseDto != null },
       action = { findResponse(proofIndex) },
     ).thenApply { responseDto ->
-      responseDto ?: throw RuntimeException("Timeout waiting for proof response. job=${jobPathProvider(proofIndex)}")
+      responseDto ?: throw RuntimeException("Timeout waiting for proof response. job=${jobsPathProvider(proofIndex)}")
     }
   }
 
@@ -93,9 +115,16 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
    * `GET`s the job. Returns the parsed job on a 2xx response, or null when the job is not available yet (e.g. a 404
    * before it is created, or any non-success status), so callers can treat "not found" as "not ready".
    */
-  private fun fetchJob(proofIndex: TProofIndex): SafeFuture<ProverJobResponse?> {
-    val path = jobPathProvider(proofIndex)
-    return restClient.get(path).thenApply { result ->
+  private fun fetchJob(proofIndex: TProofIndex, includeResponse: Boolean = false): SafeFuture<ProverJobResponse?> {
+    val path = jobsPathProvider(proofIndex)
+    val params = if (includeResponse) {
+      listOf(
+        "includeResponse" to "true",
+      )
+    } else {
+      emptyList()
+    }
+    return restClient.get(path, params).thenApply { result ->
       when (result) {
         is Ok -> {
           @Suppress("UNCHECKED_CAST")
@@ -126,6 +155,21 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
     val proofRequest: JsonNode,
   )
 
+  /** Body of `POST /v1/jobs/dequeue` */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private data class DequeueJobRequest(
+    @get:JsonProperty("criteria")
+    val criteria: JobCriteriaDto? = null,
+  )
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private data class JobCriteriaDto(
+    @get:JsonProperty("start_block_gte")
+    val startBlockGte: Long? = null,
+    @get:JsonProperty("proof_type")
+    val proofType: String? = null,
+  )
+
   /** Subset of the `GET /v1/jobs/...` response body this transport relies on. */
   private data class ProverJobResponse(
     @JsonProperty("status")
@@ -135,11 +179,11 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   )
 
   companion object {
-    private const val STATUS_PENDING = "pending"
+    private const val STATUS_QUEUED = "queued"
     private const val STATUS_CLAIMED = "claimed"
     private const val STATUS_PROVED = "proved"
 
     /** Statuses indicating a job already exists for a proof index (so a new request must not be submitted). */
-    private val ACTIVE_JOB_STATUSES = setOf(STATUS_PENDING, STATUS_CLAIMED, STATUS_PROVED)
+    private val ACTIVE_JOB_STATUSES = setOf(STATUS_QUEUED, STATUS_CLAIMED, STATUS_PROVED)
   }
 }
