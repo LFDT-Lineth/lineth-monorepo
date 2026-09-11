@@ -80,6 +80,8 @@ Safe Member
 - `UNPAUSE_L2_BLOB_SUBMISSION_ROLE`
 - `FORCED_TRANSACTION_SENDER_ROLE`
 
+> **Warning — do not grant `FORCED_TRANSACTION_SENDER_ROLE` on a validium chain.** The coordinator does not support forced transactions on validium chains yet ([#3868](https://github.com/LFDT-Lineth/lineth-monorepo/issues/3868)). The validium V2 contract enforces forced-transaction inclusion at finalization, so a single forced transaction on a validium chain will halt finalization until coordinator support is added. On rollup chains, this role behaves as normal.
+
 ### 📗 L2 Message Service Roles
 
 - `DEFAULT_ADMIN_ROLE`
