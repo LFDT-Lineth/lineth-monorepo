@@ -4,15 +4,12 @@ const fri = @import("query/fri.zig");
 const pcs = @import("query/pcs.zig");
 const verifier = @import("verifier.zig");
 
-/// Every stride and offset the walk needs, derived from the types rather than
-/// written out as literals. proof_abi.zig pins these same numbers and the
-/// encoder mirrors them in prover-ray's layout.go, but neither checks this
-/// walk: deriving them means a field added to any of these structs shifts the
-/// walk with it, instead of leaving it patching stale offsets. That failure is
-/// silent — a mis-patched image still casts cleanly, and the bad pointers only
-/// surface deep inside verify().
+/// Strides and offsets of the image layout, derived from the types so that a
+/// field added to any of them moves this walk with it. Nothing downstream would
+/// catch a stale number: a wrong offset patches the wrong bytes and leaves real
+/// pointers at their encoded addresses, and the image still casts cleanly.
 const abi = struct {
-    /// A slice header is {ptr: u64, len: u64}; only ptr needs adjusting.
+    /// {ptr, len}, both usize; only ptr needs adjusting.
     const slice_hdr = @sizeOf([]const u8);
     const slice_len_off = slice_hdr / 2;
 
@@ -32,11 +29,11 @@ const abi = struct {
     const ito_siblings = @offsetOf(merkle.InputTreeOpening, "siblings");
     const ito_leaves = @offsetOf(merkle.InputTreeOpening, "leaves");
 
-    /// leaves holds inline ?RowPair values: the RowPair payload, then a
-    /// presence flag. An optional's layout is not introspectable, so the flag
-    /// is taken to sit just past the payload — the pairing proof_abi.zig pins
-    /// (?RowPair is 72 bytes, RowPair is 64).
     const opt_row_pair = @sizeOf(?merkle.RowPair);
+    /// An optional's discriminant offset is not derivable (@offsetOf rejects
+    /// optionals), so this assumes the flag follows the payload.
+    /// test/proof_abi_test.zig pins the real offset against a null and a
+    /// non-null value.
     const row_pair_flag = @sizeOf(merkle.RowPair);
     const row_opening = @sizeOf(merkle.RowOpening);
     const row_base = @offsetOf(merkle.RowOpening, "base");
@@ -51,23 +48,20 @@ const abi = struct {
     const branch_siblings = @offsetOf(merkle.Branch, "siblings");
 };
 
-/// image_relocation patches every slice-pointer in a VerifyInput image from its
-/// encoded guest address (encoded_base + offset) to the equivalent host address
-/// (mapped_base + offset). The image layout is fully determined by the
-/// proofserialization layout constants mirrored in proof_abi.zig; every []const T
-/// header is a {ptr: u64le, len: u64le} pair and only the ptr field needs
-/// adjustment. The walk is typed, never scanning raw bytes, so non-pointer u64s
-/// (lengths, field values) are never touched.
+/// Patches every slice-pointer in a VerifyInput image from `encoded_base +
+/// offset` to `mapped_base + offset`, in place.
 ///
-/// Call this after loading an image into an anonymous mmap at an address other
-/// than its encoded base — the macOS fallback in main.zig and the test fixture
-/// loader in riscv_proof_image_test.zig both use it.
+/// The walk is structural, never scanning for pointer-shaped bytes, so lengths
+/// and field values are never touched.
+///
+/// Call this after loading an image at an address other than the one it was
+/// encoded for: the macOS fallback in main.zig and the fixture loader in
+/// riscv_proof_image_test.zig both do.
 pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usize) void {
     const delta: i64 = @as(i64, @intCast(mapped_base)) - @as(i64, @intCast(encoded_base));
 
-    // Patch a single slice-pointer at byte offset `off` in the image.
-    // Returns the payload offset within the image (old_ptr - encoded_base),
-    // which callers use to walk into the pointed-to data.
+    // Returns the patched pointer's offset within the image, for walking into
+    // whatever it points at.
     const patchPtr = struct {
         fn f(image: [*]u8, len: usize, off: usize, enc_base: usize, d: i64) usize {
             if (off + abi.slice_hdr > len) return 0;
@@ -85,21 +79,17 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
         }
     }.f;
 
-    // VerifyInput.public_inputs: []Scalar, no nested pointers.
     _ = patchPtr(img, img_len, abi.public_inputs, encoded_base, delta);
 
-    // Proof.rounds and Proof.module_sizes ([]u64, no nested pointers).
     const rounds_ptr = patchPtr(img, img_len, abi.rounds, encoded_base, delta);
     const n_rounds = sliceLen(img, abi.rounds);
     _ = patchPtr(img, img_len, abi.module_sizes, encoded_base, delta);
 
-    // RoundMessage.cells: []Scalar. commitment is an inline optional.
     for (0..n_rounds) |i| {
         const rm = rounds_ptr + i * abi.round_message;
         _ = patchPtr(img, img_len, rm + abi.round_cells, encoded_base, delta);
     }
 
-    // OpeningProof.input_queries: [][]InputTreeOpening.
     const iq_outer_ptr = patchPtr(img, img_len, abi.input_queries, encoded_base, delta);
     const n_iq = sliceLen(img, abi.input_queries);
     for (0..n_iq) |i| {
@@ -110,8 +100,8 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
             const ito_off = iq_inner_ptr + j * abi.ito;
             _ = patchPtr(img, img_len, ito_off + abi.ito_siblings, encoded_base, delta);
 
-            // leaves: []?RowPair — inline values, not pointers, so the elements
-            // are walked at that stride with no dereference.
+            // leaves holds ?RowPair inline, so elements are walked at that
+            // stride rather than dereferenced.
             const leaves_hdr = ito_off + abi.ito_leaves;
             const leaves_ptr = patchPtr(img, img_len, leaves_hdr, encoded_base, delta);
             const n_leaves = sliceLen(img, leaves_hdr);
@@ -119,7 +109,6 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
                 const leaf_off = leaves_ptr + k * abi.opt_row_pair;
                 if (leaf_off + abi.row_pair_flag + 1 > img_len) continue;
                 if (img[leaf_off + abi.row_pair_flag] == 0) continue; // absent
-                // Both RowOpenings of the pair, each {base, ext}.
                 for (0..2) |r| {
                     const row = leaf_off + r * abi.row_opening;
                     _ = patchPtr(img, img_len, row + abi.row_base, encoded_base, delta);
@@ -129,11 +118,9 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
         }
     }
 
-    // FriProof.round_roots and .final_poly: both scalar element slices.
     _ = patchPtr(img, img_len, abi.round_roots, encoded_base, delta);
     _ = patchPtr(img, img_len, abi.final_poly, encoded_base, delta);
 
-    // FriProof.running_queries: [][]Branch. Branch.leaf is an inline Digest.
     const rq_outer_ptr = patchPtr(img, img_len, abi.running_queries, encoded_base, delta);
     const n_rq = sliceLen(img, abi.running_queries);
     for (0..n_rq) |i| {
