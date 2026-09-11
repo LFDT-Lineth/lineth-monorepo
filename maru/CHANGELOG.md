@@ -4,10 +4,9 @@
 
 - *(maru)* Support Noise / Yamux (#3751)
 - *(maru)* Support custom validator signers (#3700)
+- *(maru)* Add Amsterdam support (#3939)
 
 ### 🐛 Bug Fixes
-
-- *(maru)* Reject Amsterdam blocks missing the payload slot number even when execution-layer validation is disabled (#3939)
 
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
 
