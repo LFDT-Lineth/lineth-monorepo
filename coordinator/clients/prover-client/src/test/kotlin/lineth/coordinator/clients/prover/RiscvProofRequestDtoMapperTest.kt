@@ -13,6 +13,7 @@ import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexString
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,17 @@ import kotlin.time.Instant
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
 class RiscvProofRequestDtoMapperTest {
+
+  @Test
+  fun `serialized payload includes slot zero and omits absent slot`() {
+    val mapper = JsonSerialization.proofResponseMapperV1
+    val dto = executionPayload().copy(slotNumber = 0UL).fromDomainObject()
+    val json = mapper.readTree(mapper.writeValueAsString(dto))
+    assertThat(json.get("slotNumber").longValue()).isZero()
+
+    val oldPayload = executionPayload().copy(slotNumber = null).fromDomainObject()
+    assertThat(mapper.readTree(mapper.writeValueAsString(oldPayload)).has("slotNumber")).isFalse()
+  }
 
   private val programVk = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_VK
   private val chainId = 59144L
@@ -324,7 +336,8 @@ class RiscvProofRequestDtoMapperTest {
     ),
     blobGasUsed = 0UL,
     excessBlobGas = 0UL,
-    blockAccessList = byteArrayOf(),
+    blockAccessList = byteArrayOf(0xc0.toByte()),
+    slotNumber = 42UL,
   )
 
   private fun expectedExecutionPayloadDto(payload: ExecutionPayload): ExecutionPayloadDto = ExecutionPayloadDto(
@@ -353,6 +366,7 @@ class RiscvProofRequestDtoMapperTest {
     blobGasUsed = payload.blobGasUsed.toLong(),
     excessBlobGas = payload.excessBlobGas.toLong(),
     blockAccessList = payload.blockAccessList.encodeHex(),
+    slotNumber = payload.slotNumber?.toLong(),
   )
 
   private fun blockIntervalProofIndex(start: ULong, end: ULong): BlockIntervalProofIndex = BlockIntervalProofIndex(

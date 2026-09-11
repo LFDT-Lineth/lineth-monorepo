@@ -141,7 +141,8 @@
         "withdrawals": { "type": "array", "items": { "$ref": "#/$defs/withdrawal" } },
         "blobGasUsed": { "$ref": "#/$defs/uint" },
         "excessBlobGas": { "$ref": "#/$defs/uint" },
-        "blockAccessList": { "$ref": "#/$defs/bytes" }
+        "blockAccessList": { "$ref": "#/$defs/bytes" },
+        "slotNumber": { "$ref": "#/$defs/uint" }
       }
     },
     "newPayloadRequest": {
