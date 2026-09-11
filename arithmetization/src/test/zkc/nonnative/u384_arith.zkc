@@ -1,0 +1,51 @@
+// ===================================================================
+// Unit test for the 384-bit non-native modular arithmetic
+// (arithmetization/src/main/lib/nonnative/u384.zkc).
+//
+// u384 is the width required by BLS12-381, whose base field prime is
+// 381 bits and therefore does not fit the existing u256 layer. Each
+// fixture supplies two operands, a modulus, and the expected result of
+// every operation; accepting traces carry correct expectations,
+// rejecting traces carry a wrong one.
+//
+// `a` and `b` are deliberately NOT required to be reduced: they are
+// canonicalised through reduce_384 first, which is what every caller of
+// addmod_384/submod_384 must do (those two assume reduced inputs).
+// ===================================================================
+
+include "../../../main/lib/nonnative/u384.zkc"
+
+pub input a(address:u1) -> (v:u384)
+pub input b(address:u1) -> (v:u384)
+pub input m(address:u1) -> (v:u384)
+
+pub input want_reduce_a(address:u1) -> (v:u384)
+pub input want_mul(address:u1) -> (v:u384)
+pub input want_add(address:u1) -> (v:u384)
+pub input want_sub(address:u1) -> (v:u384)
+pub input want_sub_rev(address:u1) -> (v:u384)
+
+fn main() {
+    var modulus:u384 = m[0]
+
+    var x:u384 = reduce_384(a[0], modulus)
+    var y:u384 = reduce_384(b[0], modulus)
+
+    if x != want_reduce_a[0] {
+        fail
+    }
+    if mulmod_384(x, y, modulus) != want_mul[0] {
+        fail
+    }
+    if addmod_384(x, y, modulus) != want_add[0] {
+        fail
+    }
+    // both borrow directions: x-y takes the direct path when x >= y and the
+    // +modulus path otherwise, and y-x exercises the opposite branch.
+    if submod_384(x, y, modulus) != want_sub[0] {
+        fail
+    }
+    if submod_384(y, x, modulus) != want_sub_rev[0] {
+        fail
+    }
+}

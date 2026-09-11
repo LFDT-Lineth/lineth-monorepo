@@ -1,0 +1,617 @@
+include "fp12.zkc"
+include "g1.zkc"
+include "g2.zkc"
+
+// ============================================================================
+// BLS12-381 optimal Ate pairing: Miller loop, final exponentiation, and the
+// EIP-2537 BLS12_PAIRING_CHECK (0x0f) predicate.
+//
+//     e(P, Q) = f_{x, Q}(P) ^ ((p^12 - 1) / r)
+//
+// The seed x is NEGATIVE, x = -0xd201000000010000, so the Miller loop runs over
+// |x| and the result is conjugated at the end. Conjugating before the final
+// exponentiation is equivalent to inverting after its easy part, because
+// f^(p^6-1) = conj(f)/f.
+//
+// |x| has just SIX set bits (63, 62, 60, 57, 48, 16), so of the 63 iterations
+// only five perform an addition step. zkc traces only the path actually taken,
+// so the untaken addition arms cost nothing.
+//
+// LINE PLACEMENT. This is the part that is easy to get wrong and hard to
+// notice. BLS12-381 has an M-twist: matching coefficients on y^2 = x^3 + b*xi
+// gives s^6 = xi^-1, so the untwist is (x', y') -> (x'/w^2, y'/w^3), NOT
+// (x'w^2, y'w^3). With w^6 = xi, clearing denominators by the Fp2 factor xi
+// (which the final exponentiation kills, as it does any subfield element):
+//
+//     xi * l(P) = xi*yP  +  (lam*X - Y) * w^3  +  (-lam*xP) * w^5
+//
+// and since w^2 = v the Fp12 coordinates are
+//
+//     c0 = (xi*yP, 0, 0)          c1 = (0, lam*X - Y, -lam*xP)
+//
+// so exactly three of the six Fp2 coefficients are non-zero: c0.0, c1.1, c1.2.
+//
+// The WRONG (D-twist) placement satisfies both non-degeneracy and e^r == 1, and
+// is rejected only by full bilinearity e(aP,bQ) == e(P,Q)^(ab). Any change to
+// this file must be re-checked against bilinearity, not against the weaker two.
+//
+// SCALING. Each step returns its line pre-scaled by an Fp2 factor (2YZ^2 for
+// doubling, B*Z for addition). Rescaling a line by an element of a proper
+// subfield does not change the pairing, since the final exponentiation contains
+// (p^6-1)(p^2+1) and any c in Fp2 has c^(p^2-1) = 1.
+// ============================================================================
+
+// Low 64 bits of |x|. Held as a u64 rather than a u384 so the loops can peel
+// bits with a narrow split instead of a wide variable shift.
+const BLS12_381_SEED_BITS:u64 = 0xd201000000010000
+
+// ----------------------------------------------------------------------------
+// Pair staging area, carved out of the region map in fp12.zkc. Pair i occupies
+// twelve cells at BLS_MEM_PAIRS + 12*i:
+//     +0,+1     xP, yP            the G1 point, affine
+//     +2 .. +5  Qx0,Qx1,Qy0,Qy1   the G2 point, affine
+//     +6 ..+11  TX0..TZ1          the running projective T, owned by the loop
+// The caller fills the first six; the Miller loop initialises and owns the rest.
+// ----------------------------------------------------------------------------
+const BLS12_381_MAX_PAIRS:u8 = 64
+
+// Working Fp12 slots (12 cells each), all inside the work region.
+const ML_F:u12   = 960     // Miller accumulator
+const ML_W:u12   = 972     // Miller temp
+const FE_A:u12   = 984     // final-exponentiation temporaries
+const FE_B:u12   = 996
+const FE_C:u12   = 1008
+const FE_T:u12   = 1020
+const FE_U:u12   = 1032    // holds f across the whole hard part
+const XT_ACC:u12 = 1044    // fp12_expt accumulator
+const XT_TMP:u12 = 1056
+const PC_OUT:u12 = 1068    // pairing_check: Miller output
+
+// ----- line + point steps -----
+//
+// Both steps return the line as three Fp2 coefficients in a P-independent form:
+// C0 and C5 still need scaling by yP and xP respectively (both in Fp, so that
+// is fp2_mul_by_fp, two mulmods each). Splitting it this way keeps the addition
+// step at ten arguments -- passing P as well would be twelve, over the cap.
+
+// Tangent at T = (X : Y : Z), plus 2T.
+//   line, scaled by 2*Y*Z^2:  C0 = xi*2*Y*Z^2,  A3 = 3X^3 - 2Y^2Z,  C5 = -3X^2Z
+fn miller_double_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384)
+        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+
+    var xs0:u384, xs1:u384
+    xs0, xs1 = fp2_sqr_bls12_381(X0, X1)
+    var ys0:u384, ys1:u384
+    ys0, ys1 = fp2_sqr_bls12_381(Y0, Y1)
+    var zs0:u384, zs1:u384
+    zs0, zs1 = fp2_sqr_bls12_381(Z0, Z1)
+
+    // C0 = xi * (2 * Y * Z^2)
+    var yz0:u384, yz1:u384
+    yz0, yz1 = fp2_mul_bls12_381(Y0, Y1, zs0, zs1)
+    var d0:u384, d1:u384
+    d0, d1 = fp2_add_bls12_381(yz0, yz1, yz0, yz1)
+    C00, C01 = fp2_mul_by_nonresidue_bls12_381(d0, d1)
+
+    // A3 = 3*X^3 - 2*Y^2*Z
+    var xc0:u384, xc1:u384
+    xc0, xc1 = fp2_mul_bls12_381(xs0, xs1, X0, X1)
+    var t0:u384, t1:u384
+    t0, t1 = fp2_add_bls12_381(xc0, xc1, xc0, xc1)
+    var x3a0:u384, x3a1:u384
+    x3a0, x3a1 = fp2_add_bls12_381(t0, t1, xc0, xc1)
+    var yz20:u384, yz21:u384
+    yz20, yz21 = fp2_mul_bls12_381(ys0, ys1, Z0, Z1)
+    var yz2d0:u384, yz2d1:u384
+    yz2d0, yz2d1 = fp2_add_bls12_381(yz20, yz21, yz20, yz21)
+    A30, A31 = fp2_sub_bls12_381(x3a0, x3a1, yz2d0, yz2d1)
+
+    // C5 = -3 * X^2 * Z
+    var xz0:u384, xz1:u384
+    xz0, xz1 = fp2_mul_bls12_381(xs0, xs1, Z0, Z1)
+    t0, t1 = fp2_add_bls12_381(xz0, xz1, xz0, xz1)
+    t0, t1 = fp2_add_bls12_381(t0, t1, xz0, xz1)
+    C50, C51 = fp2_neg_bls12_381(t0, t1)
+
+    nX0, nX1, nY0, nY1, nZ0, nZ1 = double_projective_bls12_381_g2(X0, X1, Y0, Y1, Z0, Z1)
+}
+
+// Chord through T = (X : Y : Z) and the fixed affine Q, plus T + Q.
+//   A = Qy*Z - Y,  B = Qx*Z - X
+//   line, scaled by B*Z:  C0 = xi*B*Z,  A3 = A*X - B*Y,  C5 = -A*Z
+//   T + Q:  t = A^2 Z - B^3 - 2 B^2 X,  X3 = B*t,
+//           Y3 = A*(B^2 X - t) - B^3 Y,  Z3 = B^3 Z
+fn miller_add_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384,
+                             qx0:u384, qx1:u384, qy0:u384, qy1:u384)
+        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+
+    var t0:u384, t1:u384
+    t0, t1 = fp2_mul_bls12_381(qy0, qy1, Z0, Z1)
+    var A0:u384, A1:u384
+    A0, A1 = fp2_sub_bls12_381(t0, t1, Y0, Y1)
+
+    t0, t1 = fp2_mul_bls12_381(qx0, qx1, Z0, Z1)
+    var B0:u384, B1:u384
+    B0, B1 = fp2_sub_bls12_381(t0, t1, X0, X1)
+
+    // C0 = xi * B * Z
+    var bz0:u384, bz1:u384
+    bz0, bz1 = fp2_mul_bls12_381(B0, B1, Z0, Z1)
+    C00, C01 = fp2_mul_by_nonresidue_bls12_381(bz0, bz1)
+
+    // A3 = A*X - B*Y
+    var ax0:u384, ax1:u384
+    ax0, ax1 = fp2_mul_bls12_381(A0, A1, X0, X1)
+    var by0:u384, by1:u384
+    by0, by1 = fp2_mul_bls12_381(B0, B1, Y0, Y1)
+    A30, A31 = fp2_sub_bls12_381(ax0, ax1, by0, by1)
+
+    // C5 = -A*Z
+    var az0:u384, az1:u384
+    az0, az1 = fp2_mul_bls12_381(A0, A1, Z0, Z1)
+    C50, C51 = fp2_neg_bls12_381(az0, az1)
+
+    // T + Q
+    var b20:u384, b21:u384
+    b20, b21 = fp2_sqr_bls12_381(B0, B1)
+    var b30:u384, b31:u384
+    b30, b31 = fp2_mul_bls12_381(b20, b21, B0, B1)
+    var a20:u384, a21:u384
+    a20, a21 = fp2_sqr_bls12_381(A0, A1)
+
+    var b2x0:u384, b2x1:u384
+    b2x0, b2x1 = fp2_mul_bls12_381(b20, b21, X0, X1)
+
+    var s0:u384, s1:u384
+    s0, s1 = fp2_mul_bls12_381(a20, a21, Z0, Z1)
+    s0, s1 = fp2_sub_bls12_381(s0, s1, b30, b31)
+    var dbl0:u384, dbl1:u384
+    dbl0, dbl1 = fp2_add_bls12_381(b2x0, b2x1, b2x0, b2x1)
+    s0, s1 = fp2_sub_bls12_381(s0, s1, dbl0, dbl1)
+
+    nX0, nX1 = fp2_mul_bls12_381(B0, B1, s0, s1)
+
+    var u0:u384, u1:u384
+    u0, u1 = fp2_sub_bls12_381(b2x0, b2x1, s0, s1)
+    u0, u1 = fp2_mul_bls12_381(A0, A1, u0, u1)
+    var w0:u384, w1:u384
+    w0, w1 = fp2_mul_bls12_381(b30, b31, Y0, Y1)
+    nY0, nY1 = fp2_sub_bls12_381(u0, u1, w0, w1)
+
+    nZ0, nZ1 = fp2_mul_bls12_381(b30, b31, Z0, Z1)
+}
+
+// ----- pair staging -----
+
+fn pair_slot_bls12_381(i:u8) -> (base:u12) {
+    base = BLS_MEM_PAIRS + ((i as u12) * 12)
+}
+
+// Write the i-th (P, Q) into the staging area. T is left alone; the Miller loop
+// initialises it.
+//
+// The bound is enforced rather than trusted: slot 64 starts exactly where the
+// work region does, so an unchecked overflow would quietly overwrite the Miller
+// accumulator and yield a wrong answer instead of an error. See the note on
+// pairing_check_bls12_381 for why this is a `fail`.
+fn stage_pair_bls12_381<bls_fp12_mem>(i:u8, xP:u384, yP:u384,
+                                      qx0:u384, qx1:u384, qy0:u384, qy1:u384) {
+    if i >= BLS12_381_MAX_PAIRS {
+        fail
+    }
+    var base:u12 = pair_slot_bls12_381(i)
+    bls_fp12_mem[base] = xP
+    bls_fp12_mem[base + 1] = yP
+    bls_fp12_mem[base + 2] = qx0
+    bls_fp12_mem[base + 3] = qx1
+    bls_fp12_mem[base + 4] = qy0
+    bls_fp12_mem[base + 5] = qy1
+}
+
+// ----- the shared Miller loop -----
+
+// Product over i of f_{|x|, Q_i}(P_i), conjugated for the negative seed, written
+// to `out` (12 cells).
+//
+// ONE loop for all n pairs, not n loops: the accumulator is squared once per
+// bit and every pair's line is multiplied into it, so the 63 Fp12 squarings and
+// the whole bit schedule are shared. Running n separate loops and multiplying
+// afterwards would cost n times those squarings -- about 1100 mulmod_384 per
+// extra pair -- for the same answer.
+//
+// Each pair must already be staged (see stage_pair_bls12_381) and must be a
+// genuine, validated, non-infinity point on both sides; the affine T
+// initialisation below cannot represent the identity. pairing_check_bls12_381
+// screens for that. `out` must lie outside the work region.
+fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
+    // T <- Q, in projective coordinates with Z = 1
+    var base:u12 = BLS_MEM_PAIRS
+    for i:u8 = 0; i < n; i = i + 1 {
+        bls_fp12_mem[base + 6] = bls_fp12_mem[base + 2]
+        bls_fp12_mem[base + 7] = bls_fp12_mem[base + 3]
+        bls_fp12_mem[base + 8] = bls_fp12_mem[base + 4]
+        bls_fp12_mem[base + 9] = bls_fp12_mem[base + 5]
+        bls_fp12_mem[base + 10] = 1
+        bls_fp12_mem[base + 11] = 0
+        base = base + 12
+    }
+
+    fp12_set_one_bls12_381(ML_F)
+
+    // The MSB (bit 63) is the implicit initialisation T = Q, f = 1, so start
+    // one bit down: shifting left by one puts bit 62 at the top of `acc`.
+    var acc:u64 = BLS12_381_SEED_BITS << 1
+
+    var TX0:u384, TX1:u384, TY0:u384, TY1:u384, TZ0:u384, TZ1:u384
+    var C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384
+    var L00:u384, L01:u384, L50:u384, L51:u384
+
+    for j:u7 = 0; j < 63; j = j + 1 {
+        var bit:u1
+        var rest:u63
+        bit::rest = acc
+        acc = (rest as u64) << 1
+
+        // f <- f^2, once for the whole batch
+        fp12_sqr_bls12_381(ML_F, ML_W)
+        fp12_copy_bls12_381(ML_W, ML_F)
+
+        // f <- f * l_{T_i,T_i}(P_i);  T_i <- 2*T_i
+        base = BLS_MEM_PAIRS
+        for i:u8 = 0; i < n; i = i + 1 {
+            TX0 = bls_fp12_mem[base + 6]
+            TX1 = bls_fp12_mem[base + 7]
+            TY0 = bls_fp12_mem[base + 8]
+            TY1 = bls_fp12_mem[base + 9]
+            TZ0 = bls_fp12_mem[base + 10]
+            TZ1 = bls_fp12_mem[base + 11]
+
+            TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
+                miller_double_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1)
+
+            bls_fp12_mem[base + 6] = TX0
+            bls_fp12_mem[base + 7] = TX1
+            bls_fp12_mem[base + 8] = TY0
+            bls_fp12_mem[base + 9] = TY1
+            bls_fp12_mem[base + 10] = TZ0
+            bls_fp12_mem[base + 11] = TZ1
+
+            L00, L01 = fp2_mul_by_fp_bls12_381(C00, C01, bls_fp12_mem[base + 1])
+            L50, L51 = fp2_mul_by_fp_bls12_381(C50, C51, bls_fp12_mem[base])
+            fp12_mul_by_line_bls12_381(ML_F, L00, L01, A30, A31, L50, L51, ML_W)
+            fp12_copy_bls12_381(ML_W, ML_F)
+
+            base = base + 12
+        }
+
+        if bit == 1 {
+            // f <- f * l_{T_i,Q_i}(P_i);  T_i <- T_i + Q_i
+            base = BLS_MEM_PAIRS
+            for i:u8 = 0; i < n; i = i + 1 {
+                TX0 = bls_fp12_mem[base + 6]
+                TX1 = bls_fp12_mem[base + 7]
+                TY0 = bls_fp12_mem[base + 8]
+                TY1 = bls_fp12_mem[base + 9]
+                TZ0 = bls_fp12_mem[base + 10]
+                TZ1 = bls_fp12_mem[base + 11]
+
+                TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
+                    miller_add_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1,
+                                              bls_fp12_mem[base + 2], bls_fp12_mem[base + 3],
+                                              bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
+
+                bls_fp12_mem[base + 6] = TX0
+                bls_fp12_mem[base + 7] = TX1
+                bls_fp12_mem[base + 8] = TY0
+                bls_fp12_mem[base + 9] = TY1
+                bls_fp12_mem[base + 10] = TZ0
+                bls_fp12_mem[base + 11] = TZ1
+
+                L00, L01 = fp2_mul_by_fp_bls12_381(C00, C01, bls_fp12_mem[base + 1])
+                L50, L51 = fp2_mul_by_fp_bls12_381(C50, C51, bls_fp12_mem[base])
+                fp12_mul_by_line_bls12_381(ML_F, L00, L01, A30, A31, L50, L51, ML_W)
+                fp12_copy_bls12_381(ML_W, ML_F)
+
+                base = base + 12
+            }
+        }
+    }
+
+    // the seed is negative
+    fp12_conj_bls12_381(ML_F, out)
+}
+
+// Single-pair convenience wrapper. Stages into pair slot 0, so it clobbers it.
+fn miller_loop_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
+                                       qx0:u384, qx1:u384, qy0:u384, qy1:u384,
+                                       out:u12) {
+    stage_pair_bls12_381(0, xP, yP, qx0, qx1, qy0, qy1)
+    miller_loop_multi_bls12_381(1, out)
+}
+
+// ----- final exponentiation -----
+
+// XT_ACC <- XT_ACC^(2^n) * a. One rung of the seed addition chain below.
+fn fp12_expt_step_bls12_381<bls_fp12_mem>(a:u12, n:u8) {
+    for i:u8 = 0; i < n; i = i + 1 {
+        fp12_cyclotomic_sqr_bls12_381(XT_ACC, XT_ACC)
+    }
+    fp12_mul_bls12_381(XT_ACC, a, XT_TMP)
+    fp12_copy_bls12_381(XT_TMP, XT_ACC)
+}
+
+// a^x for the curve seed x. Since x is negative this is conj(a^|x|), and
+// conjugation is inversion only inside the cyclotomic subgroup -- which is
+// exactly where every caller here lives.
+//
+// A FIXED ADDITION CHAIN, NOT A BIT LOOP. |x| = 0xd201000000010000 is a
+// compile-time constant with set bits at 63, 62, 60, 57, 48 and 16, so the
+// square-and-multiply schedule is known in advance: square, then multiply, with
+// the gaps 1, 2, 3, 9, 32 and a tail of 16 squarings. 1+2+3+9+32+16 = 63
+// squarings and 5 multiplies, exactly what peeling the bits at runtime would
+// cost, minus the peeling.
+//
+// This also avoids a zkc problem worth recording. An fp12 squaring followed by a
+// CONDITIONAL fp12_mul inside a loop makes `zkc execute -c` report a failed call
+// lookup -- while still EXITING 0, so only stderr reveals it (the Makefile in
+// the test directory now treats that combination as a hard failure). Narrowed
+// down, it needs all three: the squaring, the dense multiply, and the branch.
+// Either operation alone in a conditional loop is clean, an unconditional
+// squaring plus multiply is clean, and it makes no difference whether the
+// addresses are constants or parameters -- so it is not an aliasing mistake
+// here. The Miller loop's conditional is unaffected because it multiplies by a
+// sparse line rather than a dense Fp12, and it does verify clean. Since this
+// schedule is static anyway, the branch simply should not exist.
+//
+// PRECONDITION: `a` is cyclotomic (it comes from the easy part) and lies outside
+// XT_ACC/XT_TMP. `o` may alias `a`.
+fn fp12_expt_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
+    fp12_copy_bls12_381(a, XT_ACC)      // bit 63, the leading one
+
+    fp12_expt_step_bls12_381(a, 1)      // bit 62
+    fp12_expt_step_bls12_381(a, 2)      // bit 60
+    fp12_expt_step_bls12_381(a, 3)      // bit 57
+    fp12_expt_step_bls12_381(a, 9)      // bit 48
+    fp12_expt_step_bls12_381(a, 32)     // bit 16
+
+    for i:u8 = 0; i < 16; i = i + 1 {   // trailing zeros, bits 15..0
+        fp12_cyclotomic_sqr_bls12_381(XT_ACC, XT_ACC)
+    }
+
+    fp12_conj_bls12_381(XT_ACC, o)      // the seed is negative
+}
+
+// f ^ (3 * (p^12 - 1) / r), written to `o`.
+//
+// EASY PART. f^(p^6-1) = conj(f)/f, then f^(p^2+1) via the p^2 Frobenius. The
+// result lies in the cyclotomic subgroup, which is what licenses the Granger-
+// Scott squaring used by everything after it.
+//
+// HARD PART. Hayashida-Hayasaka-Teruya, https://eprint.iacr.org/2020/875.pdf,
+// using the identity (verified exactly, not just modulo the group order)
+//
+//     3*d = (x-1)^2 * (x+p) * (x^2 + p^2 - 1) + 3,      d = (p^4-p^2+1)/r
+//
+// evaluated as five exponentiations by the 64-bit seed plus two Frobenius maps.
+//
+// WHY THE CUBE IS FINE. This returns e(P,Q)^3, not e(P,Q): the chain computes
+// f^(3d) because 3*d, not d, is the value with a short addition chain. That is
+// still a bilinear, non-degenerate pairing, and for the only thing this library
+// does with it -- comparing against 1 -- it is exactly equivalent: f^d lies in a
+// group of prime order r, and r is neither 2 nor 3, so (f^d)^3 = 1 iff f^d = 1.
+// Anyone wanting the textbook value would have to exponentiate by (x-1)^2/3,
+// a 126-bit generic exponent, costing roughly 3000 extra mulmod_384.
+//
+// `a` may be any Fp12 value; `o` must lie outside the work region.
+fn fp12_final_exp_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
+    // ---- easy part ----
+    fp12_conj_bls12_381(a, FE_A)
+    fp12_inv_bls12_381(a, FE_B)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_T)        // f^(p^6-1)
+    fp12_frobenius_sq_bls12_381(FE_T, FE_A)
+    fp12_mul_bls12_381(FE_A, FE_T, FE_U)        // f, now cyclotomic
+
+    // ---- hard part ----
+    fp12_expt_bls12_381(FE_U, FE_A)
+    fp12_conj_bls12_381(FE_U, FE_B)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_C)        // f^(x-1)
+
+    fp12_expt_bls12_381(FE_C, FE_A)
+    fp12_conj_bls12_381(FE_C, FE_B)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_T)        // f^((x-1)^2)
+
+    fp12_expt_bls12_381(FE_T, FE_A)
+    fp12_frobenius_bls12_381(FE_T, FE_B)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_C)        // ^(x+p)
+
+    fp12_expt_bls12_381(FE_C, FE_A)
+    fp12_expt_bls12_381(FE_A, FE_T)             // ^(x^2)
+    fp12_frobenius_sq_bls12_381(FE_C, FE_A)
+    fp12_mul_bls12_381(FE_T, FE_A, FE_B)        // ^(x^2 + p^2)
+    fp12_conj_bls12_381(FE_C, FE_A)
+    fp12_mul_bls12_381(FE_B, FE_A, FE_T)        // ^(x^2 + p^2 - 1)
+
+    fp12_cyclotomic_sqr_bls12_381(FE_U, FE_A)
+    fp12_mul_bls12_381(FE_A, FE_U, FE_B)        // f^3
+
+    fp12_mul_bls12_381(FE_T, FE_B, o)
+}
+
+// e(P, Q)^3 for a single validated, non-infinity pair. `out` must lie outside
+// the work region.
+fn pairing_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
+                                   qx0:u384, qx1:u384, qy0:u384, qy1:u384,
+                                   out:u12) {
+    miller_loop_bls12_381(xP, yP, qx0, qx1, qy0, qy1, PC_OUT)
+    fp12_final_exp_bls12_381(PC_OUT, out)
+}
+
+// ----- the precompile predicate -----
+
+// G2 subgroup membership for pair `base`, read off the Miller loop's OWN work.
+//
+// The loop walks T over the bits of |x| and leaves T = [|x|]Q. The membership
+// condition is psi(Q) == [x]Q, and x is negative, so that is exactly
+//
+//     -T == psi(Q).
+//
+// So once the loop has run, the check costs one psi (2 Fp2 muls) and a
+// projective comparison (2 more) instead of a second 64-bit ladder. Against
+// is_in_subgroup_affine_bls12_381_g2, which repeats the ladder from scratch and
+// then converts to affine, that is a saving of roughly 2,900 mulmod_384 PER
+// PAIR -- the ladder itself plus the invmod_384 the affine conversion needs.
+// The idea is gnark's: its computeLines folds the same check into the line
+// precomputation, for the same reason.
+//
+// The comparison is projective: -T == (px, py) iff TX == px*TZ and -TY == py*TZ.
+//
+// MUST be called after miller_loop_multi_bls12_381 and before anything that
+// reuses the T cells. `base` must be a LIVE pair, i.e. Q is not the encoded
+// infinity -- pairing_check_bls12_381 has already dropped those.
+fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
+    res = 0
+
+    var TZ0:u384 = bls_fp12_mem[base + 10]
+    var TZ1:u384 = bls_fp12_mem[base + 11]
+    if fp2_is_zero_bls12_381(TZ0, TZ1) == 1 {
+        // [|x|]Q = O. A subgroup point has prime order r > |x|, and Q is not the
+        // identity here, so this can only happen off-subgroup.
+        return
+    }
+
+    var px0:u384, px1:u384, py0:u384, py1:u384
+    px0, px1, py0, py1 = psi_bls12_381_g2(bls_fp12_mem[base + 2], bls_fp12_mem[base + 3],
+                                          bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
+
+    var ex0:u384, ex1:u384
+    ex0, ex1 = fp2_mul_bls12_381(px0, px1, TZ0, TZ1)
+    var ey0:u384, ey1:u384
+    ey0, ey1 = fp2_mul_bls12_381(py0, py1, TZ0, TZ1)
+
+    var ny0:u384, ny1:u384
+    ny0, ny1 = fp2_neg_bls12_381(bls_fp12_mem[base + 8], bls_fp12_mem[base + 9])
+
+    var eqx:u1 = fp2_is_equal_bls12_381(bls_fp12_mem[base + 6], bls_fp12_mem[base + 7], ex0, ex1)
+    var eqy:u1 = fp2_is_equal_bls12_381(ny0, ny1, ey0, ey1)
+    if (eqx == 1) && (eqy == 1) {
+        res = 1
+    }
+}
+
+// EIP-2537 BLS12_PAIRING_CHECK over n staged pairs.
+//
+//   0  input rejected: some coordinate is non-canonical, off-curve, or outside
+//      the prime-order subgroup. The EVM frame must revert.
+//   1  input accepted, the product of pairings is NOT 1.
+//   2  input accepted, the product of pairings IS 1.
+//
+// Invalid input is a status rather than a `fail` on purpose: a bad precompile
+// argument is a normal, provable EVM outcome, so it must not abort the proof.
+//
+// Both subgroup checks are mandatory here. Unlike G1ADD/G2ADD, a pairing over
+// off-subgroup points is not just meaningless but forgeable.
+//
+// The G2 one is deliberately deferred until AFTER the Miller loop, because the
+// loop computes [|x|]Q for free on its way and that is all the check needs --
+// see t_matches_psi_bls12_381. The cost is that a bad G2 input no longer
+// short-circuits: it now pays a full Miller loop before being rejected. That
+// trades the rare case against the common one, which is the right way round for
+// a precompile. It is safe to run the loop on an unvalidated (but on-twist)
+// point: every operation in it is mulmod/addmod, so a degenerate T merely
+// produces a garbage f, and we reject before f reaches the final exponentiation
+// (the only place an inversion happens).
+//
+// Pairs with an infinity on either side contribute e(O, Q) = e(P, O) = 1 and are
+// dropped -- they are also the one input the Miller loop cannot represent, since
+// its T starts from an affine Q. Dropping them compacts the live pairs to the
+// front of the staging area, which is why validation and compaction share a
+// pass.
+//
+// n == 0 yields status 2, the empty product. Whether an empty *calldata* is even
+// a legal invocation is an ABI question, not a curve one, and belongs to the
+// caller that decodes the input.
+//
+// CAPACITY. n > BLS12_381_MAX_PAIRS is a `fail`, deliberately, and it is the one
+// place here that aborts rather than returning a status. The gas schedule
+// (32600*k + 37700) admits far more pairs than the staging area holds, so a
+// large k is reachable from valid calldata -- but returning 0 for it would be a
+// consensus bug, since the real EVM would accept and compute. Aborting the proof
+// is a liveness failure; answering wrongly is a safety failure. Once the ABI
+// layer exists it should bound k up front, and raising the bound here means
+// widening the address type and moving the work region.
+fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
+    status = 0
+    if n > BLS12_381_MAX_PAIRS {
+        fail
+    }
+
+    var m:u8 = 0
+    var src:u12 = BLS_MEM_PAIRS
+    var dst:u12 = BLS_MEM_PAIRS
+
+    for i:u8 = 0; i < n; i = i + 1 {
+        var xP:u384 = bls_fp12_mem[src]
+        var yP:u384 = bls_fp12_mem[src + 1]
+        var qx0:u384 = bls_fp12_mem[src + 2]
+        var qx1:u384 = bls_fp12_mem[src + 3]
+        var qy0:u384 = bls_fp12_mem[src + 4]
+        var qy1:u384 = bls_fp12_mem[src + 5]
+
+        if is_valid_affine_bls12_381_g1(xP, yP) != 1 {
+            return
+        }
+        if is_in_subgroup_affine_bls12_381_g1(xP, yP) != 1 {
+            return
+        }
+        if is_valid_affine_bls12_381_g2(qx0, qx1, qy0, qy1) != 1 {
+            return
+        }
+        // G2 subgroup membership is NOT checked here -- see the header. It is
+        // read off the Miller loop's own T below, at a fraction of the cost.
+
+        var pinf:u1 = is_infinity_affine_bls12_381_g1(xP, yP)
+        var qinf:u1 = is_infinity_affine_bls12_381_g2(qx0, qx1, qy0, qy1)
+        if (pinf == 0) && (qinf == 0) {
+            // keep; dst <= src always, so this never clobbers an unread pair
+            bls_fp12_mem[dst] = xP
+            bls_fp12_mem[dst + 1] = yP
+            bls_fp12_mem[dst + 2] = qx0
+            bls_fp12_mem[dst + 3] = qx1
+            bls_fp12_mem[dst + 4] = qy0
+            bls_fp12_mem[dst + 5] = qy1
+            dst = dst + 12
+            m = m + 1
+        }
+
+        src = src + 12
+    }
+
+    if m == 0 {
+        status = 2
+        return
+    }
+
+    miller_loop_multi_bls12_381(m, PC_OUT)
+
+    // Now that T = [|x|]Q for every live pair, the deferred G2 subgroup checks
+    // are just comparisons. This must happen BEFORE the final exponentiation:
+    // that is the only step here that inverts, and an unvalidated point can
+    // drive the Miller output somewhere the inversion has no meaning.
+    var base:u12 = BLS_MEM_PAIRS
+    for i:u8 = 0; i < m; i = i + 1 {
+        if t_matches_psi_bls12_381(base) != 1 {
+            return
+        }
+        base = base + 12
+    }
+
+    fp12_final_exp_bls12_381(PC_OUT, ML_F)
+
+    if fp12_is_one_bls12_381(ML_F) == 1 {
+        status = 2
+    } else {
+        status = 1
+    }
+}

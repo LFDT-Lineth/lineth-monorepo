@@ -1,0 +1,104 @@
+// ===================================================================
+// Unit test for the Fp12 operations the final exponentiation needs
+// (arithmetization/src/main/lib/bls12_381/fp12.zkc): inversion, the p-
+// and p^2-power Frobenius, and the Granger-Scott cyclotomic squaring.
+//
+// fp12_arith.zkc covers multiply / square / conjugate / sparse line;
+// this covers the rest. They are split because these four are only
+// reachable from the final exponentiation, and their failure modes are
+// different in kind:
+//
+//   - INVERSION is self-checking: a * a^-1 == 1 needs no fixture.
+//   - FROBENIUS is not. A wrong gamma constant still produces a
+//     field automorphism-shaped answer, so it is pinned against the
+//     reference cell by cell.
+//   - CYCLOTOMIC SQUARING is the dangerous one. It is only valid on the
+//     cyclotomic subgroup and returns garbage elsewhere, silently and
+//     self-consistently. It is checked BOTH against the reference and
+//     against the general squaring on a genuine cyclotomic element --
+//     the second check is what would catch a formula that happens to
+//     be idempotent under its own re-derivation.
+//
+// The in-place cases at the end are not incidental: fp12_expt squares
+// the accumulator in place 63 times, so "destination may alias source"
+// is load-bearing, not a convenience.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/fp12.zkc"
+
+pub input a(address:u4) -> (v:u384)
+pub input c(address:u4) -> (v:u384)
+pub input want_inv(address:u4) -> (v:u384)
+pub input want_frob(address:u4) -> (v:u384)
+pub input want_frob2(address:u4) -> (v:u384)
+pub input want_cyclo(address:u4) -> (v:u384)
+
+const A:u12 = 0
+const C:u12 = 12
+const O:u12 = 24
+const T:u12 = 36
+
+fn main<bls_fp12_mem>() {
+    for i:u5 = 0; i < 12; i = i + 1 {
+        bls_fp12_mem[A + (i as u12)] = a[i as u4]
+        bls_fp12_mem[C + (i as u12)] = c[i as u4]
+    }
+
+    // ----- inversion -----
+    fp12_inv_bls12_381(A, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_inv[i as u4] {
+            fail
+        }
+    }
+    fp12_mul_bls12_381(A, O, T)
+    if fp12_is_one_bls12_381(T) != 1 {
+        fail
+    }
+
+    // ----- Frobenius -----
+    fp12_frobenius_bls12_381(A, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_frob[i as u4] {
+            fail
+        }
+    }
+
+    fp12_frobenius_sq_bls12_381(A, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_frob2[i as u4] {
+            fail
+        }
+    }
+
+    // ----- cyclotomic squaring, on a genuinely cyclotomic element -----
+    fp12_cyclotomic_sqr_bls12_381(C, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_cyclo[i as u4] {
+            fail
+        }
+    }
+
+    // it must agree with the general squaring there
+    fp12_sqr_bls12_381(C, T)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != bls_fp12_mem[T + (i as u12)] {
+            fail
+        }
+    }
+
+    // ----- in-place aliasing, which fp12_expt depends on -----
+    fp12_cyclotomic_sqr_bls12_381(C, C)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[C + (i as u12)] != want_cyclo[i as u4] {
+            fail
+        }
+    }
+
+    fp12_frobenius_bls12_381(A, A)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[A + (i as u12)] != want_frob[i as u4] {
+            fail
+        }
+    }
+}

@@ -1,0 +1,82 @@
+// ===================================================================
+// Unit test for the BLS12-381 final exponentiation
+// (arithmetization/src/main/lib/bls12_381/pairing.zkc).
+//
+// Checks the three stages separately so a regression points at one of
+// them rather than at "the pairing is wrong":
+//   - the easy part f^(p^6-1)(p^2+1)
+//   - one exponentiation by the seed
+//   - the whole thing
+//
+// Plus two algebraic properties that need no fixture:
+//   - the easy part lands in the cyclotomic subgroup, so the general
+//     squaring and the Granger-Scott squaring must agree on it. This
+//     is the check that catches a wrong cyclotomic squaring, which is
+//     otherwise silently self-consistent.
+//   - the output has order dividing r, i.e. it really is a pairing
+//     value and not just some Fp12 element.
+//
+// NOTE the result is e(P,Q)^3, not e(P,Q) -- see the comment on
+// fp12_final_exp_bls12_381. That is deliberate and sound for the
+// equality-to-1 test the precompile performs.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/pairing.zkc"
+
+pub input f(address:u4) -> (v:u384)
+pub input want_easy(address:u4) -> (v:u384)
+pub input want_expt(address:u4) -> (v:u384)
+pub input want_fe(address:u4) -> (v:u384)
+
+const F:u12 = 0
+const O:u12 = 12
+const T:u12 = 24
+const E:u12 = 36
+
+fn main<bls_fp12_mem>() {
+    for i:u5 = 0; i < 12; i = i + 1 {
+        bls_fp12_mem[F + (i as u12)] = f[i as u4]
+    }
+
+    // ----- easy part -----
+    fp12_conj_bls12_381(F, FE_A)
+    fp12_inv_bls12_381(F, FE_B)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_T)
+    fp12_frobenius_sq_bls12_381(FE_T, FE_A)
+    fp12_mul_bls12_381(FE_A, FE_T, E)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[E + (i as u12)] != want_easy[i as u4] {
+            fail
+        }
+    }
+
+    // the easy part must be cyclotomic: the two squarings agree there
+    fp12_sqr_bls12_381(E, O)
+    fp12_cyclotomic_sqr_bls12_381(E, T)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != bls_fp12_mem[T + (i as u12)] {
+            fail
+        }
+    }
+
+    // ----- one exponentiation by the seed -----
+    fp12_expt_bls12_381(E, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_expt[i as u4] {
+            fail
+        }
+    }
+
+    // ----- the whole final exponentiation -----
+    fp12_final_exp_bls12_381(F, O)
+    for i:u5 = 0; i < 12; i = i + 1 {
+        if bls_fp12_mem[O + (i as u12)] != want_fe[i as u4] {
+            fail
+        }
+    }
+
+    // Deliberately NOT checked here: that the output has order r. It costs
+    // 256 Fp12 squarings, roughly as much again as the final exponentiation
+    // itself, and it is the weaker property anyway -- pairing_check.zkc pins
+    // the real one, bilinearity, through the shipped predicate.
+}

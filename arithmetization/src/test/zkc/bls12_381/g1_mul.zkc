@@ -1,0 +1,33 @@
+// ===================================================================
+// Unit test for BLS12-381 G1 scalar multiplication
+// (arithmetization/src/main/lib/bls12_381/g1.zkc).
+//
+// Split from g1_add.zkc because the ladder recurses once per scalar bit,
+// so a full-width scalar is orders of magnitude more expensive than a
+// single addition. This is the harness that exercises the dedicated
+// doubling formula, which plain addition fixtures never reach.
+//
+// Not itself a precompile: BLS12_G1ADD needs only addition. This is
+// groundwork for BLS12_G1MSM, and it is the cheapest way to pin down the
+// doubling formula and the identity handling in the ladder.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g1.zkc"
+
+pub input k(address:u1) -> (v:u384)
+pub input px(address:u1) -> (v:u384)
+pub input py(address:u1) -> (v:u384)
+pub input want_qx(address:u1) -> (v:u384)
+pub input want_qy(address:u1) -> (v:u384)
+
+fn main() {
+    var qx:u384, qy:u384
+    qx, qy = scalar_mul_affine_bls12_381_g1(k[0], px[0], py[0])
+
+    if qx != want_qx[0] {
+        fail
+    }
+    if qy != want_qy[0] {
+        fail
+    }
+}

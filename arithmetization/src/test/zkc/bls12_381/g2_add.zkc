@@ -1,0 +1,55 @@
+// ===================================================================
+// Unit test for BLS12-381 G2 validity and the projective group law
+// (arithmetization/src/main/lib/bls12_381/g2.zkc).
+//
+// G2 is the sextic twist E'(Fp2): y^2 = x^3 + 4(1 + u). Each fixture
+// carries two candidate points, the expected verdict of
+// is_valid_affine_* on each, and -- when both are valid -- their sum.
+//
+// The doubling formula is dedicated (not a special case of the complete
+// addition), so a P + P fixture exercises only the addition path. It is
+// covered separately by checking 2*P through the ladder below.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g2.zkc"
+
+pub input px0(address:u1) -> (v:u384)
+pub input px1(address:u1) -> (v:u384)
+pub input py0(address:u1) -> (v:u384)
+pub input py1(address:u1) -> (v:u384)
+pub input qx0(address:u1) -> (v:u384)
+pub input qx1(address:u1) -> (v:u384)
+pub input qy0(address:u1) -> (v:u384)
+pub input qy1(address:u1) -> (v:u384)
+
+pub input want_valid_p(address:u1) -> (v:u8)
+pub input want_valid_q(address:u1) -> (v:u8)
+pub input want_rx0(address:u1) -> (v:u384)
+pub input want_rx1(address:u1) -> (v:u384)
+pub input want_ry0(address:u1) -> (v:u384)
+pub input want_ry1(address:u1) -> (v:u384)
+
+fn main() {
+    var vp:u1 = is_valid_affine_bls12_381_g2(px0[0], px1[0], py0[0], py1[0])
+    var vq:u1 = is_valid_affine_bls12_381_g2(qx0[0], qx1[0], qy0[0], qy1[0])
+
+    if (vp as u8) != want_valid_p[0] {
+        fail
+    }
+    if (vq as u8) != want_valid_q[0] {
+        fail
+    }
+
+    if (vp == 1) && (vq == 1) {
+        var rx0:u384, rx1:u384, ry0:u384, ry1:u384
+        rx0, rx1, ry0, ry1 = add_affine_bls12_381_g2(px0[0], px1[0], py0[0], py1[0],
+                                                     qx0[0], qx1[0], qy0[0], qy1[0])
+
+        if (rx0 != want_rx0[0]) || (rx1 != want_rx1[0]) {
+            fail
+        }
+        if (ry0 != want_ry0[0]) || (ry1 != want_ry1[0]) {
+            fail
+        }
+    }
+}

@@ -1,0 +1,35 @@
+// ===================================================================
+// Unit test for 384-bit modular inversion and exponentiation
+// (arithmetization/src/main/lib/nonnative/u384.zkc).
+//
+// Split out from u384_arith.zkc because both operations are orders of
+// magnitude more expensive than mul/add/sub: expmod_unconstrained_384
+// recurses once per exponent bit, so a full-width exponent costs ~384
+// levels, and invmod_384 is a Fermat exponentiation by modulus-2.
+//
+// invmod_384 hints the inverse and then constrains it via
+// inv*inp == 1, so a wrong `want_inv` is caught by the harness while a
+// wrong *hint* would already have been caught inside invmod_384. Only
+// invertible inputs are valid here: gcd(a, m) must be 1.
+// ===================================================================
+
+include "../../../main/lib/nonnative/u384.zkc"
+
+pub input a(address:u1) -> (v:u384)
+pub input e(address:u1) -> (v:u384)
+pub input m(address:u1) -> (v:u384)
+
+pub input want_inv(address:u1) -> (v:u384)
+pub input want_exp(address:u1) -> (v:u384)
+
+fn main() {
+    var modulus:u384 = m[0]
+    var x:u384 = reduce_384(a[0], modulus)
+
+    if invmod_384(x, modulus) != want_inv[0] {
+        fail
+    }
+    if expmod_unconstrained_384(x, e[0], modulus) != want_exp[0] {
+        fail
+    }
+}

@@ -1,0 +1,36 @@
+// ===================================================================
+// Unit test for BLS12-381 Fp2 inversion
+// (arithmetization/src/main/lib/bls12_381/fp2.zkc).
+//
+// Split from fp2_arith.zkc: inversion is the only Fp2 operation that
+// costs a Fermat exponentiation (~617 mulmod_384 against 3 for a
+// multiply), and the only one undefined at zero, so every fixture here
+// is non-zero.
+//
+// Checked two ways -- against the expected value, and by the defining
+// identity a * a^-1 == 1. The identity alone would be satisfied by a
+// correct inverse computed the wrong way round (conjugate sign flipped
+// AND norm mis-signed), so both matter.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/fp2.zkc"
+
+pub input a0(address:u1) -> (v:u384)
+pub input a1(address:u1) -> (v:u384)
+pub input want_inv0(address:u1) -> (v:u384)
+pub input want_inv1(address:u1) -> (v:u384)
+
+fn main() {
+    var i0:u384, i1:u384
+    i0, i1 = fp2_inv_bls12_381(a0[0], a1[0])
+
+    if (i0 != want_inv0[0]) || (i1 != want_inv1[0]) {
+        fail
+    }
+
+    var m0:u384, m1:u384
+    m0, m1 = fp2_mul_bls12_381(a0[0], a1[0], i0, i1)
+    if (m0 != 1) || (m1 != 0) {
+        fail
+    }
+}

@@ -1,0 +1,51 @@
+// ===================================================================
+// Unit test for the BLS12-381 pairing-check predicate
+// (arithmetization/src/main/lib/bls12_381/pairing.zkc), i.e. the whole
+// EIP-2537 BLS12_PAIRING_CHECK (0x0f) computation short of ABI decoding.
+//
+// This is where BILINEARITY is tested, and it is the only property that
+// really pins a pairing. Non-degeneracy and e^r == 1 are both satisfied
+// by a wrong line placement -- that mistake was actually made here once
+// and survived both of those checks. Fixtures like
+//
+//     e(3P, Q) * e(P, -3Q) == 1
+//     e(2P, 3Q) * e(5P, 7Q) * e(-41P, Q) == 1
+//
+// hold only if the pairing is genuinely bilinear, so they are the real
+// regression barrier for this whole directory.
+//
+// The three-pair fixture additionally exercises the SHARED Miller loop:
+// the accumulator is squared once per bit while three independent T
+// points advance, so a bug in the per-pair bookkeeping (a clobbered T,
+// a mis-strided slot) shows up here and nowhere else.
+//
+// Status values are the precompile's, not booleans:
+//   0 = input rejected (the EVM frame must revert)
+//   1 = accepted, product != 1
+//   2 = accepted, product == 1
+// ===================================================================
+
+include "../../../main/lib/bls12_381/pairing.zkc"
+
+pub input n(address:u1) -> (v:u8)
+pub input want(address:u1) -> (v:u8)
+
+pub input px(address:u3) -> (v:u384)
+pub input py(address:u3) -> (v:u384)
+pub input qx0(address:u3) -> (v:u384)
+pub input qx1(address:u3) -> (v:u384)
+pub input qy0(address:u3) -> (v:u384)
+pub input qy1(address:u3) -> (v:u384)
+
+fn main<bls_fp12_mem>() {
+    var k:u8 = n[0]
+
+    for i:u8 = 0; i < k; i = i + 1 {
+        var j:u3 = i as u3
+        stage_pair_bls12_381(i, px[j], py[j], qx0[j], qx1[j], qy0[j], qy1[j])
+    }
+
+    if (pairing_check_bls12_381(k) as u8) != want[0] {
+        fail
+    }
+}
