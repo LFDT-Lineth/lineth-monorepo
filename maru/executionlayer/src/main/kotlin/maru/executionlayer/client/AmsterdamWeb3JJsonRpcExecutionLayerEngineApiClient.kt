@@ -12,15 +12,13 @@ import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
-import maru.executionlayer.mappers.Mappers.toExecutionPayloadV3
-import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
+import maru.executionlayer.mappers.Mappers.toExecutionPayloadV4
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV4
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.tuweni.bytes.Bytes32
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV3
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -28,16 +26,16 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
 import java.util.Optional
 
-// https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md
-class CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
+// https://github.com/ethereum/execution-apis/blob/main/src/engine/amsterdam.md
+class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
   web3jClient: Web3JClient,
   metricsFacade: MetricsFacade,
 ) : BaseWeb3JJsonRpcExecutionLayerEngineApiClient(web3jClient = web3jClient, metricsFacade = metricsFacade) {
-  override fun getFork(): ElFork = ElFork.Cancun
+  override fun getFork(): ElFork = ElFork.Amsterdam
 
   override fun getPayload(payloadId: Bytes8): SafeFuture<Response<ExecutionPayload>> =
     createRequestTimer<ExecutionPayload>(method = "getPayload").captureTime(
-      web3jEngineClient.getPayloadV3(payloadId).thenApply {
+      web3jEngineClient.getPayloadV6(payloadId).thenApply {
         when {
           it.payload != null ->
             Response.fromPayloadReceivedAsJson(it.payload.executionPayload.toDomainExecutionPayload())
@@ -54,13 +52,11 @@ class CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
   override fun newPayload(executionPayload: ExecutionPayload): SafeFuture<Response<PayloadStatusV1>> =
     createRequestTimer<PayloadStatusV1>(method = "newPayload").captureTime(
       web3jEngineClient
-        .newPayloadV3(
-          /* executionPayload = */
-          executionPayload.toExecutionPayloadV3(),
-          /* blobVersionedHashes = */
+        .newPayloadV5(
+          executionPayload.toExecutionPayloadV4(),
           emptyList(),
-          /* parentBeaconBlockRoot = */
           Bytes32.ZERO,
+          emptyList(),
         ).thenApply {
           if (it.payload != null) {
             Response.fromPayloadReceivedAsJson(it.payload)
@@ -77,23 +73,9 @@ class CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
     ).captureTime(
-      web3jEngineClient.forkChoiceUpdatedV3(
+      web3jEngineClient.forkChoiceUpdatedV4(
         forkChoiceState,
-        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV1()?.toV3()),
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV4()),
       ),
     ).toSafeFuture()
-
-  private fun PayloadAttributesV1.toV3(): PayloadAttributesV3 =
-    PayloadAttributesV3(
-      /* timestamp = */
-      this.timestamp,
-      /* prevRandao = */
-      this.prevRandao,
-      /* suggestedFeeRecipient = */
-      this.suggestedFeeRecipient,
-      /* withdrawals = */
-      emptyList(),
-      /* parentBeaconBlockRoot = */
-      Bytes32.ZERO,
-    )
 }

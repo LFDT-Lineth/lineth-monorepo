@@ -116,6 +116,7 @@ class EagerQbftBlockCreatorTest {
     mainBlockCreator: QbftBlockCreator,
     sequence: Long,
     round: Int,
+    forkActivationTimestamp: ULong = 0UL,
   ): EagerQbftBlockCreator {
     whenever(
       beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
@@ -147,6 +148,8 @@ class EagerQbftBlockCreatorTest {
         feeRecipient = feeRecipient,
         config = EagerQbftBlockCreator.Config(
           minBlockBuildTime = 500.milliseconds,
+          forkActivationTimestamp = forkActivationTimestamp,
+          targetGasLimit = 60_000_000UL,
         ),
         beaconChain = beaconChain,
       )
@@ -280,7 +283,41 @@ class EagerQbftBlockCreatorTest {
       nextBlockTimestamp = any(),
       feeRecipient = any(),
       prevRandao = any(),
+      nextBlockSlotNumber = eq(1UL),
+      targetGasLimit = eq(60_000_000UL),
     )
+  }
+
+  @Test
+  fun `clamps build timestamp to fork activation before FCU and block assembly`() {
+    val latestPayload = ethApiClient.eth1Web3j
+      .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), true)
+      .send().block.toDomain()
+    val parent = SealedBeaconBlock(
+      BeaconBlock(
+        DataGenerators.randomBeaconBlockHeader(0U),
+        DataGenerators.randomBeaconBlockBody().copy(executionPayload = GENESIS_EXECUTION_PAYLOAD),
+      ),
+      emptySet(),
+    )
+    val activationTimestamp = latestPayload.timestamp + 2UL
+    val manager = executionLayerManager
+    val delegate = createDelayedBlockCreator(round = 0, manager = manager)
+    val creator = setup(
+      manager,
+      parent,
+      delegate,
+      sequence = 1,
+      round = 0,
+      forkActivationTimestamp = activationTimestamp,
+    )
+    val parentHeader = QbftBlockHeaderAdapter(parent.beaconBlock.beaconBlockHeader)
+
+    val result = creator.createBlock((activationTimestamp - 1UL).toLong(), parentHeader)
+
+    val block = result.block().toBeaconBlock()
+    assertThat(block.beaconBlockHeader.timestamp).isEqualTo(activationTimestamp)
+    assertThat(block.beaconBlockBody.executionPayload.timestamp).isEqualTo(activationTimestamp)
   }
 
   @Test
@@ -325,6 +362,8 @@ class EagerQbftBlockCreatorTest {
       nextBlockTimestamp = any(),
       feeRecipient = any(),
       prevRandao = any(),
+      nextBlockSlotNumber = eq(1UL),
+      targetGasLimit = eq(60_000_000UL),
     )
   }
 
@@ -342,6 +381,7 @@ class EagerQbftBlockCreatorTest {
         finalizedHash = genesisBlockHash,
         nextBlockTimestamp = rejectedBlockTimestamp.toULong(),
         feeRecipient = validator.address,
+        nextBlockSlotNumber = 1UL,
       ).get()
     val transaction = BesuTransactionsHelper().createTransfers(1u)
     besuInstance.execute(transaction)

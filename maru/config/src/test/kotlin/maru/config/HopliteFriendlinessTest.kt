@@ -384,6 +384,27 @@ class HopliteFriendlinessTest {
   }
 
   @Test
+  fun amsterdamTargetGasLimitIsParseable() {
+    val config = parseConfig<QbftOptionsDtoToml>(qbftOptionsToml + "\ntarget-gas-limit = 60000000")
+    assertThat(config.toDomain().targetGasLimit).isEqualTo(60_000_000UL)
+  }
+
+  @Test
+  fun amsterdamTargetGasLimitHasNoDefault() {
+    assertThat(parseConfig<QbftOptionsDtoToml>(qbftOptionsToml).toDomain().targetGasLimit).isNull()
+    assertThat(parseConfig<QbftConfig>(qbftOptionsToml).targetGasLimit).isNull()
+  }
+
+  @Test
+  fun amsterdamTargetGasLimitMustMeetMinimumWhenConfigured() {
+    val config = parseConfig<QbftOptionsDtoToml>(qbftOptionsToml + "\ntarget-gas-limit = 4999")
+    assertThatThrownBy { config.toDomain() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("targetGasLimit must be at least 5000")
+    assertThat(config.copy(targetGasLimit = 5000UL).toDomain().targetGasLimit).isEqualTo(5000UL)
+  }
+
+  @Test
   fun payloadValidationEnablementFlagIsParseableWhenTrue() {
     val payloadValidatorToml =
       """
