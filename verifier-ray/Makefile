@@ -2,12 +2,6 @@ SHELL := /bin/bash
 
 .PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
-# `make` with no target runs first goal. Set explicitly here to avoid include overriding the default goal.
-.DEFAULT_GOAL := ci
-
-# shared guest build tools (elf-to-json, linker script, IN_ORIGIN)
-include ../riscv-guests/build_common/Makefile
-
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
@@ -23,6 +17,11 @@ NATIVE_BIN := zig-out/bin/verifier-ray
 IN_BYTES := @$(PROOF_IMAGE)
 
 DISABLE_ACCELERATORS ?= false
+
+# Use the zkc tool version pinned in go.mod
+ZKC = go tool zkc
+# Use pinned elf_to_json in go.mod
+ELF_TO_JSON = go tool elf_to_json
 
 ci: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
@@ -119,18 +118,18 @@ verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig testdata/riscv_proof_image.bin
 
 zkc-build: build-r5
-	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
+	$(ELF_TO_JSON) $(R5_BIN) $(IN_BYTES) > $(R5_JSON)
 
 zkc-verify: zkc-build
-	zkc exec $(R5_JSON) $(ZKC_MAIN)
+	$(ZKC) exec $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-passing:
 	$(MAKE) zkc-verify
 
 zkc-verify-failing:
 	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC) -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
-	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
-	zkc exec $(R5_JSON) $(ZKC_MAIN)
+	$(ELF_TO_JSON) $(R5_BIN) $(IN_BYTES) > $(R5_JSON)
+	$(ZKC) exec $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-failing-expected:
 	@if $(MAKE) zkc-verify-failing; then \
@@ -142,8 +141,8 @@ zkc-verify-failing-expected:
 
 profile-zkc-case:
 	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
-	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
-	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
+	$(ELF_TO_JSON) $(R5_BIN) $(IN_BYTES) > $(R5_JSON)
+	@$(ZKC) exec $(R5_JSON) $(ZKC_MAIN)
 
 profile-zkc: generate-testdata
 	go run bench/verifier_profile/main.go \
