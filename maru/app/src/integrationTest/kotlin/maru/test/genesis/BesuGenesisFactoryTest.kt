@@ -160,9 +160,24 @@ class BesuGenesisFactoryTest {
             fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Osaka),
           ),
         )
+      val amsterdamForkSpec =
+        ForkSpec(
+          timestampSeconds = Instant.Companion
+            .parse("2025-10-24T00:00:00Z")
+            .epochSeconds
+            .toULong(),
+          blockTimeSeconds = 2U,
+          configuration = QbftConsensusConfig(
+            validatorSet = validators,
+            fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Amsterdam),
+          ),
+        )
 
       val forksSchedule =
-        ForksSchedule(13U, listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec))
+        ForksSchedule(
+          13U,
+          listOf(ttdForkSpec, shanghaiForkSpec, cancunForkSpec, pragueForkSpec, osakaForkSpec, amsterdamForkSpec),
+        )
 
       val result =
         BesuGenesisFactory.createGenesisWithQBFT(
@@ -184,6 +199,7 @@ class BesuGenesisFactoryTest {
       assertIsNumberWithValue(config.get("cancunTime"), cancunForkSpec.timestampSeconds)
       assertIsNumberWithValue(config.get("pragueTime"), pragueForkSpec.timestampSeconds)
       assertIsNumberWithValue(config.get("osakaTime"), osakaForkSpec.timestampSeconds)
+      assertIsNumberWithValue(config.get("amsterdamTime"), amsterdamForkSpec.timestampSeconds)
     }
 
     @Test
@@ -227,7 +243,7 @@ class BesuGenesisFactoryTest {
     }
 
     @Test
-    fun `should create genesis with fork schedule with interleaved forks`() {
+    fun `should preserve skipped and repeated forks without enabling future forks`() {
       val cancunForkSpec =
         ForkSpec(
           timestampSeconds = 0UL,
@@ -246,7 +262,10 @@ class BesuGenesisFactoryTest {
             fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Osaka),
           ),
         )
-      val forksSchedule = ForksSchedule(13U, listOf(cancunForkSpec, osakaForkSpec))
+      val forksSchedule = ForksSchedule(
+        13U,
+        listOf(cancunForkSpec, osakaForkSpec, osakaForkSpec.copy(timestampSeconds = 3000UL)),
+      )
       val result =
         BesuGenesisFactory.createGenesisWithQBFT(
           blockPeriodSeconds = 4U,
@@ -264,7 +283,30 @@ class BesuGenesisFactoryTest {
       assertIsNumberWithValue(config.get("cancunTime"), 0UL)
       assertIsNumberWithValue(config.get("pragueTime"), 2000UL)
       assertIsNumberWithValue(config.get("osakaTime"), 2000UL)
+      Assertions.assertThat(config.has("amsterdamTime")).isFalse()
     }
+  }
+
+  @Test
+  fun `Amsterdam-only schedule enables all earlier forks at genesis`() {
+    val validators = setOf(Validator(address = Random.nextBytes(20)))
+    val schedule = ForksSchedule(
+      13u,
+      listOf(
+        ForkSpec(
+          timestampSeconds = 1000UL,
+          blockTimeSeconds = 1u,
+          configuration = QbftConsensusConfig(validators, ChainFork(ClFork.QBFT_PHASE0, ElFork.Amsterdam)),
+        ),
+      ),
+    )
+    val genesis = BesuGenesisFactory.createGenesisWithQBFT(blockPeriodSeconds = 1u, forks = schedule)
+    val config = objectMapper.readTree(genesis).get("config")
+
+    for (key in listOf("shanghaiTime", "cancunTime", "pragueTime", "osakaTime")) {
+      assertIsNumberWithValue(config.get(key), 0UL)
+    }
+    assertIsNumberWithValue(config.get("amsterdamTime"), 1000UL)
   }
 
   @Nested

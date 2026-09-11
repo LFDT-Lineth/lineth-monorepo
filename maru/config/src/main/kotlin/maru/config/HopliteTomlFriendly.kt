@@ -124,6 +124,10 @@ data class QbftOptionsDtoToml(
     description = "Logical signer name passed to the external signer factory when signer-type is 'custom'.",
   )
   val signerName: String? = null,
+  @param:ConfigDoc(
+    description = "Target execution block gas limit. Required for block-producing nodes with Amsterdam scheduled.",
+  )
+  val targetGasLimit: ULong? = null,
 ) {
   fun toDomain(): QbftConfig =
     QbftConfig(
@@ -136,6 +140,7 @@ data class QbftOptionsDtoToml(
       futureMessagesLimit = futureMessagesLimit,
       feeRecipient = feeRecipient,
       validatorSigner = ValidatorSignerConfig.fromConfig(signerType, signerName),
+      targetGasLimit = targetGasLimit,
     )
 
   override fun equals(other: Any?): Boolean {
@@ -154,6 +159,7 @@ data class QbftOptionsDtoToml(
     if (!feeRecipient.contentEquals(other.feeRecipient)) return false
     if (signerType != other.signerType) return false
     if (signerName != other.signerName) return false
+    if (targetGasLimit != other.targetGasLimit) return false
 
     return true
   }
@@ -169,6 +175,7 @@ data class QbftOptionsDtoToml(
     result = 31 * result + feeRecipient.contentHashCode()
     result = 31 * result + signerType.hashCode()
     result = 31 * result + (signerName?.hashCode() ?: 0)
+    result = 31 * result + (targetGasLimit?.hashCode() ?: 0)
     return result
   }
 }

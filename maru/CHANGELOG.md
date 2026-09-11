@@ -7,6 +7,8 @@
 
 ### 🐛 Bug Fixes
 
+- *(maru)* Reject Amsterdam blocks missing the payload slot number even when execution-layer validation is disabled (#3939)
+
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
 
 ### ⚙️ Miscellaneous Tasks

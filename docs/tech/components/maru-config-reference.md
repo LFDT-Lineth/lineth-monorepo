@@ -147,6 +147,7 @@ QBFT consensus settings. Omit on follower (non-validator) nodes.
 | `qbft.round-expiry-coefficient` | Multiplier used to derive each subsequent round's expiry from the previous one. | `Double` | no | `2.0` | active |
 | `qbft.signer-name` | Logical signer name passed to the external signer factory when signer-type is 'custom'. | `String?` | no | - | active |
 | `qbft.signer-type` | Validator signing backend. Use 'local' for the node private key or 'custom' for an external signer. | `String` | no | `local` | active |
+| `qbft.target-gas-limit` | Target execution block gas limit. Required for block-producing nodes with Amsterdam scheduled. | `ULong?` | no | - | active |
 
 ### `syncing`
 

@@ -10,8 +10,10 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
+import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV3
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.tuweni.bytes.Bytes32
@@ -70,12 +72,15 @@ class CancunWeb3JJsonRpcExecutionLayerEngineApiClient(
 
   override fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
-    payloadAttributes: PayloadAttributesV1?,
+    payloadAttributes: PayloadAttributes?,
   ): SafeFuture<Response<ForkChoiceUpdatedResult>> =
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
     ).captureTime(
-      web3jEngineClient.forkChoiceUpdatedV3(forkChoiceState, Optional.ofNullable(payloadAttributes?.toV3())),
+      web3jEngineClient.forkChoiceUpdatedV3(
+        forkChoiceState,
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV1()?.toV3()),
+      ),
     ).toSafeFuture()
 
   private fun PayloadAttributesV1.toV3(): PayloadAttributesV3 =
