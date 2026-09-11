@@ -595,7 +595,12 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
         assertThat(log)
           .withFailMessage {
             val relatedLines = log.lineSequence()
-              .filter { it.contains("line count") || it.contains("stopping selection") }
+              .filter {
+                it.contains("line count") ||
+                  it.contains("stopping selection") ||
+                  it.contains("Interrupting the selection") ||
+                  it.contains("too late for inclusion")
+              }
               .joinToString("\n")
             "Expected Besu logs to contain '$target'.\n" +
               "Related log lines captured instead:\n$relatedLines"
