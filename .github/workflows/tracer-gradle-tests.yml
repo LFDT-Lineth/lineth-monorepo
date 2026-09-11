@@ -50,7 +50,7 @@ jobs:
           JAVA_OPTS: -Xmx2g
 
       - name: Run Spotless Check
-        run: ./gradlew spotlessCheck --stacktrace
+        run: ./gradlew spotlessCheck --stacktrace --info
 
       - name: Compile all Java/Kotlin code in tracer module
         run: ./gradlew :tracer:classes :tracer:testClasses
@@ -114,4 +114,3 @@ jobs:
         with:
           name: jacoco-fast-replay-tests-exec-file
           path: tracer/arithmetization/build/jacoco/fastReplayTests.exec
-
