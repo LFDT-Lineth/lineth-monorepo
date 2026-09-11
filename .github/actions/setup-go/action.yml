@@ -46,3 +46,5 @@ runs:
       with:
         path: ${{ steps.cache.outputs.paths }}
         key: ${{ steps.cache.outputs.prefix }}${{ steps.go.outputs.go-version }}-${{ hashFiles(inputs.cache-dependency-path) }}
+        # Reuse main's cache when dependencies change; Go fetches missing modules.
+        restore-keys: ${{ steps.cache.outputs.prefix }}${{ steps.go.outputs.go-version }}-
