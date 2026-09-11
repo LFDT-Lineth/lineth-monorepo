@@ -1,7 +1,7 @@
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907102024-e1ed771dd796 h1:ORwdo7z8TXtms2lVQpPpXq+jOfGqnD3APmOu4X5pvyY=
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907102024-e1ed771dd796/go.mod h1:umx/RI/g2j3klWgMV8kUfjso4eKPbPDiFAfBe+/b/8s=
-github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260907102024-e1ed771dd796 h1:e3ZRltzFptWSHeYwQRAhWlhqCSX487OdkV66TP4eLRs=
-github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260907102024-e1ed771dd796/go.mod h1:QoOHtYGhpg/76PyKHDS0ZxPdNBonIshQGq9zvJ4FqPs=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907081205-20e4172711a4 h1:mbvSEPWqPp+5xK/7arKDkVGoeq1iExsnqocOgB47XVc=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907081205-20e4172711a4/go.mod h1:umx/RI/g2j3klWgMV8kUfjso4eKPbPDiFAfBe+/b/8s=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260911112416-7c6a734869c1 h1:8QU/8I8RkWsfA6R0AXX9HPCGKpJayU06TBjb0I27fRQ=
+github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260911112416-7c6a734869c1/go.mod h1:VmcebRApxiJbIxyfudPAU9MziRn9a1nYkmt+UGGDOeQ=
 github.com/LFDT-Lineth/zkc v1.2.32 h1:+KztPR6eIieERgYlWgHd65STh268cTB6O/pNhfylOtk=
 github.com/LFDT-Lineth/zkc v1.2.32/go.mod h1:sBRNMvovYHKzGBhayuSA5m5HMadXWmI/rX8nNsaMidE=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=

@@ -3,11 +3,9 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 
-	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
@@ -21,18 +19,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
-	"github.com/LFDT-Lineth/zkc/pkg/util/field"
-	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
-	"github.com/LFDT-Lineth/zkc/pkg/util/source"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
-	zkccodegen "github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
-	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
-)
-
-var (
-	zkcField = field.KOALABEAR_16
-	zkcCfg   = zkccodegen.DEFAULT_CONFIG
+	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 )
 
 // HonestRiscvArtifacts are the verifier-facing outputs from compiling the real
@@ -72,18 +59,13 @@ var honestSharedRandomness = koalafield.Octuplet{
 // pipeline rather than trace-and-check-constraints alone — and returns the
 // verifier-facing artifacts derived from it.
 func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
-	sourcePath, err := honestRiscvSourcePath()
+	binF, err := embedded.CompiledBinaryFile()
 	if err != nil {
-		return HonestRiscvArtifacts{}, err
-	}
-
-	binF, err := compileBinaryConstraints(sourcePath)
-	if err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("compiling %s: %w", sourcePath, err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("compiling embedded binary: %w", err)
 	}
 	compiledConstraints, err := binF.MarshalBinary()
 	if err != nil {
-		return HonestRiscvArtifacts{}, fmt.Errorf("marshaling %s constraints: %w", sourcePath, err)
+		return HonestRiscvArtifacts{}, fmt.Errorf("marshaling embedded binary constraints: %w", err)
 	}
 
 	sys := wiop.NewSystemf("zkc-riscv-system")
@@ -97,7 +79,7 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	}
 
 	// The witness is a real halting guest ELF, not a synthetic verifier fixture.
-	honestInputs, err := zkc_r5.PrepareInput(zkc_r5.AllInOneGuestELF, nil)
+	honestInputs, err := predecoding.PrepareInputs(minimalelf.AllInOneElfProgram, nil)
 	if err != nil {
 		return HonestRiscvArtifacts{}, fmt.Errorf("PrepareInput: %w", err)
 	}
@@ -132,44 +114,6 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 		CompiledSystem: compiledSystem,
 		VerifyInput:    verifyInput,
 	}, nil
-}
-
-func honestRiscvSourcePath() (string, error) {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", fmt.Errorf("resolving codegen source path: runtime.Caller failed")
-	}
-	return filepath.Join(filepath.Dir(thisFile), "..", "..", "arithmetization", "src", "main", "riscv", "main.zkc"), nil
-}
-
-func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic during zkc compilation: %v", r)
-		}
-	}()
-
-	srcZkc, err := os.ReadFile(srcPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read zkc source file: %w", err)
-	}
-	src := source.NewSourceFile(srcPath, srcZkc)
-	macroProgram, _, errs := compiler.Compile(zkcField, zkcCfg.GetMaxStaticHeight(), *src)
-	if len(errs) > 0 {
-		for i := range errs {
-			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
-		}
-		return nil, fmt.Errorf("failed to compile zkc source")
-	}
-	ir, errs := ast.Compile(macroProgram, zkcCfg)
-	if len(errs) > 0 {
-		for i := range errs {
-			fmt.Printf("zkc compile error: %s\n", errs[i].Error())
-		}
-		return nil, fmt.Errorf("failed to compile zkc source")
-	}
-	binfile = constraints.NewBinaryFile[koalabear.Element](nil, nil, ir)
-	return binfile, nil
 }
 
 func runCompilePipeline(sys *wiop.System) {
