@@ -39,6 +39,12 @@ class EagerQbftBlockCreator(
 
   data class Config(
     val minBlockBuildTime: Duration,
+    /**
+     * ProtocolStarter selects the fork using the anticipated next block timestamp, so this
+     * protocol can start before activation. Its first payload must not predate the fork.
+     */
+    val forkActivationTimestamp: ULong = 0UL,
+    val targetGasLimit: ULong? = null,
   )
 
   override fun createBlock(
@@ -71,7 +77,11 @@ class EagerQbftBlockCreator(
     // INVALID_PAYLOAD_ATTRIBUTES (or INVALID_WITHDRAWALS_PARAMS on V1). Clamping here makes the
     // timestamp strictly greater than the EL head, mirroring what Clique's DefaultBlockScheduler
     // does for non-merge consensus.
-    val safeTimestampSeconds = maxOf(headerTimeStampSeconds, elHeadTimestampSeconds.toLong() + 1L)
+    val safeTimestampSeconds = maxOf(
+      headerTimeStampSeconds,
+      elHeadTimestampSeconds.toLong() + 1L,
+      config.forkActivationTimestamp.toLong(),
+    )
     if (safeTimestampSeconds != headerTimeStampSeconds) {
       log.debug(
         "Clamped next block timestamp from {} to {} (EL head timestamp={})",
@@ -94,6 +104,8 @@ class EagerQbftBlockCreator(
               .inc(),
             prevRandao = parentBeaconBlock.beaconBlockBody.executionPayload.prevRandao,
           ),
+          nextBlockSlotNumber = beaconBlockHeader.number + 1UL,
+          targetGasLimit = config.targetGasLimit,
         ).get()
     log.debug(
       "Building new block, FCU result={}",

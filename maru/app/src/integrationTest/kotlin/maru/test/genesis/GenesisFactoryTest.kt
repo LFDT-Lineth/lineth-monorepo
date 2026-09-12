@@ -36,7 +36,7 @@ class GenesisFactoryTest {
   }
 
   @Test
-  fun `should create genesis with ttd and all chain forks from Paris to Osaka`() {
+  fun `should create genesis with ttd and all chain forks from Paris to Amsterdam`() {
     val parisTime = Instant.fromEpochSeconds(0)
     val shanghaiTimestamp = Instant.parse("2025-01-01T00:00:00Z")
     val cancunTimestamp = Instant.parse("2025-02-01T00:00:00Z")
@@ -44,6 +44,8 @@ class GenesisFactoryTest {
     val pragueTimestamp = Instant.parse("2025-03-01T00:00:00Z")
     val osakaTimestamp = Instant.parse("2025-04-01T00:00:00Z")
     val osakaTimestamp2 = Instant.parse("2025-04-02T00:00:00Z")
+    val amsterdamTimestamp = Instant.parse("2025-05-01T00:00:00Z")
+    val amsterdamTimestamp2 = Instant.parse("2025-05-02T00:00:00Z")
 
     val forks =
       mapOf(
@@ -54,6 +56,8 @@ class GenesisFactoryTest {
         pragueTimestamp to ChainFork(ClFork.QBFT_PHASE1, ElFork.Prague),
         osakaTimestamp to ChainFork(ClFork.QBFT_PHASE0, ElFork.Osaka),
         osakaTimestamp2 to ChainFork(ClFork.QBFT_PHASE1, ElFork.Osaka),
+        amsterdamTimestamp to ChainFork(ClFork.QBFT_PHASE0, ElFork.Amsterdam),
+        amsterdamTimestamp2 to ChainFork(ClFork.QBFT_PHASE1, ElFork.Amsterdam),
       )
 
     genesisFactory.initForkSchedule(
@@ -79,6 +83,7 @@ class GenesisFactoryTest {
     assertIsNumberWithValue(config.get("cancunTime"), cancunTimestamp.epochSeconds)
     assertIsNumberWithValue(config.get("pragueTime"), pragueTimestamp.epochSeconds)
     assertIsNumberWithValue(config.get("osakaTime"), osakaTimestamp.epochSeconds)
+    assertIsNumberWithValue(config.get("amsterdamTime"), amsterdamTimestamp.epochSeconds)
   }
 
   @Test

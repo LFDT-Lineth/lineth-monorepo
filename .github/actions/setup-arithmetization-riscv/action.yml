@@ -26,11 +26,11 @@ runs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
-          # setup-go has no restore-only mode, so read-only here means the Go cache is off entirely.
+          # Preserve the existing opt-out for builds of custom refs.
           cache: ${{ inputs.cache-save }}
 
       - name: Install Zig
@@ -61,8 +61,23 @@ runs:
       # is one recipe to keep in sync instead of two. The l2-execution guest's native host tools
       # (l2-execution-wrap, l2-execution-runner) link them via the default `zig build` step this job
       # also runs, even though the benchmark itself only consumes the freestanding riscv64 ELF.
+      - name: Prepare native crypto cache destinations
+        id: crypto-cache-permissions
+        shell: bash
+        run: |
+          sudo mkdir -p /usr/local/lib /usr/local/include/mcl
+          echo "lib-owner=$(stat -c '%u:%g' /usr/local/lib)" >> "$GITHUB_OUTPUT"
+          echo "include-owner=$(stat -c '%u:%g' /usr/local/include)" >> "$GITHUB_OUTPUT"
+          owner="$(id -u):$(id -g)"
+          sudo chown "$owner" /usr/local/lib /usr/local/include
+          sudo chown -R "$owner" /usr/local/include/mcl
+          # Do not create placeholders: make treats an existing library as installed.
+          for path in /usr/local/lib/libblst.a /usr/local/lib/libmcl.so /usr/local/include/blst.h /usr/local/include/blst_aux.h; do
+            if [ -e "$path" ]; then sudo chown "$owner" "$path"; fi
+          done
+
       - name: Cache blst + mcl builds
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: ./.github/actions/cache
         with:
           path: |
             /usr/local/lib/libblst.a
@@ -72,9 +87,24 @@ runs:
             /usr/local/include/mcl
           key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
 
+      - name: Restore native crypto destination ownership
+        if: ${{ always() && steps.crypto-cache-permissions.outputs.lib-owner != '' }}
+        shell: bash
+        env:
+          LIB_OWNER: ${{ steps.crypto-cache-permissions.outputs.lib-owner }}
+          INCLUDE_OWNER: ${{ steps.crypto-cache-permissions.outputs.include-owner }}
+        run: |
+          for path in /usr/local/lib/libblst.a /usr/local/lib/libmcl.so /usr/local/include/blst.h /usr/local/include/blst_aux.h /usr/local/include/mcl; do
+            if [ -e "$path" ]; then sudo chown -R root:root "$path"; fi
+          done
+          sudo chown "$LIB_OWNER" /usr/local/lib
+          sudo chown "$INCLUDE_OWNER" /usr/local/include
+
       - name: Install native crypto deps (blst, mcl)
         shell: bash
-        run: make -C riscv-guests install-native-crypto-deps
+        run: |
+          make -C riscv-guests install-native-crypto-deps
+          sudo ldconfig
 
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
