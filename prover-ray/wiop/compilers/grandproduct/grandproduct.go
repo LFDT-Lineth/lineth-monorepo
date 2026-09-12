@@ -139,17 +139,30 @@ func buildZ(
 		round,
 	)
 
-	// Recurrence Z[i]·zDen − Z[i−1]·zNum. The −1 shift on Z places row 0 in
-	// NewVanishing's cancelled positions, so the recurrence is vacuous on row 0
-	// (pinned separately by the local constraint below) and on a one-row
-	// dynamic module. For a statically one-row module it is skipped outright.
+	// Recurrence Z[i]·zDen − Z[i−1]·zNum, cancelled on row 0 only: row 0 is
+	// pinned separately by the local constraint below, and cancelling it also
+	// makes the recurrence vacuous on a one-row dynamic module. For a statically
+	// one-row module it is skipped outright.
+	//
+	// The cancellation set is declared manually rather than inferred by
+	// NewVanishing. Inference derives cancelled rows from every shift in the
+	// expression tree, and zNum/zDen embed the caller's factor expressions
+	// verbatim -- a factor read as col.View().Shift(+k) would cancel the last k
+	// rows too. Row n−1 is exactly the row opened as ZFinal below and fed to
+	// FinalProductCheck; cancelling it would sever Z[n−1] from Z[n−2] and let a
+	// prover choose the endpoint freely, so CheckResultIsOne would accept an
+	// arbitrary non-permuted multiset. Shifts on factor columns are cyclic
+	// (tableElemAt wraps mod n), so the recurrence is genuinely well-defined on
+	// every row but the first and needs no further exemption. Compare
+	// localvanishing.liftToGlobal, which avoids the same inference for its own
+	// reasons.
 	if m.IsDynamic() || m.Size() > 1 {
 		zView := zCol.View()
 		recurrence := wiop.Sub(
 			wiop.Mul(zView, zDen),
 			wiop.Mul(zView.Shift(-1), zNum),
 		)
-		m.NewVanishing(ctx.Childf("z-recurrence-m%d-k%d", mi, k), recurrence)
+		m.NewVanishingManual(ctx.Childf("z-recurrence-m%d-k%d", mi, k), recurrence, 0)
 	}
 
 	// Initial condition at row 0: Z[0]·zDen − zNum = 0, i.e. Z[0] = zNum/zDen.
