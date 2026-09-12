@@ -202,6 +202,19 @@ func updateSetup(ctx context.Context, cfg *config.Config, force bool,
 	manifestPath := filepath.Join(setupPath, config.ManifestFileName)
 	logrus.Infof("Manifest path: %s", manifestPath)
 
+	// Provisioning, not proving: this is the one place allowed to write into the
+	// SRS directory, so a later prove-time read finds the Lagrange basis already
+	// there instead of spending hours re-deriving it. It runs before the
+	// skip-if-already-setup check so that re-running setup against current
+	// assets still backfills a missing dump; a dump already on disk makes this
+	// free, and --force re-validates it in full. Best-effort: a failed persist
+	// warns and setup carries on; persist_derived_srs = false turns it off.
+	if persister, ok := srsProvider.(circuits.LagrangePersister); ok && cfg.PersistDerivedSRS {
+		if err := persister.DeriveAndPersistLagrange(ctx, ccs, force); err != nil {
+			logrus.Warnf("could not persist derived lagrange SRS for %s (continuing): %v", circuit, err)
+		}
+	}
+
 	// check if setup can be skipped
 	if !force {
 		// we may want to skip setup if the files already exist
