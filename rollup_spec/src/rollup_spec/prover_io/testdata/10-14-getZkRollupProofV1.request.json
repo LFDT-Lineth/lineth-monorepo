@@ -21,7 +21,9 @@
       }
     ],
     "chunks": [
-      "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+      {
+        "chunkHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+      }
     ],
     "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
     "startOffset": 4,

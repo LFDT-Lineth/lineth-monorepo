@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import ckzg
-import lz4.block
+import zstandard
 
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import (
@@ -45,7 +45,7 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 BLOB_BYTES_LENGTH = 4096 * 32
 
 # Big-endian width of the per-conflation segment length prefix within the DA
-# stream (§3.1): `[len][lz4(rlp(conflation))]`. 4 bytes comfortably bounds any
+# stream (§3.1): `[len][zstd(rlp(conflation))]`. 4 bytes comfortably bounds any
 # realistic compressed conflation size well under 2**32.
 SEGMENT_LENGTH_PREFIX_BYTES = 4
 
@@ -99,6 +99,38 @@ class TruncatedEthereumBlock:
 
 
 @dataclass
+class ChunkWitness:
+    """
+    One touched chunk's anchored hash plus its declared kind (§3.1).
+
+    - **Blob chunk** (`is_calldata=False`, the default): fixed
+      `BLOB_BYTES_LENGTH` bytes (EIP-4844 pads every blob to 128 KiB), bound by
+      its KZG commitment / versioned hash. A blob chunk may be *shared* with a
+      neighbouring proof across a range boundary (§3.1), reconstructed from
+      this proof's own slice plus witnessed opaque prefix/suffix bytes.
+    - **Calldata chunk** (`is_calldata=True`): one calldata submission, bound
+      by `keccak256(_compressedData)`. It packs a whole number of conflation
+      segments (complete, no partial tail) and is *range-aligned*: it shares no
+      bytes with a neighbouring proof, so its `start_offset` is 0 and it
+      carries no opaque bytes. The guest resolves its extent by matching the
+      anchored `chunk_hash` at segment boundaries — no length is witnessed.
+
+    `is_calldata` is witness data: the anchored `chunk_hash` does not by itself
+    record which binding applies. It needs no independent L1 verification
+    because the guest confirms it — each arm recomputes the binding hash from
+    the reconstructed bytes and rejects unless it equals `chunk_hash`, so a
+    mismatched flag fails the check. The flag selects the check; the hash
+    carries the soundness.
+    """
+    chunk_hash: Hash32
+    is_calldata: bool = False
+
+    @property
+    def is_blob(self) -> bool:
+        return not self.is_calldata
+
+
+@dataclass
 class DataRollingHashWitness:
     """
     DataRollingHashWitness is the preimage of a dataRollingHash fold step (§3.1):
@@ -134,9 +166,9 @@ class ConflationWitness:
     witnessed truncated form.
 
     Each conflation is compressed INDEPENDENTLY — truncate → RLP-encode →
-    LZ4-compress, one segment per conflation, length-prefixed — and the
+    zstd-compress, one segment per conflation, length-prefixed — and the
     resulting segments are concatenated in order to form the DA byte stream
-    (§3.1). LZ4 back-references never cross a segment boundary, so this proof
+    (§3.1). zstd back-references never cross a segment boundary, so this proof
     can recompress its own conflations without any foreign witness data.
     """
     block_rlps: List[bytes]
@@ -178,46 +210,68 @@ def _truncate_conflation(
 
 def _compress_conflation_segment(truncated: Sequence["TruncatedEthereumBlock"]) -> bytes:
     """
-    Independently RLP-encode and LZ4-compress one conflation's truncated
+    Independently RLP-encode and zstd-compress one conflation's truncated
     blocks, and prefix the result with its compressed length (§3.1):
-    `[len][lz4(rlp(conflation))]`. The sequencer and the rollup guest must
+    `[len][zstd(rlp(conflation))]`. The sequencer and the rollup guest must
     agree byte-for-byte on this framing for the KZG verifier to accept.
     """
-    segment = compress_lz4(rlp_encode_truncated_blocks(truncated))
+    segment = compress_zstd(rlp_encode_truncated_blocks(truncated))
     return len(segment).to_bytes(SEGMENT_LENGTH_PREFIX_BYTES, "big") + segment
 
 
 def _verify_and_fold_chunks(
     own_stream_bytes: bytes,
     start_offset: int,
-    chunks: Sequence[Hash32],
+    chunks: Sequence[ChunkWitness],
     opaque_prefix_bytes: bytes,
     opaque_suffix_bytes: bytes,
     parent_data_rolling_hash: Hash32,
     boundary_prev_data_rolling_hash: Optional[Hash32],
+    segment_end_offsets: Sequence[int],
 ) -> Tuple[Hash32, int]:
     """
     Slice `own_stream_bytes` (this proof's own concatenated conflation
-    segments) across the chunks it touches, reconstruct each chunk's full
-    published bytes, verify each chunk's KZG commitment against its anchored
-    hash (`chunks[k]`), and fold the dataRollingHash chain across them (§3.1, §3.4).
+    segments) across the chunks it touches, reconstruct each chunk's published
+    bytes, recompute each chunk's binding hash and check it against its
+    anchored hash (`chunks[k].chunk_hash`), and fold the dataRollingHash chain
+    across them (§3.1, §3.4). The per-chunk check dispatches on the declared
+    kind `chunks[k].is_calldata` (§3.1): a blob chunk verifies its KZG
+    commitment's versioned hash, a calldata chunk verifies `keccak256` of its
+    bytes. Both arms end in `recomputed == chunk_hash`, so the flag selects
+    which recomputation runs while the anchored hash carries the soundness.
 
-    `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes not owned
-    by this proof — relevant only at the two ends of the touched range, never
-    per-chunk: `opaque_prefix_bytes` fills the start of the FIRST touched
-    chunk when `start_offset > 0`; `opaque_suffix_bytes` fills the end of the
-    LAST touched chunk when this proof's data doesn't reach `chunkSize`. Both
-    default to empty. The guest witnesses them as opaque bytes purely to
-    reconstruct each boundary chunk's full published content for KZG
-    verification — their content is never interpreted, only reproduced
-    (§2.2: "opaque boundary bytes").
+    A **blob chunk** is fixed at `BLOB_BYTES_LENGTH` (EIP-4844 pads every blob
+    to 128 KiB) and may be shared with a neighbouring proof across a range
+    boundary: `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes
+    not owned by this proof, relevant only at the two ends of the touched
+    range, never per-chunk — `opaque_prefix_bytes` fills the start of the FIRST
+    touched chunk when `start_offset > 0`; `opaque_suffix_bytes` fills the end
+    of the LAST touched chunk when this proof's data doesn't reach that blob's
+    end. Both default to empty. The guest witnesses opaque bytes purely to
+    reconstruct a boundary blob chunk's full published content for KZG
+    verification — their content is never interpreted (§2.2).
 
-    Mid-chunk starts (`start_offset > 0`): `parent_data_rolling_hash` is already the dataRollingHash
-    value *after* folding the first touched chunk, so instead of folding
-    forward the guest opens its preimage — `boundary_prev_data_rolling_hash` plus the
-    recomputed hash of the first chunk must reproduce `parent_data_rolling_hash` — which
-    binds the witnessed chunk to the chain position without requiring the
-    guest to have derived `parent_data_rolling_hash` itself.
+    A **calldata chunk** packs a whole number of conflation segments (§3.1) —
+    complete segments, no partial tail — so its end falls only at a segment
+    boundary. The guest resolves each calldata chunk's extent by hashing the
+    stream from its start (`cursor`) to each candidate segment-end offset and
+    accepting the first whose keccak256 equals `chunk_hash`; the matching
+    partition is the proof of the chunk's extent, so no length is witnessed and
+    a run of consecutive calldata chunks self-delimits. A calldata chunk is
+    range-aligned: it never shares bytes with a neighbouring proof, so it
+    carries no opaque prefix/suffix bytes and sits only at `start_offset = 0`.
+
+    `segment_end_offsets` is the cumulative byte offset of each segment's end
+    within `own_stream_bytes` — the candidate calldata chunk boundaries. It is
+    derived in-guest from the recomputed segments, never witnessed.
+
+    Mid-chunk starts (`start_offset > 0`, necessarily a blob chunk):
+    `parent_data_rolling_hash` is already the dataRollingHash value *after*
+    folding the first touched chunk, so instead of folding forward the guest
+    opens its preimage — `boundary_prev_data_rolling_hash` plus the recomputed
+    hash of the first chunk must reproduce `parent_data_rolling_hash` — which
+    binds the witnessed chunk to the chain position without requiring the guest
+    to have derived `parent_data_rolling_hash` itself.
 
     Returns `(end_data_rolling_hash, end_offset)`.
     """
@@ -226,66 +280,112 @@ def _verify_and_fold_chunks(
         raise Exception("rollup proof must touch at least one chunk")
     if not (0 <= start_offset < BLOB_BYTES_LENGTH):
         raise Exception("startOffset must be within [0, chunkSize)")
-
-    end_offset = len(own_stream_bytes) - (chunk_count - 1) * BLOB_BYTES_LENGTH + start_offset
-    if not (0 < end_offset <= BLOB_BYTES_LENGTH):
-        raise Exception("chunk witness count is inconsistent with the reconstructed segment length")
     if len(opaque_prefix_bytes) != start_offset:
         raise Exception("opaquePrefixBytes length does not match startOffset")
-    if len(opaque_suffix_bytes) != BLOB_BYTES_LENGTH - end_offset:
-        raise Exception("opaqueSuffixBytes length does not match endOffset")
+
+    # Opaque bytes attach only to shared blob chunks: a non-zero start_offset
+    # opens the first chunk's prefix (so that chunk is a blob), and a suffix
+    # pads the last chunk's tail (so that chunk is a blob).
+    if start_offset > 0 and not chunks[0].is_blob:
+        raise Exception("mid-chunk start (startOffset > 0) requires the first chunk to be a blob")
+    if len(opaque_suffix_bytes) > 0 and not chunks[-1].is_blob:
+        raise Exception("opaqueSuffixBytes requires the last chunk to be a blob")
 
     setup = _trusted_setup()
     cursor = 0
+    last_chunk_len = 0  # bytes consumed of the last-folded chunk, within that chunk
     data_rolling_hash = parent_data_rolling_hash
-    for i in range(chunk_count):
+    for i, chunk in enumerate(chunks):
         is_first = i == 0
         is_last = i == chunk_count - 1
         prefix = opaque_prefix_bytes if is_first else b""
         suffix = opaque_suffix_bytes if is_last else b""
-        own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
 
-        own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
-        cursor += own_slice_len
-        full_chunk_bytes = prefix + own_slice + suffix
-        if len(full_chunk_bytes) != BLOB_BYTES_LENGTH:
-            raise Exception(f"chunk {i} reconstructed bytes do not fill the chunk")
-
-        try:
-            # ┌─ PRECOMPILE (production guest): BLS12-381 / KZG commitment ───┐
-            # │ The zkVM exposes EIP-4844 blob commitment computation as a    │
-            # │ native primitive or a deterministic linked implementation.    │
-            # │ This call hides the BLS12-381 multi-scalar multiplication     │
-            # │ over the chunk's 4096 field elements.                         │
-            # │                                                               │
-            # │ Soundness for this chunk comes from computing the commitment  │
-            # │ directly from `full_chunk_bytes` and matching its versioned   │
-            # │ hash to the chunk's anchored hash: the commitment scheme's    │
-            # │ binding property means only these exact bytes can produce a   │
-            # │ commitment hashing to that value.                             │
-            # └───────────────────────────────────────────────────────────────┘
-            chunk_kzg_commitment = KZGCommitment(
-                ckzg.blob_to_kzg_commitment(full_chunk_bytes, setup),
-            )
-        except Exception as exc:
-            raise Exception("invalid chunk KZG commitment computation") from exc
-
-        computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
-        if computed_chunk_hash != chunks[i]:
-            raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
+        if chunk.is_blob:
+            # Fixed-size blob: own slice fills whatever the opaque boundary
+            # bytes don't, reconstructing exactly BLOB_BYTES_LENGTH.
+            own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
+            if own_slice_len < 0:
+                raise Exception(f"chunk {i} opaque bytes exceed the blob chunk size")
+            last_chunk_len = BLOB_BYTES_LENGTH - len(suffix)
+            # The final position must lie strictly inside the last chunk:
+            # end_offset == 0 is the fresh-start sentinel, so a trailing blob
+            # chunk that opaque suffix bytes fill entirely is rejected.
+            if is_last and last_chunk_len <= 0:
+                raise Exception(f"chunk {i} opaque suffix bytes fill the whole blob chunk")
+            own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
+            cursor += own_slice_len
+            full_chunk_bytes = prefix + own_slice + suffix
+            if len(full_chunk_bytes) != BLOB_BYTES_LENGTH:
+                raise Exception(f"chunk {i} reconstructed bytes do not fill the chunk")
+            try:
+                # Ordinary in-guest code (production guest): the EIP-4844 blob
+                # commitment is computed in software as a BLS12-381 G1
+                # multi-scalar multiplication over the chunk's 4096 field
+                # elements (the blst-backed MSM in the RISC-V guest; `ckzg`
+                # here). It is NOT a zkVM precompile — soundness for this
+                # chunk comes from computing the commitment directly from
+                # `full_chunk_bytes` and matching its versioned hash to the
+                # chunk's anchored hash: the commitment scheme's binding
+                # property means only these exact bytes can produce a
+                # commitment hashing to that value.
+                chunk_kzg_commitment = KZGCommitment(
+                    ckzg.blob_to_kzg_commitment(full_chunk_bytes, setup),
+                )
+            except Exception as exc:
+                raise Exception("invalid chunk KZG commitment computation") from exc
+            computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
+            if computed_chunk_hash != chunk.chunk_hash:
+                raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
+        else:
+            # Range-aligned calldata chunk: it packs a whole number of
+            # segments, so it carries no opaque boundary bytes and its start
+            # sits at a fresh stream/segment boundary.
+            if len(prefix) != 0 or len(suffix) != 0:
+                raise Exception(f"chunk {i} is a calldata chunk and carries no opaque bytes")
+            if is_first and start_offset != 0:
+                raise Exception(f"chunk {i} is a calldata chunk and starts at offset 0")
+            # A calldata chunk must start at a segment boundary. `cursor` is
+            # derived in-guest (it advances only by whole blob windows or
+            # matched segment ends), so this is an assertion of the stream
+            # invariant rather than a check on witnessed input.
+            if cursor != 0 and cursor not in segment_end_offsets:
+                raise Exception(f"calldata chunk {i} does not start at a segment boundary")
+            # Resolve the chunk's extent by matching its anchored hash at each
+            # candidate segment-end boundary strictly past the cursor (a
+            # zero-length chunk is rejected: end_offset 0 is the fresh-start
+            # sentinel, so keccak256(b"") at `end == cursor` is not a valid
+            # match). The matching partition is the proof of the extent
+            # (keccak is binding), so no length is witnessed; a run of
+            # consecutive calldata chunks self-delimits.
+            matched_end: Optional[int] = None
+            for end in segment_end_offsets:
+                if end <= cursor:
+                    continue
+                if keccak256(own_stream_bytes[cursor:end]) == chunk.chunk_hash:
+                    matched_end = end
+                    break
+            if matched_end is None:
+                raise Exception(f"calldata chunk {i} does not match any whole-segment extent")
+            last_chunk_len = matched_end - cursor
+            cursor = matched_end
 
         if is_first and start_offset > 0:
             if boundary_prev_data_rolling_hash is None:
                 raise Exception("mid-chunk start requires boundaryPrevDataRollingHash")
-            if DataRollingHashWitness(boundary_prev_data_rolling_hash, chunks[i]).hash() != parent_data_rolling_hash:
+            if DataRollingHashWitness(boundary_prev_data_rolling_hash, chunk.chunk_hash).hash() != parent_data_rolling_hash:
                 raise Exception("boundary chunk dataRollingHash preimage does not open parentDataRollingHash")
             data_rolling_hash = parent_data_rolling_hash
         else:
-            data_rolling_hash = DataRollingHashWitness(data_rolling_hash, chunks[i]).hash()
+            data_rolling_hash = DataRollingHashWitness(data_rolling_hash, chunk.chunk_hash).hash()
 
     if cursor != len(own_stream_bytes):
         raise Exception("chunk witnesses do not cover the reconstructed segment length")
 
+    # end_offset is the position within the LAST chunk: for a blob, the bytes
+    # consumed of its fixed window (chunkSize less the opaque suffix); for a
+    # calldata chunk, its whole length (a calldata chunk is consumed whole).
+    end_offset = last_chunk_len
     return data_rolling_hash, end_offset
 
 
@@ -365,7 +465,7 @@ class RollupProofPrivateInput:
     start_offset: int
     chain_id: U64
     conflations: List[ConflationWitness]
-    chunks: List[Hash32]
+    chunks: List[ChunkWitness]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
     opaque_prefix_bytes: bytes = b""
     opaque_suffix_bytes: bytes = b""
@@ -420,15 +520,17 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, independently computes the canonical
     compressed segment from `block_rlps` (truncate → RLP-encode →
-    LZ4-compress, length-prefixed, §3.1) and concatenates the segments into
+    zstd-compress, length-prefixed, §3.1) and concatenates the segments into
     this proof's own byte stream. Slices that stream across the chunks it
     touches, reconstructing each chunk's full published bytes together with
-    any witnessed opaque boundary bytes, computes the KZG commitment for each,
-    and checks it against the L1-anchored `chunkHash` — folding the dataRollingHash
-    chain across the touched chunks as it goes (§3.4). Recursively verifies
-    the N l2-execution proofs, checks continuity, builds the L2->L1
-    Merkle-root commitment, collects FTX outputs, and emits the 20-field
-    rollup PI tuple (§2.4).
+    any witnessed opaque boundary bytes, recomputes each chunk's binding hash
+    (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
+    commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
+    against the L1-anchored `chunkHash` — folding the dataRollingHash chain
+    across the touched chunks as it goes (§3.4). Recursively verifies the N
+    l2-execution proofs, checks continuity, builds the L2->L1 Merkle-root
+    commitment, collects FTX outputs, and emits the 20-field rollup PI tuple
+    (§2.4).
     """
     if len(rollup_input.conflations) == 0:
         raise Exception("rollup proof must cover at least one conflation")
@@ -461,6 +563,15 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         segments.append(_compress_conflation_segment(conflation_truncated))
 
     own_stream_bytes = b"".join(segments)
+    # Cumulative byte offset of each segment's end within the stream. Calldata
+    # chunks pack a whole number of segments (§3.1), so their boundaries fall
+    # only at these offsets; the guest resolves each calldata chunk's extent by
+    # matching its anchored hash at these candidate ends (no length witnessed).
+    segment_end_offsets: List[int] = []
+    _running = 0
+    for _seg in segments:
+        _running += len(_seg)
+        segment_end_offsets.append(_running)
     end_data_rolling_hash, end_offset = _verify_and_fold_chunks(
         own_stream_bytes,
         rollup_input.start_offset,
@@ -469,6 +580,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         rollup_input.opaque_suffix_bytes,
         rollup_input.parent_data_rolling_hash,
         rollup_input.boundary_prev_data_rolling_hash,
+        segment_end_offsets,
     )
 
     rollup_start_block_number = int(rollup_input.l2_execution_proofs[0].proof.start_block_number)
@@ -803,21 +915,24 @@ def rlp_encode_truncated_blocks(blocks: Sequence[TruncatedEthereumBlock]) -> byt
     return rlp.encode(items)
 
 
-def compress_lz4(data: bytes) -> bytes:
+def compress_zstd(data: bytes) -> bytes:
     """
-    LZ4-compress the canonical RLP-encoded truncated-block payload using
-    the raw LZ4 block format (no 4-byte uncompressed-size header). The
-    rollup guest zero-pads this output to `BLOB_BYTES_LENGTH` and
+    zstd-compress the canonical RLP-encoded truncated-block payload (§3.1).
+    The rollup guest zero-pads this output to `BLOB_BYTES_LENGTH` and
     hands the padded result to `ckzg.blob_to_kzg_commitment` (§2.2 step 1).
 
-    The sequencer producing the blob must use the same compression mode
-    (LZ4 block, `store_size=False`) and compression level — both choices
-    are protocol-level decisions and must match byte-for-byte for the KZG
-    verifier to accept on the L1-committed `blobHash`.
+    The compression profile is a protocol-level decision pinned byte-for-byte
+    (§3.2) so the sequencer, this reference, and the guest all produce the same
+    segment bytes for the KZG verifier to accept: the zstd reference C library
+    at version 1.5.6, one-shot `ZSTD_compress` at the default level (3), no
+    dictionary, a single frame with the content-size flag set and the content
+    checksum disabled. zstd guarantees identical output only for a fixed library
+    version and level, so the version pin is part of the profile.
 
-    NOT a precompile — LZ4 runs as ordinary in-guest code. A vendored C
-    library (lz4) compiled into the RISC-V guest performs the compression
-    in linear time; soundness comes from KZG verification on the
-    computed payload (§2.2 step 1), not from the LZ4 internals.
+    `zstandard.ZstdCompressor` defaults match that profile: level 3, no
+    dictionary, a content-size-bearing frame, no content checksum. The guest
+    runs ordinary in-guest code — the same vendored zstd C source compiled into
+    the RISC-V guest — and soundness comes from KZG verification on the computed
+    payload (§2.2 step 1), not from the zstd internals.
     """
-    return lz4.block.compress(data, store_size=False)
+    return zstandard.ZstdCompressor(level=3).compress(data)

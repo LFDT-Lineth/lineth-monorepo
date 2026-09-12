@@ -4,7 +4,12 @@
 #   https://github.com/ethereum/execution-specs/tree/a456712e04153ebeb17ff892446a01b6ba537f65
 ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712e04153ebeb17ff892446a01b6ba537f65
 ckzg>=2.1
-lz4>=4
+# zstd is a protocol-pinned compression profile (§3.2): the segment bytes must
+# reproduce exactly for the KZG check. zstandard 0.23.x bundles upstream zstd
+# 1.5.6 — the pinned version — so the requirement is pinned to that line, not
+# left to float (0.24+ bundles zstd 1.5.7, whose output is not guaranteed
+# byte-identical).
+zstandard==0.23.*
 remerkleable>=0.1.28
 # Validates the V1 prover-request/response fixtures against the shared JSON
 # schemas in src/rollup_spec/prover_io/schemas/ (tests/test_fixture_schema_conformance.py).
