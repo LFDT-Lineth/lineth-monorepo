@@ -78,6 +78,11 @@ pub const Element = extern struct {
         return self.add(self);
     }
 
+    pub fn halve(self: Element) Element {
+        if ((self.value & 1) == 0) return .{ .value = self.value >> 1 };
+        return .{ .value = @as(u32, @intCast((@as(u64, self.value) + modulus) >> 1)) };
+    }
+
     pub fn mul(self: Element, rhs: Element) Element {
         return init(@as(u64, self.value) * @as(u64, rhs.value));
     }

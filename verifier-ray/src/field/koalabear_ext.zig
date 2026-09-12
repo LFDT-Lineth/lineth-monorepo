@@ -79,6 +79,17 @@ pub const Ext = extern struct {
         return self.mulByBase(rhs.inverse());
     }
 
+    pub fn halve(self: Ext) Ext {
+        // Halving is base-field-linear (each limb scales independently), so
+        // this halves every limb directly instead of computing 2^-1 once and
+        // calling mulByBase.
+        return .{
+            .B0 = .{ .a0 = self.B0.a0.halve(), .a1 = self.B0.a1.halve() },
+            .B1 = .{ .a0 = self.B1.a0.halve(), .a1 = self.B1.a1.halve() },
+            .B2 = .{ .a0 = self.B2.a0.halve(), .a1 = self.B2.a1.halve() },
+        };
+    }
+
     pub fn mul(self: Ext, rhs: Ext) Ext {
         // Karatsuba for cubic extension: 6 E2 muls instead of 9 (schoolbook).
         // F_{p^6} = F_{p^2}[v]/(v^3 - nr), nr = u+1 in F_{p^2}.
