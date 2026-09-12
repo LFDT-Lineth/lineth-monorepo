@@ -1,3 +1,5 @@
 .claude/
 *.log
 zkcdriver/testdata/synced/*
+instrumentation/testdata/fixtures
+!instrumentation/testdata/fixtures/.gitkeep
