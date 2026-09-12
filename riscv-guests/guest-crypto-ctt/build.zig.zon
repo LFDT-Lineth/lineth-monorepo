@@ -1,0 +1,18 @@
+.{
+    .name = .guest_crypto_ctt,
+    .version = "0.0.0",
+    .fingerprint = 0x2b75fa46e7118444,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Consensys fork of Constantine with the guest shims and rv64 freestanding build.
+        .constantine = .{
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#fe7d318e7e4bfb1a605105a77ed0e0dfe8566296",
+            .hash = "N-V-__8AAHYI6Qarmr8vdUIwguqW1KfYG_hI1O_9siutpMuB",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "c_allocator.zig",
+    },
+}

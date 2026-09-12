@@ -69,6 +69,13 @@ runs:
         make -C riscv-guests install-native-crypto-deps
         sudo ldconfig
 
+    # Install Nim and clang for the freestanding Constantine build.
+    - name: Install constantine build deps (nim, clang)
+      shell: bash
+      run: |
+        make -C riscv-guests install-constantine-deps
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
       uses: ./.github/actions/cache
@@ -86,7 +93,6 @@ runs:
       uses: ./.github/actions/cache
       with:
         path: riscv-guests/*/.zig-cache
-        key: riscv-guests-zig-cache-${{ hashFiles('riscv-guests/.zigversion', 'riscv-guests/build_common/**', 'riscv-guests/*/build.zig', 'riscv-guests/*/build.zig.zon', 'riscv-guests/*/src/**') }}
+        key: riscv-guests-zig-cache-${{ hashFiles('riscv-guests/.zigversion', 'riscv-guests/Makefile', 'riscv-guests/build_common/**', 'riscv-guests/*/build.zig', 'riscv-guests/*/build.zig.zon', 'riscv-guests/*/src/**') }}
         restore-keys: |
           riscv-guests-zig-cache-
-
