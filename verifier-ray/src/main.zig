@@ -2,16 +2,19 @@ const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
+const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
+const image_relocation = verifier_ray.image_relocation;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
-const native_input_path: [:0]const u8 = "zig-out/input.bin";
+const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
+const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;
 
@@ -72,9 +75,14 @@ comptime {
 }
 
 fn runVerifier(input: *const verifier.VerifyInput) u8 {
-    const verifier_case = comptime embedded_data.get(embedded_data_conf.spec_index);
-    const spec = verifier_case.spec;
-    const systems = verifier_case.systems;
+    const spec = if (comptime embedded_data_conf.embed_input)
+        comptime embedded_data.get(embedded_data_conf.spec_index).spec
+    else
+        riscv_system.system_0_spec;
+    const systems = if (comptime embedded_data_conf.embed_input)
+        comptime embedded_data.get(embedded_data_conf.spec_index).systems
+    else
+        riscv_system.system_0_systems;
     // `spec`/`systems` are comptime, but the verifier input is a runtime value
     // read from `input` (mmap/linker/embedded memory), so dereference it here.
     verifier.verify(spec, systems, input.proof, input.public_inputs) catch {
@@ -89,11 +97,25 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
 // small libc surface: open the file, mmap exactly `@sizeOf(Input)`, and cast the bytes to
 // `Input`. Avoiding std file/argument handling keeps ReleaseSmall native binaries compact.
 const o_rdonly: c_int = 0;
+const o_rdwr: c_int = 2;
 const prot_read: c_int = 1;
+const prot_write: c_int = 2;
 const map_private: c_int = 2;
+// MAP_FIXED: map at exactly the requested address. Safe here because
+// loadNativeInput runs in a standalone process that does not share its address
+// space with anything else mapped at input_guest_base.
+const map_fixed: c_int = 0x10;
+// MAP_ANONYMOUS: allocate anonymous (not file-backed) memory.
+// Linux uses 0x20; macOS uses 0x1000.
+const map_anon: c_int = if (builtin.target.os.tag == .macos) 0x1000 else 0x20;
+const seek_set: c_int = 0;
+const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
 
 extern fn open(path: [*:0]const u8, flags: c_int) c_int;
+extern fn close(fd: c_int) c_int;
+extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
+extern fn read(fd: c_int, buf: [*]u8, count: usize) isize;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
@@ -104,17 +126,50 @@ fn loadNativeInput() *const verifier.VerifyInput {
     if (comptime embedded_data_conf.embed_input) {
         return &embedded_input;
     }
-    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
-    // so it will fail if the input is not embedded.
 
     const fd = open(native_input_path.ptr, o_rdonly);
     if (fd < 0) exitNative(1);
+    defer _ = close(fd);
 
-    const mapped_addr = mmap(null, @sizeOf(verifier.VerifyInput), prot_read, map_private, fd, 0);
-    if (@intFromPtr(mapped_addr) == map_failed) exitNative(1);
+    const image_len = lseek(fd, 0, seek_end);
+    if (image_len <= 0) exitNative(1);
 
-    const mapped_bytes: [*]const u8 = @ptrCast(mapped_addr);
-    return @ptrCast(@alignCast(mapped_bytes));
+    // Try to map at GuestBase so the baked-in absolute pointers are valid with no
+    // fixup. On Linux this always works. On macOS, MAP_FIXED at low addresses is
+    // refused by the kernel; in that case fall back to an anonymous mapping at any
+    // address and rebase the embedded pointers.
+    const try_fixed = mmap(
+        @ptrFromInt(input_guest_base),
+        @intCast(image_len),
+        prot_read,
+        map_private | map_fixed,
+        fd,
+        0,
+    );
+    if (@intFromPtr(try_fixed) != map_failed) {
+        return @ptrCast(@alignCast(try_fixed));
+    }
+
+    // MAP_FIXED failed (macOS). Allocate a writable anonymous buffer, read the
+    // file into it, then patch every slice pointer from its guest address to the
+    // equivalent host address.
+    const buf_addr = mmap(null, @intCast(image_len), prot_read | prot_write, map_private | map_anon, -1, 0);
+    if (@intFromPtr(buf_addr) == map_failed) exitNative(1);
+
+    // Seek back to start and read the full image.
+    if (lseek(fd, 0, seek_set) < 0) exitNative(1);
+    const buf: [*]u8 = @ptrCast(buf_addr);
+    var remaining: usize = @intCast(image_len);
+    var off: usize = 0;
+    while (remaining > 0) {
+        const n = read(fd, buf + off, remaining);
+        if (n <= 0) exitNative(1);
+        off += @intCast(n);
+        remaining -= @intCast(n);
+    }
+
+    image_relocation.rebase(buf, @intCast(image_len), input_guest_base, @intFromPtr(buf_addr));
+    return @ptrCast(@alignCast(buf_addr));
 }
 
 fn loadR5Input() *const verifier.VerifyInput {
@@ -124,12 +179,9 @@ fn loadR5Input() *const verifier.VerifyInput {
     if (comptime embedded_data_conf.embed_input) {
         return &embedded_input;
     }
-    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
-    // so it will fail if the input is not embedded.
 
-    // the input is linked into the binary at compile time using the
-    // `_in_start` symbol defined in the linker script, so we can just take its
-    // address and cast it to our structured input type
+    // The zkc JSON input writer places the proof image bytes directly at
+    // `_in_start`, already relocated for GuestBase.
     return @ptrCast(@alignCast(&_in_start));
 }
 
