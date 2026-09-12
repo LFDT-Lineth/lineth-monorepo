@@ -4,7 +4,7 @@
 #   https://github.com/ethereum/execution-specs/tree/a456712e04153ebeb17ff892446a01b6ba537f65
 ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712e04153ebeb17ff892446a01b6ba537f65
 ckzg>=2.1
-lz4>=4
+zstandard>=0.25
 remerkleable>=0.1.28
 # Validates the V1 prover-request/response fixtures against the shared JSON
 # schemas in src/rollup_spec/prover_io/schemas/ (tests/test_fixture_schema_conformance.py).

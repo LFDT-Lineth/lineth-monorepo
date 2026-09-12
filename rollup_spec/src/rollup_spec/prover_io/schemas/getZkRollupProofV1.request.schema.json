@@ -82,12 +82,18 @@
     "conflation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["blockRlps"],
+      "required": ["blockRlps", "compressedSegment"],
       "properties": {
         "blockRlps": {
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/hex" }
+        },
+        "compressedSegment": {
+          "description": "Exact witnessed DA segment: one zstd frame. The guest requires the frame to consume all segment bytes and its decompressed bytes to equal the canonical truncated-block RLP.",
+          "type": "string",
+          "minLength": 4,
+          "pattern": "^0x([0-9a-fA-F]{2})*$"
         }
       }
     },
