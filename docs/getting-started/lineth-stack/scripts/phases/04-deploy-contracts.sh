@@ -895,6 +895,46 @@ step4_token_bridge_l2() {
   export L2_TOKEN_BRIDGE_ADDRESS
 }
 
+# Step 5 — deterministic deployment proxy (EIP-7997 / Arachnid Create2Factory)
+#
+# The factory lives at the well-known constant address below (not a nonce-derived
+# CREATE address), and the deployment transaction is a pre-signed keyless
+# broadcast. The L2 deployer only funds the keyless signer with exactly 0.01 ETH.
+# See contracts/common/helpers/deterministicDeploymentProxy.ts for the logic.
+DETERMINISTIC_PROXY_FACTORY="0x4e59b44847b379578588920cA78FbF26c0B4956C"
+step5_deterministic_proxy() {
+  step "Step 5: deploy L2 deterministic deployment proxy (Create2Factory)"
+  local logfile="$LOG_DIR/step5-deterministic-proxy.log"
+
+  # Idempotent skip: the factory is already installed when code exists at the
+  # well-known address (mirrors step_already_done_with_code, without a nonce
+  # guard — the address is not nonce-derived). Anvil-type dev chains preinstall it.
+  local existing_code
+  existing_code="$(cast code "$DETERMINISTIC_PROXY_FACTORY" --rpc-url "$L2_RPC_URL" 2>/dev/null || true)"
+  if [[ "$existing_code" =~ ^0x[0-9a-fA-F]+$ && "$existing_code" != "0x" ]]; then
+    log "Step 5: factory code already present at $DETERMINISTIC_PROXY_FACTORY — skipping"
+    return 0
+  fi
+
+  # Resolve the funding-transfer fee the same way as the other L2 deploys: the
+  # fixed local EIP-1559 model from resolveL2DeployFeeOverrides() (no forced
+  # gas price). The quickstart Besu enforces a minimum gas price, so a zero
+  # gas price is rejected. Note: the 0.01 ETH funding is still required — the
+  # pre-signed broadcast hardcodes a 100 gwei gas price regardless of the
+  # chain's configured minimum.
+  L2_DEPLOYER_PRIVATE_KEY="$L2_DEPLOYER_PRIVATE_KEY" \
+  L2_RPC_URL="$L2_RPC_URL" \
+  TS_NODE_TRANSPILE_ONLY=1 \
+  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+    pnpm -s exec ts-node /scripts/internal/deploy-deterministic-deployment-proxy.ts 2>&1 | tee "$logfile"
+
+  verify_address \
+    "$(extract_required_address "$logfile" "DeterministicDeploymentProxy")" \
+    "$DETERMINISTIC_PROXY_FACTORY" \
+    "DeterministicDeploymentProxy"
+  log "Deterministic deployment proxy ready at $DETERMINISTIC_PROXY_FACTORY"
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Run all steps in order
 # ─────────────────────────────────────────────────────────────────────────────
@@ -903,6 +943,7 @@ step1_l1_rollup
 step2_l2_message_service
 step3_token_bridge_l1
 step4_token_bridge_l2
+step5_deterministic_proxy
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fund generated runtime accounts

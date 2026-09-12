@@ -1,0 +1,31 @@
+{
+  "name": "@lfdt-lineth/forge-contract-deployer",
+  "version": "0.1.0",
+  "private": true,
+  "license": "(MIT OR Apache-2.0)",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24.18.0",
+    "pnpm": ">=11.9.0"
+  },
+  "scripts": {
+    "build": "NODE_PATH=$PWD/node_modules tsup --config tsup.config.ts",
+    "lint": "NODE_PATH=./node_modules eslint 'src/**/*.ts' 'test/**/*.ts'",
+    "start": "node dist/cli.js",
+    "test": "NODE_PATH=./node_modules node --import tsx --test test/*.test.ts",
+    "test:integration": "bash test/integration/two-chain.sh",
+    "typecheck": "NODE_PATH=./node_modules tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "catalog:",
+    "ethers": "catalog:"
+  },
+  "devDependencies": {
+    "@lfdt-lineth/eslint-config": "workspace:*",
+    "@types/node": "24.13.2",
+    "eslint": "catalog:",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

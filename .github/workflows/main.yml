@@ -103,6 +103,7 @@ jobs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
+      contract-deployer: ${{ steps.filter.outputs.contract-deployer }}
       prover: ${{ steps.filter.outputs.prover }}
       prover-ray: ${{ steps.filter.outputs.prover-ray }}
       rollup-spec: ${{ steps.filter.outputs.rollup-spec }}
@@ -158,6 +159,23 @@ jobs:
               - 'ts-libs/linea-native-libs/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/postman-*.yml'
+              - '.github/workflows/build-and-publish.yml'
+              - '.github/workflows/main.yml'
+              - '.nvmrc'
+            contract-deployer:
+              - 'contracts/forge-deployer/**'
+              - 'contracts/common/**'
+              - 'contracts/local-deployments-artifacts/**'
+              - 'contracts/package.json'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.json'
+              - '.npmrc'
+              - 'patches/**'
+              - 'scripts/docker/**'
+              - '.github/actions/docker-build-publish/**'
+              - '.github/workflows/contracts-forge-deployer-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.nvmrc'
@@ -334,6 +352,7 @@ jobs:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
       develop_tag: ${{ needs.compute-commit-tags.outputs.develop_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
+      contract_deployer_changed: ${{ needs.filter-commit-changes.outputs.contract-deployer }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
@@ -449,4 +468,3 @@ jobs:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
       anthropic_api_key: ${{ secrets.LITELLM_KEY_CI_FAILURE_ANALYSIS }}
-

@@ -96,45 +96,53 @@ async function main() {
   ];
   const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(
+    process.env.CONTRACT_DEPLOY_ARTIFACTS_DIR ?? path.join(__dirname, "./dynamic-artifacts"),
+    verifierName,
+  );
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
   // The public quickstart can pin local L1 deploy gas for deterministic boot
   // behavior via L1_DEPLOY_GAS_PRICE_WEI; otherwise the provider's fee data is
   // used. resolveOneModelFeeOverrides guarantees a single, complete fee model.
   const feeOverrides = await resolveOneModelFeeOverrides(provider, "L1_DEPLOY_GAS_PRICE_WEI");
 
-  const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
-
-  const [verifier, linethRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
-    deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
-      nonce: walletNonce,
-      ...feeOverrides,
-    }),
-    deployContractFromArtifacts(linethRollupImplementationName, LinethRollupV8Abi, LinethRollupV8Bytecode, wallet, {
-      nonce: walletNonce + 1,
-      ...feeOverrides,
-    }),
-    deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
-      nonce: walletNonce + 2,
-      ...feeOverrides,
-    }),
-    deployContractFromArtifacts(
-      AddressFilterContractName,
-      AddressFilterAbi,
-      AddressFilterBytecode,
-      wallet,
-      linethRollupSecurityCouncil,
-      PRECOMPILES_ADDRESSES,
-      {
-        nonce: walletNonce + 3,
-        ...feeOverrides,
-      },
-    ),
-  ]);
+  // Serialize deployments before using the next planned nonce so RPCs never
+  // estimate a transaction with a future nonce.
+  const verifier = await deployContractFromArtifacts(
+    verifierName,
+    verifierArtifacts.abi,
+    verifierArtifacts.bytecode,
+    wallet,
+    { nonce: walletNonce, ...feeOverrides },
+  );
+  const linethRollupImplementation = await deployContractFromArtifacts(
+    linethRollupImplementationName,
+    LinethRollupV8Abi,
+    LinethRollupV8Bytecode,
+    wallet,
+    { nonce: walletNonce + 1, ...feeOverrides },
+  );
+  const proxyAdmin = await deployContractFromArtifacts(
+    ProxyAdminContractName,
+    ProxyAdminAbi,
+    ProxyAdminBytecode,
+    wallet,
+    { nonce: walletNonce + 2, ...feeOverrides },
+  );
+  const addressFilter = await deployContractFromArtifacts(
+    AddressFilterContractName,
+    AddressFilterAbi,
+    AddressFilterBytecode,
+    wallet,
+    linethRollupSecurityCouncil,
+    PRECOMPILES_ADDRESSES,
+    { nonce: walletNonce + 3, ...feeOverrides },
+  );
 
   const [proxyAdminAddress, verifierAddress, linethRollupImplementationAddress, addressFilterAddress] =
     await Promise.all([
@@ -173,10 +181,7 @@ async function main() {
     linethRollupImplementationAddress,
     proxyAdminAddress,
     initializer,
-    {
-      nonce: walletNonce + 4,
-      ...feeOverrides,
-    },
+    { nonce: walletNonce + 4, ...feeOverrides },
   );
 
   const linethRollupAddress = await linethRollupContract.getAddress();
@@ -195,10 +200,7 @@ async function main() {
       MimcAddressAbi,
       MimcAddressFilterBytecode,
       wallet,
-      {
-        nonce: walletNonce + 5,
-        ...feeOverrides,
-      },
+      { nonce: walletNonce + 5, ...feeOverrides },
     );
     const mimcAddress = await mimc.getAddress();
 
@@ -221,10 +223,7 @@ async function main() {
       wallet,
       { libraries: { "src/libraries/Mimc.sol:Mimc": mimcAddress } },
       ...args,
-      {
-        nonce: walletNonce + 6,
-        ...feeOverrides,
-      },
+      { nonce: walletNonce + 6, ...feeOverrides },
     );
 
     const forcedTransactionGatewayAddress = await forcedTransactionGateway.getAddress();
