@@ -3,7 +3,7 @@ module github.com/consensys/linea-monorepo/verifier-ray/codegen
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260910132558-58f8abea3737
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -29,8 +29,3 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Temporary: abicheck maps ABI numbers that the stacked prover-ray branch adds
-// and no released version carries yet. Drop this and bump the pin above once
-// the prover-ray half is merged.
-replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../prover-ray

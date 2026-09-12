@@ -6,16 +6,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 const (
-	elfToJSON = "../../../arithmetization/src/test/scripts/elf_to_json_gen/main.go"
-	zkcMain   = "bench_main.zkc"
-	r5Bin     = "zig-out/bin/bench-pcs"
-	r5JSON    = "zig-out/bin/bench-pcs.json"
+	arithmetizationDir = "../../../arithmetization"
+	zkcMain            = "../../../arithmetization/src/main/riscv/main.zkc"
+	r5Bin              = "zig-out/bin/bench-pcs"
+	r5JSON             = "zig-out/bin/bench-pcs.json"
 )
 
 var (
@@ -38,16 +39,31 @@ func main() {
 	if err := run("zig", buildArgs...); err != nil {
 		fatal(err)
 	}
-	// Keep the conversion command explicit so it is easy to replace with a
-	// pinned converter in CI/local runs.
-	json, err := exec.Command("go", "run", elfToJSON, r5Bin, "0x00", "0x08800000").Output()
+	if err := os.MkdirAll("zig-out/bin", 0o755); err != nil {
+		fatal(err)
+	}
+	out, err := os.Create(r5JSON)
 	if err != nil {
 		fatal(err)
 	}
-	if err := os.WriteFile(r5JSON, json, 0o644); err != nil {
+	r5BinAbsolute, err := filepath.Abs(r5Bin)
+	if err != nil {
+		fatal(err)
+	}
+	convert := exec.Command("go", "-C", arithmetizationDir, "tool", "elf_to_json", r5BinAbsolute, "0x00", "0x08800000")
+	convert.Stdout = out
+	convert.Stderr = os.Stderr
+	if err := convert.Run(); err != nil {
+		_ = out.Close()
+		fatal(err)
+	}
+	if err := out.Close(); err != nil {
 		fatal(err)
 	}
 
+	// -vvv is what surfaces the guest's VERIFIER-MARK writes and the per-cycle
+	// counter the marks are read against; at lower verbosities zkc prints
+	// neither.
 	cmd := exec.Command(zkcBin, "exec", "--fast", "-vvv", r5JSON, zkcMain)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
