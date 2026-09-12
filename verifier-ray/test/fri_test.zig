@@ -140,8 +140,12 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
         final_poly[0] = wrongExt();
     }
 
+    var round_caps: [params.numRounds() - 1]merkle.MerkleCap = undefined;
+    for (&round_caps) |*cap| cap.* = .{ .nodes = &.{}, .aux = &.{} };
+
     const proof = fri.Proof{
         .round_roots = round_roots,
+        .round_caps = &round_caps,
         .final_poly = final_poly,
         .running_queries = &.{running_branches},
     };
@@ -152,7 +156,13 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
     // initialize it rather than leaving allocator garbage.
     const rounds = try allocator.alloc(fri.Pair, params.numRounds());
     @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });
-    const running_result = fri.resolveRunningLayers(params, round_roots, running_branches, case.position, rounds);
+    var frontiers: [params.numRounds()][]const poseidon2.Digest = undefined;
+    var root_frontiers: [params.numRounds()][1]poseidon2.Digest = undefined;
+    for (round_roots, 0..) |root, i| {
+        root_frontiers[i + 1][0] = root;
+        frontiers[i + 1] = root_frontiers[i + 1][0..];
+    }
+    const running_result = fri.resolveRunningLayers(params, &frontiers, running_branches, case.position, rounds);
 
     if (corrupt == .running_sibling) {
         try std.testing.expectError(error.MerkleProofInvalid, running_result);
@@ -219,10 +229,10 @@ test "resolveRunningLayers and checkFolds reject undersized buffers" {
     const params = fold_fixtures.fold_cases[0].params;
     var rounds: [1]fri.Pair = undefined;
     const branches: [0]merkle.Branch = .{};
-    const roots: [0]poseidon2.Digest = .{};
+    const frontiers: [0][]const poseidon2.Digest = .{};
     try std.testing.expectError(
         error.InvalidRunningLayerShape,
-        fri.resolveRunningLayers(params, &roots, &branches, 0, &rounds),
+        fri.resolveRunningLayers(params, &frontiers, &branches, 0, &rounds),
     );
 
     var aux: [1]?fri.Pair = .{null};
