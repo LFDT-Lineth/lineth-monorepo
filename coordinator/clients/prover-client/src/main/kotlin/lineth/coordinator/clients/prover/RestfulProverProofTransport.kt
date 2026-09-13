@@ -74,9 +74,9 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
     val path = dequeuePathProvider
     val body = DequeueJobRequest(
-      criteria = JobCriteriaDto(
+      filter = JobFilterDto(
         startBlockGte = startBlockNumberGte,
-        proofType = proofType,
+        proofTypes = setOf(proofType),
       ),
     )
     val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
@@ -158,16 +158,16 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   /** Body of `POST /v1/jobs/dequeue` */
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private data class DequeueJobRequest(
-    @get:JsonProperty("criteria")
-    val criteria: JobCriteriaDto? = null,
+    @get:JsonProperty("filter")
+    val filter: JobFilterDto? = null,
   )
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  private data class JobCriteriaDto(
+  private data class JobFilterDto(
     @get:JsonProperty("start_block_gte")
     val startBlockGte: Long? = null,
-    @get:JsonProperty("proof_type")
-    val proofType: String? = null,
+    @get:JsonProperty("proof_types")
+    val proofTypes: Set<String>? = null,
   )
 
   /** Subset of the `GET /v1/jobs/...` response body this transport relies on. */

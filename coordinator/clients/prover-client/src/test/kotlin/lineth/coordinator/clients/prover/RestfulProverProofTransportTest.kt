@@ -139,7 +139,7 @@ class RestfulProverProofTransportTest {
   }
 
   @Test
-  fun `removeRequests omits null criteria fields from the request body`() {
+  fun `removeRequests omits null filter fields from the request body`() {
     val restClient = RecordingHttpRestClient()
     val transport = RestfulProverProofTransport<Any, Any, BlockIntervalProofIndex>(
       restClient = restClient,
@@ -157,9 +157,9 @@ class RestfulProverProofTransportTest {
     transport.removeRequests(null).get()
 
     val body = OBJECT_MAPPER.readTree(checkNotNull(restClient.lastPostBody))
-    val criteria = checkNotNull(body.get("criteria"))
-    assertThat(criteria.has("start_block_gte")).isFalse()
-    assertThat(criteria.get("proof_type").asText()).isEqualTo("execution")
+    val filter = checkNotNull(body.get("filter"))
+    assertThat(filter.has("start_block_gte")).isFalse()
+    assertThat(filter.get("proof_types").toSet().map { it.asText() }).containsExactly("execution")
   }
 
   @Test
@@ -181,9 +181,9 @@ class RestfulProverProofTransportTest {
     transport.removeRequests(42).get()
 
     val body = OBJECT_MAPPER.readTree(checkNotNull(restClient.lastPostBody))
-    val criteria = checkNotNull(body.get("criteria"))
-    assertThat(criteria.get("start_block_gte").asLong()).isEqualTo(42L)
-    assertThat(criteria.get("proof_type").asText()).isEqualTo("execution")
+    val filter = checkNotNull(body.get("filter"))
+    assertThat(filter.get("start_block_gte").asLong()).isEqualTo(42L)
+    assertThat(filter.get("proof_types").toSet().map { it.asText() }).containsExactly("execution")
   }
 
   private fun jobsPathPattern(proofType: String): String = "/api/v1/jobs/1/$proofType/.*"
