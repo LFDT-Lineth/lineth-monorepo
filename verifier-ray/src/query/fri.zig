@@ -230,7 +230,7 @@ pub fn checkFolds(
             diff = diff.mulByBase(x_inv);
             diff = diff.mul(fold_alphas[j]);
             sum = sum.add(diff);
-            sum = sum.mulByBase(inv_two);
+            sum = sum.halve();
 
             if (j < num_rounds - 1) {
                 if (!sum.eql(rq.rounds[j + 1].self)) return Error.FoldMismatch;
@@ -251,10 +251,6 @@ pub fn checkFolds(
         }
     }
 }
-
-// 2^{-1} mod p (p = 2_130_706_433 = 2^31 - 2^24 + 1). Duplicated from
-// crypto/poseidon2.zig's inv2Exp1, which is private to that module.
-const inv_two: field.Element = .{ .value = 1_065_353_217 };
 
 fn fullDomainGenerator(params: Params) field.Element {
     return field.rootOfUnityBy(@as(usize, 1) << @intCast(params.log_codeword_size)) catch unreachable;
