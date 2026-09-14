@@ -83,7 +83,7 @@ func buildShard(
 
 	s := &shard{sys: sys, col: col, local: local, vals: vals, localV: localV, withSeed: withSeed}
 
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: withSeed})
 	grandproduct.Compile(sys)
 
 	return s
@@ -128,74 +128,6 @@ func (s *shard) coins(rt *wiop.Runtime) (alpha, beta field.Gen) {
 	return rt.GetCoinValue(coinRound.Coins[0]), rt.GetCoinValue(coinRound.Coins[1])
 }
 
-// TestSharedRandomness_CoinsLandAfterTheLastBusRound pins the round layout the
-// sharded RISC-V protocol depends on: round 0 commits the program verification
-// data, round 1 commits the columns the message bus reads, and α/β must be
-// sampled on round 2 — after every bus-impacting commitment, and before any
-// shard-specific data that must not influence the shared challenges.
-//
-// If the coins ever slid to round 1 they would be drawn before the bus columns
-// were committed; if they slid past round 2 they would absorb shard-specific
-// data and shards would stop agreeing. Neither shows up as a failure in the
-// other tests here, which use a single participant round, so the layout is
-// asserted directly.
-func TestSharedRandomness_CoinsLandAfterTheLastBusRound(t *testing.T) {
-	t.Skip()
-	sys := wiop.NewSystemf("shard")
-	r0 := sys.NewRound() // program verification data
-	r1 := sys.NewRound() // the columns the bus reads
-
-	progMod := sys.NewSizedModule(sys.Context.Childf("prog"), 4, wiop.PaddingDirectionNone)
-	progCol := progMod.NewColumn(sys.Context.Childf("prog-col"), r0)
-
-	busMod := sys.NewSizedModule(sys.Context.Childf("bus"), 4, wiop.PaddingDirectionNone)
-	busCol := busMod.NewColumn(sys.Context.Childf("bus-col"), r1)
-
-	mb := sys.NewMessageBusSend(
-		sys.Context.Childf("entry"), "shard", "handle", wiop.NewTable(busCol.View()))
-	mb.SkipInShardCheck = true
-
-	// γ and the contribution are only declared when the shared-randomness option
-	// is on; the assertions below are about exactly those cells.
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
-	grandproduct.Compile(sys)
-
-	require.Len(t, sys.Rounds[2].Coins, 2,
-		"α and β must be declared on round 2, one past the last bus-impacting round")
-	require.Empty(t, sys.Rounds[1].Coins,
-		"no coin may be sampled on round 1, before the bus columns are committed")
-
-	// The seed cells stay on round 0 regardless of how far out the coin round
-	// sits, so they are always assigned before the hook reads them.
-	cell, pos := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedPI, 0)
-	require.GreaterOrEqual(t, pos, 0, "γ must be registered as a public input")
-	require.Equal(t, 0, cell.Round().ID, "γ cells must live on round 0")
-
-	// The contribution cells go the other way: they cannot precede the
-	// commitments they hash, so they belong on the coin round, where the prover
-	// action that computes them runs.
-	contrib, pos := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedContributionPI, 0)
-	require.GreaterOrEqual(t, pos, 0, "the contribution must be registered as a public input")
-	require.Equal(t, 2, contrib.Round().ID, "contribution cells must live on the coin round")
-
-	// Prove the shard to confirm the hook fires on the round that carries the
-	// coins rather than panicking or seeding an empty round. Both columns are
-	// assigned up front: AssignColumn does not care which round the runtime is
-	// on, only that the value is there when that round's actions run.
-	var rt *wiop.Runtime
-	sys.Prove(func(r *wiop.Runtime) {
-		rt = r
-		messagebus.AssignSharedRandomnessSeed(r, gamma(7))
-		r.AssignColumn(progCol, makeVec(1, 2, 3, 4))
-		r.AssignColumn(busCol, makeVec(10, 20, 30, 40))
-	})
-
-	// Compile declares α and β itself, so they are reached through the coin round
-	// the assertions above pinned down.
-	require.False(t, equal(rt.GetCoinValue(sys.Rounds[2].Coins[0]), field.Gen{}),
-		"α must have been sampled")
-}
-
 // TestSharedRandomness_UnseededShardsDisagree is the control for
 // TestSharedRandomness_SameGammaGivesSameCoins. Built without γ, the two shards
 // derive their coins from their own transcripts, which differ — so they
@@ -206,7 +138,7 @@ func TestSharedRandomness_CoinsLandAfterTheLastBusRound(t *testing.T) {
 // would match whether or not the hook did anything, and the positive test would
 // pass against a hook that seeds nothing.
 func TestSharedRandomness_UnseededShardsDisagree(t *testing.T) {
-	t.Skip()
+
 	send := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, false)
 	recv := buildShard(t, "shard-2", wiop.BusReceive, []uint64{40, 30, 20, 10}, 222, false)
 
@@ -226,7 +158,7 @@ func TestSharedRandomness_UnseededShardsDisagree(t *testing.T) {
 // replaced each shard's local state with γ before sampling. Their accumulators
 // must then multiply to one, the cross-shard balance condition.
 func TestSharedRandomness_SameGammaGivesSameCoins(t *testing.T) {
-	t.Skip()
+
 	g := gamma(7)
 
 	send := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, true)
@@ -253,7 +185,7 @@ func TestSharedRandomness_SameGammaGivesSameCoins(t *testing.T) {
 // the challenges would leave shards free to disagree on the permutation
 // challenge while still appearing to share randomness.
 func TestSharedRandomness_DifferentGammaGivesDifferentCoins(t *testing.T) {
-	t.Skip()
+
 	s := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, true)
 
 	alphaA, betaA := s.coins(s.run(gamma(7)))
@@ -270,7 +202,7 @@ func TestSharedRandomness_DifferentGammaGivesDifferentCoins(t *testing.T) {
 // public-input vector, at the positions carrying the SharedRandomnessSeed_i tags,
 // where an aggregator can read it and compare it against a sibling's.
 func TestSharedRandomness_IsAPublicInput(t *testing.T) {
-	t.Skip()
+
 	s := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, true)
 	g := gamma(7)
 

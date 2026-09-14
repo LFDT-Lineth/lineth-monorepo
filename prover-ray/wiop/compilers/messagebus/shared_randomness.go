@@ -26,30 +26,42 @@ const (
 // round is what lets the challenges drawn later depend on it.
 func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta *wiop.CoinField) {
 	compCtx := sys.Context.Childf("message-bus")
-
+	seedRound := sys.Rounds[0]
 	// The coins for the message bus land on the round immediately after the seed — which is also
 	// where the preflight data lands. This draws the bus coins via standard fiat-shamir, as far as the round 0 (and precomputed round) carries the same data over shards, all shards samples the same bus coins.
-	coinRound := sys.NewRound()
+	coinRound := seedRound.EnsureNext()
 	alpha = coinRound.NewCoinField(compCtx.Childf("alpha"))
 	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
 
 	if opt.SharedRandomness {
-		ctx := sys.Context.Childf("shared-randomness")
-		seedRound := sys.Rounds[0]
 
+		ctx := sys.Context.Childf("shared-randomness")
 		for i := range NumSharedRandomness {
 			cell := seedRound.NewCell(ctx.Childf("gamma-%d", i), false)
 			sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
 		}
 
 		// the shard specific preflight data lands on the same round as bus coins, this allows the shard to generate its contribution in the shared randomness  γ.
+		//
+		// The cells are lazy rather than written by a prover action. A prover
+		// action registered here would run before the commit action that the later
+		// pcs.Compile appends to this same round, and would therefore hash a
+		// commitment that does not exist yet — the prover publishing Hash(0) while
+		// the verifier, which loads every commitment from the proof, recomputes the
+		// real one. A lazy cell is resolved by [wiop.Runtime.AdvanceRound], after
+		// every action on the round has run, so the commitment is in place by then.
 		for i := range NumSharedRandomnessContribution {
-			cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
+			cell := coinRound.NewLazyCell(ctx.Childf("contribution-%d", i), false,
+				func(rt *wiop.Runtime) field.Gen {
+					return field.ElemFromBase(sharedRandomnessContribution(rt)[i])
+				})
 			sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
 		}
-		// register prover and verifier actions of the preflight round
-		coinRound.RegisterAction(&SharedRandomnessContributionAssigner{})
 		coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
+
+		// Seed the FS state with γ before α and β are sampled so every shard
+		// that was given the same γ draws identical challenges.
+		coinRound.RegisterPreSamplingHook(&sharedRandomnessSeeder{})
 	}
 
 	return alpha, beta
@@ -107,6 +119,15 @@ func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 		}
 		rt.AssignCell(cell, field.ElemFromBase(gamma[i]))
 	}
+}
+
+// sharedRandomnessSeeder is a pre-sampling hook that overrides the runtime's
+// Fiat-Shamir state with γ so every shard seeded with the same γ samples the
+// same α and β, regardless of its local transcript.
+type sharedRandomnessSeeder struct{}
+
+func (*sharedRandomnessSeeder) Run(rt *wiop.Runtime) {
+	rt.SetFSState(GetSharedRandomnessSeed(rt))
 }
 
 // SharedRandomnessContributionAssigner is a prover action that takes all the
