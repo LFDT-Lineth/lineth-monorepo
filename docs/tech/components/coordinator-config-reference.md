@@ -75,7 +75,7 @@ Coordinator PostgreSQL persistence settings.
 | `database.read-pipelining-limit` | Maximum number of read queries pipelined on a single connection. | `Int` | no | `10` | active |
 | `database.read-pool-size` | Connection pool size for read-only queries. | `Int` | no | `10` | active |
 | `database.schema` | PostgreSQL schema (database) name. | `String` | no | `linea_coordinator` | active |
-| `database.schema-version` | Expected database schema version; must match a supported migration version. | `Int` | no | `6` | active |
+| `database.schema-version` | Expected database schema version; must match a supported migration version. | `Int` | no | `4` | active |
 | `database.transactional-pool-size` | Connection pool size for transactional (read-write) queries. | `Int` | no | `10` | active |
 | `database.username` | PostgreSQL username. Example: `postgres`. | `String` | yes | - | active |
 

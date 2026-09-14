@@ -11,7 +11,7 @@ data class DatabaseConfig(
   val username: String,
   val password: Masked,
   val schema: String,
-  val schemaVersion: Int = 6,
+  val schemaVersion: Int = 4,
   val readPoolSize: Int = 10,
   val readPipeliningLimit: Int = 10,
   val transactionalPoolSize: Int = 10,
