@@ -6,7 +6,7 @@
 |------|---------|
 | Node.js | >= 24.18.0 (see `.nvmrc`) |
 | pnpm | >= 11.9.0 |
-| JDK | 21 (for coordinator, Besu plugins) |
+| JDK | 25 (for coordinator, Besu plugins) |
 | Docker | 24+ with 16 GB memory, 4+ CPUs |
 | Docker Compose | 2.19+ |
 | Make | 3.81+ |
