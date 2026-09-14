@@ -1,0 +1,69 @@
+include "g2.zkc"
+
+// ============================================================================
+// BLS12-381 G2: the generator, affine->projective conversion and affine
+// addition.
+//
+// SPLIT OUT OF g2.zkc ON PURPOSE -- same reason as g1_group.zkc. zkc rejects a
+// program containing a module unreachable from `main`, and PAIRING_CHECK is the
+// only BLS12-381 precompile wired into riscv/main.zkc so far. It validates G2
+// points and runs the psi subgroup test, both of which stay in g2.zkc, but it
+// never adds two G2 points and never needs the generator.
+//
+// Note the asymmetry with g1_group.zkc: most of the G2 projective group law
+// (add_mixed, double_projective, scalar_mul_projective, projective_to_affine)
+// stays in g2.zkc, because is_in_subgroup_affine_bls12_381_g2 -- which G2MSM
+// will need and which the pairing keeps for that purpose -- reaches all of it.
+//
+// Exercised by test/zkc/bls12_381/g2_add. Fold back into g2.zkc when
+// BLS12_G2ADD (0x0d) is wired.
+// ============================================================================
+
+fn generator_bls12_381_g2() -> (x0:u384, x1:u384, y0:u384, y1:u384) {
+    x0 = BLS12_381_G2_GX_C0
+    x1 = BLS12_381_G2_GX_C1
+    y0 = BLS12_381_G2_GY_C0
+    y1 = BLS12_381_G2_GY_C1
+}
+
+fn affine_to_projective_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384)
+ -> (X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384) {
+    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
+        X0 = 0
+        X1 = 0
+        Y0 = 1
+        Y1 = 0
+        Z0 = 0
+        Z1 = 0
+    } else {
+        X0 = x0
+        X1 = x1
+        Y0 = y0
+        Y1 = y1
+        Z0 = 1
+        Z1 = 0
+    }
+}
+
+// Affine addition, handling the identity on either side. Kept thin: it exists
+// so callers do not have to remember add_mixed's no-infinity precondition.
+fn add_affine_bls12_381_g2(px0:u384, px1:u384, py0:u384, py1:u384,
+qx0:u384, qx1:u384, qy0:u384, qy1:u384)
+ -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+    if is_infinity_affine_bls12_381_g2(qx0, qx1, qy0, qy1) == 1 {
+        rx0 = px0
+        rx1 = px1
+        ry0 = py0
+        ry1 = py1
+        return
+    }
+
+    // P may still be the identity here -- add_mixed is complete in that operand.
+    var PX0:u384, PX1:u384, PY0:u384, PY1:u384, PZ0:u384, PZ1:u384
+    PX0, PX1, PY0, PY1, PZ0, PZ1 = affine_to_projective_bls12_381_g2(px0, px1, py0, py1)
+
+    var RX0:u384, RX1:u384, RY0:u384, RY1:u384, RZ0:u384, RZ1:u384
+    RX0, RX1, RY0, RY1, RZ0, RZ1 = add_mixed_bls12_381_g2(PX0, PX1, PY0, PY1, PZ0, PZ1, qx0, qx1, qy0, qy1)
+
+    rx0, rx1, ry0, ry1 = projective_to_affine_bls12_381_g2(RX0, RX1, RY0, RY1, RZ0, RZ1)
+}

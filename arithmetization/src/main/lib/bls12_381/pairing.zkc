@@ -56,16 +56,16 @@ const BLS12_381_SEED_BITS:u64 = 0xd201000000010000
 const BLS12_381_MAX_PAIRS:u8 = 64
 
 // Working Fp12 slots (12 cells each), all inside the work region.
-const ML_F:u12   = 960     // Miller accumulator
-const ML_W:u12   = 972     // Miller temp
-const FE_A:u12   = 984     // final-exponentiation temporaries
-const FE_B:u12   = 996
-const FE_C:u12   = 1008
-const FE_T:u12   = 1020
-const FE_U:u12   = 1032    // holds f across the whole hard part
-const XT_ACC:u12 = 1044    // fp12_expt accumulator
+const ML_F:u12 = 960 // Miller accumulator
+const ML_W:u12 = 972 // Miller temp
+const FE_A:u12 = 984 // final-exponentiation temporaries
+const FE_B:u12 = 996
+const FE_C:u12 = 1008
+const FE_T:u12 = 1020
+const FE_U:u12 = 1032 // holds f across the whole hard part
+const XT_ACC:u12 = 1044 // fp12_expt accumulator
 const XT_TMP:u12 = 1056
-const PC_OUT:u12 = 1068    // pairing_check: Miller output
+const PC_OUT:u12 = 1068 // pairing_check: Miller output
 
 // ----- line + point steps -----
 //
@@ -77,8 +77,8 @@ const PC_OUT:u12 = 1068    // pairing_check: Miller output
 // Tangent at T = (X : Y : Z), plus 2T.
 //   line, scaled by 2*Y*Z^2:  C0 = xi*2*Y*Z^2,  A3 = 3X^3 - 2Y^2Z,  C5 = -3X^2Z
 fn miller_double_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384)
-        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
-            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+ -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
 
     var xs0:u384, xs1:u384
     xs0, xs1 = fp2_sqr_bls12_381(X0, X1)
@@ -123,9 +123,9 @@ fn miller_double_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:
 //   T + Q:  t = A^2 Z - B^3 - 2 B^2 X,  X3 = B*t,
 //           Y3 = A*(B^2 X - t) - B^3 Y,  Z3 = B^3 Z
 fn miller_add_step_bls12_381(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384,
-                             qx0:u384, qx1:u384, qy0:u384, qy1:u384)
-        -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
-            C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
+qx0:u384, qx1:u384, qy0:u384, qy1:u384)
+ -> (nX0:u384, nX1:u384, nY0:u384, nY1:u384, nZ0:u384, nZ1:u384,
+C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384) {
 
     var t0:u384, t1:u384
     t0, t1 = fp2_mul_bls12_381(qy0, qy1, Z0, Z1)
@@ -197,7 +197,7 @@ fn pair_slot_bls12_381(i:u8) -> (base:u12) {
 // accumulator and yield a wrong answer instead of an error. See the note on
 // pairing_check_bls12_381 for why this is a `fail`.
 fn stage_pair_bls12_381<bls_fp12_mem>(i:u8, xP:u384, yP:u384,
-                                      qx0:u384, qx1:u384, qy0:u384, qy1:u384) {
+qx0:u384, qx1:u384, qy0:u384, qy1:u384) {
     if i >= BLS12_381_MAX_PAIRS {
         fail
     }
@@ -228,7 +228,7 @@ fn stage_pair_bls12_381<bls_fp12_mem>(i:u8, xP:u384, yP:u384,
 fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
     // T <- Q, in projective coordinates with Z = 1
     var base:u12 = BLS_MEM_PAIRS
-    for i:u8 = 0; i < n; i = i + 1 {
+    for i:u8 = 0; i<n; i = i + 1 {
         bls_fp12_mem[base + 6] = bls_fp12_mem[base + 2]
         bls_fp12_mem[base + 7] = bls_fp12_mem[base + 3]
         bls_fp12_mem[base + 8] = bls_fp12_mem[base + 4]
@@ -248,7 +248,7 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
     var C00:u384, C01:u384, A30:u384, A31:u384, C50:u384, C51:u384
     var L00:u384, L01:u384, L50:u384, L51:u384
 
-    for j:u7 = 0; j < 63; j = j + 1 {
+    for j:u7 = 0; j<63; j = j + 1 {
         var bit:u1
         var rest:u63
         bit::rest = acc
@@ -260,7 +260,7 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
 
         // f <- f * l_{T_i,T_i}(P_i);  T_i <- 2*T_i
         base = BLS_MEM_PAIRS
-        for i:u8 = 0; i < n; i = i + 1 {
+        for i:u8 = 0; i<n; i = i + 1 {
             TX0 = bls_fp12_mem[base + 6]
             TX1 = bls_fp12_mem[base + 7]
             TY0 = bls_fp12_mem[base + 8]
@@ -269,7 +269,7 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
             TZ1 = bls_fp12_mem[base + 11]
 
             TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
-                miller_double_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1)
+            miller_double_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1)
 
             bls_fp12_mem[base + 6] = TX0
             bls_fp12_mem[base + 7] = TX1
@@ -289,7 +289,7 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
         if bit == 1 {
             // f <- f * l_{T_i,Q_i}(P_i);  T_i <- T_i + Q_i
             base = BLS_MEM_PAIRS
-            for i:u8 = 0; i < n; i = i + 1 {
+            for i:u8 = 0; i<n; i = i + 1 {
                 TX0 = bls_fp12_mem[base + 6]
                 TX1 = bls_fp12_mem[base + 7]
                 TY0 = bls_fp12_mem[base + 8]
@@ -298,9 +298,9 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
                 TZ1 = bls_fp12_mem[base + 11]
 
                 TX0, TX1, TY0, TY1, TZ0, TZ1, C00, C01, A30, A31, C50, C51 =
-                    miller_add_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1,
-                                              bls_fp12_mem[base + 2], bls_fp12_mem[base + 3],
-                                              bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
+                miller_add_step_bls12_381(TX0, TX1, TY0, TY1, TZ0, TZ1,
+                bls_fp12_mem[base + 2], bls_fp12_mem[base + 3],
+                bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
 
                 bls_fp12_mem[base + 6] = TX0
                 bls_fp12_mem[base + 7] = TX1
@@ -323,19 +323,11 @@ fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
     fp12_conj_bls12_381(ML_F, out)
 }
 
-// Single-pair convenience wrapper. Stages into pair slot 0, so it clobbers it.
-fn miller_loop_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
-                                       qx0:u384, qx1:u384, qy0:u384, qy1:u384,
-                                       out:u12) {
-    stage_pair_bls12_381(0, xP, yP, qx0, qx1, qy0, qy1)
-    miller_loop_multi_bls12_381(1, out)
-}
-
 // ----- final exponentiation -----
 
 // XT_ACC <- XT_ACC^(2^n) * a. One rung of the seed addition chain below.
 fn fp12_expt_step_bls12_381<bls_fp12_mem>(a:u12, n:u8) {
-    for i:u8 = 0; i < n; i = i + 1 {
+    for i:u8 = 0; i<n; i = i + 1 {
         fp12_cyclotomic_sqr_bls12_381(XT_ACC, XT_ACC)
     }
     fp12_mul_bls12_381(XT_ACC, a, XT_TMP)
@@ -368,19 +360,19 @@ fn fp12_expt_step_bls12_381<bls_fp12_mem>(a:u12, n:u8) {
 // PRECONDITION: `a` is cyclotomic (it comes from the easy part) and lies outside
 // XT_ACC/XT_TMP. `o` may alias `a`.
 fn fp12_expt_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
-    fp12_copy_bls12_381(a, XT_ACC)      // bit 63, the leading one
+    fp12_copy_bls12_381(a, XT_ACC) // bit 63, the leading one
 
-    fp12_expt_step_bls12_381(a, 1)      // bit 62
-    fp12_expt_step_bls12_381(a, 2)      // bit 60
-    fp12_expt_step_bls12_381(a, 3)      // bit 57
-    fp12_expt_step_bls12_381(a, 9)      // bit 48
-    fp12_expt_step_bls12_381(a, 32)     // bit 16
+    fp12_expt_step_bls12_381(a, 1) // bit 62
+    fp12_expt_step_bls12_381(a, 2) // bit 60
+    fp12_expt_step_bls12_381(a, 3) // bit 57
+    fp12_expt_step_bls12_381(a, 9) // bit 48
+    fp12_expt_step_bls12_381(a, 32) // bit 16
 
-    for i:u8 = 0; i < 16; i = i + 1 {   // trailing zeros, bits 15..0
+    for i:u8 = 0; i<16; i = i + 1 { // trailing zeros, bits 15..0
         fp12_cyclotomic_sqr_bls12_381(XT_ACC, XT_ACC)
     }
 
-    fp12_conj_bls12_381(XT_ACC, o)      // the seed is negative
+    fp12_conj_bls12_381(XT_ACC, o) // the seed is negative
 }
 
 // f ^ (3 * (p^12 - 1) / r), written to `o`.
@@ -409,43 +401,34 @@ fn fp12_final_exp_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
     // ---- easy part ----
     fp12_conj_bls12_381(a, FE_A)
     fp12_inv_bls12_381(a, FE_B)
-    fp12_mul_bls12_381(FE_A, FE_B, FE_T)        // f^(p^6-1)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_T) // f^(p^6-1)
     fp12_frobenius_sq_bls12_381(FE_T, FE_A)
-    fp12_mul_bls12_381(FE_A, FE_T, FE_U)        // f, now cyclotomic
+    fp12_mul_bls12_381(FE_A, FE_T, FE_U) // f, now cyclotomic
 
     // ---- hard part ----
     fp12_expt_bls12_381(FE_U, FE_A)
     fp12_conj_bls12_381(FE_U, FE_B)
-    fp12_mul_bls12_381(FE_A, FE_B, FE_C)        // f^(x-1)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_C) // f^(x-1)
 
     fp12_expt_bls12_381(FE_C, FE_A)
     fp12_conj_bls12_381(FE_C, FE_B)
-    fp12_mul_bls12_381(FE_A, FE_B, FE_T)        // f^((x-1)^2)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_T) // f^((x-1)^2)
 
     fp12_expt_bls12_381(FE_T, FE_A)
     fp12_frobenius_bls12_381(FE_T, FE_B)
-    fp12_mul_bls12_381(FE_A, FE_B, FE_C)        // ^(x+p)
+    fp12_mul_bls12_381(FE_A, FE_B, FE_C) // ^(x+p)
 
     fp12_expt_bls12_381(FE_C, FE_A)
-    fp12_expt_bls12_381(FE_A, FE_T)             // ^(x^2)
+    fp12_expt_bls12_381(FE_A, FE_T) // ^(x^2)
     fp12_frobenius_sq_bls12_381(FE_C, FE_A)
-    fp12_mul_bls12_381(FE_T, FE_A, FE_B)        // ^(x^2 + p^2)
+    fp12_mul_bls12_381(FE_T, FE_A, FE_B) // ^(x^2 + p^2)
     fp12_conj_bls12_381(FE_C, FE_A)
-    fp12_mul_bls12_381(FE_B, FE_A, FE_T)        // ^(x^2 + p^2 - 1)
+    fp12_mul_bls12_381(FE_B, FE_A, FE_T) // ^(x^2 + p^2 - 1)
 
     fp12_cyclotomic_sqr_bls12_381(FE_U, FE_A)
-    fp12_mul_bls12_381(FE_A, FE_U, FE_B)        // f^3
+    fp12_mul_bls12_381(FE_A, FE_U, FE_B) // f^3
 
     fp12_mul_bls12_381(FE_T, FE_B, o)
-}
-
-// e(P, Q)^3 for a single validated, non-infinity pair. `out` must lie outside
-// the work region.
-fn pairing_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
-                                   qx0:u384, qx1:u384, qy0:u384, qy1:u384,
-                                   out:u12) {
-    miller_loop_bls12_381(xP, yP, qx0, qx1, qy0, qy1, PC_OUT)
-    fp12_final_exp_bls12_381(PC_OUT, out)
 }
 
 // ----- the precompile predicate -----
@@ -483,7 +466,7 @@ fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
 
     var px0:u384, px1:u384, py0:u384, py1:u384
     px0, px1, py0, py1 = psi_bls12_381_g2(bls_fp12_mem[base + 2], bls_fp12_mem[base + 3],
-                                          bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
+    bls_fp12_mem[base + 4], bls_fp12_mem[base + 5])
 
     var ex0:u384, ex1:u384
     ex0, ex1 = fp2_mul_bls12_381(px0, px1, TZ0, TZ1)
@@ -543,7 +526,7 @@ fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
 // widening the address type and moving the work region.
 fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
     status = 0
-    if n > BLS12_381_MAX_PAIRS {
+    if n>BLS12_381_MAX_PAIRS {
         fail
     }
 
@@ -551,7 +534,7 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
     var src:u12 = BLS_MEM_PAIRS
     var dst:u12 = BLS_MEM_PAIRS
 
-    for i:u8 = 0; i < n; i = i + 1 {
+    for i:u8 = 0; i<n; i = i + 1 {
         var xP:u384 = bls_fp12_mem[src]
         var yP:u384 = bls_fp12_mem[src + 1]
         var qx0:u384 = bls_fp12_mem[src + 2]
@@ -573,6 +556,20 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
 
         var pinf:u1 = is_infinity_affine_bls12_381_g1(xP, yP)
         var qinf:u1 = is_infinity_affine_bls12_381_g2(qx0, qx1, qy0, qy1)
+
+        // EIP-2537 validates EVERY non-infinity point, including one whose
+        // partner is the identity and which therefore contributes nothing to
+        // the product. Such a pair is about to be dropped, so it never reaches
+        // the Miller loop and cannot use the free psi check below -- it has to
+        // pay for the full ladder. Skipping this would accept an off-subgroup
+        // G2 whenever it is paired with an infinite G1, which the reference
+        // implementation rejects: a consensus split, not just a laxity.
+        if (pinf == 1) && (qinf == 0) {
+            if is_in_subgroup_affine_bls12_381_g2(qx0, qx1, qy0, qy1) != 1 {
+                return
+            }
+        }
+
         if (pinf == 0) && (qinf == 0) {
             // keep; dst <= src always, so this never clobbers an unread pair
             bls_fp12_mem[dst] = xP
@@ -600,7 +597,7 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
     // that is the only step here that inverts, and an unvalidated point can
     // drive the Miller output somewhere the inversion has no meaning.
     var base:u12 = BLS_MEM_PAIRS
-    for i:u8 = 0; i < m; i = i + 1 {
+    for i:u8 = 0; i<m; i = i + 1 {
         if t_matches_psi_bls12_381(base) != 1 {
             return
         }

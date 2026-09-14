@@ -19,18 +19,6 @@ fn mulmod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384) {
     }
 }
 
-// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
-// Callers that branch on raw (unreduced) equality/inequality of field elements
-// must reduce their inputs through this first, otherwise non-canonical encodings
-// (e.g. val = x + modL) alias the same residue while comparing as distinct u384
-// values. Implemented as multiplication by 1 modulo modL.
-fn reduce_384(val:u384, modL:u384) -> (remainder:u384) {
-    remainder = mulmod_384(1, val, modL)
-    if remainder >= modL {
-        fail
-    }
-}
-
 // addmod_384 adds two values and reduces modulo modL. Assumes inputs are already
 // reduced
 fn addmod_384(lhsL:u384, rhsL:u384, modL:u384) -> (remainder:u384) {

@@ -11,7 +11,7 @@
 // covered separately by checking 2*P through the ladder below.
 // ===================================================================
 
-include "../../../main/lib/bls12_381/g2.zkc"
+include "../../../main/lib/bls12_381/g2_group.zkc"
 
 pub input px0(address:u1) -> (v:u384)
 pub input px1(address:u1) -> (v:u384)

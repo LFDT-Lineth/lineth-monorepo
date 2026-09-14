@@ -16,7 +16,7 @@
 // ===================================================================
 
 include "../../../main/riscv/ram/read.zkc"
-include "../../../main/riscv/ram/write.zkc"
+include "../../../main/riscv/ram/write_u384.zkc"
 
 type lane = u64
 

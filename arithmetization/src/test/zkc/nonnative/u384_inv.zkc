@@ -13,7 +13,7 @@
 // invertible inputs are valid here: gcd(a, m) must be 1.
 // ===================================================================
 
-include "../../../main/lib/nonnative/u384.zkc"
+include "../../../main/lib/nonnative/u384_reduce.zkc"
 
 pub input a(address:u1) -> (v:u384)
 pub input e(address:u1) -> (v:u384)

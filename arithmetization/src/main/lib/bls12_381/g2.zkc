@@ -46,12 +46,8 @@ const BLS12_381_PSI_C2_C1:u384 = 0x1a0111ea397fe699ec02408663d4de85aa0d857d89759
 const BLS12_381_PSI_C3_C0:u384 = 0x135203e60180a68ee2e9c448d77a2cd91c3dedd930b1cf60ef396489f61eb45e304466cf3e67fa0af1ee7b04121bdea2
 const BLS12_381_PSI_C3_C1:u384 = 0x06af0e0437ff400b6831e36d6bd17ffe48395dabc2d3435e77f76e17009241c5ee67992f72ec05f4c81084fbede3cc09
 
-fn generator_bls12_381_g2() -> (x0:u384, x1:u384, y0:u384, y1:u384) {
-    x0 = BLS12_381_G2_GX_C0
-    x1 = BLS12_381_G2_GX_C1
-    y0 = BLS12_381_G2_GY_C0
-    y1 = BLS12_381_G2_GY_C1
-}
+// The generator, affine_to_projective and add_affine live in g2_group.zkc
+// -- see the header there for why they are a separate file.
 
 // ----- validity -----
 
@@ -64,7 +60,7 @@ fn is_infinity_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (res:u
 }
 
 fn is_equal_affine_bls12_381_g2(Px0:u384, Px1:u384, Py0:u384, Py1:u384,
-                                Qx0:u384, Qx1:u384, Qy0:u384, Qy1:u384) -> (res:u1) {
+Qx0:u384, Qx1:u384, Qy0:u384, Qy1:u384) -> (res:u1) {
     res = 0
     if (Px0 == Qx0) && (Px1 == Qx1) && (Py0 == Qy0) && (Py1 == Qy1) {
         res = 1
@@ -119,27 +115,8 @@ fn neg_affine_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384) -> (rx0:u384, rx1
 
 // ----- coordinate conversion -----
 
-fn affine_to_projective_bls12_381_g2(x0:u384, x1:u384, y0:u384, y1:u384)
-        -> (X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384) {
-    if is_infinity_affine_bls12_381_g2(x0, x1, y0, y1) == 1 {
-        X0 = 0
-        X1 = 0
-        Y0 = 1
-        Y1 = 0
-        Z0 = 0
-        Z1 = 0
-    } else {
-        X0 = x0
-        X1 = x1
-        Y0 = y0
-        Y1 = y1
-        Z0 = 1
-        Z1 = 0
-    }
-}
-
 fn projective_to_affine_bls12_381_g2(X0:u384, X1:u384, Y0:u384, Y1:u384, Z0:u384, Z1:u384)
-        -> (x0:u384, x1:u384, y0:u384, y1:u384) {
+ -> (x0:u384, x1:u384, y0:u384, y1:u384) {
     if fp2_is_zero_bls12_381(Z0, Z1) == 1 {
         x0 = 0
         x1 = 0
@@ -194,8 +171,8 @@ fn fp2_mul_by_b3_bls12_381_g2(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
 // equal Q (doubling) or may be -Q. Callers taking untrusted input must screen
 // Q for infinity first; add_affine_bls12_381_g2 below does exactly that.
 fn add_mixed_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u384, Z11:u384,
-                          x20:u384, x21:u384, y20:u384, y21:u384)
-        -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
+x20:u384, x21:u384, y20:u384, y21:u384)
+ -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
 
     // products of matching coordinates; with Z2 = 1, zz = Z1 comes for free
     var xx0:u384, xx1:u384
@@ -269,7 +246,7 @@ fn add_mixed_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u384, Z11:
 // Dedicated projective doubling (a = 0), the Fp2 analogue of
 // sw_double_projective_384. Precondition: P != O (Z != 0); the ladder guards it.
 fn double_projective_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u384, Z11:u384)
-        -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
+ -> (X30:u384, X31:u384, Y30:u384, Y31:u384, Z30:u384, Z31:u384) {
 
     var xs0:u384, xs1:u384
     xs0, xs1 = fp2_sqr_bls12_381(X10, X11)
@@ -334,29 +311,6 @@ fn double_projective_bls12_381_g2(X10:u384, X11:u384, Y10:u384, Y11:u384, Z10:u3
     Z30, Z31 = fp2_add_bls12_381(s40, s41, s40, s41)
 }
 
-// Affine addition, handling the identity on either side. Kept thin: it exists
-// so callers do not have to remember add_mixed's no-infinity precondition.
-fn add_affine_bls12_381_g2(px0:u384, px1:u384, py0:u384, py1:u384,
-                           qx0:u384, qx1:u384, qy0:u384, qy1:u384)
-        -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
-    if is_infinity_affine_bls12_381_g2(qx0, qx1, qy0, qy1) == 1 {
-        rx0 = px0
-        rx1 = px1
-        ry0 = py0
-        ry1 = py1
-        return
-    }
-
-    // P may still be the identity here -- add_mixed is complete in that operand.
-    var PX0:u384, PX1:u384, PY0:u384, PY1:u384, PZ0:u384, PZ1:u384
-    PX0, PX1, PY0, PY1, PZ0, PZ1 = affine_to_projective_bls12_381_g2(px0, px1, py0, py1)
-
-    var RX0:u384, RX1:u384, RY0:u384, RY1:u384, RZ0:u384, RZ1:u384
-    RX0, RX1, RY0, RY1, RZ0, RZ1 = add_mixed_bls12_381_g2(PX0, PX1, PY0, PY1, PZ0, PZ1, qx0, qx1, qy0, qy1)
-
-    rx0, rx1, ry0, ry1 = projective_to_affine_bls12_381_g2(RX0, RX1, RY0, RY1, RZ0, RZ1)
-}
-
 // Recursive double-and-add, same shape as sw_scalar_mul_projective_384:
 // bits peeled LSB-first on the way down, applied MSB-first on the way back up.
 //
@@ -367,7 +321,7 @@ fn add_affine_bls12_381_g2(px0:u384, px1:u384, py0:u384, py1:u384,
 //
 // PRECONDITION: (px, py) is a genuine affine point, not the encoded infinity.
 fn scalar_mul_projective_bls12_381_g2(k:u384, px0:u384, px1:u384, py0:u384, py1:u384)
-        -> (QX0:u384, QX1:u384, QY0:u384, QY1:u384, QZ0:u384, QZ1:u384) {
+ -> (QX0:u384, QX1:u384, QY0:u384, QY1:u384, QZ0:u384, QZ1:u384) {
     if k == 0 {
         // O = (0 : 1 : 0)
         QX0 = 0
@@ -412,7 +366,7 @@ fn scalar_mul_projective_bls12_381_g2(k:u384, px0:u384, px1:u384, py0:u384, py1:
 }
 
 fn scalar_mul_affine_bls12_381_g2(k:u384, x0:u384, x1:u384, y0:u384, y1:u384)
-        -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
+ -> (rx0:u384, rx1:u384, ry0:u384, ry1:u384) {
     rx0 = 0
     rx1 = 0
     ry0 = 0

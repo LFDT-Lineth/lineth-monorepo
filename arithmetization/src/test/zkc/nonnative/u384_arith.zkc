@@ -13,7 +13,7 @@
 // addmod_384/submod_384 must do (those two assume reduced inputs).
 // ===================================================================
 
-include "../../../main/lib/nonnative/u384.zkc"
+include "../../../main/lib/nonnative/u384_reduce.zkc"
 
 pub input a(address:u1) -> (v:u384)
 pub input b(address:u1) -> (v:u384)

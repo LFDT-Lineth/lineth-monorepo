@@ -10,7 +10,7 @@
 // normal revert path the arithmetization has to be able to prove.
 // ===================================================================
 
-include "../../../main/lib/bls12_381/g1.zkc"
+include "../../../main/lib/bls12_381/g1_group.zkc"
 
 pub input px(address:u1) -> (v:u384)
 pub input py(address:u1) -> (v:u384)

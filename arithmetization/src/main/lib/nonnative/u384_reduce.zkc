@@ -1,0 +1,21 @@
+include "u384.zkc"
+
+// Split out of u384.zkc because zkc rejects a program containing a module
+// unreachable from `main`. Every u384 value the BLS12-381 precompile handles is
+// range-checked against p by is_valid_affine_* rather than reduced -- a
+// non-canonical coordinate is invalid EVM input, not something to normalise --
+// so nothing in the interpreter's include graph calls this.
+//
+// Exercised by test/zkc/nonnative/u384_arith and friends.
+
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u384
+// values. Implemented as multiplication by 1 modulo modL.
+fn reduce_384(val:u384, modL:u384) -> (remainder:u384) {
+    remainder = mulmod_384(1, val, modL)
+    if remainder >= modL {
+        fail
+    }
+}

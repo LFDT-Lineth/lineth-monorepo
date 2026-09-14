@@ -12,7 +12,7 @@
 // doubling formula and the identity handling in the ladder.
 // ===================================================================
 
-include "../../../main/lib/bls12_381/g1.zkc"
+include "../../../main/lib/bls12_381/g1_group.zkc"
 
 pub input k(address:u1) -> (v:u384)
 pub input px(address:u1) -> (v:u384)
