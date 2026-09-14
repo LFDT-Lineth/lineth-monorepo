@@ -35,6 +35,6 @@ class BlobsPostgresDaoV2Test : BlobsPostgresDaoTestBase<BlobRecordV2>() {
   override fun endBlockNumber(blob: BlobRecordV2): ULong = blob.endBlockNumber
 
   override fun assertAdditionalInsertedColumns(row: Row, blob: BlobRecordV2) {
-    assertThat(row.getInteger("batches_count")).isEqualTo(blob.totalBatchesCount.toInt())
+    assertThat(row.getInteger("batches_count")).isEqualTo(blob.totalConflationsCount.toInt())
   }
 }

@@ -4,6 +4,7 @@ import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import linea.domain.BlobRecordV2
 import linea.domain.BlobStatus
+import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -33,10 +34,12 @@ class BlobsPostgresDaoV2(
         endBlockNumber = row.getLong("end_block_number").toULong(),
         startBlockTimestamp = Instant.fromEpochMilliseconds(row.getLong("start_block_timestamp")),
         endBlockTimestamp = Instant.fromEpochMilliseconds(row.getLong("end_block_timestamp")),
-        totalBatchesCount = row.getInteger("batches_count").toUInt(),
-        parentShnarf = blobsInfo.parentShnarf,
-        endShnarf = blobsInfo.endShnarf,
+        totalConflationsCount = row.getInteger("batches_count").toUInt(),
+        parentDataRollingHash = blobsInfo.parentDataRollingHash,
+        dataRollingHash = blobsInfo.dataRollingHash,
+        endOffset = blobsInfo.endOffset,
         blobsData = blobsInfo.blobsData,
+        proofHash = row.getString("blob_hash").decodeHex(),
       )
     }
   }
@@ -50,11 +53,11 @@ class BlobsPostgresDaoV2(
       clock.now().toEpochMilliseconds(),
       blobRecord.startBlockNumber.toLong(),
       blobRecord.endBlockNumber.toLong(),
-      ByteArray(0).encodeHex(),
+      blobRecord.proofHash.encodeHex(),
       blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN),
       blobRecord.startBlockTimestamp.toEpochMilliseconds(),
       blobRecord.endBlockTimestamp.toEpochMilliseconds(),
-      blobRecord.totalBatchesCount.toInt(),
+      blobRecord.totalConflationsCount.toInt(),
       ByteArray(0).encodeHex(),
       BlobsInfo.fromDomainObject(blobRecord).toJsonString(),
     )
