@@ -193,6 +193,110 @@ test "pcs rejects reordered input cap tables" {
     try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
 }
 
+fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
+    try std.testing.expectEqualSlices(usize, &.{ 3, 2, 1, 0 }, input.query_positions);
+
+    try std.testing.expectEqual(@as(usize, 1), input.proof.input_caps.len);
+    const input_cap = input.proof.input_caps[0];
+    try std.testing.expectEqual(@as(usize, 4), input_cap.nodes.len);
+    try std.testing.expectEqual(@as(usize, 2), input_cap.tables.len);
+    try std.testing.expectEqual(@as(u8, 1), input_cap.tables[1].size_log2);
+    try std.testing.expectEqual(@as(usize, 4), input_cap.tables[1].rows.len);
+    try std.testing.expectEqual(@as(usize, 1), input_cap.tables[1].rows[2].ext.len);
+
+    try std.testing.expectEqual(@as(usize, 1), input.proof.fri_proof.round_caps.len);
+    const running_cap = input.proof.fri_proof.round_caps[0];
+    try std.testing.expectEqual(@as(usize, 2), running_cap.nodes.len);
+    try std.testing.expectEqual(@as(usize, 1), running_cap.aux.len);
+    try std.testing.expect(running_cap.aux[0] == null);
+}
+
+test "pcs rejects tampered unqueried input cap node" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
+    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
+    // The bottom-pair fold maps query positions 0..3 to frontier nodes 0/1,
+    // so node 3 is bound only through reconstruction of the committed root.
+    nodes[3][0] = nodes[3][0].add(field.Element.one());
+    caps[0].nodes = nodes;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered unqueried revealed input cap row" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
+    const tables = try allocator.dupe(pcs.InputCapTable, caps[0].tables);
+    const rows = try allocator.dupe(merkle.RowOpening, tables[1].rows);
+    const values = try allocator.dupe(ext.Ext, rows[2].ext);
+    // The size-one table has four encoded rows. Queries 0..3 consume only row
+    // pair 0/1; row 2 still contributes to the authenticated upper cap.
+    values[0].B0.a0 = values[0].B0.a0.add(field.Element.one());
+    rows[2].ext = values;
+    tables[1].rows = rows;
+    caps[0].tables = tables;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered unqueried running cap node" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
+    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
+    // At running round one, these query positions all authenticate to frontier
+    // node 0, leaving node 1 bound only through the cap-to-root comparison.
+    nodes[1][0] = nodes[1][0].add(field.Element.one());
+    caps[0].nodes = nodes;
+    input.proof.fri_proof.round_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered running cap auxiliary digest" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
+    const aux = try allocator.dupe(?poseidon2.Digest, caps[0].aux);
+    aux[0] = caps[0].nodes[0];
+    caps[0].aux = aux;
+    input.proof.fri_proof.round_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
 test "routeInputRoots ignores an unused batch root" {
     const system = pcs.System{
         .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1 },
