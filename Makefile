@@ -26,24 +26,31 @@ RISCV_COMPOSE = COMPOSE_PROFILES=l1,l2,riscv docker compose \
 	--project-name $(RISCV_COMPOSE_PROJECT) \
 	--file $(RISCV_COMPOSE_FILE)
 
-.PHONY: clean-riscv-environment start-env-with-riscv
+.PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv
+
+build-riscv-images:
+	$(MAKE) -j1 docker-build-riscv-besu docker-build-maru docker-build-coordinator \
+		DOCKER_IMAGE_TAG=local-riscv \
+		PLATFORMS=$$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}') \
+		SKIP_PREBUILD=false DRY_RUN=false
 
 clean-riscv-environment:
 	$(RISCV_COMPOSE) down --volumes --remove-orphans
 	rm -rf tmp/riscv
 
 start-env-with-riscv:
+	$(MAKE) build-riscv-images
 	$(MAKE) clean-riscv-environment
 	mkdir -p \
 		tmp/riscv/prover/riscv/execution/requests \
 		tmp/riscv/prover/riscv/execution/responses
 	chmod -R a+rwX tmp/riscv/prover
-	$(MAKE) seed-deny-list
 	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
 		l1-cl-node \
 		maru \
 		postgres
 	$(MAKE) deploy-contracts \
+		L2_GENESIS_TIMESTAMP_FILE=tmp/riscv/genesis/fork-timestamp.txt \
 		L1_CONTRACT_VERSION=9 \
 		LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \

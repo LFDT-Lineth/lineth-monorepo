@@ -27,6 +27,43 @@ Each `docker-build-<image>` target mirrors the corresponding workflow: same
 pre-build step (`./gradlew …:installDist` where the workflow has one), same
 Dockerfile, context, build args and named build contexts.
 
+### Local RISC-V stack
+
+From the repository root, with the required Java/Node/pnpm versions and dependencies installed:
+
+```bash
+make start-env-with-riscv
+```
+
+Every run builds the current checkout's Besu, Maru, and coordinator images for the Docker
+host architecture, using local `local-riscv` tags. Gradle and Docker reuse cached work.
+No first-party images are pulled or published. All builds finish before the previous
+stack is stopped; a successful startup **resets the RISC-V chain, database, and proof files**.
+
+The stack runs L1 Besu and Teku for the V9 rollup stub, L2 Besu and Maru for Amsterdam
+blocks, Postgres for coordinator state, and the coordinator plus a filesystem responder
+for execution proof requests and dummy responses. Genesis generators run once and exit.
+Besu has no zkEVM sequencer, tracer, or Shomei plugins. The L2 message service is deployed
+because execution requests refer to it. There is no real prover, proof submission to L1,
+forced-transaction gateway, message anchoring, or dynamic gas pricing.
+
+The coordinator still loads trace limits and gas-price multipliers because its shared
+configuration loader requires them even when the corresponding services are disabled.
+Those files do not enable tracing or pricing services.
+
+L1 RPC is at `localhost:8445`, L2 RPC at `localhost:8545`, and coordinator health at
+`localhost:9545/health`. Execution requests and responses remain in
+`tmp/riscv/prover/riscv/execution/` for inspection until the next reset.
+Stopping and starting the responder allows pending requests to complete. The current
+coordinator resumes RISC-V processing from the last L1-finalized block; with finalization
+disabled here, a coordinator restart replays from genesis and can produce additional
+request/response files for the same blocks.
+
+```bash
+COMPOSE_PROFILES=l1,l2,riscv docker compose -p linea-riscv-dev -f docker/compose-riscv.yml logs -f coordinator
+make clean-riscv-environment
+```
+
 ### linea-besu-package
 
 `make docker-build-linea-besu-package` is the slowest target by a wide margin: its

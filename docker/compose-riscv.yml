@@ -19,7 +19,11 @@ services:
     extends:
       file: compose-spec-l1-services.yml
       service: l1-el-node
+    image: lineth-besu:local-riscv
+    pull_policy: never
     container_name: linea-riscv-l1-el-node
+    volumes:
+      - ./config/riscv/besu-log4j.xml:/var/lib/besu/log4j.xml:ro
     ports: !override
       - "8445:8545"
     networks:
@@ -46,9 +50,7 @@ services:
     container_name: linea-riscv-l1-node-genesis-generator
 
   l2-genesis-initialization:
-    extends:
-      file: compose-spec-l2-services.yml
-      service: l2-genesis-initialization
+    image: busybox:latest
     container_name: linea-riscv-l2-genesis-initialization
     entrypoint: ["sh", "/riscv/init.sh"]
     volumes:
@@ -60,13 +62,17 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: maru
+    image: consensys/maru:local-riscv
+    pull_policy: never
     container_name: linea-riscv-maru
     environment:
-      LINETH_USE_MARU_OVERRIDE_CONFIG: "true"
+      LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
     ports: !override []
-    volumes:
+    volumes: !override
       - ../tmp/riscv/genesis:/initialization:ro
-      - ./config/maru/sequencer.riscv.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
+      - ./config/maru/sequencer.riscv.config.toml:/opt/consensys/maru/configs/config.toml:ro
+      - ./config/maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
+      - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key:ro
     networks:
       l1network:
       linea:
@@ -76,17 +82,17 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: sequencer
+    image: lineth-besu:local-riscv
+    pull_policy: never
     container_name: linea-riscv-sequencer
-    volumes:
+    volumes: !override
       - ../tmp/riscv/genesis:/initialization:ro
+      - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
+      - ./config/linea-besu-sequencer/key:/var/lib/besu/key:ro
+      - ./config/riscv/besu-log4j.xml:/var/lib/besu/log4j.xml:ro
     command:
       - --config-file=/var/lib/besu/sequencer.config.toml
       - --node-private-key-file=/var/lib/besu/key
-      - --plugin-linea-node-type=SEQUENCER
-      - --plugin-linea-liveness-enabled=false
-      - --data-storage-format=BONSAI
-      - --target-gas-limit=30000000
-      - --plugins=LineaExtraDataPlugin,LineaTransactionPoolValidatorPlugin,LineaBundleEndpointsPlugin,LineaSetExtraDataEndpointPlugin
     ports: !override
       - "8545:8545"
     networks:
@@ -99,6 +105,12 @@ services:
       file: compose-spec-l2-services.yml
       service: postgres
     container_name: linea-riscv-postgres
+    environment:
+      POSTGRES_DB: linea_coordinator
+    command: ["postgres"]
+    volumes: !override []
+    networks: !override
+      - linea
     ports: !override []
 
   riscv-proof-responder:
@@ -117,8 +129,8 @@ services:
   coordinator:
     container_name: linea-riscv-coordinator
     hostname: coordinator
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-local}
-    platform: ${RISCV_PLATFORM:-linux/amd64}
+    image: consensys/linea-coordinator:local-riscv
+    pull_policy: never
     profiles: ["l2"]
     depends_on:
       l2-genesis-initialization:
@@ -142,9 +154,6 @@ services:
       timeout: 1s
       retries: 120
     restart: on-failure
-    environment:
-      dev_LINETH_COORDINATOR_DISABLED: "false"
-      CONFIG_OVERRIDE_OPTS: ""
     command:
       - sh
       - -c
