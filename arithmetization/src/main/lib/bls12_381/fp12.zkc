@@ -41,9 +41,9 @@ include "fp2.zkc"
 // ----------------------------------------------------------------------------
 memory bls_fp12_mem[u32](address:u12) -> (limb:u384)
 
-const BLS_MEM_USER:u12  = 0
+const BLS_MEM_USER:u12 = 0
 const BLS_MEM_PAIRS:u12 = 192
-const BLS_MEM_WORK:u12  = 960
+const BLS_MEM_WORK:u12 = 960
 
 // Scratch blocks, one region per routine so that a routine calling another
 // cannot clobber it. fp6_* never touches scratch, so only the fp12_* routines
@@ -245,18 +245,18 @@ fn fp12_conj_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
 //   c1 = (a0+a1)(b0+b1) - a0b0 - a1b1
 // DESTINATION MUST BE DISJOINT from both sources.
 fn fp12_mul_bls12_381<bls_fp12_mem>(a:u12, b:u12, o:u12) {
-    fp6_mul_bls12_381(a, b, MUL_T0)                    // v0 = a0*b0
-    fp6_mul_bls12_381(a + 6, b + 6, MUL_T1)            // v1 = a1*b1
+    fp6_mul_bls12_381(a, b, MUL_T0) // v0 = a0*b0
+    fp6_mul_bls12_381(a + 6, b + 6, MUL_T1) // v1 = a1*b1
 
-    fp6_add_bls12_381(a, a + 6, MUL_T2)                // a0+a1
-    fp6_add_bls12_381(b, b + 6, MUL_T3)                // b0+b1
-    fp6_mul_bls12_381(MUL_T2, MUL_T3, MUL_T2)          // (a0+a1)(b0+b1)
+    fp6_add_bls12_381(a, a + 6, MUL_T2) // a0+a1
+    fp6_add_bls12_381(b, b + 6, MUL_T3) // b0+b1
+    fp6_mul_bls12_381(MUL_T2, MUL_T3, MUL_T2) // (a0+a1)(b0+b1)
 
     fp6_sub_bls12_381(MUL_T2, MUL_T0, MUL_T2)
-    fp6_sub_bls12_381(MUL_T2, MUL_T1, o + 6)           // c1
+    fp6_sub_bls12_381(MUL_T2, MUL_T1, o + 6) // c1
 
-    fp6_mul_by_v_bls12_381(MUL_T1, MUL_T3)             // v*v1
-    fp6_add_bls12_381(MUL_T0, MUL_T3, o)               // c0
+    fp6_mul_by_v_bls12_381(MUL_T1, MUL_T3) // v*v1
+    fp6_add_bls12_381(MUL_T0, MUL_T3, o) // c0
 }
 
 // Squaring, as the Karatsuba multiply specialised to a == b: 2 Fp6
@@ -266,18 +266,18 @@ fn fp12_mul_bls12_381<bls_fp12_mem>(a:u12, b:u12, o:u12) {
 //   c0 = (a0+a1)(a0 + v*a1) - t - v*t
 // DESTINATION MUST BE DISJOINT from the source.
 fn fp12_sqr_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
-    fp6_mul_bls12_381(a, a + 6, SQR_T0)                // t = a0*a1
+    fp6_mul_bls12_381(a, a + 6, SQR_T0) // t = a0*a1
 
-    fp6_mul_by_v_bls12_381(a + 6, SQR_T1)              // v*a1
-    fp6_add_bls12_381(a, SQR_T1, SQR_T1)               // a0 + v*a1
-    fp6_add_bls12_381(a, a + 6, SQR_T2)                // a0 + a1
-    fp6_mul_bls12_381(SQR_T1, SQR_T2, SQR_T1)          // (a0+a1)(a0+v*a1)
+    fp6_mul_by_v_bls12_381(a + 6, SQR_T1) // v*a1
+    fp6_add_bls12_381(a, SQR_T1, SQR_T1) // a0 + v*a1
+    fp6_add_bls12_381(a, a + 6, SQR_T2) // a0 + a1
+    fp6_mul_bls12_381(SQR_T1, SQR_T2, SQR_T1) // (a0+a1)(a0+v*a1)
 
     fp6_sub_bls12_381(SQR_T1, SQR_T0, SQR_T1)
-    fp6_mul_by_v_bls12_381(SQR_T0, SQR_T2)             // v*t
-    fp6_sub_bls12_381(SQR_T1, SQR_T2, o)               // c0
+    fp6_mul_by_v_bls12_381(SQR_T0, SQR_T2) // v*t
+    fp6_sub_bls12_381(SQR_T1, SQR_T2, o) // c0
 
-    fp6_add_bls12_381(SQR_T0, SQR_T0, o + 6)           // c1 = 2t
+    fp6_add_bls12_381(SQR_T0, SQR_T0, o + 6) // c1 = 2t
 }
 
 // Multiply by a Miller line.
@@ -293,10 +293,10 @@ fn fp12_sqr_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
 // Specialising Karatsuba to this shape costs 15 Fp2 multiplications against 18
 // for a dense fp12_mul. DESTINATION MUST BE DISJOINT from the source.
 fn fp12_mul_by_line_bls12_381<bls_fp12_mem>(f:u12,
-                                            L00:u384, L01:u384,
-                                            L30:u384, L31:u384,
-                                            L50:u384, L51:u384,
-                                            o:u12) {
+L00:u384, L01:u384,
+L30:u384, L31:u384,
+L50:u384, L51:u384,
+o:u12) {
     // v0 = f0 * (L0, 0, 0): a cubic-extension multiply by a degree-0 element is
     // just scaling every coefficient, 3 Fp2 multiplications.
     var t0:u384, t1:u384, c0:u384, c1:u384
@@ -345,10 +345,10 @@ fn fp12_mul_by_line_bls12_381<bls_fp12_mem>(f:u12,
     fp6_add_bls12_381(f, f + 6, o + 6)
     fp6_mul_bls12_381(o + 6, LIN_T2, o + 6)
     fp6_sub_bls12_381(o + 6, LIN_T0, o + 6)
-    fp6_sub_bls12_381(o + 6, LIN_T1, o + 6)            // c1
+    fp6_sub_bls12_381(o + 6, LIN_T1, o + 6) // c1
 
-    fp6_mul_by_v_bls12_381(LIN_T1, LIN_T2)             // v*v1
-    fp6_add_bls12_381(LIN_T0, LIN_T2, o)               // c0
+    fp6_mul_by_v_bls12_381(LIN_T1, LIN_T2) // v*v1
+    fp6_add_bls12_381(LIN_T0, LIN_T2, o) // c0
 }
 
 // ----- Fp6 inversion -----
@@ -415,10 +415,10 @@ fn fp6_inv_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
 // so this is one Fp6 inversion, i.e. still one invmod_384 overall.
 // DESTINATION MUST BE DISJOINT from the source.
 fn fp12_inv_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
-    fp6_mul_bls12_381(a, a, INV_T0)                    // c0^2
-    fp6_mul_bls12_381(a + 6, a + 6, INV_T1)            // c1^2
-    fp6_mul_by_v_bls12_381(INV_T1, INV_T1)             // v*c1^2
-    fp6_sub_bls12_381(INV_T0, INV_T1, INV_T0)          // c0^2 - v*c1^2
+    fp6_mul_bls12_381(a, a, INV_T0) // c0^2
+    fp6_mul_bls12_381(a + 6, a + 6, INV_T1) // c1^2
+    fp6_mul_by_v_bls12_381(INV_T1, INV_T1) // v*c1^2
+    fp6_sub_bls12_381(INV_T0, INV_T1, INV_T0) // c0^2 - v*c1^2
     fp6_inv_bls12_381(INV_T0, INV_T0)
 
     fp6_mul_bls12_381(a, INV_T0, o)
@@ -433,7 +433,7 @@ fn fp12_is_one_bls12_381<bls_fp12_mem>(a:u12) -> (res:u1) {
     if bls_fp12_mem[a] != 1 {
         return
     }
-    for i:u5 = 1; i < 12; i = i + 1 {
+    for i:u5 = 1; i<12; i = i + 1 {
         if bls_fp12_mem[a + (i as u12)] != 0 {
             return
         }

@@ -18,7 +18,7 @@ This folder contains the zkvm library: zkc implementations of EVM precompiles an
 | BLS12_G1MSM         |   🔴   | custom-0 |  0b... | 0b...1100 |
 | BLS12_G2ADD         |   🔴   | custom-0 |  0b... | 0b...1101 |
 | BLS12_G2MSM         |   🔴   | custom-0 |  0b... | 0b...1110 |
-| BLS12_PAIRING_CHECK |   🔴   | custom-0 |  0b... | 0b...1111 |
+| BLS12_PAIRING_CHECK |   🟢   | custom-0 |  0b000 | 0b0001111 |
 | BLS12_MAP_FP_TO_G1  |   🔴   | custom-0 |  0b... | 0b..10000 |
 | BLS12_MAP_FP2_TO_G2 |   🔴   | custom-0 |  0b... | 0b..10001 |
 | P256_VERIFY         |   🔴   | custom-0 |  0b..1 | 0b....... |

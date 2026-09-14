@@ -13,7 +13,7 @@ fn executable_region_end() -> (end:Address) {
             var blob_size:Length
             blob_offset, blob_size = blobs_offset_and_size[i]
             var blob_end:Address = (blob_offset + blob_size) as Address
-            if blob_end > max_end {
+            if blob_end>max_end {
                 max_end = blob_end
             }
         }
