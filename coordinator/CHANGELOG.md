@@ -40,6 +40,7 @@
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
+- *(coordinator)* Consolidate prover clients (#3944)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

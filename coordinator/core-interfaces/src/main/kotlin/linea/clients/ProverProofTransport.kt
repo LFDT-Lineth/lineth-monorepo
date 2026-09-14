@@ -27,6 +27,12 @@ interface ProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : Proo
   fun isRequestAlreadySubmitted(proofIndex: TProofIndex): SafeFuture<Boolean>
 
   /**
+   * Returns true when a response for [proofIndex] has already been existed (e.g. the response
+   * file already exists, or a job for it is already known as proven to the remote service).
+   */
+  fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean>
+
+  /**
    * Submits the [requestDto] for [proofIndex]. For the file-based transport this writes the JSON request file; for the
    * RESTful transport this issues the POST call. Implementations should be idempotent.
    */

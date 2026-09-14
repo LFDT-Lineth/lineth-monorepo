@@ -2,42 +2,36 @@
 pragma solidity ^0.8.33;
 
 /**
- * @title Interface for shared shnarf related data accepting functions, errors and events.
+ * @title Interface for shared dataRollingHash accepting functions, errors and events.
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
 interface IShnarfDataAcceptorBase {
   /**
-   * @dev Thrown when the shnarf being submitted is the zero hash.
+   * @dev Thrown when the dataRollingHash being submitted is the zero hash.
    */
-  error ShnarfSubmissionIsZeroHash();
+  error DataRollingHashSubmissionIsZeroHash();
 
   /**
-   * @dev Thrown when the final block hash being submitted is the zero hash.
+   * @dev Thrown when the current dataRollingHash was already anchored.
    */
-  error FinalBlockHashIsZeroHash();
+  error DataRollingHashAlreadyAnchored(bytes32 dataRollingHash);
 
   /**
-   * @dev Thrown when the current shnarf was already submitted.
+   * @dev Thrown when no anchored dataRollingHash exists for the parent position.
    */
-  error ShnarfAlreadySubmitted(bytes32 shnarf);
+  error ParentDataRollingHashNotAnchored(bytes32 dataRollingHash);
 
   /**
-   * @dev Thrown when a shnarf does not exist for a parent blob.
+   * @dev Thrown when the computed dataRollingHash does not match what is expected.
    */
-  error ParentShnarfNotSubmitted(bytes32 shnarf);
+  error FinalDataRollingHashWrong(bytes32 expected, bytes32 value);
 
   /**
-   * @dev Thrown when the computed shnarf does not match what is expected.
+   * @notice Emitted when compressed data is being submitted and anchored successfully on L1.
+   * @dev The parent dataRollingHash is included for state reconstruction simplicity.
+   * @param parentDataRollingHash The parent dataRollingHash for the data being submitted.
+   * @param dataRollingHash The indexed dataRollingHash anchored for the data being submitted.
    */
-  error FinalShnarfWrong(bytes32 expected, bytes32 value);
-
-  /**
-   * @notice Emitted when compressed data is being submitted and verified successfully on L1.
-   * @dev The parent shnarf is included for state reconstruction simplicity.
-   * @param parentShnarf The parent shnarf for the data being submitted.
-   * @param shnarf The indexed shnarf for the data being submitted.
-   * @param finalBlockHash The L2 final block hash that the current blob submission ends on. NB: The last blob in the collection.
-   */
-  event DataSubmittedV4(bytes32 parentShnarf, bytes32 indexed shnarf, bytes32 finalBlockHash);
+  event DataSubmittedV4(bytes32 parentDataRollingHash, bytes32 indexed dataRollingHash);
 }
