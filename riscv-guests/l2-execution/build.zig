@@ -17,9 +17,15 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    // BLS12-381 pairing provider: the zesu stdlibs_accel stub by default (which
+    // fails unconditionally today); the arithmetization PAIRING_CHECK wrapper
+    // (prover-accelerated custom op) when opted in with -Dbls12-pairing-accel.
+    // Read by zkvm_provide.zig at comptime.
+    const bls12_pairing_accel = b.option(bool, "bls12-pairing-accel", "Use the arithmetization BLS12-381 PAIRING_CHECK wrapper instead of the standard zig backend (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
+    guest_options.addOption(bool, "bls12_pairing_accel", bls12_pairing_accel);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
