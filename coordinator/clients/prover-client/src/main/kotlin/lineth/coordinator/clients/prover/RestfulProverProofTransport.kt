@@ -92,7 +92,7 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   }
 
   override fun findResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto?> {
-    return fetchJob(proofIndex, true).thenApply { job -> job?.provedResponseOrNull() }
+    return fetchJob(proofIndex, includeResponse = true).thenApply { job -> job?.provedResponseOrNull() }
   }
 
   override fun isResponseAlreadyExisted(proofIndex: TProofIndex): SafeFuture<Boolean> {
