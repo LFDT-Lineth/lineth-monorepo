@@ -7,6 +7,7 @@ const Toolchain = struct {
     nim: []const u8,
     nimble: []const u8,
     llvm_ar: []const u8,
+    llvm_nm: []const u8,
 };
 
 fn envOr(b: *std.Build, key: []const u8, default: []const u8) []const u8 {
@@ -23,7 +24,8 @@ fn resolveToolchain(b: *std.Build) Toolchain {
     return .{
         .nim = findTool(b, envOr(b, "NIM", "nim"), extra),
         .nimble = findTool(b, envOr(b, "NIMBLE", "nimble"), extra),
-        .llvm_ar = findTool(b, envOr(b, "LLVM_AR", "llvm-ar"), extra),
+        .llvm_ar = findToolCandidates(b, "LLVM_AR", &.{ "llvm-ar", "llvm-ar-21", "llvm-ar-20", "llvm-ar-19", "llvm-ar-18" }, extra),
+        .llvm_nm = findToolCandidates(b, "LLVM_NM", &.{ "llvm-nm", "llvm-nm-21", "llvm-nm-20", "llvm-nm-19", "llvm-nm-18" }, extra),
     };
 }
 
@@ -32,6 +34,22 @@ fn findTool(b: *std.Build, name: []const u8, extra: []const []const u8) []const 
         std.debug.print(
             "error: required tool '{s}' not found; install it with: make -C riscv-guests install-constantine-deps\n",
             .{name},
+        );
+        std.process.exit(1);
+    };
+}
+
+fn findToolCandidates(
+    b: *std.Build,
+    env_key: []const u8,
+    candidates: []const []const u8,
+    extra: []const []const u8,
+) []const u8 {
+    if (b.graph.environ_map.get(env_key)) |name| return findTool(b, name, extra);
+    return b.findProgram(candidates, extra) catch {
+        std.debug.print(
+            "error: required tool '{s}' not found; install it with: make -C riscv-guests install-constantine-deps\n",
+            .{candidates[0]},
         );
         std.process.exit(1);
     };
@@ -50,12 +68,21 @@ pub fn build(b: *std.Build) void {
 const NIM_BINDINGS = "bindings/lib_constantine.nim";
 
 fn buildRiscv(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
-    // Run the fork's rv64im-freestanding build and merge in the guest allocator.
-    const task = b.addSystemCommand(&.{ tc.nimble, "-y", "make_lib_riscv64_freestanding" });
+    // Run the fork's rv64im-freestanding build in Zig's writable temporary output directory.
+    const out = b.tmpPath();
+    const task = b.addSystemCommand(&.{
+        "sh",
+        "-c",
+        \\export CTT_OUTDIR="$1" CTT_NIMCACHE="$1/nimcache" NIM="$3" LLVM_AR="$4" LLVM_NM="$5"
+        \\exec "$2" -y make_lib_riscv64_freestanding
+        ,
+        "nimble make_lib_riscv64_freestanding (rv64im)",
+    });
     task.setName("nimble make_lib_riscv64_freestanding (rv64im)");
     task.setCwd(tree);
-    // The pinned dependency hash covers cache invalidation.
-    const archive = tree.join(b.allocator, "lib/libconstantine.riscv64.a") catch @panic("oom");
+    task.addDirectoryArg(out);
+    task.addArgs(&.{ tc.nimble, tc.nim, tc.llvm_ar, tc.llvm_nm });
+    const archive = out.join(b.allocator, "libconstantine.riscv64.a") catch @panic("oom");
 
     // Match the guest's rv64im soft-float ABI.
     const allocator_obj = b.addObject(.{
@@ -95,7 +122,7 @@ fn nimCmd(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath, name: []const 
 fn buildHost(b: *std.Build, tc: Toolchain, tree: std.Build.LazyPath) std.Build.LazyPath {
     const nim = nimCmd(b, tc, tree, "nim compile constantine (host)");
     // The host archive backs the FFI unit test and its embedded KZG context.
-    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG" });
+    nim.addArgs(&.{ "--cc:clang", "-d:CTT_EMBEDDED_KZG", "-d:CTT_KZG_VERIFICATION_ONLY" });
     _ = nim.addPrefixedOutputDirectoryArg("--outdir:", "host");
     const nimcache = nim.addPrefixedOutputDirectoryArg("--nimcache:", "host-nimcache");
     _ = nimcache; // declared as a cache output
