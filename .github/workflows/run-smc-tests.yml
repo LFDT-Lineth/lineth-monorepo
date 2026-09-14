@@ -27,13 +27,13 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: 1.25.7
           cache-dependency-path: |
                 prover/go.sum
 
-      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: ./.github/actions/cache
         with:
           path: |
             ~/.cache/go-build
@@ -47,7 +47,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
 
       - name: Cache Hardhat compiler
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: ./.github/actions/cache
         with:
           path: ~/.cache/hardhat-nodejs
           key: ${{ runner.os }}-hardhat-compilers-${{ hashFiles('contracts/hardhat.config.ts', 'contracts/hardhat_overrides.ts') }}

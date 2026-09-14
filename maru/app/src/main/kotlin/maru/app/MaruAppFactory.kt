@@ -30,6 +30,7 @@ import maru.api.ApiServerImpl
 import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
+import maru.config.QbftConfig
 import maru.config.SyncingConfig
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
@@ -144,6 +145,8 @@ class MaruAppFactory(
   ): MaruApp {
     log.info("configs={}", config)
     log.info("beaconGenesisConfig={}", beaconGenesisConfig)
+
+    checkTargetGasLimitAndForks(config.qbft, beaconGenesisConfig)
 
     val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
 
@@ -577,6 +580,20 @@ class MaruAppFactory(
       )
     val qbftConsensusConfig = qbftForkConfig.configuration as QbftConsensusConfig
     beaconChainInitialization.ensureDbIsInitialized(qbftConsensusConfig.validatorSet)
+  }
+
+  internal fun checkTargetGasLimitAndForks(
+    qbftConfig: QbftConfig?,
+    forksSchedule: ForksSchedule,
+  ) {
+    if (qbftConfig != null && forksSchedule.forks.any {
+        it.configuration.fork.elFork.version >= ElFork.Amsterdam.version
+      }
+    ) {
+      requireNotNull(qbftConfig.targetGasLimit) {
+        "qbft.target-gas-limit must be configured for block-producing nodes with Amsterdam scheduled"
+      }
+    }
   }
 
   internal fun checkL2EthApiEndpointAndForks(

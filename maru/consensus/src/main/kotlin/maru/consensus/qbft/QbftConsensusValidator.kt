@@ -9,36 +9,95 @@
 package maru.consensus.qbft
 
 import maru.core.Protocol
+import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
-import org.hyperledger.besu.consensus.qbft.core.statemachine.QbftController
-import java.util.concurrent.Executor
+import org.hyperledger.besu.consensus.qbft.core.types.QbftEventHandler
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class QbftConsensusValidator(
-  private val qbftController: QbftController,
+  private val qbftController: QbftEventHandler,
   private val eventProcessor: QbftEventProcessor,
   private val bftExecutors: BftExecutors,
-  private val eventQueueExecutor: Executor,
+  private val shutdownTimeout: Duration = DEFAULT_SHUTDOWN_TIMEOUT,
 ) : Protocol {
+  companion object {
+    val DEFAULT_SHUTDOWN_TIMEOUT: Duration = 30.seconds
+  }
+
+  private val log = LogManager.getLogger(this.javaClass)
   private var isRunning = false
+  private var pendingStop: SafeFuture<Unit>? = null
 
   @Synchronized
   override fun start() {
     if (isRunning) {
-      return
+      if (pendingStop?.isDone != true) {
+        return
+      }
+      pause()
     }
-    eventProcessor.start()
-    bftExecutors.start()
-    qbftController.start()
-    eventQueueExecutor.execute(eventProcessor)
-    isRunning = true
+    try {
+      bftExecutors.start()
+      qbftController.start()
+      eventProcessor.start()
+      isRunning = true
+    } catch (failure: Throwable) {
+      cleanUpAfterFailedStart()
+      throw failure
+    }
+  }
+
+  private fun cleanUpAfterFailedStart() {
+    runCatching { bftExecutors.stop() }
+    runCatching { qbftController.stop() }
+    runCatching { eventProcessor.stop() }
   }
 
   @Synchronized
   override fun pause() {
-    eventProcessor.stop()
-    bftExecutors.stop()
-    qbftController.stop()
-    isRunning = false
+    if (!isRunning) {
+      return
+    }
+    val completion = eventProcessor.stop()
+    pendingStop = completion
+    try {
+      completion.get(shutdownTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+    } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
+      throw e
+    } finally {
+      if (completion.isDone) {
+        completeStop(completion)
+      } else {
+        completion.whenComplete { _, _ ->
+          try {
+            completeStop(completion)
+          } catch (error: Exception) {
+            log.error("Failed to clean up QBFT validator after event processor shutdown", error)
+          }
+        }
+      }
+    }
+  }
+
+  @Synchronized
+  private fun completeStop(completion: SafeFuture<Unit>) {
+    if (pendingStop !== completion) {
+      return
+    }
+    try {
+      bftExecutors.stop()
+    } finally {
+      try {
+        qbftController.stop()
+      } finally {
+        isRunning = false
+        pendingStop = null
+      }
+    }
   }
 
   override fun close() {
