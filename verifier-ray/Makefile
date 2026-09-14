@@ -11,7 +11,6 @@ include ../riscv-guests/build_common/Makefile
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
-LARGE_PCS_BENCH_OUT ?= zig-out/bench/large-pcs.zig
 
 # Input is currently embedded into the binary at build time (we don't have input
 # serialization yet), selected via `-Dembedded-input=<valid|invalid>` and a fixture
@@ -136,8 +135,7 @@ generate-testdata:
 # generation or CI. The generator self-checks the proof with prover-ray before
 # emitting the verifier-facing Zig literal.
 generate-large-pcs-benchmark:
-	mkdir -p $(dir $(LARGE_PCS_BENCH_OUT))
-	cd testdata/generate/fri && go run . -large-pcs-out "$(abspath $(LARGE_PCS_BENCH_OUT))"
+	cd testdata/generate/fri && go run . -large-pcs
 
 # Opt-in only: this builds a PCS-only R5 guest and runs it through zkc with the
 # Poseidon2 accelerator enabled. The generated fixture and guest artifacts are
