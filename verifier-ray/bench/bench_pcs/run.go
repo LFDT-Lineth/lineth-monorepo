@@ -27,11 +27,6 @@ var (
 type marker struct{ cycle, value uint64 }
 
 func main() {
-	zkcBin := "zkc"
-	if len(os.Args) > 1 {
-		zkcBin = os.Args[1]
-	}
-
 	buildArgs := []string{"build", "--release=small"}
 	if os.Getenv("DISABLE_ACCELERATORS") == "true" {
 		buildArgs = append(buildArgs, "-Ddisable-accelerators=true")
@@ -60,11 +55,22 @@ func main() {
 	if err := out.Close(); err != nil {
 		fatal(err)
 	}
+	r5JSONAbsolute, err := filepath.Abs(r5JSON)
+	if err != nil {
+		fatal(err)
+	}
+	zkcMainAbsolute, err := filepath.Abs(zkcMain)
+	if err != nil {
+		fatal(err)
+	}
 
 	// -vvv is what surfaces the guest's VERIFIER-MARK writes and the per-cycle
 	// counter the marks are read against; at lower verbosities zkc prints
 	// neither.
-	cmd := exec.Command(zkcBin, "exec", "--fast", "-vvv", r5JSON, zkcMain)
+	cmd := exec.Command(
+		"go", "-C", arithmetizationDir, "tool", "zkc",
+		"exec", "--fast", "-vvv", r5JSONAbsolute, zkcMainAbsolute,
+	)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fatal(err)
