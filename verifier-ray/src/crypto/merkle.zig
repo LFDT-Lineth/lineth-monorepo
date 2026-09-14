@@ -234,9 +234,8 @@ pub const InputTreeOpening = struct {
     pub fn authenticateToCap(self: InputTreeOpening, idx: usize, frontier: []const poseidon2.Digest) Error!void {
         const depth = try frontierDepth(frontier);
         const height = self.leaves.len;
-        if (height == 0 or self.siblings.len != height - 1 - depth or depth >= height) {
-            return Error.InvalidFrontier;
-        }
+        if (height == 0 or depth >= height) return Error.InvalidFrontier;
+        if (self.siblings.len != height - 1 - depth) return Error.InvalidFrontier;
         const bottom = self.leaves[height - 1] orelse return Error.MissingBottomLevel;
         for (self.leaves[0..depth]) |pair| {
             if (pair != null) return Error.InvalidCap;

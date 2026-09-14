@@ -71,6 +71,14 @@ test "merkle branch with no siblings is rejected before any hashing" {
     try std.testing.expectError(error.EmptyBranch, branch.recoverRoot(0));
 }
 
+test "input merkle opening rejects frontier depth equal to tree height" {
+    // Frontier depth one leaves no branch level below a height-one tree. This
+    // must be rejected before sibling-count subtraction or bottom-row access.
+    const opening = merkle.InputTreeOpening{ .siblings = &.{}, .leaves = &.{null} };
+    const frontier = [_]poseidon2.Digest{ poseidon2.zeroDigest(), poseidon2.zeroDigest() };
+    try std.testing.expectError(error.InvalidFrontier, opening.authenticateToCap(0, &frontier));
+}
+
 // ─── query.fri: frozen vectors from a real multi-round, multi-level proof ──
 
 fn toExt(e: [6]u32) ext.Ext {
