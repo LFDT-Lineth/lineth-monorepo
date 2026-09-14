@@ -10,13 +10,14 @@ package maru.executionlayer.client
 
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
+import maru.executionlayer.manager.PayloadAttributes
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV1
+import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -62,11 +63,14 @@ class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
 
   override fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
-    payloadAttributes: PayloadAttributesV1?,
+    payloadAttributes: PayloadAttributes?,
   ): SafeFuture<Response<ForkChoiceUpdatedResult>> =
     createRequestTimer<ForkChoiceUpdatedResult>(
       method = "forkChoiceUpdate",
     ).captureTime(
-      web3jEngineClient.forkChoiceUpdatedV1(forkChoiceState, Optional.ofNullable(payloadAttributes)),
+      web3jEngineClient.forkChoiceUpdatedV1(
+        forkChoiceState,
+        Optional.ofNullable(payloadAttributes?.toPayloadAttributesV1()),
+      ),
     ).toSafeFuture()
 }

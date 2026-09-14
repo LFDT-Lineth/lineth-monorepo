@@ -142,7 +142,11 @@ class QbftValidatorFactory(
         finalizationStateProvider = finalizationStateProvider,
         prevRandaoProvider = prevRandaoProvider,
         feeRecipient = qbftOptions.feeRecipient,
-        eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(qbftOptions.minBlockBuildTime),
+        eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(
+          minBlockBuildTime = qbftOptions.minBlockBuildTime,
+          forkActivationTimestamp = forkSpec.timestampSeconds,
+          targetGasLimit = qbftOptions.targetGasLimit,
+        ),
         blockHashing = blockHashing,
       )
 
@@ -202,6 +206,7 @@ class QbftValidatorFactory(
         executionLayerManager = if (payloadValidationEnabled) executionLayerManager else null,
         allowEmptyBlocks = allowEmptyBlocks,
         blockHashing = blockHashing,
+        elFork = protocolConfig.elFork,
       )
     val protocolSchedule =
       QbftProtocolScheduleAdapter(
@@ -291,7 +296,6 @@ class QbftValidatorFactory(
       QbftEventMultiplexer(qbftController).also {
         it.onBlockTimerFired = onBlockTimerFired
       }
-    val eventProcessor = QbftEventProcessor(bftEventQueue, eventMultiplexer)
     val eventQueueExecutor =
       Executors.newSingleThreadExecutor(
         Thread
@@ -300,6 +304,7 @@ class QbftValidatorFactory(
           .daemon(true)
           .factory(),
       )
+    val eventProcessor = QbftEventProcessor(bftEventQueue, eventMultiplexer, eventQueueExecutor)
 
     val messageDecoder = MinimalQbftMessageDecoder(SecpCrypto)
     val qbftMessageProcessor =
@@ -328,7 +333,6 @@ class QbftValidatorFactory(
       qbftController = qbftController,
       eventProcessor = eventProcessor,
       bftExecutors = bftExecutors,
-      eventQueueExecutor = eventQueueExecutor,
     )
   }
 
@@ -369,6 +373,7 @@ class QbftValidatorFactory(
         prevRandaoProvider = prevRandaoProvider,
         shouldBuildNextBlock = shouldBuildNextBlock,
         feeRecipient = feeRecipient,
+        targetGasLimit = qbftOptions.targetGasLimit,
       )
     return TransactionalSealedBeaconBlockImporter(
       beaconChain = beaconChain,

@@ -88,7 +88,7 @@ object ConflationAppHelper {
   /**
    * Returns the block number of the last block processed by the RISC-V proof pipeline
    */
-  fun getLastRiscVProcessedBlocks(
+  fun getLastRiscvProcessedBlocks(
     lastFinalizedBlock: ULong,
     l2EthClient: EthApiClient,
   ): SafeFuture<LastProcessedBlocks> {

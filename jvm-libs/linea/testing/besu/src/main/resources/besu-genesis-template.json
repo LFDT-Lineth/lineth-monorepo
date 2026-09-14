@@ -12,6 +12,8 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
+    "builderDepositRequestContractAddress": "0x0000000000000000000000000000000000009999",
+    "builderExitRequestContractAddress": "0x0000000000000000000000000000000000009999",
     "depositContractAddress": "0x0000000000000000000000000000000000009999",
     "withdrawalRequestContractAddress": "0x0000000000000000000000000000000000009999",
     "consolidationRequestContractAddress": "0x0000000000000000000000000000000000009999"

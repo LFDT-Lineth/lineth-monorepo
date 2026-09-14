@@ -952,6 +952,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "qbft.target-gas-limit": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Target execution block gas limit. Required for block-producing nodes with Amsterdam scheduled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "syncing": {
         "type": "SyncingConfig",
         "section": true,

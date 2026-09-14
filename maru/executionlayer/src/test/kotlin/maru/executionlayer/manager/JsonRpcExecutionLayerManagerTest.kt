@@ -8,6 +8,7 @@
  */
 package maru.executionlayer.manager
 
+import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.ext.DataGenerators
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.reset
@@ -31,13 +34,10 @@ import org.mockito.kotlin.isNull
 import org.mockito.kotlin.times
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
-import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextULong
@@ -144,12 +144,15 @@ class JsonRpcExecutionLayerManagerTest {
     verify(executionLayerEngineApiClient, atLeastOnce()).getPayload(eq(payloadId))
   }
 
-  @Test
-  fun `setHeadAndStartBlockBuilding passes arguments to FCU correctly`() {
+  @ParameterizedTest(name = "FCU argument propagation with Amsterdam attributes = {0}")
+  @ValueSource(booleans = [false, true])
+  fun `setHeadAndStartBlockBuilding passes arguments to FCU correctly`(amsterdam: Boolean) {
     val newHeadHash = Bytes32.random()
     val newSafeHash = Bytes32.random()
     val newFinalizedHash = Bytes32.random()
     val nextTimestamp = Random.nextULong(0U, ULong.MAX_VALUE)
+    val nextSlot = if (amsterdam) Random.nextULong(0U, ULong.MAX_VALUE) else null
+    val targetGasLimit = if (amsterdam) 60_000_000UL else null
 
     val payloadId = Bytes8(Bytes.random(8))
     val payloadStatus = mockForkChoiceUpdateWithValidStatus(payloadId)
@@ -162,6 +165,8 @@ class JsonRpcExecutionLayerManagerTest {
           finalizedHash = newFinalizedHash.toArray(),
           nextBlockTimestamp = nextTimestamp,
           feeRecipient = feeRecipient,
+          nextBlockSlotNumber = nextSlot,
+          targetGasLimit = targetGasLimit,
         ).get()
 
     val expectedPayloadStatus =
@@ -182,10 +187,12 @@ class JsonRpcExecutionLayerManagerTest {
       },
       argThat { payloadAttributes ->
         payloadAttributes ==
-          PayloadAttributesV1(
-            UInt64.fromLongBits(nextTimestamp.toLong()),
-            Bytes32.ZERO,
-            Bytes20(Bytes.wrap(feeRecipient)),
+          PayloadAttributes(
+            timestamp = nextTimestamp,
+            prevRandao = EMPTY_HASH,
+            suggestedFeeRecipient = feeRecipient,
+            slotNumber = nextSlot,
+            targetGasLimit = targetGasLimit,
           )
       },
     )

@@ -165,6 +165,95 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
+func TestInputCapsAuthenticateRevealedTablesAndQueryBoundary(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(20260819))
+	params, err := NewParams(4, 3, 4)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(4, 2))
+	require.NoError(t, err)
+	witness := MultiSizeTable{
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 1)}},
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 2)}},
+		{Base: [][]field.Element{field.VecPseudoRandBase(prng, 4)}},
+		{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}},
+	}
+	committed := pcs.Commit(witness)
+	shape := committed.EncodedTable.Shape()
+	info, err := inputCapShapeInfo(params, shape)
+	require.NoError(t, err)
+	require.Equal(t, 2, info.depth)
+	capNodes := committed.Tree.OpenCap(info.depth).Nodes
+	treeCap := InputCap{Nodes: capNodes, Tables: revealedInputTables(committed.EncodedTable, info)}
+	require.Len(t, treeCap.Tables, 2)
+	frontier, err := authenticateInputCap(info, treeCap, shape, committed.Tree.Root())
+	require.NoError(t, err)
+
+	queryPosition := 5
+	branch := openInputTreeOpeningToDepth(params, committed, queryPosition, info.depth)
+	require.Nil(t, branch.Leaves[0], "cap-revealed pair must not be repeated in the query")
+	require.Nil(t, branch.Leaves[1], "cap-revealed pair must not be repeated in the query")
+	require.NotNil(t, branch.Leaves[2], "auxiliary pair below the cap must stay on the query path")
+	numLeaves := 1 << len(branch.Leaves)
+	leafIndex := queryPosition / ((1 << params.LogCodewordSize) / numLeaves)
+	require.NoError(t, branch.AuthenticateToCap(leafIndex, frontier))
+	base := leafIndex / (numLeaves / len(treeCap.Tables[0].Rows))
+	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base), treeCap.Tables[0].Rows[base])
+	require.Equal(t, openEncodedRow(committed.EncodedTable[0], base^1), treeCap.Tables[0].Rows[base^1])
+
+	shifts := BatchShifts{
+		{Base: [][]int{{0}}},
+		{Base: [][]int{{0}}},
+		{Base: [][]int{{0}}},
+		{Ext: [][]int{{0}}},
+	}
+	zeta := field.UintsToExt(3, 0, 0, 0, 0, 0)
+	foldAlphas := []field.Ext{
+		field.UintsToExt(7, 0, 0, 0, 0, 0),
+		field.UintsToExt(11, 0, 0, 0, 0, 0),
+		field.UintsToExt(13, 0, 0, 0, 0, 0),
+	}
+	proof, claims := openForTest(t, pcs, openInputs{
+		Witnesses: []Batch{witness},
+		Committed: []CommitterState{committed},
+		Shifts:    []BatchShifts{shifts},
+		Zeta:      zeta,
+		Challenges: Challenges{
+			FoldAlphas:     foldAlphas,
+			QueryPositions: []int{5, 9, 1, 13},
+		},
+	})
+	verifyInput := VerifyInputs{
+		Roots:         []field.Octuplet{committed.Tree.Root()},
+		Shapes:        []Shape{shape},
+		Shifts:        []BatchShifts{shifts},
+		ClaimedValues: claims,
+		Zeta:          zeta,
+		Challenges:    Challenges{FoldAlphas: foldAlphas, QueryPositions: []int{5, 9, 1, 13}},
+	}
+	require.NoError(t, pcs.Verify(verifyInput, proof))
+	require.Len(t, proof.InputCaps[0].Tables, 2)
+
+	missingTable := proof
+	missingTable.InputCaps = append([]InputCap(nil), proof.InputCaps...)
+	missingTable.InputCaps[0].Tables = missingTable.InputCaps[0].Tables[:1]
+	require.Error(t, pcs.Verify(verifyInput, missingTable))
+
+	reorderedTables := proof
+	reorderedTables.InputCaps = append([]InputCap(nil), proof.InputCaps...)
+	reorderedTables.InputCaps[0].Tables = append([]InputCapTable(nil), proof.InputCaps[0].Tables...)
+	reorderedTables.InputCaps[0].Tables[0], reorderedTables.InputCaps[0].Tables[1] =
+		reorderedTables.InputCaps[0].Tables[1], reorderedTables.InputCaps[0].Tables[0]
+	require.Error(t, pcs.Verify(verifyInput, reorderedTables))
+
+	capPairOnPath := proof
+	capPairOnPath.InputQueries = append([]InputQuery(nil), proof.InputQueries...)
+	capPairOnPath.InputQueries[0] = append(InputQuery(nil), proof.InputQueries[0]...)
+	capPairOnPath.InputQueries[0][0].Leaves = append([]*RowPair(nil), proof.InputQueries[0][0].Leaves...)
+	pair := RowPair{proof.InputCaps[0].Tables[0].Rows[0], proof.InputCaps[0].Tables[0].Rows[1]}
+	capPairOnPath.InputQueries[0][0].Leaves[0] = &pair
+	require.ErrorContains(t, pcs.Verify(verifyInput, capPairOnPath), "query supplied a revealed row pair")
+}
+
 type pcsOpenVerifyFixture struct {
 	pcs       *PCS
 	input     VerifyInputs
@@ -302,6 +391,17 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 func TestPCSOpenVerifyNormalFlow(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
 	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof))
+}
+
+func TestPCSVerifyAllowsUnusedEmptyBatch(t *testing.T) {
+	fx := newPCSOpenVerifyFixture(t)
+	in := fx.input
+	in.Roots = append(append([]field.Octuplet(nil), in.Roots...), field.Octuplet{})
+	in.Shapes = append(append([]Shape(nil), in.Shapes...), Shape{})
+	in.Shifts = append(append([]BatchShifts(nil), in.Shifts...), BatchShifts{})
+	in.ClaimedValues = append(append([]BatchClaimedValues(nil), in.ClaimedValues...), BatchClaimedValues{})
+
+	require.NoError(t, fx.pcs.Verify(in, fx.proof))
 }
 
 // TestPCSStaticParamsLargerThanWitness exercises a static PCS whose Params are
