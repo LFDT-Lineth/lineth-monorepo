@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
@@ -681,6 +684,13 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
 		{name: "write_output", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b010, 1), want: computeRTypeBase + rtypeOpWriteOutput},
+		{name: "bls12 pairing check", instr: encodeRType(opcodeCUSTOM0, 0b0001111, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpBls12PairingCheck},
+		// rd=x0 discards the status and the precompile has no other
+		// architectural effect, so it folds -- unlike the custom-1 accelerants,
+		// which read rd as an output pointer.
+		{name: "bls12 pairing check rd zero", instr: encodeRType(opcodeCUSTOM0, 0b0001111, 0, 0, 0b000, 0), want: computeNoOp},
+		{name: "custom0 unimplemented funct7", instr: encodeRType(opcodeCUSTOM0, 0b0000110, 0, 0, 0b000, 1), want: computeInvalid},
+		{name: "custom0 bad funct3", instr: encodeRType(opcodeCUSTOM0, 0b0001111, 0, 0, 0b001, 1), want: computeInvalid},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -722,4 +732,67 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		decodedBits.writeBits(uint64(rd), 5)
 	}
 	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
+}
+
+// TestComputeOpBasesMatchConstantsZkc pins the one invariant this package
+// shares with the arithmetization but cannot express in Go: the ComputeOp
+// numbering. The interpreter switches on the values produced here, so if the
+// two sides disagree the failure is silent -- every store, branch and jump in
+// the guest is reinterpreted as some other instruction. The rest of the tests
+// in this file compare symbolic constants against each other and so pass
+// unchanged through a renumbering; this one does not.
+func TestComputeOpBasesMatchConstantsZkc(t *testing.T) {
+	const constantsPath = "../../src/main/common/constants.zkc"
+
+	source, err := os.ReadFile(constantsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", constantsPath, err)
+	}
+
+	declared := map[string]uint32{}
+	pattern := regexp.MustCompile(`(?m)^const\s+(\w+):ComputeOp\s*=\s*(\d+)`)
+	for _, match := range pattern.FindAllStringSubmatch(string(source), -1) {
+		value, err := strconv.ParseUint(match[2], 10, 32)
+		if err != nil {
+			t.Fatalf("parsing %s = %q: %v", match[1], match[2], err)
+		}
+		declared[match[1]] = uint32(value)
+	}
+	if len(declared) == 0 {
+		t.Fatalf("no ComputeOp constants found in %s", constantsPath)
+	}
+
+	// One representative per range boundary. A shifted base moves the whole
+	// range, so first and last of each is enough to catch it.
+	want := map[string]uint32{
+		"NO_OP":                        computeNoOp,
+		"READ8_SGN_WB":                 computeITypeBase + itypeRead8SgnWB,
+		"ITYPE_EBREAK":                 computeITypeBase + itypeEbreak,
+		"RTYPE_ADD_WB":                 computeRTypeBase + rtypeOpAddWB,
+		"RTYPE_KECCAK":                 computeRTypeBase + rtypeOpKeccak,
+		"RTYPE_POSEIDON2":              computeRTypeBase + rtypeOpPoseidon2,
+		"RTYPE_WRITE_OUTPUT":           computeRTypeBase + rtypeOpWriteOutput,
+		"RTYPE_BLS12_PAIRING_CHECK_WB": computeRTypeBase + rtypeOpBls12PairingCheck,
+		"STYPE_STORE8":                 computeSTypeBase + stypeStore8,
+		"STYPE_STORE64":                computeSTypeBase + stypeStore64,
+		"BRANCH_BEQ":                   computeBTypeBase + bTypeUnifiedIndex[0b000],
+		"BRANCH_BGEU":                  computeBTypeBase + bTypeUnifiedIndex[0b111],
+		"JTYPE_JAL":                    computeJTypeBase + jtypeJal,
+		"JTYPE_JAL_WB":                 computeJTypeBase + jtypeJalWB,
+		"UTYPE_LUI_WB":                 computeUTypeBase + utypeLuiWB,
+		"UTYPE_AUIPC_WB":               computeUTypeBase + utypeAuipcWB,
+		"COMPUTE_INVALID":              computeInvalid,
+	}
+
+	for name, expected := range want {
+		got, ok := declared[name]
+		if !ok {
+			t.Errorf("%s declares no %s", constantsPath, name)
+			continue
+		}
+		if got != expected {
+			t.Errorf("%s = %d in %s, but this package computes %d",
+				name, got, constantsPath, expected)
+		}
+	}
 }

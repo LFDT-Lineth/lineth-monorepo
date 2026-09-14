@@ -47,6 +47,7 @@ const (
 	opcodeLUI     = 0b0110111
 	opcodeAUIPC   = 0b0010111
 	opcodeJAL     = 0b1101111
+	opcodeCUSTOM0 = 0b0001011
 	opcodeCUSTOM1 = 0b0101011
 )
 
@@ -54,7 +55,7 @@ const (
 // constants.zkc.
 func instructionTypeFromOpcode(opcode uint32) uint32 {
 	switch opcode {
-	case opcodeOP, opcodeOP32, opcodeCUSTOM1:
+	case opcodeOP, opcodeOP32, opcodeCUSTOM0, opcodeCUSTOM1:
 		return rType
 	case opcodeLOAD, opcodeOPIMM, opcodeOPIMM32, opcodeJALR, opcodeSYSTEM:
 		return iType
@@ -98,6 +99,11 @@ func shouldUseNoOp(instrType, rd, localOp, opcode uint32) bool {
 			return false
 		}
 		switch localOp {
+		// These read rd as an output POINTER rather than writing it, so rd=x0
+		// is a real (if degenerate) operand and must not be folded away.
+		// rtypeOpBls12PairingCheck is deliberately absent: it writes its status
+		// to rd, so rd=x0 is architecturally inert and folds like any other
+		// writeback.
 		case rtypeOpKeccak, rtypeOpPoseidon2, rtypeOpWriteOutput:
 			return false
 		default:
@@ -196,7 +202,11 @@ const (
 	rtypeOpKeccak      = 28
 	rtypeOpPoseidon2   = 29
 	rtypeOpWriteOutput = 30
-	rtypeInvalid       = 63
+	// EVM precompiles on custom-0. Unlike the custom-1 accelerants above, these
+	// write their status to rd, so they are ordinary writeback ops and fold to
+	// NO_OP when rd is x0.
+	rtypeOpBls12PairingCheck = 31
+	rtypeInvalid             = 63
 )
 
 func rtypeOpForRd(localOp, rd uint32) uint32 {
@@ -257,10 +267,10 @@ const (
 	computeNoOp      = 0
 	computeITypeBase = 1
 	computeRTypeBase = 25
-	computeSTypeBase = 56
-	computeBTypeBase = 60
-	computeJTypeBase = 66
-	computeUTypeBase = 68
+	computeSTypeBase = 57
+	computeBTypeBase = 61
+	computeJTypeBase = 67
+	computeUTypeBase = 69
 	computeInvalid   = 255
 )
 
@@ -503,6 +513,18 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 			}
 		}
 		return rtypeInvalid
+	case opcodeCUSTOM0:
+		// EVM precompiles. funct7 is the precompile index from
+		// arithmetization/src/main/lib/README.md; only the implemented ones decode.
+		if funct3 != 0b000 {
+			return rtypeInvalid
+		}
+		switch funct7 {
+		case 0b0001111:
+			return rtypeOpBls12PairingCheck
+		default:
+			return rtypeInvalid
+		}
 	case opcodeCUSTOM1:
 		if funct7 != 0b0000000 {
 			return rtypeInvalid
