@@ -566,7 +566,7 @@
         "type": "Int",
         "section": false,
         "required": false,
-        "default": "4",
+        "default": "6",
         "description": "Expected database schema version; must match a supported migration version.",
         "example": null,
         "deprecated": false,

@@ -33,9 +33,9 @@ data class DatabaseToml(
   val schema: String = "linea_coordinator",
   @param:ConfigDoc(
     description = "Expected database schema version; must match a supported migration version.",
-    default = "4",
+    default = "6",
   )
-  val schemaVersion: Int = 4,
+  val schemaVersion: Int = 6,
   @param:ConfigDoc(
     description = "Connection pool size for read-only queries.",
     default = "10",
