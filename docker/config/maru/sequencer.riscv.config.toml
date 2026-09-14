@@ -1,0 +1,35 @@
+allow-empty-blocks = true
+
+[linea]
+contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+l1-eth-api = { endpoint = "http://l1-el-node:8545" }
+l1-polling-interval = "1 seconds"
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+
+[persistence]
+data-path = "/tmp/maru-db"
+private-key-path = "/tmp/maru-db/private-key"
+
+[qbft]
+fee-recipient = "0x0000000000000000000000000000000000000000"
+target-gas-limit = 30000000
+
+[payload-validator]
+engine-api-endpoint = { endpoint = "http://sequencer:8550" }
+payload-validation-enabled = true
+
+[fork-transition]
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+
+[observability]
+port = 9090
+jvm-metrics-enabled = true
+prometheus-metrics-enabled = true
+
+[api]
+port = 8080
+
+# Required by the config loader even when this single-validator stack has no peers.
+[syncing]
+peer-chain-height-polling-interval = "1 seconds"
+sync-target-selection = "Highest"
