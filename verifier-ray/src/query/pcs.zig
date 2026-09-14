@@ -616,11 +616,9 @@ fn authenticateInputCap(
     root: poseidon2.Digest,
     aux_storage: []?poseidon2.Digest,
 ) Error![]const poseidon2.Digest {
+    // Depth-zero caps use caller-owned root storage and are handled by verify.
+    if (info.depth == 0) return Error.InvalidCap;
     const expected_nodes = @as(usize, 1) << @intCast(info.depth);
-    if (info.depth == 0) {
-        if (cap.nodes.len != 0 or cap.tables.len != 0) return Error.InvalidCap;
-        return &[_]poseidon2.Digest{root};
-    }
     if (cap.nodes.len != expected_nodes or cap.tables.len != info.revealed_count) return Error.InvalidCap;
     if (aux_storage.len < expected_nodes - 1) return Error.InvalidCap;
     @memset(aux_storage[0 .. expected_nodes - 1], null);
