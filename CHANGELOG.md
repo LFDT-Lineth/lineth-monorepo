@@ -33,6 +33,7 @@
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(maru)* Add Amsterdam support (#3939)
 
 ### 🐛 Bug Fixes
 
