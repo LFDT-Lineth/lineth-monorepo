@@ -9,9 +9,7 @@ const poseidon2 = @import("poseidon2.zig");
 /// preimage branches over the multi-size aux-pair tree, prover-ray's
 /// `pcs.go` `InputTreeOpening`) is the PCS layer's own commitment structure.
 pub const Error = error{
-    EmptyBranch,
     MissingBottomLevel,
-    SiblingCountMismatch,
     InvalidLevelSize,
     LevelSizeTooLarge,
     LevelSizeAbsent,
@@ -43,32 +41,6 @@ pub const Branch = struct {
     siblings: []const poseidon2.Digest,
     /// The deepest leaf reachable through this branch.
     leaf: poseidon2.Digest,
-
-    /// Recovers the tree root by re-hashing `leaf` up to the root along
-    /// `siblings`. `idx`'s bits, least significant first, decide at each
-    /// level whether the running digest is the left or right child.
-    pub fn recoverRoot(self: Branch, idx: usize) Error!poseidon2.Digest {
-        if (self.siblings.len == 0) return Error.EmptyBranch;
-
-        var ancestor = self.leaf;
-        var curr_pos = idx;
-        var i = self.siblings.len;
-        while (i != 0) {
-            i -= 1;
-            const sibling = self.siblings[i];
-            const left = if (curr_pos & 1 != 0) sibling else ancestor;
-            const right = if (curr_pos & 1 != 0) ancestor else sibling;
-            ancestor = hashNode(left, right, null);
-            curr_pos >>= 1;
-        }
-        // All bits of the leaf position must have been consumed by the walk: an
-        // `idx` larger than the tree's leaf count would leave residual high bits,
-        // meaning the branch does not authenticate a leaf that exists in the tree.
-        // Mirrors prover-ray's `tree.go` currPos>0 guard. Redundant when the
-        // caller has already bounded `idx < 2^siblings.len`, but defense-in-depth.
-        if (curr_pos != 0) return Error.IndexOutOfRange;
-        return ancestor;
-    }
 
     /// Authenticates the suffix of this branch against an already-authenticated
     /// frontier. The frontier depth is inferred from its power-of-two length.
@@ -209,26 +181,6 @@ pub const InputTreeOpening = struct {
     siblings: []const poseidon2.Digest,
     leaves: []const ?RowPair,
 
-    /// Folds this branch's rows up to the tree root. Mirrors prover-ray's
-    /// `InputTreeOpening.RecoverRoot`.
-    pub fn recoverRoot(self: InputTreeOpening, idx: usize) Error!poseidon2.Digest {
-        const num_levels = self.leaves.len;
-        if (num_levels == 0) return Error.MissingBottomLevel;
-        const bottom = self.leaves[num_levels - 1] orelse return Error.MissingBottomLevel;
-        if (self.siblings.len != num_levels - 1) return Error.SiblingCountMismatch;
-
-        var step = foldOneLevel(hashRowOpening(bottom[0]), hashRowOpening(bottom[1]), null, idx);
-
-        var i = num_levels - 1;
-        while (i != 0) {
-            i -= 1;
-            step = foldOneLevel(step.ancestor, self.siblings[i], self.leaves[i], step.curr_pos);
-        }
-        // Every bit of the leaf position must be consumed (see Branch.recoverRoot).
-        if (step.curr_pos != 0) return Error.IndexOutOfRange;
-        return step.ancestor;
-    }
-
     /// Authenticates the portion of a sparse row-opening branch below an
     /// already-authenticated input-tree frontier.
     pub fn authenticateToCap(self: InputTreeOpening, idx: usize, frontier: []const poseidon2.Digest) Error!void {
@@ -281,7 +233,7 @@ pub const InputTreeOpening = struct {
 
 const FoldStep = struct { ancestor: poseidon2.Digest, curr_pos: usize };
 
-/// One step of `recoverRoot`'s upward walk: hashes `aux` (if present) into an
+/// One step of input-branch authentication: hashes `aux` (if present) into an
 /// aux digest via `hashRowPair` before combining with `hashNode`. Mirrors
 /// prover-ray's `foldOneLevel`.
 fn foldOneLevel(ancestor: poseidon2.Digest, sibling: poseidon2.Digest, aux: ?RowPair, curr_pos: usize) FoldStep {

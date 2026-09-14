@@ -45,9 +45,12 @@ fn runMerkleCase(allocator: std.mem.Allocator, case: merkle_fixtures.MerkleCase)
         .leaf = toDigest(case.leaf),
         .siblings = try toDigests(allocator, case.siblings),
     };
-    const recovered = try branch.recoverRoot(case.index);
-    const matches = poseidon2.eql(recovered, toDigest(case.root));
-    try std.testing.expectEqual(case.expect_match, matches);
+    const frontier = [_]poseidon2.Digest{toDigest(case.root)};
+    if (case.expect_match) {
+        try branch.authenticateToCap(case.index, &frontier);
+    } else {
+        try std.testing.expectError(error.InvalidCap, branch.authenticateToCap(case.index, &frontier));
+    }
 }
 
 test "merkle branches from prover-ray vectors" {
@@ -68,7 +71,8 @@ test "merkle branch with no siblings is rejected before any hashing" {
     // A pure shape check: no tree needed, so hand-written rather than
     // generated (unlike the other merkle cases, which come from a real tree).
     const branch = merkle.Branch{ .leaf = poseidon2.zeroDigest(), .siblings = &.{} };
-    try std.testing.expectError(error.EmptyBranch, branch.recoverRoot(0));
+    const frontier = [_]poseidon2.Digest{poseidon2.zeroDigest()};
+    try std.testing.expectError(error.InvalidFrontier, branch.authenticateToCap(0, &frontier));
 }
 
 test "input merkle opening rejects frontier depth equal to tree height" {
