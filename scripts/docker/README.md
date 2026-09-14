@@ -35,29 +35,20 @@ From the repository root, with the required Java/Node/pnpm versions and dependen
 make start-env-with-riscv
 ```
 
-Every run builds the current checkout's Besu, Maru, and coordinator images for the Docker
-host architecture, using local `local-riscv` tags. Gradle and Docker reuse cached work.
-No first-party images are pulled or published. All builds finish before the previous
-stack is stopped; a successful startup **resets the RISC-V chain, database, and proof files**.
+Each run builds Besu, Maru, and coordinator images from the checkout for the Docker host,
+reusing build caches. Once builds succeed, startup **resets the chain, database, and proof files**.
 
-The stack runs L1 Besu and Teku for the V9 rollup stub, L2 Besu and Maru for Amsterdam
-blocks, Postgres for coordinator state, and the coordinator plus a filesystem responder
-for execution proof requests and dummy responses. Genesis generators run once and exit.
-Besu has no zkEVM sequencer, tracer, or Shomei plugins. The L2 message service is deployed
-because execution requests refer to it. There is no real prover, proof submission to L1,
-forced-transaction gateway, message anchoring, or dynamic gas pricing.
+The stack runs L1 Besu/Teku, L2 Besu/Maru, Postgres, the coordinator, and a dummy proof
+responder. It produces Amsterdam execution requests; real proving and proof submission
+to L1 are not enabled.
 
-The coordinator still loads trace limits and gas-price multipliers because its shared
-configuration loader requires them even when the corresponding services are disabled.
-Those files do not enable tracing or pricing services.
+- L1 RPC: `localhost:8445`
+- L2 RPC: `localhost:8545`
+- Coordinator health: `localhost:9545/health`
+- Execution requests and responses: `tmp/riscv/prover/riscv/execution/`
 
-L1 RPC is at `localhost:8445`, L2 RPC at `localhost:8545`, and coordinator health at
-`localhost:9545/health`. Execution requests and responses remain in
-`tmp/riscv/prover/riscv/execution/` for inspection until the next reset.
-Stopping and starting the responder allows pending requests to complete. The current
-coordinator resumes RISC-V processing from the last L1-finalized block; with finalization
-disabled here, a coordinator restart replays from genesis and can produce additional
-request/response files for the same blocks.
+Restarting the coordinator replays from genesis because L1 finalization is disabled,
+so it can create additional request/response files for the same blocks.
 
 ```bash
 COMPOSE_PROFILES=l1,l2,riscv docker compose -p linea-riscv-dev -f docker/compose-riscv.yml logs -f coordinator

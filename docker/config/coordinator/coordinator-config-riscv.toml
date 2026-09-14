@@ -29,8 +29,6 @@ fs-requests-directory = "/data/prover/riscv/aggregation/requests"
 fs-responses-directory = "/data/prover/riscv/aggregation/responses"
 program-vk = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-# The shared coordinator config loader still requires trace endpoints and trace limits.
-# The RISC-V execution pipeline does not call the zkEVM trace APIs.
 [traces.counters]
 endpoints = ["http://sequencer:8545/"]
 
