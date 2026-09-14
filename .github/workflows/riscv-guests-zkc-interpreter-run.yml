@@ -98,7 +98,7 @@ jobs:
       # exec needs Go for the module-pinned zkc and elf_to_json tools. The Zig setup above installs
       # no Go. Pin chosen to match the repo's other Go pins (keep in sync).
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: "1.25.7"
           cache-dependency-path: "**/*.sum"
