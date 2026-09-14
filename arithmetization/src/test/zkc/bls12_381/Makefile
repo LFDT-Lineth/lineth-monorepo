@@ -30,7 +30,7 @@
 SHELL := /bin/sh
 
 HARNESSES := fp2_arith fp2_inv fp12_arith fp12_ops g1_add g1_mul g1_subgroup \
-             g2_add g2_mul g2_subgroup miller final_exp pairing_check
+             g2_add g2_mul g2_subgroup miller final_exp pairing_check pairing_ram
 FIELD     := KOALABEAR_16
 
 # Default to the zkc version pinned in arithmetization/go.mod, as the poseidon2

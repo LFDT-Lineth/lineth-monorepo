@@ -1,0 +1,73 @@
+// ===================================================================
+// Unit test for the BLS12-381 PAIRING_CHECK RAM/ABI layer
+// (arithmetization/src/main/lib/bls12_381/impl.zkc).
+//
+// pairing_check.zkc stages pairs by calling stage_pair_bls12_381
+// directly, so it never touches the calldata layout. This harness is
+// the other half: it lays the pairs out in guest RAM exactly as the
+// zig wrapper does -- 288 contiguous bytes per pair, unpadded,
+// big-endian -- and calls the accelerator entry point, so the byte
+// offsets and the coefficient order are what is under test.
+//
+// THE THING THIS EXISTS TO CATCH is the Fp2 coefficient order. A G2
+// point serialises as x.c0 || x.c1 || y.c0 || y.c1, c0 FIRST. EIP-2537
+// does not use the ZCash/blst "c1 first" convention that most
+// BLS12-381 tooling defaults to, and swapping them is not a crash or a
+// compile error -- it silently pairs a different, wrong point. The
+// fixtures below are the same bilinearity identities pairing_check.zkc
+// uses, so a swapped order breaks them.
+//
+// The base address is 4-byte aligned deliberately: read_u384_be has an
+// aligned fast path worth ~5x, and every EIP-2537 field element is a
+// multiple of 4 bytes, so aligning the array aligns every element.
+//
+// Status values are the precompile's:
+//   0 = input rejected (the EVM frame must revert)
+//   1 = accepted, product != 1
+//   2 = accepted, product == 1
+//
+// FIXTURE GOTCHA: this is the first harness in this directory to reach
+// guest RAM, so it pulls in riscv/memory.zkc and with it the whole VM
+// input surface. Every fixture must therefore also supply
+// entry_point_and_blobs_count, blobs_offset_and_size, blobs_data,
+// instruction_base and decoded, even though none of them is used.
+// Omitting one does not produce a missing-input diagnostic -- zkc
+// panics with a nil pointer dereference inside the constraint checker.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/impl.zkc"
+include "../../../main/riscv/ram/write_u384.zkc"
+
+type lane = u64
+
+const PAIRS_BASE:Address = 0x100
+
+pub input n(address:u1) -> (v:u8)
+pub input want(address:u1) -> (v:u8)
+
+pub input px(address:u3) -> (v:u384)
+pub input py(address:u3) -> (v:u384)
+pub input qx0(address:u3) -> (v:u384)
+pub input qx1(address:u3) -> (v:u384)
+pub input qy0(address:u3) -> (v:u384)
+pub input qy1(address:u3) -> (v:u384)
+
+fn main<ram, bls_fp12_mem>() {
+    var k:u8 = n[0]
+
+    var addr:Address = PAIRS_BASE
+    for i:u8 = 0; i<k; i = i + 1 {
+        var j:u3 = i as u3
+        write_u384_be(addr, px[j])
+        write_u384_be(addr + 48, py[j])
+        write_u384_be(addr + 96, qx0[j])
+        write_u384_be(addr + 144, qx1[j])
+        write_u384_be(addr + 192, qy0[j])
+        write_u384_be(addr + 240, qy1[j])
+        addr = addr + 288
+    }
+
+    if (bls12_pairing_check(PAIRS_BASE, k as u64) as u8) != want[0] {
+        fail
+    }
+}

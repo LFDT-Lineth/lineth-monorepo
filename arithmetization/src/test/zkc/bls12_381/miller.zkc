@@ -18,7 +18,7 @@
 // Fp12 squaring plus a sparse line multiply plus a doubling step.
 // ===================================================================
 
-include "../../../main/lib/bls12_381/pairing.zkc"
+include "../../../main/lib/bls12_381/pairing_single.zkc"
 
 pub input px(address:u1) -> (v:u384)
 pub input py(address:u1) -> (v:u384)
