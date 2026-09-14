@@ -76,6 +76,14 @@ pub fn vanillaHasExecutionRequests(alloc: std.mem.Allocator, vanilla_stateless_i
     return r.deposits.len != 0 or r.withdrawals.len != 0 or r.consolidations.len != 0;
 }
 
+/// True when the execution payload carries a non-empty beacon-chain withdrawals list, which the
+/// guest rejects by Linea policy (`error.WithdrawalsNotSupported`). Same SKIP role as
+/// `vanillaHasExecutionRequests`.
+pub fn vanillaHasWithdrawals(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
+    const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
+    return si.new_payload_request.execution_payload.withdrawals.len != 0;
+}
+
 /// True when EIP-8025's fork-activation schedule mechanism, applied the way zesu's vanilla
 /// `executeStatelessInput` enforces it, finds this block's declared active fork still pending:
 /// `chain_config.activation_block`/`activation_timestamp` is either unset (zesu's own preamble

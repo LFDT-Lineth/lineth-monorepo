@@ -29,7 +29,7 @@ data class AggregationCalculators(
   val service: LongRunningService,
 )
 
-data class RiscVConflationCalculators(
+data class RiscvConflationCalculators(
   val conflationCalculator: GlobalBlockConflationCalculator,
   val conflationService: ConflationService,
 )
@@ -205,7 +205,7 @@ object CalculatorsFactory {
     )
   }
 
-  fun createForRiscV(
+  fun createForRiscv(
     lastConflatedBlockNumber: ULong,
     lastConflatedTimestamp: Instant,
     blocksPerBatch: UInt,
@@ -215,7 +215,7 @@ object CalculatorsFactory {
     extraSyncCalculators: List<ConflationTriggerCalculator>,
     aggregationTargetEndBlockNumbers: Set<ULong>,
     log: Logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java),
-  ): RiscVConflationCalculators {
+  ): RiscvConflationCalculators {
     val syncCalculators = createConflationTriggerCalculators(
       tracesCountersLimit = null,
       blocksLimit = blocksPerBatch,
@@ -241,7 +241,7 @@ object CalculatorsFactory {
       safeBlockNumberProvider = safeBlockNumberProvider,
       metricsFacade = metricsFacade,
     )
-    return RiscVConflationCalculators(
+    return RiscvConflationCalculators(
       conflationCalculator = conflationCalculator,
       conflationService = conflationService,
     )

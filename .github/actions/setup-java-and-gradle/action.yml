@@ -26,7 +26,7 @@ runs:
         with:
           # Non-main branches read from the main branch's warm cache but don't write new entries,
           # reducing Maven Central dependency fetches and avoiding 429 rate-limit errors.
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') }}
 
 
 

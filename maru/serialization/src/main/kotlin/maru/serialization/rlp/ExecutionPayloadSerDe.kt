@@ -37,6 +37,10 @@ class ExecutionPayloadSerDe : RLPSerDe<ExecutionPayload> {
     rlpOutput.writeList(value.transactions) { transaction, output ->
       output.writeBytes(Bytes.wrap(transaction))
     }
+    if (value.blockAccessList != null) {
+      rlpOutput.writeBytes(Bytes.wrap(requireNotNull(value.blockAccessList)))
+      rlpOutput.writeLong(requireNotNull(value.slotNumber).toLong())
+    }
     rlpOutput.endList()
   }
 
@@ -56,6 +60,8 @@ class ExecutionPayloadSerDe : RLPSerDe<ExecutionPayload> {
     val baseFeePerGas = BigInteger(rlpInput.readBytes().toArray())
     val blockHash = rlpInput.readBytes().toArray()
     val transactions = rlpInput.readList { it.readBytes().toArray() }.toList()
+    val blockAccessList = if (rlpInput.isEndOfCurrentList) null else rlpInput.readBytes().toArray()
+    val slotNumber = if (blockAccessList == null) null else rlpInput.readLong().toULong()
     rlpInput.leaveList()
     return ExecutionPayload(
       parentHash = parentHash,
@@ -72,6 +78,8 @@ class ExecutionPayloadSerDe : RLPSerDe<ExecutionPayload> {
       baseFeePerGas = baseFeePerGas,
       blockHash = blockHash,
       transactions = transactions,
+      blockAccessList = blockAccessList,
+      slotNumber = slotNumber,
     )
   }
 }

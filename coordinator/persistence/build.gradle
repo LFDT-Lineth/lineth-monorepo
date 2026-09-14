@@ -10,10 +10,6 @@ dependencies {
   api(project(":coordinator:clients:prover-client:serialization"))
   api(project(":coordinator:core-interfaces"))
 
-  implementation(project(":coordinator:clients:prover-client:file-based-client")) {
-    because "ProverResponseIndex is a part of it"
-  }
-
   implementation(project(":jvm-libs:generic:errors"))
   implementation(project(":jvm-libs:generic:extensions:futures"))
   implementation(project(":jvm-libs:generic:extensions:kotlin"))

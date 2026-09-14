@@ -91,7 +91,7 @@ pub const linea_errors = error{
 /// Maps a guest failure to its deterministic, category-stable exit code (Readme.md §2.5).
 pub fn exitCode(err: anyerror) ExitCode {
     return switch (err) {
-        error.InvalidSsz => .invalid_ssz_envelope,
+        error.InvalidSsz, error.BoundsViolation => .invalid_ssz_envelope,
 
         error.InvalidStatelessInput => .invalid_stateless_input,
 

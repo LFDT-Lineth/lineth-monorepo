@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test reference-test prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -30,15 +30,17 @@ ZIG_FETCH_FLAGS ?=
 NAME     := evm_execution_guest
 BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
-# Sample fixture input used by exec/debug
+# Sample fixture input used by exec/debug / zkc-smoke-*
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by exec. Quiet (no per-instruction printf) is zkc's default unless
-# -v/-vv/-vvv raise verbosity. Override to pick the execution backend — e.g. "--gogen --fast" runs
-# the guest via zkc's generated-Go backend in fast mode, the runnability path used while the
-# interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
+# Flags forwarded to `zkc exec` by exec / zkc-smoke-exec. Quiet (no per-instruction printf) is zkc's
+# default unless -v/-vv/-vvv raise verbosity. "--fast" skips tracing, the runnability path used while
+# the interpreter does not implement tracing yet. "--check" runs the guest via the interpreter with
 # tracing enabled.
 ZKC_EXEC_FLAGS ?=
+
+# Flags forwarded to `zkc trace` by trace / zkc-smoke-trace.
+ZKC_TRACE_FLAGS ?= --stats
 
 # Parameters for execution-spec zkevm fixtures.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
@@ -50,6 +52,15 @@ OBJDUMP     ?= false
 # If true, build with the arithmetization keccak wrapper (prover-accelerated
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
+
+# Shared body for zkc-smoke-exec / zkc-smoke-trace: pass the exact INPUT as the smoke operand.
+# $(1) = zkc makefile target (elf-exec | elf-trace)
+# $(2) = optional extra runner args (e.g. --zkc-flags "...")
+define zkc-smoke-run
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
+		--zkc-target "$(1)" \
+		$(2)
+endef
 
 # ── Proving-system-agnostic guest lifecycle ─────────────────────────────────
 fetch:
@@ -67,6 +78,20 @@ test:
 REFERENCE_ARGS ?= --fork Amsterdam
 reference-test:
 	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
+
+# ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
+# each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
+# and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --fast).
+# Minutes per heavy block; use it to prove the real ELF agrees with the corpus.
+reference-test-zkc:
+	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+
+# Smoke: compare the exact INPUT .ssz under ZkC with the host.
+zkc-smoke-exec: require-input
+	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
+
+zkc-smoke-trace: require-input
+	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:

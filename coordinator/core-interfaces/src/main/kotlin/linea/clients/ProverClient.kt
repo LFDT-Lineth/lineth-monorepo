@@ -15,8 +15,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 interface ProverProofResponseChecker<ProofResponse, TProofIndex : ProofIndex> {
   fun findProofResponse(proofIndex: TProofIndex): SafeFuture<ProofResponse?>
 
-  fun isProofAlreadyDone(proofIndex: TProofIndex): SafeFuture<Boolean> =
-    findProofResponse(proofIndex).thenApply { it != null }
+  fun isProofAlreadyDone(proofIndex: TProofIndex): SafeFuture<Boolean>
 }
 
 interface ProverProofRequestCreator<ProofRequest : Any, TProofIndex : ProofIndex> {

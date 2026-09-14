@@ -1,0 +1,37 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  implementation project(':coordinator:core-interfaces')
+  api project(':coordinator:clients:prover-client:serialization')
+  implementation project(':coordinator:clients:smart-contract-client')
+  implementation project(':coordinator:ethereum:models-helper')
+  implementation project(':coordinator:utilities')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  implementation project(':jvm-libs:generic:http-rest')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:linea:core:domain-models')
+
+  implementation "io.vertx:vertx-core"
+  implementation "io.vertx:vertx-web-client"
+
+  // Block encoding used by the execution proof request DTO mapper.
+  implementation project(':jvm-libs:linea:besu-libs')
+
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+
+  // Shared test fixtures (builders, fakes, WireMock helpers) reused across the test suites.
+  testFixturesImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+
+  testImplementation testFixtures(project(':coordinator:core-interfaces'))
+  testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
+  testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
+  testImplementation "io.vertx:vertx-junit5"
+  testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+}

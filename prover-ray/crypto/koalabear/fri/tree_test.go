@@ -94,3 +94,113 @@ func TestBuildTreeExtOpenRecover(t *testing.T) {
 		}
 	}
 }
+
+func TestMerkleCapAuthenticatesBranches(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(19))
+	leaves := field.VecPseudoRandExt(prng, 16)
+	tree := buildTreeExt(leaves)
+	height := tree.NumLevel() - 1
+
+	for depth := 1; depth < height; depth++ {
+		treeCap := tree.OpenCap(depth)
+		if err := treeCap.Authenticate(depth, tree.Root()); err != nil {
+			t.Fatalf("depth %d: authenticate cap: %v", depth, err)
+		}
+		for idx := range leaves {
+			branch := tree.OpenBranchToDepth(idx, depth)
+			if err := branch.AuthenticateToCap(idx, treeCap.Nodes); err != nil {
+				t.Fatalf("depth %d index %d: authenticate branch: %v", depth, idx, err)
+			}
+		}
+	}
+}
+
+func TestMerkleCapAuthenticatesAuxiliaryPrefix(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(23))
+	tree := NewTree([][]field.Octuplet{
+		pseudoRandOctuplets(prng, 1),
+		nil,
+		pseudoRandOctuplets(prng, 4),
+	})
+	treeCap := tree.OpenCap(2)
+	if err := treeCap.Authenticate(2, tree.Root()); err != nil {
+		t.Fatalf("authenticate cap: %v", err)
+	}
+	if treeCap.Aux[0] == nil {
+		t.Fatal("cap omitted root auxiliary digest")
+	}
+
+	// Cap auxiliary values must not alias the committed tree.
+	original := tree.Root()
+	*treeCap.Aux[0] = field.PseudoRandOctuplet(prng)
+	if tree.Root() != original {
+		t.Fatal("mutating cap auxiliary digest changed tree root")
+	}
+	if err := treeCap.Authenticate(2, tree.Root()); err == nil {
+		t.Fatal("tampered cap authenticated")
+	}
+}
+
+func pseudoRandOctuplets(prng *rand.Rand, n int) []field.Octuplet {
+	values := make([]field.Octuplet, n)
+	for i := range values {
+		values[i] = field.PseudoRandOctuplet(prng)
+	}
+	return values
+}
+
+func TestMerkleCapRejectsMalformedAndTamperedProofs(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(29))
+	tree := buildTreeExt(field.VecPseudoRandExt(prng, 8))
+	treeCap := tree.OpenCap(2)
+
+	badLength := treeCap
+	badLength.Nodes = badLength.Nodes[:len(badLength.Nodes)-1]
+	if err := badLength.Validate(2); err == nil {
+		t.Fatal("truncated cap accepted")
+	}
+	if err := (MerkleCap{Nodes: []field.Octuplet{{}}}).Validate(0); err == nil {
+		t.Fatal("nonempty depth-zero cap accepted")
+	}
+
+	badNode := treeCap
+	badNode.Nodes = append([]field.Octuplet(nil), treeCap.Nodes...)
+	badNode.Nodes[0] = field.PseudoRandOctuplet(prng)
+	if err := badNode.Authenticate(2, tree.Root()); err == nil {
+		t.Fatal("tampered cap node authenticated")
+	}
+
+	branch := tree.OpenBranchToDepth(3, 2)
+	branch.Siblings[0] = field.PseudoRandOctuplet(prng)
+	if err := branch.AuthenticateToCap(3, treeCap.Nodes); err == nil {
+		t.Fatal("tampered branch authenticated")
+	}
+}
+
+func TestMerkleCapAuthenticatesDepthZero(t *testing.T) {
+	root := field.PseudoRandOctuplet(rand.New(utils.NewRandSource(31)))
+	if err := (MerkleCap{}).Authenticate(0, root); err != nil {
+		t.Fatalf("depth-zero cap should authenticate the trusted root: %v", err)
+	}
+}
+
+func TestMerkleCapDepth(t *testing.T) {
+	tests := []struct {
+		queries uint
+		height  int
+		want    int
+	}{
+		{queries: 1, height: 8, want: 0},
+		{queries: 2, height: 1, want: 0},
+		{queries: 2, height: 8, want: 1},
+		{queries: 3, height: 8, want: 2},
+		{queries: 4, height: 8, want: 2},
+		{queries: 229, height: 12, want: 8},
+		{queries: 229, height: 4, want: 3},
+	}
+	for _, test := range tests {
+		if got := merkleCapDepth(test.queries, test.height); got != test.want {
+			t.Errorf("queries=%d height=%d: got %d, want %d", test.queries, test.height, got, test.want)
+		}
+	}
+}

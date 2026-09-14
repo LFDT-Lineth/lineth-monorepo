@@ -29,6 +29,7 @@ pub const zkvm_keccak256_hash = keccak.zkvm_keccak256_hash;
 pub const zkvm_keccak256 = keccak.zkvm_keccak256;
 
 // ── io accelerator (zkvm-standards io-interface, include/zkvm_io.h) ──────────
+pub const read_input = io.read_input;
 pub const write_output = io.write_output;
 
 // ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────

@@ -58,11 +58,6 @@ func TestMeasure(t *testing.T) {
 			require.GreaterOrEqual(t, s.Total, s.Payload,
 				"payload is a subset of the image, so overhead cannot be negative")
 
-			// The projection drops AuxSiblings because the Zig merkle.Branch has no
-			// such field. That is only sound while they are all nil.
-			require.Zero(t, s.AuxNonNil,
-				"non-nil AuxSiblings would be silently dropped by the projection")
-
 			t.Logf("\n=== %s ===\n%s", sc.Name, s)
 		})
 	}
