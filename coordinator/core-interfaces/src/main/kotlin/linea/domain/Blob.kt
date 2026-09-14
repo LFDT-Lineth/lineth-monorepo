@@ -151,10 +151,12 @@ data class BlobRecordV2(
   override val endBlockNumber: ULong,
   val startBlockTimestamp: Instant,
   val endBlockTimestamp: Instant,
-  val parentShnarf: ByteArray,
-  val endShnarf: ByteArray,
-  val totalBatchesCount: UInt,
+  val parentDataRollingHash: ByteArray,
+  val dataRollingHash: ByteArray,
+  val totalConflationsCount: UInt,
   val blobsData: List<BlobData>,
+  val proofHash: ByteArray,
+  val endOffset: Int,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -166,10 +168,12 @@ data class BlobRecordV2(
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!endShnarf.contentEquals(other.endShnarf)) return false
-    if (totalBatchesCount != other.totalBatchesCount) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
+    if (totalConflationsCount != other.totalConflationsCount) return false
     if (blobsData != other.blobsData) return false
+    if (!proofHash.contentEquals(other.proofHash)) return false
+    if (endOffset != other.endOffset) return false
 
     return true
   }
@@ -179,18 +183,20 @@ data class BlobRecordV2(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
-    result = 31 * result + parentShnarf.contentHashCode()
-    result = 31 * result + endShnarf.contentHashCode()
-    result = 31 * result + totalBatchesCount.hashCode()
+    result = 31 * result + parentDataRollingHash.contentHashCode()
+    result = 31 * result + dataRollingHash.contentHashCode()
+    result = 31 * result + totalConflationsCount.hashCode()
     result = 31 * result + blobsData.hashCode()
+    result = 31 * result + proofHash.contentHashCode()
+    result = 31 * result + endOffset
     return result
   }
 }
 
 data class BlobData(
-  val blobHash: ByteArray,
-  val compressedData: ByteArray,
-  val batchesCount: UInt,
+  val chunkHash: ByteArray,
+  val blobBytes: ByteArray,
+  val conflationsCount: UInt,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -198,17 +204,17 @@ data class BlobData(
 
     other as BlobData
 
-    if (!blobHash.contentEquals(other.blobHash)) return false
-    if (!compressedData.contentEquals(other.compressedData)) return false
-    if (batchesCount != other.batchesCount) return false
+    if (!chunkHash.contentEquals(other.chunkHash)) return false
+    if (!blobBytes.contentEquals(other.blobBytes)) return false
+    if (conflationsCount != other.conflationsCount) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = blobHash.contentHashCode()
-    result = 31 * result + compressedData.contentHashCode()
-    result = 31 * result + batchesCount.hashCode()
+    var result = chunkHash.contentHashCode()
+    result = 31 * result + blobBytes.contentHashCode()
+    result = 31 * result + conflationsCount.hashCode()
     return result
   }
 }

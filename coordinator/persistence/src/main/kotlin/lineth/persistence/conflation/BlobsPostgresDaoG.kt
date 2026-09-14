@@ -76,7 +76,8 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
     """
       .trimIndent()
 
-  // TODO: after riscv migration, drop blob_hash and expected_shnarf columns and rename blob_compression_proof to blobs_info
+  // TODO: after riscv migration, drop expected_shnarf column and rename blob_compression_proof to blobs_info
+  // blob_hash is repurposed as rollup proof hash — do NOT drop it
   // https://github.com/LFDT-Lineth/lineth-monorepo/issues/3658
   protected val insertSql =
     """

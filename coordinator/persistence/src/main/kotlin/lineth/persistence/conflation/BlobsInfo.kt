@@ -8,22 +8,24 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 
 data class BlobsInfo(
-  val parentShnarf: ByteArray,
-  val endShnarf: ByteArray,
+  val parentDataRollingHash: ByteArray,
+  val dataRollingHash: ByteArray,
+  val endOffset: Int,
   val blobsData: List<BlobData>,
 ) {
   fun toJsonString(): String =
     JsonObject()
-      .put("parentShnarf", parentShnarf.encodeHex())
-      .put("endShnarf", endShnarf.encodeHex())
+      .put("parentDataRollingHash", parentDataRollingHash.encodeHex())
+      .put("dataRollingHash", dataRollingHash.encodeHex())
+      .put("endOffset", endOffset)
       .put(
         "blobsData",
         JsonArray(
           blobsData.map { blobData ->
             JsonObject()
-              .put("blobHash", blobData.blobHash.encodeHex())
-              .put("compressedData", blobData.compressedData.encodeHex())
-              .put("batchesCount", blobData.batchesCount.toInt())
+              .put("chunkHash", blobData.chunkHash.encodeHex())
+              .put("blobBytes", blobData.blobBytes.encodeHex())
+              .put("conflationsCount", blobData.conflationsCount.toInt())
           },
         ),
       )
@@ -33,15 +35,17 @@ data class BlobsInfo(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
     other as BlobsInfo
-    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
-    if (!endShnarf.contentEquals(other.endShnarf)) return false
+    if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+    if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
+    if (endOffset != other.endOffset) return false
     if (blobsData != other.blobsData) return false
     return true
   }
 
   override fun hashCode(): Int {
-    var result = parentShnarf.contentHashCode()
-    result = 31 * result + endShnarf.contentHashCode()
+    var result = parentDataRollingHash.contentHashCode()
+    result = 31 * result + dataRollingHash.contentHashCode()
+    result = 31 * result + endOffset
     result = 31 * result + blobsData.hashCode()
     return result
   }
@@ -50,14 +54,15 @@ data class BlobsInfo(
     fun fromJsonString(jsonString: String): BlobsInfo {
       val json = JsonObject(jsonString)
       return BlobsInfo(
-        parentShnarf = json.getString("parentShnarf").decodeHex(),
-        endShnarf = json.getString("endShnarf").decodeHex(),
+        parentDataRollingHash = json.getString("parentDataRollingHash").decodeHex(),
+        dataRollingHash = json.getString("dataRollingHash").decodeHex(),
+        endOffset = json.getInteger("endOffset"),
         blobsData = json.getJsonArray("blobsData").map { item ->
           val blobDataJson = item as JsonObject
           BlobData(
-            blobHash = blobDataJson.getString("blobHash").decodeHex(),
-            compressedData = blobDataJson.getString("compressedData").decodeHex(),
-            batchesCount = blobDataJson.getInteger("batchesCount").toUInt(),
+            chunkHash = blobDataJson.getString("chunkHash").decodeHex(),
+            blobBytes = blobDataJson.getString("blobBytes").decodeHex(),
+            conflationsCount = blobDataJson.getInteger("conflationsCount").toUInt(),
           )
         },
       )
@@ -65,8 +70,9 @@ data class BlobsInfo(
 
     fun fromDomainObject(record: BlobRecordV2): BlobsInfo =
       BlobsInfo(
-        parentShnarf = record.parentShnarf,
-        endShnarf = record.endShnarf,
+        parentDataRollingHash = record.parentDataRollingHash,
+        dataRollingHash = record.dataRollingHash,
+        endOffset = record.endOffset,
         blobsData = record.blobsData,
       )
   }
