@@ -1,0 +1,37 @@
+name: 'Shared cache'
+description: 'Restore caches on every ref; save only on main and when the caller permits it.'
+inputs:
+  path:
+    description: 'Paths to cache'
+    required: true
+  key:
+    description: 'Exact cache key'
+    required: true
+  restore-keys:
+    description: 'Optional fallback key prefixes'
+    default: ''
+  cache-save:
+    description: 'Allow saving on main; false keeps custom-ref builds restore-only.'
+    default: 'true'
+outputs:
+  cache-hit:
+    description: 'Whether the exact key was restored'
+    value: ${{ steps.writable.outputs.cache-hit || steps.readonly.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    # Use the upstream post-job save so the cache includes the completed build.
+    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      id: writable
+      if: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && inputs.cache-save == 'true' }}
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}
+        restore-keys: ${{ inputs.restore-keys }}
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      id: readonly
+      if: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') || inputs.cache-save != 'true' }}
+      with:
+        path: ${{ inputs.path }}
+        key: ${{ inputs.key }}
+        restore-keys: ${{ inputs.restore-keys }}
