@@ -801,7 +801,8 @@ func writeLargePCSFixture(path string) error {
 	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
 	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, round_caps: []const MerkleCapData, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
 	fmt.Fprintln(&out, "pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, input_caps: []const InputCapData, fri_proof: FriProofData };")
-	fmt.Fprintln(&out, "pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, entry_claims: []const []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = \"\" };\n")
+	fmt.Fprintln(&out, "pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, entry_claims: []const []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = \"\" };")
+	fmt.Fprintln(&out)
 
 	fmt.Fprintln(&out, "pub const large_case = PcsCase{")
 	writePCSCaseValue(&out, buildLargePCSScenario())
