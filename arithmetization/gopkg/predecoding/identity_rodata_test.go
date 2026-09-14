@@ -3,7 +3,7 @@ package predecoding_test
 // Experiment: does the pre-decoded instruction table — the basis of the guest
 // Program ID — distinguish two guests that differ only in .rodata?
 //
-// Requirement 2 of the Program ID design (Azam, 2026-09-11) is that the
+// Requirement 2 of the Program ID design is that the
 // identifier "must uniquely define a specific guest program — no two different
 // programs can share the same identifier". Predecode consumes only the blobs
 // flagged Executable, and elfmapping sets that flag per *section*
@@ -73,9 +73,9 @@ func makeELFWithRodata(t *testing.T, text, rodata []byte) []byte {
 	}
 
 	buf.Write([]byte{0x7f, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-	w(uint16(2))        // e_type:     ET_EXEC
-	w(uint16(243))      // e_machine:  EM_RISCV
-	w(uint32(1))        // e_version
+	w(uint16(2))   // e_type:     ET_EXEC
+	w(uint16(243)) // e_machine:  EM_RISCV
+	w(uint32(1))   // e_version
 	w(uint64(expEntryPoint))
 	w(uint64(ehdrSize)) // e_phoff
 	w(shOff)            // e_shoff
@@ -88,14 +88,14 @@ func makeELFWithRodata(t *testing.T, text, rodata []byte) []byte {
 	w(uint16(3))        // e_shstrndx
 
 	// PT_LOAD spanning .text and .rodata
-	w(uint32(1))                 // p_type:  PT_LOAD
-	w(uint32(5))                 // p_flags: PF_R | PF_X
-	w(textOff)                   // p_offset
-	w(uint64(expTextAddr))       // p_vaddr
-	w(uint64(expTextAddr))       // p_paddr
-	w(uint64(expSegmentSize))    // p_filesz
-	w(uint64(expSegmentSize))    // p_memsz
-	w(uint64(0x1000))            // p_align
+	w(uint32(1))              // p_type:  PT_LOAD
+	w(uint32(5))              // p_flags: PF_R | PF_X
+	w(textOff)                // p_offset
+	w(uint64(expTextAddr))    // p_vaddr
+	w(uint64(expTextAddr))    // p_paddr
+	w(uint64(expSegmentSize)) // p_filesz
+	w(uint64(expSegmentSize)) // p_memsz
+	w(uint64(0x1000))         // p_align
 
 	buf.Write(text)
 	buf.Write(rodata)
