@@ -9,6 +9,7 @@ const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
 const poseidon2 = @import("poseidon2.zig");
 const io = @import("io.zig");
+const bls12_381 = @import("bls12_381.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
 pub const zkvm_exit = lineth_std.zkvm_exit;
@@ -34,3 +35,9 @@ pub const write_output = io.write_output;
 
 // ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────
 pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;
+
+// ── BLS12-381 accelerators (include/zkvm_accelerators.h) ────────────────────
+pub const zkvm_bls12_381_g1_point = bls12_381.zkvm_bls12_381_g1_point;
+pub const zkvm_bls12_381_g2_point = bls12_381.zkvm_bls12_381_g2_point;
+pub const zkvm_bls12_381_pairing_pair = bls12_381.zkvm_bls12_381_pairing_pair;
+pub const zkvm_bls12_pairing = bls12_381.zkvm_bls12_pairing;

@@ -1,0 +1,28 @@
+// Single-pair wrappers around the multi-pair Miller loop and final exponentiation.
+//
+// WHY THIS FILE EXISTS: zkc compile hard-errors on any function in main's
+// include graph that is unreachable from main. The VM always uses the batched
+// multi-pair path (pairing_check_bls12_381), so miller_loop_bls12_381 and
+// pairing_bls12_381 are never reached from main. Keeping them in pairing.zkc
+// would cause two unreachable-module errors at compile time. This companion
+// file is only included by test harnesses (miller.zkc), keeping them out of
+// main's include graph entirely.
+//
+// FOLD BACK: when a single-pair use-case is wired into the VM, move these
+// back into pairing.zkc and delete this file.
+
+include "pairing.zkc"
+
+fn miller_loop_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
+                                       qx0:u384, qx1:u384, qy0:u384, qy1:u384,
+                                       out:u12) {
+    stage_pair_bls12_381(0, xP, yP, qx0, qx1, qy0, qy1)
+    miller_loop_multi_bls12_381(1, out)
+}
+
+fn pairing_bls12_381<bls_fp12_mem>(xP:u384, yP:u384,
+                                   qx0:u384, qx1:u384, qy0:u384, qy1:u384,
+                                   out:u12) {
+    miller_loop_bls12_381(xP, yP, qx0, qx1, qy0, qy1, out)
+    fp12_final_exp_bls12_381(out, out)
+}

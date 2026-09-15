@@ -1,0 +1,109 @@
+include "g1.zkc"
+
+// ============================================================================
+// BLS12-381 G1: coordinate conversion, the group law, and the generator.
+//
+// SPLIT OUT OF g1.zkc ON PURPOSE. zkc rejects a program containing a module
+// that is unreachable from `main`, so every file in the interpreter's include
+// graph must be entirely live. PAIRING_CHECK is the only BLS12-381 precompile
+// wired into riscv/main.zkc so far, and it never adds or scales a G1 point --
+// it only validates them (is_valid_affine / is_in_subgroup, which stay in
+// g1.zkc and reach the shared formulas directly). Keeping the group law here
+// means the interpreter does not drag it in and fail to compile.
+//
+// Everything below is exercised by test/zkc/bls12_381/{g1_add,g1_mul}. Fold it
+// back into g1.zkc when BLS12_G1ADD (0x0b) and BLS12_G1MSM (0x0c) are wired --
+// at that point it becomes reachable and the split stops paying for itself.
+// ============================================================================
+
+// Base point (generator) of the prime-order subgroup of G1.
+const BLS12_381_GX:u384 = 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+const BLS12_381_GY:u384 = 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+
+// Returns the curve generator G = (Gx, Gy).
+fn generator_bls12_381_g1() -> (x:u384, y:u384) {
+    x = BLS12_381_GX
+    y = BLS12_381_GY
+}
+
+fn is_equal_affine_bls12_381_g1(Px:u384, Py:u384, Qx:u384, Qy:u384) -> (res:u1) {
+    res = 0
+    if (Px == Qx) && (Py == Qy) {
+        res = 1
+    }
+}
+
+// ----- coordinate conversion -----
+
+fn affine_to_projective_bls12_381_g1(x:u384, y:u384) -> (X:u384, Y:u384, Z:u384) {
+    if is_infinity_affine_bls12_381_g1(x, y) == 1 {
+        X = 0
+        Y = 1
+        Z = 0
+    } else {
+        X = x
+        Y = y
+        Z = 1
+    }
+}
+
+fn projective_to_affine_bls12_381_g1(X:u384, Y:u384, Z:u384) -> (x:u384, y:u384) {
+    if Z == 0 {
+        x = 0
+        y = 0
+    } else {
+        var z_inv:u384 = invmod_384(Z, BLS12_381_P)
+        x = mulmod_384(X, z_inv, BLS12_381_P)
+        y = mulmod_384(Y, z_inv, BLS12_381_P)
+    }
+}
+
+// ----- projective group law (thin forwards to the shared formulas) -----
+
+fn add_projective_bls12_381_g1(X1:u384, Y1:u384, Z1:u384, X2:u384, Y2:u384, Z2:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+    X3, Y3, Z3 = sw_add_projective_384(X1, Y1, Z1, X2, Y2, Z2, BLS12_381_P, BLS12_381_B3)
+}
+
+fn double_projective_bls12_381_g1(X1:u384, Y1:u384, Z1:u384) -> (X3:u384, Y3:u384, Z3:u384) {
+    X3, Y3, Z3 = sw_double_projective_384(X1, Y1, Z1, BLS12_381_P)
+}
+
+fn scalar_mul_projective_bls12_381_g1(k:u384, PX:u384, PY:u384, PZ:u384) -> (QX:u384, QY:u384, QZ:u384) {
+    QX, QY, QZ = sw_scalar_mul_projective_384(k, PX, PY, PZ, BLS12_381_P, BLS12_381_B3)
+}
+
+// ----- affine entry points -----
+
+// Affine point addition, the operation behind the BLS12_G1ADD precompile.
+// Inputs must already have been accepted by is_valid_affine_bls12_381_g1; the
+// encoded infinity (0, 0) is handled as the identity on both input and output.
+fn add_affine_bls12_381_g1(Px:u384, Py:u384, Qx:u384, Qy:u384) -> (Rx:u384, Ry:u384) {
+    var PX:u384, PY:u384, PZ:u384
+    PX, PY, PZ = affine_to_projective_bls12_381_g1(Px, Py)
+
+    var QX:u384, QY:u384, QZ:u384
+    QX, QY, QZ = affine_to_projective_bls12_381_g1(Qx, Qy)
+
+    var RX:u384, RY:u384, RZ:u384
+    RX, RY, RZ = add_projective_bls12_381_g1(PX, PY, PZ, QX, QY, QZ)
+
+    Rx, Ry = projective_to_affine_bls12_381_g1(RX, RY, RZ)
+}
+
+// Scalar multiplication. No group-order bound on k: s*P = (s mod r)*P holds for
+// subgroup points, and G1MSM takes a full 256-bit scalar.
+fn scalar_mul_affine_bls12_381_g1(k:u384, Px:u384, Py:u384) -> (Qx:u384, Qy:u384) {
+    Qx = 0
+    Qy = 0
+    if k == 0 {
+        return
+    }
+
+    var PX:u384, PY:u384, PZ:u384
+    PX, PY, PZ = affine_to_projective_bls12_381_g1(Px, Py)
+
+    var QX:u384, QY:u384, QZ:u384
+    QX, QY, QZ = scalar_mul_projective_bls12_381_g1(k, PX, PY, PZ)
+
+    Qx, Qy = projective_to_affine_bls12_381_g1(QX, QY, QZ)
+}

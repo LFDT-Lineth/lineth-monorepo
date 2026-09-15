@@ -1,0 +1,133 @@
+include "constants.zkc"
+
+// ============================================================================
+// Fp2 = Fp[u]/(u^2 + 1), the first level of the BLS12-381 tower
+//
+//     Fp -> Fp2 -> Fp6 -> Fp12
+//
+// An element is carried as two u384 coordinates (a0, a1) meaning a0 + a1*u.
+// zkc has no aggregate value types, so every Fp2 value is a pair of loose
+// arguments/returns; the Fp12 layer above will move to a scratch memory instead,
+// but at this level pairs in registers are far cheaper than memory traffic.
+//
+// CONVENTION: every input is assumed already reduced (< p) and every output is
+// reduced, which addmod/submod/mulmod_384 all preserve. Callers taking values
+// from untrusted input must push them through reduce_384 first.
+//
+// NAMING: the BLS12-381 modulus is hardcoded rather than passed as a parameter,
+// so the names carry the curve. BN254 uses the same u^2+1 construction over a
+// different p, and ECPAIRING (0x08) would want its own copy; keeping the curve
+// in the name means the two can coexist in one program. This matters because zkc has
+// a single flat namespace.
+//
+// Frobenius note: for Fp2, a^p == conjugate(a). Since p = 3 (mod 4), (p-1)/2 is
+// odd, so u^p = u*(u^2)^((p-1)/2) = u*(-1)^odd = -u. There is therefore no
+// separate frobenius function -- use fp2_conjugate_bls12_381.
+// ============================================================================
+
+// ----- predicates -----
+
+fn fp2_is_zero_bls12_381(a0:u384, a1:u384) -> (res:u1) {
+    res = 0
+    if (a0 == 0) && (a1 == 0) {
+        res = 1
+    }
+}
+
+fn fp2_is_equal_bls12_381(a0:u384, a1:u384, b0:u384, b1:u384) -> (res:u1) {
+    res = 0
+    if (a0 == b0) && (a1 == b1) {
+        res = 1
+    }
+}
+
+// ----- additive group -----
+
+fn fp2_add_bls12_381(a0:u384, a1:u384, b0:u384, b1:u384) -> (c0:u384, c1:u384) {
+    c0 = addmod_384(a0, b0, BLS12_381_P)
+    c1 = addmod_384(a1, b1, BLS12_381_P)
+}
+
+fn fp2_sub_bls12_381(a0:u384, a1:u384, b0:u384, b1:u384) -> (c0:u384, c1:u384) {
+    c0 = submod_384(a0, b0, BLS12_381_P)
+    c1 = submod_384(a1, b1, BLS12_381_P)
+}
+
+fn fp2_neg_bls12_381(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    c0 = submod_384(0, a0, BLS12_381_P)
+    c1 = submod_384(0, a1, BLS12_381_P)
+}
+
+// Conjugation, which is also the p-power Frobenius (see the header note).
+fn fp2_conjugate_bls12_381(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    c0 = a0
+    c1 = submod_384(0, a1, BLS12_381_P)
+}
+
+// ----- multiplicative -----
+
+// (a0 + a1*u)(b0 + b1*u) = (a0*b0 - a1*b1) + (a0*b1 + a1*b0)*u.
+// Karatsuba: 3 base-field multiplications instead of the schoolbook 4. At u384
+// a mulmod is ~15.3k trace cells against ~225 for an addmod, so trading one
+// mulmod for three add/sub is strongly worth it.
+fn fp2_mul_bls12_381(a0:u384, a1:u384, b0:u384, b1:u384) -> (c0:u384, c1:u384) {
+    var v0:u384 = mulmod_384(a0, b0, BLS12_381_P)
+    var v1:u384 = mulmod_384(a1, b1, BLS12_381_P)
+
+    c0 = submod_384(v0, v1, BLS12_381_P)
+
+    var sa:u384 = addmod_384(a0, a1, BLS12_381_P)
+    var sb:u384 = addmod_384(b0, b1, BLS12_381_P)
+    var prod:u384 = mulmod_384(sa, sb, BLS12_381_P)
+    var diag:u384 = addmod_384(v0, v1, BLS12_381_P)
+    c1 = submod_384(prod, diag, BLS12_381_P)
+}
+
+// Squaring via the complex method: only 2 base-field multiplications.
+//   c0 = (a0 + a1)(a0 - a1) = a0^2 - a1^2
+//   c1 = 2*a0*a1
+fn fp2_sqr_bls12_381(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    var s:u384 = addmod_384(a0, a1, BLS12_381_P)
+    var d:u384 = submod_384(a0, a1, BLS12_381_P)
+    c0 = mulmod_384(s, d, BLS12_381_P)
+
+    var m:u384 = mulmod_384(a0, a1, BLS12_381_P)
+    c1 = addmod_384(m, m, BLS12_381_P)
+}
+
+// Multiplication by a base-field scalar; cheaper than a full fp2_mul when one
+// operand is known to lie in Fp (the line evaluations in the Miller loop hit
+// this case constantly, since P is an Fp-rational G1 point).
+fn fp2_mul_by_fp_bls12_381(a0:u384, a1:u384, k:u384) -> (c0:u384, c1:u384) {
+    c0 = mulmod_384(a0, k, BLS12_381_P)
+    c1 = mulmod_384(a1, k, BLS12_381_P)
+}
+
+// Multiplication by the cubic/quadratic non-residue xi = (1 + u), the element
+// the Fp6 and Fp12 extensions are built on:
+//   (a0 + a1*u)(1 + u) = (a0 - a1) + (a0 + a1)*u
+// No multiplications at all -- this is why xi = 1+u was chosen.
+fn fp2_mul_by_nonresidue_bls12_381(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    c0 = submod_384(a0, a1, BLS12_381_P)
+    c1 = addmod_384(a0, a1, BLS12_381_P)
+}
+
+// Inversion: 1/(a0 + a1*u) = (a0 - a1*u) / (a0^2 + a1^2).
+// The denominator is the field norm, which lies in Fp, so this needs exactly
+// ONE base-field inversion. That matters: invmod_384 is a Fermat exponentiation
+// costing ~613 mulmod_384 on its own, so an Fp2 inverse is ~617 mulmods against
+// 3 for a multiply. Never invert inside a loop -- batch, or stay projective.
+//
+// Fails on zero, which has no inverse; callers handling untrusted values must
+// screen with fp2_is_zero_bls12_381 first.
+fn fp2_inv_bls12_381(a0:u384, a1:u384) -> (c0:u384, c1:u384) {
+    var t0:u384 = mulmod_384(a0, a0, BLS12_381_P)
+    var t1:u384 = mulmod_384(a1, a1, BLS12_381_P)
+    var norm:u384 = addmod_384(t0, t1, BLS12_381_P)
+
+    var norm_inv:u384 = invmod_384(norm, BLS12_381_P)
+
+    c0 = mulmod_384(a0, norm_inv, BLS12_381_P)
+    var t2:u384 = mulmod_384(a1, norm_inv, BLS12_381_P)
+    c1 = submod_384(0, t2, BLS12_381_P)
+}

@@ -25,7 +25,7 @@
 const zesu_zkvm_stdlibs = @import("zesu_zkvm_stdlibs"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
 const zesu_crypto_backend = @import("zesu_crypto_backend"); // zesu's own native crypto backend (modexp, RIPEMD-160 — see src/zesu_crypto_backend.zig)
-const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
+const build_options = @import("build_options"); // keccak_accel / bls12_pairing_accel: standard zig vs Lineth wrapper
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
 // the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
@@ -51,7 +51,11 @@ comptime {
     @export(&bls12_g1_msm, .{ .name = "zkvm_bls12_g1_msm" });
     @export(&bls12_g2_add, .{ .name = "zkvm_bls12_g2_add" });
     @export(&bls12_g2_msm, .{ .name = "zkvm_bls12_g2_msm" });
-    @export(&bls12_pairing, .{ .name = "zkvm_bls12_pairing" });
+    if (build_options.bls12_pairing_accel) {
+        @export(&lineth_accel.zkvm_bls12_pairing, .{ .name = "zkvm_bls12_pairing" });
+    } else {
+        @export(&bls12_pairing, .{ .name = "zkvm_bls12_pairing" });
+    }
     @export(&bls12_map_fp_to_g1, .{ .name = "zkvm_bls12_map_fp_to_g1" });
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });

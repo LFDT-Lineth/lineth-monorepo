@@ -1,0 +1,57 @@
+name: Arithmetization BLS12-381 unit tests (full suite)
+# Runs the exhaustive BLS12-381 fixture suite (>1 hour).  Not a PR gate --
+# the bounded subset in arithmetization-guest-programs-exec.yml covers that.
+# Trigger manually after a substantial change to pairing.zkc / impl.zkc, or
+# let the weekly schedule catch slow regressions.
+
+on:
+  schedule:
+    # Monday 04:00 UTC: early enough to be visible at the morning stand-up.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: version pinned in arithmetization/go.mod)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bls12-381-full:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
+          cache-save: ${{ inputs.zkc-ref == '' }}
+
+      - name: Run BLS12-381 unit tests (full suite)
+        run: make test
+        working-directory: arithmetization/src/test/zkc/bls12_381
+        timeout-minutes: 110
+
+  notify:
+    needs: [bls12-381-full]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "BLS12-381 full unit-test suite failed"
+      run_id: ${{ github.run_id }}
+    secrets:
+      channel_id: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}

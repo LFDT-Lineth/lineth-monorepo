@@ -74,6 +74,14 @@ jobs:
         working-directory: arithmetization/src/test
         timeout-minutes: 30
 
+      - name: Run BLS12-381 unit tests (bounded CI target)
+        # Runs all cheap harnesses in full and samples one accept + one reject from
+        # each of the four slow harnesses (miller, final_exp, pairing_check, pairing_ram).
+        # Full suite (>1 hour) lives in arithmetization-bls12-381-unit-tests.yml.
+        run: make test-ci
+        working-directory: arithmetization/src/test/zkc/bls12_381
+        timeout-minutes: 15
+
       - name: Run l2-execution guest program with zkc interpreter and check guest_output
         run: make -C riscv-guests/l2-execution zkc-smoke-exec
         timeout-minutes: 30

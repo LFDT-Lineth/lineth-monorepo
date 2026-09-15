@@ -1,0 +1,80 @@
+include "pairing.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../common/type.zkc"
+
+// ============================================================================
+// EIP-2537 BLS12_PAIRING_CHECK (precompile 0x0f) — the RAM/ABI layer.
+//
+// This is the thin part: it decodes the guest's pair array out of RAM into the
+// staging area and hands off to pairing_check_bls12_381, which owns all of the
+// curve semantics. Everything interesting is in pairing.zkc.
+//
+// R-TYPE ABI (opcode custom-0 = 0x0b, funct3 0b000, funct7 0b0001111):
+//     rs1 = pointer to the pair array
+//     rs2 = number of pairs
+//     rd <- status
+// with status
+//     0  input rejected — the EVM frame must revert
+//     1  accepted, the product of pairings is NOT 1
+//     2  accepted, the product of pairings IS 1
+// Unusually for a precompile, no output buffer is needed: the whole result is
+// those two bits, so it fits in rd and all three operands fit in the R-type's
+// three registers. The guest wrapper splits the status back into the C ABI's
+// two signals (a zkvm_status return plus a `bool* verified` out-param).
+//
+// MEMORY LAYOUT, taken from the caller (zesu) and not from EIP-2537 directly.
+// The 16-bytes-per-limb calldata padding is stripped guest-side before the
+// accelerator ever sees it, so a pair is 288 contiguous bytes with no padding
+// and no inter-element gap:
+//
+//     +0    xP        G1 x        48 bytes, big-endian
+//     +48   yP        G1 y
+//     +96   Qx.c0     G2 x, real part
+//     +144  Qx.c1     G2 x, imaginary part
+//     +192  Qy.c0     G2 y, real part
+//     +240  Qy.c1     G2 y, imaginary part
+//
+// NOTE THE Fp2 COEFFICIENT ORDER: c0 BEFORE c1. EIP-2537 does NOT use the
+// ZCash/blst "c1 first" serialisation that most BLS12-381 tooling defaults to.
+// Getting this backwards is not a compile error and not a crash — it silently
+// computes a pairing over a different, wrong point.
+//
+// The point at infinity is all-zero bytes on both sides, which is what
+// is_infinity_affine_* already recognises.
+// ============================================================================
+
+const BLS12_381_PAIR_BYTES:Address = 288
+
+// Decode `num_pairs` pairs starting at `pairs_ptr` and run the check.
+//
+// `num_pairs` above BLS12_381_MAX_PAIRS is a `fail`, inherited from
+// pairing_check_bls12_381 — see the capacity note there for why answering
+// "invalid" instead would be a consensus bug. The gas schedule (32600*k +
+// 37700) does admit larger k, so this is a reachable liveness limit rather
+// than an impossible one; it is bounded here as well as there so the failure
+// happens before any RAM is touched.
+fn bls12_pairing_check<ram, bls_fp12_mem>(pairs_ptr:Address, num_pairs:u64) -> (status:u2) {
+    if num_pairs>(BLS12_381_MAX_PAIRS as u64) {
+        printf "[ERROR] BLS12_PAIRING_CHECK: %d pairs exceeds the staging area\n", num_pairs
+        fail
+    }
+
+    var n:u8 = num_pairs as u8
+    var addr:Address = pairs_ptr
+
+    for i:u8 = 0; i<n; i = i + 1 {
+        var xP:u384 = read_u384_be(addr)
+        var yP:u384 = read_u384_be(addr + 48)
+        var qx0:u384 = read_u384_be(addr + 96)
+        var qx1:u384 = read_u384_be(addr + 144)
+        var qy0:u384 = read_u384_be(addr + 192)
+        var qy1:u384 = read_u384_be(addr + 240)
+        stage_pair_bls12_381(i, xP, yP, qx0, qx1, qy0, qy1)
+        addr = addr + BLS12_381_PAIR_BYTES
+    }
+
+    // n == 0 yields status 2, the empty product. zesu rejects empty calldata
+    // before it gets here, but the arithmetization should not depend on that.
+    status = pairing_check_bls12_381(n)
+}
