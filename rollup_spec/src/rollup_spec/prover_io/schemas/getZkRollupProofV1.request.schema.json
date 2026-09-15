@@ -32,10 +32,25 @@
           "items": { "$ref": "#/$defs/conflation" }
         },
         "chunks": {
-          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4): each entry is the chunk's L1-anchored KZG versioned hash.",
+          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4). Each entry carries the chunk's L1-anchored binding hash and its declared kind: a blob chunk (fixed 128 KiB, shareable across a range boundary via opaque bytes) or a range-aligned calldata chunk (its submission is exactly this proof's own stream).",
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/hash32" }
+          "items": {
+            "type": "object",
+            "required": ["chunkHash"],
+            "additionalProperties": false,
+            "properties": {
+              "chunkHash": {
+                "description": "The chunk's L1-anchored binding hash: a KZG versioned hash for a blob chunk, keccak256(_compressedData) for a calldata chunk (§3.1).",
+                "$ref": "#/$defs/hash32"
+              },
+              "isCalldata": {
+                "description": "Selects the in-guest check (§3.1): false (the default) verifies the chunk as a blob via its KZG versioned hash; true verifies it as a range-aligned calldata chunk via keccak256 of the proof's own stream.",
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
         },
         "opaquePrefixBytes": {
           "description": "Foreign bytes before startOffset in the FIRST touched chunk only (§3.1); empty (0x) or absent otherwise.",
