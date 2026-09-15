@@ -36,6 +36,12 @@ build-riscv-images:
 
 clean-riscv-environment:
 	$(RISCV_COMPOSE) down --volumes --remove-orphans
+	# Containers create root-owned directories on Linux; clear them before host-side removal.
+	@if [ -d tmp/riscv ]; then \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/riscv,target=/data" \
+			busybox:latest find /data -mindepth 1 -delete; \
+	fi
 	rm -rf tmp/riscv
 
 start-env-with-riscv:
