@@ -1,0 +1,92 @@
+name: RISC-V stack
+
+on:
+  pull_request:
+    # Include stacked and draft PRs; starting the job requires maintainer approval.
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/riscv-stack.yml"
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/actions/setup-node*/**"
+      - "scripts/docker/**"
+      - "Makefile"
+      - "docker/**"
+      - "contracts/**"
+      - "coordinator/**"
+      - "jvm-libs/**"
+      - "maru/**"
+      - "linea-besu/besu/**"
+      - "linea-besu/package/**"
+      - "buildSrc/**"
+      - "gradle/**"
+      - "gradlew*"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".nvmrc"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: riscv-stack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    name: Build and check RISC-V stack (dummy proofs)
+    # Match the internal E2E path: PR code runs on a self-hosted runner after approval.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    environment: docker-build-and-e2e
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    timeout-minutes: 90
+    steps:
+      - name: Checkout requested commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Set up Node and contract deployment dependencies
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: "-F contracts --frozen-lockfile --prefer-offline"
+
+      - name: Test smoke-check assertions
+        run: node --test scripts/docker/check-riscv-stack.test.mjs
+
+      - name: Build and start the local stack
+        id: start
+        run: make start-env-with-riscv
+
+      - name: Check execution requests and completed batches
+        run: node scripts/docker/check-riscv-stack.mjs
+
+      - name: Collect stack diagnostics
+        if: ${{ always() && steps.start.outcome != 'skipped' && steps.start.outcome != '' }}
+        run: |
+          mkdir -p tmp/riscv-ci
+          COMPOSE_PROFILES=l1,l2,riscv docker compose -p linea-riscv-dev -f docker/compose-riscv.yml \
+            logs --no-color > tmp/riscv-ci/compose.log 2>&1 || true
+          docker ps -a > tmp/riscv-ci/containers.txt
+
+      - name: Upload stack diagnostics and proof sample
+        if: ${{ always() && steps.start.outcome != 'skipped' && steps.start.outcome != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: riscv-stack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tmp/riscv-ci/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Clean up the stack
+        if: ${{ always() && steps.start.outcome != 'skipped' && steps.start.outcome != '' }}
+        run: make clean-riscv-environment
