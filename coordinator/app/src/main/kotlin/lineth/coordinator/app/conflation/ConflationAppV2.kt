@@ -9,8 +9,10 @@ import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
 import linea.web3j.createWeb3jHttpService
+import linea.web3j.ethapi.Web3jExecutionPayloadClient
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.ethapi.validateLinethBlock
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
@@ -77,6 +79,7 @@ class ConflationAppV2(
     log = LogManager.getLogger("clients.l2.eth.conflation"),
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
+    blockValidator = ::validateLinethBlock,
   )
 
   private val chainId: ULong = l2EthClient.ethChainId().get()
@@ -104,11 +107,12 @@ class ConflationAppV2(
 
     val l2ExecutionProverClient = proverClientFactory.executionProverClient()
 
-    val executionWitnessClient = Web3jExecutionWitnessClient(
-      web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString()),
-    )
+    val web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString())
+    val executionWitnessClient = Web3jExecutionWitnessClient(web3jService)
+    val executionPayloadClient = Web3jExecutionPayloadClient(web3jService)
     val requestBuilder = L2ExecutionRequestBuilderImpl(
       executionWitnessClient = executionWitnessClient,
+      executionPayloadClient = executionPayloadClient,
       forcedTransactionsDao = forcedTransactionsDao,
       chainId = chainId,
     )

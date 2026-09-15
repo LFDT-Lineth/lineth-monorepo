@@ -27,12 +27,20 @@ data class BlockData<TxData>(
   val transactions: List<TxData> = emptyList(), // List of transaction hashes
   val ommers: List<ByteArray> = emptyList(), // List of uncle block hashes
   val size: ULong,
+  val slotNumber: ULong? = null,
+  val blockAccessListHash: ByteArray? = null,
 ) {
   companion object {
     // companion object to allow static extension functions
   }
 
   init {
+    require((slotNumber == null) == (blockAccessListHash == null)) {
+      "slotNumber and blockAccessListHash must either both be present or both be absent"
+    }
+    require(blockAccessListHash == null || blockAccessListHash.size == 32) {
+      "blockAccessListHash must be 32 bytes"
+    }
     if (transactions.isNotEmpty()) {
       require(transactions.first() is Transaction || transactions.first() is ByteArray) {
         "Invalid transaction type ${transactions.first()!!::class.java}. Supported types Transaction or ByteArray."
@@ -80,6 +88,8 @@ data class BlockData<TxData>(
     if (ommers != other.ommers) return false
     if (headerSummary != other.headerSummary) return false
     if (size != other.size) return false
+    if (slotNumber != other.slotNumber) return false
+    if (!blockAccessListHash.contentEquals(other.blockAccessListHash)) return false
 
     return true
   }
@@ -112,6 +122,8 @@ data class BlockData<TxData>(
     result = 31 * result + ommers.hashCode()
     result = 31 * result + headerSummary.hashCode()
     result = 31 * result + size.hashCode()
+    result = 31 * result + slotNumber.hashCode()
+    result = 31 * result + blockAccessListHash.contentHashCode()
     return result
   }
 
@@ -141,6 +153,8 @@ data class BlockData<TxData>(
       "baseFeePerGas=$baseFeePerGas, " +
       "transactions=$txStr, " +
       "ommers=$ommers, " +
+      "slotNumber=$slotNumber, " +
+      "blockAccessListHash=${blockAccessListHash?.encodeHex()}, " +
       "size=$size" + ")"
   }
 }
