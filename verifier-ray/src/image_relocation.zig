@@ -24,6 +24,14 @@ const abi = struct {
     const opening = @offsetOf(verifier.Proof, "pcs_opening") +
         @offsetOf(verifier.PcsOpening, "proof");
     const input_queries = opening + @offsetOf(pcs.OpeningProof, "input_queries");
+    const input_caps = opening + @offsetOf(pcs.OpeningProof, "input_caps");
+
+    const input_cap = @sizeOf(pcs.InputCap);
+    const input_cap_nodes = @offsetOf(pcs.InputCap, "nodes");
+    const input_cap_tables = @offsetOf(pcs.InputCap, "tables");
+
+    const input_cap_table = @sizeOf(pcs.InputCapTable);
+    const input_cap_table_rows = @offsetOf(pcs.InputCapTable, "rows");
 
     const ito = @sizeOf(merkle.InputTreeOpening);
     const ito_siblings = @offsetOf(merkle.InputTreeOpening, "siblings");
@@ -41,8 +49,13 @@ const abi = struct {
 
     const fri_proof = opening + @offsetOf(pcs.OpeningProof, "fri_proof");
     const round_roots = fri_proof + @offsetOf(fri.Proof, "round_roots");
+    const round_caps = fri_proof + @offsetOf(fri.Proof, "round_caps");
     const final_poly = fri_proof + @offsetOf(fri.Proof, "final_poly");
     const running_queries = fri_proof + @offsetOf(fri.Proof, "running_queries");
+
+    const merkle_cap = @sizeOf(merkle.MerkleCap);
+    const merkle_cap_nodes = @offsetOf(merkle.MerkleCap, "nodes");
+    const merkle_cap_aux = @offsetOf(merkle.MerkleCap, "aux");
 
     const branch = @sizeOf(merkle.Branch);
     const branch_siblings = @offsetOf(merkle.Branch, "siblings");
@@ -90,6 +103,28 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
         _ = patchPtr(img, img_len, rm + abi.round_cells, encoded_base, delta);
     }
 
+    const input_caps_ptr = patchPtr(img, img_len, abi.input_caps, encoded_base, delta);
+    const n_input_caps = sliceLen(img, abi.input_caps);
+    for (0..n_input_caps) |i| {
+        const input_cap = input_caps_ptr + i * abi.input_cap;
+        _ = patchPtr(img, img_len, input_cap + abi.input_cap_nodes, encoded_base, delta);
+
+        const tables_hdr = input_cap + abi.input_cap_tables;
+        const tables_ptr = patchPtr(img, img_len, tables_hdr, encoded_base, delta);
+        const n_tables = sliceLen(img, tables_hdr);
+        for (0..n_tables) |j| {
+            const table = tables_ptr + j * abi.input_cap_table;
+            const rows_hdr = table + abi.input_cap_table_rows;
+            const rows_ptr = patchPtr(img, img_len, rows_hdr, encoded_base, delta);
+            const n_rows = sliceLen(img, rows_hdr);
+            for (0..n_rows) |k| {
+                const row = rows_ptr + k * abi.row_opening;
+                _ = patchPtr(img, img_len, row + abi.row_base, encoded_base, delta);
+                _ = patchPtr(img, img_len, row + abi.row_ext, encoded_base, delta);
+            }
+        }
+    }
+
     const iq_outer_ptr = patchPtr(img, img_len, abi.input_queries, encoded_base, delta);
     const n_iq = sliceLen(img, abi.input_queries);
     for (0..n_iq) |i| {
@@ -119,6 +154,15 @@ pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usiz
     }
 
     _ = patchPtr(img, img_len, abi.round_roots, encoded_base, delta);
+
+    const round_caps_ptr = patchPtr(img, img_len, abi.round_caps, encoded_base, delta);
+    const n_round_caps = sliceLen(img, abi.round_caps);
+    for (0..n_round_caps) |i| {
+        const round_cap = round_caps_ptr + i * abi.merkle_cap;
+        _ = patchPtr(img, img_len, round_cap + abi.merkle_cap_nodes, encoded_base, delta);
+        _ = patchPtr(img, img_len, round_cap + abi.merkle_cap_aux, encoded_base, delta);
+    }
+
     _ = patchPtr(img, img_len, abi.final_poly, encoded_base, delta);
 
     const rq_outer_ptr = patchPtr(img, img_len, abi.running_queries, encoded_base, delta);
