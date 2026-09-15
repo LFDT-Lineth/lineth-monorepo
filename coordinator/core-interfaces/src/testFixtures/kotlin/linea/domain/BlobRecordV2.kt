@@ -11,16 +11,18 @@ fun createBlobRecordV2(
   endBlockNumber: ULong,
   startBlockTimestamp: Instant = Clock.System.now().trimToSecondPrecision(),
   endBlockTimestamp: Instant? = null,
-  parentShnarf: ByteArray = Random.nextBytes(32),
-  endShnarf: ByteArray = Random.nextBytes(32),
-  totalBatchesCount: UInt = 1U,
+  parentDataRollingHash: ByteArray = Random.nextBytes(32),
+  dataRollingHash: ByteArray = Random.nextBytes(32),
+  totalConflationsCount: UInt = 1U,
   blobsData: List<BlobData> = listOf(
     BlobData(
-      blobHash = Random.nextBytes(32),
-      compressedData = Random.nextBytes(32),
-      batchesCount = 1U,
+      chunkHash = Random.nextBytes(32),
+      blobBytes = Random.nextBytes(32),
+      conflationsCount = 1U,
     ),
   ),
+  proofHash: ByteArray = Random.nextBytes(32),
+  endOffset: Int = Constants.Eip4844BlobSize,
 ): BlobRecordV2 {
   val resolvedEndBlockTimestamp = endBlockTimestamp
     ?: startBlockTimestamp
@@ -31,9 +33,11 @@ fun createBlobRecordV2(
     endBlockNumber = endBlockNumber,
     startBlockTimestamp = startBlockTimestamp,
     endBlockTimestamp = resolvedEndBlockTimestamp,
-    parentShnarf = parentShnarf,
-    endShnarf = endShnarf,
-    totalBatchesCount = totalBatchesCount,
+    parentDataRollingHash = parentDataRollingHash,
+    dataRollingHash = dataRollingHash,
+    totalConflationsCount = totalConflationsCount,
     blobsData = blobsData,
+    proofHash = proofHash,
+    endOffset = endOffset,
   )
 }
