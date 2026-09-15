@@ -11,9 +11,9 @@ package maru.executionlayer.client
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.LatestBlockMetadata
+import maru.executionlayer.manager.PayloadAttributes
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
-import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -26,7 +26,7 @@ interface ExecutionLayerEngineApiClient {
 
   fun forkChoiceUpdate(
     forkChoiceState: ForkChoiceStateV1,
-    payloadAttributes: PayloadAttributesV1?,
+    payloadAttributes: PayloadAttributes?,
   ): SafeFuture<Response<ForkChoiceUpdatedResult>>
 
   fun getLatestBlockHash(): SafeFuture<ByteArray> = getLatestBlockMetadata().thenApply { it.blockHash }

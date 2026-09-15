@@ -75,6 +75,7 @@ class ProverClientFactory(
       PreRiscvExecutionProverClient(
         config = proverConfig,
         vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
       ).also { executionWaitingResponsesMetric.addReporter(it) }
     }
   }
@@ -93,6 +94,7 @@ class ProverClientFactory(
       PreRiscvBlobCompressionProverClient(
         config = proverConfig,
         vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
         log = log,
       )
         .also { blobWaitingResponsesMetric.addReporter(it) }
@@ -112,6 +114,7 @@ class ProverClientFactory(
         config = proverConfig.proofAggregation,
         invalidityProverConfig = proverConfig.invalidity,
         vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
         log = log,
       )
         .also { aggregationWaitingResponsesMetric.addReporter(it) }
@@ -132,6 +135,7 @@ class ProverClientFactory(
       PreRiscvInvalidityProverClient(
         config = proverConfig.invalidity!!,
         vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
       )
         .also { invalidityWaitingResponsesMetric.addReporter(it) }
     }
@@ -157,6 +161,7 @@ class ProverClientFactory(
       ),
       requestFileNameProvider = L2ExecutionProofFileNameProvider,
       responseFileNameProvider = L2ExecutionProofFileNameProvider,
+      enableRequestFilesCleanup = config.enableRequestFilesCleanup,
     )
     return L2ExecutionProverClient(
       transport = transport,

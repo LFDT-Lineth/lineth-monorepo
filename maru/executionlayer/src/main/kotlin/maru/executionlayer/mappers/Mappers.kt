@@ -29,7 +29,9 @@ import org.web3j.protocol.core.methods.response.EthBlock
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV2
 import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV3
+import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV4
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1
+import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV4
 import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.math.BigInteger
@@ -152,6 +154,26 @@ object Mappers {
       transactions = this.transactions.map { it.toArray() },
     )
 
+  fun ExecutionPayloadV4.toDomainExecutionPayload() =
+    ExecutionPayload(
+      parentHash = this.parentHash.toArray(),
+      feeRecipient = this.feeRecipient.wrappedBytes.toArray(),
+      stateRoot = this.stateRoot.toArray(),
+      receiptsRoot = this.receiptsRoot.toArray(),
+      logsBloom = this.logsBloom.toArray(),
+      prevRandao = this.prevRandao.toArray(),
+      blockNumber = this.blockNumber.longValue().toULong(),
+      gasLimit = this.gasLimit.longValue().toULong(),
+      gasUsed = this.gasUsed.longValue().toULong(),
+      timestamp = this.timestamp.longValue().toULong(),
+      extraData = this.extraData.toArray(),
+      baseFeePerGas = this.baseFeePerGas.toBigInteger(),
+      blockHash = this.blockHash.toArray(),
+      transactions = this.transactions.map { it.toArray() },
+      blockAccessList = this.blockAccessList.toArray(),
+      slotNumber = this.slotNumber.longValue().toULong(),
+    )
+
   fun ExecutionPayloadV1.toDomainExecutionPayload() =
     ExecutionPayload(
       parentHash = this.parentHash.toArray(),
@@ -206,6 +228,48 @@ object Mappers {
       UInt64.ZERO,
       /* excessBlobGas */
       UInt64.ZERO,
+    )
+
+  fun ExecutionPayload.toExecutionPayloadV4() =
+    ExecutionPayloadV4(
+      /* parentHash */
+      Bytes32.wrap(this.parentHash),
+      /* feeRecipient */
+      Bytes20(Bytes.wrap(this.feeRecipient)),
+      /* stateRoot */
+      Bytes32.wrap(this.stateRoot),
+      /* receiptsRoot */
+      Bytes32.wrap(this.receiptsRoot),
+      /* logsBloom */
+      Bytes.wrap(this.logsBloom),
+      /* prevRandao */
+      Bytes32.wrap(this.prevRandao),
+      /* blockNumber */
+      UInt64.valueOf(this.blockNumber.toString()),
+      /* gasLimit */
+      UInt64.valueOf(this.gasLimit.toString()),
+      /* gasUsed */
+      UInt64.valueOf(this.gasUsed.toString()),
+      /* timestamp */
+      UInt64.valueOf(this.timestamp.toString()),
+      /* extraData */
+      Bytes.wrap(this.extraData),
+      /* baseFeePerGas */
+      UInt256.valueOf(this.baseFeePerGas),
+      /* blockHash */
+      Bytes32.wrap(this.blockHash),
+      /* transactions */
+      this.transactions.map { Bytes.wrap(it) },
+      /* withdrawals */
+      emptyList(),
+      /* blobGasUsed */
+      UInt64.ZERO,
+      /* excessBlobGas */
+      UInt64.ZERO,
+      /* blockAccessList */
+      Bytes.wrap(requireNotNull(this.blockAccessList) { "Amsterdam requires blockAccessList" }),
+      /* slotNumber */
+      UInt64.valueOf(requireNotNull(this.slotNumber) { "Amsterdam requires slotNumber" }.toString()),
     )
 
   fun ExecutionPayload.toExecutionPayloadV2() =
@@ -279,6 +343,17 @@ object Mappers {
       UInt64.fromLongBits(this.timestamp.toLong()),
       Bytes32.wrap(this.prevRandao),
       Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
+    )
+
+  fun PayloadAttributes.toPayloadAttributesV4(): PayloadAttributesV4 =
+    PayloadAttributesV4(
+      UInt64.fromLongBits(this.timestamp.toLong()),
+      Bytes32.wrap(this.prevRandao),
+      Bytes20(Bytes.wrap(this.suggestedFeeRecipient)),
+      emptyList(),
+      Bytes32.ZERO,
+      UInt64.valueOf(requireNotNull(this.slotNumber) { "Amsterdam requires slotNumber" }.toString()),
+      UInt64.valueOf(requireNotNull(this.targetGasLimit) { "Amsterdam requires targetGasLimit" }.toString()),
     )
 
   fun TekuPayloadStatus.toDomain(): PayloadStatus =
