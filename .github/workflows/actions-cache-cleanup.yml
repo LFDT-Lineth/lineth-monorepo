@@ -50,27 +50,23 @@ jobs:
                 gh api -X DELETE "repos/${REPO}/actions/caches/${id}" || true
               done
 
-      - name: Limit PR CodeQL dependency caches to 2 GiB
+      - name: Delete PR CodeQL dependency caches
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          CODEQL_PR_CACHE_BUDGET_BYTES: "2147483648"
         run: |
           set -euo pipefail
           # Collect every page before deleting; a failed inventory must not trigger cleanup.
-          # Keep the most recently accessed prefix within a shared 2 GiB PR budget.
-          # Concurrent uploads can exceed this budget until the next scheduled sweep.
+          # Remove PR copies to protect shared main caches; uploads can recur between sweeps.
           cache_ids=$(gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
-            | jq -rs --argjson budget "$CODEQL_PR_CACHE_BUDGET_BYTES" '
-                [.[].actions_caches[]
-                  | select(.ref | test("^refs/pull/[0-9]+/(head|merge)$"))
-                  | select(.key | startswith("codeql-dependencies-"))]
-                | sort_by(.last_accessed_at, .created_at, .id) | reverse
-                | foreach .[] as $cache (0; . + $cache.size_in_bytes;
-                    if . > $budget then $cache.id else empty end)
+            | jq -rs '
+                .[].actions_caches[]
+                | select(.ref | test("^refs/pull/[0-9]+/(head|merge)$"))
+                | select(.key | startswith("codeql-dependencies-"))
+                | .id
               ')
           while IFS= read -r id; do
             [ -n "$id" ] || continue
-            echo "Deleting PR CodeQL dependency cache $id (over budget)"
+            echo "Deleting PR CodeQL dependency cache $id"
             gh api -X DELETE "repos/${REPO}/actions/caches/${id}"
           done <<< "$cache_ids"
