@@ -38,7 +38,7 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
   private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClientReadOnly::class.java),
 ) : LinethRollupSmartContractClientReadOnly,
   LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
-  FinalizedStateDataProvider {
+  FinalizedStateDataClientReadOnly {
 
   protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LinethRollupV8 {
     return contractClientAtBlock(blockParameter, LinethRollupV8::class.java)

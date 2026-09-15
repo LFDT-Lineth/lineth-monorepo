@@ -2,7 +2,7 @@ name: "Maru config docs"
 
 # Generates the committed Maru config reference (Markdown + JSON) and an ephemeral
 # MDX partial, validates they stay in sync, and publishes only
-# docs/stack/reference/_generated/maru/ to Consensys/doc.linea.
+# docs/stack/reference/_generated/maru/ to Consensys-Incorporated/doc.linea.
 #
 # Publishing is release-gated: automatic publishing fires only when a
 # `releases/maru/*` tag is cut, so doc.linea always reflects a released
@@ -22,6 +22,7 @@ permissions:
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/actions/setup-java-and-gradle/**"
       - ".github/actions/validate-config-docs/**"
@@ -54,7 +55,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish generated Maru config docs to Consensys/doc.linea"
+        description: "Publish generated Maru config docs to Consensys-Incorporated/doc.linea"
         required: false
         type: boolean
         default: false
@@ -78,6 +79,7 @@ concurrency:
 
 jobs:
   validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
       contents: read

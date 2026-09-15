@@ -13,15 +13,14 @@ import (
 // Emits the runtime PCS opening fixture for verify.zig. The compile-time
 // `pcs.System` is emitted separately by `codegen.WritePcsSystemZig`.
 
-// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .entry_claims = ..., .proof = ... }`.
-func pcsOpeningZigLiteral(entryClaims [][]field.Ext, proof fri.OpeningProof) string {
-	var b strings.Builder
-	b.WriteString("verifier.PcsOpening{ .entry_claims = &")
-	b.WriteString(extJaggedLiteral(entryClaims))
-	b.WriteString(", .proof = ")
-	b.WriteString(pcsOpeningProofZigLiteral(proof))
-	b.WriteString(" }")
-	return b.String()
+// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .proof = ... }`.
+//
+// No `.entry_claims` field: the verifier reconstructs those claimed
+// evaluations itself, from `rounds[*].cells`, via the compiled `pcs.System`'s
+// per-column `claim_cells` table (see `verifier.zig`'s `verify`). There is
+// nothing left for this fixture to embed for them.
+func pcsOpeningZigLiteral(proof fri.OpeningProof) string {
+	return "verifier.PcsOpening{ .proof = " + pcsOpeningProofZigLiteral(proof) + " }"
 }
 
 // pcsOpeningProofZigLiteral renders a `pcs.OpeningProof{...}` (input_queries +
@@ -42,8 +41,23 @@ func pcsOpeningProofZigLiteral(proof fri.OpeningProof) string {
 		}
 		b.WriteString(" }")
 	}
+	b.WriteString(" }, .input_caps = &.{ ")
+	for i, cap := range proof.InputCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(inputCapZigLiteral(cap))
+	}
 	b.WriteString(" }, .fri_proof = fri.Proof{ ")
 	fmt.Fprintf(&b, ".round_roots = &%s, ", commitmentSliceZig(proof.FRIProof.RoundRoots))
+	b.WriteString(".round_caps = &.{ ")
+	for i, cap := range proof.FRIProof.RoundCaps {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(merkleCapZigLiteral(cap))
+	}
+	b.WriteString(" }, ")
 	fmt.Fprintf(&b, ".final_poly = &%s, ", extArrayLiteral(proof.FRIProof.FinalPoly))
 	b.WriteString(".running_queries = &.{ ")
 	for q, rq := range proof.FRIProof.RunningQueries {
@@ -55,13 +69,50 @@ func pcsOpeningProofZigLiteral(proof fri.OpeningProof) string {
 			if j > 0 {
 				b.WriteString(", ")
 			}
-			branch := layer[0]
+			branch := layer
 			fmt.Fprintf(&b, "merkle.Branch{ .leaf = %s, .siblings = &%s }",
 				commitmentValueLiteral(branch.Leaf), commitmentSliceZig(branch.Siblings))
 		}
 		b.WriteString(" }")
 	}
 	b.WriteString(" } } }")
+	return b.String()
+}
+
+func inputCapZigLiteral(cap fri.InputCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "pcs.InputCap{ .nodes = &%s, .tables = &.{ ", commitmentSliceZig(cap.Nodes))
+	for i, table := range cap.Tables {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(&b, "pcs.InputCapTable{ .size_log2 = %d, .rows = &.{ ", table.SizeLog2)
+		for j, row := range table.Rows {
+			if j > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(rowOpeningZigLiteral(row))
+		}
+		b.WriteString(" } }")
+	}
+	b.WriteString(" } }")
+	return b.String()
+}
+
+func merkleCapZigLiteral(cap fri.MerkleCap) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "merkle.MerkleCap{ .nodes = &%s, .aux = &.{ ", commitmentSliceZig(cap.Nodes))
+	for i, aux := range cap.Aux {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if aux == nil {
+			b.WriteString("null")
+		} else {
+			b.WriteString(commitmentValueLiteral(*aux))
+		}
+	}
+	b.WriteString(" } }")
 	return b.String()
 }
 
@@ -108,18 +159,6 @@ func extArrayLiteral(values []field.Ext) string {
 		parts[i] = extValueLiteral(v)
 	}
 	return "[_]ext.Ext{ " + strings.Join(parts, ", ") + " }"
-}
-
-// extJaggedLiteral renders `[][]field.Ext` for `[]const []const ext.Ext`.
-func extJaggedLiteral(rows [][]field.Ext) string {
-	if len(rows) == 0 {
-		return ".{}"
-	}
-	parts := make([]string, len(rows))
-	for i, row := range rows {
-		parts[i] = "&" + extArrayLiteral(row)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
 func elemArrayLiteral(values []field.Element) string {

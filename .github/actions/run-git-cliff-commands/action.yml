@@ -18,10 +18,18 @@ inputs:
           linea-besu/**
 
       Blank/whitespace-only lines are ignored; leading/trailing whitespace on each line is trimmed.
-    required: true
+      Optional — defaults to component-name's entry in scripts/components.sh (the single
+      source of truth); only pass this to override that default.
+    required: false
+    default: ''
   scopes:
-    description: "Regex alternation of conventional-commit scopes to gate on, injected into the shared template (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
-    required: true
+    description: >
+      Regex alternation of conventional-commit scopes to gate on, injected into the shared
+      template (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc').
+      Optional — defaults to component-name's entry in scripts/components.sh (the single
+      source of truth); only pass this to override that default.
+    required: false
+    default: ''
   cliff-template:
     description: "Path to the shared git-cliff template containing the @@SCOPES@@ placeholder"
     required: false
@@ -34,6 +42,16 @@ inputs:
     description: "Prepend the unreleased changelogs to the CHANGELOG.md"
     required: false
     default: "false"
+  target-ref:
+    description: >
+      Branch name to fast-forward before prepending, to dodge a race with a concurrent push
+      to that same branch. Only pass this when the caller will commit-and-push the result
+      afterward. Leave empty (default) otherwise — e.g. read-only CI previews must not pass
+      this, and must never derive it from `github.head_ref`/`github.ref_name` for a workflow
+      reachable by `pull_request`, since `github.head_ref` is attacker-controlled on fork PRs
+      (CodeQL actions/cache-poisoning).
+    required: false
+    default: ''
   generate-changelog-with-next-tag-version:
     description: "Generate the unreleased changelogs but replace the header with next-tag-version"
     required: false
@@ -57,28 +75,38 @@ runs:
   using: 'composite'
   steps:
     # The step bodies live in scripts/*.sh and are driven through the Makefile
-    # (targets: paths, render, version, changelog) so the same logic backs both
-    # this action and local `make *-dry-run` previews. See ./Makefile.
+    # (targets: component-info, paths, render, version, changelog) so the same
+    # logic backs both this action and local `make *-dry-run` previews. See ./Makefile.
     # Steps run from the repo root (GITHUB_WORKSPACE); the scripts append their
     # step outputs to $GITHUB_OUTPUT.
 
-    # Normalize inputs.include-path (newline-separated paths) into one
+    # Look up component-name's default scopes/include-path (scripts/components.sh)
+    # so callers only need to pass component-name. inputs.scopes/include-path,
+    # when given, override this default.
+    - name: Resolve component defaults
+      id: defaults
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component-name }}
+      run: make -f "${{ github.action_path }}/Makefile" component-info
+
+    # Normalize the effective include-path (newline-separated paths) into one
     # trimmed, non-empty path per line so downstream steps can reconstruct a
     # bash array safely.
     - name: Build include-path list
       id: paths
       shell: bash
       env:
-        INCLUDE_PATH: ${{ inputs.include-path }}
+        INCLUDE_PATH: ${{ inputs.include-path != '' && inputs.include-path || steps.defaults.outputs.include_path }}
       run: make -f "${{ github.action_path }}/Makefile" paths
 
-    # Render the shared cliff template into a temp config with the caller's
+    # Render the shared cliff template into a temp config with the effective
     # scopes injected into the @@SCOPES@@ placeholder.
     - name: Render git-cliff config with injected scopes
       id: render
       shell: bash
       env:
-        SCOPES: ${{ inputs.scopes }}
+        SCOPES: ${{ inputs.scopes != '' && inputs.scopes || steps.defaults.outputs.scopes }}
         TEMPLATE: ${{ inputs.cliff-template }}
       run: make -f "${{ github.action_path }}/Makefile" render
 
@@ -116,5 +144,5 @@ runs:
         INCLUDE_PATHS: ${{ steps.paths.outputs.include_paths }}
         GENERATE_WITH_NEXT_TAG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' }}
         NEXT_VERSION: ${{ steps.version.outputs.version }}
-        TARGET_REF: ${{ github.head_ref || github.ref_name }}
+        TARGET_REF: ${{ inputs.target-ref }}
       run: make -f "${{ github.action_path }}/Makefile" prepend

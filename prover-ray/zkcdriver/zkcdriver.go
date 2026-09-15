@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
@@ -41,7 +43,7 @@ type ZkCDriver struct {
 	// Configuration options for tracing (e.g. whether or not to use
 	// parallelisation, what batch size to use, etc).  Generally speaking this
 	// should be left to the provided defaults.
-	TracingConfig constraints.TraceConfig `serde:"omit"`
+	TracingConfig vm.TraceConfig `serde:"omit"`
 	// Metadata embedded in the zkevm.bin file, as needed to check
 	// compatibility.  Guaranteed non-nil.
 	Metadata typed.Map `serde:"omit"`
@@ -63,24 +65,10 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	// Construct the driver
 	return &ZkCDriver{
 		BinaryFile:    binf,
-		TracingConfig: constraints.DEFAULT_TRACE_CONFIG,
+		TracingConfig: vm.DEFAULT_TRACE_CONFIG,
 		Settings:      &settings,
 		Metadata:      metadata,
 	}
-}
-
-// Assign the arithmetization related columns. Namely, it will open the file
-// specified in the witness object, call corset and assign the prover runtime
-// columns. As part of the assignment process, the original trace is expanded
-// according to the given schema.  The expansion process is about filling in
-// computed columns with concrete values, such for determining multiplicative
-// inverses, etc.
-func (a *ZkCDriver) Assign(
-	run *wiop.Runtime,
-	inputsFile string,
-	sharedRandomness field.Octuplet,
-) {
-	a.AssignWithPreRead(run, ReadZkcInputs(inputsFile), sharedRandomness)
 }
 
 // PreReadInputs holds the result of pre-reading a trace file.
@@ -96,30 +84,29 @@ type PreReadInputs struct {
 	InputsFile string
 }
 
-// ReadZkcInputs reads and parses a zkc inputs file, returning the "pre-read"
+// PreReadZkcInputs reads and parses a zkc inputs file, returning the "pre-read"
 // input data. This can be called early to overlap I/O with other work.
-func ReadZkcInputs(inputsFile string) *PreReadInputs {
+func PreReadZkcInputs(inputsFile string) *PreReadInputs {
 	traceF, err := ReadMaybeCompressedFile(inputsFile)
 	if err != nil {
+		utils.Panic("boom: %v", err)
 		return &PreReadInputs{Err: err, InputsFile: inputsFile}
 	}
 	inputs, err := ReadZkcInputFile(traceF)
 	return &PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
-// AssignWithPreRead assigns arithmetization columns using a pre-read trace.
-func (a *ZkCDriver) AssignWithPreRead(
-	run *wiop.Runtime,
-	preRead *PreReadInputs,
-	sharedRandomness field.Octuplet,
-) {
+// TraceZkcInputs reads and expands a trace file, returning the pre-read trace
+// data laid out on multiple shards. The function panics on errors.
+func (a *ZkCDriver) TraceZkcInputs(preRead *PreReadInputs) trace.Trace[koalabear.Element] {
+
 	assignStart := time.Now()
 	var (
 		errs []error
 		// filter the inputs so that we only pass the inputs that are actually
 		// used by the zkc program.
-		inputs = vm.FilterInputs(a.BinaryFile.Program(), preRead.Inputs)
-		errT   = preRead.Err
+		inputs, _ = vm.FilterInputs(a.BinaryFile.TracingProgram(), preRead.Inputs)
+		errT      = preRead.Err
 	)
 	logrus.Infof("[bootstrapper] trace available (pre-read): %v", time.Since(assignStart))
 
@@ -138,15 +125,24 @@ func (a *ZkCDriver) AssignWithPreRead(
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	_, _, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())
 	}
 	logrus.Infof("[bootstrapper] tracing: %v", time.Since(tracingStart))
 
+	return expandedTrace
+}
+
+// AssignTraceShard assigns arithmetization columns using a pre-read trace.
+func (a *ZkCDriver) AssignTraceShard(
+	run *wiop.Runtime,
+	expandedShard trace.Shard[koalabear.Element],
+	sharedRandomness field.Octuplet,
+) {
+
 	copyStart := time.Now()
-	AssignFromTrace(run, expandedTrace, a.BinaryFile.AirConstraints(), sharedRandomness)
+	AssignFromTraceShard(run, expandedShard, a.BinaryFile.AirConstraints(), sharedRandomness)
 	logrus.Infof("[bootstrapper] column assignment: %v", time.Since(copyStart))
-	logrus.Infof("[bootstrapper] total Arithmetization.Assign: %v", time.Since(assignStart))
 }

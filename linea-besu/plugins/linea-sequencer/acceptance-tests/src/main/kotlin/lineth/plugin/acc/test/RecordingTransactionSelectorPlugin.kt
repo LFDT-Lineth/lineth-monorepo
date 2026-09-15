@@ -8,6 +8,7 @@
  */
 package lineth.plugin.acc.test
 
+import lineth.txselection.LineaTransactionSelectionResult
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.plugin.BesuPlugin
 import org.hyperledger.besu.plugin.ServiceManager
@@ -45,6 +46,7 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
 
   private lateinit var transactionSelectionService: TransactionSelectionService
   private val rejections: ConcurrentHashMap<Hash, TransactionSelectionResult> = ConcurrentHashMap()
+  private val lineaRejections: ConcurrentHashMap<Hash, LineaTransactionSelectionResult> = ConcurrentHashMap()
 
   override fun register(serviceManager: ServiceManager) {
     transactionSelectionService =
@@ -57,6 +59,11 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
         val txHashHex = request.params[0] as String
         val txHash = Hash.fromHexString(txHashHex)
         rejections[txHash]?.toString()
+      }
+      rpcEndpointService.registerRPCEndpoint("test", "getLineaRejectionReason") { request: PluginRpcRequest ->
+        val txHashHex = request.params[0] as String
+        val txHash = Hash.fromHexString(txHashHex)
+        lineaRejections[txHash]?.toString()
       }
     }
   }
@@ -84,14 +91,27 @@ class RecordingTransactionSelectorPlugin : BesuPlugin {
     override fun evaluateTransactionPostProcessing(
       evaluationContext: TransactionEvaluationContext,
       processingResult: TransactionProcessingResult,
-    ): TransactionSelectionResult = TransactionSelectionResult.SELECTED
+    ): TransactionSelectionResult {
+      // Reaching post-processing means this pass evaluated the transaction all the way through
+      // without any selector rejecting it, i.e. it is being selected for the block. Drop any
+      // rejection recorded by an earlier pass: block building runs many selection passes over the
+      // node's lifetime, and a transaction that is ultimately selected must not keep reporting a
+      // stale rejection from a pass that was cancelled, timed out, or otherwise abandoned.
+      rejections.remove(evaluationContext.pendingTransaction.transaction.hash)
+      lineaRejections.remove(evaluationContext.pendingTransaction.transaction.hash)
+      return TransactionSelectionResult.SELECTED
+    }
 
     override fun onTransactionNotSelected(
       evaluationContext: TransactionEvaluationContext,
       transactionSelectionResult: TransactionSelectionResult,
     ) {
       val txHash = evaluationContext.pendingTransaction.transaction.hash
-      rejections[txHash] = transactionSelectionResult
+      if (transactionSelectionResult is LineaTransactionSelectionResult) {
+        lineaRejections[txHash] = transactionSelectionResult
+      } else {
+        rejections[txHash] = transactionSelectionResult
+      }
     }
   }
 }

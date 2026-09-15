@@ -10,11 +10,21 @@
 package lineth.config;
 
 import java.util.Map;
+import java.util.OptionalLong;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 
 /** The Linea tracer configuration. */
 @Builder(toBuilder = true)
 public record LineaTracerConfiguration(
-    String moduleLimitsFilePath, Map<String, Integer> moduleLimitsMap, boolean isLimitless)
-    implements LineaOptionsConfiguration {}
+    String moduleLimitsFilePath,
+    Map<String, Integer> moduleLimitsMap,
+    boolean isLimitless,
+    OptionalLong tracingEndTimestamp)
+    implements LineaOptionsConfiguration {
+  public LineaTracerConfiguration {
+    if (tracingEndTimestamp == null) {
+      tracingEndTimestamp = OptionalLong.empty();
+    }
+  }
+}

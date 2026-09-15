@@ -2,10 +2,11 @@ package net.consensys.linea.async
 
 import io.vertx.core.Vertx
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.time.Instant
 import java.util.function.Consumer
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class RetriedExecutionException(override val message: String) : RuntimeException(message)
 
@@ -29,6 +30,7 @@ interface AsyncRetryer<T> {
       maxRetries: Int? = null,
       timeout: Duration? = null,
       initialDelay: Duration? = null,
+      clock: Clock = Clock.System,
     ): AsyncRetryer<T> {
       return SequentialAsyncRetryerFactory(
         vertx = vertx,
@@ -36,6 +38,7 @@ interface AsyncRetryer<T> {
         maxRetries = maxRetries,
         initialDelay = initialDelay,
         timeout = timeout,
+        clock = clock,
       )
     }
 
@@ -49,6 +52,7 @@ interface AsyncRetryer<T> {
       stopRetriesOnErrorPredicate: (Throwable) -> Boolean = ::alwaysFalsePredicate,
       exceptionConsumer: Consumer<Throwable>? = null,
       ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
+      clock: Clock = Clock.System,
       action: () -> SafeFuture<T>,
     ): SafeFuture<T> {
       return SequentialAsyncRetryerFactory<T>(
@@ -57,6 +61,7 @@ interface AsyncRetryer<T> {
         maxRetries = maxRetries,
         timeout = timeout,
         initialDelay = initialDelay,
+        clock = clock,
       ).retry(
         stopRetriesPredicate,
         stopRetriesOnErrorPredicate,
@@ -81,6 +86,7 @@ internal class SequentialAsyncActionRetryer<T>(
   val stopRetriesOnErrorPredicate: (Throwable) -> Boolean = ::alwaysFalsePredicate,
   val exceptionConsumer: Consumer<Throwable>? = null,
   val ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
+  val clock: Clock = Clock.System,
   val action: () -> SafeFuture<T>,
 ) {
   init {
@@ -103,17 +109,17 @@ internal class SequentialAsyncActionRetryer<T>(
 
   private val resultFuture = SafeFuture<T>()
   private var remainingRetries: Int? = maxRetries
-  private var startTime: Instant = Instant.now()
+  private var startTime: Instant = clock.now()
   private var remainingTime: Long? = timeout?.inWholeMilliseconds
 
   fun retry(): SafeFuture<T> {
     if (initialDelay != null && initialDelay > 0.milliseconds) {
       vertx.setTimer(initialDelay.inWholeMilliseconds) {
-        startTime = Instant.now()
+        startTime = clock.now()
         retryLoop()
       }
     } else {
-      startTime = Instant.now()
+      startTime = clock.now()
       retryLoop()
     }
 
@@ -128,7 +134,7 @@ internal class SequentialAsyncActionRetryer<T>(
     }
 
     actionFuture.handle { result, throwable ->
-      val timeElapsedSinceStarted = (Instant.now().toEpochMilli() - startTime.toEpochMilli())
+      val timeElapsedSinceStarted = (clock.now().toEpochMilliseconds() - startTime.toEpochMilliseconds())
       var errorThrowable = throwable
       remainingTime =
         timeout?.let { it.inWholeMilliseconds - timeElapsedSinceStarted }
@@ -189,6 +195,7 @@ private class SequentialAsyncRetryerFactory<T>(
   val maxRetries: Int? = null,
   val timeout: Duration? = null,
   val initialDelay: Duration? = null,
+  val clock: Clock = Clock.System,
 ) : AsyncRetryer<T> {
   override fun retry(action: () -> SafeFuture<T>): SafeFuture<T> {
     return SequentialAsyncActionRetryer(
@@ -200,6 +207,7 @@ private class SequentialAsyncRetryerFactory<T>(
       stopRetriesPredicate = ::alwaysTruePredicate,
       exceptionConsumer = null,
       ignoreFirstExceptionsUntilTimeElapsed = null,
+      clock = clock,
       action = action,
     ).retry()
   }
@@ -221,6 +229,7 @@ private class SequentialAsyncRetryerFactory<T>(
       stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
       exceptionConsumer = exceptionConsumer,
       ignoreFirstExceptionsUntilTimeElapsed = ignoreFirstExceptionsUntilTimeElapsed,
+      clock = clock,
       action = action,
     ).retry()
   }

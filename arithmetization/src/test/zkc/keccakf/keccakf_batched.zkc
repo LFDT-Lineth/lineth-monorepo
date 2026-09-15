@@ -194,7 +194,7 @@ fn theta<keccak_state>() {
 
     for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
         var i:u5 = i_minus_one + 1
-        keccak_state[D + (mod5(i) as u7)] = keccak_state[C + (i_minus_one as u7)] ^ bit_rotl64(keccak_state[C + (mod5(i + 1) as u7)], 1)
+        keccak_state[D + (mod5[i] as u7)] = keccak_state[C + (i_minus_one as u7)] ^ bit_rotl64(keccak_state[C + (mod5[i + 1] as u7)], 1)
     }
 
     for j:u7 = 0; j<5; j = j + 1 {
@@ -211,11 +211,11 @@ fn theta<keccak_state>() {
 fn rho<keccak_state>() {
 
     for j:u3 = 0; j<5; j = j + 1 {
-        keccak_state[ROW0 + (j as u7)] = bit_rotl64(keccak_state[ROW0 + (j as u7)], rot_offset(0, j))
-        keccak_state[ROW1 + (j as u7)] = bit_rotl64(keccak_state[ROW1 + (j as u7)], rot_offset(1, j))
-        keccak_state[ROW2 + (j as u7)] = bit_rotl64(keccak_state[ROW2 + (j as u7)], rot_offset(2, j))
-        keccak_state[ROW3 + (j as u7)] = bit_rotl64(keccak_state[ROW3 + (j as u7)], rot_offset(3, j))
-        keccak_state[ROW4 + (j as u7)] = bit_rotl64(keccak_state[ROW4 + (j as u7)], rot_offset(4, j))
+        keccak_state[ROW0 + (j as u7)] = bit_rotl64(keccak_state[ROW0 + (j as u7)], rot_offset[0, j])
+        keccak_state[ROW1 + (j as u7)] = bit_rotl64(keccak_state[ROW1 + (j as u7)], rot_offset[1, j])
+        keccak_state[ROW2 + (j as u7)] = bit_rotl64(keccak_state[ROW2 + (j as u7)], rot_offset[2, j])
+        keccak_state[ROW3 + (j as u7)] = bit_rotl64(keccak_state[ROW3 + (j as u7)], rot_offset[3, j])
+        keccak_state[ROW4 + (j as u7)] = bit_rotl64(keccak_state[ROW4 + (j as u7)], rot_offset[4, j])
     }
 }
 

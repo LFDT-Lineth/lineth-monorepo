@@ -1,7 +1,7 @@
 package lineth.conflation.calculators
-
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
+import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
@@ -246,6 +246,7 @@ class ConflationTriggerCalculatorByHardForkTimestampTest {
       blockTimestamp = timestamp,
       tracesCounters = fakeTracesCountersV2(blockNumber.toUInt()),
       blockRLPEncoded = ByteArray(0),
+      coinbase = ZERO_COINBASE,
     )
   }
 }

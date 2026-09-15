@@ -115,27 +115,24 @@ public class TracerReadinessPlugin extends AbstractLineaOptionsPlugin {
               }
             });
 
-    // Start the Vertx HTTP server
-    server =
-        vertx
-            .createHttpServer(httpServerOptions(configuration))
-            .requestHandler(router)
-            .listen(
-                configuration.serverPort(),
-                result -> {
-                  final String pluginName = getClass().getSimpleName();
-                  final int port = configuration.serverPort();
+    server = vertx.createHttpServer(httpServerOptions(configuration)).requestHandler(router);
+    server
+        .listen(configuration.serverPort())
+        .onComplete(
+            result -> {
+              final String pluginName = getClass().getSimpleName();
+              final int port = configuration.serverPort();
 
-                  if (result.succeeded()) {
-                    log.info("[{}] Started listening on port {}", pluginName, port);
-                  } else {
-                    log.error(
-                        "[{}] Failed to start listening on port {}: {}",
-                        pluginName,
-                        port,
-                        result.cause().getMessage());
-                  }
-                });
+              if (result.succeeded()) {
+                log.info("[{}] Started listening on port {}", pluginName, port);
+              } else {
+                log.error(
+                    "[{}] Failed to start listening on port {}: {}",
+                    pluginName,
+                    port,
+                    result.cause().getMessage());
+              }
+            });
   }
 
   private String statusResponse(final String status) {

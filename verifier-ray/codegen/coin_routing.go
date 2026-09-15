@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 )
 
 // CoinRouting is the protocol-level Fiat-Shamir coin layout shared by every
@@ -11,8 +12,10 @@ import (
 // is built once per system rather than duplicated inside each sub-verifier's
 // System.
 type CoinRouting struct {
-	// RoundCoinCounts[i] is the number of coins squeezed after round i is
-	// absorbed. Index 0 is always 0: no coins precede the first round message.
+	// RoundCoinCounts[i] is the number of coins declared on wiop.Round i (i.e.
+	// squeezed once round i-1's message has been absorbed and round i is
+	// current). Index 0 is always 0: round 0 is the first message round, so
+	// nothing precedes it to base a challenge on.
 	RoundCoinCounts []int
 	// RoundCoinOffsets[i] is the start index of round i's coins in the flat
 	// all_coins array consumed by the Zig verifier.
@@ -27,6 +30,21 @@ type CoinRouting struct {
 	// byte-exact with the prover. Counted in the same order as the proof's
 	// module_sizes (VanishingSystem dynamic-module order).
 	DynamicModuleCount int
+	// SharedRandomnessCoinRound is the wiop.Round.ID whose coins must be
+	// derived from γ (messagebus.CompileOptions.SharedRandomness) rather than
+	// from this shard's own transcript state, or -1 if the system was not
+	// compiled with that option. Mirrors prover-ray's Runtime.AdvanceRound,
+	// which runs every Round.PreSamplingHooks entry — here, exactly the
+	// messagebus.SharedRandomnessSeedHook — before deriving the round's coins:
+	// without replaying that override, the Zig verifier's replay derives a
+	// different α/β than the prover did and every downstream check fails.
+	SharedRandomnessCoinRound int
+	// SharedRandomnessGammaRefs locates γ's NumSharedRandomness base-field limbs
+	// in the replayed transcript, in limb order, so the Zig verifier can rebuild
+	// the octuplet and install it as the Fiat-Shamir state before
+	// SharedRandomnessCoinRound's coins are squeezed. Empty when
+	// SharedRandomnessCoinRound is -1.
+	SharedRandomnessGammaRefs []PublicInputRef
 }
 
 // BuildCoinRouting extracts the protocol-level coin layout from a compiled
@@ -60,7 +78,65 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 	// order (NOT verifier-action-registration order). See DynamicModuleOrder.
 	out.DynamicModuleCount = len(DynamicModuleOrder(sys))
 
+	sharedRandomnessRound, err := sharedRandomnessCoinRound(sys)
+	if err != nil {
+		return CoinRouting{}, err
+	}
+	out.SharedRandomnessCoinRound = -1
+	if sharedRandomnessRound != nil {
+		out.SharedRandomnessCoinRound = sharedRandomnessRound.ID
+		out.SharedRandomnessGammaRefs = make([]PublicInputRef, messagebus.NumSharedRandomness)
+		for i := range out.SharedRandomnessGammaRefs {
+			cell, pos := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedPI, i)
+			if pos < 0 {
+				return CoinRouting{}, fmt.Errorf(
+					"codegen: BuildCoinRouting: HasSharedRandomness is true but gamma limb %d is missing", i)
+			}
+			out.SharedRandomnessGammaRefs[i] = PublicInputRef{
+				StatementIndex: pos,
+				Round:          cell.Context.ID.Slot(),
+				Index:          cell.Context.ID.Position(),
+			}
+		}
+	}
+
 	return out, nil
+}
+
+// sharedRandomnessCoinRound returns the round messagebus.registerSharedRandomness
+// attached its Fiat-Shamir-overriding pre-sampling hook to, or nil if sys was not
+// compiled with messagebus.CompileOptions.SharedRandomness. Detected structurally
+// (any round carrying a pre-sampling hook) rather than by re-deriving
+// messagebus's own coin-round choice, so this stays correct even if that choice
+// changes.
+//
+// Errors if more than one round carries a hook: [wiop.Round.RegisterPreSamplingHook]
+// allows stacking hooks on one round (last one wins) but never spreads them
+// across rounds in any wiop compiler today, so more than one hook round would
+// mean either a new compiler this function does not know about yet, or that the
+// single-hook assumption baked into the Zig replay no longer holds.
+func sharedRandomnessCoinRound(sys *wiop.System) (*wiop.Round, error) {
+	if !messagebus.HasSharedRandomness(sys) {
+		return nil, nil
+	}
+	var found *wiop.Round
+	for _, r := range sys.Rounds {
+		if len(r.PreSamplingHooks) == 0 {
+			continue
+		}
+		if found != nil {
+			return nil, fmt.Errorf(
+				"codegen: BuildCoinRouting: rounds %d and %d both carry pre-sampling hooks; "+
+					"the Zig replay only supports a single shared-randomness override round",
+				found.ID, r.ID)
+		}
+		found = r
+	}
+	if found == nil {
+		return nil, fmt.Errorf(
+			"codegen: BuildCoinRouting: HasSharedRandomness is true but no round carries a pre-sampling hook")
+	}
+	return found, nil
 }
 
 // DynamicModuleOrder returns the dynamically-sized modules in the canonical

@@ -1,8 +1,8 @@
 package lineth.conflation.calculators
-
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.domain.BlockCounters
 import linea.domain.ConflationTrigger
+import lineth.conflation.ZERO_COINBASE
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV2
@@ -178,6 +178,7 @@ class ConflationTriggerCalculatorByExecutionTracesTest {
       blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),
       tracesCounters = tracesCounters,
       blockRLPEncoded = ByteArray(0),
+      coinbase = ZERO_COINBASE,
     )
   }
 }

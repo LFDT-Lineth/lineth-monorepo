@@ -1,9 +1,9 @@
 package lineth.conflation.calculators
-
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import linea.domain.BlockCounters
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
+import lineth.conflation.ZERO_COINBASE
 import lineth.coordination.blob.FakeBlobCompressor
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV2
@@ -39,6 +39,7 @@ class GlobalBlobAwareConflationCalculatorFailureTest {
       blockRLPEncoded = byteArrayOf(1),
       numOfTransactions = 1U,
       gasUsed = 1UL,
+      coinbase = ZERO_COINBASE,
     )
     calculator.newBlock(blockCounters)
     calculator.onBlobCreation {
