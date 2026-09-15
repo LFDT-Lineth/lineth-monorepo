@@ -3,7 +3,7 @@ module github.com/consensys/linea-monorepo/verifier-ray/codegen
 go 1.25.7
 
 require (
-	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260902120351-309a2f9518a0
+	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260914144829-78ab0e583e12
 	github.com/stretchr/testify v1.11.1
 )
 
