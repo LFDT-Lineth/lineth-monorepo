@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
     // Read by zkvm_provide.zig at comptime.
     const bls12_pairing_accel = b.option(bool, "bls12-pairing-accel", "Use the arithmetization BLS12-381 PAIRING_CHECK wrapper instead of the standard zig backend (default: standard)") orelse false;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
+    const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
     guest_options.addOption(bool, "bls12_pairing_accel", bls12_pairing_accel);
@@ -58,6 +59,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+    const guest_common_mod = b.dependency("guest_common", .{ .target = target, .optimize = optimize }).module("guest_common");
 
     const modexp_impl_mod = b.createModule(.{
         .root_source_file = zesu_guest.path("src/crypto/backends/modexp_impl.zig"),
@@ -107,6 +109,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    l2_execution_ssz_guest_mod.addImport("guest_common", guest_common_mod);
 
     const guest_module = b.createModule(.{
         .root_source_file = b.path(source),
@@ -144,6 +147,7 @@ pub fn build(b: *std.Build) void {
     const host_optimize: std.builtin.OptimizeMode =
         if (optimize == .ReleaseSmall) .ReleaseSafe else optimize;
     const native_target = b.resolveTargetQuery(.{});
+    const zlob_dep = b.dependency("zlob", .{ .target = native_target, .optimize = host_optimize });
     const native_crypto = resolveNativeCrypto(b, native_target);
     const zesu_native = b.dependency("zesu", .{ .target = native_target, .optimize = host_optimize });
     const native_imports = zesuImports(zesu_native);
@@ -176,11 +180,13 @@ pub fn build(b: *std.Build) void {
     }));
     test_step.dependOn(&b.addRunArtifact(stdlibs_tests).step);
 
+    const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = host_optimize }).module("guest_common");
     const l2_execution_ssz_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),
         .target = native_target,
         .optimize = host_optimize,
     });
+    l2_execution_ssz_mod.addImport("guest_common", guest_common_native_mod);
     const l2_execution_ssz_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("test/l2_execution_ssz_test.zig"),
@@ -251,6 +257,50 @@ pub fn build(b: *std.Build) void {
     addExecutionImports(l2_execution_mod, native_imports);
     l2_execution_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
+    const execution_machine_mod = b.createModule(.{
+        .root_source_file = b.path("test/execution_machine.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    execution_machine_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    const host_machine_mod = b.createModule(.{
+        .root_source_file = b.path("test/host_machine.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    host_machine_mod.addImport("execution_machine", execution_machine_mod);
+    host_machine_mod.addImport("l2_execution", l2_execution_mod);
+    host_machine_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    const zkc_machine_mod = b.createModule(.{
+        .root_source_file = b.path("test/zkc_machine.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    zkc_machine_mod.addImport("execution_machine", execution_machine_mod);
+
+    const zkc_machine_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/zkc_machine_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    zkc_machine_tests.root_module.addImport("execution_machine", execution_machine_mod);
+    zkc_machine_tests.root_module.addImport("zkc_machine", zkc_machine_mod);
+    test_step.dependOn(&b.addRunArtifact(zkc_machine_tests).step);
+
+    const spec_runner_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/spec_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    spec_runner_tests.root_module.addImport("zlob", zlob_dep.module("zlob"));
+    test_step.dependOn(&b.addRunArtifact(spec_runner_tests).step);
+
     const l2_execution_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("test/l2_execution_test.zig"),
@@ -310,6 +360,19 @@ pub fn build(b: *std.Build) void {
     vanilla_wrap_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
     vanilla_wrap_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
+    const execution_spec_suite_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/execution_spec_suite.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    execution_spec_suite_tests.root_module.addImport("execution_machine", execution_machine_mod);
+    execution_spec_suite_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    execution_spec_suite_tests.root_module.addImport("zlob", zlob_dep.module("zlob"));
+    linkNativeZesuCrypto(execution_spec_suite_tests, native_target, native_crypto);
+    test_step.dependOn(&b.addRunArtifact(execution_spec_suite_tests).step);
+
     // ── Vanilla StatelessInput SSZ encoder module (test/stateless_input_encode.zig) ─────────────────
     // Test-only SSZ encoder for zesu's vanilla StatelessInput — the byte-level inverse of
     // zesu_ssz_decode's decode, which ships with no matching encoder of its own. Wired as a shared
@@ -331,9 +394,9 @@ pub fn build(b: *std.Build) void {
 
     // ── `l2-execution-wrap` native host tool ────────────────────────────────────────────────────────
     // Wraps a vanilla EF stateless-input .ssz into an extended L2ExecutionProofPrivateInput .ssz
-    // (zero l2MessageServiceAddress -> bridge suppression), so the ZkC harness can feed the extended
-    // guest the same EF corpus the vanilla guest ran on. Installed to zig-out/bin so `make compile`
-    // (plain `zig build`) produces it alongside the guest ELF; the Go harness invokes it per input.
+    // (zero l2MessageServiceAddress -> bridge suppression), for hand-feeding one corpus input to
+    // the extended guest ELF under zkc (`make exec INPUT=<wrapped.ssz>`). Installed to zig-out/bin
+    // so `make compile` (plain `zig build`) produces it alongside the guest ELF.
     const l2_execution_wrap_exe = b.addExecutable(.{
         .name = "l2-execution-wrap",
         .root_module = b.createModule(.{
@@ -353,6 +416,41 @@ pub fn build(b: *std.Build) void {
     const run_l2_execution_wrap = b.addRunArtifact(l2_execution_wrap_exe);
     if (b.args) |extra| run_l2_execution_wrap.addArgs(extra);
     run_l2_execution_wrap_step.dependOn(&run_l2_execution_wrap.step);
+
+    // ── `zkc-reference-runner` native host tool ───────────────────────────────────────────────────
+    // Drives normalized extended inputs through the compiled guest ELF under ZkC.
+    const zkc_reference_runner_exe = b.addExecutable(.{
+        .name = "zkc-reference-runner",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/zkc_reference_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    zkc_reference_runner_exe.root_module.addImport("execution_machine", execution_machine_mod);
+    zkc_reference_runner_exe.root_module.addImport("host_machine", host_machine_mod);
+    zkc_reference_runner_exe.root_module.addImport("zkc_machine", zkc_machine_mod);
+    zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    zkc_reference_runner_exe.root_module.addImport("zlob", zlob_dep.module("zlob"));
+    linkNativeZesuCrypto(zkc_reference_runner_exe, native_target, native_crypto);
+    b.installArtifact(zkc_reference_runner_exe);
+
+    // Smoke: one exact extended SSZ input under ZkC, checked against the host machine.
+    // Outside the EF-corpus lazy block — no fixtures dependency. Needs zkc+go on PATH.
+    // Makefile exposes zkc-smoke-exec / zkc-smoke-trace and sets -Dzkc-smoke-input from INPUT.
+    const zkc_smoke_step = b.step(
+        "zkc-smoke",
+        "Run testdata .ssz under ZkC and compare it with the host machine",
+    );
+    const run_zkc_smoke = b.addRunArtifact(zkc_reference_runner_exe);
+    run_zkc_smoke.addArg(zkc_smoke_input);
+    run_zkc_smoke.addArg("--install-prefix");
+    run_zkc_smoke.addArg(b.install_prefix);
+    run_zkc_smoke.addArg("--makefile");
+    run_zkc_smoke.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+    if (b.args) |extra| run_zkc_smoke.addArgs(extra);
+    run_zkc_smoke.step.dependOn(b.getInstallStep());
+    zkc_smoke_step.dependOn(&run_zkc_smoke.step);
 
     // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
     // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
@@ -540,16 +638,33 @@ pub fn build(b: *std.Build) void {
         // module in the same compile unit is a Zig module-graph conflict ("file exists in modules
         // 'l2_execution' and 'evm_execution_guest'") — the same constraint documented above for
         // `l2_execution_ssz_guest_mod`.
-        extended_vanilla_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
-        extended_vanilla_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        extended_vanilla_runner_exe.root_module.addImport("execution_machine", execution_machine_mod);
+        extended_vanilla_runner_exe.root_module.addImport("host_machine", host_machine_mod);
         extended_vanilla_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+        extended_vanilla_runner_exe.root_module.addImport("zlob", zlob_dep.module("zlob"));
         linkNativeZesuCrypto(extended_vanilla_runner_exe, native_target, native_crypto);
 
         const run_extended_vanilla = b.addRunArtifact(extended_vanilla_runner_exe);
-        run_extended_vanilla.addArg("--fixtures");
         run_extended_vanilla.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
         if (b.args) |extra| run_extended_vanilla.addArgs(extra);
         extended_vanilla_step.dependOn(&run_extended_vanilla.step);
+
+        // ── zkc corpus run (reference-test-zkc) ───────────────────────────────────────────────────
+        // Needs the guest ELF + wrap tool installed (hence the install-step dependency) and zkc/go
+        // on PATH. Pass-through extra args after `--`, e.g. `-- --fork Amsterdam --limit 5`.
+        const reference_test_zkc_step = b.step(
+            "reference-test-zkc",
+            "Run the EF zkevm corpus through the guest ELF under zkc (needs zkc+go on PATH)",
+        );
+        const run_zkc_reference = b.addRunArtifact(zkc_reference_runner_exe);
+        run_zkc_reference.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
+        run_zkc_reference.addArg("--install-prefix");
+        run_zkc_reference.addArg(b.install_prefix);
+        run_zkc_reference.addArg("--makefile");
+        run_zkc_reference.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+        if (b.args) |extra| run_zkc_reference.addArgs(extra);
+        run_zkc_reference.step.dependOn(b.getInstallStep());
+        reference_test_zkc_step.dependOn(&run_zkc_reference.step);
 
         const fixtures_parent = std.fs.path.dirname(execution_specs_fixtures_link) orelse ".";
         const mkdir_fixtures_parent = b.addSystemCommand(&.{ "mkdir", "-p", fixtures_parent });

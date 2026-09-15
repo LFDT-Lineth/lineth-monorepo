@@ -14,6 +14,7 @@
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 
 ### 🐛 Bug Fixes
 
@@ -40,6 +41,7 @@
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
+- *(coordinator)* Consolidate prover clients (#3944)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

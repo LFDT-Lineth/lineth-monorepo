@@ -4,6 +4,7 @@
 
 - *(maru)* Support Noise / Yamux (#3751)
 - *(maru)* Support custom validator signers (#3700)
+- *(maru)* Add Amsterdam support (#3939)
 
 ### 🐛 Bug Fixes
 

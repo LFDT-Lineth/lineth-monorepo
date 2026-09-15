@@ -2,7 +2,8 @@
   "programVk": "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d",
   "metadata": {
     "startBlockNumber": 10,
-    "endBlockNumber": 14
+    "endBlockNumber": 14,
+    "startBlockTimestamp": 1763000457
   },
   "proofRequest": {
     "chainId": 59144,

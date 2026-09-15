@@ -23,12 +23,12 @@ jobs:
       with:
         fetch-depth: 0
     - name: install Go
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      uses: ./.github/actions/setup-go
       with:
         go-version: 1.25.7
         cache-dependency-path: |
               prover-ray/go.sum
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    - uses: ./.github/actions/cache
       with:
         path: |
           ~/.cache/go-build
@@ -43,6 +43,7 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee #v9.2.1
       with:
+          skip-save-cache: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') }}
           version: v2.11.3
           working-directory: prover-ray
           args: --timeout=5m
@@ -67,12 +68,12 @@ jobs:
     - name: checkout code
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
     - name: install Go
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      uses: ./.github/actions/setup-go
       with:
         go-version: ${{ matrix.go-version }}
         cache-dependency-path: |
               prover-ray/go.sum
-    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    - uses: ./.github/actions/cache
       with:
         path: |
           ~/.cache/go-build

@@ -33,6 +33,8 @@
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(maru)* Add Amsterdam support (#3939)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 
 ### 🐛 Bug Fixes
 
@@ -156,3 +158,4 @@
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(coordinator)* Consolidate prover clients (#3944)

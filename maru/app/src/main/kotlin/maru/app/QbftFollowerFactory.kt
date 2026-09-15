@@ -91,6 +91,7 @@ class QbftFollowerFactory(
         executionLayerManager = if (payloadValidationEnabled) elManager else null,
         allowEmptyBlocks = allowEmptyBlocks,
         blockHashing = blockHashing,
+        elFork = qbftConsensusConfig.elFork,
       )
 
     val sealsVerifier = QuorumOfSealsVerifier(validatorProvider, SCEP256SealVerifier())

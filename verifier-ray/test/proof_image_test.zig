@@ -10,8 +10,9 @@
 //! This is the one test where a byte written by Go is interpreted by the actual
 //! Zig type, with no Zig-side parsing in between: mmap, cast, read.
 //!
-//! The fixture is `testdata/proof_image.bin`, written by prover-ray's
-//! `TestVerifierRayImageIsUpToDate`, which fails if the file goes stale. Values are raw u32
+//! The fixture is `testdata/proof_image.bin`, written by
+//! `codegen/abicheck`'s `TestVerifierRayImageIsUpToDate`, which fails if the file
+//! goes stale. Values are raw u32
 //! limbs, not field arithmetic results, so both sides compare identical numbers.
 
 const std = @import("std");
@@ -22,7 +23,7 @@ const verifier = verifier_ray.verifier;
 /// The address the image is relocated for. Pointers in the image are absolute,
 /// so it can only be read here.
 ///
-/// prover-ray's abi_agreement_test.go must use the same constant. It is not the
+/// codegen/abicheck's abi_agreement_test.go must use the same constant. It is not the
 /// production GuestBase (0x08800000) because macOS refuses MAP_FIXED in the low
 /// address space; 0x400000000 maps on both hosts.
 const fixture_base: usize = 0x400000000;
