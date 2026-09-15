@@ -68,7 +68,7 @@ const abi = struct {
 /// and field values are never touched.
 ///
 /// Call this after loading an image at an address other than the one it was
-/// encoded for: the macOS fallback in main.zig and the fixture loader in
+/// encoded for: the native loader in main.zig and the fixture loader in
 /// riscv_proof_image_test.zig both do.
 pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usize) void {
     const delta: i64 = @as(i64, @intCast(mapped_base)) - @as(i64, @intCast(encoded_base));

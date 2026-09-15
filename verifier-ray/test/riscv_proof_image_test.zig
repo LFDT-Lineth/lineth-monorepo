@@ -32,15 +32,18 @@ const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
 const prot_write: c_int = 2;
 const map_private: c_int = 2;
-const map_anon: c_int = if (@import("builtin").target.os.tag == .macos) 0x1000 else 0x20;
 const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
 
 extern fn open(path: [*:0]const u8, flags: c_int) c_int;
 extern fn mmap(address: ?*anyopaque, length: usize, prot: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
+extern fn munmap(address: *anyopaque, length: usize) c_int;
 extern fn close(fd: c_int) c_int;
 extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
-extern fn read(fd: c_int, buf: [*]u8, count: usize) isize;
+
+fn readU64(buf: [*]const u8, offset: usize) u64 {
+    return std.mem.readInt(u64, buf[offset..][0..8], .little);
+}
 
 fn loadFixtureImage() !*const verifier.VerifyInput {
     const fd = open(image_path, o_rdonly);
@@ -51,22 +54,30 @@ fn loadFixtureImage() !*const verifier.VerifyInput {
     if (image_len <= 0) return error.ImageMissing;
     const img_len: usize = @intCast(image_len);
 
-    // Allocate anonymous read-write memory at any address the OS picks, then
-    // read the file into it and rebase all pointers from encoded_base to the
-    // actual mapped address. This works on Linux and macOS without MAP_FIXED.
-    const p = mmap(null, img_len, prot_read | prot_write, map_private | map_anon, -1, 0);
+    // Map the file privately at any address the OS picks. Pointer rewrites are
+    // copy-on-write and cannot modify the stored proof image.
+    const p = mmap(null, img_len, prot_read | prot_write, map_private, fd, 0);
     if (@intFromPtr(p) == map_failed) return error.MmapFailed;
 
     const buf: [*]u8 = @ptrCast(p);
-    var total: usize = 0;
-    _ = lseek(fd, 0, 0); // seek back to start (SEEK_SET = 0)
-    while (total < img_len) {
-        const n = read(fd, buf + total, img_len - total);
-        if (n <= 0) return error.ReadFailed;
-        total += @intCast(n);
-    }
+    const rounds_header = @offsetOf(verifier.VerifyInput, "proof") +
+        @offsetOf(verifier.Proof, "rounds");
+    const stored_rounds_pointer = readU64(buf, rounds_header);
 
     verifier_ray.image_relocation.rebase(buf, img_len, encoded_base, @intFromPtr(p));
+
+    const rounds_offset = stored_rounds_pointer - encoded_base;
+    try std.testing.expectEqual(
+        @as(u64, @intCast(@intFromPtr(p))) + rounds_offset,
+        readU64(buf, rounds_header),
+    );
+
+    // A fresh mapping must still see the original pointer bytes, proving the
+    // relocation dirtied only the private mapping rather than the file.
+    const stored = mmap(null, img_len, prot_read, map_private, fd, 0);
+    if (@intFromPtr(stored) == map_failed) return error.MmapFailed;
+    defer _ = munmap(stored, img_len);
+    try std.testing.expectEqual(stored_rounds_pointer, readU64(@ptrCast(stored), rounds_header));
 
     return @ptrCast(@alignCast(p));
 }

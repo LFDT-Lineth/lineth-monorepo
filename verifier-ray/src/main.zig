@@ -92,30 +92,20 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
     return 0; // success
 }
 
-// Native smoke tests use the same fixed binary input image as the R5 linked-memory path.
-// The Makefile places that image at `native_input_path`, so native execution only needs a
-// small libc surface: open the file, mmap exactly `@sizeOf(Input)`, and cast the bytes to
-// `Input`. Avoiding std file/argument handling keeps ReleaseSmall native binaries compact.
+// Native smoke tests use the same binary input image as the R5 linked-memory path.
+// The file is mapped privately at an address chosen by the OS, then its absolute
+// guest pointers are rebased in the copy-on-write mapping. Avoiding std
+// file/argument handling keeps ReleaseSmall native binaries compact.
 const o_rdonly: c_int = 0;
-const o_rdwr: c_int = 2;
 const prot_read: c_int = 1;
 const prot_write: c_int = 2;
 const map_private: c_int = 2;
-// MAP_FIXED: map at exactly the requested address. Safe here because
-// loadNativeInput runs in a standalone process that does not share its address
-// space with anything else mapped at input_guest_base.
-const map_fixed: c_int = 0x10;
-// MAP_ANONYMOUS: allocate anonymous (not file-backed) memory.
-// Linux uses 0x20; macOS uses 0x1000.
-const map_anon: c_int = if (builtin.target.os.tag == .macos) 0x1000 else 0x20;
-const seek_set: c_int = 0;
 const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
 
 extern fn open(path: [*:0]const u8, flags: c_int) c_int;
 extern fn close(fd: c_int) c_int;
 extern fn lseek(fd: c_int, offset: i64, whence: c_int) i64;
-extern fn read(fd: c_int, buf: [*]u8, count: usize) isize;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
@@ -133,42 +123,16 @@ fn loadNativeInput() *const verifier.VerifyInput {
 
     const image_len = lseek(fd, 0, seek_end);
     if (image_len <= 0) exitNative(1);
+    const img_len: usize = @intCast(image_len);
 
-    // Try to map at GuestBase so the baked-in absolute pointers are valid with no
-    // fixup. On Linux this always works. On macOS, MAP_FIXED at low addresses is
-    // refused by the kernel; in that case fall back to an anonymous mapping at any
-    // address and rebase the embedded pointers.
-    const try_fixed = mmap(
-        @ptrFromInt(input_guest_base),
-        @intCast(image_len),
-        prot_read,
-        map_private | map_fixed,
-        fd,
-        0,
-    );
-    if (@intFromPtr(try_fixed) != map_failed) {
-        return @ptrCast(@alignCast(try_fixed));
-    }
-
-    // MAP_FIXED failed (macOS). Allocate a writable anonymous buffer, read the
-    // file into it, then patch every slice pointer from its guest address to the
-    // equivalent host address.
-    const buf_addr = mmap(null, @intCast(image_len), prot_read | prot_write, map_private | map_anon, -1, 0);
+    // MAP_PRIVATE makes pointer rewrites copy-on-write: the mapped bytes change,
+    // but the stored proof image does not. A read-only file descriptor is enough
+    // because no write is ever propagated back to the file.
+    const buf_addr = mmap(null, img_len, prot_read | prot_write, map_private, fd, 0);
     if (@intFromPtr(buf_addr) == map_failed) exitNative(1);
 
-    // Seek back to start and read the full image.
-    if (lseek(fd, 0, seek_set) < 0) exitNative(1);
     const buf: [*]u8 = @ptrCast(buf_addr);
-    var remaining: usize = @intCast(image_len);
-    var off: usize = 0;
-    while (remaining > 0) {
-        const n = read(fd, buf + off, remaining);
-        if (n <= 0) exitNative(1);
-        off += @intCast(n);
-        remaining -= @intCast(n);
-    }
-
-    image_relocation.rebase(buf, @intCast(image_len), input_guest_base, @intFromPtr(buf_addr));
+    image_relocation.rebase(buf, img_len, input_guest_base, @intFromPtr(buf_addr));
     return @ptrCast(@alignCast(buf_addr));
 }
 
