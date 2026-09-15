@@ -42,6 +42,14 @@ inputs:
     description: 'Directory (relative to github.workspace) containing the checked-out monorepo'
     required: false
     default: '.'
+  override-compose-file:
+    description: >
+      Optional path to a custom override compose file (absolute, or relative to
+      working-directory) merged on top of docker/compose-tracing-v2-ci-extension.yml.
+      When set and present, the environment is started by make command "start-env-with-tracing-v2-ci-override";
+      otherwise it falls back to the default "start-env-with-tracing-v2-ci".
+    required: false
+    default: ''
   dockerhub_username:
     required: false
     default: ''
@@ -162,10 +170,28 @@ runs:
     - name: Spin up fresh environment with retry
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
       run: |
         set -euo pipefail
+        # Resolve the optional override compose file (absolute, or relative to working-directory).
+        override_file=""
+        if [ -n "$OVERRIDE_COMPOSE_FILE" ]; then
+          if [ -f "$OVERRIDE_COMPOSE_FILE" ]; then
+            override_file="$(cd "$(dirname "$OVERRIDE_COMPOSE_FILE")" && pwd)/$(basename "$OVERRIDE_COMPOSE_FILE")"
+          else
+            echo "Override compose file not found: $OVERRIDE_COMPOSE_FILE — falling back to start-env-with-tracing-v2-ci." >&2
+          fi
+        fi
+
+        if [ -n "$override_file" ]; then
+          target="start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$override_file CLEAN_PREVIOUS_ENV=false"
+        else
+          target="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false"
+        fi
+        echo "Spin-up target: $target"
         make retry \
-          TARGET="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false" \
+          TARGET="$target" \
           RETRY_LIMIT=10 \
           RETRY_TIMEOUT=10m \
           RETRY_BACKOFF=30s \
