@@ -1,4 +1,4 @@
-package minimalelf
+package minimalelf_test
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
+	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
@@ -24,7 +25,7 @@ func TestRisc5InstructionCoverageGuest(t *testing.T) {
 		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
 	}
 
-	inputsMap, err := predecoding.PrepareInputs(AllInOneElfProgram, nil)
+	inputsMap, err := predecoding.PrepareInputs(minimalelf.AllInOneElfProgram, nil)
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
