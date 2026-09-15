@@ -30,6 +30,16 @@ pub fn build(b: *std.Build) void {
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
     const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
     const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
+    const riscv_system_path = b.option(
+        []const u8,
+        "riscv-system",
+        "Path to the generated RISC-V verifier system Zig source",
+    ) orelse @panic("'-Driscv-system=<path>' is required");
+    if (riscv_system_path.len == 0) @panic("'-Driscv-system=<path>' must not be empty");
+    const riscv_system_source: std.Build.LazyPath = if (std.fs.path.isAbsolute(riscv_system_path))
+        .{ .cwd_relative = riscv_system_path }
+    else
+        b.path(riscv_system_path);
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -108,7 +118,7 @@ pub fn build(b: *std.Build) void {
     // verifier bootstrap (verifier-ray/codegen/generate-riscv-system), smoke-
     // tested by test/riscv_system_test.zig.
     const riscv_system_mod = b.addModule("riscv_system", .{
-        .root_source_file = b.path("testdata/generated/riscv_system.zig"),
+        .root_source_file = riscv_system_source,
         .target = target,
         .optimize = optimize,
         .imports = &.{

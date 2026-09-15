@@ -297,6 +297,6 @@ func TestVerifierRayImageIsUpToDate(t *testing.T) {
 	require.Equal(t, committed, image,
 		"the image verifier-ray reads is stale against the pinned prover-ray. "+
 			"test/proof_image_test.zig asserts against it, so regenerate with "+
-			"UPDATE_VERIFIER_RAY_IMAGE=1 go test ./abicheck/ and re-run `zig build test` "+
+			"UPDATE_VERIFIER_RAY_IMAGE=1 go test ./abicheck/ and re-run `make -C verifier-ray test-zig` "+
 			"to confirm the Zig side still agrees")
 }

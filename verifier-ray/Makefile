@@ -2,7 +2,13 @@ SHELL := /bin/bash
 
 .PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata generate-large-pcs-benchmark profile-large-pcs verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
-R5_BIN := zig-out/bin/verifier-ray
+RISCV_SYSTEM ?= testdata/generated/riscv_system.zig
+ZIG_OUT ?= zig-out
+ZIG_BUILD = zig build \
+	--prefix "$(abspath $(ZIG_OUT))" \
+	-Driscv-system="$(abspath $(RISCV_SYSTEM))"
+
+R5_BIN := $(ZIG_OUT)/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 PROOF_IMAGE := testdata/riscv_proof_image.bin
@@ -56,8 +62,11 @@ help:
 		'  clean                 Remove Zig build artifacts' \
 		'zkc variables:' \
 		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
+		'  PROOF_IMAGE          Proof paired with RISCV_SYSTEM, default testdata/riscv_proof_image.bin' \
 		'' \
-		'R5 build variables:' \
+		'Zig build variables:' \
+		'  RISCV_SYSTEM         Generated verifier system source, default testdata/generated/riscv_system.zig' \
+		'  ZIG_OUT              Per-build output prefix, default zig-out' \
 		'  DISABLE_ACCELERATORS  Disable Lineth zkVM accelerator wrappers (for compatibility testing), default false' \
 
 fmt: fmt-zig fmt-go
@@ -75,22 +84,22 @@ fmt-go:
 build: build-zig
 
 build-zig:
-	zig build
+	$(ZIG_BUILD)
 
 build-release:
-	zig build --release=small -Dstrip=true
+	$(ZIG_BUILD) --release=small -Dstrip=true
 
 build-r5:
-	zig build --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
+	$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 
 run:
-	zig build run
+	$(ZIG_BUILD) run
 
 run-passing:
 	$(MAKE) run
 
 run-failing:
-	zig build run -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC)
+	$(ZIG_BUILD) run -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC)
 
 run-failing-expected:
 	@if $(MAKE) run-failing; then \
@@ -103,8 +112,8 @@ run-failing-expected:
 test: test-zig test-codegen
 
 test-zig: generate-testdata
-	zig build test
-	zig build -Dverifier-profiling=true test-profiling
+	$(ZIG_BUILD) test
+	$(ZIG_BUILD) -Dverifier-profiling=true test-profiling
 
 test-generated-zig: test-zig
 
@@ -141,7 +150,9 @@ zkc-verify-passing:
 	$(MAKE) zkc-verify
 
 zkc-verify-failing:
-	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC) -Ddisable-accelerators=$(DISABLE_ACCELERATORS)
+	$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true \
+		-Dembedded-input=invalid -Dembedded-spec=$(EMBEDDED_SPEC) \
+		-Ddisable-accelerators=$(DISABLE_ACCELERATORS)
 	$(ELF_TO_JSON) $(R5_BIN) $(IN_BYTES) > $(R5_JSON)
 	$(ZKC) exec $(R5_JSON) $(ZKC_MAIN)
 
@@ -154,7 +165,9 @@ zkc-verify-failing-expected:
 	fi
 
 profile-zkc-case:
-	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
+	@$(ZIG_BUILD) --release=small -Dstrip=true -Dr5=true \
+		-Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) \
+		-Dverifier-profiling=true -Dr5-marks=true
 	$(ELF_TO_JSON) $(R5_BIN) $(IN_BYTES) > $(R5_JSON)
 	@$(ZKC) exec $(R5_JSON) $(ZKC_MAIN)
 
