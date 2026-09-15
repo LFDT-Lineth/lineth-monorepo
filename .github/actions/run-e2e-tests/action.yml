@@ -46,8 +46,9 @@ inputs:
     description: >
       Optional path to a custom override compose file (absolute, or relative to
       working-directory) merged on top of docker/compose-tracing-v2-ci-extension.yml.
-      When set and present, the environment is started by make command "start-env-with-tracing-v2-ci-override";
-      otherwise it falls back to the default "start-env-with-tracing-v2-ci".
+      When set, the environment is started by make command "start-env-with-tracing-v2-ci-override"
+      and the step fails if the file does not exist. When empty, the default
+      "start-env-with-tracing-v2-ci" is used.
     required: false
     default: ''
   dockerhub_username:
@@ -180,7 +181,8 @@ runs:
           if [ -f "$OVERRIDE_COMPOSE_FILE" ]; then
             override_file="$(cd "$(dirname "$OVERRIDE_COMPOSE_FILE")" && pwd)/$(basename "$OVERRIDE_COMPOSE_FILE")"
           else
-            echo "Override compose file not found: $OVERRIDE_COMPOSE_FILE — falling back to start-env-with-tracing-v2-ci." >&2
+            echo "::error::Override compose file not found: $OVERRIDE_COMPOSE_FILE" >&2
+            exit 1
           fi
         fi
 
