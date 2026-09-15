@@ -4,15 +4,14 @@ permissions:
   actions: write
   contents: read
 
-# The repo's Actions cache sits at the 10GB cap, mostly duplicated per-PR
-# zig, CodeQL and node entries, which evicts the shared Gradle cache within
-# hours of it being written. Frees PR cache entries so main's caches survive.
+# PR caches compete with main's shared dependency caches for repository storage.
+# GitHub-managed Code Quality still writes PR caches independently of codeql.yml.
 on:
   pull_request_target:
     types:
       - closed
   schedule:
-    - cron: "43 2 * * *"
+    - cron: "43 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -50,3 +49,28 @@ jobs:
             | while read -r id; do
                 gh api -X DELETE "repos/${REPO}/actions/caches/${id}" || true
               done
+
+      - name: Limit PR CodeQL dependency caches to 2 GiB
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CODEQL_PR_CACHE_BUDGET_BYTES: "2147483648"
+        run: |
+          set -euo pipefail
+          # Collect every page before deleting; a failed inventory must not trigger cleanup.
+          # Keep the most recently accessed prefix within a shared 2 GiB PR budget.
+          # Concurrent uploads can exceed this budget until the next scheduled sweep.
+          cache_ids=$(gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
+            | jq -rs --argjson budget "$CODEQL_PR_CACHE_BUDGET_BYTES" '
+                [.[].actions_caches[]
+                  | select(.ref | test("^refs/pull/[0-9]+/(head|merge)$"))
+                  | select(.key | startswith("codeql-dependencies-"))]
+                | sort_by(.last_accessed_at, .created_at, .id) | reverse
+                | foreach .[] as $cache (0; . + $cache.size_in_bytes;
+                    if . > $budget then $cache.id else empty end)
+              ')
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            echo "Deleting PR CodeQL dependency cache $id (over budget)"
+            gh api -X DELETE "repos/${REPO}/actions/caches/${id}"
+          done <<< "$cache_ids"
