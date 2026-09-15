@@ -17,11 +17,13 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
-    // BLS12-381 pairing provider: the zesu stdlibs_accel stub by default (which
-    // fails unconditionally today); the arithmetization PAIRING_CHECK wrapper
-    // (prover-accelerated custom op) when opted in with -Dbls12-pairing-accel.
-    // Read by zkvm_provide.zig at comptime.
-    const bls12_pairing_accel = b.option(bool, "bls12-pairing-accel", "Use the arithmetization BLS12-381 PAIRING_CHECK wrapper instead of the standard zig backend (default: standard)") orelse false;
+    // BLS12-381 pairing provider: enable the arithmetization PAIRING_CHECK wrapper
+    // (prover-accelerated custom op) by default for the guest artifact built by the
+    // repository's normal Makefile/CI path. The alternative zesu stdlibs_accel
+    // provider is currently an unconditional-failure stub, so it remains available
+    // only as an explicit opt-out with -Dbls12-pairing-accel=false. Read by
+    // zkvm_provide.zig at comptime.
+    const bls12_pairing_accel = b.option(bool, "bls12-pairing-accel", "Use the arithmetization BLS12-381 PAIRING_CHECK wrapper instead of the standard zig backend (default: arithmetized)") orelse true;
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const zkc_smoke_input = b.option([]const u8, "zkc-smoke-input", "Extended SSZ input for the ZkC smoke test") orelse "test/testdata/stateless_input.ssz";
     const guest_options = b.addOptions();

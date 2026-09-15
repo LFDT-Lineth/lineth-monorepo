@@ -8,13 +8,11 @@
 //   - one exponentiation by the seed
 //   - the whole thing
 //
-// Plus two algebraic properties that need no fixture:
+// Plus one algebraic property that needs no fixture:
 //   - the easy part lands in the cyclotomic subgroup, so the general
 //     squaring and the Granger-Scott squaring must agree on it. This
 //     is the check that catches a wrong cyclotomic squaring, which is
 //     otherwise silently self-consistent.
-//   - the output has order dividing r, i.e. it really is a pairing
-//     value and not just some Fp12 element.
 //
 // NOTE the result is e(P,Q)^3, not e(P,Q) -- see the comment on
 // fp12_final_exp_bls12_381. That is deliberate and sound for the
