@@ -27,6 +27,34 @@ Each `docker-build-<image>` target mirrors the corresponding workflow: same
 pre-build step (`./gradlew …:installDist` where the workflow has one), same
 Dockerfile, context, build args and named build contexts.
 
+### Local RISC-V stack
+
+From the repository root, with the required Java/Node/pnpm versions and dependencies installed:
+
+```bash
+make start-env-with-riscv
+```
+
+Each run builds Besu, Maru, and coordinator images from the checkout for the Docker host,
+reusing build caches. Once builds succeed, startup **resets the chain, database, and proof files**.
+
+The stack runs L1 Besu/Teku, L2 Besu/Maru, Postgres, the coordinator, and a dummy proof
+responder. It produces Amsterdam execution requests; real proving and proof submission
+to L1 are not enabled.
+
+- L1 RPC: `localhost:8445`
+- L2 RPC: `localhost:8545`
+- Coordinator health: `localhost:9545/health`
+- Execution requests and responses: `tmp/riscv/prover/riscv/execution/`
+
+Restarting the coordinator replays from genesis because L1 finalization is disabled,
+so it can create additional request/response files for the same blocks.
+
+```bash
+COMPOSE_PROFILES=l1,l2,riscv docker compose -p linea-riscv-dev -f docker/compose-riscv.yml logs -f coordinator
+make clean-riscv-environment
+```
+
 ### linea-besu-package
 
 `make docker-build-linea-besu-package` is the slowest target by a wide margin: its

@@ -20,6 +20,51 @@ clean-environment:
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
 
+RISCV_COMPOSE_FILE ?= docker/compose-riscv.yml
+RISCV_COMPOSE_PROJECT ?= linea-riscv-dev
+RISCV_COMPOSE = COMPOSE_PROFILES=l1,l2,riscv docker compose \
+	--project-name $(RISCV_COMPOSE_PROJECT) \
+	--file $(RISCV_COMPOSE_FILE)
+
+.PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv
+
+build-riscv-images:
+	$(MAKE) -j1 docker-build-riscv-besu docker-build-maru docker-build-coordinator \
+		DOCKER_IMAGE_TAG=local-riscv \
+		PLATFORMS=$$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}') \
+		SKIP_PREBUILD=false DRY_RUN=false
+
+clean-riscv-environment:
+	$(RISCV_COMPOSE) down --volumes --remove-orphans
+	# Containers create root-owned directories on Linux; clear them before host-side removal.
+	@if [ -d tmp/riscv ]; then \
+		docker run --rm --network none --user 0:0 \
+			--mount "type=bind,source=$(CURDIR)/tmp/riscv,target=/data" \
+			busybox:latest find /data -mindepth 1 -delete; \
+	fi
+	rm -rf tmp/riscv
+
+start-env-with-riscv:
+	$(MAKE) build-riscv-images
+	$(MAKE) clean-riscv-environment
+	mkdir -p \
+		tmp/riscv/prover/riscv/execution/requests \
+		tmp/riscv/prover/riscv/execution/responses
+	chmod -R a+rwX tmp/riscv/prover
+	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
+		l1-cl-node \
+		maru \
+		postgres
+	$(MAKE) deploy-contracts \
+		L2_GENESIS_TIMESTAMP_FILE=tmp/riscv/genesis/fork-timestamp.txt \
+		L1_CONTRACT_VERSION=9 \
+		LINETH_PROTOCOL_CONTRACTS_ONLY=true \
+		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
+		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+	$(RISCV_COMPOSE) up --detach --no-deps --wait --wait-timeout 600 \
+		riscv-proof-responder \
+		coordinator
+
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
 # Also drop any stale lockfile from a crashed previous run, otherwise every
