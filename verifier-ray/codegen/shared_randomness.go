@@ -11,53 +11,48 @@ import (
 // [messagebus.SharedRandomnessContributionChecker] registered on a wiop.System,
 // in the form the Zig shared-randomness sub-verifier consumes.
 //
-// The checker recomputes a Poseidon2 Merkle-Damgård sponge hash over every
-// round preceding the message-bus coin round that carries a PCS commitment,
-// and compares the resulting digest, limb by limb, against public-input cells
+// The checker recomputes the multiset hash of the message-bus columns,
+// PCS commitment and compares it, limb by limb, against public-input cells
 // claiming to be this shard's contribution to the cross-shard shared
-// randomness. Both halves — the ordered per-round commitment octuplets and the
-// claimed-digest cell refs — are plain (round, index) transcript coordinates,
-// so the Zig verifier can enforce the identity against the adversary's
-// transcript the same way every other sub-verifier does; no baked-in
-// honest-prover value is trusted.
+// randomness. Both halves — the commitment's round and the claimed-digest cell
+// refs — are plain transcript coordinates, so the Zig verifier can enforce the
+// identity against the adversary's transcript the same way every other
+// sub-verifier does; no baked-in honest-prover value is trusted.
 //
-// Absent (empty Rounds and ContributionRefs) when sys was not compiled with
+// Absent (no ContributionRefs) when sys was not compiled with
 // [messagebus.CompileOptions.SharedRandomness] — see
 // [BuildSharedRandomnessSystem].
 type SharedRandomnessSystem struct {
 	SourceName string
-	// Rounds is every round index in [0, coinRound.ID), in order, mirroring the
-	// Go verifier's `for i := range rt.CurrentRound().ID` loop exactly. A round
-	// with HasCommitment == false is skipped by the Zig checker, just as the Go
-	// loop's `continue` skips it — its Commitment field is meaningless in that
-	// case and left zero.
-	Rounds []SharedRandomnessRound
+	// CommitmentRound is the round whose commitment is the whole sponge
+	// preimage: prover-ray's sharedRandomnessContribution hashes
+	// rt.Commitments[rt.CurrentRound().ID] and nothing else. The preflight
+	// columns are assumed isolated on that round — an assumption prover-ray's
+	// backend enforces.
+	CommitmentRound CommitmentRoundCtx
 	// ContributionRefs are the (round, index) transcript positions of the
 	// [messagebus.SharedRandomnessSeedContributionPI] cells, one per limb of the
 	// multiset-hash digest, in limb order.
 	ContributionRefs []ScalarCellRef
 }
 
-// SharedRandomnessRound is one round's commitment status and, when present,
-// its committed Octuplet — the same (round, index) coordinate style used by
-// every other sub-verifier's cell references, except a round's commitment
-// lives outside the cells slice (see verifier-ray's protocol.RoundMessage).
-type SharedRandomnessRound struct {
+// CommitmentRoundCtx names the round whose commitment feeds the hash,
+type CommitmentRoundCtx struct {
 	// RoundIndex is the wiop Round.ID / proof.rounds index this entry describes.
 	RoundIndex int
 	// HasCommitment mirrors wiop.Round.HasCommitment for this round. When
-	// false, the Zig checker skips this round entirely, exactly as the Go
-	// reference implementation's `continue` does.
+	// false the prover hashes a zero Octuplet — a Go map miss on
+	// rt.Commitments — so the Zig checker must do the same to stay in step.
 	HasCommitment bool
 }
 
 // BuildSharedRandomnessSystem extracts the
 // [messagebus.SharedRandomnessContributionChecker] verifier action registered
-// on sys, if any, and records the ordered round list plus the contribution
-// public-input cell refs it needs. Returns a zero-value SharedRandomnessSystem
-// (no error) when sys carries no such action — a system compiled without
-// [messagebus.CompileOptions.SharedRandomness] has nothing for this
-// sub-verifier to check.
+// on sys, if any, and records the round whose commitment it hashes plus the
+// contribution public-input cell refs it needs. Returns a zero-value
+// SharedRandomnessSystem (no error) when sys carries no such action — a system
+// compiled without [messagebus.CompileOptions.SharedRandomness] has nothing for
+// this sub-verifier to check.
 //
 // sys must have been compiled with messagebus.Compile(sys,
 // messagebus.CompileOptions{SharedRandomness: true}); the coin round the
@@ -83,12 +78,9 @@ func BuildSharedRandomnessSystem(sys *wiop.System) (SharedRandomnessSystem, erro
 		return out, nil
 	}
 
-	out.Rounds = make([]SharedRandomnessRound, coinRound.ID)
-	for i := 0; i < coinRound.ID; i++ {
-		out.Rounds[i] = SharedRandomnessRound{
-			RoundIndex:    i,
-			HasCommitment: sys.Rounds[i].HasCommitment,
-		}
+	out.CommitmentRound = CommitmentRoundCtx{
+		RoundIndex:    coinRound.ID,
+		HasCommitment: coinRound.HasCommitment,
 	}
 
 	for i := range messagebus.NumSharedRandomnessContribution {
