@@ -55,6 +55,32 @@ COMPOSE_PROFILES=l1,l2,riscv docker compose -p linea-riscv-dev -f docker/compose
 make clean-riscv-environment
 ```
 
+### RISC-V CI (maintainer approval)
+
+The **RISC-V stack** workflow tests the same local stack with dummy proofs. Relevant
+changes on same-repository PRs, including stacked and draft PRs, create a run that waits
+for approval in the existing `docker-build-and-e2e` environment. Open the run, select
+**Review deployments**, and approve that environment to start the build. Each new PR
+commit cancels the previous run and needs approval again. Fork PRs are excluded from
+this self-hosted runner workflow.
+
+Once the workflow is on `main`, it can also be started from **Actions → RISC-V stack →
+Run workflow**, selecting `main` or another branch. Manual runs require the same approval.
+This workflow is separate from the regular E2E suite and does not publish images.
+
+The check requires deployed contracts, advancing L2 blocks, execution requests starting
+at block 1, and a transaction-bearing Amsterdam block whose witness and dummy response
+have resulted in a proven batch in Postgres. Run it locally after stack startup with:
+
+```bash
+node scripts/docker/check-riscv-stack.mjs
+```
+
+It waits up to two minutes for proof consumption. CI uploads the result, Compose logs,
+container status, and a successful request/response sample as a `riscv-stack-*` artifact,
+then cleans up the stack. Real R5 proving, guest-program execution, and L1 proof submission
+remain outside this smoke check.
+
 ### linea-besu-package
 
 `make docker-build-linea-besu-package` is the slowest target by a wide margin: its
