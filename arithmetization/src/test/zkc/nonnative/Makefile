@@ -32,7 +32,7 @@ test:
 		i=0; \
 		grep '^{' $$h.accepts | while IFS= read -r l; do \
 			printf '%s\n' "$$l" > $$tmp; \
-			if $(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >/dev/null 2>&1; then \
+			if $(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >$$dir/out 2>&1 && ! grep -q 'level=error' $$dir/out; then \
 				echo "  accept[$$i] PASS"; \
 			else \
 				echo "  accept[$$i] FAIL (expected to be accepted)"; echo fail >> $$dir/rc; \
@@ -42,7 +42,7 @@ test:
 		i=0; \
 		grep '^{' $$h.rejects | while IFS= read -r l; do \
 			printf '%s\n' "$$l" > $$tmp; \
-			if $(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >/dev/null 2>&1; then \
+			if $(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >$$dir/out 2>&1 && ! grep -q 'level=error' $$dir/out; then \
 				echo "  reject[$$i] FAIL (expected to be rejected)"; echo fail >> $$dir/rc; \
 			else \
 				echo "  reject[$$i] PASS"; \

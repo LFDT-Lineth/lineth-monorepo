@@ -30,18 +30,18 @@ include "../../../main/lib/bls12_381/pairing.zkc"
 pub input n(address:u1) -> (v:u8)
 pub input want(address:u1) -> (v:u8)
 
-pub input px(address:u3) -> (v:u384)
-pub input py(address:u3) -> (v:u384)
-pub input qx0(address:u3) -> (v:u384)
-pub input qx1(address:u3) -> (v:u384)
-pub input qy0(address:u3) -> (v:u384)
-pub input qy1(address:u3) -> (v:u384)
+pub input px(address:u6) -> (v:u384)
+pub input py(address:u6) -> (v:u384)
+pub input qx0(address:u6) -> (v:u384)
+pub input qx1(address:u6) -> (v:u384)
+pub input qy0(address:u6) -> (v:u384)
+pub input qy1(address:u6) -> (v:u384)
 
 fn main<bls_fp12_mem>() {
     var k:u8 = n[0]
 
     for i:u8 = 0; i < k; i = i + 1 {
-        var j:u3 = i as u3
+        var j:u6 = i as u6
         stage_pair_bls12_381(i, px[j], py[j], qx0[j], qx1[j], qy0[j], qy1[j])
     }
 

@@ -19,13 +19,18 @@
 # A `fail` also prints an AIR error, which is why the exit code, not the error
 # output, is what separates rejected from broken.
 #
-# Cost notes (these are dev targets, not CI -- the whole run is over an hour):
+# Cost notes:
 #   - every affine result costs one Fermat inversion, ~613 mulmod_384 on its
 #     own, which dominates the group law it follows;
 #   - g2_subgroup runs the real 64-bit seed ladder, ~20s per fixture;
-#   - miller, final_exp and pairing_check are the expensive ones: a single
-#     pairing is ~17k mulmod_384, about a minute per fixture under -c.
+#   - miller, final_exp, pairing_check and pairing_ram are the expensive ones:
+#     a single pairing is ~17k mulmod_384, about a minute per fixture under -c.
 # Harnesses are ordered cheapest-first so a regression surfaces early.
+#
+# Two targets:
+#   test     -- full suite (>1 hour, developer / scheduled)
+#   test-ci  -- bounded CI target (<15 min): all cheap harnesses run their full
+#               fixture set; the four slow ones sample one accept + one reject
 
 SHELL := /bin/sh
 
@@ -48,6 +53,49 @@ test:
 			[ -f $$h.$$kind ] || continue; \
 			i=0; \
 			grep '^{' $$h.$$kind | while IFS= read -r l; do \
+				printf '%s\n' "$$l" > $$tmp; \
+				$(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >/dev/null 2>$$err; \
+				rc=$$?; \
+				if [ $$rc -eq 0 ] && grep -q 'level=error' $$err; then \
+					echo "  $$kind[$$i] BROKEN (constraints violated, exit 0)"; \
+					echo fail >> $$dir/rc; \
+				elif [ $$rc -eq 0 ]; then \
+					if [ $$kind = accepts ]; then echo "  $$kind[$$i] PASS"; \
+					else echo "  $$kind[$$i] FAIL (expected to be rejected)"; echo fail >> $$dir/rc; fi; \
+				else \
+					if [ $$kind = rejects ]; then echo "  $$kind[$$i] PASS"; \
+					else echo "  $$kind[$$i] FAIL (expected to be accepted)"; echo fail >> $$dir/rc; fi; \
+				fi; \
+				i=$$((i+1)); \
+			done; \
+		done; \
+	done; \
+	rc=0; if [ -f $$dir/rc ]; then rc=1; fi; \
+	rm -rf $$dir; \
+	if [ $$rc -eq 0 ]; then echo "ALL OK"; else echo "FAILURES"; fi; \
+	exit $$rc
+
+# Bounded CI target.  All harnesses are covered; the four slow ones (miller,
+# final_exp, pairing_check, pairing_ram -- each fixture ~1 min under -c) are
+# sampled to one accept and one reject so the whole target fits in ~10 minutes.
+# The full suite is `make test` (>1 hour).
+#
+# The n_h list encodes the per-harness fixture cap as "CAP:NAME": 9999 is
+# effectively unlimited (no cheap harness has anywhere near that many fixtures).
+.PHONY: test-ci
+test-ci:
+	@dir=$$(mktemp -d); tmp=$$dir/case.json; err=$$dir/err; \
+	for n_h in \
+	    9999:fp2_arith 9999:fp2_inv 9999:fp12_arith 9999:fp12_ops \
+	    9999:g1_add 9999:g1_mul 9999:g1_subgroup \
+	    9999:g2_add 9999:g2_mul 9999:g2_subgroup \
+	    1:miller 1:final_exp 1:pairing_check 1:pairing_ram; do \
+		n=$${n_h%%:*}; h=$${n_h##*:}; \
+		echo "=== $$h ==="; \
+		for kind in accepts rejects; do \
+			[ -f $$h.$$kind ] || continue; \
+			i=0; \
+			grep '^{' $$h.$$kind | head -$$n | while IFS= read -r l; do \
 				printf '%s\n' "$$l" > $$tmp; \
 				$(ZKC) execute -c --field $(FIELD) $$tmp $$h.zkc >/dev/null 2>$$err; \
 				rc=$$?; \
