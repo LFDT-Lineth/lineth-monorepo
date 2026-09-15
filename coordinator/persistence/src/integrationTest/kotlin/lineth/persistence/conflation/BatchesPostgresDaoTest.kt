@@ -27,7 +27,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   init {
-    target = "6"
+    target = "4"
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-batches")

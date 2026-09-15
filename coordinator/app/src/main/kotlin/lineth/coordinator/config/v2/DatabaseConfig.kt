@@ -23,7 +23,7 @@ data class DatabaseConfig(
     ),
 ) {
   companion object {
-    val supportedSchemas = 4..6
+    val supportedSchemas = 4..5
   }
 
   init {
