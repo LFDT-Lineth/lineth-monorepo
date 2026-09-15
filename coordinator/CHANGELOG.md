@@ -14,6 +14,7 @@
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 
 ### 🐛 Bug Fixes
 
