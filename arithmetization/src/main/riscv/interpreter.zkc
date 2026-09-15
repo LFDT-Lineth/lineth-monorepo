@@ -195,7 +195,7 @@ include "../lib/io/write_output.zkc"
 
 // -- NO PREDECODING PROOF SECTION --
 #[global]
-fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
+fn interpreter<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>(clock_cycle:u32, base:Address, pc:Address, output_write_address:OutputAddress) -> ! {
     // -- NO PREDECODING PROOF SECTION END--
 
     var new_output_write_address:OutputAddress
@@ -223,15 +223,30 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state>(clock_cycle:u32, b
         // interpreter!(clock_cycle + 1, base, new_pc, exec_end, new_output_write_address)
         // -- PREDECODING PROOF SECTION END--
 
-        // -- NO PREDECODING PROOF SECTION --
+        // -- Interpreting the riscV transpiled program --
         interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
-        // -- NO PREDECODING PROOF SECTION END--
     }
+
     // Termination
+    // Hash the guest program output with keccak and expose the hash in the
+    // `guest_output_hash` public output.
+    // Note that we can reuse the RAM at any address, as the r5 execution is over.
+    for i:OutputAddress = 0; i<new_output_write_address; i = i + 1 {
+        write_8(i as Address, guest_output_tmp[i])
+    }
+    keccak(0, new_output_write_address as u32, 0)
+    guest_output_hash[0] = read_32(0)
+    guest_output_hash[1] = read_32(4)
+    guest_output_hash[2] = read_32(8)
+    guest_output_hash[3] = read_32(12)
+    guest_output_hash[4] = read_32(16)
+    guest_output_hash[5] = read_32(20)
+    guest_output_hash[6] = read_32(24)
+    guest_output_hash[7] = read_32(28)
     done
 }
 
-fn interpreter_a<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter_a<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
     var compute_op:ComputeOp
     var imm:DoubleWord
     var rs1:Register
@@ -433,7 +448,7 @@ fn interpreter_a<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Ad
     registers[rd] = result
 }
 
-fn interpreter_b<registers, ram, keccak_state, poseidon2_state>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter_b<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>(index:u64, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
 
     var compute_op:ComputeOp
     var imm:DoubleWord
