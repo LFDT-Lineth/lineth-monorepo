@@ -160,9 +160,21 @@ func buildZ(
 		ctx.Childf("z-b%d-k%d", bIdx, kIdx),
 		round)
 
-	// The recurrence zNum − (Z − Z<<−1)·zDen carries a −1 shift on Z, so
-	// NewVanishing automatically cancels row 0; the row-0 boundary is pinned
-	// separately by the local constraint below.
+	// The recurrence zNum − (Z − Z<<−1)·zDen is cancelled on row 0 only; the
+	// row-0 boundary is pinned separately by the local constraint below.
+	//
+	// The cancellation set is declared manually rather than inferred by
+	// NewVanishing. Inference derives cancelled rows from every shift in the
+	// expression tree, and zNum/zDen embed the caller's fraction expressions
+	// verbatim -- a numerator read as col.View().Shift(+k) would cancel the last
+	// k rows too. This is production-reachable: zkcdriver applies
+	// ColumnAccess.RelativeShift to lookup source/target views, so any corset
+	// lookup over a shifted register lands here. Row n−1 is exactly the row
+	// opened as the Z endpoint and summed into the LogDerivativeSum Result;
+	// cancelling it would sever Z[n−1] from Z[n−2] and let a prover choose the
+	// endpoint freely, passing the final-sum check for an arbitrary witness.
+	// Shifts on fraction columns are cyclic (tableElemAt wraps mod n), so the
+	// recurrence is genuinely well-defined on every row but the first.
 	//
 	// For a *statically* one-row module the recurrence is vacuous and we
 	// skip it as an optimisation. For a dynamic module we cannot know the
@@ -174,15 +186,16 @@ func buildZ(
 		recurrence := wiop.Sub(
 			zNum,
 			wiop.Mul(
-				// Shift(-1) is load-bearing for the dynamic n=1 corner case: it puts row 0 in NewVanishing's
-				// CancelledPositions, so when RuntimeSize == 1 the only row is cancelled and Check is vacuous.
+				// Cancelling row 0 is load-bearing for the dynamic n=1 corner case: when
+				// RuntimeSize == 1 the only row is cancelled and Check is vacuous.
 				wiop.Sub(zView, zView.Shift(-1)),
 				zDen,
 			),
 		)
-		m.NewVanishing(
+		m.NewVanishingManual(
 			ctx.Childf("z-recurrence-b%d-k%d", bIdx, kIdx),
 			recurrence,
+			0,
 		)
 	}
 
