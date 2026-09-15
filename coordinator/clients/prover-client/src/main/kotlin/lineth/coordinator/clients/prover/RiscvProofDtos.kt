@@ -1,5 +1,6 @@
 package lineth.coordinator.clients.prover
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import linea.clients.ConflationWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
@@ -72,6 +73,9 @@ data class RollupProofPublicInputsDto(
 data class MetaDataDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
+  val startBlockTimestamp: Long,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val totalGasUsed: Long? = null,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
