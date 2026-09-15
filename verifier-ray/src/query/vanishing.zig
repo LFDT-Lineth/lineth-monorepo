@@ -139,7 +139,9 @@ fn verifyModule(
     const annihilator = powModuleSize(eval_coin, static_n, dynamic_n).sub(ext.Ext.one());
 
     const ctx = EvalCtx{ .coin = eval_coin, .annihilator = annihilator, .dynamic_n = dynamic_n };
-    inline for (module.buckets) |bucket| {
+    // Runtime loop over runtime buckets: see verifyBucket's own note on why
+    // `bucket` is deliberately not comptime.
+    for (module.buckets) |bucket| {
         try verifyBucket(module, bucket, static_n, input, merge_coin, ctx);
     }
 }
@@ -156,20 +158,31 @@ fn powModuleSize(r: ext.Ext, comptime static_n: usize, dynamic_n: usize) ext.Ext
 
 fn verifyBucket(
     comptime module: Module,
-    comptime bucket: Bucket,
+    bucket: Bucket,
     comptime static_n: usize,
     input: CheckInput,
     merge_coin: ext.Ext,
     ctx: EvalCtx,
 ) Error!void {
-    // A real (non-synthetic) arithmetization module's bucket can carry many
-    // thousands of vanishing constraints (e.g. a wide opcode-decode module),
-    // comfortably exceeding Zig's default 1000-backwards-branch comptime
-    // budget for the `inline for` below. Mirrors the same raised quota already
-    // used by `query/pcs.zig`'s comptime-heavy loops.
-    comptime {
-        @setEvalBranchQuota(2_000_000);
-    }
+    // `bucket` is a RUNTIME parameter, and the loop over its vanishings below is
+    // a runtime loop, for the same reason evalExpr/evalOp take a runtime
+    // expr_index (see the long note there).
+    //
+    // When `bucket` was comptime, Zig monomorphized a distinct verifyBucket per
+    // bucket and `inline for (bucket.vanishings)` unrolled every constraint of
+    // that bucket into straight-line code. On the real RISC-V arithmetization
+    // that produced 85 instantiations totalling ~6.0 MiB of the ~7.9 MiB
+    // .text — enough to push the guest's executable span past elf_to_json's
+    // 2,000,000-record pre-decoding cap and to dominate the interpreted
+    // instruction-fetch cost in zkc.
+    //
+    // Nothing here needs bucket to be comptime: Bucket/Vanishing are plain data
+    // (ratio, a slice of expression indices, a claim offset), the expression
+    // indices are already consumed as runtime values by evalExpr, and
+    // cancelled_positions is likewise handled at runtime by cancellationAtPoint.
+    // `module` and `static_n` stay comptime — there are only ~100 modules, and
+    // static_n legitimately folds static-size exponentiation and root-of-unity
+    // work at compile time.
 
     // r^n = Z_H(r) + 1, recovered from the annihilator carried in ctx.
     const r_pow_n = ctx.annihilator.add(ext.Ext.one());
@@ -184,7 +197,7 @@ fn verifyBucket(
 
     var aggregate = ext.Ext.zero();
     var coin_power = ext.Ext.one();
-    inline for (bucket.vanishings) |v| {
+    for (bucket.vanishings) |v| {
         // Aggregate the vanished numerators with the merge coin alpha:
         // P_agg(r) = sum_i alpha^i * P_i(r) * C_i(r).
         const value = try evalExpr(module, v.expression, static_n, ctx, input);
@@ -334,8 +347,12 @@ fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) E
     return numerator.div(denominator);
 }
 
+// `positions` is a RUNTIME slice: it comes from a runtime Vanishing (see
+// verifyBucket). static_n stays comptime so the static root-of-unity lookup
+// still folds; only the position-derived exponent is runtime, which is what the
+// dynamic path already did.
 fn cancellationAtPoint(
-    comptime positions: []const i32,
+    positions: []const i32,
     comptime static_n: usize,
     ctx: EvalCtx,
 ) Error!ext.Ext {
@@ -344,7 +361,7 @@ fn cancellationAtPoint(
     const omega = if (static_n == 0) field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize else field.Element.one();
     var result = ext.Ext.one();
 
-    inline for (positions) |position| {
+    for (positions) |position| {
         // Same runtime bounds check as evalLagrangeSelector, for the same
         // reason: on the dynamic path n is proof-supplied, so a hostile size
         // can push a codegen-baked position out of [-n, n) (usize underflow
@@ -358,9 +375,7 @@ fn cancellationAtPoint(
         // Cancellation polynomial for openings already enforced elsewhere:
         // C(r) = product_{k in cancelled} (r - omega_n^norm(k)).
         const root = if (static_n != 0)
-            comptime staticRootPower(static_n, normalizePosition(position, static_n, 0))
-        else if (comptime position >= 0)
-            omega.powComptime(comptime @as(usize, @intCast(position)))
+            staticRootPower(static_n, normalizePosition(position, static_n, 0))
         else
             omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
         result = result.mul(ctx.coin.sub(ext.Ext.lift(root)));
