@@ -75,7 +75,7 @@ jobs:
         run: make -C riscv-guests/l2-execution zkc-smoke-trace
         timeout-minutes: 45
         env:
-          ZKC_REF: "" # Empty to avoid installing zkc again
+          ZKC_REF: "main" # Empty to avoid installing zkc again
           INPUT: test/testdata/block_amsterdam_175k.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:5000"
