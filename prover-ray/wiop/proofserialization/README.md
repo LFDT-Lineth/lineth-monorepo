@@ -74,9 +74,10 @@ a bug factory.
 Note what the projection *drops*, because the verifier's types have no field for
 it:
 
-- `fri.Branch.AuxSiblings` — the Zig `merkle.Branch` has no such field.
-- `fri.QueryLayer` is `[]Branch` in Go but only `layer[0]` is used; the Zig side
-  is one `Branch` per fold round.
+- The old Go `fri.Branch.AuxSiblings` field is no longer part of the merged FRI
+  representation; each running-query entry is already one `merkle.Branch`.
+- `fri.Proof.RunningQueries` is `[][]Branch` in Go and the Zig side is one
+  `Branch` per fold round, so each entry maps directly without dropping a layer.
 
 ## 4. Why the format is already decided by verifier-ray
 
@@ -162,10 +163,13 @@ Recommend (1), keeping the `base` parameter so (2) stays available for tests.
 | `merkle.RowPair` = `[2]RowOpening` | 64 | 8 | `[0]` @0, `[1]` @32 |
 | `merkle.Branch` | 48 | 8 | **`siblings` @0, `leaf` @16** — see §7 |
 | `merkle.InputTreeOpening` | 32 | 8 | `siblings` @0, `leaves` @16 |
-| `fri.Proof` | 48 | 8 | `round_roots` @0, `final_poly` @16, `running_queries` @32 |
-| `pcs.OpeningProof` | 64 | 8 | `input_queries` @0, `fri_proof` @16 |
-| `verifier.PcsOpening` | 64 | 8 | `proof` @0 (its only field — no `entry_claims`; the verifier reconstructs those from `rounds[*].cells` instead) |
-| `verifier.Proof` | 96 | 8 | `rounds` @0, `module_sizes` @16, `pcs_opening` @32 |
+| `merkle.MerkleCap` | 32 | 8 | `nodes` @0, `aux` @16 |
+| `pcs.InputCap` | 32 | 8 | `nodes` @0, `tables` @16 |
+| `pcs.InputCapTable` | 24 | 8 | `rows` @0, `size_log2` @16 |
+| `fri.Proof` | 64 | 8 | `round_roots` @0, `round_caps` @16, `final_poly` @32, `running_queries` @48 |
+| `pcs.OpeningProof` | 96 | 8 | `input_queries` @0, `input_caps` @16, `fri_proof` @32 |
+| `verifier.PcsOpening` | 96 | 8 | `proof` @0 (its only field — no `entry_claims`; the verifier reconstructs those from `rounds[*].cells` instead) |
+| `verifier.Proof` | 128 | 8 | `rounds` @0, `module_sizes` @16, `pcs_opening` @32 |
 
 Unions and optionals. Zig gives **no ABI guarantee** for these — the offsets are
 measured facts about one compiler version, not language guarantees. Per §2 we
@@ -176,9 +180,11 @@ serialize them as they are; §7 covers keeping the numbers honest.
 | `value.Scalar` | 28 | 4 | @0, 24B | `u8` @24, 3B pad | `0` = base, `1` = ext |
 | `?protocol.Commitment` | 36 | 4 | @0, 32B | `u8` @32, 3B pad | `0` = absent, `1` = present |
 | `?merkle.RowPair` | 72 | 8 | @0, 64B | `u8` @64, 7B pad | `0` = null, `1` = present |
+| `?poseidon2.Digest` | 36 | 4 | @0, 32B | `u8` @32, 3B pad | `0` = null, `1` = present |
 
-The root `verifier.Proof` occupies image offsets `[0, 96)`, because the loader
-casts the base address itself.
+The root `verifier.VerifyInput` occupies image offsets `[0, 144)`: its
+`proof` field is a 128-byte `verifier.Proof` followed by the public-input slice
+header at offset 128. The loader casts the base address itself to this root.
 
 ## 7. Field ordering is pinned and machine-checked
 
@@ -304,7 +310,7 @@ The rule needs the bump pointer rather than `self + 16` in two cases:
 
 - A struct with more than one field. The root's `rounds` header sits at `[0,16)`,
   but offset 16 is `module_sizes`, not the rounds payload — so the payload goes
-  after the whole 112-byte root.
+  after the whole 144-byte root.
 - A slice whose elements themselves contain slices (`[]RoundMessage`,
   `[]InputTreeOpening`, `[]const []const Branch`). The element array must be
   contiguous for the guest to index it by stride, so the elements' own payloads
@@ -317,7 +323,7 @@ by emitting children before parents. Either is trivial since encode cost is free
 depth-first-with-patching is preferable because it gives the guest better
 locality — a structure and the data it points at end up adjacent.
 
-The root is the one fixed constraint: it must occupy `[0, 112)`, so reserve it up
+The root is the one fixed constraint: it must occupy `[0, 144)`, so reserve it up
 front and fill it last.
 
 ## 9. Determinism: match Zig's own representation
@@ -403,8 +409,8 @@ circuit. All four programs above happened to have 4 trees and depth 17, which is
 what made it look constant.
 
 Measured across the 29 `wioptest` circuits (`TestImageShapeIsCircuitDependent`),
-leaf slots per query ranges **6 to 12** — a 2× spread — and overhead runs **54%
-to 72%** of the image on those small circuits, against 3–4% on the larger
+leaf slots per query ranges **6 to 12** — a 2× spread — and overhead runs **68%
+to 89%** of the image on those small circuits, against 3–4% on the larger
 programs above. The ratio improves as row data grows, but nothing about it is
 constant.
 
@@ -415,19 +421,18 @@ withdrawn.
 
 **The space tradeoff is a non-issue at production circuit sizes.** For the larger
 programs the image costs **3–4% over a packed encoding**, so zero-cost decoding
-is bought for a rounding error. On small circuits the ratio is much worse (54–72%)
+is bought for a rounding error. On small circuits the ratio is much worse (68–89%)
 because the fixed FRI structure dominates a tiny payload — but a proof that small
 is not worth optimising.
 
 **The model is validated against the encoder, not just asserted.**
 `TestMeasureAgreesWithEncode` compares `Measure`'s arithmetic against
 `len(Encode(...))` on real proofs; they now agree **byte for byte, with zero
-padding**. That comparison immediately found a bug in the model: it counted a
-192-byte "pcs_opening header" for `PcsOpening` + `OpeningProof` + `fri.Proof`,
-all three of which are stored *inline* in their parent and were therefore already
-inside the root's 112 bytes. Every figure this document quoted was inflated by
-that fixed 192 bytes — negligible against 43 MB, but the model was unchecked
-until the encoder existed to check it against.
+padding**. That comparison previously found a bug in the model: it counted the
+nested `PcsOpening` + `OpeningProof` + `fri.Proof` headers even though all three
+are stored *inline* in their parent and are already inside the root's 144 bytes.
+The corrected model counts those bytes exactly once; the encoder comparison is
+what keeps this invariant checked.
 
 **Opened row data is 91–93% of the image** and is pure field elements. Nothing
 about the format touches it.
@@ -443,7 +448,8 @@ own.
 of which the flag-plus-padding is 125 KB and null slots are 148–577 KB depending
 on the program. §4.4's question — can the verifier derive presence from the
 reconstructed layout? — is worth roughly 1% of the image. Worth asking, not worth
-blocking on.
+blocking on. The top 8 of the 17 slots are null in every branch, where presence
+is a function of the cap depth alone, which the verifier already derives.
 
 **Fits the guest comfortably.** At 43 MiB the largest measured image uses 4% of
 the 1 GiB `IN` region (§5.1).
@@ -454,15 +460,22 @@ memory image is fine as a RAM witness and wrong as a network payload.
 ### 11.2 Structural constants
 
 Identical across all four programs, since they follow from the FRI parameters
-rather than the circuit: 229 queries, 4 input trees per query, opening depth 17,
-16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
-30,915 branch sibling digests, 1 final-poly coefficient. Only `row data` and
-`cells` scale with the program.
+rather than the circuit: 229 queries, 4 input trees per query, input tree height
+17 (so 17 `?RowPair` slots per branch, the top 8 of them null under a depth-8
+cap), 16 FRI rounds (15 round roots), 15 layers per running query, 3435 branches,
+9,847 branch sibling digests, 1 final-poly coefficient. The cap structure is
+fixed by the FRI/input-tree parameters; `row data`, cap row data, and `cells`
+scale with the program.
 
-Also confirmed: **all 30,915 `AuxSiblings` slots are nil**, so the Zig
-`merkle.Branch` having no such field (§3) drops nothing. Had any been non-nil it
-would have meant the two verifiers reconstruct different roots — checked
-explicitly rather than assumed, since the projection silently discards the field.
+The sibling count follows from the cap depths: running layer `j` has height
+`17 - j` and cap depth `min(8, 16 - j)`, leaving 43 siblings per query. The
+frontiers cost 2,302 digests and 2,287 auxiliary slots once, shared across every
+query.
+
+Running-query branches now carry exactly the fields consumed by Zig (`siblings`
+and `leaf`). Merkle-cap auxiliary nodes are represented explicitly in each
+`round_caps` entry and are therefore included in the image rather than silently
+dropped during projection.
 
 ### 11.3 Still not counted
 
