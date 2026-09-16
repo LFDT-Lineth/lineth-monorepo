@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const field = @import("../field/koalabear.zig");
@@ -10,6 +11,7 @@ pub const CellError = error{CellRefOutOfRange};
 
 pub const Error = error{
     InvalidRoundCount,
+    InvalidSpec,
     MissingDynamicModuleSize,
     DynamicModuleSizeTooLarge,
     /// A `shared_randomness_gamma_refs` entry named a round/index the bound
@@ -18,6 +20,10 @@ pub const Error = error{
     /// about the shared-randomness layout.
     InvalidSharedRandomnessGamma,
 } || CellError;
+
+pub const ReplayLimits = struct {
+    total_round_coins: usize,
+};
 
 pub const Scalar = types.Scalar;
 pub const Coin = types.Coin;
@@ -83,7 +89,7 @@ pub const Context = struct {
     rounds: []const RoundMessage,
 
     /// Bounds-checked access to a transcript cell by its (round, index) ref.
-    /// `round`/`index` come from the trusted comptime System, but `rounds` and
+    /// `round`/`index` come from the trusted decoded System, but `rounds` and
     /// each round's `cells` slice length come from the (untrusted) proof, so an
     /// adversarial proof with a short round/cells slice would otherwise read out
     /// of bounds — a memory-safety issue in bounds-check-off R5 builds. Returns an
@@ -129,6 +135,20 @@ pub fn replayWithTranscript(
         validateSpec(spec);
     }
 
+    return replayWithTranscriptRuntime(.{ .total_round_coins = spec.total_round_coins }, transcript, spec, rounds, module_sizes);
+}
+
+/// Runtime-metadata counterpart to replayWithTranscript. Only the output
+/// capacity remains comptime so callers retain bounded stack storage.
+pub fn replayWithTranscriptRuntime(
+    comptime limits: ReplayLimits,
+    transcript: *fiat_shamir.Transcript,
+    spec: Spec,
+    rounds: []const RoundMessage,
+    module_sizes: []const usize,
+) Error![limits.total_round_coins]Coin {
+    if (!validSpecRuntime(spec) or spec.total_round_coins > limits.total_round_coins) return error.InvalidSpec;
+
     // round_coin_counts[0] is the pre-round-1 phase, so there is one message
     // round per remaining entry.
     if (rounds.len != spec.round_coin_counts.len - 1) return error.InvalidRoundCount;
@@ -141,15 +161,15 @@ pub fn replayWithTranscript(
         if (size > spec.column_size_max_supported) return error.DynamicModuleSizeTooLarge;
     }
 
-    var all_coins: [spec.total_round_coins]Coin = undefined;
+    var all_coins: [limits.total_round_coins]Coin = undefined;
 
-    inline for (1..spec.round_coin_counts.len) |round_index| {
+    for (1..spec.round_coin_counts.len) |round_index| {
         // Mirror prover-ray's `Runtime.AdvanceRound`: before absorbing the
         // round's commitment/cells, feed each dynamic module's runtime
         // size (as a base-field element) into the transcript. Runs at every round
         // advance, so a size is absorbed once per replayed round — matching the
         // prover exactly, which is what keeps the derived eval coin `r` in sync.
-        if (comptime spec.dynamic_module_count > 0) {
+        if (spec.dynamic_module_count > 0) {
             for (module_sizes[0..spec.dynamic_module_count]) |size| {
                 transcript.updateElement(field.Element.init(@intCast(size)));
             }
@@ -165,7 +185,7 @@ pub fn replayWithTranscript(
         // only hook any wiop compiler registers today is the shared-randomness
         // seed override, so this replays that directly rather than
         // representing hooks as a general mechanism.
-        if (comptime spec.shared_randomness_coin_round) |gamma_round| {
+        if (spec.shared_randomness_coin_round) |gamma_round| {
             if (round_index == gamma_round) {
                 transcript.setState(try gammaDigest(spec, rounds));
             }
@@ -182,12 +202,12 @@ pub fn replayWithTranscript(
 /// Rebuilds γ as a Poseidon2 octuplet from the bound round cells named by
 /// `spec.shared_randomness_gamma_refs`, in limb order. Called once per replay,
 /// right before the shared-randomness coin round's coins are squeezed.
-fn gammaDigest(comptime spec: Spec, rounds: []const RoundMessage) Error!poseidon2.Digest {
+fn gammaDigest(spec: Spec, rounds: []const RoundMessage) Error!poseidon2.Digest {
     if (spec.shared_randomness_gamma_refs.len != @typeInfo(poseidon2.Digest).array.len)
         return error.InvalidSharedRandomnessGamma;
 
     var digest: poseidon2.Digest = undefined;
-    inline for (spec.shared_randomness_gamma_refs, 0..) |ref, i| {
+    for (spec.shared_randomness_gamma_refs, 0..) |ref, i| {
         if (ref.round >= rounds.len) return error.InvalidSharedRandomnessGamma;
         const cells = rounds[ref.round].cells;
         if (ref.index >= cells.len) return error.InvalidSharedRandomnessGamma;
@@ -197,6 +217,22 @@ fn gammaDigest(comptime spec: Spec, rounds: []const RoundMessage) Error!poseidon
         };
     }
     return digest;
+}
+
+fn validSpecRuntime(spec: Spec) bool {
+    if (spec.round_coin_counts.len == 0 or spec.round_coin_counts[0] != 0) return false;
+    if (spec.round_coin_offsets.len != spec.round_coin_counts.len) return false;
+    var expected_offset: usize = 0;
+    for (spec.round_coin_counts, spec.round_coin_offsets) |count, offset| {
+        if (offset != expected_offset) return false;
+        expected_offset = std.math.add(usize, expected_offset, count) catch return false;
+    }
+    if (spec.total_round_coins != expected_offset) return false;
+    if (spec.shared_randomness_coin_round) |round| {
+        if (round == 0 or round >= spec.round_coin_counts.len) return false;
+        if (spec.shared_randomness_gamma_refs.len != 8) return false;
+    } else if (spec.shared_randomness_gamma_refs.len != 0) return false;
+    return true;
 }
 
 fn validateSpec(comptime spec: Spec) void {
