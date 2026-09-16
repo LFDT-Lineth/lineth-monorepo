@@ -14,9 +14,9 @@ include "memory.zkc"
 include "../lib/poseidon2/ram.zkc"
 
 // -- PREDECODING PROOF SECTION -- 
-include "../predecoding/predecoding.zkc"
-include "../predecoding/read_instruction.zkc"
-include "../predecoding/executable_region.zkc"
+// include "../predecoding/predecoding.zkc"
+// include "../predecoding/read_instruction.zkc"
+// include "../predecoding/executable_region.zkc"
 // -- PREDECODING PROOF SECTION END-- 
 
 // TODO @Ghost
@@ -42,13 +42,13 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // - comment the section labeled from "NO PREDECODING PROOF"
     //   to "NO PREDECODING PROOF END"
 
-    var pc_predecoding:Address = base
-    var exec_end:Address = executable_region_end()
-    while pc_predecoding<exec_end {
-        var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
-        predecoding(pc_predecoding, instruction)
-        pc_predecoding = (pc_predecoding + 4) as Address
-    }
+    // var pc_predecoding:Address = base
+    // var exec_end:Address = executable_region_end()
+    // while pc_predecoding<exec_end {
+    //     var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
+    //     predecoding(pc_predecoding, instruction)
+    //     pc_predecoding = (pc_predecoding + 4) as Address
+    // }
 
     // =============================
     // Loading blobs data into RAM
@@ -73,11 +73,11 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
 
     // -- PREDECODING PROOF SECTION -- 
     // parameters: clock_cycle, base, pc, exec_end, output_write_address
-    interpreter!(0, base, entry_point, exec_end, 0)
+    // interpreter!(0, base, entry_point, exec_end, 0)
     // -- PREDECODING PROOF SECTION END-- 
 
     // -- NO PREDECODING PROOF -- 
     // parameters: clock_cycle, base, pc, output_write_address
-    // interpreter!(0, base, entry_point, 0)
+    interpreter!(0, base, entry_point, 0)
     // -- NO PREDECODING PROOF END-- 
 }

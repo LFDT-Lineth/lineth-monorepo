@@ -13,7 +13,7 @@ pub input blobs_offset_and_size(i:u64) -> (blob_offset:Address, blob_size:Length
 
 // -- PREDECODING PROOF SECTION -- 
 // Whether blob i holds executable (SHF_EXECINSTR) section bytes (1) or data (0).
-pub input blobs_executable(i:u64) -> (executable:u1)
+// pub input blobs_executable(i:u64) -> (executable:u1)
 // -- PREDECODING PROOF SECTION END-- 
 
 // Concatenated bytes for all sparse memory blobs, in blob order
