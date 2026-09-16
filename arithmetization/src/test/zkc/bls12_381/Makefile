@@ -29,8 +29,9 @@
 #
 # Two targets:
 #   test     -- full suite (>1 hour, developer / scheduled)
-#   test-ci  -- bounded CI target (<15 min): all cheap harnesses run their full
-#               fixture set; the four slow ones sample one accept + one reject
+#   test-ci  -- bounded CI target (<15 min): the cheap harnesses and pairing_ram
+#               run their full fixture set, the slow curve-math ones sample one
+#               accept + one reject
 
 SHELL := /bin/sh
 
@@ -75,13 +76,19 @@ test:
 	if [ $$rc -eq 0 ]; then echo "ALL OK"; else echo "FAILURES"; fi; \
 	exit $$rc
 
-# Bounded CI target.  All harnesses are covered; the four slow ones (miller,
-# final_exp, pairing_check, pairing_ram -- each fixture ~1 min under -c) are
-# sampled to one accept and one reject so the whole target fits in ~10 minutes.
-# The full suite is `make test` (>1 hour).
+# Bounded CI target.  All harnesses are covered; the slow pure-curve-math ones
+# (miller, final_exp, pairing_check -- each fixture ~1 min under -c) are sampled
+# to one accept and one reject so the whole target fits in ~10 minutes. The full
+# suite is `make test` (>1 hour).
+#
+# pairing_ram is NOT sampled. It is the only harness that reaches guest RAM and
+# the only one that can stage more than one chunk, so it owns both the ABI byte
+# layout and the >64-pair chunked path -- sampling it would take the one-pair
+# fixture and silently skip every chunk-boundary case. All 11 of its fixtures
+# run in ~2 minutes, which the budget affords.
 #
 # The n_h list encodes the per-harness fixture cap as "CAP:NAME": 9999 is
-# effectively unlimited (no cheap harness has anywhere near that many fixtures).
+# effectively unlimited (no harness has anywhere near that many fixtures).
 .PHONY: test-ci
 test-ci:
 	@dir=$$(mktemp -d); tmp=$$dir/case.json; err=$$dir/err; \
@@ -89,7 +96,7 @@ test-ci:
 	    9999:fp2_arith 9999:fp2_inv 9999:fp12_arith 9999:fp12_ops \
 	    9999:g1_add 9999:g1_mul 9999:g1_subgroup \
 	    9999:g2_add 9999:g2_mul 9999:g2_subgroup \
-	    1:miller 1:final_exp 1:pairing_check 1:pairing_ram; do \
+	    1:miller 1:final_exp 1:pairing_check 9999:pairing_ram; do \
 		n=$${n_h%%:*}; h=$${n_h##*:}; \
 		echo "=== $$h ==="; \
 		for kind in accepts rejects; do \

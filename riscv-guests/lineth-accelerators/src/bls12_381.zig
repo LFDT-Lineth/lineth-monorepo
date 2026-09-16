@@ -26,7 +26,7 @@ pub const zkvm_bls12_381_pairing_pair = extern struct {
 };
 
 // Status values returned in rd by the accelerator. Kept in sync with
-// pairing_check_bls12_381 in arithmetization/src/main/lib/bls12_381/pairing.zkc.
+// bls12_pairing_check in arithmetization/src/main/lib/bls12_381/impl.zkc.
 const STATUS_INVALID: usize = 0;
 const STATUS_VALID_NOT_ONE: usize = 1;
 const STATUS_VALID_ONE: usize = 2;
@@ -53,9 +53,9 @@ const STATUS_VALID_ONE: usize = 2;
 //     bytes32(0).
 // Collapsing them would turn every "pairing != 1" answer into a frame revert.
 //
-// The arithmetization aborts rather than answering if num_pairs exceeds its
-// staging area (64). That bound is above anything the pairing's proving cost
-// makes practical, but it is a hard limit rather than a graceful one.
+// num_pairs is passed through unbounded. The arithmetization's staging area
+// holds 64 pairs and it processes longer calls in successive chunks, so there is
+// no count this wrapper has to screen for — only proving cost grows, linearly.
 pub fn zkvm_bls12_pairing(
     pairs: [*c]const zkvm_bls12_381_pairing_pair,
     num_pairs: usize,

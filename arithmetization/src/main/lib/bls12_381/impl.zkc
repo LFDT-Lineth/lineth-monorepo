@@ -7,8 +7,8 @@ include "../../common/type.zkc"
 // EIP-2537 BLS12_PAIRING_CHECK (precompile 0x0f) — the RAM/ABI layer.
 //
 // This is the thin part: it decodes the guest's pair array out of RAM into the
-// staging area and hands off to pairing_check_bls12_381, which owns all of the
-// curve semantics. Everything interesting is in pairing.zkc.
+// staging area and hands off to pairing_accumulate_bls12_381, which owns all of
+// the curve semantics. Everything interesting is in pairing.zkc.
 //
 // R-TYPE ABI (opcode custom-0 = 0x0b, funct3 0b000, funct7 0b0001111):
 //     rs1 = pointer to the pair array
@@ -48,33 +48,58 @@ const BLS12_381_PAIR_BYTES:Address = 288
 
 // Decode `num_pairs` pairs starting at `pairs_ptr` and run the check.
 //
-// `num_pairs` above BLS12_381_MAX_PAIRS is a `fail`, inherited from
-// pairing_check_bls12_381 — see the capacity note there for why answering
-// "invalid" instead would be a consensus bug. The gas schedule (32600*k +
-// 37700) does admit larger k, so this is a reachable liveness limit rather
-// than an impossible one; it is bounded here as well as there so the failure
-// happens before any RAM is touched.
+// CHUNKED, because `num_pairs` is unbounded. The staging area holds only
+// BLS12_381_MAX_PAIRS pairs, but the gas schedule (32600*k + 37700) lets a
+// single valid transaction pass far more than that — 65 is affordable outright
+// and a whole block admits thousands. Failing on those would abort the proof
+// for input the real EVM executes happily, so instead the pairs are read and
+// Miller-looped in batches of BLS12_381_MAX_PAIRS, each batch's output
+// multiplied into one accumulator, and a SINGLE final exponentiation applied at
+// the end. See pairing_accumulate_bls12_381 for why that is exactly equivalent.
+//
+// The whole call is still one status: a chunk reporting an invalid pair rejects
+// the entire precompile invocation, matching EIP-2537, which validates every
+// point before producing a result.
+//
+// num_pairs == 0 yields status 2, the empty product. zesu rejects empty calldata
+// before it gets here, but the arithmetization should not depend on that.
 fn bls12_pairing_check<ram, bls_fp12_mem>(pairs_ptr:Address, num_pairs:u64) -> (status:u2) {
-    if num_pairs>(BLS12_381_MAX_PAIRS as u64) {
-        printf "[ERROR] BLS12_PAIRING_CHECK: %d pairs exceeds the staging area\n", num_pairs
-        fail
-    }
+    status = 0
 
-    var n:u8 = num_pairs as u8
+    fp12_set_one_bls12_381(PC_ACC)
+
+    var chunk_max:u64 = BLS12_381_MAX_PAIRS as u64
+    var remaining:u64 = num_pairs
     var addr:Address = pairs_ptr
 
-    for i:u8 = 0; i<n; i = i + 1 {
-        var xP:u384 = read_u384_be(addr)
-        var yP:u384 = read_u384_be(addr + 48)
-        var qx0:u384 = read_u384_be(addr + 96)
-        var qx1:u384 = read_u384_be(addr + 144)
-        var qy0:u384 = read_u384_be(addr + 192)
-        var qy1:u384 = read_u384_be(addr + 240)
-        stage_pair_bls12_381(i, xP, yP, qx0, qx1, qy0, qy1)
-        addr = addr + BLS12_381_PAIR_BYTES
+    // Steps by chunk_max, so this runs ceil(num_pairs / chunk_max) times and
+    // not at all when num_pairs is zero. Counting up avoids a u64 division.
+    for c:u64 = 0; c<num_pairs; c = c + chunk_max {
+        var chunk:u8 = BLS12_381_MAX_PAIRS
+        if remaining<chunk_max {
+            chunk = remaining as u8
+        }
+
+        for i:u8 = 0; i<chunk; i = i + 1 {
+            var xP:u384 = read_u384_be(addr)
+            var yP:u384 = read_u384_be(addr + 48)
+            var qx0:u384 = read_u384_be(addr + 96)
+            var qx1:u384 = read_u384_be(addr + 144)
+            var qy0:u384 = read_u384_be(addr + 192)
+            var qy1:u384 = read_u384_be(addr + 240)
+            stage_pair_bls12_381(i, xP, yP, qx0, qx1, qy0, qy1)
+            addr = addr + BLS12_381_PAIR_BYTES
+        }
+
+        if pairing_accumulate_bls12_381(chunk, PC_ACC) != 1 {
+            // Rejected: status stays 0 and no final exponentiation runs.
+            return
+        }
+
+        remaining = remaining - (chunk as u64)
     }
 
-    // n == 0 yields status 2, the empty product. zesu rejects empty calldata
-    // before it gets here, but the arithmetization should not depend on that.
-    status = pairing_check_bls12_381(n)
+    // num_pairs == 0 reaches here with the accumulator still at one, which the
+    // final exponentiation maps to one -- the status 2 the empty product wants.
+    status = pairing_finish_bls12_381(PC_ACC)
 }

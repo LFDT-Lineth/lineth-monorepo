@@ -21,6 +21,14 @@
 // aligned fast path worth ~5x, and every EIP-2537 field element is a
 // multiple of 4 bytes, so aligning the array aligns every element.
 //
+// THE OTHER THING THIS EXISTS TO CATCH is the chunk boundary. This is the
+// only harness that can stage more than BLS12_381_MAX_PAIRS = 64 pairs, so
+// it is the only place the chunked Miller loop is reachable: a longer call
+// is read in batches of 64 and the batches' Miller outputs multiplied
+// before one final exponentiation. The >64-pair fixtures put live pairs on
+// either side of the boundary so that dropping a chunk's contribution
+// changes the answer -- see the note above them in pairing_ram.accepts.
+//
 // Status values are the precompile's:
 //   0 = input rejected (the EVM frame must revert)
 //   1 = accepted, product != 1
@@ -45,25 +53,28 @@ const PAIRS_BASE:Address = 0x100
 pub input n(address:u1) -> (v:u8)
 pub input want(address:u1) -> (v:u8)
 
-pub input px(address:u6) -> (v:u384)
-pub input py(address:u6) -> (v:u384)
-pub input qx0(address:u6) -> (v:u384)
-pub input qx1(address:u6) -> (v:u384)
-pub input qy0(address:u6) -> (v:u384)
-pub input qy1(address:u6) -> (v:u384)
+// u8, not u6: this is the only harness that can exceed one staging chunk, and
+// the >64-pair fixtures below need to address up to 255 pairs. A u6 index would
+// wrap silently at 64 and alias later pairs onto earlier ones -- which for a
+// chunk-boundary test would quietly make the thing under test untested.
+pub input px(address:u8) -> (v:u384)
+pub input py(address:u8) -> (v:u384)
+pub input qx0(address:u8) -> (v:u384)
+pub input qx1(address:u8) -> (v:u384)
+pub input qy0(address:u8) -> (v:u384)
+pub input qy1(address:u8) -> (v:u384)
 
 fn main<ram, bls_fp12_mem>() {
     var k:u8 = n[0]
 
     var addr:Address = PAIRS_BASE
     for i:u8 = 0; i<k; i = i + 1 {
-        var j:u6 = i as u6
-        write_u384_be(addr, px[j])
-        write_u384_be(addr + 48, py[j])
-        write_u384_be(addr + 96, qx0[j])
-        write_u384_be(addr + 144, qx1[j])
-        write_u384_be(addr + 192, qy0[j])
-        write_u384_be(addr + 240, qy1[j])
+        write_u384_be(addr, px[i])
+        write_u384_be(addr + 48, py[i])
+        write_u384_be(addr + 96, qx0[i])
+        write_u384_be(addr + 144, qx1[i])
+        write_u384_be(addr + 192, qy0[i])
+        write_u384_be(addr + 240, qy1[i])
         addr = addr + 288
     }
 

@@ -37,6 +37,9 @@ pub input qx1(address:u6) -> (v:u384)
 pub input qy0(address:u6) -> (v:u384)
 pub input qy1(address:u6) -> (v:u384)
 
+// Drives one chunk, which is all a <=64-pair batch needs. This is the exact
+// sequence bls12_pairing_check runs; the multi-chunk path is covered by
+// pairing_ram.zkc, which is the only harness that can stage more than 64 pairs.
 fn main<bls_fp12_mem>() {
     var k:u8 = n[0]
 
@@ -45,7 +48,14 @@ fn main<bls_fp12_mem>() {
         stage_pair_bls12_381(i, px[j], py[j], qx0[j], qx1[j], qy0[j], qy1[j])
     }
 
-    if (pairing_check_bls12_381(k) as u8) != want[0] {
+    fp12_set_one_bls12_381(PC_ACC)
+
+    var status:u2 = 0
+    if pairing_accumulate_bls12_381(k, PC_ACC) == 1 {
+        status = pairing_finish_bls12_381(PC_ACC)
+    }
+
+    if (status as u8) != want[0] {
         fail
     }
 }

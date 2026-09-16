@@ -52,6 +52,12 @@ const BLS12_381_SEED_BITS:u64 = 0xd201000000010000
 //     +2 .. +5  Qx0,Qx1,Qy0,Qy1   the G2 point, affine
 //     +6 ..+11  TX0..TZ1          the running projective T, owned by the loop
 // The caller fills the first six; the Miller loop initialises and owns the rest.
+//
+// This is a CHUNK SIZE, not a limit on the precompile's input. 64 is what the
+// region map allows -- (BLS_MEM_WORK - BLS_MEM_PAIRS) / 12 = (960 - 192) / 12
+// exactly -- so slot 64 would start on top of ML_F. Calls with more pairs than
+// this are processed in successive chunks and their Miller outputs multiplied
+// together; see pairing_accumulate_bls12_381.
 // ----------------------------------------------------------------------------
 const BLS12_381_MAX_PAIRS:u8 = 64
 
@@ -65,7 +71,8 @@ const FE_T:u12 = 1020
 const FE_U:u12 = 1032 // holds f across the whole hard part
 const XT_ACC:u12 = 1044 // fp12_expt accumulator
 const XT_TMP:u12 = 1056
-const PC_OUT:u12 = 1068 // pairing_check: Miller output
+const PC_OUT:u12 = 1068 // pairing_check: per-chunk Miller output
+const PC_ACC:u12 = 1080 // pairing_check: Miller product across chunks
 
 // ----- line + point steps -----
 //
@@ -194,8 +201,12 @@ fn pair_slot_bls12_381(i:u8) -> (base:u12) {
 //
 // The bound is enforced rather than trusted: slot 64 starts exactly where the
 // work region does, so an unchecked overflow would quietly overwrite the Miller
-// accumulator and yield a wrong answer instead of an error. See the note on
-// pairing_check_bls12_381 for why this is a `fail`.
+// accumulator and yield a wrong answer instead of an error.
+//
+// This `fail` is an INTERNAL invariant, not an input limit. `i` is an index
+// within the current chunk, and every caller derives it from a loop bounded by
+// BLS12_381_MAX_PAIRS, so reaching it means the chunking above is broken --
+// which is a prover bug, not a rejectable EVM input.
 fn stage_pair_bls12_381<bls_fp12_mem>(i:u8, xP:u384, yP:u384,
 qx0:u384, qx1:u384, qy0:u384, qy1:u384) {
     if i >= BLS12_381_MAX_PAIRS {
@@ -223,8 +234,9 @@ qx0:u384, qx1:u384, qy0:u384, qy1:u384) {
 //
 // Each pair must already be staged (see stage_pair_bls12_381) and must be a
 // genuine, validated, non-infinity point on both sides; the affine T
-// initialisation below cannot represent the identity. pairing_check_bls12_381
-// screens for that. `out` must lie outside the work region.
+// initialisation below cannot represent the identity.
+// pairing_accumulate_bls12_381 screens for that. `out` must lie outside the
+// work region.
 fn miller_loop_multi_bls12_381<bls_fp12_mem>(n:u8, out:u12) {
     // T <- Q, in projective coordinates with Z = 1
     var base:u12 = BLS_MEM_PAIRS
@@ -452,7 +464,7 @@ fn fp12_final_exp_bls12_381<bls_fp12_mem>(a:u12, o:u12) {
 //
 // MUST be called after miller_loop_multi_bls12_381 and before anything that
 // reuses the T cells. `base` must be a LIVE pair, i.e. Q is not the encoded
-// infinity -- pairing_check_bls12_381 has already dropped those.
+// infinity -- pairing_accumulate_bls12_381 has already dropped those.
 fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
     res = 0
 
@@ -483,15 +495,29 @@ fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
     }
 }
 
-// EIP-2537 BLS12_PAIRING_CHECK over n staged pairs.
+// Validate the n staged pairs, run the shared Miller loop over the live ones,
+// and fold the chunk's Miller output into the Fp12 accumulator at `acc`.
 //
-//   0  input rejected: some coordinate is non-canonical, off-curve, or outside
-//      the prime-order subgroup. The EVM frame must revert.
-//   1  input accepted, the product of pairings is NOT 1.
-//   2  input accepted, the product of pairings IS 1.
+// This is the per-CHUNK half of EIP-2537 BLS12_PAIRING_CHECK, and
+// pairing_finish_bls12_381 is the other half. The split exists because the
+// staging area holds only BLS12_381_MAX_PAIRS pairs while the gas schedule
+// (32600*k + 37700) admits far more, so a large call is processed in successive
+// chunks. That is sound because the Miller loop is MULTIPLICATIVE over pairs:
 //
-// Invalid input is a status rather than a `fail` on purpose: a bad precompile
-// argument is a normal, provable EVM outcome, so it must not abort the proof.
+//     prod_i f_{x,Qi}(Pi)  =  prod_chunks ( prod_{i in chunk} f_{x,Qi}(Pi) )
+//
+// and the final exponentiation is a group homomorphism, so raising the single
+// accumulated product to (p^12-1)/r at the end gives the same answer as
+// exponentiating each chunk and multiplying -- for a fraction of the cost.
+//
+// Returns ok = 0 iff some pair is invalid (non-canonical, off-curve, or outside
+// the prime-order subgroup). The caller must then report status 0 WITHOUT
+// calling pairing_finish_bls12_381. Invalid input is a status rather than a
+// `fail` on purpose: a bad precompile argument is a normal, provable EVM
+// outcome, so it must not abort the proof.
+//
+// A chunk of nothing but infinities leaves `acc` untouched, which is correct --
+// those pairs contribute e(O, Q) = e(P, O) = 1.
 //
 // Both subgroup checks are mandatory here. Unlike G1ADD/G2ADD, a pairing over
 // off-subgroup points is not just meaningless but forgeable.
@@ -504,29 +530,22 @@ fn t_matches_psi_bls12_381<bls_fp12_mem>(base:u12) -> (res:u1) {
 // a precompile. It is safe to run the loop on an unvalidated (but on-twist)
 // point: every operation in it is mulmod/addmod, so a degenerate T merely
 // produces a garbage f, and we reject before f reaches the final exponentiation
-// (the only place an inversion happens).
+// (the only place an inversion happens). Chunking preserves that ordering: EVERY
+// chunk's psi checks run before the single final exponentiation, because the
+// caller aborts on ok == 0 and only ever finishes after the last chunk.
 //
-// Pairs with an infinity on either side contribute e(O, Q) = e(P, O) = 1 and are
-// dropped -- they are also the one input the Miller loop cannot represent, since
-// its T starts from an affine Q. Dropping them compacts the live pairs to the
-// front of the staging area, which is why validation and compaction share a
-// pass.
+// Pairs with an infinity on either side are dropped -- they are also the one
+// input the Miller loop cannot represent, since its T starts from an affine Q.
+// Dropping them compacts the live pairs to the front of the staging area, which
+// is why validation and compaction share a pass.
 //
-// n == 0 yields status 2, the empty product. Whether an empty *calldata* is even
-// a legal invocation is an ABI question, not a curve one, and belongs to the
-// caller that decodes the input.
+// n == 0 leaves `acc` untouched.
 //
-// CAPACITY. n > BLS12_381_MAX_PAIRS is a `fail`, deliberately, and it is the one
-// place here that aborts rather than returning a status. The gas schedule
-// (32600*k + 37700) admits far more pairs than the staging area holds, so a
-// large k is reachable from valid calldata -- but returning 0 for it would be a
-// consensus bug, since the real EVM would accept and compute. Aborting the proof
-// is a liveness failure; answering wrongly is a safety failure. Once the ABI
-// layer exists it should bound k up front, and raising the bound here means
-// widening the address type and moving the work region.
-fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
-    status = 0
+// `acc` must be disjoint from ML_F and PC_OUT.
+fn pairing_accumulate_bls12_381<bls_fp12_mem>(n:u8, acc:u12) -> (ok:u1) {
+    ok = 0
     if n>BLS12_381_MAX_PAIRS {
+        // A chunking bug, not a rejectable input -- see stage_pair_bls12_381.
         fail
     }
 
@@ -586,7 +605,8 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
     }
 
     if m == 0 {
-        status = 2
+        // Every pair had an infinity: the empty product. Leave `acc` alone.
+        ok = 1
         return
     }
 
@@ -594,8 +614,8 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
 
     // Now that T = [|x|]Q for every live pair, the deferred G2 subgroup checks
     // are just comparisons. This must happen BEFORE the final exponentiation:
-    // that is the only step here that inverts, and an unvalidated point can
-    // drive the Miller output somewhere the inversion has no meaning.
+    // that is the only step that inverts, and an unvalidated point can drive
+    // the Miller output somewhere the inversion has no meaning.
     var base:u12 = BLS_MEM_PAIRS
     for i:u8 = 0; i<m; i = i + 1 {
         if t_matches_psi_bls12_381(base) != 1 {
@@ -604,7 +624,32 @@ fn pairing_check_bls12_381<bls_fp12_mem>(n:u8) -> (status:u2) {
         base = base + 12
     }
 
-    fp12_final_exp_bls12_381(PC_OUT, ML_F)
+    // acc <- acc * f_chunk. fp12_mul needs its destination disjoint from both
+    // sources, and ML_F is dead the moment the Miller loop has written PC_OUT,
+    // so it serves as the temporary.
+    fp12_mul_bls12_381(acc, PC_OUT, ML_F)
+    fp12_copy_bls12_381(ML_F, acc)
+
+    ok = 1
+}
+
+// Final exponentiation over the accumulated Miller product, then the comparison
+// that is the precompile's actual answer.
+//
+//   1  accepted, the product of pairings is NOT 1
+//   2  accepted, the product of pairings IS 1
+//
+// No special case for "every pair was an infinity". That leaves `acc` at the
+// multiplicative identity, and the identity is a fixed point of every operation
+// the final exponentiation performs (mul, conj, inv, Frobenius, squaring), so it
+// comes back as 1 and the answer is the 2 the empty product requires. Skipping
+// the exponentiation would save ~7k mulmod_384 on an input no real transaction
+// sends, at the price of a second code path through the answer.
+//
+// Status 0 is NOT produced here -- a rejected input never reaches this point;
+// the caller returns 0 as soon as a chunk reports ok == 0.
+fn pairing_finish_bls12_381<bls_fp12_mem>(acc:u12) -> (status:u2) {
+    fp12_final_exp_bls12_381(acc, ML_F)
 
     if fp12_is_one_bls12_381(ML_F) == 1 {
         status = 2
