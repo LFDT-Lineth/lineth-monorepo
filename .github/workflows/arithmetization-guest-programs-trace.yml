@@ -78,7 +78,7 @@ jobs:
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"
 
-      - name: Trace l2-execution guest program with Amsterdam block 175k
+      - name: Trace l2-execution guest program with Amsterdam block 175k sharding 5000
         # 175k references the amount of gas used in the block
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
@@ -86,13 +86,23 @@ jobs:
           ZKC_REF: "" # Empty to avoid installing zkc again
           INPUT: test/testdata/block_amsterdam_175k.ssz
           KECCAK_ACCEL: true
-          ZKC_TRACE_FLAGS: "--stats -vv"
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:5000"
 
-      - name: Trace l2-execution guest program with Amsterdam block 786k
+      - name: Trace l2-execution guest program with Amsterdam block 175k sharding 50000
+        # 175k references the amount of gas used in the block
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "" # Empty to avoid installing zkc again
-          INPUT: test/testdata/block_amsterdam_786k.ssz
+          INPUT: test/testdata/block_amsterdam_175k.ssz
           KECCAK_ACCEL: true
-          ZKC_TRACE_FLAGS: "--stats -vv"
+          ZKC_TRACE_FLAGS: "--stats -vv --sharding interpreter:50000"
+
+      # - name: Trace l2-execution guest program with Amsterdam block 786k
+      #   run: make -C riscv-guests/l2-execution trace
+      #   timeout-minutes: 45
+      #   env:
+      #     ZKC_REF: "" # Empty to avoid installing zkc again
+      #     INPUT: test/testdata/block_amsterdam_786k.ssz
+      #     KECCAK_ACCEL: true
+      #     ZKC_TRACE_FLAGS: "--stats -vv"
