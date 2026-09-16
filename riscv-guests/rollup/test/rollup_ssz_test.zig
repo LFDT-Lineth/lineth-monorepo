@@ -14,7 +14,7 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
 
     const original = try sampleInput(alloc);
     const encoded = try rollup_ssz.encodeInput(alloc, original);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x02 }, encoded[0..2]);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x01 }, encoded[0..2]);
 
     const v = try rollup_ssz.decodeInput(alloc, encoded);
 

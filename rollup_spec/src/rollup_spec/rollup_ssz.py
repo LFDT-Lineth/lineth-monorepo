@@ -10,7 +10,7 @@ sibling `l2_execution_ssz.py`, mirroring the proof pipeline itself.
 Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
-  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1002) — rollup guest input
+  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
 
 The guest output container omits the `proof` field the logical `RollupProof`
@@ -60,7 +60,7 @@ from .rollup import (
 )
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_INPUT_SCHEMA_ID = 0x1002
+ROLLUP_INPUT_SCHEMA_ID = 0x1001
 ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
@@ -266,7 +266,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
 
 
 def encode_rollup_input(private_input: RollupProofPrivateInput) -> bytes:
-    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1002 schema id)."""
+    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1001 schema id)."""
     return _frame(ROLLUP_INPUT_SCHEMA_ID, _ssz_rollup_input(private_input).encode_bytes())
 
 

@@ -1,6 +1,6 @@
 # Rollup Guest (stub)
 
-Decodes the canonical `RollupProofPrivateInput` SSZ envelope (schema id `0x1002`) and emits a
+Decodes the canonical `RollupProofPrivateInput` SSZ envelope (schema id `0x1001`) and emits a
 schema-valid `RollupOutput` SSZ envelope (schema id `0x1801`), entirely by **echo or sentinel**:
 every output field is either copied from a defined place in the input, or set to a fixed,
 precomputed sentinel constant. No proof verification, no chunk/conflation folding — that logic

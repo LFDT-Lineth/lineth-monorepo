@@ -132,7 +132,7 @@ def _rollup_output_bytes() -> bytes:
 
 
 _DECODE_CASES = [
-    pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x1002, id="rollup_input"),
+    pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x1001, id="rollup_input"),
     pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x1801, id="rollup_output"),
 ]
 
