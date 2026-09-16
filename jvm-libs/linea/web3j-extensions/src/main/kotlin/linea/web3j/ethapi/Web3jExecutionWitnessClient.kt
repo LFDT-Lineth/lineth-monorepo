@@ -3,6 +3,7 @@ package linea.web3j.ethapi
 import linea.domain.BlockParameter
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
+import linea.kotlin.toHexString
 import linea.web3j.requestAsync
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.Request
@@ -35,7 +36,7 @@ class Web3jExecutionWitnessClient(
 private fun BlockParameter.toDebugExecutionWitnessRpcParam(): String =
   when (this) {
     is BlockParameter.Tag -> tag
-    is BlockParameter.BlockNumber -> number.toString()
+    is BlockParameter.BlockNumber -> number.toHexString()
     is BlockParameter.BlockHash -> hashHex
   }
 

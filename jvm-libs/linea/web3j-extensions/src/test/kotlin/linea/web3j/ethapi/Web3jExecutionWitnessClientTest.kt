@@ -50,7 +50,7 @@ class Web3jExecutionWitnessClientTest {
     wiremock.stubFor(
       post(urlEqualTo("/"))
         .withRequestBody(containing("\"method\":\"debug_executionWitness\""))
-        .withRequestBody(containing("\"params\":[\"42\"]"))
+        .withRequestBody(containing("\"params\":[\"0x2a\"]"))
         .willReturn(
           ok(
             JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
