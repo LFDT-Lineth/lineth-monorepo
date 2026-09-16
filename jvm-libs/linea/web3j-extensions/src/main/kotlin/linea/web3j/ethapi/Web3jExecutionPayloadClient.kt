@@ -35,12 +35,24 @@ class Web3jExecutionPayloadClient(
   }
 
   private fun getBlockAccessList(blockHash: String): SafeFuture<ByteArray> =
-    Request("debug_getRawBlockAccessList", listOf(blockHash), web3jService, RawDataResponse::class.java)
+    Request(
+      "engine_getPayloadBodiesByHashV2",
+      listOf(listOf(blockHash)),
+      web3jService,
+      PayloadBodiesResponse::class.java,
+    )
       .requestAsync { response ->
-        val result = requireNotNull(response.result) { "No block access list for block $blockHash" }.decodeHex()
+        val bodies = requireNotNull(response.result) { "No payload bodies for block $blockHash" }
+        require(bodies.size == 1) { "Expected one payload body for block $blockHash, got ${bodies.size}" }
+        val body = requireNotNull(bodies.single()) { "No payload body for block $blockHash" }
+        val result = requireNotNull(body.blockAccessList) { "No block access list for block $blockHash" }.decodeHex()
         require(result.isNotEmpty()) { "Empty block access list for block $blockHash" }
         result
       }
 }
 
-private class RawDataResponse : Response<String>()
+private class PayloadBodiesResponse : Response<List<PayloadBody?>>()
+
+private class PayloadBody {
+  var blockAccessList: String? = null
+}

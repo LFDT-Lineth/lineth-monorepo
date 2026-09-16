@@ -2,11 +2,13 @@ package linea.web3j.ethapi
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
 import com.github.tomakehurst.wiremock.client.WireMock.ok
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.domain.BlockParameter
 import linea.domain.toBesu
@@ -78,11 +80,32 @@ class Web3jExecutionPayloadClientTest {
   @NullSource
   @ValueSource(strings = ["0x", "0xc0", "0xzz"])
   fun `missing empty or mismatched BAL fails the request`(bal: String?) {
-    stub("debug_getRawBlockAccessList", bal)
+    stubPayloadBody(bal)
 
     assertThatThrownBy {
       client.getExecutionPayload(acquiredBlock).get()
     }.hasCauseInstanceOf(IllegalArgumentException::class.java)
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = ["[]", "[null]", "[{}]", "[null,null]"])
+  fun `missing or unexpected payload bodies fail the request`(bodies: String?) {
+    stub("engine_getPayloadBodiesByHashV2", bodies?.let(::JsonArray))
+
+    assertThatThrownBy { client.getExecutionPayload(acquiredBlock).get() }
+      .hasCauseInstanceOf(IllegalArgumentException::class.java)
+  }
+
+  @Test
+  fun `Engine API errors fail the request`() {
+    server.stubFor(
+      post(urlEqualTo("/")).withRequestBody(containing("engine_getPayloadBodiesByHashV2"))
+        .willReturn(ok("""{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}""")),
+    )
+
+    assertThatThrownBy { client.getExecutionPayload(acquiredBlock).get() }
+      .hasStackTraceContaining("Method not found")
   }
 
   @Test
@@ -92,7 +115,7 @@ class Web3jExecutionPayloadClientTest {
     assertThat(acquired.slotNumber).isEqualTo(20UL)
     assertThat(acquired.blockAccessListHash).isEqualTo(rpcBlock.getString("blockAccessListHash").decodeHex())
     assertThat(RLP.encodeBlock(acquired.toBesu())).isEqualTo(fixture.getString("rawBlock").decodeHex())
-    stub("debug_getRawBlockAccessList", fixture.getString("blockAccessList"))
+    stubPayloadBody(fixture.getString("blockAccessList"))
     val payload = client.getExecutionPayload(acquired).get()
     assertThat(payload.slotNumber).isEqualTo(20UL)
     assertThat(payload.blockHash).isEqualTo(acquired.hash)
@@ -103,8 +126,14 @@ class Web3jExecutionPayloadClientTest {
     server.verify(
       1,
       postRequestedFor(urlEqualTo("/"))
-        .withRequestBody(containing("debug_getRawBlockAccessList"))
-        .withRequestBody(containing(acquired.hash.encodeHex())),
+        .withRequestBody(
+          equalToJson(
+            """{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByHashV2",
+              "params":[["${acquired.hash.encodeHex()}"]]}""",
+            false,
+            true,
+          ),
+        ),
     )
     server.verify(2, postRequestedFor(urlEqualTo("/")))
   }
@@ -203,6 +232,21 @@ class Web3jExecutionPayloadClientTest {
 
   private fun toDomain(json: JsonObject): linea.domain.Block = ObjectMapperFactory.getObjectMapper()
     .readValue(json.encode(), EthBlockExtended.Block::class.java).toDomain()
+
+  private fun stubPayloadBody(bal: String?) {
+    stub(
+      "engine_getPayloadBodiesByHashV2",
+      listOf(
+        JsonObject(
+          mapOf(
+            "transactions" to emptyList<String>(),
+            "withdrawals" to emptyList<String>(),
+            "blockAccessList" to bal,
+          ),
+        ),
+      ),
+    )
+  }
 
   private fun stub(method: String, result: Any?) {
     server.stubFor(

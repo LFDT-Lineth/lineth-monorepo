@@ -69,6 +69,9 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.riscvStartingBlockTimestampInclusive) {
       "riscvStartingBlockTimestampInclusive must be set to use ConflationAppV2"
     }
+    requireNotNull(configs.conflation.l2EngineEndpoint) {
+      "conflation.l2-engine-endpoint must be set to use ConflationAppV2"
+    }
     requireNotNull(configs.riscvProversConfig) {
       "riscvProversConfig must be set to use ConflationAppV2"
     }
@@ -109,7 +112,9 @@ class ConflationAppV2(
 
     val web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString())
     val executionWitnessClient = Web3jExecutionWitnessClient(web3jService)
-    val executionPayloadClient = Web3jExecutionPayloadClient(web3jService)
+    val executionPayloadClient = Web3jExecutionPayloadClient(
+      createWeb3jHttpService(rpcUrl = requireNotNull(configs.conflation.l2EngineEndpoint).toString()),
+    )
     val requestBuilder = L2ExecutionRequestBuilderImpl(
       executionWitnessClient = executionWitnessClient,
       executionPayloadClient = executionPayloadClient,

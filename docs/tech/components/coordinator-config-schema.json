@@ -212,6 +212,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "conflation.l2-engine-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 Engine API endpoint for RISC-V payload bodies; required by ConflationAppV2. JWT-protected endpoints require an authenticating proxy; this client does not generate JWT tokens.",
+        "example": "http://sequencer:8550",
+        "deprecated": false,
+        "replacement": null
+      },
       "conflation.l2-fetch-blocks-limit": {
         "type": "UInt?",
         "section": false,
