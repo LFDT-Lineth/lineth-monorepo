@@ -8,4 +8,6 @@
  */
 package maru.core
 
+const val AMSTERDAM_MIN_TARGET_GAS_LIMIT = 5000UL
+
 val EMPTY_HASH = ByteArray(32)

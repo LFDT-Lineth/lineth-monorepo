@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
@@ -135,6 +136,8 @@ func projectModuleSizes(sys *wiop.System, proof wiop.Proof) ([]uint64, error) {
 func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 	out := OpeningProof{FriProof: projectFriProof(op.FRIProof)}
 
+	out.InputCaps = utils.Map(projectInputCap, op.InputCaps)
+
 	if len(op.InputQueries) > 0 {
 		out.InputQueries = make([][]InputTreeOpening, len(op.InputQueries))
 		for q, iq := range op.InputQueries {
@@ -148,6 +151,38 @@ func projectOpeningProof(op fri.OpeningProof) OpeningProof {
 		}
 	}
 
+	return out
+}
+
+func projectMerkleCap(treeCap fri.MerkleCap) MerkleCap {
+	out := MerkleCap{Nodes: DigestsFrom(treeCap.Nodes)}
+	if len(treeCap.Aux) > 0 {
+		out.Aux = make([]*Digest, len(treeCap.Aux))
+		for i, aux := range treeCap.Aux {
+			if aux == nil {
+				continue
+			}
+			digest := DigestFrom(*aux)
+			out.Aux[i] = &digest
+		}
+	}
+	return out
+}
+
+func projectInputCap(treeCap fri.InputCap) InputCap {
+	out := InputCap{Nodes: DigestsFrom(treeCap.Nodes)}
+	if len(treeCap.Tables) > 0 {
+		out.Tables = make([]InputCapTable, len(treeCap.Tables))
+		for i, table := range treeCap.Tables {
+			out.Tables[i] = InputCapTable{SizeLog2: table.SizeLog2}
+			if len(table.Rows) > 0 {
+				out.Tables[i].Rows = make([]RowOpening, len(table.Rows))
+				for j, row := range table.Rows {
+					out.Tables[i].Rows[j] = projectRowOpening(row)
+				}
+			}
+		}
+	}
 	return out
 }
 
@@ -177,6 +212,7 @@ func projectFriProof(p fri.Proof) FriProof {
 		RoundRoots: DigestsFrom(p.RoundRoots),
 		FinalPoly:  ExtsFrom(p.FinalPoly),
 	}
+	out.RoundCaps = utils.Map(projectMerkleCap, p.RoundCaps)
 
 	if len(p.RunningQueries) > 0 {
 		out.RunningQueries = make([][]Branch, len(p.RunningQueries))
@@ -186,16 +222,10 @@ func projectFriProof(p fri.Proof) FriProof {
 			}
 			out.RunningQueries[q] = make([]Branch, len(rq))
 			for j, layer := range rq {
-				if len(layer) == 0 {
-					continue
-				}
-				// The verifier reads one Branch per fold round. Go's QueryLayer is
-				// a slice, but only layer[0] is consumed, and AuxSiblings has no
-				// counterpart in Zig's merkle.Branch at all -- measured to be
-				// entirely nil, so dropping it loses nothing.
+				// The merged FRI representation carries one Branch per fold round.
 				out.RunningQueries[q][j] = Branch{
-					Siblings: DigestsFrom(layer[0].Siblings),
-					Leaf:     DigestFrom(layer[0].Leaf),
+					Siblings: DigestsFrom(layer.Siblings),
+					Leaf:     DigestFrom(layer.Leaf),
 				}
 			}
 		}
