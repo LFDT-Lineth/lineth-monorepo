@@ -12,12 +12,13 @@ import (
 // sub-verifier; fields are zero-valued (empty) when the system has no queries
 // of that kind.
 type CompiledSystem struct {
-	Routing      CoinRouting
-	PublicInput  PublicInputSystem
-	Vanishing    VanishingSystem
-	LogDeriv     LogDerivSystem
-	GrandProduct GrandProductSystem
-	RowLimit     RowLimitSystem
+	Routing          CoinRouting
+	PublicInput      PublicInputSystem
+	Vanishing        VanishingSystem
+	LogDeriv         LogDerivSystem
+	GrandProduct     GrandProductSystem
+	RowLimit         RowLimitSystem
+	SharedRandomness SharedRandomnessSystem
 	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
@@ -55,18 +56,23 @@ func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
 	if err != nil {
 		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
 	}
+	sharedRandomness, err := BuildSharedRandomnessSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
 	pcs, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
 	}
 	return CompiledSystem{
-		Routing:      routing,
-		PublicInput:  publicInput,
-		Vanishing:    vanishing,
-		LogDeriv:     logDeriv,
-		GrandProduct: grandProduct,
-		RowLimit:     rowLimit,
-		Pcs:          &pcs,
+		Routing:          routing,
+		PublicInput:      publicInput,
+		Vanishing:        vanishing,
+		LogDeriv:         logDeriv,
+		GrandProduct:     grandProduct,
+		RowLimit:         rowLimit,
+		SharedRandomness: sharedRandomness,
+		Pcs:              &pcs,
 	}, nil
 }
 
@@ -76,12 +82,25 @@ type CompiledSystemZigOptions struct {
 	// (protocol, field, vanishing, logderivativesum, rowlimit). Set to false
 	// when writing multiple systems under a shared file header.
 	EmitHeader         bool
+	EvalBranchQuota    int
 	ProtocolImport     string
 	FieldImport        string
 	VanishingImport    string
 	LogDerivImport     string
 	GrandProductImport string
 	RowLimitImport     string
+	// WritePcs, when true, additionally writes system.Pcs (which must be
+	// non-nil) via WritePcsSystemZigWithOptions, using PcsImport/FriImport and
+	// PcsConstPrefix below. Defaults to false: most call sites emit PCS
+	// separately (e.g. to apply a per-scenario ConstPrefix), so leaving this
+	// unset preserves their existing behavior.
+	WritePcs       bool
+	PcsImport      string
+	FriImport      string
+	PcsConstPrefix string
+	// SharedRandomnessImport is the import path used for the shared-randomness
+	// sub-verifier system, emitted unconditionally after the row-limit system.
+	SharedRandomnessImport string
 }
 
 // WriteCompiledSystemZig writes the spec, vanishing system, and logderiv
@@ -90,6 +109,11 @@ type CompiledSystemZigOptions struct {
 // and WriteLogDerivSystemZigWithOptions that handles the EmitHeader/EmitImport
 // flags automatically from a single opts.EmitHeader flag.
 func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts CompiledSystemZigOptions) error {
+	if opts.EvalBranchQuota > 0 {
+		if _, err := fmt.Fprintf(w, "comptime { @setEvalBranchQuota(%d); }\n\n", opts.EvalBranchQuota); err != nil {
+			return err
+		}
+	}
 	if err := WriteSpecZigWithOptions(w, system.Routing, SpecZigOptions{
 		ProtocolImport: opts.ProtocolImport,
 		ConstName:      fmt.Sprintf("system_%d_spec", index),
@@ -124,8 +148,29 @@ func WriteCompiledSystemZig(w io.Writer, index int, system CompiledSystem, opts 
 	}); err != nil {
 		return err
 	}
-	return WriteRowLimitSystemZigWithOptions(w, index, system.RowLimit, RowLimitZigOptions{
+	if err := WriteRowLimitSystemZigWithOptions(w, index, system.RowLimit, RowLimitZigOptions{
 		EmitImport: opts.EmitHeader,
 		Import:     opts.RowLimitImport,
+	}); err != nil {
+		return err
+	}
+	if err := WriteSharedRandomnessSystemZigWithOptions(w, index, system.SharedRandomness, SharedRandomnessZigOptions{
+		EmitImport:             opts.EmitHeader,
+		SharedRandomnessImport: opts.SharedRandomnessImport,
+	}); err != nil {
+		return err
+	}
+	if !opts.WritePcs {
+		return nil
+	}
+	if system.Pcs == nil {
+		return fmt.Errorf("codegen: WriteCompiledSystemZig: opts.WritePcs set but system.Pcs is nil")
+	}
+	return WritePcsSystemZigWithOptions(w, index, *system.Pcs, PcsZigOptions{
+		PcsImport:   opts.PcsImport,
+		FriImport:   opts.FriImport,
+		FieldImport: opts.FieldImport,
+		ConstPrefix: opts.PcsConstPrefix,
+		EmitHeader:  opts.EmitHeader,
 	})
 }

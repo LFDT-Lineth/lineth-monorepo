@@ -166,6 +166,122 @@ test "lagrange selector rejects an in-domain evaluation coin" {
     }
 }
 
+// dynSelectorSystem builds a single-bucket DYNAMIC module (size from
+// module_sizes[0]) whose sole vanishing is the bare selector L_position — the
+// dynamic analogue of the static fixture in the in-domain test above, for
+// exercising the runtime position bounds check against a proof-supplied size.
+fn dynSelectorSystem(comptime position: i32) vanishing.System {
+    const S = struct {
+        const expressions = [_]vanishing.ExprNode{.{ .lagrange_selector = position }};
+        const vanishings = [_]vanishing.Vanishing{.{ .expression = 0 }};
+        const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
+        const modules = [_]vanishing.Module{.{
+            .size = .{ .dynamic = 0 },
+            .expressions = &expressions,
+            .buckets = &buckets,
+            .witness_claim_offset = 0,
+            .merge_coin_index = 0,
+            .eval_coin_index = 1,
+        }};
+    };
+    return .{ .modules = &S.modules, .dynamic_module_count = 1, .total_witness_claims = 0, .total_quotient_claims = 1 };
+}
+
+// dynCancelledSystem is dynSelectorSystem's analogue for the cancellation
+// path: a constant-1 vanishing carrying one cancelled position, so
+// cancellationAtPoint (not evalLagrangeSelector) resolves `position` against
+// the proof-supplied size.
+fn dynCancelledSystem(comptime position: i32) vanishing.System {
+    const S = struct {
+        const expressions = [_]vanishing.ExprNode{.{ .constant = field.Element.init(1) }};
+        const cancelled = [_]i32{position};
+        const vanishings = [_]vanishing.Vanishing{.{ .expression = 0, .cancelled_positions = &cancelled }};
+        const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
+        const modules = [_]vanishing.Module{.{
+            .size = .{ .dynamic = 0 },
+            .expressions = &expressions,
+            .buckets = &buckets,
+            .witness_claim_offset = 0,
+            .merge_coin_index = 0,
+            .eval_coin_index = 1,
+        }};
+    };
+    return .{ .modules = &S.modules, .dynamic_module_count = 1, .total_witness_claims = 0, .total_quotient_claims = 1 };
+}
+
+test "lagrange selector rejects positions outside [-n, n) for dynamic modules" {
+    // module_sizes is proof-supplied: a hostile size can push a codegen-baked
+    // position out of the addressable range [-n, n). Below n = 4, an
+    // off-domain eval coin r = 2, and a zero quotient claim.
+    const n = 4;
+    const sizes = [_]usize{n};
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+    const off_domain = ext.Ext.lift(field.Element.init(2)); // 2 is not a 4th root of unity
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), off_domain };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+    const input = vanishing.CheckInput{
+        .ctx = ctx,
+        .witness_claims = &.{},
+        .quotient_claims = &quotient_claims,
+        .module_sizes = &sizes,
+    };
+
+    // position == n: one past the last row. Without the bounds check the
+    // root-of-unity exponentiation would silently reduce it mod n and evaluate
+    // L_0 — a different selector than the constraint declares.
+    try std.testing.expectError(
+        error.LagrangeSelectorPositionOutOfRange,
+        vanishing.verify(dynSelectorSystem(n), input),
+    );
+
+    // position == -n-1: one below the first addressable end-relative row.
+    // Without the bounds check normalizePosition's usize subtraction (n - n-1)
+    // underflows.
+    try std.testing.expectError(
+        error.LagrangeSelectorPositionOutOfRange,
+        vanishing.verify(dynSelectorSystem(-n - 1), input),
+    );
+
+    // position == -n: the valid boundary (resolves to row 0). It must clear
+    // the bounds check and proceed to the ordinary identity check, which fails
+    // here (L_0(2) != 0 while the quotient claim is zero) — confirming the
+    // rejections above were specifically the bounds guard.
+    try std.testing.expectError(
+        error.QuotientIdentityMismatch,
+        vanishing.verify(dynSelectorSystem(-n), input),
+    );
+}
+
+test "cancelled positions get the same dynamic bounds check" {
+    const n = 4;
+    const sizes = [_]usize{n};
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+    const off_domain = ext.Ext.lift(field.Element.init(2));
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), off_domain };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &.{} };
+    const input = vanishing.CheckInput{
+        .ctx = ctx,
+        .witness_claims = &.{},
+        .quotient_claims = &quotient_claims,
+        .module_sizes = &sizes,
+    };
+
+    try std.testing.expectError(
+        error.LagrangeSelectorPositionOutOfRange,
+        vanishing.verify(dynCancelledSystem(n), input),
+    );
+    try std.testing.expectError(
+        error.LagrangeSelectorPositionOutOfRange,
+        vanishing.verify(dynCancelledSystem(-n - 1), input),
+    );
+    // Valid boundary: -n resolves to row 0, C(r) = r - 1 = 1 at r = 2, so the
+    // identity check runs (and fails against the zero quotient claim).
+    try std.testing.expectError(
+        error.QuotientIdentityMismatch,
+        vanishing.verify(dynCancelledSystem(-n), input),
+    );
+}
+
 const ProofData = struct {
     proof_rounds: []const protocol.RoundMessage,
     public_inputs: []const protocol.Scalar,

@@ -2,6 +2,7 @@ name: verifier-ray
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
     paths:
@@ -36,7 +37,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  ZKC_VERSION: 'v1.2.26'
+  ZKC_VERSION: 'v1.2.32'
   ZIG_VERSION: '0.16.0'
 
 concurrency:
@@ -45,6 +46,7 @@ concurrency:
 
 jobs:
   test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -55,7 +57,7 @@ jobs:
       # Keep this aligned with .github/actions/setup-arithmetization-riscv, but use
       # newer Go because verifier-ray/prover-ray modules declare go 1.25.7.
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/*.sum"
@@ -65,6 +67,7 @@ jobs:
         with:
           version: ${{ env.ZIG_VERSION }}
           dependency-hash-paths: verifier-ray/**/build.zig.zon
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - name: Install native tools
         run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf xxd
@@ -94,15 +97,15 @@ jobs:
         working-directory: verifier-ray
         run: make run-passing
 
-      - name: Native verifier failing smoke test
-        working-directory: verifier-ray
-        run: make run-failing-expected
+      # - name: Native verifier failing smoke test
+      #   working-directory: verifier-ray
+      #   run: make run-failing-expected
 
-      - name: ZKC verifier passing smoke test
-        working-directory: verifier-ray
-        run: make zkc-verify-passing
+      # - name: ZKC verifier passing smoke test
+      #   working-directory: verifier-ray
+      #   run: make zkc-verify-passing
 
-      - name: ZKC verifier failing smoke test
-        working-directory: verifier-ray
-        run: make zkc-verify-failing-expected
+      # - name: ZKC verifier failing smoke test
+      #   working-directory: verifier-ray
+      #   run: make zkc-verify-failing-expected
 

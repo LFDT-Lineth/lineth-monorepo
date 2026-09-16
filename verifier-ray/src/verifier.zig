@@ -4,6 +4,7 @@ const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
 const grandproduct = @import("query/grandproduct.zig");
 const rowlimit = @import("query/rowlimit.zig");
+const shared_randomness = @import("query/shared_randomness.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
@@ -26,6 +27,14 @@ pub const Systems = struct {
     /// bounds dynamic-module runtime sizes rather than checking a polynomial
     /// identity, so it needs only `proof.module_sizes`, never claims or coins.
     rowlimit: rowlimit.System = .{},
+    /// Shared-randomness contribution check: this shard's public-input
+    /// contribution digest must equal the Poseidon2 sponge hash over every
+    /// committed round preceding the message-bus coin round. Verifier-side
+    /// counterpart to prover-ray's messagebus.SharedRandomnessContributionChecker.
+    /// Empty (`.{}`) for a protocol compiled without
+    /// messagebus.CompileOptions.SharedRandomness, in which case the check is a
+    /// no-op.
+    shared_randomness: shared_randomness.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
     /// challenges, query positions) from the shared Fiat-Shamir transcript and
@@ -76,10 +85,14 @@ pub const Proof = struct {
 /// prover could supply roots here, it could open against a forged root while zeta
 /// stays bound to the honest commitment. Coins (zeta, fold challenges, query
 /// positions) are likewise absent and derived by `verify`.
+///
+/// It also does NOT carry `entry_claims`: those claimed evaluations are
+/// ordinary `LagrangeEval.EvaluationClaims` cells, already transcript-bound in
+/// `rounds[*].cells`. `verify` reconstructs the `pcs.verify`-shaped
+/// `entry_claims` array locally, by reading each opened column's claim cells
+/// out of `rounds[*].cells` via the per-column `claim_cells` table on
+/// `pcs.System.columns` (see `pcs.ColumnDesc.claim_cells`).
 pub const PcsOpening = struct {
-    /// Per-opened-column claimed evaluations, jagged `[entry][shift]` in
-    /// canonical layout order (see `pcs.VerifyInput.entry_claims`).
-    entry_claims: []const []const ext.Ext,
     proof: pcs.OpeningProof,
 };
 
@@ -170,10 +183,20 @@ pub fn verify(
     // query-position counts.
     const recon = try pcs.reconstruct(pcs_system, proof.module_sizes);
 
+    // Every claimed evaluation is an ordinary `LagrangeEval.EvaluationClaims`
+    // cell, transcript-bound in `ctx.rounds`. The per-column `claim_cells`
+    // table (parallel to `shifts`) names exactly which (round, index) cell
+    // backs each (column, shift) claim. This array is stack-local to this call
+    // and passed straight into `pcs.verify` below, so its lifetime is fine:
+    // nothing here escapes past `verify` returning.
+    var entry_claims_buf: pcs.EntryClaims(pcs_system) = .{};
+    try pcs.buildEntryClaims(pcs_system, recon, ctx, &entry_claims_buf);
+    const entry_claims = entry_claims_buf.slice();
+
     const pcs_challenges = try pcs.deriveChallenges(pcs_system, recon, &transcript, opening.proof.fri_proof);
     try pcs.verify(pcs_system, .{
         .roots = &bound_roots,
-        .entry_claims = opening.entry_claims,
+        .entry_claims = entry_claims,
         .zeta = all_coins[zeta_index],
         .fold_alphas = pcs_challenges.foldAlphas(),
         .deep_alpha = pcs_challenges.deep_alpha,
@@ -189,8 +212,8 @@ pub fn verify(
     // different values for the same column" gap.
     var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
     var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
-    try routeClaims(pcs_system, recon, pcs_system.witness_map, opening.entry_claims, &derived_witness);
-    try routeClaims(pcs_system, recon, pcs_system.quotient_map, opening.entry_claims, &derived_quotient);
+    try routeClaims(pcs_system, recon, pcs_system.witness_map, entry_claims, &derived_witness);
+    try routeClaims(pcs_system, recon, pcs_system.quotient_map, entry_claims, &derived_quotient);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
@@ -208,6 +231,8 @@ pub fn verify(
     try grandproduct.verify(systems.grandproduct, ctx);
 
     try rowlimit.verify(systems.rowlimit, proof.module_sizes);
+
+    try shared_randomness.verify(systems.shared_randomness, ctx);
 
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }

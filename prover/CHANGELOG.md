@@ -1,10 +1,11 @@
-## [unreleased]
+## [1.0.6] - 2026-09-02
 
 ### 🐛 Bug Fixes
 
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
 - *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
 - *(prover)* Restore EIP-155 chain ID when decoding legacy transactions (#3782)
+- *(prover)* Empty-codehash check (#3913)
 
 ### 🚜 Refactor
 

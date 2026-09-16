@@ -43,7 +43,10 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
    * @param nTransactions the number of transactions to try to include in the same block. The last
    *     one is not supposed to fit as it exceeds the limit, thus it is included in the next block
    * @param input a function that generates the input data for each transaction
-   * @param target the expected string to be found in the blocks log
+   * @param moduleName the name of the module whose limit is being crossed
+   * @param moduleLimit the line-count limit of that module
+   * @param attemptedCount the cumulated line count the overflowing transaction would push the module
+   *     to (i.e. `moduleLimit + <lines of the overflow tx>`); this is what the rejection log reports
    * @throws Exception if an error occurs during the test
    */
   @ParameterizedTest
@@ -51,7 +54,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   fun ecPairingLimitsTest(
     nTransactions: Int,
     input: BiFunction<Int, Int, String>,
-    target: String,
+    moduleName: String,
+    moduleLimit: Int,
+    attemptedCount: Int,
   ) {
     // Deploy the EcPairing contract
     val ecPairing = deployEcPairing()
@@ -102,20 +107,18 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit semantics: the fitting transactions were mined together, the overflowing
+    // one landed in a strictly later block, and the sequencer logged that the overflow pushed the
+    // module's cumulated count to `attemptedCount`, above `moduleLimit`. See
+    // assertModuleLimitOverflowed for why this is sequenced after the overflow receipt.
+    assertModuleLimitOverflowed(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
+      txHashes[nTransactions - 1]!!,
+      moduleName,
+      moduleLimit,
+      attemptedCount,
     )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
-    )
-
-    asserLogsContain(target)
   }
 
   /**
@@ -135,7 +138,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
      *     reach the limit with a smaller number of transaction
      *
      * input: input data for each transaction
-     * target: the expected string to be found in the blocks log
+     * moduleName/moduleLimit: the module whose limit is crossed and its limit
+     * attemptedCount: the cumulated count the overflow tx would push the module to
+     *     (`moduleLimit + <lines of the overflow tx>`); this is what the rejection log reports
      */
     val callsPerTransaction = 32
     val nTransactions = PRECOMPILE_ECADD_EFFECTIVE_CALLS / callsPerTransaction + 1
@@ -144,12 +149,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         "041b98f07f44aa55ce8bd97e32cacf55f1e42229d540d5e7a767d1138a5da656" +
         "185f6f5cf93c8afa0461a948c2da7c403b6f8477c488155dfa8d2da1c62517b8" +
         "13d83d7a51eb18fdb51225873c87d44f883e770ce2ca56c305d02d6cb99ca5b8"
-    val target =
-      "Cumulated line count for module PRECOMPILE_ECADD_EFFECTIVE_CALLS=" +
-        (PRECOMPILE_ECADD_EFFECTIVE_CALLS + callsPerTransaction) +
-        " is above the limit " +
-        PRECOMPILE_ECADD_EFFECTIVE_CALLS +
-        ", stopping selection"
+    // The overflowing transaction adds `callsPerTransaction` calls, so the rejected cumulated count
+    // is `moduleLimit + callsPerTransaction`.
+    val moduleName = "PRECOMPILE_ECADD_EFFECTIVE_CALLS"
+    val moduleLimit = PRECOMPILE_ECADD_EFFECTIVE_CALLS
+    val attemptedCount = moduleLimit + callsPerTransaction
 
     // Deploy the EcAdd contract
     val ecAdd = deployEcAdd()
@@ -195,20 +199,18 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit semantics: the fitting transactions were mined together, the overflowing
+    // one landed in a strictly later block, and the sequencer logged that the overflow pushed the
+    // module's cumulated count to `attemptedCount`, above `moduleLimit`. See
+    // assertModuleLimitOverflowed for why this is sequenced after the overflow receipt.
+    assertModuleLimitOverflowed(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
+      txHashes[nTransactions - 1]!!,
+      moduleName,
+      moduleLimit,
+      attemptedCount,
     )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
-    )
-
-    asserLogsContain(target)
   }
 
   /**
@@ -225,19 +227,20 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
      *     The last one is not supposed to fit as it exceeds the limit, thus it is
      *     included in the next block
      * input: input data for each transaction
-     * target: the expected string to be found in the blocks log
+     * moduleName/moduleLimit: the module whose limit is crossed and its limit
+     * attemptedCount: the cumulated count the overflow tx would push the module to
+     *     (`moduleLimit + <lines of the overflow tx>`); this is what the rejection log reports
      */
     val nTransactions = PRECOMPILE_ECMUL_EFFECTIVE_CALLS + 1
     val input =
       "030644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd3" +
         "15ed738c0e0a7c92e7845f96b2ae9c0a68a6a449e3538fc7ff3ebf7a5a18a2c4" +
         "0000000000000000000000000000000000000000000000000000000000000001"
-    val target =
-      "Cumulated line count for module PRECOMPILE_ECMUL_EFFECTIVE_CALLS=" +
-        (PRECOMPILE_ECMUL_EFFECTIVE_CALLS + 1) +
-        " is above the limit " +
-        PRECOMPILE_ECMUL_EFFECTIVE_CALLS +
-        ", stopping selection"
+    // The overflowing transaction adds 1 call, so the rejected cumulated count is
+    // `moduleLimit + 1`.
+    val moduleName = "PRECOMPILE_ECMUL_EFFECTIVE_CALLS"
+    val moduleLimit = PRECOMPILE_ECMUL_EFFECTIVE_CALLS
+    val attemptedCount = moduleLimit + 1
 
     // Deploy the EcMul contract
     val ecMul = deployEcMul()
@@ -283,20 +286,18 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit semantics: the fitting transactions were mined together, the overflowing
+    // one landed in a strictly later block, and the sequencer logged that the overflow pushed the
+    // module's cumulated count to `attemptedCount`, above `moduleLimit`. See
+    // assertModuleLimitOverflowed for why this is sequenced after the overflow receipt.
+    assertModuleLimitOverflowed(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
+      txHashes[nTransactions - 1]!!,
+      moduleName,
+      moduleLimit,
+      attemptedCount,
     )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
-    )
-
-    asserLogsContain(target)
   }
 
   /**
@@ -313,7 +314,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
      *     The last one is not supposed to fit as it exceeds the limit, thus it is
      *     included in the next block
      * input: input data for each transaction
-     * target: the expected string to be found in the blocks log
+     * moduleName/moduleLimit: the module whose limit is crossed and its limit
+     * attemptedCount: the cumulated count the overflow tx would push the module to
+     *     (`moduleLimit + <lines of the overflow tx>`); this is what the rejection log reports
      */
     val nTransactions = PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1
     val input =
@@ -323,12 +326,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
           "c2ff96feed8749a5ad1c0714f950b5ac939d8acedbedcbc2949614ab8af06312" +
           "1feecd50adc6273fdd5d11c6da18c8cfe14e2787f5a90af7c7c1328e7d0a2c42",
       )
-    val target =
-      "Cumulated line count for module PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS=" +
-        (PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1) +
-        " is above the limit " +
-        PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS +
-        ", stopping selection"
+    // The overflowing transaction adds 1 call, so the rejected cumulated count is
+    // `moduleLimit + 1`.
+    val moduleName = "PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS"
+    val moduleLimit = PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS
+    val attemptedCount = moduleLimit + 1
 
     // Deploy the EcRecover contract
     val ecRecover = deployEcRecover()
@@ -342,6 +344,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .bytes.toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
+
     // send first tx (nonce=0) last one, so they will stay ready in the pool,
     // but will not be included in a block due to the nonce gap, doing this before
     // to avoid timing issues caused by slow tx sending calls that could cause flakiness
@@ -373,20 +376,18 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     // Wait for the sentry to be mined
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.bytes.toHexString()))
 
-    // Assert that all the transactions involving the EcPairing precompile, but the last one, were
-    // included in the same block
-    assertTransactionsMinedInSameBlock(
+    // Assert the limit semantics: the fitting transactions were mined together, the overflowing
+    // one landed in a strictly later block, and the sequencer logged that the overflow pushed the
+    // module's cumulated count to `attemptedCount`, above `moduleLimit`. See
+    // assertModuleLimitOverflowed for why this is sequenced after the overflow receipt.
+    assertModuleLimitOverflowed(
       minerNode.nodeRequests().eth(),
       txHashes.toList().subList(0, nTransactions - 1).filterNotNull(),
+      txHashes[nTransactions - 1]!!,
+      moduleName,
+      moduleLimit,
+      attemptedCount,
     )
-
-    // Assert that the last transaction was included in another block
-    assertTransactionsMinedInSeparateBlocks(
-      minerNode.nodeRequests().eth(),
-      listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
-    )
-
-    asserLogsContain(target)
   }
 
   companion object {
@@ -444,11 +445,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         Arguments.of(
           PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1, // 1 final exponentiation per transaction
           BiFunction<Int, Int, String> { _, _ -> nonTrivial }, // 1 pair per transaction
-          "Cumulated line count for module PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS=" +
-            (PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1) +
-            " is above the limit " +
-            PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS +
-            ", stopping selection",
+          "PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS",
+          PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS,
+          PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1, // overflow tx adds 1 final exponentiation
         ),
       )
 
@@ -480,11 +479,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
             nonTrivial.repeat(if (i < nTransactions - 1) nPairsPerTransaction else 1)
           },
           // nPairsPerTransaction pairs per transaction except the last one which has 1
-          "Cumulated line count for module PRECOMPILE_ECPAIRING_MILLER_LOOPS=" +
-            (PRECOMPILE_ECPAIRING_MILLER_LOOPS + 1) +
-            " is above the limit " +
-            PRECOMPILE_ECPAIRING_MILLER_LOOPS +
-            ", stopping selection",
+          "PRECOMPILE_ECPAIRING_MILLER_LOOPS",
+          PRECOMPILE_ECPAIRING_MILLER_LOOPS,
+          PRECOMPILE_ECPAIRING_MILLER_LOOPS + 1, // overflow tx adds 1 Miller loop
         ),
       )
 
@@ -515,11 +512,9 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
             leftTrivialValid.repeat(if (i < nTransactions - 1) nPairsPerTransaction else 1)
           },
           // nPairsPerTransaction pairs per transaction except the last one which has 1
-          "Cumulated line count for module PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS=" +
-            (PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS + 1) +
-            " is above the limit " +
-            PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS +
-            ", stopping selection",
+          "PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS",
+          PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS,
+          PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS + 1, // overflow tx adds 1 G2 membership call
         ),
       )
 
@@ -527,7 +522,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       Description of the test cases:
 
       - This method defines 3 test cases.
-      - Each test case is defined by a tuple (nTransactions, input, target). See the test method signature for more details.
+      - Each test case is defined by a tuple (nTransactions, input, moduleName, moduleLimit, attemptedCount). See the test method signature for more details.
       - Each test case goal is crossing a limit independently. Specifically:
        * The first test case crosses the limit of final exponentiations.
        * The second test case crosses the limit of Miller loops.

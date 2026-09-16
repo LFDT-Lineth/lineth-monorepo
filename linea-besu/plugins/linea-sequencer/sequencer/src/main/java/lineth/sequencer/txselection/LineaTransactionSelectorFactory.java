@@ -32,6 +32,7 @@ import lineth.jsonrpc.JsonRpcManager;
 import lineth.metrics.HistogramMetrics;
 import lineth.sequencer.forced.ForcedTransactionPoolService;
 import lineth.sequencer.liveness.LivenessService;
+import lineth.sequencer.tracing.LineaTracerFactory;
 import lineth.sequencer.txselection.selectors.LineaTransactionSelector;
 import lineth.sequencer.txselection.selectors.TransactionEventFilter;
 import lineth.utils.TransactionCompressor;
@@ -58,9 +59,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final BlockchainService blockchainService;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
   private final LineaTransactionSelectorConfiguration txSelectorConfiguration;
-  private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private final LineaProfitabilityConfiguration profitabilityConfiguration;
   private final LineaTracerConfiguration tracerConfiguration;
+  private final LineaTracerFactory tracerFactory;
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
   private final BundlePoolService bundlePoolService;
   private final ForcedTransactionPoolService forcedTransactionPoolService;
@@ -95,9 +96,11 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final BlobCompressorSelectorByTimestamp blobCompressorSelectorByTimestamp) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
-    this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.profitabilityConfiguration = profitabilityConfiguration;
     this.tracerConfiguration = tracerConfiguration;
+    this.tracerFactory =
+        LineaTracerFactory.fromBlockchainService(
+            blockchainService, tracerConfiguration, l1L2BridgeConfiguration);
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
     this.maybeProfitabilityMetrics = maybeProfitabilityMetrics;
     this.bundlePoolService = bundlePoolService;
@@ -127,9 +130,9 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             selectorsStateManager,
             blockchainService,
             txSelectorConfiguration,
-            l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
+            tracerFactory.create(pendingBlockHeader.getTimestamp()),
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
             invalidTransactionByLineCountCache,
@@ -282,12 +285,12 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   }
 
   private void commit(final BlockTransactionSelectionService bts) {
-    currSelector.get().getOperationTracer().commitTransactionBundle();
+    currSelector.get().commitTransactionBundle();
     bts.commit();
   }
 
   private void rollback(final BlockTransactionSelectionService bts) {
-    currSelector.get().getOperationTracer().popTransactionBundle();
+    currSelector.get().popTransactionBundle();
     bts.rollback();
   }
 

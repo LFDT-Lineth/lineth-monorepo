@@ -1,7 +1,10 @@
 package lineth.coordinator.app
 
 import lineth.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
+import lineth.coordinator.app.conflation.ConflationAppHelper.forcedTransactionsEnabled
 import lineth.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
+import lineth.coordinator.config.v2.ForcedTransactionsConfig
+import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
@@ -12,8 +15,25 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.net.URI
 
 class ConflationAppTest {
+  @Test
+  fun `forced transactions are enabled only when configured and not on validium`() {
+    val enabledConfig = ForcedTransactionsConfig(
+      disabled = false,
+      l1Endpoint = URI.create("http://l1").toURL(),
+      sequencerEndpoint = URI.create("http://sequencer").toURL(),
+    )
+    val rollup = L1SubmissionConfig.DataAvailability.ROLLUP
+    val validium = L1SubmissionConfig.DataAvailability.VALIDIUM
+
+    assertThat(forcedTransactionsEnabled(null, rollup)).isFalse()
+    assertThat(forcedTransactionsEnabled(enabledConfig.copy(disabled = true), rollup)).isFalse()
+    assertThat(forcedTransactionsEnabled(enabledConfig, validium)).isFalse()
+    assertThat(forcedTransactionsEnabled(enabledConfig, rollup)).isTrue()
+  }
+
   @Test
   fun `test resume conflation from uses lastFinalizedBlock + 1 for db queries`() {
     val aggregationsRepository = mock<AggregationsRepository>()

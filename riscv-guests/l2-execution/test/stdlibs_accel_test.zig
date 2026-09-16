@@ -1,12 +1,12 @@
 //! Integration smoke test for the delegated precompiles (zesu-zkvm `stdlibs_accel`, imported as
-//! `zesu_zkvm_accel`). The guest's in-guest precompiles delegate to this module via zkvm_provide.zig;
+//! `zesu_zkvm_stdlibs`). The guest's in-guest precompiles delegate to this module via zkvm_provide.zig;
 //! correctness of the implementation is upstream's responsibility, but this guards the pinned
 //! dependency version + our import wiring by round-tripping its secp256k1 ecrecover on the host.
 //!
 //! std + the dependency only — no fixtures, no native crypto libs.
 
 const std = @import("std");
-const accel = @import("zesu_zkvm_accel");
+const stdlibs = @import("zesu_zkvm_stdlibs");
 
 const Secp256k1 = std.crypto.ecc.Secp256k1;
 const Scalar = Secp256k1.scalar.Scalar;
@@ -56,7 +56,7 @@ test "delegated ecrecover round-trips signatures back to the signing key" {
 
         const zb = z.toBytes(.big);
         var out: [64]u8 = undefined;
-        try std.testing.expect(accel.ecrecover(&zb, &found.?.sig, found.?.recid, &out));
+        try std.testing.expect(stdlibs.ecrecover(&zb, &found.?.sig, found.?.recid, &out));
         try std.testing.expectEqualSlices(u8, &expected, &out);
     }
 }
@@ -66,11 +66,11 @@ test "delegated ecrecover rejects malformed signatures" {
     var out: [64]u8 = undefined;
 
     // r = 0 and s = 0 are invalid.
-    try std.testing.expect(!accel.ecrecover(&z, &([_]u8{0} ** 64), 0, &out));
+    try std.testing.expect(!stdlibs.ecrecover(&z, &([_]u8{0} ** 64), 0, &out));
 
     // r ≥ n (all 0xFF) is non-canonical.
     var sig_bad_r: [64]u8 = undefined;
     sig_bad_r[0..32].* = [_]u8{0xFF} ** 32;
     sig_bad_r[32..].* = scalarFromU64(9).toBytes(.big);
-    try std.testing.expect(!accel.ecrecover(&z, &sig_bad_r, 0, &out));
+    try std.testing.expect(!stdlibs.ecrecover(&z, &sig_bad_r, 0, &out));
 }

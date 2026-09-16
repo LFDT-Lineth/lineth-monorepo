@@ -31,6 +31,7 @@ pub const Error = merkle.Error || fri.Error || error{
     RowShapeMismatch,
     ConjugateRowShapeMismatch,
     ClaimPointOnQueryPoint,
+    InconsistentAliasedClaim,
     MissingTopLevelAux,
     BoundaryFinalSelfMismatch,
     BoundaryFinalSiblingMismatch,
@@ -40,6 +41,8 @@ pub const Error = merkle.Error || fri.Error || error{
     RestrictOutOfRange,
     LayoutOverflow,
 };
+
+const InputWidths = struct { base: usize, ext: usize };
 
 /// A committed column's size source. `.static` bakes a comptime size_log2 (a
 /// static-module column, whose padded size is fixed at compile time).
@@ -72,6 +75,23 @@ pub const ColumnDesc = struct {
     /// size, so one baked System's shifts work at every dynamic size. May be
     /// negative (a back-shift).
     shifts: []const isize,
+    /// Where to read this column's claimed evaluation for the matching entry of
+    /// `shifts` — same length and order as `shifts`, so `claim_cells[k]` is the
+    /// `(round, index)` transcript cell carrying the claim for `shifts[k]`.
+    /// These cells are ordinary `rounds[*].cells` entries (the prover's
+    /// `LagrangeEval.EvaluationClaims`), absorbed into the Fiat-Shamir
+    /// transcript before the opening challenges are derived. Emitted by codegen.
+    claim_cells: []const CellRef = &.{},
+};
+
+/// Locates one claimed-evaluation cell in `rounds[*].cells` by its
+/// `(round, index)` coordinates — the same `ObjectID.Slot()` / `.Position()`
+/// encoding used by every other cell reference in this codebase (see
+/// `query/vanishing.zig`'s `ScalarRef`, `query/logderivativesum.zig`'s
+/// `ScalarRef`). Consumed via `protocol.Context.cell(round, index)`.
+pub const CellRef = struct {
+    round: usize,
+    index: usize,
 };
 
 /// Routes one vanishing witness/quotient claim to its authenticated value.
@@ -133,7 +153,20 @@ pub const OpeningProof = struct {
     /// tree (input-opening order: first batch encountered by the canonical
     /// size-descending layout, with equal Merkle roots deduplicated).
     input_queries: []const []const merkle.InputTreeOpening,
+    input_caps: []const InputCap = &.{},
     fri_proof: fri.Proof,
+};
+
+/// An authenticated input-tree frontier and the complete row tables whose
+/// auxiliary leaves lie above it.
+pub const InputCap = struct {
+    nodes: []const poseidon2.Digest,
+    tables: []const InputCapTable,
+};
+
+pub const InputCapTable = struct {
+    size_log2: u8,
+    rows: []const merkle.RowOpening,
 };
 
 pub const VerifyInput = struct {
@@ -215,6 +248,21 @@ pub fn InputRootRouting(comptime system: System) type {
     };
 }
 
+fn InputCapInfo(comptime system: System) type {
+    return struct {
+        height: usize = 0,
+        depth: usize = 0,
+        rate_log: u8 = 0,
+        batch_idx: usize = 0,
+        revealed: [@as(usize, system.max_size_log2) + 1]u8 = undefined,
+        revealed_count: usize = 0,
+        cap_table_by_depth: [@as(usize, system.envelope_params.log_codeword_size) + 1]?usize =
+            [_]?usize{null} ** (@as(usize, system.envelope_params.log_codeword_size) + 1),
+        query_rows: [@as(usize, system.envelope_params.log_codeword_size) + 1]bool =
+            [_]bool{false} ** (@as(usize, system.envelope_params.log_codeword_size) + 1),
+    };
+}
+
 /// Reconstructs the canonical layout at verify time from `system.columns` and
 /// runtime `module_sizes`, byte-faithfully mirroring prover-ray's
 /// `GetLayout` (per-column size_log2 + running position within
@@ -251,7 +299,19 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                 const n = module_sizes[dyn.index];
                 if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
                 const sz: u8 = @intCast(field.log2PowerOfTwo(n));
-                if (sz < dyn.min_size_log2) return Error.DynamicModuleSizeBelowMinimum;
+                // dyn.min_size_log2 used to reject runtime sizes where two
+                // distinct RAW shifts of this column alias to the same domain
+                // point (e.g. offsets 0 and -1 both normalize to row 0 at
+                // runtime size 1). That rejection was overly conservative: an
+                // honest prover CAN legitimately run a module at an aliasing
+                // size (prover-ray's own RecoverBatchClaims dedupes such
+                // openings into a single FRI claim before batching, and
+                // reconstructQueryValueAt below dedupes the same way when
+                // summing the DEEP quotient), so aliasing sizes are safe to
+                // accept, not just aliasing-completeness gaps to reject. Kept
+                // as a documented field (still emitted by codegen) but no
+                // longer enforced here.
+                _ = dyn.min_size_log2;
                 break :blk sz;
             },
         };
@@ -302,6 +362,79 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
 
     r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Total number of (column, shift) claim slots across every column — the flat
+/// backing-array size `EntryClaims` needs to hold every column's claims
+/// contiguously. A comptime sum over `system.columns`, since each column's
+/// `shifts.len` (and hence `claim_cells.len`) is fixed at codegen time.
+fn totalClaimSlots(comptime system: System) usize {
+    comptime {
+        @setEvalBranchQuota(20_000_000);
+        var total: usize = 0;
+        for (system.columns) |col| total += col.shifts.len;
+        return total;
+    }
+}
+
+/// Stack storage for one proof's reconstructed `entry_claims`, built by
+/// `buildEntryClaims` from `rounds[*].cells`. Two levels, both
+/// envelope-max-sized so nothing is allocated: a flat backing array holding
+/// every column's claims contiguously (avoids a jagged 2D array, since
+/// columns' shift counts differ), and a per-entry slice array of views into
+/// it, in the SAME canonical entry order `Reconstructed` assigns — exactly the
+/// shape `pcs.verify`'s `VerifyInput.entry_claims` expects.
+pub fn EntryClaims(comptime system: System) type {
+    return struct {
+        const entry_cap = @max(system.max_entries, 1);
+        const slot_cap = @max(totalClaimSlots(system), 1);
+
+        backing: [slot_cap]ext.Ext = undefined,
+        entries: [entry_cap][]const ext.Ext = undefined,
+        num_entries: usize = 0,
+
+        pub fn slice(self: *const @This()) []const []const ext.Ext {
+            return self.entries[0..self.num_entries];
+        }
+    };
+}
+
+/// Fills `out` with the claimed evaluation of every opened column, in
+/// reconstructed canonical entry order, by reading each column's `claim_cells`
+/// out of `ctx`'s bound round messages — the SAME cells (and hence the SAME
+/// values) `replayWithTranscript` already absorbed into the Fiat-Shamir
+/// transcript before any opening challenge was derived. The canonical ORDER is
+/// rebuilt here from the codegen-emitted per-column `claim_cells` table
+/// (parallel to `shifts`); the values themselves are read straight out of the
+/// bound rounds.
+///
+/// `map_ctx` is any type exposing `cell(round: usize, index: usize) CellError!Scalar`
+/// — `protocol.Context` in production, a caller-supplied stub in tests — kept
+/// generic here so this stays independent of `protocol.zig`.
+pub fn buildEntryClaims(
+    comptime system: System,
+    recon: Reconstructed(system),
+    ctx: anytype,
+    out: *EntryClaims(system),
+) !void {
+    out.num_entries = recon.num_entries;
+    var next_slot: usize = 0;
+    // Guarded exactly like `reconstruct`'s own entry-walk loops: a column-free
+    // System (system.columns == &.{}) must not force Zig to analyze indexing
+    // into that empty slice, even though `recon.num_entries` is always 0 in
+    // that case and the loop body would never actually run.
+    if (comptime system.columns.len > 0) {
+        for (0..recon.num_entries) |e| {
+            const col = system.columns[recon.entry_col_decl_idx[e]];
+            if (col.claim_cells.len != col.shifts.len) return error.ClaimCellsShiftsLengthMismatch;
+            const start = next_slot;
+            for (col.claim_cells) |ref| {
+                out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
+                next_slot += 1;
+            }
+            out.entries[e] = out.backing[start..next_slot];
+        }
+    }
 }
 
 /// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,
@@ -399,6 +532,176 @@ pub fn deriveChallenges(
     return challenges;
 }
 
+/// Depth of the auxiliary node carrying the rows of plaintext size
+/// `2^size_log2`, where `bottom_size_log2` is the tree's largest plaintext
+/// size. Returns null when those rows have no auxiliary level: rows at the
+/// bottom size occupy the leaves, and an encoded size of one has no aux above
+/// it.
+pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
+    if (size_log2 >= bottom_size_log2) return null;
+    const encoded_log = @as(usize, rate_log) + size_log2;
+    if (encoded_log == 0) return null;
+    return encoded_log - 1;
+}
+
+fn buildInputCapInfo(comptime system: System, recon: Reconstructed(system), routing: InputRootRouting(system), tree_idx: usize) Error!InputCapInfo(system) {
+    const Info = InputCapInfo(system);
+    var info = Info{ .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size };
+    var found = false;
+    var bottom: u8 = 0;
+    for (0..recon.num_entries) |e| {
+        const batch = recon.entry_batch[e];
+        if (routing.index_by_batch[batch] != tree_idx) continue;
+        if (!found) {
+            info.batch_idx = batch;
+            found = true;
+        }
+        bottom = @max(bottom, recon.entry_size_log2[e]);
+    }
+    if (!found) return Error.InputTreeShapeMismatch;
+    info.height = @as(usize, info.rate_log) + bottom;
+    if (info.height == 0 or info.height > recon.params.log_codeword_size) return Error.InputTreeShapeMismatch;
+    info.depth = merkle.capDepth(recon.params.num_queries, info.height);
+    info.query_rows[info.height - 1] = true;
+
+    for (0..recon.num_entries) |e| {
+        if (recon.entry_batch[e] != info.batch_idx) continue;
+        const size = recon.entry_size_log2[e];
+        const aux_depth = inputAuxDepth(info.rate_log, size, bottom) orelse continue;
+        if (aux_depth < info.depth) {
+            var seen = false;
+            for (info.revealed[0..info.revealed_count]) |old| seen = seen or old == size;
+            if (!seen) {
+                info.revealed[info.revealed_count] = size;
+                info.revealed_count += 1;
+            }
+        } else {
+            info.query_rows[aux_depth] = true;
+        }
+    }
+    // Merkleize exposes revealed tables in shape order (smallest encoded size
+    // first), while the reconstructed layout is size-descending.
+    var i: usize = 0;
+    while (i < info.revealed_count) : (i += 1) {
+        var j = i + 1;
+        while (j < info.revealed_count) : (j += 1) {
+            if (info.revealed[j] < info.revealed[i]) {
+                const tmp = info.revealed[i];
+                info.revealed[i] = info.revealed[j];
+                info.revealed[j] = tmp;
+            }
+        }
+    }
+    for (info.revealed[0..info.revealed_count], 0..) |size, table_idx| {
+        const aux_depth = inputAuxDepth(info.rate_log, size, bottom) orelse return Error.InputTreeShapeMismatch;
+        info.cap_table_by_depth[aux_depth] = table_idx;
+    }
+    return info;
+}
+
+fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths {
+    var widths: InputWidths = .{ .base = 0, .ext = 0 };
+    for (0..recon.num_entries) |e| {
+        if (recon.entry_batch[e] != batch_idx or recon.entry_size_log2[e] != size_log2) continue;
+        if (recon.entry_is_ext[e]) widths.ext += 1 else widths.base += 1;
+    }
+    return widths;
+}
+
+fn authenticateInputCap(
+    comptime system: System,
+    recon: Reconstructed(system),
+    info: InputCapInfo(system),
+    cap: InputCap,
+    root: poseidon2.Digest,
+    aux_storage: []?poseidon2.Digest,
+) Error![]const poseidon2.Digest {
+    // Depth-zero caps use caller-owned root storage and are handled by verify.
+    if (info.depth == 0) return Error.InvalidCap;
+    const expected_nodes = @as(usize, 1) << @intCast(info.depth);
+    if (cap.nodes.len != expected_nodes or cap.tables.len != info.revealed_count) return Error.InvalidCap;
+    if (aux_storage.len < expected_nodes - 1) return Error.InvalidCap;
+    @memset(aux_storage[0 .. expected_nodes - 1], null);
+    for (cap.tables, 0..) |table, i| {
+        const size = info.revealed[i];
+        if (table.size_log2 != size) return Error.InvalidCap;
+        const row_count = @as(usize, 1) << @intCast(info.rate_log + size);
+        if (table.rows.len != row_count or row_count & 1 != 0) return Error.InvalidCap;
+        const widths = inputSizeWidths(recon, info.batch_idx, size);
+        const aux_depth = inputAuxDepth(info.rate_log, size, @intCast(info.height - info.rate_log)) orelse return Error.InvalidCap;
+        if (aux_depth >= info.depth) return Error.InvalidCap;
+        const level_start = (@as(usize, 1) << @intCast(aux_depth)) - 1;
+        for (table.rows, 0..) |row, row_idx| {
+            if (row.base.len != widths.base or row.ext.len != widths.ext) return Error.InvalidCap;
+            if (row_idx & 1 == 1) continue;
+            aux_storage[level_start + row_idx / 2] = merkle.hashRowPair(.{ row, table.rows[row_idx + 1] }, true);
+        }
+    }
+    const cap_merkle = merkle.MerkleCap{ .nodes = cap.nodes, .aux = aux_storage[0 .. expected_nodes - 1] };
+    cap_merkle.authenticate(info.depth, root) catch return Error.MerkleProofInvalid;
+    return cap.nodes;
+}
+
+fn InputQuerySource(comptime system: System) type {
+    const Info = InputCapInfo(system);
+    return struct {
+        opening: []const merkle.InputTreeOpening,
+        caps: []const InputCap,
+        infos: []const Info,
+        frontiers: []const []const poseidon2.Digest,
+        routing: InputRootRouting(system),
+        params: fri.Params,
+        query_position: usize,
+
+        const Self = @This();
+
+        fn authenticate(self: Self) Error!void {
+            if (self.opening.len != self.frontiers.len or self.opening.len != self.infos.len) return Error.InputTreeCountMismatch;
+            const codeword_size = @as(usize, 1) << @intCast(self.params.log_codeword_size);
+            for (self.opening, self.infos, self.frontiers) |branch, info, frontier| {
+                if (branch.leaves.len != info.height or branch.siblings.len != info.height - 1 - info.depth) {
+                    return Error.InputTreeShapeMismatch;
+                }
+                if (branch.leaves[info.height - 1] == null) return Error.MissingBottomLevel;
+                for (branch.leaves, 0..) |pair, level| {
+                    if (level < info.depth) {
+                        if (pair != null) return Error.InvalidCap;
+                    } else if ((pair != null) != info.query_rows[level]) {
+                        return Error.InputTreeShapeMismatch;
+                    }
+                }
+                const num_leaves = @as(usize, 1) << @intCast(info.height);
+                if (num_leaves > codeword_size or codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
+                const leaf_index = self.query_position / (codeword_size / num_leaves);
+                branch.authenticateToCap(leaf_index, frontier) catch return Error.MerkleProofInvalid;
+            }
+        }
+
+        fn pairAtLevel(self: Self, batch_idx: usize, level_size: usize) Error!merkle.RowPair {
+            const branch_idx = self.routing.index_by_batch[batch_idx];
+            if (branch_idx >= self.opening.len or branch_idx >= self.caps.len) return Error.InputTreeCountMismatch;
+            const info = self.infos[branch_idx];
+            if (level_size == 0 or level_size & (level_size - 1) != 0) return Error.InvalidLevelSize;
+            const level_log: usize = @ctz(level_size);
+            if (level_log > 0) {
+                if (info.cap_table_by_depth[level_log - 1]) |table_idx| {
+                    const tables = self.caps[branch_idx].tables;
+                    if (table_idx >= tables.len) return Error.LevelSizeAbsent;
+                    const table = tables[table_idx];
+                    const num_leaves = @as(usize, 1) << @intCast(info.height);
+                    const codeword_size = @as(usize, 1) << @intCast(self.params.log_codeword_size);
+                    if (level_size > num_leaves or codeword_size % num_leaves != 0 or num_leaves % level_size != 0) return Error.InvalidLevelSize;
+                    const leaf_index = self.query_position / (codeword_size / num_leaves);
+                    const base = leaf_index / (num_leaves / level_size);
+                    if (base >= table.rows.len or (base ^ 1) >= table.rows.len) return Error.IndexOutOfRange;
+                    return .{ table.rows[base], table.rows[base ^ 1] };
+                }
+            }
+            return self.opening[branch_idx].pairAtLevel(level_size);
+        }
+    };
+}
+
 // =============================================================================
 // Verify
 // =============================================================================
@@ -436,13 +739,55 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     }
 
     if (input.proof.input_queries.len != params.num_queries) return Error.InputQueryCountMismatch;
+    if (input.proof.input_caps.len != routing.distinct_count) return Error.InputTreeCountMismatch;
     if (input.query_positions.len < params.num_queries) return Error.QueryPositionCountMismatch;
     try fri.checkOpeningProofShape(params, input.proof.fri_proof, input.fold_alphas, input.query_positions[0..params.num_queries]);
+
+    const tree_cap = @max(system.num_batches, 1);
+    const Info = InputCapInfo(system);
+    var input_infos: [tree_cap]Info = undefined;
+    var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
+    var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
+    var input_aux_storage: [@max(system.envelope_params.num_queries * 2, 2)]?poseidon2.Digest = undefined;
+    for (0..routing.distinct_count) |tree_idx| {
+        const info = try buildInputCapInfo(system, recon, routing, tree_idx);
+        input_infos[tree_idx] = info;
+        if (info.depth == 0) {
+            if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
+            input_root_frontiers[tree_idx] = routing.roots[tree_idx];
+            input_frontiers[tree_idx] = input_root_frontiers[tree_idx .. tree_idx + 1];
+        } else {
+            input_frontiers[tree_idx] = try authenticateInputCap(
+                system,
+                recon,
+                info,
+                input.proof.input_caps[tree_idx],
+                routing.roots[tree_idx],
+                input_aux_storage[0..],
+            );
+        }
+    }
+
+    const cap_rounds = comptime @as(usize, system.max_size_log2) + 1;
+    var running_frontiers: [cap_rounds][]const poseidon2.Digest = undefined;
+    var running_root_frontiers: [cap_rounds]poseidon2.Digest = undefined;
+    if (num_rounds > 0) {
+        for (1..@as(usize, num_rounds)) |j| {
+            const depth = merkle.capDepth(params.num_queries, params.log_codeword_size - @as(u8, @intCast(j)));
+            const cap = input.proof.fri_proof.round_caps[j - 1];
+            if (depth == 0) {
+                running_root_frontiers[j] = input.proof.fri_proof.round_roots[j - 1];
+                running_frontiers[j] = running_root_frontiers[j .. j + 1];
+            } else {
+                cap.authenticate(depth, input.proof.fri_proof.round_roots[j - 1]) catch return Error.MerkleProofInvalid;
+                running_frontiers[j] = cap.nodes;
+            }
+        }
+    }
 
     // Envelope-max-sized stack buffers; runtime lengths use the restricted
     // num_rounds. `max_size_log2` bounds the envelope num_rounds
     // (log_final_poly_size == 0).
-    const cap_rounds = comptime @as(usize, system.max_size_log2) + 1;
     var rounds_buf: [system.envelope_params.num_queries][cap_rounds]fri.Pair = undefined;
     var aux_buf: [system.envelope_params.num_queries][cap_rounds + 1]?fri.Pair = undefined;
     var final_buf: [system.envelope_params.num_queries]ext.Ext = undefined;
@@ -454,11 +799,21 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
         const query_position = input.query_positions[query_idx];
         const opening = input.proof.input_queries[query_idx];
-        try authenticateInputQuery(params, opening, routing, query_position);
+        const Source = InputQuerySource(system);
+        const source = Source{
+            .opening = opening,
+            .caps = input.proof.input_caps,
+            .infos = input_infos[0..routing.distinct_count],
+            .frontiers = input_frontiers[0..routing.distinct_count],
+            .routing = routing,
+            .params = params,
+            .query_position = query_position,
+        };
+        try source.authenticate();
 
         if (num_rounds > 0) {
             const running_query = input.proof.fri_proof.running_queries[query_idx];
-            try fri.resolveRunningLayers(params, input.proof.fri_proof.round_roots, running_query, query_position, rounds_buf[query_idx][0..num_rounds]);
+            try fri.resolveRunningLayers(params, running_frontiers[0..num_rounds], running_query, query_position, rounds_buf[query_idx][0..num_rounds]);
         }
 
         const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @intCast(num_rounds));
@@ -480,7 +835,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            try bindInputTreeOpenings(system, recon, routing, e0, e1, opening, level_size);
+            try bindInputTreeOpenings(system, recon, source, e0, e1, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -495,11 +850,10 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const self_val = try reconstructQueryValueAt(
                 system,
                 recon,
-                routing,
+                source,
                 e0,
                 e1,
                 size_log2,
-                opening,
                 level_size,
                 input.entry_claims,
                 input.zeta,
@@ -511,11 +865,10 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const sib_val = try reconstructQueryValueAt(
                 system,
                 recon,
-                routing,
+                source,
                 e0,
                 e1,
                 size_log2,
-                opening,
                 level_size,
                 input.entry_claims,
                 input.zeta,
@@ -567,30 +920,6 @@ fn systemHasMultiShiftEntry(comptime system: System) bool {
     }
 }
 
-/// Authenticates every distinct input tree once per query against its known
-/// root: prover-ray's `authenticateInputQuery`.
-fn authenticateInputQuery(
-    params: fri.Params,
-    opening: []const merkle.InputTreeOpening,
-    routing: anytype,
-    query_position: usize,
-) Error!void {
-    if (opening.len != routing.distinct_count) return Error.InputTreeCountMismatch;
-
-    const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
-    for (opening, routing.distinctRoots()) |branch, root| {
-        const num_levels = branch.leaves.len;
-        // num_levels is proof-controlled: bounding it before the shift keeps
-        // an oversized value from overflow-trapping the cast, and makes
-        // num_leaves <= codeword_size follow.
-        if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
-        const num_leaves = @as(usize, 1) << @intCast(num_levels);
-        if (codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
-        const recovered = try branch.recoverRoot(query_position / (codeword_size / num_leaves));
-        if (!poseidon2.eql(recovered, root)) return Error.MerkleProofInvalid;
-    }
-}
-
 /// Per-batch (base, ext) widths within the bundle spanning canonical entries
 /// [e0, e1). Computed at runtime from the reconstructed arrays.
 fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) struct { base: usize, ext: usize } {
@@ -610,10 +939,9 @@ fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) str
 fn bindInputTreeOpenings(
     comptime system: System,
     recon: anytype,
-    routing: anytype,
+    source: anytype,
     e0: usize,
     e1: usize,
-    opening: []const merkle.InputTreeOpening,
     level_size: usize,
 ) Error!void {
     // Distinct batches within the bundle, in first-declaration (entry) order.
@@ -630,8 +958,7 @@ fn bindInputTreeOpenings(
         count += 1;
 
         const widths = bundleBatchWidths(recon, e0, e1, b);
-        const branch_idx = routing.index_by_batch[b];
-        const pair = try opening[branch_idx].pairAtLevel(level_size);
+        const pair = try source.pairAtLevel(b, level_size);
         if (pair[0].base.len != widths.base or pair[0].ext.len != widths.ext) return Error.RowShapeMismatch;
         if (pair[1].base.len != widths.base or pair[1].ext.len != widths.ext) return Error.ConjugateRowShapeMismatch;
     }
@@ -644,11 +971,10 @@ fn bindInputTreeOpenings(
 fn reconstructQueryValueAt(
     comptime system: System,
     recon: anytype,
-    routing: anytype,
+    source: anytype,
     e0: usize,
     e1: usize,
     size_log2: u8,
-    opening: []const merkle.InputTreeOpening,
     level_size: usize,
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
@@ -662,24 +988,73 @@ fn reconstructQueryValueAt(
     while (i > e0) {
         i -= 1;
         const batch_idx = recon.entry_batch[i];
-        const branch_idx = routing.index_by_batch[batch_idx];
-        const pair = try opening[branch_idx].pairAtLevel(level_size);
+        const pair = try source.pairAtLevel(batch_idx, level_size);
         const row = if (sibling) pair[1] else pair[0];
         const row_idx = recon.entry_row_idx[i];
         const entry_value: ext.Ext = if (recon.entry_is_ext[i]) row.ext[row_idx] else ext.Ext.lift(row.base[row_idx]);
 
         const shifts = system.columns[recon.entry_col_decl_idx[i]].shifts;
-        var term = ext.Ext.zero();
-        for (shifts, 0..) |shift, k| {
-            const point = shiftedPoint(size_log2, shift, zeta);
-            const denom = x.sub(point);
-            if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
-            const numerator = entry_value.sub(entry_claims[i][k]);
-            term = term.add(numerator.mul(denom.inverse()));
-        }
+        const term = try entryDeepTerm(shifts, entry_claims[i], entry_value, size_log2, zeta, x);
         value = value.mul(alpha_deep).add(term);
     }
     return value;
+}
+
+/// Sums one entry's DEEP-quotient contribution over its shift schedule:
+/// sum over distinct claim points of (entry_value - claim) / (x - point).
+///
+/// Distinct RAW shifts baked at codegen time can alias to the SAME domain
+/// point at a smaller runtime module size (e.g. offsets 0 and -1 both
+/// normalize to row 0 when the runtime size is 1). prover-ray's own
+/// RecoverBatchClaims dedupes by the runtime-normalized shift before ever
+/// building the FRI batch, so an aliasing group contributes exactly ONE term
+/// to the DEEP quotient sum there. Skipping repeats of an already-seen point
+/// here reproduces that same single-term contribution instead of
+/// double-counting it.
+///
+/// The claims of an aliasing group come from DISTINCT transcript cells, so
+/// before a repeat is skipped it must be equality-bound to the claim that was
+/// kept: only the kept claim is authenticated against the commitment by the
+/// quotient reconstruction, while every cell independently reaches later
+/// consumers (routeClaims routes each raw-shift slot on its own). Skipping an
+/// unequal duplicate would let a malicious prover keep the first claim
+/// consistent with the commitment and route a second, different value into
+/// vanishing. An honest prover always produces equal claims for an aliasing
+/// group (wiop.LagrangeEval.evalPolynomials applies the shift via omega_n^k
+/// with n the RUNTIME size, so aliasing shifts evaluate at the same point);
+/// prover-ray's RecoverBatchClaims enforces the same equality on its side.
+/// Each repeat is compared against the group's first (kept) claim, which
+/// transitively binds the whole group.
+///
+/// pub rather than file-private: the aliasing path needs a module to run at an
+/// aliasing size, which no golden vector currently does, so the adversarial
+/// regression in test/pcs_test.zig drives this function directly.
+pub fn entryDeepTerm(
+    shifts: []const isize,
+    claims: []const ext.Ext,
+    entry_value: ext.Ext,
+    size_log2: u8,
+    zeta: ext.Ext,
+    x: ext.Ext,
+) Error!ext.Ext {
+    var term = ext.Ext.zero();
+    for (shifts, 0..) |shift, k| {
+        const point = shiftedPoint(size_log2, shift, zeta);
+        var already_seen = false;
+        for (shifts[0..k], 0..) |prior_shift, prior_k| {
+            if (shiftedPoint(size_log2, prior_shift, zeta).eql(point)) {
+                if (!claims[prior_k].eql(claims[k])) return Error.InconsistentAliasedClaim;
+                already_seen = true;
+                break;
+            }
+        }
+        if (already_seen) continue;
+        const denom = x.sub(point);
+        if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
+        const numerator = entry_value.sub(claims[k]);
+        term = term.add(numerator.mul(denom.inverse()));
+    }
+    return term;
 }
 
 /// zeta * omega_N^(offset mod N), omega_N the generator of the size-2^size_log2

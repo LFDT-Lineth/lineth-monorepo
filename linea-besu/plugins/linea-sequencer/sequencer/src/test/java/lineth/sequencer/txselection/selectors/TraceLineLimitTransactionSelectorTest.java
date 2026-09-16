@@ -23,8 +23,10 @@ import java.util.HashMap;
 import java.util.Optional;
 import lineth.config.LineaTracerConfiguration;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
+import lineth.sequencer.tracing.LineaTracerFactory;
 import lineth.sequencer.txselection.InvalidTransactionByLineCountCache;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.zktracer.LineCountingTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
@@ -87,9 +89,17 @@ public class TraceLineLimitTransactionSelectorTest {
     final var selector =
         new TestableTraceLineLimitTransactionSelector(
             selectorsStateManager,
-            blockchainService,
             tracerConfiguration,
-            invalidTransactionByLineCountCache);
+            invalidTransactionByLineCountCache,
+            LineaTracerFactory.fromBlockchainService(
+                    blockchainService,
+                    tracerConfiguration,
+                    LineaL1L2BridgeSharedConfiguration.builder()
+                        .contract(Address.fromHexString("0xDEADBEEF"))
+                        .topic(Bytes32.fromHexString("0x012345"))
+                        .build())
+                .create(0)
+                .orElseThrow());
     selectorsStateManager.blockSelectionStarted();
     return selector;
   }
@@ -265,18 +275,14 @@ public class TraceLineLimitTransactionSelectorTest {
 
     TestableTraceLineLimitTransactionSelector(
         final SelectorsStateManager selectorsStateManager,
-        final BlockchainService blockchainService,
         final LineaTracerConfiguration lineaTracerConfiguration,
-        final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
+        final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
+        final LineCountingTracer lineCountingTracer) {
       super(
           selectorsStateManager,
-          blockchainService,
-          LineaL1L2BridgeSharedConfiguration.builder()
-              .contract(Address.fromHexString("0xDEADBEEF"))
-              .topic(Bytes32.fromHexString("0x012345"))
-              .build(),
           lineaTracerConfiguration,
-          invalidTransactionByLineCountCache);
+          invalidTransactionByLineCountCache,
+          lineCountingTracer);
       this.testCache = invalidTransactionByLineCountCache;
     }
 

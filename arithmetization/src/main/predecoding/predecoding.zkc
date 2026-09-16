@@ -1,0 +1,70 @@
+include "../riscv/utils/sign_extend.zkc"
+include "../common/constants.zkc"
+include "../common/type.zkc"
+include "check/check_b_type.zkc"
+include "check/check_i_type.zkc"
+include "check/check_r_type.zkc"
+include "check/check_j_type.zkc"
+include "check/check_u_type.zkc"
+include "check/check_s_type.zkc"
+
+// Check that the raw word `instruction` at `pc` matches `decoded` at that address.
+fn predecoding(pc:Address, instruction:Instruction) {
+    // Variables from raw RISCV program
+    var instruction_parameters:u25
+    var opcode:Opcode
+    instruction_parameters::opcode = instruction
+
+    // Variables from pre-decoded instruction table
+    var compute_op:ComputeOp
+    var imm_decoded:DoubleWord
+    var rs1_decoded:Register
+    var rs2_decoded:Register
+    var rd_decoded:Register
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[(pc - instruction_base[0]) / 4]
+
+    var instruction_type:Type = instruction_type_from_opcode[opcode]
+    switch instruction_type {
+        case B_TYPE: {
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+        }
+        case S_TYPE: {
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+        }
+        case J_TYPE: {
+            check_j_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+        }
+        case U_TYPE: {
+            check_u_type(instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
+        }
+        case I_TYPE: {
+            check_i_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+        }
+        case R_TYPE: {
+            check_r_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
+        }
+        case UNDEFINED_TYPE: {
+            // Unknown opcode (padding, embedded data, CSR, etc.) → COMPUTE_INVALID.
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] undefined opcode requires COMPUTE_INVALID (pc=%d compute_op=%x opcode=%x params=%x)\n", pc, compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case MISC_MEM_TYPE: {
+            // FENCE / FENCE.I — no-op on this implementation.
+            if opcode != OPCODE_MISCMEM {
+                printf "[ERROR] invalid MISC_MEM opcode (pc=%d opcode=%x params=%x)\n", pc, opcode, instruction_parameters
+                fail
+            }
+            if compute_op != NO_OP {
+                printf "[ERROR] MISC_MEM requires NO_OP (pc=%d compute_op=%x opcode=%x params=%x)\n", pc, compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        default: {
+            printf "[ERROR] invalid instruction type (pc=%d opcode=%x params=%x)\n", pc, opcode, instruction_parameters
+            fail
+        }
+    }
+
+}

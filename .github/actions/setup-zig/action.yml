@@ -15,6 +15,12 @@ inputs:
       bump doesn't invalidate another subproject's cache. Callers with an identical value share one
       cache entry.
     required: true
+  cache-save:
+    description: >
+      When true, the shared cache is saved on a miss. Default false: the cache is restored only,
+      so a run that builds an input-supplied ref cannot write into the shared cache.
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -26,8 +32,9 @@ runs:
         use-cache: 'false'
 
     - name: Cache Zig global cache directory
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: ./.github/actions/cache
       with:
+        cache-save: ${{ inputs.cache-save }}
         path: .zig-cache
         key: setup-zig-global-cache-${{ inputs.version }}-${{ hashFiles(inputs.dependency-hash-paths) }}
         restore-keys: |

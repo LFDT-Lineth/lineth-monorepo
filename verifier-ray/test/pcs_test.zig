@@ -76,6 +76,30 @@ fn toInputQueries(allocator: std.mem.Allocator, qs: []const []const fixtures.Inp
     return out;
 }
 
+fn toInputCaps(allocator: std.mem.Allocator, caps: []const fixtures.InputCapData) ![]const pcs.InputCap {
+    const out = try allocator.alloc(pcs.InputCap, caps.len);
+    for (out, caps) |*dst, cap| {
+        const tables = try allocator.alloc(pcs.InputCapTable, cap.tables.len);
+        for (tables, cap.tables) |*table_dst, table| {
+            const rows = try allocator.alloc(merkle.RowOpening, table.rows.len);
+            for (rows, table.rows) |*row_dst, row| row_dst.* = try toRowOpening(allocator, row);
+            table_dst.* = .{ .size_log2 = table.size_log2, .rows = rows };
+        }
+        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .tables = tables };
+    }
+    return out;
+}
+
+fn toMerkleCaps(allocator: std.mem.Allocator, caps: []const fixtures.MerkleCapData) ![]const merkle.MerkleCap {
+    const out = try allocator.alloc(merkle.MerkleCap, caps.len);
+    for (out, caps) |*dst, cap| {
+        const aux = try allocator.alloc(?poseidon2.Digest, cap.aux.len);
+        for (aux, cap.aux) |*dst_aux, value| dst_aux.* = if (value) |v| toDigest(v) else null;
+        dst.* = .{ .nodes = try toDigests(allocator, cap.nodes), .aux = aux };
+    }
+    return out;
+}
+
 fn toBranch(allocator: std.mem.Allocator, b: fixtures.BranchData) !merkle.Branch {
     return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
 }
@@ -110,8 +134,8 @@ fn mapPcsError(name: []const u8) pcs.Error {
 // regular function parameter would lose that. Mirrors vanishing_test.zig's
 // own pattern of calling verify() directly against a comptime-extracted
 // `system`/`spec` rather than through a plain-parameter helper.
-fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
-    const input = pcs.VerifyInput{
+fn toPCSVerifyInput(allocator: std.mem.Allocator, case: fixtures.PcsCase) !pcs.VerifyInput {
+    return .{
         .roots = try toDigests(allocator, case.roots),
         .entry_claims = try toExtsJagged(allocator, case.entry_claims),
         .zeta = toExt(case.zeta),
@@ -119,13 +143,19 @@ fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: f
         .query_positions = try allocator.dupe(usize, case.query_positions),
         .proof = .{
             .input_queries = try toInputQueries(allocator, case.proof.input_queries),
+            .input_caps = try toInputCaps(allocator, case.proof.input_caps),
             .fri_proof = .{
                 .round_roots = try toDigests(allocator, case.proof.fri_proof.round_roots),
+                .round_caps = try toMerkleCaps(allocator, case.proof.fri_proof.round_caps),
                 .final_poly = try toExts(allocator, case.proof.fri_proof.final_poly),
                 .running_queries = try toRunningQueries(allocator, case.proof.fri_proof.running_queries),
             },
         },
     };
+}
+
+fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
+    const input = try toPCSVerifyInput(allocator, case);
 
     const result = pcs.verify(system, input);
     if (case.expect_verify_error.len > 0) {
@@ -145,6 +175,146 @@ test "pcs verify cases from prover-ray vectors" {
             return err;
         };
     }
+}
+
+test "pcs rejects reordered input cap tables" {
+    const case = fixtures.pcs_cases[0];
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var input = try toPCSVerifyInput(arena.allocator(), case);
+    var caps = try arena.allocator().dupe(pcs.InputCap, input.proof.input_caps);
+    var tables = try arena.allocator().dupe(pcs.InputCapTable, caps[0].tables);
+    try std.testing.expectEqual(@as(usize, 2), tables.len);
+    std.mem.swap(pcs.InputCapTable, &tables[0], &tables[1]);
+    caps[0].tables = tables;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.InvalidCap, pcs.verify(case.system, input));
+}
+
+fn expectNormalFlowCapShape(input: pcs.VerifyInput) !void {
+    try std.testing.expectEqualSlices(usize, &.{ 3, 2, 1, 0 }, input.query_positions);
+
+    try std.testing.expectEqual(@as(usize, 1), input.proof.input_caps.len);
+    const input_cap = input.proof.input_caps[0];
+    try std.testing.expectEqual(@as(usize, 4), input_cap.nodes.len);
+    try std.testing.expectEqual(@as(usize, 2), input_cap.tables.len);
+    try std.testing.expectEqual(@as(u8, 1), input_cap.tables[1].size_log2);
+    try std.testing.expectEqual(@as(usize, 4), input_cap.tables[1].rows.len);
+    try std.testing.expectEqual(@as(usize, 1), input_cap.tables[1].rows[2].ext.len);
+
+    try std.testing.expectEqual(@as(usize, 1), input.proof.fri_proof.round_caps.len);
+    const running_cap = input.proof.fri_proof.round_caps[0];
+    try std.testing.expectEqual(@as(usize, 2), running_cap.nodes.len);
+    try std.testing.expectEqual(@as(usize, 1), running_cap.aux.len);
+    try std.testing.expect(running_cap.aux[0] == null);
+}
+
+test "pcs rejects tampered unqueried input cap node" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
+    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
+    // The bottom-pair fold maps query positions 0..3 to frontier nodes 0/1,
+    // so node 3 is bound only through reconstruction of the committed root.
+    nodes[3][0] = nodes[3][0].add(field.Element.one());
+    caps[0].nodes = nodes;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered unqueried revealed input cap row" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(pcs.InputCap, input.proof.input_caps);
+    const tables = try allocator.dupe(pcs.InputCapTable, caps[0].tables);
+    const rows = try allocator.dupe(merkle.RowOpening, tables[1].rows);
+    const values = try allocator.dupe(ext.Ext, rows[2].ext);
+    // The size-one table has four encoded rows. Queries 0..3 consume only row
+    // pair 0/1; row 2 still contributes to the authenticated upper cap.
+    values[0].B0.a0 = values[0].B0.a0.add(field.Element.one());
+    rows[2].ext = values;
+    tables[1].rows = rows;
+    caps[0].tables = tables;
+    input.proof.input_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered unqueried running cap node" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
+    const nodes = try allocator.dupe(poseidon2.Digest, caps[0].nodes);
+    // At running round one, these query positions all authenticate to frontier
+    // node 0, leaving node 1 bound only through the cap-to-root comparison.
+    nodes[1][0] = nodes[1][0].add(field.Element.one());
+    caps[0].nodes = nodes;
+    input.proof.fri_proof.round_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "pcs rejects tampered running cap auxiliary digest" {
+    const case = fixtures.pcs_cases[0];
+    try std.testing.expectEqualStrings("normal_flow", case.name);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var input = try toPCSVerifyInput(allocator, case);
+    try expectNormalFlowCapShape(input);
+
+    const caps = try allocator.dupe(merkle.MerkleCap, input.proof.fri_proof.round_caps);
+    const aux = try allocator.dupe(?poseidon2.Digest, caps[0].aux);
+    aux[0] = caps[0].nodes[0];
+    caps[0].aux = aux;
+    input.proof.fri_proof.round_caps = caps;
+
+    try std.testing.expectError(error.MerkleProofInvalid, pcs.verify(case.system, input));
+}
+
+test "routeInputRoots ignores an unused batch root" {
+    const system = pcs.System{
+        .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 1, .num_queries = 1 },
+        .columns = &.{},
+        .num_batches = 2,
+        .max_entries = 1,
+        .max_size_log2 = 1,
+    };
+    var recon = pcs.Reconstructed(system){ .params = system.envelope_params, .num_entries = 1, .top_size = 1 };
+    recon.entry_batch[0] = 0;
+    var roots: [2]poseidon2.Digest = undefined;
+    for (&roots) |*root| {
+        for (root) |*element| element.* = field.Element.zero();
+    }
+    roots[1][0] = field.Element.init(1);
+    const routing = try pcs.routeInputRoots(system, recon, &roots);
+    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
+    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
 }
 
 // ── PCS challenge derivation ──────────────────────────────────────────────────
@@ -347,7 +517,92 @@ test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
 test "reconstruct: rejects non-power-of-two and missing dynamic sizes" {
     try std.testing.expectError(error.NonPowerOfTwoModuleSize, pcs.reconstruct(recon_system, &[_]usize{6}));
     try std.testing.expectError(error.MissingDynamicModuleSize, pcs.reconstruct(recon_system, &.{}));
-    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, pcs.reconstruct(recon_system, &[_]usize{2}));
+}
+
+test "reconstruct: accepts a dynamic size below the column's declared min_size_log2" {
+    // dyn.min_size_log2 documents the smallest runtime size at which every RAW
+    // shift of a column is still distinct (no two shifts alias to the same
+    // domain point); it is NOT an enforced floor. An honest proof CAN run a
+    // dynamic module at a smaller, aliasing size: prover-ray's own
+    // RecoverBatchClaims dedupes aliasing openings into a single FRI claim
+    // before ever building the batch (and every prover computes byte-identical
+    // claimed values for aliasing raw shifts, since the shift is applied via
+    // omega_n^k with n the RUNTIME size — see wiop.LagrangeEval.evalPolynomials).
+    // reconstructQueryValueAt dedupes the same way when summing the DEEP
+    // quotient, so verify() stays correct at this size too (this column has
+    // only one shift, so there is nothing to dedupe here — this test only pins
+    // that `reconstruct` itself no longer rejects the size).
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{2});
+    try std.testing.expectEqual(@as(u8, 1), recon.entry_size_log2[recon.col_to_entry[0]]);
+}
+
+// ── Aliased-claim equality binding ────────────────────────────────────────────
+//
+// At an aliasing runtime size, distinct raw shifts open the SAME domain point
+// but carry DISTINCT transcript claim cells. Only the first cell of an aliasing
+// group is authenticated through the DEEP quotient (the repeats are deduped),
+// while routeClaims later routes every raw-shift slot independently — so the
+// dedup must equality-bind the skipped cells to the kept one, or a malicious
+// prover could keep the first claim commitment-consistent and smuggle a
+// different value through a skipped slot. No golden vector runs at an aliasing
+// size, so these drive pcs.entryDeepTerm directly.
+
+test "entryDeepTerm: rejects inconsistent aliased claims" {
+    // size_log2 = 1 (n = 2): raw shifts 1 and -1 both normalize to row 1, so
+    // both open zeta * omega. An honest prover writes the same value into both
+    // claim cells; this adversarial pair differs in the second cell.
+    const shifts = [_]isize{ 1, -1 };
+    const claims = [_]ext.Ext{
+        ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
+        ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }), // tampered duplicate
+    };
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+    try std.testing.expectError(
+        error.InconsistentAliasedClaim,
+        pcs.entryDeepTerm(&shifts, &claims, ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 }), 1, zeta, x),
+    );
+}
+
+test "entryDeepTerm: equal aliased claims contribute exactly one term" {
+    // Same aliasing pair, honest (equal) claims: the contribution must be the
+    // single term (entry_value - claim) / (x - zeta * omega), not twice it.
+    const shifts = [_]isize{ 1, -1 };
+    const claim = ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 });
+    const claims = [_]ext.Ext{ claim, claim };
+    const entry_value = ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 });
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+
+    const got = try pcs.entryDeepTerm(&shifts, &claims, entry_value, 1, zeta, x);
+
+    const omega = try field.rootOfUnityBy(2);
+    const point = zeta.mulByBase(omega); // shift 1 and -1 both land here at n = 2
+    const expected = entry_value.sub(claim).mul(x.sub(point).inverse());
+    try std.testing.expect(got.eql(expected));
+}
+
+test "entryDeepTerm: non-aliasing shifts still sum one term per point" {
+    // Control at a non-aliasing size (n = 4): shifts 1 and -1 open different
+    // points and both terms must be counted — pinning that the dedup only
+    // fires on genuine aliasing.
+    const shifts = [_]isize{ 1, -1 };
+    const claims = [_]ext.Ext{
+        ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
+        ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }),
+    };
+    const entry_value = ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 });
+    const zeta = ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 });
+    const x = ext.Ext.fromUints(.{ 2, 7, 1, 8, 2, 8 });
+
+    const got = try pcs.entryDeepTerm(&shifts, &claims, entry_value, 2, zeta, x);
+
+    const omega = try field.rootOfUnityBy(4);
+    const p1 = zeta.mulByBase(omega.pow(1));
+    const p2 = zeta.mulByBase(omega.pow(3)); // -1 mod 4
+    const expected = entry_value.sub(claims[0]).mul(x.sub(p1).inverse())
+        .add(entry_value.sub(claims[1]).mul(x.sub(p2).inverse()));
+    try std.testing.expect(got.eql(expected));
 }
 
 test "routeInputRoots follows input-opening order as dynamic sizes change" {
@@ -382,4 +637,9 @@ test "routeInputRoots deduplicates equal batch roots" {
     try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
+}
+
+test "input auxiliary table includes encoded size two" {
+    const depth = pcs.inputAuxDepth(1, 0, 1) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(usize, 0), depth);
 }

@@ -52,7 +52,7 @@ class ConfigDocGeneratorsTest {
     assertThat(md).contains("Do not edit by hand")
     assertThat(md).contains("## sample")
     assertThat(md).contains("### `nested`")
-    assertThat(md).contains("| `nested.max-attempts` | `UInt` | no | `3` | active | Max attempts. |")
+    assertThat(md).contains("| `nested.max-attempts` | Max attempts. | `UInt` | no | `3` | active |")
     assertThat(md).contains("The hostname. Example: `localhost`.")
     assertThat(md).contains("| File | Key | Replacement | Description |")
     assertThat(md).contains("| sample | `legacy-gas` | `port` | Legacy gas. |")
