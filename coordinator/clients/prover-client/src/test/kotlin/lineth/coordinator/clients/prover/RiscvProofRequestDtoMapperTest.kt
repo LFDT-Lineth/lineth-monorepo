@@ -96,7 +96,12 @@ class RiscvProofRequestDtoMapperTest {
             forkName = forkName,
           ),
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000501),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000501,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+          totalGasUsed = execution.executionPayload.gasUsed.toLong(),
+        ),
       ),
     )
   }
@@ -148,7 +153,11 @@ class RiscvProofRequestDtoMapperTest {
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
           startOffset = 0,
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000510),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000510,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -164,7 +173,11 @@ class RiscvProofRequestDtoMapperTest {
       RestfulRollupAggregationProofRequestDto(
         programVk = programVk,
         proofRequest = RestfulRollupAggregationProofRequestParamsDto(rollupProofIndexes = rollupProofs),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000520,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -217,7 +230,11 @@ class RiscvProofRequestDtoMapperTest {
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
           startOffset = 0,
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000520,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -269,7 +286,11 @@ class RiscvProofRequestDtoMapperTest {
             )
           },
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000567),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000567,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }

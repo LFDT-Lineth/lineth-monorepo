@@ -395,40 +395,6 @@ func (cap MerkleCap) Authenticate(depth int, root field.Octuplet) error {
 	return nil
 }
 
-// RecoverRoot recovers the root of the tree from a branch and a position. The
-// function errors if the branch is malformed its size is inconsistent with idx.
-func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
-
-	if len(branch.AuxSiblings) != len(branch.Siblings) {
-		return field.Octuplet{}, errors.New("malformed proof")
-	}
-
-	if len(branch.Siblings) == 0 {
-		return field.Octuplet{}, errors.New("empty proof")
-	}
-
-	var (
-		ancestor = branch.Leaf
-		currPos  = idx
-	)
-
-	for i := len(branch.Siblings) - 1; i >= 0; i-- {
-		left, right := ancestor, branch.Siblings[i]
-		if currPos&1 > 0 {
-			left, right = right, left
-		}
-
-		ancestor = hashNode(left, right, branch.AuxSiblings[i])
-		currPos >>= 1
-	}
-
-	if currPos > 0 {
-		return field.Octuplet{}, errors.New("all bits of currPos should have been bitshifted beyond LSb")
-	}
-
-	return ancestor, nil
-}
-
 // AuthenticateToCap checks this lower branch against a previously
 // authenticated frontier.
 func (branch *Branch) AuthenticateToCap(idx int, frontier []field.Octuplet) error {

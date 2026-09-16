@@ -43,11 +43,11 @@ func TestOctupletExtRoundTrip(t *testing.T) {
 	}
 }
 
-// TestBuildTreeExtOpenRecover checks the Merkle tree round-trip across several
-// sizes: every leaf opens to a branch whose recovered root matches the tree
-// root, the opened leaf and its deepest sibling are the adjacent (conjugate)
-// pair, and tampering the leaf breaks recovery.
-func TestBuildTreeExtOpenRecover(t *testing.T) {
+// TestBuildTreeExtOpenAuthenticate checks the Merkle tree round-trip across
+// several sizes: every leaf opens to a branch that authenticates against the
+// tree root, the opened leaf and its deepest sibling are the adjacent
+// (conjugate) pair, and tampering the leaf breaks authentication.
+func TestBuildTreeExtOpenAuthenticate(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(7))
 
@@ -65,6 +65,7 @@ func TestBuildTreeExtOpenRecover(t *testing.T) {
 		}
 
 		root := tree.Root()
+		frontier := []field.Octuplet{root}
 		for idx := 0; idx < n; idx++ {
 
 			branch := tree.OpenBranch(idx)
@@ -77,19 +78,15 @@ func TestBuildTreeExtOpenRecover(t *testing.T) {
 				t.Fatalf("n=%d idx=%d: deepest sibling is not the adjacent leaf idx^1", n, idx)
 			}
 
-			got, err := branch.RecoverRoot(idx)
-			if err != nil {
-				t.Fatalf("n=%d idx=%d: RecoverRoot: %v", n, idx, err)
-			}
-			if got != root {
-				t.Fatalf("n=%d idx=%d: recovered root != tree root", n, idx)
+			if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+				t.Fatalf("n=%d idx=%d: AuthenticateToCap: %v", n, idx, err)
 			}
 
-			// Tampering the leaf must break recovery.
+			// Tampering the leaf must break authentication.
 			bad := branch
 			bad.Leaf = field.PseudoRandOctuplet(prng)
-			if tampered, _ := bad.RecoverRoot(idx); tampered == root {
-				t.Fatalf("n=%d idx=%d: tampered leaf still recovers the root", n, idx)
+			if err := bad.AuthenticateToCap(idx, frontier); err == nil {
+				t.Fatalf("n=%d idx=%d: tampered leaf authenticated", n, idx)
 			}
 		}
 	}

@@ -119,6 +119,7 @@ class PreRiscvProofAggregationClient(
   compressionProofResponseFileNameProvider: ProverFileNameProvider<CompressionProofIndex> =
     CompressionProofResponseFileNameProvider,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+  enableRequestFilesCleanup: Boolean = false,
   log: Logger,
 ) :
   GenericProverClient<
@@ -139,6 +140,7 @@ class PreRiscvProofAggregationClient(
       ),
       requestFileNameProvider = AggregationProofFileNameProvider,
       responseFileNameProvider = AggregationProofFileNameProvider,
+      enableRequestFilesCleanup = enableRequestFilesCleanup,
     ),
     proofIndexProvider = createProofIndexProviderFn(hashFunction),
     requestMapper = AggregationRequestDtoMapper(
