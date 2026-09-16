@@ -7,7 +7,6 @@ from ethereum.state import Address
 from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
 from .rollup import (
-    BLOB_BYTES_LENGTH,
     RollupProof,
     RollupPublicInput,
     VerifiableRollupProof,
@@ -146,15 +145,7 @@ def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> Non
     # nor block-hash continuity alone can detect either.
     if left.public_inputs.end_data_rolling_hash != right.public_inputs.parent_data_rolling_hash:
         raise Exception("rollup dataRollingHash continuity failed")
-    # A chunk filled exactly to its end (`end_offset == BLOB_BYTES_LENGTH`) and
-    # the next proof naturally starting at `start_offset == 0` describe the same
-    # stream position, even though the two integers differ — accept both that
-    # case and plain equality.
-    offsets_continuous = left.public_inputs.end_offset == right.public_inputs.start_offset
-    offsets_at_chunk_boundary = (
-        left.public_inputs.end_offset == BLOB_BYTES_LENGTH and right.public_inputs.start_offset == 0
-    )
-    if not (offsets_continuous or offsets_at_chunk_boundary):
+    if left.public_inputs.end_offset != right.public_inputs.start_offset:
         raise Exception("rollup offset continuity failed")
     # Execution continuity is now explicit (§2.4) rather than folded into the
     # DA accumulator, since a shared chunk's dataRollingHash fold no longer determines

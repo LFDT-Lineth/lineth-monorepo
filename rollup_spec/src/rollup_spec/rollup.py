@@ -273,7 +273,8 @@ def _verify_and_fold_chunks(
     binds the witnessed chunk to the chain position without requiring the guest
     to have derived `parent_data_rolling_hash` itself.
 
-    Returns `(end_data_rolling_hash, end_offset)`.
+    Returns `(end_data_rolling_hash, end_offset)`, with offset 0 at a fully
+    consumed terminal chunk and a positive offset only inside a shared blob.
     """
     chunk_count = len(chunks)
     if chunk_count == 0:
@@ -308,11 +309,8 @@ def _verify_and_fold_chunks(
             if own_slice_len < 0:
                 raise Exception(f"chunk {i} opaque bytes exceed the blob chunk size")
             last_chunk_len = BLOB_BYTES_LENGTH - len(suffix)
-            # The final position must lie strictly inside the last chunk:
-            # end_offset == 0 is the fresh-start sentinel, so a trailing blob
-            # chunk that opaque suffix bytes fill entirely is rejected.
-            if is_last and last_chunk_len <= 0:
-                raise Exception(f"chunk {i} opaque suffix bytes fill the whole blob chunk")
+            if own_slice_len <= 0:
+                raise Exception(f"chunk {i} must contain owned bytes")
             own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
             cursor += own_slice_len
             full_chunk_bytes = prefix + own_slice + suffix
@@ -353,9 +351,8 @@ def _verify_and_fold_chunks(
                 raise Exception(f"calldata chunk {i} does not start at a segment boundary")
             # Resolve the chunk's extent by matching its anchored hash at each
             # candidate segment-end boundary strictly past the cursor (a
-            # zero-length chunk is rejected: end_offset 0 is the fresh-start
-            # sentinel, so keccak256(b"") at `end == cursor` is not a valid
-            # match). The matching partition is the proof of the extent
+            # zero-length chunk is rejected). The matching partition is the
+            # proof of the extent
             # (keccak is binding), so no length is witnessed; a run of
             # consecutive calldata chunks self-delimits.
             matched_end: Optional[int] = None
@@ -382,10 +379,9 @@ def _verify_and_fold_chunks(
     if cursor != len(own_stream_bytes):
         raise Exception("chunk witnesses do not cover the reconstructed segment length")
 
-    # end_offset is the position within the LAST chunk: for a blob, the bytes
-    # consumed of its fixed window (chunkSize less the opaque suffix); for a
-    # calldata chunk, its whole length (a calldata chunk is consumed whole).
-    end_offset = last_chunk_len
+    # Fully consumed chunks have the canonical boundary offset 0. A positive
+    # offset identifies only a position inside a shared terminal blob.
+    end_offset = last_chunk_len if chunks[-1].is_blob and len(opaque_suffix_bytes) > 0 else 0
     return data_rolling_hash, end_offset
 
 

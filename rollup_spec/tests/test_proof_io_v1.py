@@ -301,7 +301,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
-        end_offset=131072,
+        end_offset=0,
         program_vks=[_EXEC_VK],
     )
 
@@ -453,7 +453,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["startOffset"] == 4
-    assert pi["endOffset"] == 131072
+    assert pi["endOffset"] == 0
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # §ProgramVK anchoring: one combined programVks list (exec/rollup not
