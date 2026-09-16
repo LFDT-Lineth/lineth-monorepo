@@ -35,7 +35,7 @@ fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
 }
 
 // -- PREDECODING PROOF SECTION -- 
-//#[inline]
+// #[inline]
 // fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
 //     var sign:u1, tmp:u20
 //     //
@@ -63,7 +63,7 @@ fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
 }
 
 // -- PREDECODING PROOF SECTION -- 
-//#[inline]
+// #[inline]
 // fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
 //     var sign:u1, tmp:u11
 //     //
