@@ -11,7 +11,7 @@ comptime {
     if (!profiling.enabled) {
         @compileError(
             "test-profiling requires profiling to be enabled at build time; " ++
-                "run `zig build test-profiling -Dverifier-profiling`",
+                "run `make test-zig`",
         );
     }
 }
