@@ -71,12 +71,13 @@ fn main<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>() {
     // Execution of the program
     // ==========================
 
-    // -- PREDECODING PROOF SECTION --
+    // -- Interpreting the riscV proved-transpiled program -- START
     // parameters: clock_cycle, base, pc, exec_end, output_write_address
     // interpreter!(0, base, entry_point, exec_end, 0)
-    // -- PREDECODING PROOF SECTION END--
+    // -- Interpreting the riscV proved-transpiled program -- END
 
-    // -- Interpreting the riscV transpiled program --
+    // -- Interpreting the riscV unproved-transpiled program -- START
     // parameters: clock_cycle, base, pc, output_write_address
     interpreter!(0, base, entry_point, 0)
+    // -- Interpreting the riscV unproved-transpiled program -- END
 }

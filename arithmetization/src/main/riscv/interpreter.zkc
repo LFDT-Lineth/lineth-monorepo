@@ -204,27 +204,31 @@ fn interpreter<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>(
     var rem:u2
     // determine index of predecoded program
     index::rem = pc - base
-    // -- PREDECODING PROOF SECTION --
-    // Execution must stay inside the span justified by predecoding, at 4-byte
+    // -- Interpreting the riscV proved-transpiled program -- START
+    // Proof of the transpilation step:
+    // Note that execution must stay inside the span justified by predecoding, at 4-byte
     // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
     // if pc<base || pc >= exec_end || rem != 0 {
     //     printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
     //     fail
     // }
-    // -- PREDECODING PROOF SECTION END--
+    // -- Interpreting the riscV proved-transpiled program -- END
+
     printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
     // Execute current instruction
     new_pc, new_output_write_address = interpreter_a(index as u64, pc, output_write_address)
+
     // Check for termination
     if new_pc != MAX_UINT_64 {
         // Execute next instruction
 
-        // -- PREDECODING PROOF SECTION --
+        // -- Interpreting the riscV proved-transpiled program -- START
         // interpreter!(clock_cycle + 1, base, new_pc, exec_end, new_output_write_address)
-        // -- PREDECODING PROOF SECTION END--
+        // -- Interpreting the riscV proved-transpiled program -- END
 
-        // -- Interpreting the riscV transpiled program --
+        // -- Interpreting the riscV unproved-transpiled program -- START
         interpreter!(clock_cycle + 1, base, new_pc, new_output_write_address)
+        // -- Interpreting the riscV unproved-transpiled program -- END
     }
 
     // Termination
