@@ -34,6 +34,7 @@
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
 - *(maru)* Add Amsterdam support (#3939)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 
 ### 🐛 Bug Fixes
 

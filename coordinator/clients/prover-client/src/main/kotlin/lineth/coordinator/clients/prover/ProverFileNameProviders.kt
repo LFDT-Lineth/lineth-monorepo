@@ -1,6 +1,7 @@
 package lineth.coordinator.clients.prover
 
 import linea.clients.ProverFileNameProvider
+import linea.clients.ProverFileNameStartBlockNumberProvider
 import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.encodeHex
 
@@ -12,7 +13,8 @@ object FileNameSuffixes {
 
 private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
 
-object L2ExecutionProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+object L2ExecutionProofFileNameProvider :
+  ProverFileNameProvider<BlockIntervalProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
@@ -20,7 +22,8 @@ object L2ExecutionProofFileNameProvider : ProverFileNameProvider<BlockIntervalPr
   }
 }
 
-object RollupProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+object RollupProofFileNameProvider :
+  ProverFileNameProvider<BlockIntervalProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
@@ -28,7 +31,8 @@ object RollupProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIn
   }
 }
 
-object RollupAggregationProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+object RollupAggregationProofFileNameProvider :
+  ProverFileNameProvider<BlockIntervalProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +

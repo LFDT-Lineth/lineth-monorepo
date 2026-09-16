@@ -55,6 +55,7 @@ class PreRiscvInvalidityProverClient(
   val config: FileBasedProverConfig,
   val vertx: Vertx,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
+  enableRequestFilesCleanup: Boolean = false,
 ) :
   GenericProverClient<
     InvalidityProofRequest,
@@ -74,6 +75,7 @@ class PreRiscvInvalidityProverClient(
       ),
       requestFileNameProvider = InvalidityProofFileNameProvider,
       responseFileNameProvider = InvalidityProofFileNameProvider,
+      enableRequestFilesCleanup = enableRequestFilesCleanup,
     ),
     proofIndexProvider = PreRiscvInvalidityProverClient::invalidityProofIndex,
     requestMapper = { invalidityProofRequest ->
