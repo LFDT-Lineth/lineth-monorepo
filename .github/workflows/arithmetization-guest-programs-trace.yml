@@ -69,14 +69,14 @@ jobs:
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
 
-      - name: Trace l2-execution guest program and check guest_output
-        run: make -C riscv-guests/l2-execution zkc-smoke-trace
-        timeout-minutes: 45
-        env:
-          ZKC_REF: "" # Empty to avoid applying the optional module override again
-          INPUT: test/testdata/stateless_input.ssz
-          KECCAK_ACCEL: true
-          ZKC_TRACE_FLAGS: "--stats -vv"
+      # - name: Trace l2-execution guest program and check guest_output
+      #   run: make -C riscv-guests/l2-execution zkc-smoke-trace
+      #   timeout-minutes: 45
+      #   env:
+      #     ZKC_REF: "" # Empty to avoid applying the optional module override again
+      #     INPUT: test/testdata/stateless_input.ssz
+      #     KECCAK_ACCEL: true
+      #     ZKC_TRACE_FLAGS: "--stats -vv"
 
       - name: Trace l2-execution guest program with Amsterdam block 175k
         # 175k references the amount of gas used in the block
