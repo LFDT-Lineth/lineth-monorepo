@@ -9,7 +9,7 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 # Use the zkc tool version pinned in go.mod by default.
 ZKC ?= go tool zkc
 # Optional: override the pinned zkc module version with a commit, branch, or tag.
-ZKC_REF ?=
+ZKC_REF ?=3b0bbdff54f65c0feeb6d21e53f25a24a46fa3a6
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
