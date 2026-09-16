@@ -73,10 +73,12 @@ func run() error {
 	// binary and scalar capacities below, so Zig does not materialize the
 	// pointer-heavy literal in .rodata.
 	maxRoundCells := 0
+	totalRoundCells := 0
 	for _, count := range artifacts.CompiledSystem.PublicInput.RoundCellCounts {
 		if count > maxRoundCells {
 			maxRoundCells = count
 		}
+		totalRoundCells += count
 	}
 	totalClaimSlots := 0
 	for _, col := range artifacts.CompiledSystem.Pcs.Columns {
@@ -87,9 +89,10 @@ func run() error {
 	// the zero-fill region bounded and out of the ELF file.
 	decodedArenaCapacity := binaryBuf.Len() * 10
 	fmt.Fprintf(&systemBuf,
-		"\nconst verifier_ray = @import(\"verifier_ray\");\nconst verifier = verifier_ray.verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\npub const system_0_encoded = @embedFile(\"riscv_system.bin\").*;\npub const system_0_limits = verifier.RuntimeLimits{ .public_input = .{ .round_count = %d, .max_cells_per_round = %d }, .replay = .{ .total_round_coins = %d }, .pcs = .{ .max_entries = %d, .num_batches = %d, .max_size_log2 = %d, .max_codeword_size_log2 = %d, .num_queries = %d, .total_claim_slots = %d }, .total_witness_claims = %d, .total_quotient_claims = %d };\npub const system_0_decoded_arena_size = %d;\n",
+		"\nconst verifier_ray = @import(\"verifier_ray\");\nconst verifier = verifier_ray.verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\npub const system_0_encoded = @embedFile(\"riscv_system.bin\").*;\npub const system_0_limits = verifier.RuntimeLimits{ .public_input = .{ .round_count = %d, .max_cells_per_round = %d, .total_cells = %d }, .replay = .{ .total_round_coins = %d }, .pcs = .{ .max_entries = %d, .num_batches = %d, .max_size_log2 = %d, .max_codeword_size_log2 = %d, .num_queries = %d, .total_claim_slots = %d }, .total_witness_claims = %d, .total_quotient_claims = %d };\npub const system_0_decoded_arena_size = %d;\n",
 		len(artifacts.CompiledSystem.PublicInput.RoundCellCounts),
 		maxRoundCells,
+		totalRoundCells,
 		artifacts.CompiledSystem.Routing.TotalRoundCoins,
 		artifacts.CompiledSystem.Pcs.MaxEntries,
 		artifacts.CompiledSystem.Pcs.NumBatches,

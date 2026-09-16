@@ -14,6 +14,7 @@ pub const Error = error{
 pub const Limits = struct {
     round_count: usize,
     max_cells_per_round: usize,
+    total_cells: usize,
 };
 
 /// One registered public input, referenced by both its position in the flat
@@ -119,19 +120,24 @@ pub fn RuntimeBoundRoundMessages(comptime limits: Limits) type {
     return struct {
         const Self = @This();
         const round_cap = @max(limits.round_count, 1);
-        const cell_cap = @max(limits.max_cells_per_round, 1);
+        const cell_cap = @max(limits.total_cells, 1);
 
         round_commitments: [round_cap]?Commitment = undefined,
         cell_counts: [round_cap]usize = undefined,
+        cell_offsets: [round_cap]usize = undefined,
         rounds_buf: [round_cap]RoundMessage = undefined,
-        cell_storage: [round_cap][cell_cap]Scalar = undefined,
+        // One contiguous backing store avoids reserving max_cells_per_round for
+        // every round. The generated limit is the exact total for this system.
+        cell_storage: [cell_cap]Scalar = undefined,
         round_count: usize = 0,
 
         pub fn rounds(self: *Self) []const RoundMessage {
             for (0..self.round_count) |round_index| {
+                const offset = self.cell_offsets[round_index];
+                const count = self.cell_counts[round_index];
                 self.rounds_buf[round_index] = .{
                     .commitment = self.round_commitments[round_index],
-                    .cells = self.cell_storage[round_index][0..self.cell_counts[round_index]],
+                    .cells = self.cell_storage[offset..][0..count],
                 };
             }
             return self.rounds_buf[0..self.round_count];
@@ -146,20 +152,23 @@ pub fn bindRoundMessagesRuntime(
     spec: Spec,
     rounds: []const RoundMessage,
     public_inputs: []const Scalar,
-) Error!RuntimeBoundRoundMessages(limits) {
+    out: *RuntimeBoundRoundMessages(limits),
+) Error!void {
     if (spec.round_cell_counts.len > limits.round_count or rounds.len != spec.round_cell_counts.len)
         return error.InvalidRoundCount;
     if (public_inputs.len != spec.refs.len) return error.InvalidPublicInputCount;
 
-    var bound: RuntimeBoundRoundMessages(limits) = undefined;
-    bound.round_count = rounds.len;
+    out.round_count = rounds.len;
     var public_input_cursor: usize = 0;
+    var next_cell: usize = 0;
     for (0..spec.round_cell_counts.len) |round_index| {
         const proof_round = rounds[round_index];
         const total_cells = spec.round_cell_counts[round_index];
         if (total_cells > limits.max_cells_per_round) return error.InvalidSpec;
-        bound.round_commitments[round_index] = proof_round.commitment;
-        bound.cell_counts[round_index] = total_cells;
+        if (next_cell > limits.total_cells or total_cells > limits.total_cells - next_cell) return error.InvalidSpec;
+        out.round_commitments[round_index] = proof_round.commitment;
+        out.cell_offsets[round_index] = next_cell;
+        out.cell_counts[round_index] = total_cells;
 
         var proof_cell_index: usize = 0;
         for (0..total_cells) |cell_index| {
@@ -169,18 +178,18 @@ pub fn bindRoundMessagesRuntime(
             {
                 const ref = spec.refs[public_input_cursor];
                 if (ref.statement_index >= public_inputs.len) return error.InvalidSpec;
-                bound.cell_storage[round_index][cell_index] = public_inputs[ref.statement_index];
+                out.cell_storage[next_cell + cell_index] = public_inputs[ref.statement_index];
                 public_input_cursor += 1;
             } else {
                 if (proof_cell_index >= proof_round.cells.len) return error.InvalidRoundCellCount;
-                bound.cell_storage[round_index][cell_index] = proof_round.cells[proof_cell_index];
+                out.cell_storage[next_cell + cell_index] = proof_round.cells[proof_cell_index];
                 proof_cell_index += 1;
             }
         }
         if (proof_cell_index != proof_round.cells.len) return error.InvalidRoundCellCount;
+        next_cell += total_cells;
     }
     if (public_input_cursor != spec.refs.len) return error.InvalidSpec;
-    return bound;
 }
 
 fn maxRoundCellCount(comptime spec: Spec) usize {

@@ -36,6 +36,7 @@ else
 // memory. Its generated capacity includes headroom over the measured decoded
 // graph and contributes to .bss rather than the ELF file's .rodata.
 var decoded_system_storage: [riscv_system.system_0_decoded_arena_size]u8 = undefined;
+var verifier_workspace: verifier.RuntimeWorkspace(riscv_system.system_0_limits) = undefined;
 
 // The main entry point for the verifier ray smoke test. This is separate from
 // the main verifier entry point in `verifier.zig` because we want to be able to
@@ -97,12 +98,13 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
         profiling.markR5Value(profiling.Mark.system_decode_done, fba.end_index);
     if (comptime embedded_data_conf.decode_only) return 0;
 
-    verifier.verifyRuntime(
+    verifier.verifyRuntimeWithWorkspace(
         riscv_system.system_0_limits,
         bundle.spec,
         bundle.systems,
         input.proof,
         input.public_inputs,
+        &verifier_workspace,
     ) catch {
         // if the verifier fails, return a non-zero exit code
         return 1;

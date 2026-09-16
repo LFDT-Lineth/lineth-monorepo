@@ -451,13 +451,13 @@ pub fn buildEntryClaims(
     ctx: anytype,
     out: *EntryClaims(system),
 ) !void {
-    return buildEntryClaimsRuntime(limitsFor(system), system, recon, ctx, out);
+    return buildEntryClaimsRuntime(limitsFor(system), system, &recon, ctx, out);
 }
 
 pub fn buildEntryClaimsRuntime(
     comptime limits: Limits,
     system: System,
-    recon: Reconstructed(limits),
+    recon: *const Reconstructed(limits),
     ctx: anytype,
     out: *RuntimeEntryClaims(limits),
 ) !void {
@@ -490,13 +490,13 @@ pub fn routeInputRoots(
     recon: Reconstructed(limitsFor(system)),
     batch_roots: []const poseidon2.Digest,
 ) Error!InputRootRouting(limitsFor(system)) {
-    return routeInputRootsRuntime(limitsFor(system), system, recon, batch_roots);
+    return routeInputRootsRuntime(limitsFor(system), system, &recon, batch_roots);
 }
 
 pub fn routeInputRootsRuntime(
     comptime limits: Limits,
     system: System,
-    recon: Reconstructed(limits),
+    recon: *const Reconstructed(limits),
     batch_roots: []const poseidon2.Digest,
 ) Error!InputRootRouting(limits) {
     if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
@@ -559,13 +559,13 @@ pub fn deriveChallenges(
     transcript: *fiat_shamir.Transcript,
     fri_proof: fri.Proof,
 ) fri.Error!PcsChallenges(system) {
-    return deriveChallengesRuntime(limitsFor(system), system, recon, transcript, fri_proof);
+    return deriveChallengesRuntime(limitsFor(system), system, &recon, transcript, fri_proof);
 }
 
 pub fn deriveChallengesRuntime(
     comptime limits: Limits,
     system: System,
-    recon: Reconstructed(limits),
+    recon: *const Reconstructed(limits),
     transcript: *fiat_shamir.Transcript,
     fri_proof: fri.Proof,
 ) fri.Error!RuntimePcsChallenges(limits) {
@@ -612,7 +612,7 @@ pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
     return encoded_log - 1;
 }
 
-fn buildInputCapInfo(comptime limits: Limits, system: System, recon: Reconstructed(limits), routing: InputRootRouting(limits), tree_idx: usize) Error!InputCapInfo(limits) {
+fn buildInputCapInfo(comptime limits: Limits, system: System, recon: *const Reconstructed(limits), routing: InputRootRouting(limits), tree_idx: usize) Error!InputCapInfo(limits) {
     _ = system;
     const Info = InputCapInfo(limits);
     var info = Info{ .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size };
@@ -679,7 +679,7 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
 
 fn authenticateInputCap(
     comptime limits: Limits,
-    recon: Reconstructed(limits),
+    recon: *const Reconstructed(limits),
     info: InputCapInfo(limits),
     cap: InputCap,
     root: poseidon2.Digest,
@@ -787,7 +787,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
         system.envelope_params.num_queries > limits.num_queries)
         return Error.LayoutOverflow;
     const recon = try reconstructRuntime(limits, system, input.module_sizes);
-    const routing = try routeInputRootsRuntime(limits, system, recon, input.roots);
+    const routing = try routeInputRootsRuntime(limits, system, &recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
@@ -830,7 +830,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
     var input_aux_storage: [@max(limits.num_queries * 2, 2)]?poseidon2.Digest = undefined;
     for (0..routing.distinct_count) |tree_idx| {
-        const info = try buildInputCapInfo(limits, system, recon, routing, tree_idx);
+        const info = try buildInputCapInfo(limits, system, &recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
             if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
@@ -839,7 +839,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
         } else {
             input_frontiers[tree_idx] = try authenticateInputCap(
                 limits,
-                recon,
+                &recon,
                 info,
                 input.proof.input_caps[tree_idx],
                 routing.roots[tree_idx],
@@ -915,7 +915,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            try bindInputTreeOpenings(limits, recon, source, e0, e1, level_size);
+            try bindInputTreeOpenings(limits, &recon, source, e0, e1, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -929,7 +929,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
 
             const self_val = try reconstructQueryValueAt(
                 system,
-                recon,
+                &recon,
                 source,
                 e0,
                 e1,
@@ -944,7 +944,7 @@ pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput
             );
             const sib_val = try reconstructQueryValueAt(
                 system,
-                recon,
+                &recon,
                 source,
                 e0,
                 e1,
