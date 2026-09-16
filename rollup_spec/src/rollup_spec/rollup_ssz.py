@@ -10,7 +10,7 @@ sibling `l2_execution_ssz.py`, mirroring the proof pipeline itself.
 Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
-  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
+  - `ROLLUP_INPUT_SCHEMA_ID`  (0x1002) — rollup guest input
   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
 
 The guest output container omits the `proof` field the logical `RollupProof`
@@ -60,7 +60,7 @@ from .rollup import (
 )
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_INPUT_SCHEMA_ID = 0x1001
+ROLLUP_INPUT_SCHEMA_ID = 0x1002
 ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
@@ -86,6 +86,7 @@ class SszConflationWitness(Container):
 class SszChunkWitness(Container):
     chunk_hash: SszBytes32
     is_calldata: boolean
+    calldata_length: uint64
 
 
 class SszRollupPublicInput(Container):
@@ -182,7 +183,11 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
         chain_id=int(private_input.chain_id),
         conflations=[_ssz_conflation_witness(c) for c in private_input.conflations],
         chunks=[
-            SszChunkWitness(chunk_hash=bytes(c.chunk_hash), is_calldata=c.is_calldata)
+            SszChunkWitness(
+                chunk_hash=bytes(c.chunk_hash),
+                is_calldata=c.is_calldata,
+                calldata_length=c.calldata_length,
+            )
             for c in private_input.chunks
         ],
         l2_execution_proofs=[
@@ -244,6 +249,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
             ChunkWitness(
                 chunk_hash=Hash32(bytes(c.chunk_hash)),
                 is_calldata=bool(c.is_calldata),
+                calldata_length=int(c.calldata_length),
             )
             for c in view.chunks
         ],
@@ -260,7 +266,7 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
 
 
 def encode_rollup_input(private_input: RollupProofPrivateInput) -> bytes:
-    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1001 schema id)."""
+    """Encode a `RollupProofPrivateInput` into framed SSZ bytes (0x1002 schema id)."""
     return _frame(ROLLUP_INPUT_SCHEMA_ID, _ssz_rollup_input(private_input).encode_bytes())
 
 

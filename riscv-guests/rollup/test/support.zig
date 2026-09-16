@@ -162,8 +162,8 @@ pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput
         .chain_id = CHAIN_ID,
         .conflations = conflations,
         .chunks = try alloc.dupe(rollup_ssz.ChunkWitness, &[_]rollup_ssz.ChunkWitness{
-            .{ .chunk_hash = CHUNK_0, .is_calldata = false },
-            .{ .chunk_hash = CHUNK_1, .is_calldata = true },
+            .{ .chunk_hash = CHUNK_0, .is_calldata = false, .calldata_length = 0 },
+            .{ .chunk_hash = CHUNK_1, .is_calldata = true, .calldata_length = rollup_ssz.BLOB_BYTES_LENGTH + 7 },
         }),
         .l2_execution_proofs = try alloc.dupe(rollup_ssz.VerifiableL2ExecutionProof, &[_]rollup_ssz.VerifiableL2ExecutionProof{ proof0, proof1 }),
         .opaque_prefix_bytes = &OPAQUE_PREFIX_BYTES,

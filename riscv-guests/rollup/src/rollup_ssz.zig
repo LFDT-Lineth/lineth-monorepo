@@ -1,5 +1,5 @@
 //! SSZ codec for the rollup guest wire format: `SszRollupProofPrivateInput`/`SszRollupOutput`,
-//! schema ids 0x1001/0x1801.
+//! schema ids 0x1002/0x1801.
 //!
 //! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
 //! guest's own tests round-trip both the input and output containers byte-for-byte using this
@@ -19,7 +19,7 @@
 const std = @import("std");
 const guest_common = @import("guest_common");
 
-pub const INPUT_SCHEMA_ID: u16 = 0x1001;
+pub const INPUT_SCHEMA_ID: u16 = 0x1002;
 pub const OUTPUT_SCHEMA_ID: u16 = 0x1801;
 const SCHEMA_ID_SIZE: usize = 2;
 
@@ -50,6 +50,7 @@ pub const ConflationWitness = struct {
 pub const ChunkWitness = struct {
     chunk_hash: [32]u8,
     is_calldata: bool,
+    calldata_length: u64,
 };
 
 /// The 16-field l2-execution public-input tuple, in wire order.
@@ -205,7 +206,7 @@ fn encodeBytes32List(alloc: std.mem.Allocator, items: []const [32]u8) ![]u8 {
 }
 
 fn decodeChunkWitnessList(alloc: std.mem.Allocator, data: []const u8) ![]const ChunkWitness {
-    const element_size = 33;
+    const element_size = 41;
     if (data.len % element_size != 0) return error.InvalidSsz;
     const n = data.len / element_size;
     if (n > MAX_CHUNKS_PER_ROLLUP) return error.BoundsViolation;
@@ -218,18 +219,20 @@ fn decodeChunkWitnessList(alloc: std.mem.Allocator, data: []const u8) ![]const C
             1 => true,
             else => return error.InvalidSsz,
         };
+        out[i].calldata_length = readU64(data, start + 33);
     }
     return out;
 }
 
 fn encodeChunkWitnessList(alloc: std.mem.Allocator, items: []const ChunkWitness) ![]u8 {
-    const element_size = 33;
+    const element_size = 41;
     const byte_len = try checkedMul(items.len, element_size);
     const out = try alloc.alloc(u8, byte_len);
     for (items, 0..) |item, i| {
         const start = i * element_size;
         @memcpy(out[start..][0..32], &item.chunk_hash);
         out[start + 32] = @intFromBool(item.is_calldata);
+        writeU64(out, start + 33, item.calldata_length);
     }
     return out;
 }
@@ -345,7 +348,7 @@ fn decodeVerifiableL2ExecutionProof(alloc: std.mem.Allocator, bytes: []const u8)
 // Fixed head: parent_data_rolling_hash(32) + start_offset(8) + chain_id(8) + 6 offsets(4 each).
 const INPUT_FIXED_SIZE: usize = 32 + 8 + 8 + 4 * 6;
 
-/// Decode the rollup guest input: the 0x1001 schema id followed by the SSZ
+/// Decode the rollup guest input: the 0x1002 schema id followed by the SSZ
 /// `SszRollupProofPrivateInput`. Strict: rejects a wrong schema id, a too-short frame, a
 /// misaligned/out-of-order/out-of-bounds offset, or a list exceeding its wire-format bound.
 pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !RollupProofPrivateInput {
@@ -495,7 +498,7 @@ fn encodeConflationWitness(alloc: std.mem.Allocator, v: ConflationWitness) ![]u8
     return out;
 }
 
-/// Encode the rollup guest input: the 0x1001 schema id followed by the SSZ
+/// Encode the rollup guest input: the 0x1002 schema id followed by the SSZ
 /// `SszRollupProofPrivateInput`. Not used by the guest itself at runtime (it only ever decodes) —
 /// kept so the input codec's byte-exact round-trip can be asserted against `decodeInput` in this
 /// guest's own tests, from literal readable Zig values rather than an externally-produced fixture.

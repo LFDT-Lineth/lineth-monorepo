@@ -37,17 +37,27 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["chunkHash"],
+            "required": ["chunkHash", "isCalldata", "calldataLength"],
             "additionalProperties": false,
+            "allOf": [
+              {
+                "if": { "properties": { "isCalldata": { "const": true } } },
+                "then": { "properties": { "calldataLength": { "minimum": 1 } } },
+                "else": { "properties": { "calldataLength": { "const": 0 } } }
+              }
+            ],
             "properties": {
               "chunkHash": {
                 "description": "The chunk's L1-anchored binding hash: a KZG versioned hash for a blob chunk, keccak256(_compressedData) for a calldata chunk (§3.1).",
                 "$ref": "#/$defs/hash32"
               },
               "isCalldata": {
-                "description": "Selects the in-guest check (§3.1): false (the default) verifies the chunk as a blob via its KZG versioned hash; true verifies it as a range-aligned calldata chunk via keccak256 of its matched whole-segment extent.",
-                "type": "boolean",
-                "default": false
+                "description": "Selects the in-guest check (§3.1): false verifies the chunk as a blob via its KZG versioned hash; true verifies it as a range-aligned calldata chunk via keccak256 of its exact witnessed extent.",
+                "type": "boolean"
+              },
+              "calldataLength": {
+                "description": "Exact calldata chunk length in bytes (§3.1). Must be 0 for a blob chunk and positive for a calldata chunk.",
+                "$ref": "#/$defs/uint64"
               }
             }
           }
@@ -82,6 +92,7 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
+    "uint64": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
     "offset": { "type": "integer", "minimum": 0, "maximum": 131071 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },

@@ -14,7 +14,7 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
 
     const original = try sampleInput(alloc);
     const encoded = try rollup_ssz.encodeInput(alloc, original);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x01 }, encoded[0..2]);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x10, 0x02 }, encoded[0..2]);
 
     const v = try rollup_ssz.decodeInput(alloc, encoded);
 
@@ -32,8 +32,19 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
     try std.testing.expectEqual(@as(usize, 2), v.chunks.len);
     try std.testing.expectEqualSlices(u8, &support.CHUNK_0, &v.chunks[0].chunk_hash);
     try std.testing.expect(!v.chunks[0].is_calldata);
+    try std.testing.expectEqual(@as(u64, 0), v.chunks[0].calldata_length);
     try std.testing.expectEqualSlices(u8, &support.CHUNK_1, &v.chunks[1].chunk_hash);
     try std.testing.expect(v.chunks[1].is_calldata);
+    try std.testing.expectEqual(@as(u64, rollup_ssz.BLOB_BYTES_LENGTH + 7), v.chunks[1].calldata_length);
+
+    const chunks_offset = std.mem.readInt(u32, encoded[2 + 52 ..][0..4], .little);
+    const second_chunk = 2 + chunks_offset + 41;
+    try std.testing.expectEqualSlices(u8, &support.CHUNK_1, encoded[second_chunk..][0..32]);
+    try std.testing.expectEqual(@as(u8, 1), encoded[second_chunk + 32]);
+    try std.testing.expectEqual(
+        @as(u64, rollup_ssz.BLOB_BYTES_LENGTH + 7),
+        std.mem.readInt(u64, encoded[second_chunk + 33 ..][0..8], .little),
+    );
 
     try std.testing.expectEqualSlices(u8, &support.OPAQUE_PREFIX_BYTES, v.opaque_prefix_bytes);
     try std.testing.expectEqual(@as(usize, 0), v.opaque_suffix_bytes.len);

@@ -417,18 +417,30 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
 
 def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
     """
-    Decode one touched-chunk entry: `{chunkHash, isCalldata?}`.
+    Decode one touched-chunk entry: `{chunkHash, isCalldata, calldataLength}`.
 
     `chunkHash` is the anchored binding hash (a KZG versioned hash for a blob
     chunk, `keccak256(_compressedData)` for a calldata chunk — §3.1).
-    `isCalldata` selects the in-guest check; it defaults to `false` (a blob
-    chunk) and is specified only for a calldata chunk.
+    `isCalldata` selects the in-guest check. `calldataLength` is zero for a
+    blob and the positive exact byte length for calldata.
     """
     chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
-    is_calldata = obj.get("isCalldata", False)
+    is_calldata = _require(obj, "isCalldata", ctx)
     if not isinstance(is_calldata, bool):
         raise ProofIoError(f"'{ctx}isCalldata' must be a boolean")
-    return ChunkWitness(chunk_hash=chunk_hash, is_calldata=is_calldata)
+    try:
+        calldata_length = int(_u64(_require(obj, "calldataLength", ctx), f"{ctx}calldataLength"))
+    except OverflowError as exc:
+        raise ProofIoError(f"'{ctx}calldataLength' exceeds uint64") from exc
+    if is_calldata and calldata_length == 0:
+        raise ProofIoError(f"'{ctx}calldataLength' must be positive for calldata")
+    if not is_calldata and calldata_length != 0:
+        raise ProofIoError(f"'{ctx}calldataLength' must be 0 for a blob")
+    return ChunkWitness(
+        chunk_hash=chunk_hash,
+        is_calldata=is_calldata,
+        calldata_length=calldata_length,
+    )
 
 
 def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:

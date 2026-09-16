@@ -101,9 +101,9 @@ class TruncatedEthereumBlock:
 @dataclass
 class ChunkWitness:
     """
-    One touched chunk's anchored hash plus its declared kind (§3.1).
+    One touched chunk's anchored hash, declared kind, and calldata length (§3.1).
 
-    - **Blob chunk** (`is_calldata=False`, the default): fixed
+    - **Blob chunk** (`is_calldata=False`): fixed
       `BLOB_BYTES_LENGTH` bytes (EIP-4844 pads every blob to 128 KiB), bound by
       its KZG commitment / versioned hash. A blob chunk may be *shared* with a
       neighbouring proof across a range boundary (§3.1), reconstructed from
@@ -112,8 +112,8 @@ class ChunkWitness:
       by `keccak256(_compressedData)`. It packs a whole number of conflation
       segments (complete, no partial tail) and is *range-aligned*: it shares no
       bytes with a neighbouring proof, so its `start_offset` is 0 and it
-      carries no opaque bytes. The guest resolves its extent by matching the
-      anchored `chunk_hash` at segment boundaries — no length is witnessed.
+      carries no opaque bytes. `calldata_length` gives its positive byte
+      length; blob chunks set this field to zero.
 
     `is_calldata` is witness data: the anchored `chunk_hash` does not by itself
     record which binding applies. It needs no independent L1 verification
@@ -123,7 +123,8 @@ class ChunkWitness:
     carries the soundness.
     """
     chunk_hash: Hash32
-    is_calldata: bool = False
+    is_calldata: bool
+    calldata_length: int
 
     @property
     def is_blob(self) -> bool:
@@ -252,13 +253,10 @@ def _verify_and_fold_chunks(
     verification — their content is never interpreted (§2.2).
 
     A **calldata chunk** packs a whole number of conflation segments (§3.1) —
-    complete segments, no partial tail — so its end falls only at a segment
-    boundary. The guest resolves each calldata chunk's extent by hashing the
-    stream from its start (`cursor`) to each candidate segment-end offset and
-    accepting the first whose keccak256 equals `chunk_hash`; the matching
-    partition is the proof of the chunk's extent, so no length is witnessed and
-    a run of consecutive calldata chunks self-delimits. A calldata chunk is
-    range-aligned: it never shares bytes with a neighbouring proof, so it
+    complete segments, no partial tail — so its start and end fall only at
+    segment boundaries. Its witnessed positive `calldata_length` determines
+    one exact slice whose keccak256 must equal `chunk_hash`. A calldata chunk
+    is range-aligned: it never shares bytes with a neighbouring proof, so it
     carries no opaque prefix/suffix bytes and sits only at `start_offset = 0`.
 
     `segment_end_offsets` is the cumulative byte offset of each segment's end
@@ -303,6 +301,8 @@ def _verify_and_fold_chunks(
         suffix = opaque_suffix_bytes if is_last else b""
 
         if chunk.is_blob:
+            if chunk.calldata_length != 0:
+                raise Exception(f"blob chunk {i} must have calldataLength 0")
             # Fixed-size blob: own slice fills whatever the opaque boundary
             # bytes don't, reconstructing exactly BLOB_BYTES_LENGTH.
             own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
@@ -336,6 +336,10 @@ def _verify_and_fold_chunks(
             if computed_chunk_hash != chunk.chunk_hash:
                 raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
         else:
+            if chunk.calldata_length <= 0:
+                raise Exception(f"calldata chunk {i} must have positive calldataLength")
+            if chunk.calldata_length > 2**64 - 1:
+                raise Exception(f"calldata chunk {i} calldataLength exceeds uint64")
             # Range-aligned calldata chunk: it packs a whole number of
             # segments, so it carries no opaque boundary bytes and its start
             # sits at a fresh stream/segment boundary.
@@ -349,23 +353,17 @@ def _verify_and_fold_chunks(
             # invariant rather than a check on witnessed input.
             if cursor != 0 and cursor not in segment_end_offsets:
                 raise Exception(f"calldata chunk {i} does not start at a segment boundary")
-            # Resolve the chunk's extent by matching its anchored hash at each
-            # candidate segment-end boundary strictly past the cursor (a
-            # zero-length chunk is rejected). The matching partition is the
-            # proof of the extent
-            # (keccak is binding), so no length is witnessed; a run of
-            # consecutive calldata chunks self-delimits.
-            matched_end: Optional[int] = None
-            for end in segment_end_offsets:
-                if end <= cursor:
-                    continue
-                if keccak256(own_stream_bytes[cursor:end]) == chunk.chunk_hash:
-                    matched_end = end
-                    break
-            if matched_end is None:
-                raise Exception(f"calldata chunk {i} does not match any whole-segment extent")
-            last_chunk_len = matched_end - cursor
-            cursor = matched_end
+            if cursor > 2**64 - 1 - chunk.calldata_length:
+                raise Exception(f"calldata chunk {i} end offset exceeds uint64")
+            end = cursor + chunk.calldata_length
+            if end > len(own_stream_bytes):
+                raise Exception(f"calldata chunk {i} exceeds the reconstructed stream length")
+            if end not in segment_end_offsets:
+                raise Exception(f"calldata chunk {i} does not end at a segment boundary")
+            if keccak256(own_stream_bytes[cursor:end]) != chunk.chunk_hash:
+                raise Exception(f"calldata chunk {i} computed hash does not match chunkHash")
+            last_chunk_len = chunk.calldata_length
+            cursor = end
 
         if is_first and start_offset > 0:
             if boundary_prev_data_rolling_hash is None:
@@ -561,8 +559,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     own_stream_bytes = b"".join(segments)
     # Cumulative byte offset of each segment's end within the stream. Calldata
     # chunks pack a whole number of segments (§3.1), so their boundaries fall
-    # only at these offsets; the guest resolves each calldata chunk's extent by
-    # matching its anchored hash at these candidate ends (no length witnessed).
+    # only at these offsets; each exact witnessed extent must end at one.
     segment_end_offsets: List[int] = []
     _running = 0
     for _seg in segments:
