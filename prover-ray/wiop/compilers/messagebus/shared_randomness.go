@@ -58,10 +58,6 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 			sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
 		}
 		coinRound.RegisterVerifierAction(&SharedRandomnessContributionChecker{})
-
-		// Seed the FS state with γ before α and β are sampled so every shard
-		// that was given the same γ draws identical challenges.
-		coinRound.RegisterPreSamplingHook(&sharedRandomnessSeeder{})
 	}
 
 	return alpha, beta
@@ -121,29 +117,6 @@ func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 	}
 }
 
-// sharedRandomnessSeeder is a pre-sampling hook that overrides the runtime's
-// Fiat-Shamir state with γ so every shard seeded with the same γ samples the
-// same α and β, regardless of its local transcript.
-type sharedRandomnessSeeder struct{}
-
-func (*sharedRandomnessSeeder) Run(rt *wiop.Runtime) {
-	rt.SetFSState(GetSharedRandomnessSeed(rt))
-}
-
-// SharedRandomnessContributionAssigner is a prover action that takes all the
-// PCS commitment preceding the shared randomness seed Fiat-Shamir override and
-// hash them into a multiset hash that is then exposed to the verifier as a
-// public-input.
-//
-// This function is meant to be run as a prover action at the round where the
-// the message BUS randomness is sampled.
-//
-// In case this function is called over a system that is not using a PCS, the
-// function will unsoundly assign a multiset-hash derived from 0. If no message
-// bus is called in this system, this function will also assign a dummy multiset
-// hash.
-type SharedRandomnessContributionAssigner struct{}
-
 // SharedRandomnessContributionChecker is a verifier action that checks that the
 // public-input cells of the shared randomness contribution are correctly
 // computed against the commitment cell values. It is the verifier analog to
@@ -178,14 +151,6 @@ func contributionCell(sys *wiop.System, i int) *wiop.Cell {
 		panic(fmt.Sprintf("wiop/compilers/messagebus: contribution-%d must not be an extension-field value", i))
 	}
 	return cell
-}
-
-// Run implements [wiop.ProverAction] on behalf of [SharedRandomnessContributionAssigner].
-func (*SharedRandomnessContributionAssigner) Run(rt *wiop.Runtime) {
-	contribution := sharedRandomnessContribution(rt)
-	for i := range contribution {
-		rt.AssignCell(contributionCell(rt.System, i), field.ElemFromBase(contribution[i]))
-	}
 }
 
 // Check implements the [VerifierAction] interface for
