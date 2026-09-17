@@ -301,7 +301,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
-        end_offset=131072,
+        end_offset=0,
         program_vks=[_EXEC_VK],
     )
 
@@ -334,7 +334,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
+    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
+    assert req.chunks[0].is_calldata is False
     assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
@@ -406,6 +407,21 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_decode_rollup_request_is_calldata_true_decodes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    out = decode_rollup_request(req)
+    assert out.chunks[0].is_calldata is True
+
+
+@pytest.mark.parametrize("bad", ["true", 1, 0, "false"])
+def test_decode_rollup_request_non_boolean_is_calldata_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = bad
+    with pytest.raises(ProofIoError, match="isCalldata"):
+        decode_rollup_request(req)
+
+
 def test_decode_rollup_request_json_round_trips() -> None:
     decoded = decode_rollup_request_json(json.dumps(_valid_rollup_request()))
     assert int(decoded.chain_id) == 59144
@@ -437,7 +453,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["startOffset"] == 4
-    assert pi["endOffset"] == 131072
+    assert pi["endOffset"] == 0
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # §ProgramVK anchoring: one combined programVks list (exec/rollup not

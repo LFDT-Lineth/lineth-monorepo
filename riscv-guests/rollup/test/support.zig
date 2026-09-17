@@ -22,6 +22,7 @@ pub const PARENT_DATA_ROLLING_HASH = repeat32(0x47);
 pub const START_OFFSET: u64 = 4;
 pub const CHAIN_ID: u64 = 59144;
 pub const CHUNK_0 = repeat32(0x1a);
+pub const CHUNK_1 = repeat32(0x2a);
 pub const OPAQUE_PREFIX_BYTES = [_]u8{ 0xab, 0xab, 0xab, 0xab };
 pub const BOUNDARY_PREV_DATA_ROLLING_HASH = repeat32(0x39);
 
@@ -160,7 +161,10 @@ pub fn sampleInput(alloc: std.mem.Allocator) !rollup_ssz.RollupProofPrivateInput
         .start_offset = START_OFFSET,
         .chain_id = CHAIN_ID,
         .conflations = conflations,
-        .chunks = try alloc.dupe([32]u8, &[_][32]u8{CHUNK_0}),
+        .chunks = try alloc.dupe(rollup_ssz.ChunkWitness, &[_]rollup_ssz.ChunkWitness{
+            .{ .chunk_hash = CHUNK_0, .is_calldata = false },
+            .{ .chunk_hash = CHUNK_1, .is_calldata = true },
+        }),
         .l2_execution_proofs = try alloc.dupe(rollup_ssz.VerifiableL2ExecutionProof, &[_]rollup_ssz.VerifiableL2ExecutionProof{ proof0, proof1 }),
         .opaque_prefix_bytes = &OPAQUE_PREFIX_BYTES,
         .opaque_suffix_bytes = &.{},

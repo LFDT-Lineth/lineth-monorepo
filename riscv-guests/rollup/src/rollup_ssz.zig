@@ -47,6 +47,11 @@ pub const ConflationWitness = struct {
     block_rlps: []const []const u8,
 };
 
+pub const ChunkWitness = struct {
+    chunk_hash: [32]u8,
+    is_calldata: bool,
+};
+
 /// The 16-field l2-execution public-input tuple, in wire order.
 pub const L2ExecutionProofPublicInput = struct {
     parent_block_hash: [32]u8,
@@ -90,7 +95,7 @@ pub const RollupProofPrivateInput = struct {
     start_offset: u64,
     chain_id: u64,
     conflations: []const ConflationWitness,
-    chunks: []const [32]u8,
+    chunks: []const ChunkWitness,
     l2_execution_proofs: []const VerifiableL2ExecutionProof,
     /// Zero-copy slices into the decoded input buffer.
     opaque_prefix_bytes: []const u8,
@@ -196,6 +201,36 @@ fn encodeBytes32List(alloc: std.mem.Allocator, items: []const [32]u8) ![]u8 {
     const byte_len = try checkedMul(items.len, 32);
     const out = try alloc.alloc(u8, byte_len);
     for (items, 0..) |item, i| @memcpy(out[i * 32 ..][0..32], &item);
+    return out;
+}
+
+fn decodeChunkWitnessList(alloc: std.mem.Allocator, data: []const u8) ![]const ChunkWitness {
+    const element_size = 33;
+    if (data.len % element_size != 0) return error.InvalidSsz;
+    const n = data.len / element_size;
+    if (n > MAX_CHUNKS_PER_ROLLUP) return error.BoundsViolation;
+    const out = try alloc.alloc(ChunkWitness, n);
+    for (0..n) |i| {
+        const start = i * element_size;
+        @memcpy(&out[i].chunk_hash, data[start..][0..32]);
+        out[i].is_calldata = switch (data[start + 32]) {
+            0 => false,
+            1 => true,
+            else => return error.InvalidSsz,
+        };
+    }
+    return out;
+}
+
+fn encodeChunkWitnessList(alloc: std.mem.Allocator, items: []const ChunkWitness) ![]u8 {
+    const element_size = 33;
+    const byte_len = try checkedMul(items.len, element_size);
+    const out = try alloc.alloc(u8, byte_len);
+    for (items, 0..) |item, i| {
+        const start = i * element_size;
+        @memcpy(out[start..][0..32], &item.chunk_hash);
+        out[start + 32] = @intFromBool(item.is_calldata);
+    }
     return out;
 }
 
@@ -344,7 +379,7 @@ pub fn decodeInput(alloc: std.mem.Allocator, data: []const u8) !RollupProofPriva
     const conflations = try alloc.alloc(ConflationWitness, conflation_slices.len);
     for (conflation_slices, 0..) |slice, i| conflations[i] = try decodeConflationWitness(alloc, slice);
 
-    const chunks = try decodeBytes32List(alloc, body[off_chunks..off_proofs], MAX_CHUNKS_PER_ROLLUP);
+    const chunks = try decodeChunkWitnessList(alloc, body[off_chunks..off_proofs]);
 
     const proof_slices = try decodeVariableList(alloc, body[off_proofs..off_prefix], MAX_L2_EXECUTION_PROOFS_PER_ROLLUP);
     const l2_execution_proofs = try alloc.alloc(VerifiableL2ExecutionProof, proof_slices.len);
@@ -478,7 +513,7 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
     for (v.conflations, 0..) |c, i| conflation_blobs[i] = try encodeConflationWitness(alloc, c);
     const conflations_bytes = try guest_common.ssz.encodeVariableList(alloc, conflation_blobs);
 
-    const chunks_bytes = try encodeBytes32List(alloc, v.chunks);
+    const chunks_bytes = try encodeChunkWitnessList(alloc, v.chunks);
 
     const proof_blobs = try alloc.alloc([]const u8, v.l2_execution_proofs.len);
     for (v.l2_execution_proofs, 0..) |p, i| proof_blobs[i] = try encodeVerifiableL2ExecutionProof(alloc, p);

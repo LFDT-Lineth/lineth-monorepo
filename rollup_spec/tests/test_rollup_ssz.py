@@ -26,7 +26,7 @@ from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from rollup_spec.rollup import RollupProof
+from rollup_spec.rollup import ChunkWitness, RollupProof
 from rollup_spec.proof_io_v1 import (
     _decode_rollup_public_input,
     decode_rollup_request,
@@ -79,6 +79,7 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
 
 def test_rollup_input_round_trips_through_ssz() -> None:
     original = decode_rollup_request(_load_json("getZkRollupProofV1.request.json"))
+    original.chunks.append(ChunkWitness(Hash32(bytes([0x2A]) * 32), is_calldata=True))
     recovered = decode_rollup_input_ssz(encode_rollup_input(original))
     assert recovered == original
 
@@ -156,3 +157,12 @@ def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> 
     encoded = encode_bytes()
     with pytest.raises(InvalidSsz):
         decode_fn(encoded + b"\x00")
+
+
+def test_decode_rollup_input_rejects_invalid_chunk_boolean() -> None:
+    encoded = bytearray(_rollup_input_bytes())
+    chunks_offset = int.from_bytes(encoded[2 + 52 : 2 + 56], "little")
+    encoded[2 + chunks_offset + 32] = 2
+
+    with pytest.raises(InvalidSsz):
+        decode_rollup_input_ssz(bytes(encoded))
