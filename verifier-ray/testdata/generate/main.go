@@ -37,12 +37,12 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
-	// Shrink the FRI query count to 1 for fixtures: the production default (229)
+	// Shrink the FRI query count to 4 for fixtures: the production default (229)
 	// would emit ~229 Merkle branches per opening, ballooning verify.zig to
-	// hundreds of MB and making Zig compilation intractable. One query exercises
-	// the same code paths byte-faithfully (the verifier derives the query count
-	// from the emitted System params, which reflect this override).
-	pcscompiler.SetFRINumQueriesForTest(1)
+	// hundreds of MB and making Zig compilation intractable.
+	//
+	// Four queries is sufficient to test the Merkle capping without ballooning the fixture sizes.
+	pcscompiler.SetFRINumQueriesForTest(4)
 
 	var out bytes.Buffer
 	writeHeader(&out)

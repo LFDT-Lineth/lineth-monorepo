@@ -129,6 +129,15 @@ func (e *encoder) putDigest(off int, v Digest) {
 	}
 }
 
+func (e *encoder) putOptionalDigest(off int, v *Digest) {
+	if v == nil {
+		e.buf[off+OffOptDigestFlag] = TagOptCommitmentNull
+		return
+	}
+	e.putDigest(off+OffOptDigestPayload, *v)
+	e.buf[off+OffOptDigestFlag] = TagOptCommitmentPresent
+}
+
 func (e *encoder) putUsize(off int, v uint64) {
 	binary.LittleEndian.PutUint64(e.buf[off:], v)
 }
@@ -170,14 +179,7 @@ func (e *encoder) putProof(off int, p Proof) {
 }
 
 func (e *encoder) putRoundMessage(off int, r RoundMessage) {
-	commitment := off + OffRoundMessageCommitment
-	if r.Commitment != nil {
-		e.buf[commitment+OffOptCommitmentFlag] = TagOptCommitmentPresent
-		e.putDigest(commitment+OffOptCommitmentPayload, *r.Commitment)
-	} else {
-		// Flag stays 0 and the payload stays zeroed: Zig reads neither.
-		e.buf[commitment+OffOptCommitmentFlag] = TagOptCommitmentNull
-	}
+	e.putOptionalDigest(off+OffRoundMessageCommitment, r.Commitment)
 
 	cells := e.putSlice(off+OffRoundMessageCells, len(r.Cells), SizeScalar, SizeElement)
 	for i, c := range r.Cells {
@@ -200,6 +202,11 @@ func (e *encoder) putScalar(off int, s Scalar) {
 func (e *encoder) putOpeningProof(off int, p OpeningProof) {
 	e.putFriProof(off+OffOpeningProofFriProof, p.FriProof)
 
+	caps := e.putSlice(off+OffOpeningProofInputCaps, len(p.InputCaps), SizeInputCap, 8)
+	for i, treeCap := range p.InputCaps {
+		e.putInputCap(caps+i*SizeInputCap, treeCap)
+	}
+
 	queries := e.putSlice(off+OffOpeningProofInputQueries, len(p.InputQueries), SizeSlice, 8)
 	for i, q := range p.InputQueries {
 		inner := e.putSlice(queries+i*SizeSlice, len(q), SizeInputTreeOpen, 8)
@@ -211,6 +218,12 @@ func (e *encoder) putOpeningProof(off int, p OpeningProof) {
 
 func (e *encoder) putFriProof(off int, p FriProof) {
 	e.putDigests(off+OffFriProofRoundRoots, p.RoundRoots)
+
+	caps := e.putSlice(off+OffFriProofRoundCaps, len(p.RoundCaps), SizeMerkleCap, 8)
+	for i, treeCap := range p.RoundCaps {
+		e.putMerkleCap(caps+i*SizeMerkleCap, treeCap)
+	}
+
 	e.putExts(off+OffFriProofFinalPoly, p.FinalPoly)
 
 	queries := e.putSlice(off+OffFriProofRunningQueries, len(p.RunningQueries), SizeSlice, 8)
@@ -219,6 +232,32 @@ func (e *encoder) putFriProof(off int, p FriProof) {
 		for j, br := range rq {
 			e.putBranch(inner+j*SizeBranch, br)
 		}
+	}
+}
+
+func (e *encoder) putMerkleCap(off int, treeCap MerkleCap) {
+	e.putDigests(off+OffMerkleCapNodes, treeCap.Nodes)
+
+	aux := e.putSlice(off+OffMerkleCapAux, len(treeCap.Aux), SizeOptDigest, SizeElement)
+	for i, node := range treeCap.Aux {
+		e.putOptionalDigest(aux+i*SizeOptDigest, node)
+	}
+}
+
+func (e *encoder) putInputCap(off int, treeCap InputCap) {
+	e.putDigests(off+OffInputCapNodes, treeCap.Nodes)
+
+	tables := e.putSlice(off+OffInputCapTables, len(treeCap.Tables), SizeInputCapTable, 8)
+	for i, table := range treeCap.Tables {
+		e.putInputCapTable(tables+i*SizeInputCapTable, table)
+	}
+}
+
+func (e *encoder) putInputCapTable(off int, table InputCapTable) {
+	e.buf[off+OffInputCapTableSizeLog2] = table.SizeLog2
+	rows := e.putSlice(off+OffInputCapTableRows, len(table.Rows), SizeRowOpening, 8)
+	for i, row := range table.Rows {
+		e.putRowOpening(rows+i*SizeRowOpening, row)
 	}
 }
 

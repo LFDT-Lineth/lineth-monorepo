@@ -26,11 +26,11 @@ runs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Install Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: ./.github/actions/setup-go
         with:
           go-version: '1.25.7'
           cache-dependency-path: "**/*.sum"
-          # setup-go has no restore-only mode, so read-only here means the Go cache is off entirely.
+          # Preserve the existing opt-out for builds of custom refs.
           cache: ${{ inputs.cache-save }}
 
       - name: Install Zig

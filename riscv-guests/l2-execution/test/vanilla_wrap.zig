@@ -77,6 +77,14 @@ pub fn vanillaHasExecutionRequests(alloc: std.mem.Allocator, vanilla_stateless_i
         r.builder_deposits.len != 0 or r.builder_exits.len != 0;
 }
 
+/// True when the execution payload carries a non-empty beacon-chain withdrawals list, which the
+/// guest rejects by Linea policy (`error.WithdrawalsNotSupported`). Same SKIP role as
+/// `vanillaHasExecutionRequests`.
+pub fn vanillaHasWithdrawals(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
+    const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
+    return si.new_payload_request.execution_payload.withdrawals.len != 0;
+}
+
 /// The current flat chain-config schema carries the active fork in its schema ID and has no
 /// activation schedule to filter from the reference corpus.
 pub fn vanillaHasForkActivationSchedule(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
