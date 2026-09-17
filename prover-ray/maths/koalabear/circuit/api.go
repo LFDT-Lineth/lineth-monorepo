@@ -299,6 +299,18 @@ func (a *API) ToBinary(x Element, n ...int) []frontend.Variable {
 	return a.emulatedAPI.ToBits(x.Emulated())
 }
 
+// ToBinaryCanonical returns the little-endian bits of the canonical (fully
+// reduced, < modulus) value of x. Unlike [API.ToBinary], which in emulated mode
+// decomposes the possibly unreduced internal representation, the result is
+// unique for a given field element, so it is safe to derive indices or
+// challenges from it.
+func (a *API) ToBinaryCanonical(x Element) []frontend.Variable {
+	if a.IsNative() {
+		return a.nativeAPI.ToBinary(x.Native(), koalabearModulus.BitLen())
+	}
+	return a.emulatedAPI.ToBitsCanonical(x.Emulated())
+}
+
 // FromBinary constructs a Var from binary bits.
 func (a *API) FromBinary(bits ...frontend.Variable) Element {
 	if a.IsNative() {
