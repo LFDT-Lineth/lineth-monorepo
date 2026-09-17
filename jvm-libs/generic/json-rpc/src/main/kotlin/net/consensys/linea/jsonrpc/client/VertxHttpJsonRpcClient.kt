@@ -13,7 +13,6 @@ import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.RequestOptions
 import net.consensys.linea.async.toCompletableFuture
-import net.consensys.linea.async.toVertxFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorException
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
@@ -92,6 +91,9 @@ class VertxHttpJsonRpcClient(
           }
         }
 
+      // Register timer as a side effect only — do NOT round-trip through CompletableFuture and back
+      // via toVertxFuture(). In Vertx 5 the converted Future loses native context propagation on
+      // error paths, causing callers that observe the result via toSafeFuture() to hang.
       metricsFacade.createTimer(
         category = metricsCategory,
         name = "request",
@@ -100,9 +102,8 @@ class VertxHttpJsonRpcClient(
           Tag("endpoint", endpoint.host),
           Tag("method", request.method),
         ),
-      )
-        .captureTime(requestFuture.toCompletableFuture())
-        .toVertxFuture()
+      ).captureTime(requestFuture.toCompletableFuture())
+      requestFuture
     }
       .onFailure { th -> logRequestFailure(json, th) }
   }
