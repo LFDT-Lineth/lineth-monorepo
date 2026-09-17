@@ -3,10 +3,10 @@ package lineth.coordination.riscv.execution
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofRequestV1
-import linea.domain.Block
+import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
-import linea.domain.toBlockParameter
-import linea.domain.toExecutionPayload
+import linea.domain.ExecutionPayload
+import linea.ethapi.ExecutionPayloadClient
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
 import linea.kotlin.encodeHex
@@ -19,6 +19,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class L2ExecutionRequestBuilderImpl(
   private val executionWitnessClient: ExecutionWitnessClient,
+  private val executionPayloadClient: ExecutionPayloadClient,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val ftxRollingInfoProvider: FtxRollingInfoProvider = FtxRollingInfoProviderImpl(forcedTransactionsDao),
   private val chainId: ULong,
@@ -30,16 +31,17 @@ class L2ExecutionRequestBuilderImpl(
     )
     val parentBlockNumber = conflation.startBlockNumber.minusCoercingUnderflow(1uL)
     val ftxStateFuture = ftxRollingInfoProvider.getFtxRollingHashByBlockNumber(parentBlockNumber)
-    val allWitnessesListFuture = SafeFuture.collectAll(
+    val allExecutionsListFuture = SafeFuture.collectAll(
       conflation.blocks.map { block ->
-        executionWitnessClient.getExecutionWitness(block.number.toBlockParameter())
-          .thenApply { witness ->
-            requireNotNull(witness) { "No execution witness available for block ${block.number}" }
-          }
+        val witnessFuture = executionWitnessClient.getExecutionWitness(BlockParameter.fromHash(block.hash))
+        val payloadFuture = executionPayloadClient.getExecutionPayload(block)
+        payloadFuture.thenCombine(witnessFuture) { payload, witness ->
+          payload to requireNotNull(witness) { "No execution witness available for block ${block.number}" }
+        }
       }.stream(),
     )
 
-    return SafeFuture.allOf(allFtxsFuture, ftxStateFuture, allWitnessesListFuture)
+    return SafeFuture.allOf(allFtxsFuture, ftxStateFuture, allExecutionsListFuture)
       .thenApply {
         val ftxsByBlock = allFtxsFuture.get()
           .groupBy { it.simulatedExecutionBlockNumber }
@@ -47,10 +49,10 @@ class L2ExecutionRequestBuilderImpl(
         val ftxState = ftxStateFuture.get()
 
         L2ExecutionProofRequestV1(
-          executions = conflation.blocks.zip(allWitnessesListFuture.get()).map { (block, witness) ->
-            block.toExecutionInfo(
+          executions = allExecutionsListFuture.get().map { (payload, witness) ->
+            payload.toExecutionInfo(
               witness = witness,
-              forcedTransactions = ftxsByBlock[block.number] ?: emptyList(),
+              forcedTransactions = ftxsByBlock[payload.blockNumber] ?: emptyList(),
             )
           },
           chainId = chainId,
@@ -62,10 +64,10 @@ class L2ExecutionRequestBuilderImpl(
   }
 }
 
-private fun Block.toExecutionInfo(witness: ExecutionWitness, forcedTransactions: List<ForcedTransaction>) =
+private fun ExecutionPayload.toExecutionInfo(witness: ExecutionWitness, forcedTransactions: List<ForcedTransaction>) =
   ExecutionInfo(
-    blockNumber = number,
-    executionPayload = toExecutionPayload(),
+    blockNumber = blockNumber,
+    executionPayload = this,
     executionWitness = witness,
     executionRequests = emptyList(),
     forcedTransactions = forcedTransactions,

@@ -2,6 +2,9 @@
 l1-endpoint = "http://127.0.0.1:8445"
 l2-endpoint = "http://127.0.0.1:8545"
 
+[conflation]
+l2-engine-endpoint = "http://127.0.0.1:8550"
+
 [prover]
 [prover.execution]
 fs-requests-directory = "tmp/local/prover/v3/execution/requests"
