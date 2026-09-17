@@ -81,25 +81,29 @@ class VertxHttpJsonRpcClient(
         if (isSuccessStatusCode(response.statusCode())) {
           handleResponse(json, response, resultMapper)
         } else {
-          // Don't chain on response.body() here: its future carries the connection's event-loop
-          // context, which may differ from the request future's context when using a connection
-          // pool. That mismatch triggers context.execute() (path 2) on Linux/epoll, which can
-          // be delayed past the caller's timeout. Discard the body via resume() instead so the
-          // connection can be reused, and return a context-free failed future immediately.
-          response.resume()
-          logResponse(
-            isError = true,
-            response = response,
-            requestBody = json,
-            responseBody = "",
+          // Read the body for logging, but avoid the cross-context path 2 stall.
+          // response.body() carries the connection's event-loop context (Y). Returning it
+          // directly and observing from outside can trigger context.execute() (path 2) on
+          // Linux/epoll when the caller's context (X) differs, stalling past caller timeouts.
+          //
+          // Fix: add onComplete to response.body() from inside this lambda (which runs on Y),
+          // so isRunningOnContext() = true → path 3 (inline). Fail a context-free Promise from
+          // that callback — context-free promises always use signalComplete (path 1).
+          val errorBridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
+          val error = JsonRpcErrorException(
+            message = "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
+            httpStatusCode = response.statusCode(),
           )
-          Future.failedFuture(
-            JsonRpcErrorException(
-              message =
-              "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-              httpStatusCode = response.statusCode(),
-            ),
-          )
+          response.body().onComplete { ar ->
+            logResponse(
+              isError = true,
+              response = response,
+              requestBody = json,
+              responseBody = ar.result()?.toString() ?: "",
+            )
+            errorBridge.fail(error)
+          }
+          errorBridge.future()
         }
       }
     }
