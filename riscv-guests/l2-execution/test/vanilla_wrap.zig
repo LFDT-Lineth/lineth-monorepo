@@ -85,6 +85,17 @@ pub fn vanillaHasWithdrawals(alloc: std.mem.Allocator, vanilla_stateless_input_s
     return si.new_payload_request.execution_payload.withdrawals.len != 0;
 }
 
+/// True when the input declares a blob transaction or Engine API versioned hashes, both rejected
+/// by Linea policy.
+pub fn vanillaHasBlobTransaction(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
+    const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
+    if (si.new_payload_request.versioned_hashes.len != 0) return true;
+    for (si.new_payload_request.execution_payload.transactions) |tx| {
+        if (tx.tx_type == 3) return true;
+    }
+    return false;
+}
+
 /// The current flat chain-config schema carries the active fork in its schema ID and has no
 /// activation schedule to filter from the reference corpus.
 pub fn vanillaHasForkActivationSchedule(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
