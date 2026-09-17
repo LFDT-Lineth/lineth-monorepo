@@ -7,13 +7,13 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Future
+import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.RequestOptions
 import net.consensys.linea.async.toCompletableFuture
-import net.consensys.linea.async.toVertxFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorException
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
@@ -65,46 +65,64 @@ class VertxHttpJsonRpcClient(
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
 
-    return httpClient.request(requestOptions).flatMap { httpClientRequest ->
+    // Bridge via a context-free Promise so the returned future is observable from any thread
+    // without requiring Vertx context dispatch (context.execute). In Vertx 5, futures that carry
+    // an event-loop context dispatch their completion listeners via context.execute(), which is
+    // unreliable when the observer is on a non-event-loop thread (e.g. a test thread or
+    // AsyncRetryer worker). Promise.promise() produces a context-free PromiseImpl whose
+    // completeInternal always uses signalComplete — a direct call with no scheduler hop.
+    val bridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
+
+    httpClient.request(requestOptions).flatMap { httpClientRequest ->
       httpClientRequest.putHeader("Content-Type", "application/json")
       logRequest(json)
 
-      val requestFuture =
-        httpClientRequest.send(json).flatMap { response: HttpClientResponse ->
-          if (isSuccessStatusCode(response.statusCode())) {
-            handleResponse(json, response, resultMapper)
-          } else {
-            response.body().flatMap { bodyBuffer ->
-              logResponse(
-                isError = true,
-                response = response,
-                requestBody = json,
-                responseBody = bodyBuffer.toString().lines().firstOrNull() ?: "",
-              )
-              Future.failedFuture(
-                JsonRpcErrorException(
-                  message =
-                  "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-                  httpStatusCode = response.statusCode(),
-                ),
-              )
-            }
+      httpClientRequest.send(json).flatMap { response: HttpClientResponse ->
+        if (isSuccessStatusCode(response.statusCode())) {
+          handleResponse(json, response, resultMapper)
+        } else {
+          // Read the body for logging, but avoid the cross-context path 2 stall.
+          // response.body() carries the connection's event-loop context (Y). Returning it
+          // directly and observing from outside can trigger context.execute() (path 2) on
+          // Linux/epoll when the caller's context (X) differs, stalling past caller timeouts.
+          //
+          // Fix: add onComplete to response.body() from inside this lambda (which runs on Y),
+          // so isRunningOnContext() = true → path 3 (inline). Fail a context-free Promise from
+          // that callback — context-free promises always use signalComplete (path 1).
+          val errorBridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
+          val error = JsonRpcErrorException(
+            message = "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
+            httpStatusCode = response.statusCode(),
+          )
+          response.body().onComplete { ar ->
+            logResponse(
+              isError = true,
+              response = response,
+              requestBody = json,
+              responseBody = ar.result()?.toString() ?: "",
+            )
+            errorBridge.fail(error)
           }
+          errorBridge.future()
         }
-
-      metricsFacade.createTimer(
-        category = metricsCategory,
-        name = "request",
-        description = "Time of Upstream API JsonRpc Requests",
-        tags = listOf(
-          Tag("endpoint", endpoint.host),
-          Tag("method", request.method),
-        ),
-      )
-        .captureTime(requestFuture.toCompletableFuture())
-        .toVertxFuture()
+      }
     }
-      .onFailure { th -> logRequestFailure(json, th) }
+      .onComplete { ar ->
+        if (ar.failed()) logRequestFailure(json, ar.cause())
+        bridge.handle(ar)
+      }
+
+    metricsFacade.createTimer(
+      category = metricsCategory,
+      name = "request",
+      description = "Time of Upstream API JsonRpc Requests",
+      tags = listOf(
+        Tag("endpoint", endpoint.host),
+        Tag("method", request.method),
+      ),
+    ).captureTime(bridge.future().toCompletableFuture())
+
+    return bridge.future()
   }
 
   private fun handleResponse(
@@ -112,12 +130,11 @@ class VertxHttpJsonRpcClient(
     httpResponse: HttpClientResponse,
     resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    var isError = false
-    var responseBody = ""
     return httpResponse
       .body()
       .flatMap { bodyBuffer: Buffer ->
-        responseBody = bodyBuffer.toString()
+        val responseBody = bodyBuffer.toString()
+        var isError = false
         try {
           val jsonResponse = responseObjectMapper.readTree(responseBody)
           val responseId = responseObjectMapper.convertValue(jsonResponse.get("id"), Any::class.java)
@@ -143,22 +160,17 @@ class VertxHttpJsonRpcClient(
 
               else -> throw IllegalArgumentException("Invalid JSON-RPC response without result or error")
             }
+          logResponse(isError, httpResponse, requestBody, responseBody, null)
           Future.succeededFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(response)
         } catch (e: Throwable) {
           isError = true
-          when (e) {
-            is IllegalArgumentException -> Future.failedFuture(e)
-            else -> Future.failedFuture(
-              IllegalArgumentException(
-                "Error parsing JSON-RPC response: message=${e.message}",
-                e,
-              ),
-            )
+          val cause = when (e) {
+            is IllegalArgumentException -> e
+            else -> IllegalArgumentException("Error parsing JSON-RPC response: message=${e.message}", e)
           }
+          logResponse(isError, httpResponse, requestBody, responseBody, cause)
+          Future.failedFuture(cause)
         }
-      }
-      .andThen { asyncResult ->
-        logResponse(isError, httpResponse, requestBody, responseBody, asyncResult.cause())
       }
   }
 

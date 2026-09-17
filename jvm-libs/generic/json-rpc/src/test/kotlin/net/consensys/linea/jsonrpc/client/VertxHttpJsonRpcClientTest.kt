@@ -300,7 +300,10 @@ class VertxHttpJsonRpcClientTest {
   @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_connectionFailure() {
     val log: Logger = spy(LogManager.getLogger(VertxHttpJsonRpcClient::class.java))
-    val endpoint = URI("http://service-not-available:1234/api/v1?appKey=1234").toURL()
+    // Use localhost with a guaranteed-closed port for an immediate "connection refused" failure.
+    // Resolving a non-existent hostname can take longer than the test timeout in Vertx 5.
+    val closedPort = java.net.ServerSocket(0).also { it.close() }.localPort
+    val endpoint = URI("http://localhost:$closedPort/api/v1?appKey=1234").toURL()
     client = VertxHttpJsonRpcClient(
       vertx.createHttpClient(clientOptions),
       endpoint,
@@ -312,7 +315,7 @@ class VertxHttpJsonRpcClientTest {
     assertThat(client.makeRequest(request).toSafeFuture())
       .failsWithin(Duration.ofSeconds(14))
       .withThrowableOfType(ExecutionException::class.java)
-      .withMessageContaining("service-not-available")
+      .withMessageContaining("localhost")
 
     verify(log).log(
       eq(Level.DEBUG),
