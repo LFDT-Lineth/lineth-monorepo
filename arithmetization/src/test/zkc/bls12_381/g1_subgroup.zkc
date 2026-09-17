@@ -1,0 +1,25 @@
+// ===================================================================
+// Unit test for the BLS12-381 G1 prime-order subgroup check
+// (arithmetization/src/main/lib/bls12_381/g1.zkc).
+//
+// G1's cofactor is not 1 -- it is a 126-bit number -- so "on the curve"
+// is strictly weaker than "in the subgroup", and the pairing needs the
+// stronger property. The interesting fixtures are therefore the points
+// that ARE on the curve but are NOT in the subgroup: an implementation
+// that forgot the check entirely would still pass every other test in
+// this directory.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g1.zkc"
+
+pub input x(address:u1) -> (v:u384)
+pub input y(address:u1) -> (v:u384)
+pub input want(address:u1) -> (v:u8)
+
+fn main() {
+    // the fixtures below are all on the curve (or the encoded infinity),
+    // which is this predicate's stated precondition
+    if (is_in_subgroup_affine_bls12_381_g1(x[0], y[0]) as u8) != want[0] {
+        fail
+    }
+}

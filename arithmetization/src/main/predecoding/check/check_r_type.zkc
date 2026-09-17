@@ -8,7 +8,7 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
 
     var R_inst:u17 = opcode::funct3::funct7
 
-    switch R_inst {  
+    switch R_inst {
         case R_KECCAK_INST: {
             if compute_op != RTYPE_KECCAK {
                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
@@ -26,9 +26,9 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x)\n", compute_op, opcode, instruction_parameters, funct3
                 fail
             }
-        }   
+        }
         default: {
-            check_r_type_with_fold(compute_op,opcode, instruction_parameters, funct3, funct7, rd, R_inst)
+            check_r_type_with_fold(compute_op, opcode, instruction_parameters, funct3, funct7, rd, R_inst)
         }
     }
 
@@ -51,8 +51,8 @@ fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
 }
 
 fn check_r_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_parameters:u25, funct3:Funct3, funct7:Funct7, rd:Register, R_inst:u17) {
-    
-    var rd_is_zero:u1 = rd == 0 ? 1 : 0
+
+    var rd_is_zero:u1 = rd == 0 ? 1:0
     var R_key:u18 = R_inst::rd_is_zero
 
     switch R_key {
@@ -389,6 +389,22 @@ fn check_r_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_param
         }
         case R_SRAW: {
             if compute_op != RTYPE_SRAW_WB {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                fail
+            }
+        }
+        // EVM precompiles on custom-0. These write their status to rd, so they
+        // fold on rd=x0 like any other writeback -- unlike the custom-1
+        // accelerants above, which read rd as an output pointer and are
+        // therefore matched in the caller's switch instead of this one.
+        case R_BLS12_PAIRING_CHECK_FOLD: {
+            if compute_op != NO_OP {
+                printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                fail
+            }
+        }
+        case R_BLS12_PAIRING_CHECK: {
+            if compute_op != RTYPE_BLS12_PAIRING_CHECK_WB {
                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                 fail
             }

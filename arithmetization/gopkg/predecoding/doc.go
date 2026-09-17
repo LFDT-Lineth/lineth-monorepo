@@ -107,7 +107,9 @@
 // `NO_OP` when `rd == x0` (except Custom-1 precompiles, which always
 // keep their semantic op). Custom-1 precompiles (`RTYPE_KECCAK`, `RTYPE_POSEIDON2`,
 // `RTYPE_WRITE_OUTPUT`) have no `_WB` variant and return early after the
-// precompile side effects.
+// precompile side effects; they read rd as an output POINTER, which is why
+// `rd == x0` must not fold them away. Custom-0 EVM precompiles are the opposite:
+// they write their status to rd and so do fold.
 //
 // # Custom-1 precompiles (`opcode` = `0b0101011`)
 //
@@ -119,6 +121,22 @@
 //
 // Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
 // (255) in the `decoded` table.
+//
+// # Custom-0 EVM precompiles (`opcode` = `0b0001011`)
+//
+// These use `funct3 = 0b000` and discriminate on `funct7`, which is the
+// precompile index from `arithmetization/src/main/lib/README.md`:
+//
+//	funct7     Local operation                       Unified compute_op                  Runtime handler
+//	0b0001111  rtypeOpBls12PairingCheck (31)         RTYPE_BLS12_PAIRING_CHECK_WB (56)   bls12_pairing_check(...)
+//
+// Only implemented precompiles decode; every other `funct7` on Custom-0 maps to
+// `rtypeInvalid` → `COMPUTE_INVALID`.
+//
+// Unlike the Custom-1 accelerants, these ARE writeback ops: rd receives the
+// precompile status rather than an output pointer, so `rd == x0` folds to
+// `NO_OP` like any other writeback. Nothing prevents a write to x0 at run time,
+// so that fold is what keeps x0 hardwired to zero.
 //
 // At runtime, the interpreter's flat `switch compute_op` handles the base `RTYPE_*`
 // cases and the `RTYPE_*_WB` cases in `interpreter.zkc`; the `_WB` arms additionally

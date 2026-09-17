@@ -1,0 +1,53 @@
+// ===================================================================
+// Unit test for the BLS12-381 G2 psi endomorphism and the subgroup
+// check (arithmetization/src/main/lib/bls12_381/g2.zkc).
+//
+// PAIRING_CHECK must reject G2 inputs that lie on the twist but outside
+// the prime-order subgroup, so this is a security-relevant predicate,
+// not a convenience. A check that simply returned 1 would satisfy every
+// positive fixture -- the off-subgroup rejects below are the ones that
+// actually constrain it.
+//
+// psi is pinned separately from the membership test. The identity
+// psi(Q) == [x]Q holds for subgroup points, so testing only membership
+// would let a wrong psi hide behind a compensating scalar-mul bug.
+//
+// This harness runs the real 64-bit seed ladder, so it is by far the
+// most expensive fixture set here.
+// ===================================================================
+
+include "../../../main/lib/bls12_381/g2.zkc"
+
+pub input x0(address:u1) -> (v:u384)
+pub input x1(address:u1) -> (v:u384)
+pub input y0(address:u1) -> (v:u384)
+pub input y1(address:u1) -> (v:u384)
+
+pub input want_psi_x0(address:u1) -> (v:u384)
+pub input want_psi_x1(address:u1) -> (v:u384)
+pub input want_psi_y0(address:u1) -> (v:u384)
+pub input want_psi_y1(address:u1) -> (v:u384)
+
+pub input want_on_curve(address:u1) -> (v:u8)
+pub input want_in_subgroup(address:u1) -> (v:u8)
+
+fn main() {
+    var oc:u1 = is_on_curve_affine_bls12_381_g2(x0[0], x1[0], y0[0], y1[0])
+    if (oc as u8) != want_on_curve[0] {
+        fail
+    }
+
+    var px0:u384, px1:u384, py0:u384, py1:u384
+    px0, px1, py0, py1 = psi_bls12_381_g2(x0[0], x1[0], y0[0], y1[0])
+    if (px0 != want_psi_x0[0]) || (px1 != want_psi_x1[0]) {
+        fail
+    }
+    if (py0 != want_psi_y0[0]) || (py1 != want_psi_y1[0]) {
+        fail
+    }
+
+    var sg:u1 = is_in_subgroup_affine_bls12_381_g2(x0[0], x1[0], y0[0], y1[0])
+    if (sg as u8) != want_in_subgroup[0] {
+        fail
+    }
+}

@@ -20,7 +20,7 @@ include "../lib/poseidon2/ram.zkc"
 // -- PREDECODING PROOF SECTION END-- 
 
 // TODO @Ghost
-fn main<registers, ram, keccak_state, poseidon2_state>() {
+fn main<registers, ram, keccak_state, poseidon2_state, bls_fp12_mem>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]

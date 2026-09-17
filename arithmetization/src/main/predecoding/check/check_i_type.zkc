@@ -54,7 +54,7 @@ fn check_i_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
 }
 fn check_i_type_with_fold(compute_op:ComputeOp, opcode:Opcode, instruction_parameters:u25, funct3:Funct3, rd:Register, I_inst:u10, imm12:Imm12, imm_in:DoubleWord) -> (imm:DoubleWord) {
     imm = imm_in
-    var rd_is_zero:u1 = rd == 0 ? 1 : 0
+    var rd_is_zero:u1 = rd == 0 ? 1:0
     var I_key:u11 = I_inst::rd_is_zero
 
     switch I_key {

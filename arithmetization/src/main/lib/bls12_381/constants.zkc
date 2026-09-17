@@ -1,0 +1,36 @@
+// ============================================================================
+// BLS12-381 curve constants, shared by the G1 and G2 layers.
+//
+// BLS12-381 is a pairing-friendly curve of embedding degree 12. Its base field
+// prime is 381 bits, which is why this library is built on the u384 non-native
+// layer rather than the u256 one used by secp256k1 and BN254.
+//
+// Constants are BLS12_381_-prefixed to avoid colliding with secp256k1's bare
+// `p`/`b`/`Gx`/`Gy` (and to match BN254's BN254_ prefix), since every curve
+// library is linked into the same program.
+//
+// Reference: the parameters fixed by EIP-2537. The values below are checked in
+// the unit tests: the generator is verified on-curve and of order r.
+// ============================================================================
+
+include "../nonnative/u384.zkc"
+
+// Base field prime. 381 bits.
+const BLS12_381_P:u384 = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+
+// Order of the prime-order subgroup of both G1 and G2. 255 bits, so it fits a
+// u256; only coordinates need the full u384 width.
+const BLS12_381_R:u384 = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
+// G1 is y^2 = x^3 + 4 over Fp, so a = 0 and b = 4.
+const BLS12_381_B:u384 = 4
+
+// b3 = 3*b, the complete-addition constant passed to the shared short-Weierstrass
+// formulas. NOTE: this is 12 for BLS12-381 G1, against 21 for secp256k1 (b = 7)
+// and 9 for BN254 (b = 3). Getting it wrong is the classic way to produce a
+// group law that looks plausible but is not the curve.
+const BLS12_381_B3:u384 = 12
+
+// Since p = 3 (mod 4), square roots are a^((p+1)/4). Needed for point
+// decompression, not for addition; kept here so G1 and G2 share one definition.
+const BLS12_381_P_PLUS_1_OVER_4:u384 = 0x680447a8e5ff9a692c6e9ed90d2eb35d91dd2e13ce144afd9cc34a83dac3d8907aaffffac54ffffee7fbfffffffeaab

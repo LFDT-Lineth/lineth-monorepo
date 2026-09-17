@@ -1,4 +1,5 @@
 include "../memory.zkc"
+include "../utils/bswap.zkc"
 include "../../common/constants.zkc"
 
 fn write_8<ram>(address:Address, value:u8) -> () {
