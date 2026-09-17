@@ -32,6 +32,12 @@ const (
 	coinRoundID = 1
 )
 
+// equal reports whether two field values coincide.
+func equal(a, b field.Gen) bool {
+	diff := a.Sub(b)
+	return diff.IsZero()
+}
+
 // pairColAssignment pairs a column with the rows to write into it.
 type pairColAssignment struct {
 	col  *wiop.Column
