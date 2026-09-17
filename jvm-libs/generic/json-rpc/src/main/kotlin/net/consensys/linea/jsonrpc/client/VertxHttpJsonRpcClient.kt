@@ -122,12 +122,11 @@ class VertxHttpJsonRpcClient(
     httpResponse: HttpClientResponse,
     resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    var isError = false
-    var responseBody = ""
     return httpResponse
       .body()
       .flatMap { bodyBuffer: Buffer ->
-        responseBody = bodyBuffer.toString()
+        val responseBody = bodyBuffer.toString()
+        var isError = false
         try {
           val jsonResponse = responseObjectMapper.readTree(responseBody)
           val responseId = responseObjectMapper.convertValue(jsonResponse.get("id"), Any::class.java)
@@ -153,22 +152,17 @@ class VertxHttpJsonRpcClient(
 
               else -> throw IllegalArgumentException("Invalid JSON-RPC response without result or error")
             }
+          logResponse(isError, httpResponse, requestBody, responseBody, null)
           Future.succeededFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(response)
         } catch (e: Throwable) {
           isError = true
-          when (e) {
-            is IllegalArgumentException -> Future.failedFuture(e)
-            else -> Future.failedFuture(
-              IllegalArgumentException(
-                "Error parsing JSON-RPC response: message=${e.message}",
-                e,
-              ),
-            )
+          val cause = when (e) {
+            is IllegalArgumentException -> e
+            else -> IllegalArgumentException("Error parsing JSON-RPC response: message=${e.message}", e)
           }
+          logResponse(isError, httpResponse, requestBody, responseBody, cause)
+          Future.failedFuture(cause)
         }
-      }
-      .andThen { asyncResult ->
-        logResponse(isError, httpResponse, requestBody, responseBody, asyncResult.cause())
       }
   }
 
