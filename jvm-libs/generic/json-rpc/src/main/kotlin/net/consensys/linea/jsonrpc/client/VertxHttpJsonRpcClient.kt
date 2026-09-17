@@ -81,21 +81,25 @@ class VertxHttpJsonRpcClient(
         if (isSuccessStatusCode(response.statusCode())) {
           handleResponse(json, response, resultMapper)
         } else {
-          response.body().flatMap { bodyBuffer ->
-            logResponse(
-              isError = true,
-              response = response,
-              requestBody = json,
-              responseBody = bodyBuffer.toString().lines().firstOrNull() ?: "",
-            )
-            Future.failedFuture(
-              JsonRpcErrorException(
-                message =
-                "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-                httpStatusCode = response.statusCode(),
-              ),
-            )
-          }
+          // Don't chain on response.body() here: its future carries the connection's event-loop
+          // context, which may differ from the request future's context when using a connection
+          // pool. That mismatch triggers context.execute() (path 2) on Linux/epoll, which can
+          // be delayed past the caller's timeout. Discard the body via resume() instead so the
+          // connection can be reused, and return a context-free failed future immediately.
+          response.resume()
+          logResponse(
+            isError = true,
+            response = response,
+            requestBody = json,
+            responseBody = "",
+          )
+          Future.failedFuture(
+            JsonRpcErrorException(
+              message =
+              "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
+              httpStatusCode = response.statusCode(),
+            ),
+          )
         }
       }
     }
