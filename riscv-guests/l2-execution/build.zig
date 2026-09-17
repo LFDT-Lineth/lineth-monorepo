@@ -17,12 +17,17 @@ pub fn build(b: *std.Build) void {
     const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
+    guest_options.addOption(bool, "is_guest", true);
 
     const gp_name = "evm_execution_guest";
     const source = "src/evm_execution_guest.zig";
 
     // Build a self-contained rv64im ELF that links execution, crypto, accelerators, and input I/O.
-    const zesu_guest = b.dependency("zesu", .{ .target = target, .optimize = optimize });
+    const zesu_guest = b.dependency("zesu", .{
+        .target = target,
+        .optimize = optimize,
+        .@"crypto-backend" = .@"extern",
+    });
     const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
     // Build guest and host Constantine archives, plus the Zig bindings module.
@@ -60,6 +65,13 @@ pub fn build(b: *std.Build) void {
     zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
+    const block_rlp_size_mod = b.createModule(.{
+        .root_source_file = b.path("src/block_rlp_size.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    block_rlp_size_mod.addImport("zesu_primitives", zesu_guest.module("primitives"));
+    block_rlp_size_mod.addImport("zesu_input", zesu_guest.module("input"));
 
     // Expose the precompile providers as a standalone module for the exported zkvm_* symbols.
     const provide_mod = b.addModule("zkvm_provide", .{
@@ -93,7 +105,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     guest_module.code_model = .medium;
-    addExecutionImports(guest_module, zesuImports(zesu_guest));
+    addExecutionImports(guest_module, zesuImports(zesu_guest), block_rlp_size_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
     guest_module.addImport("guest_crypto", guest_crypto_mod);
@@ -109,10 +121,7 @@ pub fn build(b: *std.Build) void {
     // delegates per-block execution to) against a real execution-spec-tests zkevm SSZ fixture on
     // the host, asserting it computes the SAME pre/post/receipts roots as zesu's own vanilla
     // `executor.executeStatelessInput` — i.e. adding the log-preserving path doesn't change
-    // validation outcomes. Links zesu's full native crypto backend; linea adds the library search
-    // path so it links on macOS. The committed fixture is an empty block (only keccak), but the
-    // full backend is linked so the suite can grow to tx-bearing fixtures (ecrecover/curves)
-    // without further build changes.
+    // validation outcomes. It links the same Constantine-backed `zkvm_*` provider as the guest.
     //
     // Host artifacts never build at ReleaseSmall: zig 0.16 (stable and dev.3153) -Oz miscompiles
     // zesu's value-semantics hot paths on aarch64 hosts — stack slots of by-value hash-map captures
@@ -124,16 +133,26 @@ pub fn build(b: *std.Build) void {
     const host_optimize: std.builtin.OptimizeMode =
         if (optimize == .ReleaseSmall) .ReleaseSafe else optimize;
     const native_target = b.resolveTargetQuery(.{});
-    const native_crypto = resolveNativeCrypto(b, native_target);
-    const zesu_native = b.dependency("zesu", .{ .target = native_target, .optimize = host_optimize });
+    const zesu_native = b.dependency("zesu", .{
+        .target = native_target,
+        .optimize = host_optimize,
+        .@"crypto-backend" = .@"extern",
+    });
     const native_imports = zesuImports(zesu_native);
+    const block_rlp_size_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/block_rlp_size.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    block_rlp_size_native_mod.addImport("zesu_primitives", zesu_native.module("primitives"));
+    block_rlp_size_native_mod.addImport("zesu_input", zesu_native.module("input"));
 
     const guest_mod = b.createModule(.{
         .root_source_file = b.path(source),
         .target = native_target,
         .optimize = host_optimize,
     });
-    addExecutionImports(guest_mod, native_imports);
+    addExecutionImports(guest_mod, native_imports, block_rlp_size_native_mod);
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
     const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
@@ -147,6 +166,45 @@ pub fn build(b: *std.Build) void {
         .target = native_target,
         .optimize = host_optimize,
     });
+    const lineth_accel_native_mod = b.dependency("lineth_accelerators", .{ .target = native_target, .optimize = host_optimize }).module("lineth_accelerators");
+    const modexp_impl_native_mod = b.createModule(.{
+        .root_source_file = zesu_native.path("src/crypto/backends/modexp_impl.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    modexp_impl_native_mod.addImport("zesu_allocator", zesu_native.module("zesu_allocator"));
+    const ripemd160_impl_native_mod = b.createModule(.{
+        .root_source_file = zesu_native.path("src/crypto/backends/ripemd160_impl.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    const blake2f_impl_native_mod = b.createModule(.{
+        .root_source_file = zesu_native.path("src/crypto/backends/blake2f_impl.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    const zesu_crypto_backend_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/zesu_crypto_backend.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    zesu_crypto_backend_native_mod.addImport("zesu_modexp_impl", modexp_impl_native_mod);
+    zesu_crypto_backend_native_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_native_mod);
+    zesu_crypto_backend_native_mod.addImport("zesu_blake2f_impl", blake2f_impl_native_mod);
+    const provide_native_mod = b.createModule(.{
+        .root_source_file = b.path("src/zkvm_provide.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    provide_native_mod.addImport("lineth_zkvm_accel", lineth_accel_native_mod);
+    provide_native_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_native_mod);
+    provide_native_mod.addImport("guest_crypto", guest_crypto_native_mod);
+    provide_native_mod.addObjectFile(guest_crypto_host_a);
+    const native_options = b.addOptions();
+    native_options.addOption(bool, "keccak_accel", false);
+    native_options.addOption(bool, "is_guest", false);
+    provide_native_mod.addOptions("build_options", native_options);
+    const provide_native_obj = b.addObject(.{ .name = "zkvm_provide", .root_module = provide_native_mod });
     const guest_crypto_tests = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("test/guest_crypto_test.zig"),
@@ -156,6 +214,7 @@ pub fn build(b: *std.Build) void {
     });
     guest_crypto_tests.root_module.addImport("guest_crypto", guest_crypto_native_mod);
     guest_crypto_tests.root_module.addObjectFile(guest_crypto_host_a);
+    guest_crypto_tests.root_module.addObject(provide_native_obj);
     guest_crypto_tests.root_module.link_libc = true;
     // EIP-196/197 smoke vectors straight from zesu's testdata (CSV: input,result,gas,notes;
     // hex without 0x; empty notes = success row).
@@ -206,28 +265,7 @@ pub fn build(b: *std.Build) void {
     tx_fixtures_mod.addImport("zesu_executor", native_imports.executor);
     tx_fixtures_mod.addImport("zesu_mpt", native_imports.mpt);
 
-    // secp256k1_wrapper.zig can't be rooted directly as its own module the way
-    // modexp_impl_mod/ripemd160_impl_mod are: unlike those two, this file is ALSO
-    // relatively-imported by zesu's own accel_impl root (already in this graph via
-    // accelerators), and Zig rejects one file belonging to two modules at once. The exposed
-    // accelerators surface has no path to `sign`/`getContext` either (it only exposes
-    // verify/ecrecover). A WriteFile step copies the file byte-for-byte to a fresh path
-    // nothing else claims, so the copy can root its own module. That module needs its own C
-    // include path for its `@cImport`'d secp256k1.h — C include paths are per-module and don't
-    // inherit from linkNativeZesuCrypto below (zesu's own build.zig hits the same constraint
-    // wiring accel_impl).
-    const secp256k1_wrapper_copy = b.addWriteFiles();
-    const secp256k1_wrapper_copy_path = secp256k1_wrapper_copy.addCopyFile(
-        zesu_native.path("src/crypto/backends/secp256k1_wrapper.zig"),
-        "secp256k1_wrapper.zig",
-    );
-    const secp256k1_wrapper_mod = b.createModule(.{
-        .root_source_file = secp256k1_wrapper_copy_path,
-        .target = native_target,
-        .optimize = host_optimize,
-    });
-    secp256k1_wrapper_mod.addIncludePath(.{ .cwd_relative = native_crypto.include_path });
-    tx_fixtures_mod.addImport("zesu_secp256k1", secp256k1_wrapper_mod);
+    tx_fixtures_mod.addImport("guest_crypto", guest_crypto_native_mod);
 
     // ── l2-execution guest logic (src/l2_execution.zig) unit tests ──────────────────────────────────
     // These `zig build test` UNIT TESTS run only on the native target — like the l2_execution_ssz
@@ -249,7 +287,7 @@ pub fn build(b: *std.Build) void {
         .target = native_target,
         .optimize = host_optimize,
     });
-    addExecutionImports(l2_execution_mod, native_imports);
+    addExecutionImports(l2_execution_mod, native_imports, block_rlp_size_native_mod);
     l2_execution_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
 
     const l2_execution_tests = b.addTest(.{
@@ -268,7 +306,7 @@ pub fn build(b: *std.Build) void {
     l2_execution_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
     l2_execution_tests.root_module.addImport("zesu_accelerators", native_imports.accelerators);
     l2_execution_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
-    linkNativeZesuCrypto(l2_execution_tests, native_target, native_crypto);
+    linkNativeCryptoProvider(l2_execution_tests, provide_native_obj, guest_crypto_host_a);
     test_step.dependOn(&b.addRunArtifact(l2_execution_tests).step);
 
     // ── l2-execution JSON output shape (test/l2_execution_json.zig) ─────────────────────────────────
@@ -344,7 +382,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     l2_execution_wrap_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-    linkNativeZesuCrypto(l2_execution_wrap_exe, native_target, native_crypto);
+    linkNativeCryptoProvider(l2_execution_wrap_exe, provide_native_obj, guest_crypto_host_a);
     b.installArtifact(l2_execution_wrap_exe);
 
     const run_l2_execution_wrap_step = b.step(
@@ -371,7 +409,7 @@ pub fn build(b: *std.Build) void {
     l2_execution_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
     l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
     l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
-    linkNativeZesuCrypto(l2_execution_runner_exe, native_target, native_crypto);
+    linkNativeCryptoProvider(l2_execution_runner_exe, provide_native_obj, guest_crypto_host_a);
     b.installArtifact(l2_execution_runner_exe);
 
     const run_l2_execution_runner_step = b.step(
@@ -413,7 +451,7 @@ pub fn build(b: *std.Build) void {
         tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
         tests.root_module.addImport("zesu_allocator", native_imports.allocator);
         tests.root_module.addImport("zesu_mpt", native_imports.mpt);
-        linkNativeZesuCrypto(tests, native_target, native_crypto);
+        linkNativeCryptoProvider(tests, provide_native_obj, guest_crypto_host_a);
 
         test_step.dependOn(&b.addRunArtifact(tests).step);
 
@@ -432,7 +470,7 @@ pub fn build(b: *std.Build) void {
         stateless_input_encode_tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
         stateless_input_encode_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
         stateless_input_encode_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
-        linkNativeZesuCrypto(stateless_input_encode_tests, native_target, native_crypto);
+        linkNativeCryptoProvider(stateless_input_encode_tests, provide_native_obj, guest_crypto_host_a);
         test_step.dependOn(&b.addRunArtifact(stateless_input_encode_tests).step);
 
         // ── Conflation-plan test DSL parity guard (test/conflation_plan_parity_test.zig) ────────────
@@ -456,7 +494,7 @@ pub fn build(b: *std.Build) void {
         conflation_plan_parity_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
         conflation_plan_parity_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
         conflation_plan_parity_tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
-        linkNativeZesuCrypto(conflation_plan_parity_tests, native_target, native_crypto);
+        linkNativeCryptoProvider(conflation_plan_parity_tests, provide_native_obj, guest_crypto_host_a);
         test_step.dependOn(&b.addRunArtifact(conflation_plan_parity_tests).step);
 
         // ── Conflation-plan range scenario suite (test/l2_execution_range_test.zig) ───────────────
@@ -478,7 +516,7 @@ pub fn build(b: *std.Build) void {
         l2_execution_range_tests.root_module.addImport("zesu_rlp_decode", native_imports.rlp_decode);
         l2_execution_range_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
         l2_execution_range_tests.root_module.addImport("tx_fixtures", tx_fixtures_mod);
-        linkNativeZesuCrypto(l2_execution_range_tests, native_target, native_crypto);
+        linkNativeCryptoProvider(l2_execution_range_tests, provide_native_obj, guest_crypto_host_a);
         test_step.dependOn(&b.addRunArtifact(l2_execution_range_tests).step);
 
         // ── Real multi-block happy-path spike test (test/real_multiblock_test.zig) ──────────────────
@@ -511,7 +549,7 @@ pub fn build(b: *std.Build) void {
         real_multiblock_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         real_multiblock_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
         real_multiblock_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-        linkNativeZesuCrypto(real_multiblock_tests, native_target, native_crypto);
+        linkNativeCryptoProvider(real_multiblock_tests, provide_native_obj, guest_crypto_host_a);
         test_step.dependOn(&b.addRunArtifact(real_multiblock_tests).step);
 
         // ── extended-vs-fixture validity reference-test guard (permanent) ──
@@ -544,7 +582,7 @@ pub fn build(b: *std.Build) void {
         extended_vanilla_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
         extended_vanilla_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         extended_vanilla_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-        linkNativeZesuCrypto(extended_vanilla_runner_exe, native_target, native_crypto);
+        linkNativeCryptoProvider(extended_vanilla_runner_exe, provide_native_obj, guest_crypto_host_a);
 
         const run_extended_vanilla = b.addRunArtifact(extended_vanilla_runner_exe);
         run_extended_vanilla.addArg("--fixtures");
@@ -611,7 +649,7 @@ fn zesuImports(zesu: *std.Build.Dependency) ZesuImports {
     };
 }
 
-fn addExecutionImports(module: *std.Build.Module, imports: ZesuImports) void {
+fn addExecutionImports(module: *std.Build.Module, imports: ZesuImports, block_rlp_size: *std.Build.Module) void {
     module.addImport("zesu_allocator", imports.allocator);
     module.addImport("zesu_executor", imports.executor);
     module.addImport("zesu_ssz_decode", imports.ssz_decode);
@@ -624,80 +662,16 @@ fn addExecutionImports(module: *std.Build.Module, imports: ZesuImports) void {
     module.addImport("zesu_hardfork", imports.hardfork);
     module.addImport("zesu_rlp_decode", imports.rlp_decode);
     module.addImport("zesu_accelerators", imports.accelerators);
+    module.addImport("zesu_block_rlp_size", block_rlp_size);
 }
 
-const NativeCrypto = struct {
-    include_path: []const u8,
-    lib_path: []const u8,
-    blst_path: []const u8,
-    mcl_path: []const u8,
-    is_linux: bool,
-};
-
-fn resolveNativeCrypto(b: *std.Build, target: std.Build.ResolvedTarget) NativeCrypto {
-    _ = target;
-    const default_prefix = if (b.graph.host.result.os.tag == .linux) "/usr/local" else "/opt/homebrew";
-    const prefix = b.option([]const u8, "crypto-prefix", "Native crypto dependency prefix") orelse default_prefix;
-    const lib_path = b.fmt("{s}/lib", .{prefix});
-    return .{
-        .include_path = b.fmt("{s}/include", .{prefix}),
-        .lib_path = lib_path,
-        .blst_path = b.fmt("{s}/libblst.a", .{lib_path}),
-        .mcl_path = b.fmt("{s}/libmcl.a", .{lib_path}),
-        .is_linux = b.graph.host.result.os.tag == .linux,
-    };
-}
-
-/// Links the full native crypto backing zesu's native accelerator: secp256k1 (ecrecover), OpenSSL
-/// (P-256), blst (BLS12-381 + KZG), mcl (BN254). No-op for freestanding targets, whose crypto is the
-/// in-guest zkvm_* symbols. zesu sets the C include path itself, so here we only add the library
-/// search path + the libraries.
-fn linkNativeZesuCrypto(
+/// Links the host test/tool root to the same Constantine-backed provider used by the guest.
+fn linkNativeCryptoProvider(
     step: *std.Build.Step.Compile,
-    target: std.Build.ResolvedTarget,
-    crypto: NativeCrypto,
+    provider: *std.Build.Step.Compile,
+    constantine: std.Build.LazyPath,
 ) void {
-    if (target.result.os.tag == .freestanding) return;
-
-    addCompileIncludePath(step, .{ .cwd_relative = crypto.include_path });
-    addCompileLibraryPath(step, .{ .cwd_relative = crypto.lib_path });
-
-    linkCompileSystemLibrary(step, "c");
-    if (target.result.os.tag != .windows) {
-        linkCompileSystemLibrary(step, "m");
-    }
-    linkCompileSystemLibrary(step, "secp256k1");
-    linkCompileSystemLibrary(step, "ssl");
-    linkCompileSystemLibrary(step, "crypto");
-    step.root_module.addObjectFile(.{ .cwd_relative = crypto.blst_path });
-    if (crypto.is_linux) {
-        linkCompileSystemLibrary(step, "mcl");
-    } else {
-        step.root_module.addObjectFile(.{ .cwd_relative = crypto.mcl_path });
-        step.root_module.link_libcpp = true;
-    }
-}
-
-fn addCompileIncludePath(step: *std.Build.Step.Compile, path: std.Build.LazyPath) void {
-    if (@hasDecl(std.Build.Step.Compile, "addIncludePath")) {
-        step.addIncludePath(path);
-    } else {
-        step.root_module.addIncludePath(path);
-    }
-}
-
-fn addCompileLibraryPath(step: *std.Build.Step.Compile, path: std.Build.LazyPath) void {
-    if (@hasDecl(std.Build.Step.Compile, "addLibraryPath")) {
-        step.addLibraryPath(path);
-    } else {
-        step.root_module.addLibraryPath(path);
-    }
-}
-
-fn linkCompileSystemLibrary(step: *std.Build.Step.Compile, name: []const u8) void {
-    if (@hasDecl(std.Build.Step.Compile, "linkSystemLibrary")) {
-        step.linkSystemLibrary(name);
-    } else {
-        step.root_module.linkSystemLibrary(name, .{});
-    }
+    step.root_module.addObject(provider);
+    step.root_module.addObjectFile(constantine);
+    step.root_module.link_libc = true;
 }

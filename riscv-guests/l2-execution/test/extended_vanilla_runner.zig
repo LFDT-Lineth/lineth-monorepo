@@ -39,9 +39,7 @@ fn recordError(name: []const u8) void {
 const ExtendedVanillaAdapter = struct {
     pub const label = "extended guest vs EF fixture ground truth (dummy-wrapped l2_execution.runL2Execution vs the fixture's own successful_validation)";
 
-    /// Skip any fixture exercising EIP-8025's fork-activation schedule (a populated
-    /// chain_config.activation_block/activation_timestamp): this guest is single-fork and fixed
-    /// (see vanilla_wrap.vanillaHasForkActivationSchedule's doc comment for why). Decode failure
+    /// The current flat chain-config schema carries the active fork in its schema ID. Decode failure
     /// belongs to `adaptInput`/`runAndCheck`'s coarse invalid-result handling — the malformed-SSZ
     /// negative-test case — so it flows through there unchanged.
     pub fn shouldSkip(

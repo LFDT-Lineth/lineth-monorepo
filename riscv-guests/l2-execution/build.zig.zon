@@ -5,12 +5,12 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zesu = .{
-            .url = "https://github.com/Consensys/zesu/archive/fc9a8e289811b0d37893df05d21931369adb9fde.tar.gz",
-            .hash = "zesu-0.1.0-UtqpAALaQwB7MkgNQS7de6P4OSrYYw1lJ4ScupPcohgM",
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/ce29ed86e35e76b78c99b768e651cc04f9e0c705.tar.gz",
+            .hash = "zesu-0.1.0-UtqpAH_6RADAjW9-PLc9-4gT_BgP0JUUiQ0DqZ5MxQeS",
         },
         .execution_spec_tests_zkevm = .{
-            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.6.2/fixtures_zkevm.tar.gz",
-            .hash = "N-V-__8AAP____94w9jBcI9yat7v2Mt9Lb-iJ5TOtfLo6-Ab",
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.8.4/fixtures_zkevm.tar.gz",
+            .hash = "N-V-__8AAP____-VD92T96PjIxzTvS5ahT2lM2ZiHXq3oaOf",
             .lazy = true,
         },
         // Shared build helpers.

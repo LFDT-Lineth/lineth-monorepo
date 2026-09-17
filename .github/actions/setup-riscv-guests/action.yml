@@ -1,10 +1,7 @@
 name: 'Setup RISC-V Guests Environment'
 description: >
-  Toolchain + native crypto libraries for building and host-testing the riscv-guests packages.
-  Installs the Zig version pinned in riscv-guests/.zigversion (via community mirrors — ziglang.org
-  prunes dev builds) and the native crypto stack that zesu's host backend links: libsecp256k1 and
-  OpenSSL from apt, blst and mcl built from pinned upstream sources into /usr/local (the build's
-  default -Dcrypto-prefix on Linux). Mirrors zesu's own `make install-apt-deps` recipe.
+  Toolchain for building and host-testing the riscv-guests packages. Installs the Zig version pinned
+  in riscv-guests/.zigversion, plus Nim and LLVM for the Constantine crypto backend.
 
 runs:
   using: 'composite'
@@ -20,24 +17,6 @@ runs:
         version: ${{ steps.zigversion.outputs.version }}
         dependency-hash-paths: riscv-guests/*/build.zig.zon
         cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-
-    # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
-    # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
-    # Cache /usr/local's result directly so a hit skips straight to a no-op inside that target.
-    - name: Cache blst + mcl builds
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-      with:
-        path: |
-          /usr/local/lib/libblst.a
-          /usr/local/lib/libmcl.so
-          /usr/local/include/blst.h
-          /usr/local/include/blst_aux.h
-          /usr/local/include/mcl
-        key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
-
-    - name: Install native crypto deps (blst, mcl)
-      shell: bash
-      run: make -C riscv-guests install-native-crypto-deps
 
     # Install Nim and clang for the freestanding Constantine build.
     - name: Install constantine build deps (nim, clang)

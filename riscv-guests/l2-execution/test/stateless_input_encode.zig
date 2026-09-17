@@ -9,20 +9,14 @@
 //! slices — serialized by `ssz.serialize`'s generic comptime reflection over the struct's fields in
 //! declaration order: the same 4-byte little-endian offset-table convention SSZ and the decoder both
 //! use, so declaring a field as a fixed array vs. a slice is itself what selects "inline in the fixed
-//! head" vs. "offset into the variable region". Two of the wire's conventions need a specific Zig
+//! head" vs. "offset into the variable region". The wire's byte-list convention needs a specific Zig
 //! shape to come out right:
 //!   - a `List[ByteList[N], M]` (a list of variable-length byte blobs — transactions/witness-nodes/
 //!     codes/headers) is a slice of byte slices (`[]const []const u8`): the outer list is variable
 //!     (gets an offset table), each inner blob is raw bytes (`@sizeOf(u8) == 1`, so the library packs
 //!     it with no per-item framing of its own).
-//!   - the optional `activation_block`/`activation_timestamp` fields are 0-or-1-element slices of
-//!     `u64` (`[]const u64`), not Zig's native `?u64` — a slice of fixed-size elements serializes as
-//!     one offset plus packed concatenation with no internal length prefix, exactly the "presence is
-//!     the encoded length" convention `SszForkActivation` uses. `?u64` would instead serialize as a
-//!     1-byte selector plus value: a real SSZ shape, just a different one than this container uses.
-//!
 //! Container layouts match the decoder exactly (fixed region sizes):
-//!   SszStatelessInput:    16 bytes  [4+4+4+4] all-variable (v0.4.1)
+//!   SszStatelessInput:    20 bytes  [4+4+8+4]
 //!   SszNewPayloadRequest: 44 bytes  [4+4+32+4]
 //!   SszExecutionPayload: 540 bytes  (Amsterdam/V4 shape)
 //!   SszExecutionWitness:  12 bytes  [4+4+4]
@@ -49,8 +43,7 @@ const ssz = @import("ssz");
 // type of their own. The three containers below need a dedicated wire shape because the decoded
 // convenience type either orders fields differently than the wire (`NewPayloadRequest`), carries a
 // wire-irrelevant field alongside the wire one (`ExecutionPayload`'s decoded `transactions` alongside
-// wire `raw_transactions`), or represents optionality with Zig's `?T` where the wire uses a 0-or-1-
-// length list (`ChainConfig`'s activation fields).
+// wire `raw_transactions`).
 
 /// SszExecutionPayload's 540-byte fixed region, field-for-field in wire order. `base_fee_per_gas` is
 /// a `u256` (the wire's real width) rather than the decoded convenience type's `u64` — only the low 8
@@ -90,27 +83,13 @@ const SszNewPayloadRequest = struct {
     execution_requests: input.ExecutionRequests,
 };
 
-/// SszForkActivation's 8-byte fixed head: one offset per optional, each pointing to a 0-or-1-element
-/// `u64` list. Presence is conveyed entirely by the encoded length, matching how the decoder reads it
-/// (it reads a `u64` only when an offset delta is exactly 8, and leaves the field `null` otherwise).
-const SszForkActivation = struct {
-    activation_block: []const u64,
-    activation_timestamp: []const u64,
-};
-
-/// SszForkConfig's 4-byte fixed head: the activation container's offset, its only field — fork
-/// identity travels in the schema prefix, not here.
-const SszForkConfig = struct {
-    activation: SszForkActivation,
-};
-
-/// SszChainConfig's 12-byte fixed head: chain_id inline, fork_config offset.
+/// SszChainConfig's 8-byte fixed region contains only the chain ID. Fork identity travels in the
+/// two-byte schema prefix.
 const SszChainConfig = struct {
     chain_id: u64,
-    fork_config: SszForkConfig,
 };
 
-/// SszStatelessInput's 16-byte all-variable fixed head (v0.4.1): one offset per field, in wire order.
+/// SszStatelessInput's 20-byte fixed region: offsets for variable fields and an inline chain ID.
 /// `public_keys` is a packed list of fixed 65-byte ByteVectors (uncompressed secp256k1, 0x04 prefix
 /// retained) — `[]const [65]u8`, not `[]const []const u8`, so the library packs them with no per-item
 /// offset table, matching the wire's "no framing, just concatenation" convention for fixed-size items.
@@ -123,22 +102,11 @@ const SszStatelessInput = struct {
 
 const PUBKEY_SIZE: usize = 65;
 
-/// Converts a `?u64` into the 0-or-1-element slice `SszForkActivation` needs, backed by `buf` (which
-/// must outlive the caller's use of the returned slice — see `encode`, which keeps one such buffer
-/// per activation field alive across its own `ssz.serialize` call).
-fn optionalAsSlice(buf: *[1]u64, value: ?u64) []const u64 {
-    if (value) |v| {
-        buf[0] = v;
-        return buf[0..1];
-    }
-    return &.{};
-}
-
 /// Encode a `StatelessInput` into the SSZ `SszStatelessInput` bytes the decoder accepts. The exact
 /// byte-level inverse of `decode`: `decode(alloc, encode(alloc, si))` reproduces `si`.
 ///
 /// `chain_config.fork_name` carries no wire bytes of its own — it is a display string the decoder
-/// derives from the schema's fork byte, so encoding reads `active_fork_idx` for that byte and leaves
+/// derives from the schema ID, so encoding reads it for that byte and leaves
 /// `fork_name` unread.
 pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
     const ep = si.new_payload_request.execution_payload;
@@ -149,9 +117,6 @@ pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
         if (key.len != PUBKEY_SIZE) return error.InvalidPublicKeySize;
         @memcpy(&public_keys[i], key);
     }
-
-    var activation_block_buf: [1]u64 = undefined;
-    var activation_timestamp_buf: [1]u64 = undefined;
 
     const body = SszStatelessInput{
         .new_payload_request = .{
@@ -186,23 +151,17 @@ pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
         .witness = si.witness,
         .chain_config = .{
             .chain_id = si.chain_config.chain_id,
-            .fork_config = .{
-                .activation = .{
-                    .activation_block = optionalAsSlice(&activation_block_buf, si.chain_config.activation_block),
-                    .activation_timestamp = optionalAsSlice(&activation_timestamp_buf, si.chain_config.activation_timestamp),
-                },
-            },
         },
         .public_keys = public_keys,
     };
 
     var out: std.ArrayList(u8) = .empty;
     defer out.deinit(alloc);
-    // The 2-byte schema id (fork byte from `chain_config.active_fork_idx` + revision byte 0x01) is
+    // The 2-byte schema ID is
     // Linea's own outer framing, not part of the SSZ container itself — prepended here directly to
     // the same buffer `ssz.serialize` appends the body into, ahead of it.
-    try out.append(alloc, @intCast(si.chain_config.active_fork_idx));
-    try out.append(alloc, 0x01);
+    try out.append(alloc, @truncate(si.chain_config.schema_id >> 8));
+    try out.append(alloc, @truncate(si.chain_config.schema_id));
     try ssz.serialize(SszStatelessInput, body, &out, alloc);
 
     return out.toOwnedSlice(alloc);
