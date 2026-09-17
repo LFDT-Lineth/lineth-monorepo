@@ -202,6 +202,7 @@ pub fn build(b: *std.Build) void {
     provide_native_mod.addImport("zesu_crypto_backend", zesu_crypto_backend_native_mod);
     provide_native_mod.addImport("guest_crypto", guest_crypto_native_mod);
     provide_native_mod.addObjectFile(guest_crypto_host_a);
+    provide_native_mod.link_libc = true;
     const native_options = b.addOptions();
     native_options.addOption(bool, "keccak_accel", false);
     native_options.addOption(bool, "is_guest", false);
@@ -405,7 +406,7 @@ pub fn build(b: *std.Build) void {
     execution_spec_suite_tests.root_module.addImport("execution_machine", execution_machine_mod);
     execution_spec_suite_tests.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
     execution_spec_suite_tests.root_module.addImport("zlob", zlob_dep.module("zlob"));
-        linkNativeCryptoProvider(execution_spec_suite_tests, provide_native_obj, guest_crypto_host_a);
+    linkNativeCryptoProvider(execution_spec_suite_tests, provide_native_obj, guest_crypto_host_a);
     test_step.dependOn(&b.addRunArtifact(execution_spec_suite_tests).step);
 
     // ── Vanilla StatelessInput SSZ encoder module (test/stateless_input_encode.zig) ─────────────────
@@ -467,7 +468,7 @@ pub fn build(b: *std.Build) void {
     zkc_reference_runner_exe.root_module.addImport("zkc_machine", zkc_machine_mod);
     zkc_reference_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
     zkc_reference_runner_exe.root_module.addImport("zlob", zlob_dep.module("zlob"));
-        linkNativeCryptoProvider(zkc_reference_runner_exe, provide_native_obj, guest_crypto_host_a);
+    linkNativeCryptoProvider(zkc_reference_runner_exe, provide_native_obj, guest_crypto_host_a);
     b.installArtifact(zkc_reference_runner_exe);
 
     // Smoke: one exact extended SSZ input under ZkC, checked against the host machine.
