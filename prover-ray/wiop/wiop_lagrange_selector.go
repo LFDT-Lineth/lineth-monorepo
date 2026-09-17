@@ -2,8 +2,10 @@ package wiop
 
 import (
 	"fmt"
+	"math/big"
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
@@ -181,4 +183,32 @@ func (ls *LagrangeSelector) EvaluateOutOfDomain(rt *Runtime, x field.Gen) field.
 	denominator := xMinusOmega.Mul(field.ElemFromBase(nElem))
 
 	return numerator.Div(denominator)
+}
+
+// EvaluateOutOfDomainGnark is the in-circuit counterpart of
+// [LagrangeSelector.EvaluateOutOfDomain]. The module must be statically sized.
+//
+// The in-domain guard of the native version becomes vacuous here: at x = ω^pos
+// both numerator and denominator vanish and the division constraint is
+// satisfied by any quotient. x is a verifier coin, so this happens with
+// negligible probability, and the native verifier rejects such a proof anyway.
+func (ls *LagrangeSelector) EvaluateOutOfDomainGnark(run *GnarkRuntime, x circuit.Ext) circuit.Ext {
+	api := run.API()
+	n := ls.module.Size()
+	pos := ls.resolvedRow(n)
+
+	var omegaPos field.Element
+	omegaPos.ExpInt64(field.RootOfUnityBy(n), int64(pos))
+
+	xPowN := x
+	for i := 0; i < bits.TrailingZeros(uint(n)); i++ {
+		xPowN = api.SquareExt(xPowN)
+	}
+	numerator := api.SubExt(xPowN, api.OneExt())
+	numerator = api.MulByFpExt(numerator, api.ConstBig(omegaPos.BigInt(new(big.Int))))
+
+	denominator := api.SubExt(x, api.ConstExt(field.Lift(omegaPos)))
+	denominator = api.MulConstExt(denominator, big.NewInt(int64(n)))
+
+	return api.DivExt(numerator, denominator)
 }

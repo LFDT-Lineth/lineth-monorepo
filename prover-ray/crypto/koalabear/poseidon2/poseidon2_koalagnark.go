@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 	"github.com/consensys/gnark/frontend"
 )
@@ -102,6 +103,13 @@ func (h *KoalagnarkMDHasher) Sum() KoalagnarkOctuplet {
 }
 
 func (h *KoalagnarkMDHasher) compressPoseidon2(a, b KoalagnarkOctuplet) KoalagnarkOctuplet {
+	return KoalagnarkCompress(h.koalaAPI, a, b)
+}
+
+// KoalagnarkCompress is the in-circuit counterpart of [Compress]: it applies
+// the Poseidon2 compression function to (a, b) using koalagnark arithmetic,
+// so it runs in native KoalaBear circuits and in emulated ones alike.
+func KoalagnarkCompress(api *circuit.API, a, b KoalagnarkOctuplet) KoalagnarkOctuplet {
 	res := KoalagnarkOctuplet{}
 
 	var x [16]circuit.Element
@@ -111,13 +119,22 @@ func (h *KoalagnarkMDHasher) compressPoseidon2(a, b KoalagnarkOctuplet) Koalagna
 	// Create a buffer to hold the feed-forward input.
 	copy(res[:], x[8:])
 
-	err := koalagnarkCompressPerm.Permutation(h.koalaAPI, x[:])
+	err := koalagnarkCompressPerm.Permutation(api, x[:])
 	if err != nil {
 		panic(err)
 	}
 
 	for i := range res {
-		res[i] = h.koalaAPI.Add(res[i], x[8+i])
+		res[i] = api.Add(res[i], x[8+i])
+	}
+	return res
+}
+
+// NewKoalagnarkOctuplet converts a native octuplet into a witness assignment.
+func NewKoalagnarkOctuplet(o field.Octuplet) KoalagnarkOctuplet {
+	var res KoalagnarkOctuplet
+	for i := range res {
+		res[i] = circuit.NewElementFromKoala(o[i])
 	}
 	return res
 }
