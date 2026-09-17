@@ -7,6 +7,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Future
+import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientResponse
@@ -64,48 +65,56 @@ class VertxHttpJsonRpcClient(
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
 
-    return httpClient.request(requestOptions).flatMap { httpClientRequest ->
+    // Bridge via a context-free Promise so the returned future is observable from any thread
+    // without requiring Vertx context dispatch (context.execute). In Vertx 5, futures that carry
+    // an event-loop context dispatch their completion listeners via context.execute(), which is
+    // unreliable when the observer is on a non-event-loop thread (e.g. a test thread or
+    // AsyncRetryer worker). Promise.promise() produces a context-free PromiseImpl whose
+    // completeInternal always uses signalComplete — a direct call with no scheduler hop.
+    val bridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
+
+    httpClient.request(requestOptions).flatMap { httpClientRequest ->
       httpClientRequest.putHeader("Content-Type", "application/json")
       logRequest(json)
 
-      val requestFuture =
-        httpClientRequest.send(json).flatMap { response: HttpClientResponse ->
-          if (isSuccessStatusCode(response.statusCode())) {
-            handleResponse(json, response, resultMapper)
-          } else {
-            response.body().flatMap { bodyBuffer ->
-              logResponse(
-                isError = true,
-                response = response,
-                requestBody = json,
-                responseBody = bodyBuffer.toString().lines().firstOrNull() ?: "",
-              )
-              Future.failedFuture(
-                JsonRpcErrorException(
-                  message =
-                  "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-                  httpStatusCode = response.statusCode(),
-                ),
-              )
-            }
+      httpClientRequest.send(json).flatMap { response: HttpClientResponse ->
+        if (isSuccessStatusCode(response.statusCode())) {
+          handleResponse(json, response, resultMapper)
+        } else {
+          response.body().flatMap { bodyBuffer ->
+            logResponse(
+              isError = true,
+              response = response,
+              requestBody = json,
+              responseBody = bodyBuffer.toString().lines().firstOrNull() ?: "",
+            )
+            Future.failedFuture(
+              JsonRpcErrorException(
+                message =
+                "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
+                httpStatusCode = response.statusCode(),
+              ),
+            )
           }
         }
-
-      // Register timer as a side effect only — do NOT round-trip through CompletableFuture and back
-      // via toVertxFuture(). In Vertx 5 the converted Future loses native context propagation on
-      // error paths, causing callers that observe the result via toSafeFuture() to hang.
-      metricsFacade.createTimer(
-        category = metricsCategory,
-        name = "request",
-        description = "Time of Upstream API JsonRpc Requests",
-        tags = listOf(
-          Tag("endpoint", endpoint.host),
-          Tag("method", request.method),
-        ),
-      ).captureTime(requestFuture.toCompletableFuture())
-      requestFuture
+      }
     }
-      .onFailure { th -> logRequestFailure(json, th) }
+      .onComplete { ar ->
+        if (ar.failed()) logRequestFailure(json, ar.cause())
+        bridge.handle(ar)
+      }
+
+    metricsFacade.createTimer(
+      category = metricsCategory,
+      name = "request",
+      description = "Time of Upstream API JsonRpc Requests",
+      tags = listOf(
+        Tag("endpoint", endpoint.host),
+        Tag("method", request.method),
+      ),
+    ).captureTime(bridge.future().toCompletableFuture())
+
+    return bridge.future()
   }
 
   private fun handleResponse(
