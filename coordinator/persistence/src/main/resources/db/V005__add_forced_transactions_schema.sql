@@ -31,3 +31,6 @@ COMMENT ON COLUMN forced_transactions.ftx_block_number_deadline IS 'Block number
 COMMENT ON COLUMN forced_transactions.ftx_rolling_hash IS 'Rolling hash of the forced transaction';
 COMMENT ON COLUMN forced_transactions.ftx_rlp IS 'RLP-encoded forced transaction data';
 COMMENT ON COLUMN forced_transactions.proof_status IS 'Status of the invalidity proof (1=UNREQUESTED, 2=REQUESTED, 3=PROVEN)';
+
+-- Add proof index hash to batches table
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS proof_index_hash varchar;
