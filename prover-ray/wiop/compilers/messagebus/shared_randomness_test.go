@@ -1,12 +1,27 @@
+// This file covers shared randomness in both directions.
+//
+// γ handed *to* the shards: the light pipeline below (no PCS) checks that a γ
+// supplied from outside reaches α and β, that it reaches nothing else, and that
+// it leaves the prover as a public input.
+//
+// γ derived *from* the shards: the committed pipeline further down runs the real
+// PCS commit action, has each shard publish the multiset hash of its bus round's
+// commitment as its contribution, and takes γ to be the group sum of those
+// contributions compressed by [multisethashing.ToSeed] — the same construction
+// [github.com/LFDT-Lineth/lineth-monorepo/prover-ray/preflight.Run] performs in
+// the orchestrator.
 package messagebus_test
 
 import (
+	"sort"
 	"testing"
 
+	multisethashing "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/multiset_hashing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,6 +41,10 @@ func equal(a, b field.Gen) bool {
 	diff := a.Sub(b)
 	return diff.IsZero()
 }
+
+// =============================================================================
+// γ handed to the shards
+// =============================================================================
 
 // shard is one compiled single-direction shard together with the handles a test
 // needs to drive and inspect it.
@@ -223,8 +242,12 @@ func TestSharedRandomness_UnseededShardsDisagree(t *testing.T) {
 // same pair of shards as the control above — different column data, different
 // local cells, therefore different local transcripts — but seeded with one
 // shared γ. The coins must now agree, which they can only do because the hook
-// replaced each shard's local state with γ before sampling. Their accumulators
-// must then multiply to one, the cross-shard balance condition.
+// replaced each shard's local state with γ before sampling.
+//
+// This is the only test that reads α and β out of the two shards and compares
+// them directly. TestSharedRandomness_SeedDerivedFromContributions observes the
+// same agreement, but only through its effect on the products, and only in the
+// committed pipeline.
 func TestSharedRandomness_SameGammaGivesSameCoins(t *testing.T) {
 	g := gamma(7)
 
@@ -250,7 +273,9 @@ func TestSharedRandomness_SameGammaGivesSameCoins(t *testing.T) {
 // TestSharedRandomness_DifferentGammaGivesDifferentCoins runs one shard twice,
 // changing nothing but γ. The coins must move with it: a γ that did not reach
 // the challenges would leave shards free to disagree on the permutation
-// challenge while still appearing to share randomness.
+// challenge while still appearing to share randomness. It is also what rules out
+// a hook that seeds some constant and ignores γ — which every other test here
+// would accept.
 func TestSharedRandomness_DifferentGammaGivesDifferentCoins(t *testing.T) {
 	s := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, true)
 
@@ -263,10 +288,58 @@ func TestSharedRandomness_DifferentGammaGivesDifferentCoins(t *testing.T) {
 		"β must change when γ changes, since γ is the state the coins are drawn from")
 }
 
+// TestSharedRandomness_SeedingIsScopedToAlphaBeta is the reason α and β are
+// marked with [wiop.CoinField.MarkSeeded] instead of the seed covering the whole
+// coin round: γ must reach the shared challenges without erasing the shard's own
+// transcript.
+//
+// The coin round is not this pass's private property — the lookup and permutation
+// passes anchor their coin rounds the way ensureCoinRound does and regularly land
+// on it, declaring their own coins there, which is what the foreign coin below
+// stands in for. The two shards are identical bar the round-0 local cell, so only
+// that cell can make them diverge. α and β must still agree, being drawn from γ
+// alone; the foreign coin and the Fiat-Shamir state must not, since the cell was
+// absorbed before the coin round and has to stay bound into every later
+// challenge. Under whole-round seeding both would have been drawn from γ too and
+// stayed identical, silently losing that binding.
+func TestSharedRandomness_SeedingIsScopedToAlphaBeta(t *testing.T) {
+	g := gamma(7)
+
+	// build compiles a seeded shard, then plants a foreign unmarked coin on the
+	// round messagebus chose for α and β.
+	build := func(name string, localV uint64) (*shard, *wiop.CoinField) {
+		s := buildShard(t, name, wiop.BusSend, []uint64{10, 20, 30, 40}, localV, true)
+		coinRound := s.sys.Rounds[1]
+		require.Len(t, coinRound.Coins, 2, "α and β must be the round's only coins so far")
+		return s, coinRound.NewCoinField(s.sys.Context.Childf("foreign"))
+	}
+
+	a, foreignA := build("shard-a", 111)
+	b, foreignB := build("shard-b", 222)
+
+	rtA, rtB := a.run(g), b.run(g)
+
+	alphaA, betaA := a.coins(rtA)
+	alphaB, betaB := b.coins(rtB)
+	require.True(t, equal(alphaA, alphaB), "α is seeded and must agree across shards")
+	require.True(t, equal(betaA, betaB), "β is seeded and must agree across shards")
+
+	require.False(t, equal(rtA.GetCoinValue(foreignA), rtB.GetCoinValue(foreignB)),
+		"an unmarked coin sharing the coin round must derive from its own shard's "+
+			"transcript, so it must differ when the shards' round-0 data differs")
+	require.NotEqual(t, rtA.GetFS().State(), rtB.GetFS().State(),
+		"the seeding must not erase the local transcript: the round-0 cell has to stay "+
+			"bound into every challenge drawn after the coin round")
+}
+
 // TestSharedRandomness_IsAPublicInput checks the property that lets the
 // aggregation layer close the binding loop: γ leaves the prover in the
 // public-input vector, at the positions carrying the SharedRandomnessSeed_i tags,
 // where an aggregator can read it and compare it against a sibling's.
+//
+// TestSharedRandomness_CoinsLandAfterTheLastBusRound already asserts that the γ
+// cells are registered and where they live; what this adds is that their
+// *values* reach the vector [wiop.System.Prove] hands out, at those positions.
 func TestSharedRandomness_IsAPublicInput(t *testing.T) {
 	s := buildShard(t, "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40}, 111, true)
 	g := gamma(7)
@@ -279,5 +352,264 @@ func TestSharedRandomness_IsAPublicInput(t *testing.T) {
 		require.Less(t, pos, len(pub), "γ limb %d must have a slot in the public-input vector", i)
 		require.True(t, equal(pub[pos], field.ElemFromBase(g[i])),
 			"public input at the SharedRandomnessSeed_%d position must carry γ limb %d", i, i)
+	}
+}
+
+// =============================================================================
+// γ derived from the shards
+// =============================================================================
+
+// seededShardAssignment pairs a column with the rows to write into it.
+type seededShardAssignment struct {
+	col  *wiop.Column
+	vals []uint64
+}
+
+// seededShard is a bidirectional shard compiled with real shared randomness and
+// real commitments, re-runnable under different γ.
+type seededShard struct {
+	sys     *wiop.System
+	assign  []seededShardAssignment
+	handles []string // alphabetical, matching Compile's public-input order
+}
+
+// buildSeededBidirectionalShard mirrors [buildBidirectionalShard] — same traffic
+// shape, one sent and one received column per handle, every entry carrying
+// SkipInShardCheck so the cross-shard layer owns the balance check — with three
+// deliberate differences.
+//
+// First, it compiles with [messagebus.CompileOptions.SharedRandomness], which is
+// what declares the γ cells and the contribution cells and registers the
+// assigner and checker.
+//
+// Second, it runs [pcs.Compile]. It registers the per-round commit action that populates
+// [wiop.Runtime.Commitments], and the contribution is a hash of exactly those
+// values.
+//
+// Third, the bus columns sit on round 1, behind a round-0 column no bus entry
+// reads — the layout [ensureCoinRound] describes, where round 0 commits the
+// program verification data and round 1 commits what the bus reads. γ still
+// lives on round 0, where [registerSharedRandomness] puts it. Keeping the bus
+// columns off round 0 is what makes the test able to tell "the round before the
+// coins" from "the first round": with everything on round 0 the two coincide,
+// and a contribution hashing the wrong round would go unnoticed.
+func buildSeededBidirectionalShard(
+	t *testing.T,
+	name, originShard string,
+	traffic []busTraffic,
+) *seededShard {
+	t.Helper()
+
+	sys := wiop.NewSystemf("%s", name)
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+
+	toAssign := make([]seededShardAssignment, 0, 2*len(traffic)+1)
+	handles := make([]string, 0, len(traffic))
+
+	// The round-0 occupant. Same content on every shard, as a guest program would
+	// be: two shards whose contributions came out equal would then be hashing this
+	// round instead of their own bus columns, which the c1 != c2 assertion catches.
+	progCol := mod.NewColumn(sys.Context.Childf("prog-col"), r0)
+	toAssign = append(toAssign, seededShardAssignment{progCol, []uint64{7, 7, 7, 7}})
+
+	for _, tr := range traffic {
+		colA := mod.NewColumn(sys.Context.Childf("a-%s", tr.handle), r1)
+		colB := mod.NewColumn(sys.Context.Childf("b-%s", tr.handle), r1)
+
+		send := sys.NewMessageBusSend(
+			sys.Context.Childf("send-%s", tr.handle), originShard, tr.handle,
+			wiop.NewTable(colA.View()))
+		recv := sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-%s", tr.handle), originShard, tr.handle,
+			wiop.NewTable(colB.View()))
+		send.SkipInShardCheck = true
+		recv.SkipInShardCheck = true
+
+		toAssign = append(toAssign,
+			seededShardAssignment{colA, tr.sent},
+			seededShardAssignment{colB, tr.received})
+		handles = append(handles, tr.handle)
+	}
+
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	grandproduct.Compile(sys)
+	pcs.Compile(sys)
+
+	sort.Strings(handles)
+	return &seededShard{sys: sys, assign: toAssign, handles: handles}
+}
+
+const (
+	// seededBusRoundID is where the bus columns sit; round 0 carries the
+	// program column instead.
+	seededBusRoundID = 1
+	// seededCoinRoundID is where messagebus.Compile puts α and β: one past the
+	// last round any bus entry reads.
+	seededCoinRoundID = seededBusRoundID + 1
+)
+
+// run drives the prover under seed g and returns the runtime together with the
+// contribution the shard published and the Merkle root it committed on the bus
+// round.
+//
+// It stops after the result round's actions: that is far enough for the
+// contribution cells (assigned on the coin round) and the per-handle
+// accumulators (assigned on the result round) to hold their values, and short of
+// the opening round, which this pipeline cannot discharge and does not need to.
+func (s *seededShard) run(
+	t *testing.T,
+	g field.Octuplet,
+) (rt *wiop.Runtime, contribution multisethashing.MSetHash, busRoot field.Octuplet) {
+	t.Helper()
+
+	require.Len(t, s.sys.Rounds[seededCoinRoundID].Coins, 2,
+		"α and β must be declared on round %d", seededCoinRoundID)
+
+	rt = wiop.NewRuntime(s.sys)
+	messagebus.AssignSharedRandomnessSeed(rt, g)
+
+	// Each committed round in turn: assign its columns, let its PCS commit action
+	// fill rt.Commitments[ID], then advance — which absorbs that root, and on the
+	// step into the coin round fires the hook that seeds α and β from γ. Columns
+	// are assigned round by round because AssignColumn rejects a column that does
+	// not belong to the round the runtime is on.
+	for rt.CurrentRound().ID < seededCoinRoundID {
+		for _, a := range s.assign {
+			if a.col.Round() == rt.CurrentRound() {
+				rt.AssignColumn(a.col, makeVec(a.vals...))
+			}
+		}
+		runRound(rt)
+		rt.AdvanceRound()
+	}
+
+	// Coin round: SharedRandomnessContributionAssigner writes the contribution.
+	runRound(rt)
+
+	contribution = s.contribution(t, rt)
+	busRoot = rt.Commitments[seededBusRoundID]
+
+	require.NotEqual(t, rt.Commitments[0], busRoot,
+		"round 0 and the bus round must commit different data, or the caller's "+
+			"contribution assertions cannot tell which of the two was hashed")
+
+	// Run the verifier action Verify would normally run, while the runtime still
+	// sits on the coin round so that it recomputes over exactly the rounds the
+	// assigner covered. This is what ties the published contribution to the
+	// shard's own commitments rather than to an arbitrary value.
+	require.NoError(t, (&messagebus.SharedRandomnessContributionChecker{}).Check(rt),
+		"the published contribution must match the shard's own commitments")
+
+	// Result round: the grand-product actions assign the per-handle accumulators.
+	rt.AdvanceRound()
+	runRound(rt)
+
+	return rt, contribution, busRoot
+}
+
+// contribution reads the shard's contribution out of its public-input cells.
+func (s *seededShard) contribution(t *testing.T, rt *wiop.Runtime) multisethashing.MSetHash {
+	t.Helper()
+	var c multisethashing.MSetHash
+	for i := range messagebus.NumSharedRandomnessContribution {
+		cell, pos := s.sys.LookupPublicInputByTag(
+			messagebus.SharedRandomnessSeedContributionPI, i)
+		require.GreaterOrEqual(t, pos, 0, "contribution limb %d must be a public input", i)
+		c[i] = rt.GetCellValue(cell).AsBase()
+	}
+	return c
+}
+
+// product returns handle i's accumulator, in the alphabetical order Compile
+// numbers the MessageBus public inputs by.
+func (s *seededShard) product(rt *wiop.Runtime, i int) field.Gen {
+	return rt.GetCellValue(s.sys.GrandProducts[i].Result)
+}
+
+// TestSharedRandomness_SeedDerivedFromContributions closes the shared-randomness
+// loop in the direction no other test covers: γ is computed *from* the shards
+// rather than given *to* them.
+//
+// Two bidirectional shards commit their bus columns, publish their contributions,
+// and γ is taken as ToSeed(Combine(c1, c2)). Feeding that γ back must leave the
+// contributions untouched and reproduce the same γ — the fixed point that lets an
+// orchestrator hand out a seed the shards can be held to.
+//
+// The reconstruction is well defined only because a contribution cannot depend on
+// γ: γ lives in cells, while a contribution hashes round commitments and
+// commitments cover columns only (see commitToRound, which walks round.Columns).
+// That independence is asserted rather than assumed, since a contribution that
+// moved with γ would make the fixed point circular and the test meaningless.
+func TestSharedRandomness_SeedDerivedFromContributions(t *testing.T) {
+	shard1 := buildSeededBidirectionalShard(
+		t, "shard-1-bidir-seeded", "shard-1", crossShardTrafficShard1)
+	shard2 := buildSeededBidirectionalShard(
+		t, "shard-2-bidir-seeded", "shard-2", crossShardTrafficShard2)
+
+	// Pass one: harvest the contributions under a throwaway seed.
+	throwaway := gamma(1)
+	_, c1, root1 := shard1.run(t, throwaway)
+	_, c2, root2 := shard2.run(t, throwaway)
+
+	require.NotEqual(t, c1, c2,
+		"the two shards hold different bus traffic, so their contributions must differ; "+
+			"equal contributions mean the PCS pass dropped out and both degenerated to "+
+			"Hash(0), or that the contribution hashed round 0, whose program column is "+
+			"the same on both shards")
+
+	// A contribution is the multiset hash of the shard's own bus-round
+	// commitment — the bus round being round 1 here, not round 0, so this also
+	// pins that the contribution follows the bus columns rather than the first
+	// committed round. Pinning it is what keeps the construction anchored to the
+	// orchestrator's: preflight.Run accumulates exactly Hash(root) per shard.
+	require.Equal(t, multisethashing.Hash(root1), c1,
+		"shard 1's contribution must be the multiset hash of its bus-round Merkle root")
+	require.Equal(t, multisethashing.Hash(root2), c2,
+		"shard 2's contribution must be the multiset hash of its bus-round Merkle root")
+
+	g := multisethashing.ToSeed(multisethashing.Combine(c1, c2))
+	require.Equal(t, g, multisethashing.ToSeed(multisethashing.Combine(c2, c1)),
+		"the group operation is commutative, so no shard ordering may be imposed")
+
+	// A γ built from a subset of the contributions binds only that subset. It must
+	// come out different, because that discrepancy is the only thing an aggregator
+	// has to go on: a shard handed such a γ stays internally consistent — its own
+	// contribution checker recomputes from its own commitments and passes — so the
+	// local checks say nothing about which γ was used.
+	require.NotEqual(t, g, multisethashing.ToSeed(c1),
+		"a γ omitting a shard's contribution must differ from the complete one")
+
+	// Pass two: bind the shards to the γ their own contributions produced.
+	rt1, c1Bound, _ := shard1.run(t, g)
+	rt2, c2Bound, _ := shard2.run(t, g)
+
+	require.Equal(t, c1, c1Bound,
+		"a contribution must not move with γ: it hashes commitments, and γ is a cell")
+	require.Equal(t, c2, c2Bound,
+		"a contribution must not move with γ: it hashes commitments, and γ is a cell")
+
+	require.Equal(t, g, multisethashing.ToSeed(multisethashing.Combine(c1Bound, c2Bound)),
+		"γ must be recoverable from the contributions of the shards it was handed to")
+
+	// The pair settles exactly, per handle. TestCrossShard_Bidirectional_Balanced
+	// asserts the same balance on the same traffic, but under a fixed-seed test
+	// hook; this is the only place the shards fold their rows under α and β
+	// actually derived from a γ, with the PCS commitments in the transcript. Had
+	// that seeding failed here, the two shards would fold under different
+	// challenges and the products would not be inverses.
+	require.Len(t, shard1.handles, len(crossShardHandles))
+	for i, h := range shard1.handles {
+		t.Run(h, func(t *testing.T) {
+			p1 := shard1.product(rt1, i)
+			p2 := shard2.product(rt2, i)
+
+			require.False(t, equal(p1, field.ElemOne()),
+				"shard 1 carries a net position on %q, so a product of one would mean the "+
+					"folds degenerated and the inverse check below is vacuous", h)
+			require.True(t, equal(p1.Mul(p2), field.ElemOne()),
+				"the shards' net positions on %q must be inverses under the shared α and β", h)
+		})
 	}
 }

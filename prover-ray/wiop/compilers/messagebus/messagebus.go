@@ -35,6 +35,9 @@
 // shard's α, β therefore derive from the seeded FS state instead of the
 // local transcript.
 //
+// The seeding is scoped to α and β via [wiop.CoinField.MarkSeeded] rather than
+// applied to the whole round, so the local transcript survives it.
+//
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
 // pass emits.
@@ -206,7 +209,7 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 	// happen here rather than in a separate call by the caller: the hook must land
 	// on the round that carries α and β, and this is where that round is decided.
 	if opt.SharedRandomness {
-		registerSharedRandomness(sys, coinRound)
+		registerSharedRandomness(sys, coinRound, alpha, beta)
 	}
 
 	// The result round (where GrandProduct cells and the verifier action live)

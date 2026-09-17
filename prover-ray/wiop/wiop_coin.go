@@ -19,11 +19,32 @@ type CoinField struct {
 	// round is the owning Round. Set once at construction, never nil for a
 	// well-formed CoinField.
 	round *Round
+	// seeded marks this coin as drawn from the Fiat-Shamir state installed by
+	// its round's [Round.PreSamplingHook] rather than from the running
+	// transcript. See [CoinField.MarkSeeded].
+	seeded bool
 }
 
 // Round returns the round in which this coin is drawn. It is always non-nil
 // for a well-formed CoinField.
 func (cf *CoinField) Round() *Round { return cf.round }
+
+// MarkSeeded opts this coin into seeded sampling: [Runtime.AdvanceRound] draws
+// it from the Fiat-Shamir state its round's [Round.PreSamplingHook] installs,
+// then restores the pre-hook transcript before drawing the round's remaining
+// coins. Marking per coin is what lets a round be shared — several compiler
+// passes anchor their coin round at "one past the last witness round" and reuse
+// whatever sits there, so a pass needing a seeded challenge lands on the same
+// round as one that must stay bound to its own commitments.
+//
+// The marking chooses whether a coin is seeded, not which seed it gets: a round
+// has one hook and therefore one seed, and every coin marked on that round is
+// drawn from it, consecutively (staying distinct through the usual safeguard
+// update).
+//
+// Call at compile time only. A round carrying a seeded coin must also carry a
+// pre-sampling hook to install the seed; [Runtime.AdvanceRound] panics otherwise.
+func (cf *CoinField) MarkSeeded() { cf.seeded = true }
 
 // Module implements [Expression]. Always returns nil: a coin is scalar and
 // not bound to any module.
