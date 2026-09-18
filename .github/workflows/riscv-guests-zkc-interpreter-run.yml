@@ -76,8 +76,8 @@ permissions:
   actions: read
 
 jobs:
-  build-l2-execution-guest:
-    name: build l2-execution guest (accel)
+  build-guest-artifacts:
+    name: build guest artifacts (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -93,7 +93,10 @@ jobs:
       - name: Build l2-execution guest
         run: make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true
 
-      - name: Upload prepared l2-execution artifacts
+      - name: Build rollup guest and sample input
+        run: make -C riscv-guests/rollup compile require-input KECCAK_ACCEL=true
+
+      - name: Upload prepared l2-execution ELF
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: l2-execution-accel-${{ github.sha }}
@@ -101,9 +104,17 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Upload prepared rollup artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rollup-accel-${{ github.sha }}
+          path: riscv-guests/rollup/zig-out
+          if-no-files-found: error
+          retention-days: 1
+
   host-tests:
     name: Guest unit tests (host)
-    needs: build-l2-execution-guest
+    needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -127,7 +138,7 @@ jobs:
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
-    needs: build-l2-execution-guest
+    needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -146,7 +157,7 @@ jobs:
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
-    needs: build-l2-execution-guest
+    needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -160,6 +171,12 @@ jobs:
         with:
           name: l2-execution-accel-${{ github.sha }}
           path: riscv-guests/l2-execution/zig-out
+
+      - name: Download prepared rollup artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rollup-accel-${{ github.sha }}
+          path: riscv-guests/rollup/zig-out
 
       # Install Go for the module-pinned zkc and elf_to_json tools.
       - name: Install Go
@@ -187,11 +204,15 @@ jobs:
       # end-to-end for an additional guest program. KECCAK_ACCEL=true matches the production
       # proving configuration; its keccak use is comptime-only in this stub.
       - name: Run rollup guest under zkc (fast, accel keccak)
-        run: make -C riscv-guests/rollup exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+        run: >-
+          make -f arithmetization/src/test/Makefile elf-exec
+          BIN_EXT=${{ github.workspace }}/riscv-guests/rollup/zig-out/bin/rollup_guest
+          IN_BYTES=@${{ github.workspace }}/riscv-guests/rollup/zig-out/sample.request.ssz
+          ZKC_EXEC_FLAGS="--fast"
 
   zkc-interpreter-trace:
     name: l2-execution guest trace in ZKC interpreter (accel)
-    needs: build-l2-execution-guest
+    needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
