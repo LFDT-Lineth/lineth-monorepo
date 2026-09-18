@@ -6,8 +6,8 @@
     .dependencies = .{
         // Consensys fork of Constantine with the guest shims and rv64 freestanding build.
         .constantine = .{
-            .url = "git+https://github.com/Consensys-Incorporated/constantine#ba2b28fb957c96016fae9851675ecf1b9a68767b",
-            .hash = "N-V-__8AANo66QaZjeuPpjhcif88Nhmf1C-6Zqe27AUTEXvS",
+            .url = "git+https://github.com/Consensys-Incorporated/constantine#8cd81ca358cff49be44ba2623bb5d979021d4094",
+            .hash = "N-V-__8AAO466QZMMLuauJ02PXPVYp1QrtSx9ATLeuXL4Eqd",
         },
     },
     .paths = .{
