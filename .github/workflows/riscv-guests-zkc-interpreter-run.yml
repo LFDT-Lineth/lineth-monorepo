@@ -1,4 +1,4 @@
-# Guest-in-ZKC-interpreter CI for the RISC-V guest programs.
+# L2 execution guest CI pipeline.
 #
 # Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
 # prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
@@ -10,10 +10,10 @@
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
 # on changes to either.
 #
-# Scope: this is a *runnability* smoke gate — it proves the build -> ELF -> ELF->JSON -> `zkc exec`
-# pipeline runs one representative committed block end-to-end under the production keccak op and exits
-# cleanly. Output/correctness equivalence over the full EF zkevm corpus is the native host suite's job.
-name: riscv-guests zkc interpreter run
+# The production ELF build is the single prerequisite for every automatic L2 guest check. A broken
+# guest build therefore prevents the expensive host reference suite and ZkC execution/trace jobs from
+# starting in parallel.
+name: l2-execution guest pipeline
 
 on:
   pull_request:
@@ -100,6 +100,49 @@ jobs:
           path: riscv-guests/l2-execution/zig-out/bin/evm_execution_guest
           if-no-files-found: error
           retention-days: 1
+
+  host-tests:
+    name: Guest unit tests (host)
+    needs: build-l2-execution-guest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup RISC-V guests environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Check Zig formatting
+        run: make fmt-check
+        working-directory: riscv-guests
+        timeout-minutes: 2
+
+      - name: Run native unit tests for all guests
+        run: make test
+        working-directory: riscv-guests
+        timeout-minutes: 20
+
+  reference-tests:
+    name: l2-execution extended-guest reference-test guards (host)
+    needs: build-l2-execution-guest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup RISC-V guests environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Run extended-guest reference-test guards
+        run: make reference-test
+        working-directory: riscv-guests/l2-execution
+        timeout-minutes: 30
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)

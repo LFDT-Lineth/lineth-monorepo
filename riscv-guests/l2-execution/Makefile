@@ -67,7 +67,7 @@ endef
 fetch:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
 
-test:
+test: fetch
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
 
 # Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
@@ -77,21 +77,21 @@ test:
 # executing the real guest ELF via ZkC. Scoped to --fork Amsterdam to keep runtime bounded; narrow
 # further with REFERENCE_ARGS.
 REFERENCE_ARGS ?= --fork Amsterdam
-reference-test:
+reference-test: fetch
 	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
 
 # ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
 # and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --fast).
 # Minutes per heavy block; use it to prove the real ELF agrees with the corpus.
-reference-test-zkc:
+reference-test-zkc: fetch
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
 # Smoke: compare the exact INPUT .ssz under ZkC with the host.
-zkc-smoke-exec: require-input
+zkc-smoke-exec: require-input fetch
 	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
 
-zkc-smoke-trace: require-input
+zkc-smoke-trace: require-input fetch
 	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).

@@ -8,22 +8,6 @@
 name: riscv-guests host tests
 
 on:
-  pull_request:
-    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'riscv-guests/**'
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-host-tests.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'riscv-guests/**'
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-host-tests.yml'
   workflow_dispatch:
 
 permissions:
@@ -33,7 +17,6 @@ permissions:
 jobs:
   host-tests:
     name: Guest unit tests (host)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -45,7 +28,6 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       - name: Check Zig formatting
-        # File list lives in the Makefile (FMT_PATHS, driven by GUESTS) so CI and local stay in sync.
         run: make fmt-check
         working-directory: riscv-guests
         timeout-minutes: 2
@@ -57,7 +39,7 @@ jobs:
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    needs: host-tests
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -72,4 +54,3 @@ jobs:
         run: make reference-test
         working-directory: riscv-guests/l2-execution
         timeout-minutes: 30
-
