@@ -21,6 +21,7 @@ ZIG ?= zig
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
+ZIG_HOST_FLAGS ?= -Dhost-tools=true
 # NOTE: `zig build --fetch` fetches the dependency tree and EXITS without building or running, so it
 # must NOT be passed to build/test targets. Pre-fetching is the dedicated `fetch` target.
 ZIG_FETCH_FLAGS ?=
@@ -57,7 +58,7 @@ KECCAK_ACCEL ?= false
 # $(1) = zkc makefile target (elf-exec | elf-trace)
 # $(2) = optional extra runner args (e.g. --zkc-flags "...")
 define zkc-smoke-run
-	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
 		--zkc-target "$(1)" \
 		$(2)
 endef
@@ -67,7 +68,7 @@ fetch:
 	$(ZIG) build $(ZIG_BUILD_FLAGS) --fetch
 
 test:
-	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
+	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS)
 
 # Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
 # host (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
@@ -77,14 +78,14 @@ test:
 # further with REFERENCE_ARGS.
 REFERENCE_ARGS ?= --fork Amsterdam
 reference-test:
-	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
 
 # ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc
 # and go on PATH (like exec/debug). ZKC_EXEC_FLAGS picks the `zkc exec` backend (default --fast).
 # Minutes per heavy block; use it to prove the real ELF agrees with the corpus.
 reference-test-zkc:
-	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
 # Smoke: compare the exact INPUT .ssz under ZkC with the host.
 zkc-smoke-exec: require-input
@@ -95,7 +96,7 @@ zkc-smoke-trace: require-input
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
-	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
+	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/

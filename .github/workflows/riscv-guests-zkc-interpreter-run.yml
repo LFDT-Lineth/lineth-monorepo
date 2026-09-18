@@ -76,11 +76,9 @@ permissions:
   actions: read
 
 jobs:
-  zkc-interpreter-run:
-    name: guests in ZKC interpreter (accel)
+  build-l2-execution-guest:
+    name: build l2-execution guest (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    # Fast-mode execution is light (~tens of MB, seconds), so this job is build-bound, not
-    # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -88,9 +86,37 @@ jobs:
         with:
           submodules: false
 
-      # Set up the pinned Zig toolchain and restore package caches.
+      # The production build constructs only the freestanding guest graph.
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
+
+      - name: Build l2-execution guest
+        run: make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true
+
+      - name: Upload prepared l2-execution artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: l2-execution-accel-${{ github.sha }}
+          path: riscv-guests/l2-execution/zig-out/bin/evm_execution_guest
+          if-no-files-found: error
+          retention-days: 1
+
+  zkc-interpreter-run:
+    name: l2-execution guest in ZKC interpreter (accel)
+    needs: build-l2-execution-guest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Download prepared l2-execution artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: l2-execution-accel-${{ github.sha }}
+          path: riscv-guests/l2-execution/zig-out
 
       # Install Go for the module-pinned zkc and elf_to_json tools.
       - name: Install Go
@@ -105,13 +131,13 @@ jobs:
         env:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
-      # Execute the guest under zkc in fast mode (--fast): a runnability check, so it skips tracing
-      # to stay light. Tracing and constraint checking are measured weekly instead — see
-      # arithmetization-weekly-zkc-metrics.yml. Uses exec's default
-      # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
-      # ZKC_REF is step-scoped above, so elf-exec does not apply the override a second time.
+      # The downloaded ELF was built with the production keccak configuration.
       - name: Run l2-execution guest under zkc (fast, accel keccak) and check guest_output
-        run: make -C riscv-guests/l2-execution zkc-smoke-exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+        run: >-
+          make -f arithmetization/src/test/Makefile elf-exec
+          BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
+          IN_BYTES=@${{ github.workspace }}/riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+          ZKC_EXEC_FLAGS="--fast"
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
       # output. Running it here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
@@ -119,6 +145,42 @@ jobs:
       # proving configuration; its keccak use is comptime-only in this stub.
       - name: Run rollup guest under zkc (fast, accel keccak)
         run: make -C riscv-guests/rollup exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
+
+  zkc-interpreter-trace:
+    name: l2-execution guest trace in ZKC interpreter (accel)
+    needs: build-l2-execution-guest
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Download prepared l2-execution artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: l2-execution-accel-${{ github.sha }}
+          path: riscv-guests/l2-execution/zig-out
+
+      - name: Install Go
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: "1.25.7"
+          cache-dependency-path: "**/*.sum"
+          cache: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+      - name: Prepare zkc interpreter CLI
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref }}
+        run: make -C arithmetization prepare-zkc
+
+      - name: Trace l2-execution guest under zkc and check guest_output
+        run: >-
+          make -f arithmetization/src/test/Makefile elf-trace
+          BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
+          IN_BYTES=@${{ github.workspace }}/riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+          ZKC_TRACE_FLAGS="--stats -vv"
 
   # Manual-only: the emulator is too slow for a per-PR gate. Runs the whole corpus by default;
   # scope with reference-args.
