@@ -127,10 +127,8 @@ below) and copied cell-by-cell into a `wiop.Runtime` via
 (`prover-ray/zkcdriver/assignment.go:22-97`), matching corset-qualified column
 names between the two representations.
 
-**d) Downstream of that**, the `wiop.System` + `Runtime` pair is handed to the
-Arcane compiler (`prover-ray/docs/section1_goals_and_objective.md:192-196`:
-"reducing the Wizard-IOP to a Poly-IOP... and closes it with the polynomial
-commitment scheme"), i.e. Wizard IOP → Arcane → Vortex PCS → Proof. That stage
+**d) Downstream of that**, the `wiop.System` + `Runtime` pair is handed to a
+series of compiler steps i.e. Wizard IOP → Compiler steps → FRI multi-level PCS → Proof. That stage
 is outside the scope of "arithmetization" itself; the AIR/trace boundary is the
 relevant interface for transpilation work.
 
