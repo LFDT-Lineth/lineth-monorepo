@@ -46,6 +46,21 @@ const Reader = struct {
     }
 
     fn readVarint(self: *Reader) Error!u64 {
+        // Single-byte fast path. Encoded values are overwhelmingly small (the
+        // RISC-V system averages 1.36 bytes per value, and enum tags and coin
+        // indices — together ~30% of all values — are always one byte), so
+        // peeling the one-byte case out of the loop below skips its shift
+        // tracking, overflow checks and canonicality check on most values. A
+        // byte with its high bit clear is a complete varint, and a single byte
+        // is always canonical (the count > 0 check below only rejects a
+        // zero payload after a continuation byte).
+        if (self.cursor < self.bytes.len) {
+            const byte = self.bytes[self.cursor];
+            if (byte & 0x80 == 0) {
+                self.cursor += 1;
+                return byte;
+            }
+        }
         var value: u64 = 0;
         var shift: u6 = 0;
         var count: usize = 0;
