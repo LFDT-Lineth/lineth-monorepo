@@ -270,7 +270,8 @@ fn zeroArray(comptime len: usize) [len]field.Element {
 }
 
 // Precomputed 2^{-n} mod p for the KoalaBear field (p = 2_130_706_433 = 2^31 - 2^24 + 1).
-const inv2Exp1: field.Element = .{ .value = 1_065_353_217 };
+// 2^-1 is not listed here: halving uses field.Element.halve() directly instead
+// of a cached-constant multiply.
 const inv2Exp2: field.Element = .{ .value = 1_598_029_825 };
 const inv2Exp3: field.Element = .{ .value = 1_864_368_129 };
 const inv2Exp4: field.Element = .{ .value = 1_997_537_281 };
@@ -290,10 +291,10 @@ fn matMulInternalInPlace(comptime width: usize, state: *[width]field.Element) vo
     state[0] = sum.sub(state[0].double());
     state[1] = sum.add(state[1]);
     state[2] = sum.add(state[2].double());
-    state[3] = sum.add(state[3].mul(inv2Exp1));
+    state[3] = sum.add(state[3].halve());
     state[4] = sum.add(state[4].mul(.{ .value = 3 }));
     state[5] = sum.add(state[5].double().double());
-    state[6] = sum.sub(state[6].mul(inv2Exp1));
+    state[6] = sum.sub(state[6].halve());
     state[7] = sum.sub(state[7].mul(.{ .value = 3 }));
     state[8] = sum.sub(state[8].double().double());
     state[9] = sum.add(state[9].mul(inv2Exp8));
