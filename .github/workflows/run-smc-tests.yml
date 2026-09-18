@@ -57,6 +57,13 @@ jobs:
       - name: Check JS formatting
         run: pnpm -F contracts run lint:ts
 
+      - name: Test Forge contract deployer
+        working-directory: contracts/forge-deployer
+        run: |
+          pnpm test
+          pnpm typecheck
+          pnpm build
+
       # Required for hardhat commands due to @nomicfoundation/hardhat-foundry package
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 #v1.9.1
@@ -67,8 +74,38 @@ jobs:
       - name: Pre-compile contracts to cache solc
         run: pnpm -F contracts run build
 
+      - name: Pre-coverage cleanup of stale OZ upgrade lock files
+        # Self-hosted runners persist /dev/shm across jobs; a previously aborted coverage
+        # run can leave a stale @openzeppelin/upgrades-core manifest lock that the new run
+        # cannot acquire, causing "Lock file is already being held" before a single test
+        # has run.  Removing the directory here is safe: the lock files are ephemeral
+        # build artefacts recreated on demand by @openzeppelin/upgrades-core.
+        run: rm -rf /dev/shm/openzeppelin-upgrades /tmp/openzeppelin-upgrades
+
       - name: Run smart contracts tests and generate coverage report
-        run: pnpm -F contracts run coverage
+        # @openzeppelin/upgrades-core hardcodes a ~7s lock-acquisition retry budget around
+        # its os.tmpdir()-based manifest lock (one lock file, shared by every
+        # deployProxy/upgradeProxy call for the whole run). On this Linux runner, plain
+        # /tmp is slow enough that coverage's instrumented (much slower) execution
+        # reliably loses that race, throwing "Lock file is already being held" -- not a
+        # real test/code failure. TMPDIR is pointed at tmpfs only for this CI-only,
+        # Linux-only step (kept out of contracts/package.json, which must stay portable
+        # to other OSes) and only around the hardhat invocation, not the preceding
+        # Go-based autoupdate step, which needs far more scratch space than tmpfs
+        # typically has. Node's os.tmpdir() honors TMPDIR before falling back to /tmp.
+        # Guard on /dev/shm actually existing: setting TMPDIR to a missing path breaks
+        # pnpm/Node's own tempdir resolution outright, not just this workaround.
+        run: |
+          pnpm -F contracts run autoupdate
+          [ -d /dev/shm ] && export TMPDIR=/dev/shm || true
+          SOLIDITY_COVERAGE=true pnpm -F contracts exec hardhat coverage --solcoverjs ./.solcover.js
+
+      - name: Clean up tmpfs coverage lock artifacts
+        # Always run (even on failure) so this self-hosted runner doesn't accumulate
+        # /dev/shm state across jobs; @openzeppelin/upgrades-core writes its manifest/lock
+        # files under <TMPDIR>/openzeppelin-upgrades (see the TMPDIR override above).
+        if: always()
+        run: rm -rf /dev/shm/openzeppelin-upgrades
 
       - name: Upload coverage report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
