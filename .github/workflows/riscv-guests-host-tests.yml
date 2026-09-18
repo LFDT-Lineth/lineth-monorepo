@@ -1,8 +1,8 @@
 # Host-machine CI for the RISC-V guest programs (riscv-guests/):
 #   - host-tests: `make test` — the top-level orchestrator fans the native unit tests out to every
 #     guest in GUESTS (single-fixture smoke test, delegated-accel integration test, …).
-#   - reference-tests: `make reference-test` in l2-execution — the dummy-wrap-vs-fixture-truth
-#     reference-test guard (extended_vanilla_runner.zig), over the Amsterdam EF corpus.
+#   - reference-tests: after the unit tests, `make reference-test` runs the dummy-wrap-vs-fixture-truth
+#     guard (extended_vanilla_runner.zig) over the Amsterdam EF corpus.
 # Both run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
 # interpreter is covered separately, by its own dedicated workflow.
 name: riscv-guests host tests

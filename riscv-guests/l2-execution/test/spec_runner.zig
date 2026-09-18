@@ -106,6 +106,7 @@ pub fn collectPaths(init: std.process.Init, operands: []const []const u8, match_
                 const path = try init.gpa.dupe(u8, operand);
                 errdefer init.gpa.free(path);
                 const display_path = try init.gpa.dupe(u8, std.fs.path.basename(operand));
+                errdefer init.gpa.free(display_path);
                 try paths.append(init.gpa, .{ .path = path, .display_path = display_path });
             },
             else => return error.UnsupportedPathType,
@@ -176,9 +177,11 @@ fn collectDirectory(
     for (paths.items) |relative_path| {
         const full_path = try std.Io.Dir.path.join(init.gpa, &.{ root, relative_path });
         errdefer init.gpa.free(full_path);
+        const display_path = try init.gpa.dupe(u8, relative_path);
+        errdefer init.gpa.free(display_path);
         try result.append(init.gpa, .{
             .path = full_path,
-            .display_path = try init.gpa.dupe(u8, relative_path),
+            .display_path = display_path,
         });
     }
 }

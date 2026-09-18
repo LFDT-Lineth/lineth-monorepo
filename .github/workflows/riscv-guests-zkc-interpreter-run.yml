@@ -3,8 +3,8 @@
 # Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
 # prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
 # input, and executes it under zkc in fast mode (--fast). This gate only needs to prove each guest
-# runs, and skipping tracing keeps it cheap. Tracing and constraint checking are measured by
-# arithmetization-weekly-zkc-metrics.yml.
+# runs, and the trace job validates the production guest path on every PR and push. The weekly
+# metrics workflow collects the detailed tracing measurements.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
@@ -22,6 +22,7 @@ on:
     paths:
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
+      - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
       - "arithmetization/src/test/Makefile" # elf-exec / elf-to-json / linker-script
       - "arithmetization/cmd/elf_to_json/**"
@@ -39,6 +40,7 @@ on:
     paths:
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**"
+      - "arithmetization/src/main/common/**"
       - "arithmetization/src/main/lib/**"
       - "arithmetization/src/test/Makefile"
       - "arithmetization/cmd/elf_to_json/**"
@@ -154,6 +156,8 @@ jobs:
         run: make reference-test
         working-directory: riscv-guests/l2-execution
         timeout-minutes: 60
+        env:
+          REFERENCE_JOBS: 8
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
