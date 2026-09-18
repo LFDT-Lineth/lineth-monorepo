@@ -272,16 +272,14 @@ fn fullDomainGenerator(params: Params) field.Element {
 /// x = g^{bitrev_{log_size}(position)}, where g generates the size-2^log_size
 /// subgroup. Matches prover-ray's `domainPoint`: the codeword is stored
 /// bit-reversed so that FRI conjugate pairs land at adjacent positions.
-/// `log_size` is a RUNTIME value (derived from the reconstructed layout, not
-/// the comptime System), so `bitReverse`'s shift amount is computed at runtime.
+/// `log_size` is a RUNTIME value derived from the reconstructed layout, so
+/// `bitReverse`'s shift amount is computed at runtime.
 fn domainPoint(log_size: u8, generator: field.Element, position: usize) field.Element {
     return generator.pow(@as(u64, bitReverse(position, log_size)));
 }
 
 /// The extension-field evaluation point for a query position at the
-/// size-2^log_size domain: prover-ray's `domainPointExt`. `log_size` is
-/// comptime since callers (the PCS/DEEP layer) only ever evaluate this at a
-/// level's own round, itself derived from the comptime layout.
+/// size-2^log_size domain: prover-ray's `domainPointExt`.
 pub fn domainPointExt(log_size: u8, position: usize) ext.Ext {
     const generator = field.rootOfUnityBy(@as(usize, 1) << @intCast(log_size)) catch unreachable;
     return ext.Ext.lift(domainPoint(log_size, generator, position));

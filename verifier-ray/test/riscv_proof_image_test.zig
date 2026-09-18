@@ -91,9 +91,14 @@ test "a Go-encoded honest proof image verifies against the real riscv system" {
     try std.testing.expect(input.proof.rounds.len > 0);
     try std.testing.expect(input.proof.pcs_opening.proof.input_queries.len > 0);
 
-    try verifier.verify(
-        riscv_system.system_0_spec,
-        riscv_system.system_0_systems,
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const bundle = try verifier_ray.system_runtime.decodeBundle(&riscv_system.system_0_encoded, arena.allocator());
+
+    try verifier.verifyRuntime(
+        riscv_system.system_0_limits,
+        bundle.spec,
+        bundle.systems,
         input.proof,
         input.public_inputs,
     );

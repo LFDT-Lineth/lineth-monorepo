@@ -305,7 +305,7 @@ test "routeInputRoots ignores an unused batch root" {
         .max_entries = 1,
         .max_size_log2 = 1,
     };
-    var recon = pcs.Reconstructed(system){ .params = system.envelope_params, .num_entries = 1, .top_size = 1 };
+    var recon = pcs.Reconstructed(pcs.limitsFor(system)){ .params = system.envelope_params, .num_entries = 1, .top_size = 1 };
     recon.entry_batch[0] = 0;
     var roots: [2]poseidon2.Digest = undefined;
     for (&roots) |*root| {

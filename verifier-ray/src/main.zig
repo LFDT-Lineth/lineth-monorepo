@@ -1,3 +1,4 @@
+const std = @import("std");
 const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
@@ -7,6 +8,8 @@ const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
 const image_relocation = verifier_ray.image_relocation;
+const system_runtime = verifier_ray.system_runtime;
+const profiling = verifier_ray.profiling;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
@@ -28,6 +31,12 @@ const embedded_input: verifier.VerifyInput = if (embedded_data_conf.invalid_inpu
     embedded_data.getInputFailing(embedded_data_conf.spec_index)
 else
     embedded_data.getInput(embedded_data_conf.spec_index);
+
+// The compact system is decoded once per process into zero-initialized guest
+// memory. Its generated capacity includes headroom over the measured decoded
+// graph and contributes to .bss rather than the ELF file's .rodata.
+var decoded_system_storage: [riscv_system.system_0_decoded_arena_size]u8 = undefined;
+var verifier_workspace: verifier.RuntimeWorkspace(riscv_system.system_0_limits) = undefined;
 
 // The main entry point for the verifier ray smoke test. This is separate from
 // the main verifier entry point in `verifier.zig` because we want to be able to
@@ -75,17 +84,28 @@ comptime {
 }
 
 fn runVerifier(input: *const verifier.VerifyInput) u8 {
-    const spec = if (comptime embedded_data_conf.embed_input)
-        comptime embedded_data.get(embedded_data_conf.spec_index).spec
-    else
-        riscv_system.system_0_spec;
-    const systems = if (comptime embedded_data_conf.embed_input)
-        comptime embedded_data.get(embedded_data_conf.spec_index).systems
-    else
-        riscv_system.system_0_systems;
-    // `spec`/`systems` are comptime, but the verifier input is a runtime value
-    // read from `input` (mmap/linker/embedded memory), so dereference it here.
-    verifier.verify(spec, systems, input.proof, input.public_inputs) catch {
+    if (comptime embedded_data_conf.embed_input) {
+        const case = comptime embedded_data.get(embedded_data_conf.spec_index);
+        verifier.verify(case.spec, case.systems, input.proof, input.public_inputs) catch return 1;
+        return 0;
+    }
+
+    if (comptime profiling.r5_marks)
+        profiling.markR5Value(profiling.Mark.system_decode_start, riscv_system.system_0_encoded.len);
+    var fba = std.heap.FixedBufferAllocator.init(&decoded_system_storage);
+    const bundle = system_runtime.decodeBundle(&riscv_system.system_0_encoded, fba.allocator()) catch return 1;
+    if (comptime profiling.r5_marks)
+        profiling.markR5Value(profiling.Mark.system_decode_done, fba.end_index);
+    if (comptime embedded_data_conf.decode_only) return 0;
+
+    verifier.verifyRuntimeWithWorkspace(
+        riscv_system.system_0_limits,
+        bundle.spec,
+        bundle.systems,
+        input.proof,
+        input.public_inputs,
+        &verifier_workspace,
+    ) catch {
         // if the verifier fails, return a non-zero exit code
         return 1;
     };

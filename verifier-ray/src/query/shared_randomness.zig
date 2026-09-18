@@ -6,6 +6,7 @@ pub const Error = error{
     MissingRoundCommitment,
     ContributionMismatch,
     ContributionNotBaseField,
+    InvalidContributionRefCount,
 } || protocol.CellError;
 
 /// ScalarRef locates a cell in ctx.rounds by its (round, index) coordinates.
@@ -55,13 +56,13 @@ pub const System = struct {
 /// trivially: a protocol compiled without
 /// messagebus.CompileOptions.SharedRandomness registers no checker and has
 /// nothing for this sub-verifier to enforce.
-pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
+pub fn verify(system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
     if (system.contribution_refs.len != multiset_hashing.size)
-        @compileError("shared_randomness: contribution_refs must match multiset_hashing.size");
+        return error.InvalidContributionRefCount;
 
     var hasher = poseidon2.MDHasher.init();
-    inline for (system.rounds) |round| {
+    for (system.rounds) |round| {
         if (!round.has_commitment) continue;
         if (round.round >= ctx.rounds.len) return error.MissingRoundCommitment;
         const commitment = ctx.rounds[round.round].commitment orelse return error.MissingRoundCommitment;
@@ -70,7 +71,7 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     const digest = hasher.sumDigest();
     const contribution = multiset_hashing.hash(digest);
 
-    inline for (system.contribution_refs, 0..) |ref, i| {
+    for (system.contribution_refs, 0..) |ref, i| {
         // The contribution limbs are base-field by protocol contract:
         // prover-ray's messagebus.contributionCell panics on an extension
         // cell, and the sibling gammaDigest path likewise rejects

@@ -11,13 +11,13 @@ const fri = @import("fri.zig");
 /// ported from prover-ray's `pcs.go` `PCS.Verify`. Produces the
 /// `fri.ResolvedQuery` records `fri.checkFolds` needs.
 ///
-/// The canonical layout is reconstructed at verify time from the comptime
+/// The canonical layout is reconstructed at verify time from the decoded
 /// `System.columns` (prover declaration order) plus the runtime
 /// `module_sizes`. This mirrors prover-ray's own `GetLayout` (per-column
 /// size_log2 + running position) + `canonicalLayout` (size DESC / batch ASC /
-/// base-then-ext / position ASC) so one baked System verifies proofs of
+/// base-then-ext / position ASC) so one compiled System verifies proofs of
 /// different dynamic-module sizes.
-/// Stack-only: buffers are sized by the comptime envelope maxima
+/// Stack-only: buffers are sized by compile-time envelope maxima
 /// (`max_entries`, `max_size_log2`), with runtime lengths from the proof.
 pub const Error = merkle.Error || fri.Error || error{
     RootCountMismatch,
@@ -44,8 +44,8 @@ pub const Error = merkle.Error || fri.Error || error{
 
 const InputWidths = struct { base: usize, ext: usize };
 
-/// A committed column's size source. `.static` bakes a comptime size_log2 (a
-/// static-module column, whose padded size is fixed at compile time).
+/// A committed column's size source. `.static` stores a fixed size_log2 for a
+/// static-module column.
 /// `.dynamic` names an index into the runtime `module_sizes` slice plus the
 /// minimum runtime size_log2 this raw shift schedule is valid for. The
 /// dynamic-module column's size_log2 = log2(module_sizes[idx]) varies per
@@ -111,7 +111,7 @@ pub const BatchRoot = union(enum) {
     /// Index into `proof.rounds`; the batch root is that round's sole oracle
     /// commitment.
     round: usize,
-    /// Compile-time precomputed-batch root, emitted by codegen.
+    /// Precomputed-batch root emitted by codegen.
     precomputed: poseidon2.Digest,
 };
 
@@ -147,6 +147,32 @@ pub const System = struct {
     max_entries: usize,
     max_size_log2: u8,
 };
+
+/// Compile-time capacities retained when System itself is decoded at runtime.
+/// These values affect only stack shapes; every semantic field is still read
+/// from and validated against the decoded System.
+pub const Limits = struct {
+    max_entries: usize,
+    num_batches: usize,
+    max_size_log2: u8,
+    max_codeword_size_log2: u8,
+    num_queries: usize,
+    total_claim_slots: usize,
+};
+
+pub fn limitsFor(comptime system: System) Limits {
+    @setEvalBranchQuota(20_000_000);
+    var slots: usize = 0;
+    for (system.columns) |col| slots += col.shifts.len;
+    return .{
+        .max_entries = system.max_entries,
+        .num_batches = system.num_batches,
+        .max_size_log2 = system.max_size_log2,
+        .max_codeword_size_log2 = system.envelope_params.log_codeword_size,
+        .num_queries = system.envelope_params.num_queries,
+        .total_claim_slots = slots,
+    };
+}
 
 pub const OpeningProof = struct {
     /// input_queries[q][i] is query q's opening of the i-th distinct input
@@ -202,12 +228,12 @@ pub const VerifyInput = struct {
 /// The reconstructed canonical layout for one proof: envelope-max-sized stack
 /// arrays plus runtime lengths. Every entry field is indexed by entry_idx in
 /// canonical order (size DESC / batch ASC / base-then-ext / position ASC).
-pub fn Reconstructed(comptime system: System) type {
+pub fn Reconstructed(comptime limits: Limits) type {
     return struct {
         // At least 1 so a batch-free System (max_entries == 0, used only to reach
         // the transcript replay before PCS) still yields indexable buffers; the
         // runtime lengths (num_entries == 0) keep every loop empty.
-        const cap = @max(system.max_entries, 1);
+        const cap = @max(limits.max_entries, 1);
 
         /// restricted FRI params for THIS proof (envelope.restrictTo(top_size)).
         params: fri.Params,
@@ -231,10 +257,10 @@ pub fn Reconstructed(comptime system: System) type {
 /// The proof's input-tree routing derived from the reconstructed layout and the
 /// actual per-batch roots: distinct roots in input-opening order plus the
 /// input-tree branch index each batch maps to.
-pub fn InputRootRouting(comptime system: System) type {
+pub fn InputRootRouting(comptime limits: Limits) type {
     return struct {
         const Self = @This();
-        const batch_cap = @max(system.num_batches, 1);
+        const batch_cap = @max(limits.num_batches, 1);
 
         distinct_count: usize = 0,
         roots: [batch_cap]poseidon2.Digest = undefined,
@@ -248,18 +274,18 @@ pub fn InputRootRouting(comptime system: System) type {
     };
 }
 
-fn InputCapInfo(comptime system: System) type {
+fn InputCapInfo(comptime limits: Limits) type {
     return struct {
         height: usize = 0,
         depth: usize = 0,
         rate_log: u8 = 0,
         batch_idx: usize = 0,
-        revealed: [@as(usize, system.max_size_log2) + 1]u8 = undefined,
+        revealed: [@as(usize, limits.max_size_log2) + 1]u8 = undefined,
         revealed_count: usize = 0,
-        cap_table_by_depth: [@as(usize, system.envelope_params.log_codeword_size) + 1]?usize =
-            [_]?usize{null} ** (@as(usize, system.envelope_params.log_codeword_size) + 1),
-        query_rows: [@as(usize, system.envelope_params.log_codeword_size) + 1]bool =
-            [_]bool{false} ** (@as(usize, system.envelope_params.log_codeword_size) + 1),
+        cap_table_by_depth: [@as(usize, limits.max_codeword_size_log2) + 1]?usize =
+            [_]?usize{null} ** (@as(usize, limits.max_codeword_size_log2) + 1),
+        query_rows: [@as(usize, limits.max_codeword_size_log2) + 1]bool =
+            [_]bool{false} ** (@as(usize, limits.max_codeword_size_log2) + 1),
     };
 }
 
@@ -268,11 +294,15 @@ fn InputCapInfo(comptime system: System) type {
 /// `GetLayout` (per-column size_log2 + running position within
 /// (size_log2, is_ext) in declaration order) + `canonicalLayout` (size DESC /
 /// batch ASC / base-then-ext / position ASC). Stack-only.
-pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!Reconstructed(system) {
-    const R = Reconstructed(system);
+pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!Reconstructed(limitsFor(system)) {
+    return reconstructRuntime(limitsFor(system), system, module_sizes);
+}
+
+pub fn reconstructRuntime(comptime limits: Limits, system: System, module_sizes: []const usize) Error!Reconstructed(limits) {
+    const R = Reconstructed(limits);
     var r: R = undefined;
     const num_cols = system.columns.len;
-    if (num_cols > system.max_entries) return Error.LayoutOverflow;
+    if (num_cols > system.max_entries or system.max_entries > limits.max_entries) return Error.LayoutOverflow;
     r.num_entries = num_cols;
 
     // Per-column size_log2, and per-column position within its
@@ -282,14 +312,14 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     // by batch and each batch's positions restart at 0. We compute it directly
     // during enumeration instead (see below), but we still need per-column
     // size_log2 first.
-    var col_size_log2: [@max(system.max_entries, 1)]u8 = undefined;
+    var col_size_log2: [@max(limits.max_entries, 1)]u8 = undefined;
     // col_position[c] = number of earlier declaration-order columns sharing c's
     // (batch, size_log2, is_ext) bucket, computed via running per-bucket
     // counters in a single O(columns) pass (replaces an O(columns^2) rescan).
-    var col_position: [@max(system.max_entries, 1)]usize = undefined;
-    const num_batches_cap = @max(system.num_batches, 1);
-    var bucket_count: [num_batches_cap][system.max_size_log2 + 1][2]usize =
-        [_][system.max_size_log2 + 1][2]usize{[_][2]usize{[_]usize{ 0, 0 }} ** (system.max_size_log2 + 1)} ** num_batches_cap;
+    var col_position: [@max(limits.max_entries, 1)]usize = undefined;
+    const num_batches_cap = @max(limits.num_batches, 1);
+    var bucket_count: [num_batches_cap][limits.max_size_log2 + 1][2]usize =
+        [_][limits.max_size_log2 + 1][2]usize{[_][2]usize{[_]usize{ 0, 0 }} ** (limits.max_size_log2 + 1)} ** num_batches_cap;
     var top_size: u8 = 0;
     for (system.columns, 0..) |col, c| {
         const sz: u8 = switch (col.size) {
@@ -315,11 +345,11 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                 break :blk sz;
             },
         };
-        if (sz > system.max_size_log2) return Error.LayoutOverflow;
+        if (sz > limits.max_size_log2) return Error.LayoutOverflow;
         col_size_log2[c] = sz;
         if (sz > top_size) top_size = sz;
 
-        if (col.batch_idx >= system.num_batches) return Error.LayoutOverflow;
+        if (col.batch_idx >= system.num_batches or system.num_batches > limits.num_batches) return Error.LayoutOverflow;
         const ext_idx: usize = if (col.is_ext) 1 else 0;
         const count = &bucket_count[col.batch_idx][sz][ext_idx];
         col_position[c] = count.*;
@@ -334,7 +364,7 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     // precomputed above in a single O(columns) pass — exactly prover GetLayout's
     // running counter, restricted to one batch.
     var entry_idx: usize = 0;
-    var size: i32 = @intCast(system.max_size_log2);
+    var size: i32 = @intCast(limits.max_size_log2);
     while (size >= 0) : (size -= 1) {
         const size_u8: u8 = @intCast(size);
         var batch: usize = 0;
@@ -346,7 +376,7 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                     if (col.is_ext != want_ext) continue;
                     if (col_size_log2[c] != size_u8) continue;
 
-                    if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
+                    if (entry_idx >= limits.max_entries) return Error.LayoutOverflow;
                     r.entry_size_log2[entry_idx] = size_u8;
                     r.entry_batch[entry_idx] = batch;
                     r.entry_is_ext[entry_idx] = want_ext;
@@ -385,9 +415,13 @@ fn totalClaimSlots(comptime system: System) usize {
 /// it, in the SAME canonical entry order `Reconstructed` assigns — exactly the
 /// shape `pcs.verify`'s `VerifyInput.entry_claims` expects.
 pub fn EntryClaims(comptime system: System) type {
+    return RuntimeEntryClaims(limitsFor(system));
+}
+
+pub fn RuntimeEntryClaims(comptime limits: Limits) type {
     return struct {
-        const entry_cap = @max(system.max_entries, 1);
-        const slot_cap = @max(totalClaimSlots(system), 1);
+        const entry_cap = @max(limits.max_entries, 1);
+        const slot_cap = @max(limits.total_claim_slots, 1);
 
         backing: [slot_cap]ext.Ext = undefined,
         entries: [entry_cap][]const ext.Ext = undefined,
@@ -413,9 +447,19 @@ pub fn EntryClaims(comptime system: System) type {
 /// generic here so this stays independent of `protocol.zig`.
 pub fn buildEntryClaims(
     comptime system: System,
-    recon: Reconstructed(system),
+    recon: Reconstructed(limitsFor(system)),
     ctx: anytype,
     out: *EntryClaims(system),
+) !void {
+    return buildEntryClaimsRuntime(limitsFor(system), system, &recon, ctx, out);
+}
+
+pub fn buildEntryClaimsRuntime(
+    comptime limits: Limits,
+    system: System,
+    recon: *const Reconstructed(limits),
+    ctx: anytype,
+    out: *RuntimeEntryClaims(limits),
 ) !void {
     out.num_entries = recon.num_entries;
     var next_slot: usize = 0;
@@ -423,17 +467,17 @@ pub fn buildEntryClaims(
     // System (system.columns == &.{}) must not force Zig to analyze indexing
     // into that empty slice, even though `recon.num_entries` is always 0 in
     // that case and the loop body would never actually run.
-    if (comptime system.columns.len > 0) {
-        for (0..recon.num_entries) |e| {
-            const col = system.columns[recon.entry_col_decl_idx[e]];
-            if (col.claim_cells.len != col.shifts.len) return error.ClaimCellsShiftsLengthMismatch;
-            const start = next_slot;
-            for (col.claim_cells) |ref| {
-                out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
-                next_slot += 1;
-            }
-            out.entries[e] = out.backing[start..next_slot];
+    for (0..recon.num_entries) |e| {
+        if (recon.entry_col_decl_idx[e] >= system.columns.len) return error.ClaimCellsShiftsLengthMismatch;
+        const col = system.columns[recon.entry_col_decl_idx[e]];
+        if (col.claim_cells.len != col.shifts.len or next_slot + col.claim_cells.len > limits.total_claim_slots)
+            return error.ClaimCellsShiftsLengthMismatch;
+        const start = next_slot;
+        for (col.claim_cells) |ref| {
+            out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
+            next_slot += 1;
         }
+        out.entries[e] = out.backing[start..next_slot];
     }
 }
 
@@ -443,17 +487,26 @@ pub fn buildEntryClaims(
 /// opening.
 pub fn routeInputRoots(
     comptime system: System,
-    recon: Reconstructed(system),
+    recon: Reconstructed(limitsFor(system)),
     batch_roots: []const poseidon2.Digest,
-) Error!InputRootRouting(system) {
+) Error!InputRootRouting(limitsFor(system)) {
+    return routeInputRootsRuntime(limitsFor(system), system, &recon, batch_roots);
+}
+
+pub fn routeInputRootsRuntime(
+    comptime limits: Limits,
+    system: System,
+    recon: *const Reconstructed(limits),
+    batch_roots: []const poseidon2.Digest,
+) Error!InputRootRouting(limits) {
     if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
 
-    var routing = InputRootRouting(system){};
+    var routing = InputRootRouting(limits){};
     for (0..recon.num_entries) |entry_idx| {
         const batch_idx = recon.entry_batch[entry_idx];
         const root = batch_roots[batch_idx];
         const branch_idx = findRootIndex(routing.roots[0..routing.distinct_count], root) orelse blk: {
-            if (routing.distinct_count >= system.num_batches) return Error.RootCountMismatch;
+            if (routing.distinct_count >= limits.num_batches) return Error.RootCountMismatch;
             const next = routing.distinct_count;
             routing.roots[next] = root;
             routing.distinct_count = next + 1;
@@ -480,11 +533,15 @@ fn findRootIndex(roots: []const poseidon2.Digest, want: poseidon2.Digest) ?usize
 /// params. `fold_alphas` has capacity `max_size_log2` (envelope num_rounds max,
 /// with log_final_poly_size assumed 0).
 pub fn PcsChallenges(comptime system: System) type {
-    const max_rounds = comptime @as(usize, system.max_size_log2) - system.envelope_params.log_final_poly_size + 1;
+    return RuntimePcsChallenges(limitsFor(system));
+}
+
+pub fn RuntimePcsChallenges(comptime limits: Limits) type {
+    const max_rounds = @as(usize, limits.max_size_log2) + 1;
     return struct {
         fold_alphas: [max_rounds]ext.Ext = undefined,
         deep_alpha: ext.Ext = ext.Ext.zero(),
-        query_positions: [system.envelope_params.num_queries]usize = undefined,
+        query_positions: [limits.num_queries]usize = undefined,
         num_rounds: usize = 0,
 
         pub fn foldAlphas(self: *const @This()) []const ext.Ext {
@@ -498,16 +555,27 @@ pub fn PcsChallenges(comptime system: System) type {
 /// counts and the codeword size, so the challenges match a proof of THIS size.
 pub fn deriveChallenges(
     comptime system: System,
-    recon: Reconstructed(system),
+    recon: Reconstructed(limitsFor(system)),
     transcript: *fiat_shamir.Transcript,
     fri_proof: fri.Proof,
 ) fri.Error!PcsChallenges(system) {
+    return deriveChallengesRuntime(limitsFor(system), system, &recon, transcript, fri_proof);
+}
+
+pub fn deriveChallengesRuntime(
+    comptime limits: Limits,
+    system: System,
+    recon: *const Reconstructed(limits),
+    transcript: *fiat_shamir.Transcript,
+    fri_proof: fri.Proof,
+) fri.Error!RuntimePcsChallenges(limits) {
+    _ = system;
     const params = recon.params;
     const num_rounds = params.numRoundsRuntime();
     const want_round_roots: usize = if (num_rounds > 0) @as(usize, num_rounds) - 1 else 0;
     if (fri_proof.round_roots.len != want_round_roots) return fri.Error.InvalidRoundRootCount;
 
-    var challenges = PcsChallenges(system){};
+    var challenges = RuntimePcsChallenges(limits){};
     challenges.num_rounds = num_rounds;
 
     // One challenge per intermediate layer root, absorbing the root between
@@ -544,8 +612,9 @@ pub fn inputAuxDepth(rate_log: u8, size_log2: u8, bottom_size_log2: u8) ?usize {
     return encoded_log - 1;
 }
 
-fn buildInputCapInfo(comptime system: System, recon: Reconstructed(system), routing: InputRootRouting(system), tree_idx: usize) Error!InputCapInfo(system) {
-    const Info = InputCapInfo(system);
+fn buildInputCapInfo(comptime limits: Limits, system: System, recon: *const Reconstructed(limits), routing: InputRootRouting(limits), tree_idx: usize) Error!InputCapInfo(limits) {
+    _ = system;
+    const Info = InputCapInfo(limits);
     var info = Info{ .rate_log = recon.params.log_codeword_size - recon.params.log_plaintext_size };
     var found = false;
     var bottom: u8 = 0;
@@ -609,9 +678,9 @@ fn inputSizeWidths(recon: anytype, batch_idx: usize, size_log2: u8) InputWidths 
 }
 
 fn authenticateInputCap(
-    comptime system: System,
-    recon: Reconstructed(system),
-    info: InputCapInfo(system),
+    comptime limits: Limits,
+    recon: *const Reconstructed(limits),
+    info: InputCapInfo(limits),
     cap: InputCap,
     root: poseidon2.Digest,
     aux_storage: []?poseidon2.Digest,
@@ -642,14 +711,14 @@ fn authenticateInputCap(
     return cap.nodes;
 }
 
-fn InputQuerySource(comptime system: System) type {
-    const Info = InputCapInfo(system);
+fn InputQuerySource(comptime limits: Limits) type {
+    const Info = InputCapInfo(limits);
     return struct {
         opening: []const merkle.InputTreeOpening,
         caps: []const InputCap,
         infos: []const Info,
         frontiers: []const []const poseidon2.Digest,
-        routing: InputRootRouting(system),
+        routing: InputRootRouting(limits),
         params: fri.Params,
         query_position: usize,
 
@@ -707,8 +776,18 @@ fn InputQuerySource(comptime system: System) type {
 // =============================================================================
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
-    const recon = try reconstruct(system, input.module_sizes);
-    const routing = try routeInputRoots(system, recon, input.roots);
+    return verifyRuntime(limitsFor(system), system, input);
+}
+
+pub fn verifyRuntime(comptime limits: Limits, system: System, input: VerifyInput) Error!void {
+    if (system.max_entries > limits.max_entries or
+        system.num_batches > limits.num_batches or
+        system.max_size_log2 > limits.max_size_log2 or
+        system.envelope_params.log_codeword_size > limits.max_codeword_size_log2 or
+        system.envelope_params.num_queries > limits.num_queries)
+        return Error.LayoutOverflow;
+    const recon = try reconstructRuntime(limits, system, input.module_sizes);
+    const routing = try routeInputRootsRuntime(limits, system, &recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
@@ -718,17 +797,18 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     // Each opened column owns exactly `shifts.len` claimed values. Guarded by a
     // comptime len check so a column-free System (columns == &.{}) doesn't force
     // Zig to analyze indexing into an empty slice.
-    if (comptime system.columns.len > 0) {
-        for (0..num_entries) |e| {
-            const shifts = system.columns[recon.entry_col_decl_idx[e]].shifts;
-            if (input.entry_claims[e].len != shifts.len) return Error.ClaimedValueCountMismatch;
-        }
+    for (0..num_entries) |e| {
+        if (recon.entry_col_decl_idx[e] >= system.columns.len) return Error.ClaimedValueCountMismatch;
+        const shifts = system.columns[recon.entry_col_decl_idx[e]].shifts;
+        if (input.entry_claims[e].len != shifts.len) return Error.ClaimedValueCountMismatch;
     }
 
     // zeta==0 is only unsafe when some column is opened at more than one shift
     // (the rotations collapse). This is a fixed property of `columns`.
-    if (comptime systemHasMultiShiftEntry(system)) {
-        if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
+    if (input.zeta.isZero()) {
+        for (system.columns) |col| {
+            if (col.shifts.len > 1) return Error.ZetaZeroWithMultipleShifts;
+        }
     }
 
     // zeta must not land in any bundle's domain.
@@ -743,14 +823,14 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     if (input.query_positions.len < params.num_queries) return Error.QueryPositionCountMismatch;
     try fri.checkOpeningProofShape(params, input.proof.fri_proof, input.fold_alphas, input.query_positions[0..params.num_queries]);
 
-    const tree_cap = @max(system.num_batches, 1);
-    const Info = InputCapInfo(system);
+    const tree_cap = @max(limits.num_batches, 1);
+    const Info = InputCapInfo(limits);
     var input_infos: [tree_cap]Info = undefined;
     var input_frontiers: [tree_cap][]const poseidon2.Digest = undefined;
     var input_root_frontiers: [tree_cap]poseidon2.Digest = undefined;
-    var input_aux_storage: [@max(system.envelope_params.num_queries * 2, 2)]?poseidon2.Digest = undefined;
+    var input_aux_storage: [@max(limits.num_queries * 2, 2)]?poseidon2.Digest = undefined;
     for (0..routing.distinct_count) |tree_idx| {
-        const info = try buildInputCapInfo(system, recon, routing, tree_idx);
+        const info = try buildInputCapInfo(limits, system, &recon, routing, tree_idx);
         input_infos[tree_idx] = info;
         if (info.depth == 0) {
             if (input.proof.input_caps[tree_idx].nodes.len != 0 or input.proof.input_caps[tree_idx].tables.len != 0) return Error.InvalidCap;
@@ -758,8 +838,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             input_frontiers[tree_idx] = input_root_frontiers[tree_idx .. tree_idx + 1];
         } else {
             input_frontiers[tree_idx] = try authenticateInputCap(
-                system,
-                recon,
+                limits,
+                &recon,
                 info,
                 input.proof.input_caps[tree_idx],
                 routing.roots[tree_idx],
@@ -768,7 +848,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         }
     }
 
-    const cap_rounds = comptime @as(usize, system.max_size_log2) + 1;
+    const cap_rounds = @as(usize, limits.max_size_log2) + 1;
     var running_frontiers: [cap_rounds][]const poseidon2.Digest = undefined;
     var running_root_frontiers: [cap_rounds]poseidon2.Digest = undefined;
     if (num_rounds > 0) {
@@ -788,10 +868,10 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     // Envelope-max-sized stack buffers; runtime lengths use the restricted
     // num_rounds. `max_size_log2` bounds the envelope num_rounds
     // (log_final_poly_size == 0).
-    var rounds_buf: [system.envelope_params.num_queries][cap_rounds]fri.Pair = undefined;
-    var aux_buf: [system.envelope_params.num_queries][cap_rounds + 1]?fri.Pair = undefined;
-    var final_buf: [system.envelope_params.num_queries]ext.Ext = undefined;
-    var resolved: [system.envelope_params.num_queries]fri.ResolvedQuery = undefined;
+    var rounds_buf: [limits.num_queries][cap_rounds]fri.Pair = undefined;
+    var aux_buf: [limits.num_queries][cap_rounds + 1]?fri.Pair = undefined;
+    var final_buf: [limits.num_queries]ext.Ext = undefined;
+    var resolved: [limits.num_queries]fri.ResolvedQuery = undefined;
 
     for (0..params.num_queries) |query_idx| {
         for (aux_buf[query_idx][0 .. num_rounds + 1]) |*slot| slot.* = null;
@@ -799,7 +879,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
         const query_position = input.query_positions[query_idx];
         const opening = input.proof.input_queries[query_idx];
-        const Source = InputQuerySource(system);
+        const Source = InputQuerySource(limits);
         const source = Source{
             .opening = opening,
             .caps = input.proof.input_caps,
@@ -825,7 +905,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         // comptime column-count check so a column-free System doesn't force
         // analysis of indexing into an empty `system.columns`.
         var e0: usize = 0;
-        while (comptime system.columns.len > 0) {
+        while (true) {
             if (e0 >= num_entries) break;
             const size_log2 = recon.entry_size_log2[e0];
             var e1 = e0;
@@ -835,7 +915,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
-            try bindInputTreeOpenings(system, recon, source, e0, e1, level_size);
+            try bindInputTreeOpenings(limits, &recon, source, e0, e1, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -849,7 +929,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
             const self_val = try reconstructQueryValueAt(
                 system,
-                recon,
+                &recon,
                 source,
                 e0,
                 e1,
@@ -864,7 +944,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             );
             const sib_val = try reconstructQueryValueAt(
                 system,
-                recon,
+                &recon,
                 source,
                 e0,
                 e1,
@@ -911,15 +991,6 @@ fn seedPair(rounds: []const fri.Pair, round: u8, num_rounds: u8) fri.Pair {
     return rounds[round];
 }
 
-fn systemHasMultiShiftEntry(comptime system: System) bool {
-    comptime {
-        for (system.columns) |col| {
-            if (col.shifts.len > 1) return true;
-        }
-        return false;
-    }
-}
-
 /// Per-batch (base, ext) widths within the bundle spanning canonical entries
 /// [e0, e1). Computed at runtime from the reconstructed arrays.
 fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) struct { base: usize, ext: usize } {
@@ -937,7 +1008,7 @@ fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) str
 /// matching its declared (base, ext) width at `level_size`. Mirrors
 /// prover-ray's `bindInputTreeOpenings`.
 fn bindInputTreeOpenings(
-    comptime system: System,
+    comptime limits: Limits,
     recon: anytype,
     source: anytype,
     e0: usize,
@@ -946,7 +1017,7 @@ fn bindInputTreeOpenings(
 ) Error!void {
     // Distinct batches within the bundle, in first-declaration (entry) order.
     // At most system.num_batches distinct batches can ever appear.
-    var seen: [@max(system.num_batches, 1)]usize = undefined;
+    var seen: [@max(limits.num_batches, 1)]usize = undefined;
     var count: usize = 0;
     var e = e0;
     outer: while (e < e1) : (e += 1) {
@@ -969,7 +1040,7 @@ fn bindInputTreeOpenings(
 /// first, which canonicalLayout's assignment makes simply reverse entry order.
 /// Mirrors prover-ray's `reconstructQueryValueAt`.
 fn reconstructQueryValueAt(
-    comptime system: System,
+    system: System,
     recon: anytype,
     source: anytype,
     e0: usize,
@@ -1076,9 +1147,8 @@ fn shiftedPoint(size_log2: u8, offset: isize, zeta: ext.Ext) ext.Ext {
 /// Whether `point` lands in the size-2^log_size multiplicative subgroup.
 /// Every domain point is a base-field root of unity, so an extension-valued
 /// point that isn't itself a lifted base element can never coincide with one.
-/// Mirrors prover-ray's `pointInDomain`. `log_size` is a RUNTIME value here
-/// (derived from the reconstructed layout, not the comptime System), so the
-/// exponentiation uses `pow`, not `powComptime`.
+/// Mirrors prover-ray's `pointInDomain`. `log_size` is derived from the runtime
+/// reconstructed layout, so the exponentiation uses `pow`.
 fn pointInDomain(point: ext.Ext, log_size: u8) bool {
     if (!point.isBase()) return false;
     const order: u64 = @as(u64, 1) << @intCast(log_size);

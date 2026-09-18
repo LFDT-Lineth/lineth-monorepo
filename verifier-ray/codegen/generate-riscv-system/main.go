@@ -43,6 +43,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	var binaryBuf bytes.Buffer
+	if err := verifierraycodegen.WriteCompiledSystemBinary(&binaryBuf, artifacts.CompiledSystem); err != nil {
+		return fmt.Errorf("WriteCompiledSystemBinary: %w", err)
+	}
 
 	// Step 1: render the CompiledSystem (including PCS, via WritePcs) as Zig
 	// source into systemBuf.
@@ -65,9 +69,40 @@ func run() error {
 	}
 
 	// Step 2: stitch the sub-verifier systems just written into a single
-	// verifier.Systems value, the top-level struct verifier.verify expects.
+	// verifier.Systems value. The executable references the separately generated
+	// binary and scalar capacities below, so Zig does not materialize the
+	// pointer-heavy literal in .rodata.
+	maxRoundCells := 0
+	totalRoundCells := 0
+	for _, count := range artifacts.CompiledSystem.PublicInput.RoundCellCounts {
+		if count > maxRoundCells {
+			maxRoundCells = count
+		}
+		totalRoundCells += count
+	}
+	totalClaimSlots := 0
+	for _, col := range artifacts.CompiledSystem.Pcs.Columns {
+		totalClaimSlots += len(col.Shifts)
+	}
+	// The decoded pointer-rich graph is currently ~8.3x the compact bytes. A
+	// generated 10x cap leaves schema-growth/alignment headroom while keeping
+	// the zero-fill region bounded and out of the ELF file.
+	decodedArenaCapacity := binaryBuf.Len() * 10
 	fmt.Fprintf(&systemBuf,
-		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\n",
+		"\nconst verifier_ray = @import(\"verifier_ray\");\nconst verifier = verifier_ray.verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\npub const system_0_encoded = @embedFile(\"riscv_system.bin\").*;\npub const system_0_limits = verifier.RuntimeLimits{ .public_input = .{ .round_count = %d, .max_cells_per_round = %d, .total_cells = %d }, .replay = .{ .total_round_coins = %d }, .pcs = .{ .max_entries = %d, .num_batches = %d, .max_size_log2 = %d, .max_codeword_size_log2 = %d, .num_queries = %d, .total_claim_slots = %d }, .total_witness_claims = %d, .total_quotient_claims = %d };\npub const system_0_decoded_arena_size = %d;\n",
+		len(artifacts.CompiledSystem.PublicInput.RoundCellCounts),
+		maxRoundCells,
+		totalRoundCells,
+		artifacts.CompiledSystem.Routing.TotalRoundCoins,
+		artifacts.CompiledSystem.Pcs.MaxEntries,
+		artifacts.CompiledSystem.Pcs.NumBatches,
+		artifacts.CompiledSystem.Pcs.MaxSizeLog2,
+		artifacts.CompiledSystem.Pcs.LogCodewordSize,
+		artifacts.CompiledSystem.Pcs.NumQueries,
+		totalClaimSlots,
+		artifacts.CompiledSystem.Vanishing.TotalWitnessClaims,
+		artifacts.CompiledSystem.Vanishing.TotalQuotientClaims,
+		decodedArenaCapacity,
 	)
 
 	generatedDir := "../../testdata/generated"
@@ -80,6 +115,12 @@ func run() error {
 		return fmt.Errorf("writing %s: %w", systemPath, err)
 	}
 	fmt.Println("wrote", systemPath)
+
+	binaryPath := filepath.Join(generatedDir, "riscv_system.bin")
+	if err := os.WriteFile(binaryPath, binaryBuf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("writing %s: %w", binaryPath, err)
+	}
+	fmt.Println("wrote", binaryPath)
 
 	// Step 3: serialize the very same honest proof as the executable/test proof
 	// image that verifier-ray mmaps or receives at _in_start.
