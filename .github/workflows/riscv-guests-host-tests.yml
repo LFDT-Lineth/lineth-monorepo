@@ -54,3 +54,5 @@ jobs:
         run: make reference-test
         working-directory: riscv-guests/l2-execution
         timeout-minutes: 60
+        env:
+          REFERENCE_JOBS: 8

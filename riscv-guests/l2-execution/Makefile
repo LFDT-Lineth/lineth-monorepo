@@ -80,8 +80,9 @@ test: fetch-host
 # executing the real guest ELF via ZkC. Scoped to --fork Amsterdam to keep runtime bounded; narrow
 # further with REFERENCE_ARGS.
 REFERENCE_ARGS ?= --fork Amsterdam
+REFERENCE_JOBS ?= 1
 reference-test: fetch-host
-	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) --jobs $(REFERENCE_JOBS)
 
 # ZkC twin of reference-test: the corpus logic lives in test/zkc_reference_runner.zig, which runs
 # each block through the guest ELF under zkc (ELF->JSON->zkc exec) instead of in-process. Needs zkc

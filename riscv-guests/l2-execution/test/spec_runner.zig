@@ -36,6 +36,13 @@ pub const Options = struct {
     limit: ?u64 = null,
     /// Stop after the first file contribution containing a failure.
     stop_on_fail: bool = false,
+    /// Identifies the worker that emitted progress for a parallel run.
+    progress_job: ?struct { index: usize, total: usize } = null,
+};
+
+pub const Path = struct {
+    path: []const u8,
+    display_path: []const u8,
 };
 
 pub const Contribution = struct {
@@ -75,10 +82,18 @@ pub const Stats = struct {
 /// Process operands in order. Files within each directory operand are visited recursively in
 /// lexical order. Repeated operands are intentionally processed repeatedly.
 pub fn run(suite: anytype, init: std.process.Init, operands: []const []const u8, opts: Options) !Stats {
-    var matcher = if (opts.match_pattern) |source| try Matcher.init(init.gpa, source) else null;
+    var paths = try collectPaths(init, operands, opts.match_pattern);
+    defer deinitPaths(init.gpa, &paths);
+    return runPaths(suite, init, paths.items, opts);
+}
+
+/// Collect selected files deterministically. Callers own the returned paths.
+pub fn collectPaths(init: std.process.Init, operands: []const []const u8, match_pattern: ?[]const u8) !std.ArrayList(Path) {
+    var matcher = if (match_pattern) |source| try Matcher.init(init.gpa, source) else null;
     defer if (matcher) |*value| value.deinit();
 
-    var stats = Stats{};
+    var paths = std.ArrayList(Path).empty;
+    errdefer deinitPaths(init.gpa, &paths);
     for (operands) |operand| {
         if (std.mem.eql(u8, operand, "-")) return error.StdinNotSupported;
         const stat = std.Io.Dir.cwd().statFile(init.io, operand, .{}) catch |err| {
@@ -86,29 +101,54 @@ pub fn run(suite: anytype, init: std.process.Init, operands: []const []const u8,
             return error.PathInspectionFailed;
         };
         switch (stat.kind) {
-            .directory => try processDirectory(suite, init, operand, if (matcher) |*value| value else null, opts, &stats),
-            .file => {
-                if (matches(std.fs.path.basename(operand), if (matcher) |*value| value else null)) {
-                    try processOne(suite, init, operand, std.fs.path.basename(operand), opts, &stats);
-                }
+            .directory => try collectDirectory(init, operand, if (matcher) |*value| value else null, &paths),
+            .file => if (matches(std.fs.path.basename(operand), if (matcher) |*value| value else null)) {
+                const path = try init.gpa.dupe(u8, operand);
+                errdefer init.gpa.free(path);
+                const display_path = try init.gpa.dupe(u8, std.fs.path.basename(operand));
+                try paths.append(init.gpa, .{ .path = path, .display_path = display_path });
             },
             else => return error.UnsupportedPathType,
         }
-        if (shouldStop(stats, opts)) break;
     }
-    if (stats.recognized_files == 0) return error.NoRecognizedFiles;
-    if (stats.contribution.cases == 0) return error.NoSelectedCases;
-    if (stats.total() == 0) return error.NoExecutedCases;
+    return paths;
+}
+
+pub fn deinitPaths(alloc: std.mem.Allocator, paths: *std.ArrayList(Path)) void {
+    for (paths.items) |path| {
+        alloc.free(path.path);
+        alloc.free(path.display_path);
+    }
+    paths.deinit(alloc);
+}
+
+pub fn runPaths(suite: anytype, init: std.process.Init, paths: []const Path, opts: Options) !Stats {
+    const stats = try processPaths(suite, init, paths, opts);
+    try validateStats(stats);
     return stats;
 }
 
-fn processDirectory(
-    suite: anytype,
+/// Process a preselected path set. The caller validates the aggregate statistics.
+pub fn processPaths(suite: anytype, init: std.process.Init, paths: []const Path, opts: Options) !Stats {
+    var stats = Stats{};
+    for (paths) |path| {
+        try processOne(suite, init, path.path, path.display_path, opts, &stats);
+        if (shouldStop(stats, opts)) break;
+    }
+    return stats;
+}
+
+pub fn validateStats(stats: Stats) !void {
+    if (stats.recognized_files == 0) return error.NoRecognizedFiles;
+    if (stats.contribution.cases == 0) return error.NoSelectedCases;
+    if (stats.total() == 0) return error.NoExecutedCases;
+}
+
+fn collectDirectory(
     init: std.process.Init,
     root: []const u8,
     matcher: ?*const Matcher,
-    opts: Options,
-    stats: *Stats,
+    result: *std.ArrayList(Path),
 ) !void {
     var dir = std.Io.Dir.cwd().openDir(init.io, root, .{ .iterate = true }) catch |err| {
         std.debug.print("error: cannot open directory '{s}': {s}\n", .{ root, @errorName(err) });
@@ -135,9 +175,11 @@ fn processDirectory(
 
     for (paths.items) |relative_path| {
         const full_path = try std.Io.Dir.path.join(init.gpa, &.{ root, relative_path });
-        defer init.gpa.free(full_path);
-        try processOne(suite, init, full_path, relative_path, opts, stats);
-        if (shouldStop(stats.*, opts)) return;
+        errdefer init.gpa.free(full_path);
+        try result.append(init.gpa, .{
+            .path = full_path,
+            .display_path = try init.gpa.dupe(u8, relative_path),
+        });
     }
 }
 
@@ -160,7 +202,18 @@ fn processOne(
             }
             stats.recognized_files += 1;
             stats.contribution.add(contribution);
-            std.debug.print("progress: {s} files={} cases={} passed={} failed={} skipped={}\n", .{
+            if (opts.progress_job) |job| {
+                std.debug.print("progress[job {}/{}]: {s} files={} cases={} passed={} failed={} skipped={}\n", .{
+                    job.index,
+                    job.total,
+                    display_path,
+                    stats.recognized_files,
+                    stats.contribution.cases,
+                    stats.contribution.passed,
+                    stats.contribution.failed,
+                    stats.contribution.skipped,
+                });
+            } else std.debug.print("progress: {s} files={} cases={} passed={} failed={} skipped={}\n", .{
                 display_path,
                 stats.recognized_files,
                 stats.contribution.cases,
@@ -180,6 +233,13 @@ fn matches(path: []const u8, matcher: ?*const Matcher) bool {
 fn shouldStop(stats: Stats, opts: Options) bool {
     if (opts.limit) |limit| if (stats.contribution.cases >= limit) return true;
     return opts.stop_on_fail and stats.contribution.failed > 0;
+}
+
+pub fn shardPaths(paths: []const Path, job_index: usize, job_count: usize) []const Path {
+    std.debug.assert(job_count > 0 and job_index < job_count);
+    const start = paths.len * job_index / job_count;
+    const end = paths.len * (job_index + 1) / job_count;
+    return paths[start..end];
 }
 
 const RecordingSuite = struct {
@@ -372,4 +432,33 @@ test "runner rejects runs with no recognized files or no selected cases" {
     };
     var skipping_suite = SkippingSuite{};
     try std.testing.expectError(error.NoExecutedCases, run(&skipping_suite, testInit(), &.{ignored}, .{}));
+}
+
+test "shards preserve the selected path sequence without overlap" {
+    const paths = [_]Path{
+        .{ .path = "a", .display_path = "a" },
+        .{ .path = "b", .display_path = "b" },
+        .{ .path = "c", .display_path = "c" },
+        .{ .path = "d", .display_path = "d" },
+        .{ .path = "e", .display_path = "e" },
+    };
+    const expected = [_][]const u8{ "a", "b", "c", "d", "e" };
+    var next: usize = 0;
+    for (0..3) |job_index| {
+        for (shardPaths(&paths, job_index, 3)) |path| {
+            try std.testing.expectEqualStrings(expected[next], path.path);
+            next += 1;
+        }
+    }
+    try std.testing.expectEqual(expected.len, next);
+}
+
+test "shards cover fewer paths than jobs exactly once" {
+    const paths = [_]Path{
+        .{ .path = "a", .display_path = "a" },
+        .{ .path = "b", .display_path = "b" },
+    };
+    var covered: usize = 0;
+    for (0..4) |job_index| covered += shardPaths(&paths, job_index, 4).len;
+    try std.testing.expectEqual(paths.len, covered);
 }
