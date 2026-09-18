@@ -19,22 +19,24 @@ import {
 } from "./../helpers";
 import l2SendMessageTransaction from "../../_testData/eip1559RlpEncoderTransactions/l2SendMessage.json";
 import transactionWithCalldata from "../../_testData/eip1559RlpEncoderTransactions/withCalldata.json";
-import transactionWithCalldataAndAccessList from "../../_testData/eip1559RlpEncoderTransactions/withCalldataAndAccessList.json";
 import transactionWithLargeCalldata from "../../_testData/eip1559RlpEncoderTransactions/withLargeCalldata.json";
 import transactionWithoutCalldata from "../../_testData/eip1559RlpEncoderTransactions/withoutCalldata.json";
 import {
   ADDRESS_ZERO,
+  BLOCK_NUMBER_DEADLINE_BUFFER,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
+  DEFAULT_FUTURE_NEXT_NETWORK_TIMESTAMP,
+  FORCED_TRANSACTION_FEE,
   FORCED_TRANSACTION_SENDER_ROLE,
   HASH_ZERO,
   L2_BLOCK_DURATION_SECONDS,
   LINEA_MAINNET_CHAIN_ID,
   MAX_GAS_LIMIT,
   MAX_INPUT_LENGTH_LIMIT,
+  MIN_FORCED_TRANSACTION_GAS_LIMIT,
+  MINIMUM_BASE_GAS_FEE,
+  TEST_MINIMUM_BASE_GAS_FEE,
   THREE_DAYS_IN_SECONDS,
-  DEFAULT_FUTURE_NEXT_NETWORK_TIMESTAMP,
-  FORCED_TRANSACTION_FEE,
-  BLOCK_NUMBER_DEADLINE_BUFFER,
 } from "../../common/constants";
 import {
   buildAccessErrorMessage,
@@ -100,8 +102,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       linethRollupAddr: string;
       chainId: bigint | number;
       blockBuffer: bigint | number;
+      minGasLimit: bigint | number;
       maxGasLimit: bigint | number;
       maxInputLengthLimit: bigint | number;
+      minimumBaseGasFee: bigint | number;
       securityCouncilAddr: string;
       addressFilterAddr: string;
       l2BlockDurationSeconds: bigint | number;
@@ -117,6 +121,8 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       bigint | number,
       bigint | number,
       bigint | number,
+      bigint | number,
+      bigint | number,
       string,
       string,
       bigint | number,
@@ -125,8 +131,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       config.linethRollupAddr,
       config.chainId,
       config.blockBuffer,
+      config.minGasLimit,
       config.maxGasLimit,
       config.maxInputLengthLimit,
+      config.minimumBaseGasFee,
       config.securityCouncilAddr,
       config.addressFilterAddr,
       config.l2BlockDurationSeconds,
@@ -155,9 +163,24 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         expectedError: "ZeroValueNotAllowed",
       },
       {
+        description: "min gas limit is set to zero",
+        override: { minGasLimit: 0 },
+        expectedError: "ZeroValueNotAllowed",
+      },
+      {
         description: "max gas limit is set to zero",
         override: { maxGasLimit: 0 },
         expectedError: "ZeroValueNotAllowed",
+      },
+      {
+        description: "max gas limit is equal to the min gas limit",
+        override: { maxGasLimit: MIN_FORCED_TRANSACTION_GAS_LIMIT },
+        expectedError: "MaxGasLimitLessThanOrEqualToMinGasLimit",
+      },
+      {
+        description: "max gas limit is lower than the min gas limit",
+        override: { maxGasLimit: MIN_FORCED_TRANSACTION_GAS_LIMIT - 1n },
+        expectedError: "MaxGasLimitLessThanOrEqualToMinGasLimit",
       },
       {
         description: "max input limit is set to zero",
@@ -196,8 +219,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           linethRollupAddr: await linethRollup.getAddress(),
           chainId: LINEA_MAINNET_CHAIN_ID,
           blockBuffer: THREE_DAYS_IN_SECONDS,
+          minGasLimit: MIN_FORCED_TRANSACTION_GAS_LIMIT,
           maxGasLimit: MAX_GAS_LIMIT,
           maxInputLengthLimit: MAX_INPUT_LENGTH_LIMIT,
+          minimumBaseGasFee: MINIMUM_BASE_GAS_FEE,
           securityCouncilAddr: securityCouncil.address,
           addressFilterAddr: await addressFilter.getAddress(),
           l2BlockDurationSeconds: L2_BLOCK_DURATION_SECONDS,
@@ -225,8 +250,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
           THREE_DAYS_IN_SECONDS,
+          MIN_FORCED_TRANSACTION_GAS_LIMIT,
           MAX_GAS_LIMIT,
           MAX_INPUT_LENGTH_LIMIT,
+          MINIMUM_BASE_GAS_FEE,
           securityCouncil.address,
           await addressFilter.getAddress(),
           0n,
@@ -247,8 +274,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
           THREE_DAYS_IN_SECONDS,
+          MIN_FORCED_TRANSACTION_GAS_LIMIT,
           MAX_GAS_LIMIT,
           MAX_INPUT_LENGTH_LIMIT,
+          MINIMUM_BASE_GAS_FEE,
           securityCouncil.address,
           await addressFilter.getAddress(),
           L2_BLOCK_DURATION_SECONDS,
@@ -256,6 +285,54 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         ),
         "ZeroValueNotAllowed",
       );
+    });
+
+    it("Should set MIN_GAS_LIMIT from constructor", async () => {
+      expect(await forcedTransactionGateway.MIN_GAS_LIMIT()).to.equal(MIN_FORCED_TRANSACTION_GAS_LIMIT);
+    });
+
+    it("Should set MINIMUM_BASE_GAS_FEE from constructor", async () => {
+      // The shared fixture gateway uses TEST_MINIMUM_BASE_GAS_FEE so legacy
+      // fixtures pass; deploy a dedicated gateway to verify the production constant is stored.
+      const factory = await ethers.getContractFactory("ForcedTransactionGateway", {
+        libraries: { Mimc: mimcLibraryAddress },
+      });
+      const gateway = (await factory.deploy(
+        await linethRollup.getAddress(),
+        LINEA_MAINNET_CHAIN_ID,
+        THREE_DAYS_IN_SECONDS,
+        MIN_FORCED_TRANSACTION_GAS_LIMIT,
+        MAX_GAS_LIMIT,
+        MAX_INPUT_LENGTH_LIMIT,
+        MINIMUM_BASE_GAS_FEE,
+        securityCouncil.address,
+        await addressFilter.getAddress(),
+        L2_BLOCK_DURATION_SECONDS,
+        BLOCK_NUMBER_DEADLINE_BUFFER,
+      )) as unknown as ForcedTransactionGateway;
+      await gateway.waitForDeployment();
+      expect(await gateway.MINIMUM_BASE_GAS_FEE()).to.equal(MINIMUM_BASE_GAS_FEE);
+    });
+
+    it("Should allow MINIMUM_BASE_GAS_FEE to be zero for gasless networks", async () => {
+      const factory = await ethers.getContractFactory("ForcedTransactionGateway", {
+        libraries: { Mimc: mimcLibraryAddress },
+      });
+      const gateway = (await factory.deploy(
+        await linethRollup.getAddress(),
+        LINEA_MAINNET_CHAIN_ID,
+        THREE_DAYS_IN_SECONDS,
+        MIN_FORCED_TRANSACTION_GAS_LIMIT,
+        MAX_GAS_LIMIT,
+        MAX_INPUT_LENGTH_LIMIT,
+        0n,
+        securityCouncil.address,
+        await addressFilter.getAddress(),
+        L2_BLOCK_DURATION_SECONDS,
+        BLOCK_NUMBER_DEADLINE_BUFFER,
+      )) as unknown as ForcedTransactionGateway;
+      await gateway.waitForDeployment();
+      expect(await gateway.MINIMUM_BASE_GAS_FEE()).to.equal(0n);
     });
   });
 
@@ -377,12 +454,18 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       await expectRevertWithCustomError(forcedTransactionGateway, sendCall, "MaxGasLimitExceeded");
     });
 
-    it("Should fail if the gas limit is too low", async () => {
+    it("Should fail if the gas limit is below MIN_GAS_LIMIT", async () => {
       const forcedTransaction = buildEip1559Transaction(transactionWithLargeCalldata.result);
-      forcedTransaction.gasLimit = 20999n;
+      forcedTransaction.gasLimit = MIN_FORCED_TRANSACTION_GAS_LIMIT - 1n;
 
       const sendCall = forcedTransactionGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState);
       await expectRevertWithCustomError(forcedTransactionGateway, sendCall, "GasLimitTooLow");
+    });
+
+    it("Should succeed if the gas limit equals MIN_GAS_LIMIT", async () => {
+      const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
+      forcedTransaction.gasLimit = MIN_FORCED_TRANSACTION_GAS_LIMIT;
+      await forcedTransactionGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState);
     });
 
     it("Should fail if the calldata input is too long", async () => {
@@ -395,7 +478,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       );
     });
 
-    it("Should fail if the maxPriorityFeePerGas is zero", async () => {
+    it("Should fail if maxPriorityFeePerGas is zero when MINIMUM_BASE_GAS_FEE is non-zero", async () => {
       const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
       forcedTransaction.maxPriorityFeePerGas = 0n;
       await expectRevertWithCustomError(
@@ -406,7 +489,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       );
     });
 
-    it("Should fail if the maxFeePerGas is zero", async () => {
+    it("Should fail if maxFeePerGas is zero when MINIMUM_BASE_GAS_FEE is non-zero", async () => {
       const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
       forcedTransaction.maxFeePerGas = 0n;
       await expectRevertWithCustomError(
@@ -417,10 +500,104 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       );
     });
 
+    it("Should fail if maxFeePerGas is below MINIMUM_BASE_GAS_FEE", async () => {
+      // Deploy a gateway with the production 7 gwei floor so the check fires.
+      const factory = await ethers.getContractFactory("ForcedTransactionGateway", {
+        libraries: { Mimc: mimcLibraryAddress },
+      });
+      const strictGateway = (await factory.deploy(
+        await linethRollup.getAddress(),
+        LINEA_MAINNET_CHAIN_ID,
+        THREE_DAYS_IN_SECONDS,
+        MIN_FORCED_TRANSACTION_GAS_LIMIT,
+        MAX_GAS_LIMIT,
+        MAX_INPUT_LENGTH_LIMIT,
+        MINIMUM_BASE_GAS_FEE,
+        securityCouncil.address,
+        await addressFilter.getAddress(),
+        L2_BLOCK_DURATION_SECONDS,
+        BLOCK_NUMBER_DEADLINE_BUFFER,
+      )) as unknown as ForcedTransactionGateway;
+      await strictGateway.waitForDeployment();
+      await linethRollup
+        .connect(securityCouncil)
+        .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await strictGateway.getAddress());
+
+      const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
+      forcedTransaction.maxFeePerGas = MINIMUM_BASE_GAS_FEE - 1n;
+      forcedTransaction.maxPriorityFeePerGas = 1n;
+      await expectRevertWithCustomError(
+        strictGateway,
+        strictGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState),
+        "MaxFeePerGasLowerThanMinimumBaseGasFee",
+        [forcedTransaction.maxFeePerGas, MINIMUM_BASE_GAS_FEE],
+      );
+    });
+
+    it("Should succeed if maxFeePerGas equals MINIMUM_BASE_GAS_FEE", async () => {
+      // Deploy a gateway with the production 7 gwei floor.
+      const factory = await ethers.getContractFactory("ForcedTransactionGateway", {
+        libraries: { Mimc: mimcLibraryAddress },
+      });
+      const strictGateway = (await factory.deploy(
+        await linethRollup.getAddress(),
+        LINEA_MAINNET_CHAIN_ID,
+        THREE_DAYS_IN_SECONDS,
+        MIN_FORCED_TRANSACTION_GAS_LIMIT,
+        MAX_GAS_LIMIT,
+        MAX_INPUT_LENGTH_LIMIT,
+        MINIMUM_BASE_GAS_FEE,
+        securityCouncil.address,
+        await addressFilter.getAddress(),
+        L2_BLOCK_DURATION_SECONDS,
+        BLOCK_NUMBER_DEADLINE_BUFFER,
+      )) as unknown as ForcedTransactionGateway;
+      await strictGateway.waitForDeployment();
+      await linethRollup
+        .connect(securityCouncil)
+        .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await strictGateway.getAddress());
+
+      const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
+      forcedTransaction.maxFeePerGas = MINIMUM_BASE_GAS_FEE;
+      forcedTransaction.maxPriorityFeePerGas = 1n;
+      await strictGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState);
+    });
+
+    it("Should skip zero-fee and base-fee-floor checks when MINIMUM_BASE_GAS_FEE is zero (gasless network)", async () => {
+      const factory = await ethers.getContractFactory("ForcedTransactionGateway", {
+        libraries: { Mimc: mimcLibraryAddress },
+      });
+      const gaslessGateway = (await factory.deploy(
+        await linethRollup.getAddress(),
+        LINEA_MAINNET_CHAIN_ID,
+        THREE_DAYS_IN_SECONDS,
+        MIN_FORCED_TRANSACTION_GAS_LIMIT,
+        MAX_GAS_LIMIT,
+        MAX_INPUT_LENGTH_LIMIT,
+        0n,
+        securityCouncil.address,
+        await addressFilter.getAddress(),
+        L2_BLOCK_DURATION_SECONDS,
+        BLOCK_NUMBER_DEADLINE_BUFFER,
+      )) as unknown as ForcedTransactionGateway;
+      await gaslessGateway.waitForDeployment();
+      await linethRollup
+        .connect(securityCouncil)
+        .grantRole(FORCED_TRANSACTION_SENDER_ROLE, await gaslessGateway.getAddress());
+
+      const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
+      forcedTransaction.maxFeePerGas = 0n;
+      forcedTransaction.maxPriorityFeePerGas = 0n;
+
+      // Zero fees must be accepted on a gasless network
+      await gaslessGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState);
+    });
+
     it("Should fail if maxPriorityFeePerGas > maxFeePerGas", async () => {
       const forcedTransaction = buildEip1559Transaction(l2SendMessageTransaction.result);
-      forcedTransaction.maxPriorityFeePerGas = 2n;
-      forcedTransaction.maxFeePerGas = 1n;
+      // Both fees must be above the fixture gateway's floor (7 wei) to reach the ordering check.
+      forcedTransaction.maxFeePerGas = 100n;
+      forcedTransaction.maxPriorityFeePerGas = 200n;
       await expectRevertWithCustomError(
         forcedTransactionGateway,
         forcedTransactionGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState),
@@ -638,17 +815,9 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     });
 
     it("Should submit the forced transaction with no calldata", async () => {
-      await forcedTransactionGateway.submitForcedTransaction(
-        buildEip1559Transaction(transactionWithoutCalldata.result),
-        defaultFinalizedState,
-      );
-    });
-
-    it("Should submit the forced transaction with calldata and access list", async () => {
-      await forcedTransactionGateway.submitForcedTransaction(
-        buildEip1559Transaction(transactionWithCalldataAndAccessList.result),
-        defaultFinalizedState,
-      );
+      const forcedTransaction = buildEip1559Transaction(transactionWithoutCalldata.result);
+      forcedTransaction.gasLimit = MIN_FORCED_TRANSACTION_GAS_LIMIT;
+      await forcedTransactionGateway.submitForcedTransaction(forcedTransaction, defaultFinalizedState);
     });
 
     it("Should submit the forced transaction with calldata", async () => {
@@ -731,8 +900,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
           THREE_DAYS_IN_SECONDS,
+          MIN_FORCED_TRANSACTION_GAS_LIMIT,
           MAX_GAS_LIMIT,
           MAX_INPUT_LENGTH_LIMIT,
+          TEST_MINIMUM_BASE_GAS_FEE,
           securityCouncil.address,
           await addressFilter.getAddress(),
           l2BlockTimeSeconds,
@@ -798,8 +969,10 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
           THREE_DAYS_IN_SECONDS,
+          MIN_FORCED_TRANSACTION_GAS_LIMIT,
           MAX_GAS_LIMIT,
           MAX_INPUT_LENGTH_LIMIT,
+          TEST_MINIMUM_BASE_GAS_FEE,
           securityCouncil.address,
           await addressFilter.getAddress(),
           l2BlockDurationSeconds,

@@ -55,7 +55,8 @@ describe("Forced transaction test suite", () => {
       const gatewayRead = context.l1Contracts.forcedTransactionGateway(l1PublicClient);
 
       const destinationChainId = await gatewayRead.read.DESTINATION_CHAIN_ID();
-      logger.debug(`Gateway config — destinationChainId=${destinationChainId}`);
+      const minGasLimit = await gatewayRead.read.MIN_GAS_LIMIT();
+      logger.debug(`Gateway config — destinationChainId=${destinationChainId} minGasLimit=${minGasLimit}`);
 
       let lastFinalizedState = await resolveLastFinalizedState(
         linethRollup,
@@ -72,7 +73,7 @@ describe("Forced transaction test suite", () => {
         to: "0x8D97689C9818892B700e27F316cc3E41e17fBeb9" as Address,
         nonce: 0n,
         value: etherToWei("0.1"),
-        gasLimit: 21_000n,
+        gasLimit: minGasLimit,
         maxFeePerGas: 1_000_000_000n,
         maxPriorityFeePerGas: 100_000_000n,
       });
@@ -177,7 +178,8 @@ describe("Forced transaction test suite", () => {
       const gatewayRead = context.l1Contracts.forcedTransactionGateway(l1PublicClient);
 
       const destinationChainId = await gatewayRead.read.DESTINATION_CHAIN_ID();
-      logger.debug(`Gateway config — destinationChainId=${destinationChainId}`);
+      const minGasLimit = await gatewayRead.read.MIN_GAS_LIMIT();
+      logger.debug(`Gateway config — destinationChainId=${destinationChainId} minGasLimit=${minGasLimit}`);
 
       let lastFinalizedState = await resolveLastFinalizedState(
         linethRollup,
@@ -194,7 +196,7 @@ describe("Forced transaction test suite", () => {
         to: "0x8D97689C9818892B700e27F316cc3E41e17fBeb9" as Address,
         nonce: 1_000_000n, // HIGH NONCE TO ENSURE THE L2 TX REVERTS ON L2.
         value: etherToWei("0.1"),
-        gasLimit: 21_000n,
+        gasLimit: minGasLimit,
         maxFeePerGas: 1_000_000_000n,
         maxPriorityFeePerGas: 100_000_000n,
       });
@@ -620,6 +622,7 @@ describe("Forced transaction test suite", () => {
 
       const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const gateway = context.l1Contracts.forcedTransactionGateway(l1WalletClient);
+      const gatewayRead = context.l1Contracts.forcedTransactionGateway(l1PublicClient);
 
       let lastFinalizedState = await resolveLastFinalizedState(
         linethRollup,
@@ -631,12 +634,13 @@ describe("Forced transaction test suite", () => {
         `Resolved finalized state — timestamp=${lastFinalizedState.timestamp} forcedTransactionNumber=${lastFinalizedState.forcedTransactionNumber}`,
       );
 
+      const minGasLimit = await gatewayRead.read.MIN_GAS_LIMIT();
       const { forcedTransaction, l2TxHash } = await buildSignedForcedTransaction(context, {
         l2Account: l2DeniedSender,
         to: l2Recipient.address,
         nonce: 0n,
         value: etherToWei("0.1"),
-        gasLimit: 21_000n,
+        gasLimit: minGasLimit,
         maxFeePerGas: 1_000_000_000n,
         maxPriorityFeePerGas: 100_000_000n,
       });
@@ -760,6 +764,7 @@ describe("Forced transaction test suite", () => {
 
       const linethRollup = context.l1Contracts.linethRollup(l1PublicClient);
       const gateway = context.l1Contracts.forcedTransactionGateway(l1WalletClient);
+      const gatewayRead = context.l1Contracts.forcedTransactionGateway(l1PublicClient);
 
       let lastFinalizedState = await resolveLastFinalizedState(
         linethRollup,
@@ -771,12 +776,13 @@ describe("Forced transaction test suite", () => {
         `Resolved finalized state — timestamp=${lastFinalizedState.timestamp} forcedTransactionNumber=${lastFinalizedState.forcedTransactionNumber}`,
       );
 
+      const minGasLimit = await gatewayRead.read.MIN_GAS_LIMIT();
       const { forcedTransaction, l2TxHash } = await buildSignedForcedTransaction(context, {
         l2Account: l2ForcedSender,
         to: l2DeniedRecipient.address,
         nonce: 0n,
         value: etherToWei("0.1"),
-        gasLimit: 21_000n,
+        gasLimit: minGasLimit,
         maxFeePerGas: 1_000_000_000n,
         maxPriorityFeePerGas: 100_000_000n,
       });

@@ -32,7 +32,6 @@ interface IForcedTransactionGateway {
    * @param to The destination address of the transaction.
    * @param value The Ether value to transfer.
    * @param input The calldata input to send to the "to" address.
-   * @param accessList The access list for the transaction.
    * @param yParity The signature's yParity.
    * @param r The r portion of the signature.
    * @param s The s portion of the signature.
@@ -45,20 +44,9 @@ interface IForcedTransactionGateway {
     address to;
     uint256 value;
     bytes input;
-    AccessList[] accessList;
     uint8 yParity;
     uint256 r;
     uint256 s;
-  }
-
-  /**
-   * @notice Supporting data for encoding an EIP-2930/1559 access lists.
-   * @param contractAddress is the address where the storageKeys will be accessed.
-   * @param storageKeys contains the list of keys expected to be accessed at contractAddress.
-   */
-  struct AccessList {
-    address contractAddress;
-    bytes32[] storageKeys;
   }
 
   /**
@@ -78,7 +66,12 @@ interface IForcedTransactionGateway {
   error MaxGasLimitExceeded();
 
   /**
-   * @dev Thrown when the gas limit configured is less than the minimum 21000.
+   * @dev Thrown when the configured max gas limit is less than or equal to the configured min gas limit.
+   */
+  error MaxGasLimitLessThanOrEqualToMinGasLimit(uint256 minGasLimit, uint256 maxGasLimit);
+
+  /**
+   * @dev Thrown when the gas limit is below the configured minimum.
    */
   error GasLimitTooLow();
 
@@ -88,9 +81,15 @@ interface IForcedTransactionGateway {
   error CalldataInputLengthLimitExceeded();
 
   /**
-   * @dev Thrown when one of the gas fee parameters are zero.
+   * @dev Thrown when one of the gas fee parameters are zero (only checked when MINIMUM_BASE_GAS_FEE is non-zero).
    */
   error GasFeeParametersContainZero(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas);
+
+  /**
+   * @dev Thrown when the transaction's maxFeePerGas is below the configured MINIMUM_BASE_GAS_FEE.
+   *      Only checked when MINIMUM_BASE_GAS_FEE is non-zero.
+   */
+  error MaxFeePerGasLowerThanMinimumBaseGasFee(uint256 maxFeePerGas, uint256 minimumBaseGasFee);
 
   /**
    * @dev Thrown when the max priority fee per gas is higher than the max fee per gas.

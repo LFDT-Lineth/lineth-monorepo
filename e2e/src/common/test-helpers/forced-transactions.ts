@@ -47,7 +47,6 @@ export type ForcedTransactionStruct = {
   to: Address;
   value: bigint;
   input: Hex;
-  accessList: { contractAddress: Address; storageKeys: Hex[] }[];
   yParity: number;
   r: bigint;
   s: bigint;
@@ -193,7 +192,6 @@ export async function buildSignedForcedTransaction(
       to,
       value,
       input: data as Hex,
-      accessList: [] as { contractAddress: Address; storageKeys: Hex[] }[],
       yParity: parsed.yParity,
       r: BigInt(parsed.r),
       s: BigInt(parsed.s),
