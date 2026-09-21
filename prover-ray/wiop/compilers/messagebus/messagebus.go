@@ -63,7 +63,8 @@ type CompileOptions struct {
 	// outside the proof instead of from its own Fiat-Shamir transcript, which is
 	// what lets several shards agree on those challenges. It declares γ and the
 	// shard's contribution to it as public inputs, and requires every bus column
-	// to sit on the coin round; see [registerSharedRandomness].
+	// to sit on the coin round. γ lives on round 0, so it is absorbed into
+	// Fiat-Shamir before α and β are drawn; see [registerSharedRandomness].
 	//
 	// Off by default: an unsharded protocol has no one to agree with and derives
 	// α and β from its own transcript. Turning it on obliges the prover to supply
