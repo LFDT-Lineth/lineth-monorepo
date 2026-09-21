@@ -34,7 +34,7 @@ class BlobsPostgresDaoV2(
         endBlockNumber = row.getLong("end_block_number").toULong(),
         startBlockTimestamp = Instant.fromEpochMilliseconds(row.getLong("start_block_timestamp")),
         endBlockTimestamp = Instant.fromEpochMilliseconds(row.getLong("end_block_timestamp")),
-        totalConflationsCount = row.getInteger("batches_count").toUInt(),
+        totalBatchesCount = row.getInteger("batches_count").toUInt(),
         parentDataRollingHash = blobsInfo.parentDataRollingHash,
         dataRollingHash = blobsInfo.dataRollingHash,
         endOffset = blobsInfo.endOffset,
@@ -57,7 +57,7 @@ class BlobsPostgresDaoV2(
       blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN),
       blobRecord.startBlockTimestamp.toEpochMilliseconds(),
       blobRecord.endBlockTimestamp.toEpochMilliseconds(),
-      blobRecord.totalConflationsCount.toInt(),
+      blobRecord.totalBatchesCount.toInt(),
       ByteArray(0).encodeHex(),
       BlobsInfo.fromDomainObject(blobRecord).toJsonString(),
     )

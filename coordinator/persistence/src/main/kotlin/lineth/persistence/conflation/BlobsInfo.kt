@@ -25,7 +25,7 @@ data class BlobsInfo(
             JsonObject()
               .put("chunkHash", blobData.chunkHash.encodeHex())
               .put("blobBytes", blobData.blobBytes.encodeHex())
-              .put("conflationsCount", blobData.conflationsCount.toInt())
+              .put("batchesCount", blobData.batchesCount.toInt())
           },
         ),
       )
@@ -62,7 +62,7 @@ data class BlobsInfo(
           BlobData(
             chunkHash = blobDataJson.getString("chunkHash").decodeHex(),
             blobBytes = blobDataJson.getString("blobBytes").decodeHex(),
-            conflationsCount = blobDataJson.getInteger("conflationsCount").toUInt(),
+            batchesCount = blobDataJson.getInteger("batchesCount").toUInt(),
           )
         },
       )

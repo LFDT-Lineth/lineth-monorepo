@@ -38,6 +38,8 @@ class RollupProofGeneratingCoordinator(
   private val batchesRepository: BatchesRepository,
   private val streamPositionProvider: StreamPositionProvider,
   private val rollupProofPoller: RollupProofPoller,
+  private val conflationSegmentBuilder: ConflationSegmentBuilder,
+  private val dataRollingHashCalculator: DataRollingHashCalculator,
   private val blockEncoder: BlockEncoder,
   private val chunkHasher: (ByteArray) -> ByteArray,
   private val proofCheckingInterval: Duration,
@@ -58,7 +60,29 @@ class RollupProofGeneratingCoordinator(
     val chunkHash: ByteArray,
     val parentDataRollingHash: ByteArray,
     val endOffset: Int,
-  )
+  ) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as SealedChunk
+
+      if (endOffset != other.endOffset) return false
+      if (!blobBytes.contentEquals(other.blobBytes)) return false
+      if (!chunkHash.contentEquals(other.chunkHash)) return false
+      if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = endOffset
+      result = 31 * result + blobBytes.contentHashCode()
+      result = 31 * result + chunkHash.contentHashCode()
+      result = 31 * result + parentDataRollingHash.contentHashCode()
+      return result
+    }
+  }
 
   private data class PendingConflation(
     val conflationResult: ConflationCalculationResult,
@@ -92,7 +116,7 @@ class RollupProofGeneratingCoordinator(
         "got ${conflation.conflationResult.startBlockNumber}"
     }
 
-    val segment = ConflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
+    val segment = conflationSegmentBuilder.buildSegment(conflation.blocks, chainId)
     streamBuffer.write(segment)
     pendingConflations += PendingConflation(conflation.conflationResult, conflation.blocks, segment.size)
     lastHandledBlockNumber = conflation.conflationResult.endBlockNumber
@@ -110,7 +134,7 @@ class RollupProofGeneratingCoordinator(
     streamBuffer.write(raw, BLOB_BYTES_LENGTH, raw.size - BLOB_BYTES_LENGTH)
 
     val chunkHash = chunkHasher(blobBytes)
-    val nextDrh = DataRollingHashCalculator.fold(parentDataRollingHash, chunkHash)
+    val nextDrh = dataRollingHashCalculator.fold(parentDataRollingHash, chunkHash)
 
     proofWindowBytesSealed += BLOB_BYTES_LENGTH
     sealedFullChunks += SealedChunk(blobBytes, chunkHash, parentDataRollingHash, BLOB_BYTES_LENGTH)
@@ -132,31 +156,54 @@ class RollupProofGeneratingCoordinator(
       val partialChunk = flushPartialChunk() ?: return@thenCompose SafeFuture.completedFuture(Unit)
       val allChunks = sealedFullChunks + partialChunk
 
-      rollupProverClient.createProofRequest(buildRequest(allChunks, window))
-        .thenCompose { proofIndex ->
-          rollupProofPoller.addProofInProgress(
-            proofIndex = proofIndex,
-            blobsData =
-            allChunks.map {
-              BlobData(chunkHash = it.chunkHash, blobBytes = it.blobBytes, conflationsCount = 0u)
-            },
-            parentDataRollingHash = allChunks.first().parentDataRollingHash,
-            dataRollingHash =
-            allChunks.last().let {
-              DataRollingHashCalculator.fold(it.parentDataRollingHash, it.chunkHash)
-            },
-            endOffset = partialChunk.endOffset,
-            startBlockTimestamp = Instant.fromEpochSeconds(window.first().blocks.first().timestamp.toLong()),
-            endBlockTimestamp = Instant.fromEpochSeconds(window.last().blocks.last().timestamp.toLong()),
-            totalConflationsCount = window.size,
+      batchesRepository.findBatchesByBlockRange(
+        window.first().conflationResult.startBlockNumber.toLong(),
+        window.last().conflationResult.endBlockNumber.toLong(),
+      ).thenCompose { batches ->
+        val batchesByStart = batches.associateBy { it.startBlockNumber }
+        val l2Executions = window.map { pending ->
+          val batch = batchesByStart[pending.conflationResult.startBlockNumber]
+            ?: error(
+              "Batch not found for conflation " +
+                "${pending.conflationResult.startBlockNumber}..${pending.conflationResult.endBlockNumber}",
+            )
+          val hash = batch.proofIndexHash
+            ?: error(
+              "proofIndexHash is null for batch " +
+                "${pending.conflationResult.startBlockNumber}..${pending.conflationResult.endBlockNumber}",
+            )
+          BlockIntervalProofIndex(
+            startBlockNumber = pending.conflationResult.startBlockNumber,
+            endBlockNumber = pending.conflationResult.endBlockNumber,
+            startBlockTimestamp = Instant.fromEpochSeconds(pending.blocks.first().timestamp.toLong()),
+            hash = hash,
           )
+        }
 
-          sealedFullChunks.clear()
-          repeat(conflationsPerRollupProof) { pendingConflations.removeFirst() }
-          proofWindowBytesSealed = 0
+        rollupProverClient.createProofRequest(buildRequest(allChunks, window, l2Executions))
+          .thenCompose { proofIndex ->
+            rollupProofPoller.addProofInProgress(
+              proofIndex = proofIndex,
+              blobsData = allChunks.map {
+                BlobData(chunkHash = it.chunkHash, blobBytes = it.blobBytes, batchesCount = 0u)
+              },
+              parentDataRollingHash = allChunks.first().parentDataRollingHash,
+              dataRollingHash = allChunks.last().let {
+                dataRollingHashCalculator.fold(it.parentDataRollingHash, it.chunkHash)
+              },
+              endOffset = partialChunk.endOffset,
+              startBlockTimestamp = Instant.fromEpochSeconds(window.first().blocks.first().timestamp.toLong()),
+              endBlockTimestamp = Instant.fromEpochSeconds(window.last().blocks.last().timestamp.toLong()),
+              totalBatchesCount = window.size,
+            )
 
-          trySubmitRollupProof()
-        }.toSafeFuture()
+            sealedFullChunks.clear()
+            repeat(conflationsPerRollupProof) { pendingConflations.removeFirst() }
+            proofWindowBytesSealed = 0
+
+            SafeFuture.completedFuture(Unit)
+          }.toSafeFuture()
+      }.toSafeFuture()
     }.toSafeFuture()
   }
 
@@ -165,28 +212,24 @@ class RollupProofGeneratingCoordinator(
     val endOffset = streamBuffer.size()
     val blobBytes = streamBuffer.toByteArray().copyOf(BLOB_BYTES_LENGTH)
     val chunkHash = chunkHasher(blobBytes)
-    val nextDrh = DataRollingHashCalculator.fold(parentDataRollingHash, chunkHash)
+    val nextDrh = dataRollingHashCalculator.fold(parentDataRollingHash, chunkHash)
     val chunk = SealedChunk(blobBytes, chunkHash, parentDataRollingHash, endOffset)
     parentDataRollingHash = nextDrh
     streamBuffer.reset()
     return chunk
   }
 
-  private fun buildRequest(chunks: List<SealedChunk>, conflations: List<PendingConflation>): RollupProofRequestV1 {
+  private fun buildRequest(
+    chunks: List<SealedChunk>,
+    conflations: List<PendingConflation>,
+    l2Executions: List<BlockIntervalProofIndex>,
+  ): RollupProofRequestV1 {
     val lastChunk = chunks.last()
     val opaqueSuffixBytes = ByteArray(BLOB_BYTES_LENGTH - lastChunk.endOffset)
 
     return RollupProofRequestV1(
       conflations = conflations.map { ConflationWitness(it.blocks.map(blockEncoder::encode)) },
-      l2Executions =
-      conflations.map {
-        BlockIntervalProofIndex(
-          startBlockNumber = it.conflationResult.startBlockNumber,
-          endBlockNumber = it.conflationResult.endBlockNumber,
-          startBlockTimestamp = Instant.fromEpochSeconds(it.blocks.first().timestamp.toLong()),
-          hash = TODO("execution proof request hash — see Open Question #4"),
-        )
-      },
+      l2Executions = l2Executions,
       chunks = chunks.map { it.chunkHash },
       parentDataRollingHash = chunks.first().parentDataRollingHash,
       startOffset = 0,

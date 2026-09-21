@@ -13,12 +13,12 @@ fun createBlobRecordV2(
   endBlockTimestamp: Instant? = null,
   parentDataRollingHash: ByteArray = Random.nextBytes(32),
   dataRollingHash: ByteArray = Random.nextBytes(32),
-  totalConflationsCount: UInt = 1U,
+  totalBatchesCount: UInt = 1U,
   blobsData: List<BlobData> = listOf(
     BlobData(
       chunkHash = Random.nextBytes(32),
       blobBytes = Random.nextBytes(32),
-      conflationsCount = 1U,
+      batchesCount = 1U,
     ),
   ),
   proofHash: ByteArray = Random.nextBytes(32),
@@ -35,7 +35,7 @@ fun createBlobRecordV2(
     endBlockTimestamp = resolvedEndBlockTimestamp,
     parentDataRollingHash = parentDataRollingHash,
     dataRollingHash = dataRollingHash,
-    totalConflationsCount = totalConflationsCount,
+    totalBatchesCount = totalBatchesCount,
     blobsData = blobsData,
     proofHash = proofHash,
     endOffset = endOffset,

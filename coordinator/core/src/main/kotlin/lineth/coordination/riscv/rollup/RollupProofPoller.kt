@@ -51,7 +51,7 @@ class RollupProofPoller(
     val endOffset: Int,
     val startBlockTimestamp: Instant,
     val endBlockTimestamp: Instant,
-    val totalConflationsCount: Int,
+    val totalBatchesCount: Int,
   )
 
   private val proofRequestsInProgress = ConcurrentLinkedDeque<ProofContext>()
@@ -74,7 +74,7 @@ class RollupProofPoller(
     endOffset: Int,
     startBlockTimestamp: Instant,
     endBlockTimestamp: Instant,
-    totalConflationsCount: Int,
+    totalBatchesCount: Int,
   ) {
     proofRequestsInProgress.add(
       ProofContext(
@@ -85,7 +85,7 @@ class RollupProofPoller(
         endOffset = endOffset,
         startBlockTimestamp = startBlockTimestamp,
         endBlockTimestamp = endBlockTimestamp,
-        totalConflationsCount = totalConflationsCount,
+        totalBatchesCount = totalBatchesCount,
       ),
     )
   }

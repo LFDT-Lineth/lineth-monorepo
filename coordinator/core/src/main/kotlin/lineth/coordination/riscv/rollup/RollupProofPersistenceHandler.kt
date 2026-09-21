@@ -19,7 +19,7 @@ class RollupProofPersistenceHandler(
       endBlockTimestamp = context.endBlockTimestamp,
       parentDataRollingHash = context.parentDataRollingHash,
       dataRollingHash = context.dataRollingHash,
-      totalConflationsCount = context.totalConflationsCount.toUInt(),
+      totalBatchesCount = context.totalBatchesCount.toUInt(),
       blobsData = context.blobsData,
       proofHash = context.proofIndex.hash,
       endOffset = context.endOffset,

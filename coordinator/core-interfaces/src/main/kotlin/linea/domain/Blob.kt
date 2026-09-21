@@ -153,7 +153,7 @@ data class BlobRecordV2(
   val endBlockTimestamp: Instant,
   val parentDataRollingHash: ByteArray,
   val dataRollingHash: ByteArray,
-  val totalConflationsCount: UInt,
+  val totalBatchesCount: UInt,
   val blobsData: List<BlobData>,
   val proofHash: ByteArray,
   val endOffset: Int,
@@ -170,7 +170,7 @@ data class BlobRecordV2(
     if (endBlockTimestamp != other.endBlockTimestamp) return false
     if (!parentDataRollingHash.contentEquals(other.parentDataRollingHash)) return false
     if (!dataRollingHash.contentEquals(other.dataRollingHash)) return false
-    if (totalConflationsCount != other.totalConflationsCount) return false
+    if (totalBatchesCount != other.totalBatchesCount) return false
     if (blobsData != other.blobsData) return false
     if (!proofHash.contentEquals(other.proofHash)) return false
     if (endOffset != other.endOffset) return false
@@ -185,7 +185,7 @@ data class BlobRecordV2(
     result = 31 * result + endBlockTimestamp.hashCode()
     result = 31 * result + parentDataRollingHash.contentHashCode()
     result = 31 * result + dataRollingHash.contentHashCode()
-    result = 31 * result + totalConflationsCount.hashCode()
+    result = 31 * result + totalBatchesCount.hashCode()
     result = 31 * result + blobsData.hashCode()
     result = 31 * result + proofHash.contentHashCode()
     result = 31 * result + endOffset
@@ -196,7 +196,7 @@ data class BlobRecordV2(
 data class BlobData(
   val chunkHash: ByteArray,
   val blobBytes: ByteArray,
-  val conflationsCount: UInt,
+  val batchesCount: UInt,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -206,7 +206,7 @@ data class BlobData(
 
     if (!chunkHash.contentEquals(other.chunkHash)) return false
     if (!blobBytes.contentEquals(other.blobBytes)) return false
-    if (conflationsCount != other.conflationsCount) return false
+    if (batchesCount != other.batchesCount) return false
 
     return true
   }
@@ -214,7 +214,7 @@ data class BlobData(
   override fun hashCode(): Int {
     var result = chunkHash.contentHashCode()
     result = 31 * result + blobBytes.contentHashCode()
-    result = 31 * result + conflationsCount.hashCode()
+    result = 31 * result + batchesCount.hashCode()
     return result
   }
 }
