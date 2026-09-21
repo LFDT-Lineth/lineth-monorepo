@@ -2,9 +2,9 @@ package gkr
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/gnark/std/gkrapi/gkr"
 )
 
 type (
@@ -41,30 +41,32 @@ type GateAPI interface {
 
 	// Mul returns res = i1 * i2 * ... in
 	Mul(i1, i2 Variable, in ...Variable) Variable
+
+	// Const introduces a constant.
+	Const(v field.Element) Variable
 }
 
 // GateFunction is a function that evaluates a polynomial over its inputs
 // using the given GateAPI.
 // It is used to define custom gates in GKR circuits.
-type GateFunction func(GateAPI, ...Variable) field.Ext
+type GateFunction func(GateAPI, ...Variable) Variable
 
 type API struct {
-	circuit   Circuit
+	circuit   rawCircuit
 	positions map[Identifier]Variable
 }
 
 // Gate adds the given gate with the given inputs and returns its output wire.
 func (api *API) Gate(gate GateFunction, inputs ...Variable) Variable {
-	/*api.circuit = append(api.circuit, gkrcore.RawWire{
-		Gate:   gate,
-		Inputs: utils.Map(inputs, frontendVarToInt),
-	})
-	api.assignments = append(api.assignments, nil)
-	return Variable(len(api.circuit) - 1)*/
-	return -1
+	ins := make([]int, len(inputs))
+	for i, in := range inputs {
+		ins[i] = int(in)
+	}
+	api.circuit = append(api.circuit, rawWire{Gate: gate, Inputs: ins})
+	return Variable(len(api.circuit) - 1)
 }
 
-func (api *API) gate2PlusIn(gate gkr.GateFunction, in1, in2 Variable, in ...Variable) Variable {
+func (api *API) gate2PlusIn(gate GateFunction, in1, in2 Variable, in ...Variable) Variable {
 	inCombined := make([]Variable, 2+len(in))
 	inCombined[0] = in1
 	inCombined[1] = in2
@@ -75,19 +77,19 @@ func (api *API) gate2PlusIn(gate gkr.GateFunction, in1, in2 Variable, in ...Vari
 }
 
 func (api *API) Add(i1, i2 Variable) Variable {
-	return api.gate2PlusIn(gkrcore.Add2, i1, i2)
+	return api.gate2PlusIn(Add2, i1, i2)
 }
 
 func (api *API) Neg(i1 Variable) Variable {
-	return api.Gate(gkrcore.Neg, i1)
+	return api.Gate(Neg, i1)
 }
 
 func (api *API) Sub(i1, i2 Variable) Variable {
-	return api.gate2PlusIn(gkrcore.Sub2, i1, i2)
+	return api.gate2PlusIn(Sub2, i1, i2)
 }
 
 func (api *API) Mul(i1, i2 Variable) Variable {
-	return api.gate2PlusIn(gkrcore.Mul2, i1, i2)
+	return api.gate2PlusIn(Mul2, i1, i2)
 }
 
 // newID binds id to v. Internal wires are not bound.
@@ -112,15 +114,52 @@ func (api *API) Export(v Variable, id Identifier) {
 func (api *API) NewInput(id Identifier) Variable {
 	v := Variable(len(api.circuit))
 	api.newID(v, id)
-	api.circuit = append(api.circuit, Wire{})
+	api.circuit = append(api.circuit, rawWire{})
 	return v
 }
 
+// Compile traces every gate function into bytecode, determines its degree, and
+// derives the proving schedule. It panics on a malformed circuit.
 func (api *API) Compile() *Compiled {
-	return nil
+	circuit := make(Circuit, len(api.circuit))
+	for i, w := range api.circuit {
+		circuit[i].Inputs = w.Inputs
+		circuit[i].Exported = w.Exported
+		if w.IsInput() {
+			continue
+		}
+		if w.Gate == nil {
+			panic(fmt.Sprintf("gkr: wire %d has inputs but no gate", i))
+		}
+		gate, err := CompileGateFunction(w.Gate, len(w.Inputs))
+		if err != nil {
+			panic(fmt.Sprintf("gkr: wire %d: %v", i, err))
+		}
+		circuit[i].Gate = gate
+	}
+
+	if len(circuit.Inputs()) == len(circuit) {
+		panic("gkr: circuit has no non-input wires")
+	}
+
+	schedule, err := DefaultProvingSchedule(circuit)
+	if err != nil {
+		panic(fmt.Sprintf("gkr: %v", err))
+	}
+
+	return &Compiled{
+		circuit:   circuit,
+		schedule:  schedule,
+		positions: maps.Clone(api.positions),
+	}
 }
 
+// Compiled is a circuit ready to be proven or verified. It is the unit that
+// Serialize and Deserialize round-trip.
 type Compiled struct {
+	circuit   Circuit
+	schedule  ProvingSchedule
+	positions map[Identifier]Variable
 }
 
 func (c *Compiled) Serialize() []byte {
