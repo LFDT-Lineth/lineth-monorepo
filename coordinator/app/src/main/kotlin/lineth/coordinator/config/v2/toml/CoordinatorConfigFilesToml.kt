@@ -17,10 +17,10 @@ data class CoordinatorConfigFileToml(
   val protocol: ProtocolToml,
   @param:ConfigSection("Block conflation, blob compression, and proof aggregation settings.")
   val conflation: ConflationToml = ConflationToml(),
-  @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
-  val prover: ProverToml,
+  @param:ConfigSection("Pre RISC-V File-based prover request/response directories and switch-over settings.")
+  val preRiscvProver: PreRiscvProverToml,
   @param:ConfigSection("RISC-V prover request/response directories for execution, rollup, and aggregation proofs.")
-  val riscvProver: ProverToml? = null,
+  val prover: ProverToml? = null,
   @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
   @param:ConfigSection("Shomei state manager client settings.")
@@ -95,8 +95,8 @@ data class CoordinatorConfigToml(
         tracesCountersLimitsV4 = tracesLimitsV4?.let { TracesCountersV4(it.tracesLimits) },
         tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
-      proversConfig = this.configs.prover.reified(),
-      riscvProversConfig = this.configs.riscvProver?.reified(),
+      preRiscvProversConfig = this.configs.preRiscvProver.reified(),
+      proversConfig = this.configs.prover?.reified(),
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),

@@ -16,6 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
+import lineth.coordinator.clients.prover.PreRiscvProverClientFactory
 import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -70,9 +71,9 @@ class ConflationAppOrchestrator(
       .get()
   }
 
-  private val preRiscvProverClientFactory = ProverClientFactory(
+  private val preRiscvProverClientFactory = PreRiscvProverClientFactory(
     vertx = vertx,
-    config = configs.proversConfig,
+    config = configs.preRiscvProversConfig,
     metricsFacade = metricsFacade,
   )
 
@@ -143,7 +144,7 @@ class ConflationAppOrchestrator(
         )
         DisabledService("forced-transactions-invalidity-proof")
       } else {
-        check(configs.proversConfig.proverA.invalidity != null) {
+        check(configs.preRiscvProversConfig.proverSwitch.current.invalidity != null) {
           "prover.invalidity config is required for forced transactions feature to work"
         }
         val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)
@@ -264,14 +265,17 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
+      val chainId: ULong = l2EthClient.ethChainId().get()
       val riscvProverClientFactory = ProverClientFactory(
         vertx = vertx,
-        config = configs.riscvProversConfig!!,
+        config = configs.proversConfig!!,
         l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+        chainId = chainId.toLong(),
         metricsFacade = metricsFacade,
       )
       ConflationAppV2(
         vertx = vertx,
+        chainId = chainId,
         batchesRepository = batchesRepository,
         configs = configs,
         forcedTransactionsApp = forcedTransactionsApp,

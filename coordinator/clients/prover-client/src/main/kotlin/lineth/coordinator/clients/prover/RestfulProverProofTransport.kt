@@ -11,6 +11,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpResponse
 import linea.clients.ProverProofTransport
 import linea.domain.ProofIndex
+import linea.kotlin.encodeHex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.httprest.client.HttpRestClient
@@ -28,8 +29,8 @@ import kotlin.time.Duration
  *  - `POST /v1/jobs/{proof_type}/{start_block}/{end_block}` — creates a job from `{ "proof_request": <requestDto> }`.
  *
  * @param proofType the `proof_type` path segment for this transport (e.g. "execution", "rollup", "rollup-aggregation").
- * @param startBlockProvider extracts the `start_block` path segment from a proof index.
- * @param endBlockProvider extracts the `end_block` path segment from a proof index.
+ * @param proofStartBlockProvider extracts the `start_block` path segment from a proof index.
+ * @param proofEndBlockProvider extracts the `end_block` path segment from a proof index.
  * @param responseDtoClass concrete [ResponseDto] type the `proof_response` payload is parsed into.
  */
 class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : ProofIndex>(
@@ -37,12 +38,18 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
   private val vertx: Vertx,
   private val chainId: Long,
   private val proofType: String,
-  private val startBlockProvider: (TProofIndex) -> ULong,
-  private val endBlockProvider: (TProofIndex) -> ULong,
+  private val proofStartBlockProvider: (TProofIndex) -> ULong,
+  private val proofEndBlockProvider: (TProofIndex) -> ULong,
+  private val proofHashProvider: (TProofIndex) -> ByteArray,
+  private val restfulApiBasePath: String = "/api",
+  private val restfulApiVersion: String = "v1",
   private val jobsPathProvider: (proofIndex: TProofIndex) -> String = { proofIndex: TProofIndex ->
-    "/api/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
+    requestURIPrefix(restfulApiBasePath, restfulApiVersion) +
+      "/jobs/$chainId/$proofType/${proofStartBlockProvider(proofIndex)}/${proofEndBlockProvider(proofIndex)}"
   },
-  private val dequeuePathProvider: String = "/api/v1/jobs/dequeue",
+  private val dequeuePathProvider: String =
+    requestURIPrefix(restfulApiBasePath, restfulApiVersion) +
+      "/jobs/dequeue",
   private val responseDtoClass: Class<ResponseDto>,
   private val pollingInterval: Duration,
   private val pollingTimeout: Duration,
@@ -58,7 +65,10 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
 
   override fun submitRequest(proofIndex: TProofIndex, requestDto: RequestDto): SafeFuture<Unit> {
     val path = jobsPathProvider(proofIndex)
-    val body = SubmitJobRequest(proofRequest = objectMapper.valueToTree(requestDto))
+    val body = SubmitJobRequest(
+      proofRequestHash = proofHashProvider(proofIndex).encodeHex(),
+      proofRequest = objectMapper.valueToTree(requestDto),
+    )
     val buffer = Buffer.buffer(objectMapper.writeValueAsBytes(body))
     log.debug("Submitting proof request. POST {}", path)
     return restClient.post(path, buffer).thenApply { result ->
@@ -151,6 +161,8 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
 
   /** Body of `POST /v1/jobs/...`: the request DTO wrapped under a `proof_request` field. */
   private data class SubmitJobRequest(
+    @get:JsonProperty("proof_request_hash")
+    val proofRequestHash: String,
     @get:JsonProperty("proof_request")
     val proofRequest: JsonNode,
   )
@@ -185,5 +197,14 @@ class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : P
 
     /** Statuses indicating a job already exists for a proof index (so a new request must not be submitted). */
     private val ACTIVE_JOB_STATUSES = setOf(STATUS_QUEUED, STATUS_CLAIMED, STATUS_PROVED)
+    fun requestURIPrefix(basePath: String, version: String): String = "${normalizeBasePath(basePath)}/$version"
+    fun normalizeBasePath(basePath: String): String {
+      val trimmed = basePath.trim().trimEnd('/')
+      return when {
+        trimmed.isEmpty() -> ""
+        trimmed.startsWith("/") -> trimmed
+        else -> "/$trimmed"
+      }
+    }
   }
 }

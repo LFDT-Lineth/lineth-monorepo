@@ -174,7 +174,8 @@ data class L2ExecutionProofRequestParamsDto(
 )
 
 data class L2ExecutionProofRequestDto(
-  val programVk: String,
+  val programId: String,
+  val provingSystemVersion: String,
   val proofRequest: L2ExecutionProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
@@ -234,13 +235,15 @@ data class RestfulRollupProofRequestParamsDto(
 )
 
 data class FileBasedRollupProofRequestDto(
-  val programVk: String,
+  val programId: String,
+  val provingSystemVersion: String,
   val proofRequest: FileBasedRollupProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
 data class RestfulRollupProofRequestDto(
-  val programVk: String,
+  val programId: String,
+  val provingSystemVersion: String,
   val proofRequest: RestfulRollupProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
@@ -278,13 +281,15 @@ data class RestfulRollupAggregationProofRequestParamsDto(
 )
 
 data class FileBasedRollupAggregationProofRequestDto(
-  val programVk: String,
+  val programId: String,
+  val provingSystemVersion: String,
   val proofRequest: FileBasedRollupAggregationProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
 data class RestfulRollupAggregationProofRequestDto(
-  val programVk: String,
+  val programId: String,
+  val provingSystemVersion: String,
   val proofRequest: RestfulRollupAggregationProofRequestParamsDto,
   val metadata: MetaDataDto,
 )

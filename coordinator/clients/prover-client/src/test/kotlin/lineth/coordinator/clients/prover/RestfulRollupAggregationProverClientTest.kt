@@ -7,7 +7,8 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.proverJobResponseBody
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.restClient
@@ -48,15 +49,17 @@ class RestfulRollupAggregationProverClientTest {
       vertx = vertx,
       chainId = CHAIN_ID,
       proofType = proofType,
-      startBlockProvider = { it.startBlockNumber },
-      endBlockProvider = { it.endBlockNumber },
+      proofStartBlockProvider = { it.startBlockNumber },
+      proofEndBlockProvider = { it.endBlockNumber },
+      proofHashProvider = { it.hash },
       responseDtoClass = RollupAggregationProofResponseDto::class.java,
       pollingInterval = 50.milliseconds,
       pollingTimeout = 2.seconds,
     )
     client = RestfulRollupAggregationProverClient(
       transport = transport,
-      programVk = ROLLUP_AGGREGATION_PROGRAM_VK,
+      programId = ROLLUP_AGGREGATION_PROGRAM_ID,
+      provingSystemVersion = PROVING_SYSTEM_VERSION,
     )
   }
 
@@ -82,7 +85,8 @@ class RestfulRollupAggregationProverClientTest {
       RestfulRollupAggregationProofRequestDto::class.java,
     )
     val expectedDto = RestfulRollupAggregationProofRequestDtoMapper(
-      ROLLUP_AGGREGATION_PROGRAM_VK,
+      ROLLUP_AGGREGATION_PROGRAM_ID,
+      PROVING_SYSTEM_VERSION,
     ).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }

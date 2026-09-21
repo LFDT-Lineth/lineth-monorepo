@@ -7,7 +7,8 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.CHAIN_ID
-import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_PROGRAM_VK
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.blockIntervalProofIndex
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.proverJobResponseBody
@@ -49,15 +50,17 @@ class RestfulRollupProverClientTest {
       vertx = vertx,
       chainId = CHAIN_ID,
       proofType = proofType,
-      startBlockProvider = { it.startBlockNumber },
-      endBlockProvider = { it.endBlockNumber },
+      proofStartBlockProvider = { it.startBlockNumber },
+      proofEndBlockProvider = { it.endBlockNumber },
+      proofHashProvider = { it.hash },
       responseDtoClass = RollupProofResponseDto::class.java,
       pollingInterval = 50.milliseconds,
       pollingTimeout = 2.seconds,
     )
     client = RestfulRollupProverClient(
       transport = transport,
-      programVk = ROLLUP_PROGRAM_VK,
+      programId = ROLLUP_PROGRAM_ID,
+      provingSystemVersion = PROVING_SYSTEM_VERSION,
       chainId = CHAIN_ID,
     )
   }
@@ -85,7 +88,11 @@ class RestfulRollupProverClientTest {
 
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
     val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RestfulRollupProofRequestDto::class.java)
-    val expectedDto = RestfulRollupProofRequestDtoMapper(ROLLUP_PROGRAM_VK, CHAIN_ID).invoke(request).get()
+    val expectedDto = RestfulRollupProofRequestDtoMapper(
+      ROLLUP_PROGRAM_ID,
+      PROVING_SYSTEM_VERSION,
+      CHAIN_ID,
+    ).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }
 

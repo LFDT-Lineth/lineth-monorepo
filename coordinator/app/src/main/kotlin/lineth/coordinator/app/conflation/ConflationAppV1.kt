@@ -48,7 +48,7 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.LatestL1FinalizedBlockProviderSync
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.PreRiscvProverClientFactory
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
@@ -83,7 +83,7 @@ class ConflationAppV1(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val proverClientFactory: ProverClientFactory,
+  private val proverClientFactory: PreRiscvProverClientFactory,
   val l2EthClient: EthApiClient = createEthApiClient(
     rpcUrl = configs.conflation.l2Endpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth.conflation"),

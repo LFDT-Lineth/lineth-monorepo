@@ -10,4 +10,7 @@ enum class LineaMetricsCategory : MetricsCategory {
   CONFLATION,
   GAS_PRICE_CAP,
   L2_PRICING,
+  RISCV_L2_EXECUTION,
+  RISCV_ROLLUP,
+  RISCV_ROLLUP_AGGREGATION,
 }

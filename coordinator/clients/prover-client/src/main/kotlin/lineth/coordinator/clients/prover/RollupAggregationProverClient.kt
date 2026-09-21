@@ -17,7 +17,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  */
 internal class FileBasedRollupAggregationProofRequestDtoMapper(
-  private val programVk: String,
+  private val programId: String,
+  private val provingSystemVersion: String,
   private val rollupProofTransport: FileBasedRollupProofTransport,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<FileBasedRollupAggregationProofRequestDto> {
@@ -27,7 +28,8 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
     return SafeFuture.collectAll(rollupProofFutures.stream())
       .thenApply { rollupResponseDtos ->
         FileBasedRollupAggregationProofRequestDto(
-          programVk = programVk,
+          programId = programId,
+          provingSystemVersion = provingSystemVersion,
           proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
             rollupProofs = rollupResponseDtos.mapIndexed { index, response ->
               val proofResponse = requireNotNull(response) {
@@ -59,11 +61,13 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
  * each rollup proof response.
  */
 internal class RestfulRollupAggregationProofRequestDtoMapper(
-  private val programVk: String,
+  private val programId: String,
+  private val provingSystemVersion: String,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RestfulRollupAggregationProofRequestDto> {
     val dto = RestfulRollupAggregationProofRequestDto(
-      programVk = programVk,
+      programId = programId,
+      provingSystemVersion = provingSystemVersion,
       proofRequest = RestfulRollupAggregationProofRequestParamsDto(
         rollupProofIndexes = request.rollupProofs,
       ),
@@ -122,10 +126,12 @@ private typealias RestfulRollupAggregationProofTransport =
 class FileBasedRollupAggregationProverClient(
   transport: FileBasedRollupAggregationProofTransport,
   rollupProofTransport: FileBasedRollupProofTransport,
-  programVk: String,
+  programId: String,
+  provingSystemVersion: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = FileBasedRollupAggregationProofRequestDtoMapper(
-    programVk,
+    programId,
+    provingSystemVersion,
     rollupProofTransport,
   ),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
@@ -159,9 +165,10 @@ class FileBasedRollupAggregationProverClient(
  */
 class RestfulRollupAggregationProverClient(
   transport: RestfulRollupAggregationProofTransport,
-  programVk: String,
+  programId: String,
+  provingSystemVersion: String,
   proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> =
-    RestfulRollupAggregationProofRequestDtoMapper(programVk),
+    RestfulRollupAggregationProofRequestDtoMapper(programId, provingSystemVersion),
   proofResponseDtoMapper: (RollupAggregationProofResponseDto)
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

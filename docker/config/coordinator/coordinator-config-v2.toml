@@ -57,50 +57,76 @@ deadline-check-interval = "PT8S"
 target-end-blocks = []
 timestamp-based-hard-forks = []
 
-[prover]
-[prover.execution]
+[pre-riscv-prover]
+[pre-riscv-prover.execution]
 fs-requests-directory = "/data/prover/v3/execution/requests"
 fs-responses-directory = "/data/prover/v3/execution/responses"
-[prover.blob-compression]
+[pre-riscv-prover.blob-compression]
 fs-requests-directory = "/data/prover/v3/compression/requests"
 fs-responses-directory = "/data/prover/v3/compression/responses"
-[prover.invalidity]
+[pre-riscv-prover.invalidity]
 fs-requests-directory = "/data/prover/v3/invalidity/requests"
 fs-responses-directory = "/data/prover/v3/invalidity/responses"
-[prover.proof-aggregation]
+[pre-riscv-prover.proof-aggregation]
 fs-requests-directory = "/data/prover/v3/aggregation/requests"
 fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+#[pre-riscv-prover.new]
+#switch-block-number-inclusive=1000
+# Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+#switch-block-timestamp = 1700000000
+#[pre-riscv-prover.new.execution]
+#fs-requests-directory = "/data/prover/v4/execution/requests"
+#fs-responses-directory = "/data/prover/v4/execution/responses"
+#[pre-riscv-prover.new.blob-compression]
+#fs-requests-directory = "/data/prover/v4/compression/requests"
+#fs-responses-directory = "/data/prover/v4/compression/responses"
+#[pre-riscv-prover.new.proof-aggregation]
+#fs-requests-directory = "/data/prover/v4/aggregation/requests"
+#fs-responses-directory = "/data/prover/v4/aggregation/responses"
+
+# RISC-V prover config
+[prover]
+proving-system-version = "0xabcdef1"
+fork-name = "amsterdam"
+[prover.l2-execution]
+programId = "0fedcba1"
+[prover.l2-execution.file-based-folder-config]
+fs-requests-directory = "/data/riscv-prover/v1/execution/requests"
+fs-responses-directory = "/data/riscv-prover/v1/execution/responses"
+[prover.rollup]
+programId = "0fedcba2"
+[prover.rollup.file-based-folder-config]
+fs-requests-directory = "/data/riscv-prover/v1/rollup/requests"
+fs-responses-directory = "/data/riscv-prover/v1/rollup/responses"
+[prover.rollup-aggregation]
+programId = "0fedcba3"
+[prover.rollup-aggregation.file-based-folder-config]
+fs-requests-directory = "/data/riscv-prover/v1/aggregation/requests"
+fs-responses-directory = "/data/riscv-prover/v1/aggregation/responses"
 
 #[prover.new]
 #switch-block-number-inclusive=1000
 # Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
 #switch-block-timestamp = 1700000000
-#[prover.new.execution]
-#fs-requests-directory = "/data/prover/v3/execution/requests"
-#fs-responses-directory = "/data/prover/v3/execution/responses"
-#[prover.new.blob-compression]
-#fs-requests-directory = "/data/prover/v3/compression/requests"
-#fs-responses-directory = "/data/prover/v3/compression/responses"
-#[prover.new.proof-aggregation]
-#fs-requests-directory = "/data/prover/v3/aggregation/requests"
-#fs-responses-directory = "/data/prover/v3/aggregation/responses"
+#proving-system-version = "0xabcdef2"
+#fork-name = "amsterdam"
 
-# RISC-V prover config
-
-[riscv-prover]
-[riscv-prover.execution]
-fs-requests-directory = "/data/prover/riscv/execution/requests"
-fs-responses-directory = "/data/prover/riscv/execution/responses"
-program-vk = "0x..."
-fork-name = "cancun"
-[riscv-prover.rollup]
-fs-requests-directory = "/data/prover/riscv/rollup/requests"
-fs-responses-directory = "/data/prover/riscv/rollup/responses"
-program-vk = "0x..."
-[riscv-prover.proof-aggregation]
-fs-requests-directory = "/data/prover/riscv/aggregation/requests"
-fs-responses-directory = "/data/prover/riscv/aggregation/responses"
-program-vk = "0x..."
+#[prover.new.l2-execution]
+#programId = "0fedcba4"
+#[prover.new.l2-execution.file-based-folder-config]
+#fs-requests-directory = "/data/riscv-prover/v2/execution/requests"
+#fs-responses-directory = "/data/riscv-prover/v2/execution/responses"
+#[prover.new.rollup]
+#programId = "0fedcba5"
+#[prover.new.rollup.file-based-folder-config]
+#fs-requests-directory = "/data/riscv-prover/v2/rollup/requests"
+#fs-responses-directory = "/data/riscv-prover/v2/rollup/responses"
+#[prover.new.rollup-aggregation]
+#programId = "0fedcba6"
+#[prover.new.rollup-aggregation.file-based-folder-config]
+#fs-requests-directory = "/data/riscv-prover/v2/aggregation/requests"
+#fs-responses-directory = "/data/riscv-prover/v2/aggregation/responses"
 
 [traces]
 [traces.counters]
