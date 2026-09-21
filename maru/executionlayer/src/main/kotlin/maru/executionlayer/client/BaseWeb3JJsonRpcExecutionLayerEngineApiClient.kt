@@ -8,7 +8,7 @@
  */
 package maru.executionlayer.client
 
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.metrics.MaruMetricsCategory
 import net.consensys.linea.metrics.DynamicTagTimer
@@ -19,7 +19,7 @@ import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 abstract class BaseWeb3JJsonRpcExecutionLayerEngineApiClient(
-  protected val web3jClient: Web3jClient,
+  protected val web3jClient: Web3JClient,
   protected val metricsFacade: MetricsFacade,
 ) : ExecutionLayerEngineApiClient {
   protected val web3jEngineClient: ExecutionEngineClient = web3jClient

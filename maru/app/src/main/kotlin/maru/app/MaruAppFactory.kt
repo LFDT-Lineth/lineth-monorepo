@@ -20,7 +20,7 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.timer.VertxTimerFactory
@@ -256,7 +256,7 @@ class MaruAppFactory(
     val qbftFork = beaconGenesisConfig.getForkByConfigType(QbftConsensusConfig::class)
     val qbftConfig = qbftFork.configuration as QbftConsensusConfig
 
-    val engineApiWeb3jClient: Web3jClient? =
+    val engineApiWeb3jClient: Web3JClient? =
       config.validatorElNode?.let {
         Helpers.createWeb3jClient(
           apiEndpointConfig = it.engineApiEndpoint,
@@ -308,7 +308,7 @@ class MaruAppFactory(
       overridingFinalizationProvider
         ?: setupFinalizationProvider(config, overridingLineaContractClient, vertx, timerFactory)
     syncControllerImpl = if (config.p2p != null) {
-      val followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient> =
+      val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient> =
         config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
           Helpers.createWeb3jClient(
             apiEndpointConfig = apiEndpointConfig,

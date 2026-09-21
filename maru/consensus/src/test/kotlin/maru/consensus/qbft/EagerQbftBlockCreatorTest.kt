@@ -9,7 +9,7 @@
 package maru.consensus.qbft
 
 import linea.teku.TekuWeb3JClientFactory
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
@@ -71,7 +71,7 @@ class EagerQbftBlockCreatorTest {
   private lateinit var cluster: Cluster
   private lateinit var besuInstance: BesuNode
   private lateinit var ethApiClient: Web3j
-  private val engineApiClients = mutableListOf<Web3jClient>()
+  private val engineApiClients = mutableListOf<Web3JClient>()
   private val proposerSelector = Mockito.mock(ProposerSelector::class.java)
   private val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
   private val beaconChain = Mockito.mock(BeaconChain::class.java)

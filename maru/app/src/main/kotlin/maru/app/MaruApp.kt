@@ -13,7 +13,7 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import linea.kotlin.encodeHex
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
@@ -62,7 +62,7 @@ class MaruApp internal constructor(
   private val metricsFacade: MetricsFacade,
   private val metricsSystem: MetricsSystem,
   private val l2EthWeb3j: Web3j?,
-  private val validatorELNodeEngineApiWeb3JClient: Web3jClient?,
+  private val validatorELNodeEngineApiWeb3JClient: Web3JClient?,
   private val apiServer: ApiServer,
   private val syncControllerManager: SyncController,
   private val timerFactory: TimerFactory,
@@ -127,7 +127,7 @@ class MaruApp internal constructor(
     }
   }
 
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient> =
+  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient> =
     config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
       Helpers.createWeb3jClient(
         apiEndpointConfig = apiEndpointConfig,

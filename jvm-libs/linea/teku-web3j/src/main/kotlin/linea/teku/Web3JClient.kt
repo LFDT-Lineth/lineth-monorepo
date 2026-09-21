@@ -11,7 +11,7 @@ package linea.teku
 import okhttp3.OkHttpClient
 import tech.pegasys.teku.ethereum.executionclient.ExecutionEngineClient
 
-class Web3jClient internal constructor(
+class Web3JClient internal constructor(
   val endpoint: String,
   private val httpClient: OkHttpClient,
   engineClient: ExecutionEngineClient,

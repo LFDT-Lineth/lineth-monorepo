@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 class TekuWeb3JClientFactoryTest {
   private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply { start() }
   private val requests = LinkedBlockingQueue<Pair<String, String?>>()
-  private val clients = mutableListOf<Web3jClient>()
+  private val clients = mutableListOf<Web3JClient>()
   private val endpoint = URI("http://127.0.0.1:${server.address.port}").toURL()
 
   @AfterEach
@@ -56,7 +56,7 @@ class TekuWeb3JClientFactoryTest {
     }
   }
 
-  private fun client(jwtPath: String? = null, timeout: Duration = 5.seconds): Web3jClient =
+  private fun client(jwtPath: String? = null, timeout: Duration = 5.seconds): Web3JClient =
     TekuWeb3JClientFactory.create(endpoint, jwtPath, timeout).also { clients.add(it) }
 
   @Test

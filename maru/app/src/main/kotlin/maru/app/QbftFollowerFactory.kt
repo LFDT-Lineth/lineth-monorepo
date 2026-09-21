@@ -8,7 +8,7 @@
  */
 package maru.app
 
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -34,8 +34,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class QbftFollowerFactory(
   private val p2pNetwork: P2PNetwork,
   private val beaconChain: BeaconChain,
-  private val validatorELNodeEngineApiWeb3JClient: Web3jClient?,
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient>,
+  private val validatorELNodeEngineApiWeb3JClient: Web3JClient?,
+  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
   private val metricsFacade: MetricsFacade,
   private val allowEmptyBlocks: Boolean,
   private val finalizationStateProvider: FinalizationProvider,

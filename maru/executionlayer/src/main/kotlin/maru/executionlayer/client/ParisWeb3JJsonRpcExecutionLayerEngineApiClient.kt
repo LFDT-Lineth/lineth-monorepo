@@ -8,7 +8,7 @@
  */
 package maru.executionlayer.client
 
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
@@ -27,7 +27,7 @@ import java.util.Optional
 
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/paris.md
 class ParisWeb3JJsonRpcExecutionLayerEngineApiClient(
-  web3jClient: Web3jClient,
+  web3jClient: Web3JClient,
   metricsFacade: MetricsFacade,
 ) : BaseWeb3JJsonRpcExecutionLayerEngineApiClient(web3jClient = web3jClient, metricsFacade = metricsFacade) {
   override fun getFork(): ElFork = ElFork.Paris

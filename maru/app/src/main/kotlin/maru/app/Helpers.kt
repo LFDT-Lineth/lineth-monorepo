@@ -9,7 +9,7 @@
 package maru.app
 
 import linea.teku.TekuWeb3JClientFactory
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import maru.config.ApiEndpointConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -42,7 +42,7 @@ object Helpers {
   fun createWeb3jClient(
     apiEndpointConfig: ApiEndpointConfig,
     log: Logger,
-  ): Web3jClient =
+  ): Web3JClient =
     TekuWeb3JClientFactory
       .create(
         endpoint = apiEndpointConfig.endpoint,
@@ -55,7 +55,7 @@ object Helpers {
     elFork: ElFork,
     metricsFacade: MetricsFacade,
     finalizationStateProvider: FinalizationProvider,
-    followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient>,
+    followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =
       followerELNodeEngineApiWeb3JClients.mapValues { (followerName, web3JClient) ->
@@ -77,7 +77,7 @@ object Helpers {
   fun createForkAwareBlockImportHandlers(
     forksSchedule: ForksSchedule,
     metricsFacade: MetricsFacade,
-    followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient>,
+    followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
     finalizationProvider: FinalizationProvider,
   ): NewBlockHandlerMultiplexer {
     val elFollowersNewBlockHandlerMap =

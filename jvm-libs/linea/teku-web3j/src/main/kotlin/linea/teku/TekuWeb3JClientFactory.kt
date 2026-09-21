@@ -55,7 +55,7 @@ object TekuWeb3JClientFactory {
     log: Logger = LogManager.getLogger("clients.web3j"),
     requestResponseLogLevel: Level = defaultRequestResponseLogLevel,
     failuresLogLevel: Level = defaultFailedRequestResponseLogLevel,
-  ): Web3jClient {
+  ): Web3JClient {
     val okHttpClient: OkHttpClient =
       okHttpClientBuilder(
         logger = log,
@@ -93,6 +93,6 @@ object TekuWeb3JClientFactory {
       { okHttpClient },
       { throw UnsupportedOperationException("IPC transport is not supported by this HTTP client factory") },
     )
-    return Web3jClient(endpoint.toString(), okHttpClient, engineClient)
+    return Web3JClient(endpoint.toString(), okHttpClient, engineClient)
   }
 }

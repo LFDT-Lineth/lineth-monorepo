@@ -8,7 +8,7 @@
  */
 package maru.executionlayer
 
-import linea.teku.Web3jClient
+import linea.teku.Web3JClient
 import maru.consensus.ElFork
 import maru.executionlayer.client.AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.CancunWeb3JJsonRpcExecutionLayerEngineApiClient
@@ -23,7 +23,7 @@ import net.consensys.linea.metrics.MetricsFacade
 
 object ExecutionLayerFactory {
   fun buildExecutionLayerManager(
-    web3JEngineApiClient: Web3jClient,
+    web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
   ): ExecutionLayerManager =
@@ -36,7 +36,7 @@ object ExecutionLayerFactory {
     )
 
   fun buildExecutionEngineClient(
-    web3JEngineApiClient: Web3jClient,
+    web3JEngineApiClient: Web3JClient,
     elFork: ElFork,
     metricsFacade: MetricsFacade,
   ): ExecutionLayerEngineApiClient =
