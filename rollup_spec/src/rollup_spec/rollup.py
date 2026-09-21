@@ -41,7 +41,7 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 # EIP-4844 blob size: FIELD_ELEMENTS_PER_BLOB (4096) × BYTES_PER_FIELD_ELEMENT (32).
 # The KZG commitment is computed over a polynomial defined by exactly this many
 # evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
-# be exactly `BLOB_BYTES_LENGTH` bytes — shorter compressed output is zero-padded.
+# be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
 
 # Big-endian width of the per-conflation segment length prefix within the DA
@@ -338,15 +338,11 @@ def _verify_and_fold_chunks(
         else:
             if chunk.calldata_length <= 0:
                 raise Exception(f"calldata chunk {i} must have positive calldataLength")
-            if chunk.calldata_length > 2**64 - 1:
-                raise Exception(f"calldata chunk {i} calldataLength exceeds uint64")
             # Range-aligned calldata chunk: it packs a whole number of
             # segments, so it carries no opaque boundary bytes and its start
             # sits at a fresh stream/segment boundary.
             if len(prefix) != 0 or len(suffix) != 0:
                 raise Exception(f"chunk {i} is a calldata chunk and carries no opaque bytes")
-            if is_first and start_offset != 0:
-                raise Exception(f"chunk {i} is a calldata chunk and starts at offset 0")
             # A calldata chunk must start at a segment boundary. `cursor` is
             # derived in-guest (it advances only by whole blob windows or
             # matched segment ends), so this is an assertion of the stream
@@ -911,8 +907,7 @@ def rlp_encode_truncated_blocks(blocks: Sequence[TruncatedEthereumBlock]) -> byt
 def compress_zstd(data: bytes) -> bytes:
     """
     zstd-compress the canonical RLP-encoded truncated-block payload (§3.1).
-    The rollup guest zero-pads this output to `BLOB_BYTES_LENGTH` and
-    hands the padded result to `ckzg.blob_to_kzg_commitment` (§2.2 step 1).
+    This produces one segment in the continuous DA stream.
 
     The compression profile is a protocol-level decision pinned byte-for-byte
     (§3.2) so the sequencer, this reference, and the guest all produce the same
