@@ -31,7 +31,9 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 	compCtx := sys.Context.Childf("message-bus")
 	seedRound := sys.Rounds[0]
 	// The coins for the message bus land on the round immediately after the seed — which is also
-	// where the preflight data lands. This draws the bus coins via standard fiat-shamir, as far as the round 0 (and precomputed round) carries the same data over shards, all shards samples the same bus coins.
+	// where the preflight data lands. This draws the bus coins via standard fiat-shamir, as far as
+	// the round 0 (and precomputed round) carries the same data over shards, all shards samples the
+	// same bus coins.
 	coinRound := seedRound.EnsureNext()
 	alpha = coinRound.NewCoinField(compCtx.Childf("alpha"))
 	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
@@ -58,7 +60,8 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 			sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
 		}
 
-		// the shard specific preflight data lands on the same round as bus coins, this allows the shard to generate its contribution in the shared randomness  γ.
+		// the shard specific preflight data lands on the same round as bus coins, this allows the
+		// shard to generate its contribution in the shared randomness  γ.
 		//
 		// The cells are lazy rather than written by a prover action. A prover
 		// action registered here would run before the commit action that the later
