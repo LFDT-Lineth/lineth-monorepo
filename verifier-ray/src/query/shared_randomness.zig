@@ -72,8 +72,7 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     inline for (system.contribution_refs, 0..) |ref, i| {
         // The contribution limbs are base-field by protocol contract:
         // prover-ray's messagebus.contributionCell panics on an extension
-        // cell, and the sibling gammaDigest path likewise rejects
-        // ext-encoded cells. Reject an ext-encoded limb here too rather than
+        // cell. Reject an ext-encoded limb here too rather than
         // lifting it via toExt(), which would erase the base/ext distinction
         // and accept an encoding the protocol is meant to forbid.
         const claimed = switch (try ctx.cell(ref.round, ref.index)) {
