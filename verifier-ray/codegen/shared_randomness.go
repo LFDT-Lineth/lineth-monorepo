@@ -57,8 +57,8 @@ type CommitmentRoundCtx struct {
 // sys must have been compiled with messagebus.Compile(sys,
 // messagebus.CompileOptions{SharedRandomness: true}); the coin round the
 // checker was registered on is read directly off the action via
-// [wiop.Round.ID], so it can never drift from the round the prover's
-// [messagebus.SharedRandomnessContributionAssigner] ran on.
+// [wiop.Round.ID], so it can never drift from the round whose PCS commitment
+// the prover hashes into its contribution.
 func BuildSharedRandomnessSystem(sys *wiop.System) (SharedRandomnessSystem, error) {
 	out := SharedRandomnessSystem{SourceName: sys.Context.Path()}
 
