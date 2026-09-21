@@ -40,7 +40,7 @@ class ProverClientFactoryTest {
     fun buildProverConfig(proverDir: Path): ProverConfig {
       return ProverConfig(
         l2Execution = ProverClientConfig(
-          fileBased = buildFileBasedProverConfig(proverDir.resolve("l2-execution")),
+          fileBased = buildFileBasedProverConfig(proverDir.resolve("execution")),
           restfulBased = null,
           programId = RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_ID,
           provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
@@ -54,7 +54,7 @@ class ProverClientFactoryTest {
           forkName = RiscvProverClientTestFixtures.FORK_NAME,
         ),
         rollupAggregation = ProverClientConfig(
-          fileBased = buildFileBasedProverConfig(proverDir.resolve("rollup-aggregation")),
+          fileBased = buildFileBasedProverConfig(proverDir.resolve("aggregation")),
           restfulBased = null,
           programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
           provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,

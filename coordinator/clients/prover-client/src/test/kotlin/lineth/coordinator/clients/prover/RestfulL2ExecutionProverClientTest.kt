@@ -32,7 +32,7 @@ import kotlin.time.Instant
  */
 @ExtendWith(VertxExtension::class)
 class RestfulL2ExecutionProverClientTest {
-  private val proofType = "l2-execution"
+  private val proofType = "execution"
   private val jobsPathPattern = "/api/v1/jobs/$CHAIN_ID/$proofType/.*"
 
   private lateinit var wiremock: WireMockServer

@@ -180,7 +180,7 @@ class ProverClientFactory(
       proverConfig = proverConfig,
       requestFileNameProvider = L2ExecutionProofFileNameProvider,
       responseFileNameProvider = L2ExecutionProofFileNameProvider,
-      proofType = "l2-execution",
+      proofType = "execution",
       responseDtoClass = L2ExecutionProofResponseDto::class.java,
     )
 
@@ -198,7 +198,7 @@ class ProverClientFactory(
       proverConfig = proverConfig,
       requestFileNameProvider = RollupAggregationProofFileNameProvider,
       responseFileNameProvider = RollupAggregationProofFileNameProvider,
-      proofType = "rollup-aggregation",
+      proofType = "aggregation",
       responseDtoClass = RollupAggregationProofResponseDto::class.java,
     )
 

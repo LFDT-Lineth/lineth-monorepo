@@ -30,7 +30,7 @@ import kotlin.time.Instant
  */
 @ExtendWith(VertxExtension::class)
 class RestfulRollupAggregationProverClientTest {
-  private val proofType = "rollup-aggregation"
+  private val proofType = "aggregation"
   private val jobsPathPattern = "/api/v1/jobs/$CHAIN_ID/$proofType/.*"
 
   private lateinit var wiremock: WireMockServer
