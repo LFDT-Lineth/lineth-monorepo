@@ -5,10 +5,15 @@ Purpose: a precise, code-grounded account of what the Zig verifier in
 reimplement this verification logic directly in `zkc` (to avoid paying R5
 interpreter/arithmetization overhead per RISC-V instruction, and to ease
 recursive proof composition). This document only describes the *current* Zig
-implementation — it does not propose a zkc design; that's future work.
+implementation — the zkc design itself is in `verifier-ray-zkc-plan.md`.
 
-All citations are to file:line in this repo as of 2026-09-16; treat them as
-pointers to re-verify, not eternal truths.
+All citations are to file:line in this repo as of 2026-09-16 (`origin/main`
+at `b75b5ca95`), **with PRs #3950 and #3959 assumed merged**: they remove the
+Fiat–Shamir pre-sampling hook from prover-ray and from
+`verifier-ray/src/protocol/root.zig`, and reshape
+`verifier-ray/src/query/shared_randomness.zig`. Those two files are cited at
+the PR #3959 head; every other verifier-ray file is identical on `main` and on
+that PR. Treat line numbers as pointers to re-verify, not eternal truths.
 
 ---
 
@@ -45,7 +50,7 @@ The ordered call chain inside `verify`:
 | :184 | `pcs.reconstruct(pcs_system, proof.module_sizes)` | rebuild canonical PCS layout for this proof's dynamic sizes |
 | :192-194 | `pcs.buildEntryClaims(...)` | gather each opened column's claimed evaluation from the transcript-bound cells |
 | :196 | `pcs.deriveChallenges(...)` | continue the *same* transcript: FRI fold alphas, DEEP alpha, query positions (§1/§2) |
-| :197-206 | `pcs.verify(...)` | authenticate the FRI/Vortex opening (§2) |
+| :197-206 | `pcs.verify(...)` | authenticate the multi-size FRI opening (§2) |
 | :215-216 | `routeClaims(...)` ×2 | map PCS-authenticated claims into `derived_witness`/`derived_quotient` |
 | :219-224 | `vanishing.verify(...)` | the AIR/quotient identity check (§3, §4) |
 | :227 | `logderivativesum.verify(...)` | lookup/log-derivative-sum scalar check |
@@ -140,25 +145,24 @@ positions).
 `verifier.zig:146` before any sub-verifier runs. Per round, in order:
 
 ```zig
-// protocol/root.zig:152-176 (abridged)
+// protocol/root.zig:118-138 at PR #3959 (abridged)
 for (module_sizes[0..spec.dynamic_module_count]) |size|
     transcript.updateElement(field.Element.init(@intCast(size)));  // 1. dynamic sizes
 if (message.commitment) |c| transcript.updateElements(&c);          // 2. round commitment
 for (message.cells) |cell| transcript.absorbScalar(cell);           // 3. opened/public cells
 
-if (round_index == gamma_round)                                      // 4. optional shared-
-    transcript.setState(try gammaDigest(spec, rounds));               //    randomness override
-
-for (all_coins[offset..][0..count]) |*coin| coin.* = transcript.randomExt(); // 5. squeeze round's coins
+for (all_coins[offset..][0..count]) |*coin| coin.* = transcript.randomExt(); // 4. squeeze round's coins
 ```
 
 This is a `comptime`-unrolled loop (`spec.round_coin_counts`/`offsets` come
 from a codegen-emitted `protocol.Spec`), so which coins are drawn after which
-round is fixed per compiled protocol, not decided at runtime. Step 4
-(`gammaDigest`, `:182-200`) is a shared-randomness hook: it rebuilds an
-8-limb γ from already-bound round cells and overwrites the sponge state
-before that round's coins are drawn, mirroring prover-ray's
-`Round.PreSamplingHooks` (`prover-ray/wiop/wiop_runtime.go:178-184`).
+round is fixed per compiled protocol, not decided at runtime. **There is no
+state override anywhere in the replay.** Before PR #3959 a `gammaDigest` hook
+overwrote the sponge state at the shared-randomness coin round (mirroring
+prover-ray's `Round.PreSamplingHooks`); PR #3950 removed the hooks and
+`Runtime.SetFSState` from prover-ray and PR #3959 removed the mirror from
+verifier-ray. `Transcript.setState` (`fiat_shamir.zig:54-56`) survives as dead
+code and must not be ported.
 
 **`zeta` is just one of these ordinary coins** — selected via
 `pcs_system.zeta_coin_index` (`verifier.zig:175-176,200`), not specially
@@ -193,7 +197,7 @@ concrete mechanism behind "replay the FS schedule."
 
 ---
 
-## 2. Verifying the FRI/Vortex proofs: commitments + column openings at `z`
+## 2. Verifying the multi-size FRI proofs: commitments + column openings at `z`
 
 The scheme is called **"multi-size FRI"** in this codebase (an evolution of an
 earlier single-size "Vortex" PCS — `prover-ray/docs/section3_cryptographic_compilation.md:373-396`
@@ -524,9 +528,15 @@ user's four steps focus on FS replay / FRI / vanishing:
   permutation/message-bus argument.
 - **`rowlimit.verify`** (`verifier.zig:233`) — checks declared dynamic
   module sizes against their bounds.
-- **`shared_randomness.verify`** (`verifier.zig:235`) — checks the
-  cross-shard shared-randomness (γ, §1's `gammaDigest` hook) was derived
-  consistently.
+- **`shared_randomness.verify`** (`verifier.zig:235`; body at PR #3959's
+  `query/shared_randomness.zig:56-86`) — this shard's claimed contribution to
+  the cross-shard shared randomness must equal `multiset_hashing.hash` of
+  **one** digest: the message-bus coin round's own commitment
+  (`system.commitment_round`), or the zero octuplet when that round committed
+  no column. The 328 claimed limbs (`41 × 8`, `crypto/multiset_hashing.zig`)
+  are read from the transcript cells named by `contribution_refs` and must be
+  base-field scalars. Before #3959 the preimage was every committed round
+  preceding the coin round; that is gone.
 
 ---
 
@@ -534,8 +544,8 @@ user's four steps focus on FS replay / FRI / vanishing:
 
 1. Merge public-input cells back into round cells.
 2. Replay the FS transcript round-by-round: absorb dynamic sizes →
-   commitment → cells (with an optional γ override) → squeeze that round's
-   coins. One of these coins is `zeta`/`eval_coin`.
+   commitment → cells → squeeze that round's coins. One of these coins is
+   `zeta`/`eval_coin`.
 3. Continue the *same* transcript for PCS: per FRI layer, squeeze a fold
    alpha then absorb that layer's root; then squeeze a final/deep alpha;
    absorb the final polynomial; derive all query positions.
@@ -565,12 +575,16 @@ user's four steps focus on FS replay / FRI / vanishing:
 (Context only — the actual design is out of scope for this document.)
 
 **Building blocks that would need a zkc-side implementation:**
-- Poseidon2 sponge over the KoalaBear octuplet state (§1) — note the
-  arithmetization already uses Poseidon2 elsewhere for R5 memory/precompile
-  work (per prior project memory, a `memory ... -> (felt: 𝔽)`-style Poseidon2
-  primitive exists), but verify its exact parameterization matches this
-  sponge's octuplet/domain-separation convention before reusing it — don't
-  assume compatibility.
+- Poseidon2 sponge over the KoalaBear octuplet state (§1). Verified: the
+  existing `arithmetization/src/main/lib/poseidon2/` permutation (width 16,
+  6 full + 21 partial rounds, S-box 3, gnark-crypto constants) is the same
+  primitive `crypto/poseidon2.zig` uses — the Zig verifier already delegates
+  to it through the `RTYPE_POSEIDON2` accelerator. Only its round constants
+  should be reused, though: the zkc permutation is loop-based over a memory
+  and costs hundreds of trace rows per call, whereas a straight-line port is
+  one row (see `verifier-ray-zkc-plan.md` §5.2). The MD compression
+  (`state' = right + perm(state ‖ right)[8..16]`) and the left zero-padding of
+  partial blocks are not in the zkc lib and must be written.
 - The extension field `Ext = F_{p^6}` (cubic-over-quadratic tower,
   `B0,B1,B2` each an `E2` pair) and its `add/sub/mul/square/inverse/pow` —
   structurally the same shape as the `Fp2`/`Fp6`/`Fp12` towers already built
@@ -619,11 +633,8 @@ flowchart TD
         Replay["for each round (comptime-unrolled):"] --> R1
         R1["1. absorb dynamic module sizes"] --> R2
         R2["2. absorb round commitment"] --> R3
-        R3["3. absorb opened/public cells"] --> R4
-        R4{"round == gamma_round?"}
-        R4 -- yes --> R4a["overwrite sponge state<br/>gammaDigest · root.zig:182-200"] --> R5
-        R4 -- no --> R5
-        R5["squeeze this round's coins<br/>Transcript.randomExt"] --> R6
+        R3["3. absorb opened/public cells"] --> R5
+        R5["4. squeeze this round's coins<br/>Transcript.randomExt"] --> R6
         R6{"more rounds?"}
         R6 -- yes --> R1
         R6 -- no --> AllCoins["all_coins[] produced<br/>(includes zeta at zeta_coin_index)"]

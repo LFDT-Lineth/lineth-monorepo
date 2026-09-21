@@ -8,6 +8,10 @@ as of 2026-09-16. **Verify signatures against whatever `zkc` version is actually
 pinned in the relevant `go.mod` before relying on them** — see the version note
 in §5, and treat quoted line numbers as pointers to re-check, not eternal truths.
 
+See also: `verifier-functionality.md` (what the Zig verifier does) and
+`verifier-ray-zkc-plan.md` (the plan for porting it to a zkc accelerator,
+including the zkc cost model and the language features confirmed for v1.2.32).
+
 ---
 
 ## 1. What is arithmetization, and where does it come from?
@@ -299,6 +303,14 @@ cache and has minor signature differences (`Check`'s argument order,
 consuming module's own `go.mod` for the pinned version rather than assuming
 one** — code below is quoted against `v1.2.32` (matching this repo) unless
 noted.
+
+**Do not use the untracked `zkc/` directory at the repo root as the language
+reference.** It is a clone of the zkc compiler at commit `26ee2a0`
+(2026-07-31), older than `v1.2.32`: its parser and docs lack `done`, the
+`f!(...)` never-returning call, `#[global]`, the `memory name[uN]` timestamp
+bound, and fixed arrays, all of which the arithmetization already uses. The
+pinned sources live in the Go module cache
+(`$GOMODCACHE/github.com/!l!f!d!t-!lineth/zkc@v1.2.32/`).
 
 **Confirmed: every `zkc` CLI subcommand is a thin wrapper around plain Go
 functions** — `cmd/zkc/main.go:15-19` is just `zkc.Execute()`, and every
