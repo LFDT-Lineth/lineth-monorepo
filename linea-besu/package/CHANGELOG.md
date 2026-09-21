@@ -11,6 +11,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [2.2.0] - 2026-08-21
 
 ### 🚀 Features

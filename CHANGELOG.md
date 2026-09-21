@@ -160,3 +160,4 @@
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
 - *(coordinator)* Consolidate prover clients (#3944)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
