@@ -54,8 +54,11 @@ class RollupProofGeneratingCoordinatorTest {
 
   private lateinit var coordinator: RollupProofGeneratingCoordinator
 
+  private lateinit var vertx: Vertx
+
   @BeforeEach
   fun setUp(vertx: Vertx) {
+    this.vertx = vertx
     whenever(blockEncoder.encode(any())).thenReturn(fakeEncodedBlock)
 
     coordinator = RollupProofGeneratingCoordinator(
@@ -63,7 +66,7 @@ class RollupProofGeneratingCoordinatorTest {
       conflationsPerRollupProof = conflationsPerRollupProof,
       rollupProverClient = rollupProverClient,
       batchesRepository = batchesRepository,
-      streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash, 0)) },
+      streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
       rollupProofPoller = rollupProofPoller,
       conflationSegmentBuilder = conflationSegmentBuilder,
       dataRollingHashCalculator = dataRollingHashCalculator,
@@ -96,8 +99,9 @@ class RollupProofGeneratingCoordinatorTest {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
 
     assertThatThrownBy {
-      coordinator.handleConflatedBatch(makeConflation(5UL, 7UL))
-    }.isInstanceOf(IllegalArgumentException::class.java)
+      coordinator.handleConflatedBatch(makeConflation(5UL, 7UL)).get()
+    }.hasCauseInstanceOf(IllegalArgumentException::class.java)
+      .cause()
       .hasMessageContaining("Conflation out of order")
       .hasMessageContaining("expected startBlockNumber=4")
   }
@@ -294,5 +298,77 @@ class RollupProofGeneratingCoordinatorTest {
 
     // createProofRequest should have been called exactly once (first window only)
     verify(rollupProverClient, org.mockito.kotlin.times(1)).createProofRequest(any())
+  }
+
+  @Test
+  fun `action submits proof when segment bytes exactly fill full chunks with no remainder`() {
+    // Coordinator where each segment is exactly half of BLOB_SIZE so two conflations = one full chunk, no remainder
+    val halfBlobSize = Constants.Eip4844BlobSize / 2
+    val exactSegment = ByteArray(halfBlobSize) { it.toByte() }
+    val exactCoordinator = RollupProofGeneratingCoordinator(
+      chainId = chainId,
+      conflationsPerRollupProof = conflationsPerRollupProof,
+      rollupProverClient = rollupProverClient,
+      batchesRepository = batchesRepository,
+      streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
+      rollupProofPoller = rollupProofPoller,
+      conflationSegmentBuilder = ConflationSegmentBuilder { _, _ -> exactSegment },
+      dataRollingHashCalculator = dataRollingHashCalculator,
+      blockEncoder = blockEncoder,
+      chunkHasher = chunkHasher,
+      proofCheckingInterval = 1.seconds,
+      vertx = vertx,
+      metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
+    )
+    exactCoordinator.start().get()
+
+    val proofHash1 = ByteArray(32) { 0x11.toByte() }
+    val proofHash2 = ByteArray(32) { 0x22.toByte() }
+
+    exactCoordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
+    exactCoordinator.handleConflatedBatch(makeConflation(4UL, 6UL)).get()
+
+    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
+      .thenReturn(SafeFuture.completedFuture(6L))
+    whenever(batchesRepository.findBatchesByBlockRange(1L, 6L))
+      .thenReturn(
+        SafeFuture.completedFuture(
+          listOf(
+            Batch(1UL, 3UL, proofHash1),
+            Batch(4UL, 6UL, proofHash2),
+          ),
+        ),
+      )
+    val returnedProofIndex = BlockIntervalProofIndex(
+      startBlockNumber = 1UL,
+      endBlockNumber = 6UL,
+      startBlockTimestamp = Instant.fromEpochSeconds(12),
+      hash = ByteArray(32) { 0xFF.toByte() },
+    )
+    whenever(rollupProverClient.createProofRequest(any()))
+      .thenReturn(SafeFuture.completedFuture(returnedProofIndex))
+
+    exactCoordinator.action().get()
+
+    val requestCaptor = argumentCaptor<linea.clients.RollupProofRequestV1>()
+    verify(rollupProverClient).createProofRequest(requestCaptor.capture())
+
+    val request = requestCaptor.firstValue
+    // One full chunk sealed, no partial — endOffset on the full chunk is BLOB_BYTES_LENGTH
+    assertThat(request.chunks).hasSize(1)
+    assertThat(request.opaqueSuffixBytes).isEmpty()
+
+    val endOffsetCaptor = argumentCaptor<Int>()
+    verify(rollupProofPoller).addProofInProgress(
+      proofIndex = any(),
+      blobsData = any(),
+      parentDataRollingHash = any(),
+      dataRollingHash = any(),
+      endOffset = endOffsetCaptor.capture(),
+      startBlockTimestamp = any(),
+      endBlockTimestamp = any(),
+      totalBatchesCount = any(),
+    )
+    assertThat(endOffsetCaptor.firstValue).isEqualTo(Constants.Eip4844BlobSize)
   }
 }
