@@ -65,51 +65,62 @@ class VertxHttpJsonRpcClient(
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
 
-    // Bridge via a context-free Promise so the returned future is observable from any thread
-    // without requiring Vertx context dispatch (context.execute). In Vertx 5, futures that carry
-    // an event-loop context dispatch their completion listeners via context.execute(), which is
-    // unreliable when the observer is on a non-event-loop thread (e.g. a test thread or
-    // AsyncRetryer worker). Promise.promise() produces a context-free PromiseImpl whose
-    // completeInternal always uses signalComplete — a direct call with no scheduler hop.
+    // Bridge via a context-free Promise so any caller thread can observe the result without
+    // going through Vertx's context.execute() dispatch. Promise.promise() produces a context-free
+    // PromiseImpl whose listeners always fire via signalComplete — direct, no scheduler.
     val bridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
 
-    httpClient.request(requestOptions).flatMap { httpClientRequest ->
-      httpClientRequest.putHeader("Content-Type", "application/json")
-      logRequest(json)
+    // Complete the bridge from INSIDE the chain (running on E1), never from a .onComplete
+    // added by the caller thread. If the caller thread attaches a listener to an already-complete
+    // future, Vertx dispatches it via context.execute() from a non-event-loop thread.
+    // On CI Linux/epoll this stalls indefinitely: eventfd is written but the event-loop thread
+    // is not given CPU time before the test timeout fires.
+    httpClient.request(requestOptions)
+      .flatMap { httpClientRequest ->
+        httpClientRequest.putHeader("Content-Type", "application/json")
+        logRequest(json)
 
-      httpClientRequest.send(json).flatMap { response: HttpClientResponse ->
-        if (isSuccessStatusCode(response.statusCode())) {
-          handleResponse(json, response, resultMapper)
-        } else {
-          // Read the body for logging, but avoid the cross-context path 2 stall.
-          // response.body() carries the connection's event-loop context (Y). Returning it
-          // directly and observing from outside can trigger context.execute() (path 2) on
-          // Linux/epoll when the caller's context (X) differs, stalling past caller timeouts.
-          //
-          // Fix: add onComplete to response.body() from inside this lambda (which runs on Y),
-          // so isRunningOnContext() = true → path 3 (inline). Fail a context-free Promise from
-          // that callback — context-free promises always use signalComplete (path 1).
-          val errorBridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
-          val error = JsonRpcErrorException(
-            message = "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-            httpStatusCode = response.statusCode(),
-          )
-          response.body().onComplete { ar ->
-            logResponse(
-              isError = true,
-              response = response,
-              requestBody = json,
-              responseBody = ar.result()?.toString() ?: "",
-            )
-            errorBridge.fail(error)
+        httpClientRequest.send(json)
+          .flatMap { response: HttpClientResponse ->
+            val resultFuture = if (isSuccessStatusCode(response.statusCode())) {
+              handleResponse(json, response, resultMapper)
+            } else {
+              val errorBridge = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
+              val error = JsonRpcErrorException(
+                message = "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
+                httpStatusCode = response.statusCode(),
+              )
+              response.body().onComplete { ar ->
+                logResponse(
+                  isError = true,
+                  response = response,
+                  requestBody = json,
+                  responseBody = ar.result()?.toString() ?: "",
+                )
+                errorBridge.fail(error)
+              }
+              errorBridge.future()
+            }
+            // Listener added from inside the chain (on the event-loop thread) — never from the
+            // caller thread — so bridge completion never goes through context dispatch.
+            resultFuture.onComplete { ar ->
+              if (ar.failed()) logRequestFailure(json, ar.cause())
+              bridge.handle(ar)
+            }
+            Future.succeededFuture<Unit>()
           }
-          errorBridge.future()
-        }
+          .recover { e ->
+            // send() or response-handling failure; inner flatMap never completed the bridge.
+            logRequestFailure(json, e)
+            bridge.fail(e)
+            Future.succeededFuture<Unit>()
+          }
       }
-    }
-      .onComplete { ar ->
-        if (ar.failed()) logRequestFailure(json, ar.cause())
-        bridge.handle(ar)
+      .recover { e ->
+        // request() failure (e.g. connection refused); outer flatMap was never entered.
+        logRequestFailure(json, e)
+        bridge.fail(e)
+        Future.succeededFuture<Unit>()
       }
 
     metricsFacade.createTimer(
