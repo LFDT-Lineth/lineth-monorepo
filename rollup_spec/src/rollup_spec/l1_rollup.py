@@ -55,8 +55,8 @@ class LinethRollupState:
     into the same slot that used to hold a plain shnarf — zero additional
     storage. The next finalization supplies the previous `(data_rolling_hash, offset)` pair
     as calldata (`finalize_rollup`'s `prev_data_rolling_hash`/`prev_offset` params); the
-    contract verifies the preimage against this commitment before applying
-    the continuity disjunction.
+    contract verifies the preimage against this commitment before checking
+    exact continuity.
     """
     current_finalized_position_commitment: Hash32
     current_finalized_last_block_hash: Hash32
@@ -150,8 +150,8 @@ def finalize_rollup(
         raise Exception("prevDataRollingHash/prevOffset do not match the finalized position commitment")
     if pi.parent_data_rolling_hash != prev_data_rolling_hash:
         raise Exception("parentDataRollingHash does not match the finalized position")
-    if not (pi.start_offset == prev_offset or pi.start_offset == 0):
-        raise Exception("startOffset neither continues the finalized position nor is a fresh start")
+    if pi.start_offset != prev_offset:
+        raise Exception("startOffset does not match the finalized position")
     if pi.end_data_rolling_hash not in state.anchored_data_rolling_hashes:
         raise Exception("endDataRollingHash was not anchored by a chunk submission")
     if pi.parent_block_hash != state.current_finalized_last_block_hash:
