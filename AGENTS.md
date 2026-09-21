@@ -399,7 +399,7 @@ docs/                    Project documentation
 - **Pipeline:** Filter changed paths -> Run component tests -> Build Docker images -> E2E tests -> Publish
 - **Coverage:** Codecov with Jacoco (JVM), Hardhat (Solidity), Jest LCOV (TS packages), and tracer Jacoco XML (`tracer` flag)
 - **Security:** CodeQL analysis, KICS Dockerfile scanning (weekly)
-- **Runners:** Custom scale-set runners (small, med, large, xl) on Ubuntu 22.04
+- **Runners:** Custom scale-set runners (small, med, large, xl) on Ubuntu 24.04
 - **Concurrency:** Cancel in-progress runs on PRs; serial on `main`
 - **Notifications:** Slack alerts on workflow failures; external contribution notifications
 
