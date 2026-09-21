@@ -16,6 +16,33 @@ func latestRound(rounds ...*wiop.Round) *wiop.Round {
 	return best
 }
 
+// misplacedParticipantColumn returns the first column of an unreduced
+// [wiop.MessageBus] entry that does not live on round wantID, along with the
+// entry holding it; both are nil when every participating column is on that
+// round.
+//
+// It looks at each column individually rather than at [wiop.MessageBus.Round],
+// which reports the maximum over the entry's table: a table straddling two
+// rounds would report the later one and hide the column on the earlier.
+func misplacedParticipantColumn(sys *wiop.System, wantID int) (*wiop.MessageBus, *wiop.ColumnView) {
+	for _, mb := range sys.MessageBuses {
+		if mb.IsReduced() {
+			continue
+		}
+		for _, cv := range mb.Tab.Columns {
+			if r := cv.Round(); r == nil || r.ID != wantID {
+				return mb, cv
+			}
+		}
+		if cv := mb.Tab.Selector; cv != nil {
+			if r := cv.Round(); r == nil || r.ID != wantID {
+				return mb, cv
+			}
+		}
+	}
+	return nil, nil
+}
+
 // latestUnreducedParticipantRound returns the highest-ID round touched by any
 // unreduced [wiop.MessageBus] entry in sys, or nil if no such entry exists.
 // It mirrors the logic of [latestParticipantRound] but operates directly on

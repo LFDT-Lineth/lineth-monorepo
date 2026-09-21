@@ -40,6 +40,7 @@ import tech.pegasys.teku.networking.p2p.libp2p.PeerManager
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.GossipTopicHandlers
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.LibP2PGossipNetwork
 import tech.pegasys.teku.networking.p2p.libp2p.gossip.PreparedPubsubMessage
+import tech.pegasys.teku.networking.p2p.libp2p.rpc.InboundRpcStreamLimiter
 import tech.pegasys.teku.networking.p2p.libp2p.rpc.RpcHandler
 import tech.pegasys.teku.networking.p2p.network.P2PNetwork
 import tech.pegasys.teku.networking.p2p.network.PeerHandler
@@ -122,9 +123,10 @@ class Libp2pNetworkFactory(
     val peerId = PeerId.fromPubKey(privateKey.publicKey())
     val libP2PNodeId = LibP2PNodeId(peerId)
 
+    val inboundRpcStreamLimiter = InboundRpcStreamLimiter(128)
     val rpcHandlers =
       rpcMethods.map { rpcMethod ->
-        RpcHandler(asyncRunner, rpcMethod, metricsSystem)
+        RpcHandler(asyncRunner, rpcMethod, metricsSystem, inboundRpcStreamLimiter)
       }
 
     val peerManager =

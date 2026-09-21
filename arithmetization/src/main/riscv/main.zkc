@@ -13,14 +13,14 @@ include "utils/register_utils.zkc"
 include "memory.zkc"
 include "../lib/poseidon2/ram.zkc"
 
-// -- PREDECODING PROOF SECTION -- 
+// -- Interpreting the riscV proved-transpiled program -- START
 // include "../predecoding/predecoding.zkc"
 // include "../predecoding/read_instruction.zkc"
 // include "../predecoding/executable_region.zkc"
-// -- PREDECODING PROOF SECTION END-- 
+// -- Interpreting the riscV proved-transpiled program -- END
 
 // TODO @Ghost
-fn main<registers, ram, keccak_state, poseidon2_state>() {
+fn main<registers, ram, keccak_state, poseidon2_state, guest_output_tmp>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]
@@ -30,17 +30,21 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     var base:Address = instruction_base[0]
 
     // ==========================
-    // Predecoding justification
+    // Transpilation proof
     // ==========================
 
     // Note: static linear pass over the executable region;
     // This section is pending decision and is commented for now.
     // It can be done once per guest upgrade.
-    // To re-enable predecoding : 
-    // - uncomment all sections labeled from "PREDECODING PROOF SECTION"
-    //   to "PREDECODING PROOF SECTION END"
-    // - comment the section labeled from "NO PREDECODING PROOF"
-    //   to "NO PREDECODING PROOF END"
+    // To re-enable predecoding :
+    // - uncomment all sections labeled from
+    // "-- Interpreting the riscV proved-transpiled program -- START"
+    //   to
+    // -- Interpreting the riscV proved-transpiled program -- END
+    // - comment the section labeled from
+    // -- Interpreting the riscV unproved-transpiled program -- START
+    //   to
+    // -- Interpreting the riscV unproved-transpiled program -- END
 
     // var pc_predecoding:Address = base
     // var exec_end:Address = executable_region_end()
@@ -71,13 +75,13 @@ fn main<registers, ram, keccak_state, poseidon2_state>() {
     // Execution of the program
     // ==========================
 
-    // -- PREDECODING PROOF SECTION -- 
+    // -- Interpreting the riscV proved-transpiled program -- START
     // parameters: clock_cycle, base, pc, exec_end, output_write_address
     // interpreter!(0, base, entry_point, exec_end, 0)
-    // -- PREDECODING PROOF SECTION END-- 
+    // -- Interpreting the riscV proved-transpiled program -- END
 
-    // -- NO PREDECODING PROOF -- 
+    // -- Interpreting the riscV unproved-transpiled program -- START
     // parameters: clock_cycle, base, pc, output_write_address
     interpreter!(0, base, entry_point, 0)
-    // -- NO PREDECODING PROOF END-- 
+    // -- Interpreting the riscV unproved-transpiled program -- END
 }
