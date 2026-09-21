@@ -95,7 +95,7 @@ class VertxHttpJsonRpcClient(
                   isError = true,
                   response = response,
                   requestBody = json,
-                  responseBody = ar.result()?.toString() ?: "",
+                  responseBody = ar.result()?.toString()?.lines()?.firstOrNull() ?: "",
                 )
                 errorBridge.fail(error)
               }
