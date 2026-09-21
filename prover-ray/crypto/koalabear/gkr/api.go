@@ -1,11 +1,16 @@
 package gkr
 
 import (
+	"fmt"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark/std/gkrapi/gkr"
 )
 
-// Variable represents a value in a GKR circuit.
-type Variable int
+type (
+	Variable   int    // Variable represents a value in a GKR circuit.
+	Identifier uint64 // Identifier is a stable, external name for an input or output variable.
+)
 
 // GateAPI is a limited version of frontend.API,
 // allowing ring arithmetic operations
@@ -41,14 +46,15 @@ type GateAPI interface {
 // GateFunction is a function that evaluates a polynomial over its inputs
 // using the given GateAPI.
 // It is used to define custom gates in GKR circuits.
-type GateFunction func(GateAPI, ...Variable) Variable
+type GateFunction func(GateAPI, ...Variable) field.Ext
 
 type API struct {
-	circuit Circuit
+	circuit   Circuit
+	positions map[Identifier]Variable
 }
 
 // Gate adds the given gate with the given inputs and returns its output wire.
-func (api *API) Gate(gate gkr.GateFunction, inputs ...Variable) Variable {
+func (api *API) Gate(gate GateFunction, inputs ...Variable) Variable {
 	/*api.circuit = append(api.circuit, gkrcore.RawWire{
 		Gate:   gate,
 		Inputs: utils.Map(inputs, frontendVarToInt),
@@ -84,26 +90,45 @@ func (api *API) Mul(i1, i2 Variable) Variable {
 	return api.gate2PlusIn(gkrcore.Mul2, i1, i2)
 }
 
+// newID binds id to v. Internal wires are not bound.
+func (api *API) newID(v Variable, id Identifier) {
+	if bound, ok := api.positions[id]; ok {
+		panic(fmt.Sprintf("gkr: identifier %d already bound to variable %d", id, bound))
+	}
+	if api.positions == nil {
+		api.positions = make(map[Identifier]Variable)
+	}
+	api.positions[id] = v
+}
+
 // Export explicitly designates a wire as output.
 // Wires that are not used as input to another are considered output by default.
-func (api *API) Export(i Variable, name string) {
-	for _, v := range in {
-		api.circuit[v].Exported = true
-	}
+func (api *API) Export(v Variable, id Identifier) {
+	api.newID(v, id)
+	api.circuit[v].Exported = true
 }
 
 // NewInput creates a new input variable.
-func (api *API) NewInput(name string) Variable {
-	i := len(api.circuit)
-	api.circuit = append(api.circuit, gkrcore.RawWire{})
-	api.assignments = append(api.assignments, nil)
-	return gkr.Variable(i)
+func (api *API) NewInput(id Identifier) Variable {
+	v := Variable(len(api.circuit))
+	api.newID(v, id)
+	api.circuit = append(api.circuit, Wire{})
+	return v
 }
 
-func (api *API) Serialize() []byte {
+func (api *API) Compile() *Compiled {
 	return nil
 }
 
-func (api *API) Deserialize(data []byte) {
+type Compiled struct {
+}
+
+func (c *Compiled) Serialize() []byte {
+	return nil
+}
+
+func (c *Compiled) Deserialize(data []byte) error {
 
 }
+
+type Assignment map[Identifier][]field.Ext

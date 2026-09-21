@@ -8,15 +8,30 @@ import (
 )
 
 func TestAdd2(t *testing.T) {
+
+	const (
+		xID = 10001
+		yID = 10002
+		zID = 10003
+	)
+
 	var api API
-	x := api.NewInput("x")
-	y := api.NewInput("y")
-	api.Export(api.Add(x, y), "z")
+	x := api.NewInput(xID)
+	y := api.NewInput(yID)
 
-	var api2 API
-	api2.Deserialize(api.Serialize())
+	api.Export(api.Add(x, y), zID)
 
-	p := NewProverState(&api2)
+	c := api.Compile()
+	var c2 Compiled
+	require.NoError(t, c2.Deserialize(c.Serialize()))
+
+	a := Assignment{
+		xID: exts(2),
+		yID: exts(4),
+		zID: exts(6),
+	}
+
+	p := NewProverState(&c2, a)
 	require.NotNil(t, p)
 
 	var challenges []field.Ext
@@ -25,5 +40,18 @@ func TestAdd2(t *testing.T) {
 		p.Next(challenges[len(challenges)-1])
 	}
 
-	require.NoError(t, Verify(api2, p.Proof, challenges))
+	aOuts := Assignment{
+		zID: exts(6),
+	}
+	_, err := Verify(&c2, aOuts, p.Proof, challenges)
+	require.NoError(t, err)
+}
+
+// exts lifts base-field values into the extension, one per instance.
+func exts(v ...uint64) []field.Ext {
+	res := make([]field.Ext, len(v))
+	for i := range v {
+		res[i] = field.Uint64ToExt(v[i])
+	}
+	return res
 }
