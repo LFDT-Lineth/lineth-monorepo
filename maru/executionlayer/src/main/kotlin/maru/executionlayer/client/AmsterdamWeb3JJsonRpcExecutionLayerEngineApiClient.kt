@@ -8,6 +8,7 @@
  */
 package maru.executionlayer.client
 
+import linea.teku.Web3jClient
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.manager.PayloadAttributes
@@ -21,14 +22,13 @@ import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadStatusV1
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import tech.pegasys.teku.infrastructure.bytes.Bytes8
 import java.util.Optional
 
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/amsterdam.md
 class AmsterdamWeb3JJsonRpcExecutionLayerEngineApiClient(
-  web3jClient: Web3JClient,
+  web3jClient: Web3jClient,
   metricsFacade: MetricsFacade,
 ) : BaseWeb3JJsonRpcExecutionLayerEngineApiClient(web3jClient = web3jClient, metricsFacade = metricsFacade) {
   override fun getFork(): ElFork = ElFork.Amsterdam

@@ -9,21 +9,21 @@
 package linea.teku
 
 import linea.web3j.okhttp.okHttpClientBuilder
+import okhttp3.Call
+import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.Web3jService
-import org.web3j.protocol.http.HttpService
+import tech.pegasys.teku.ethereum.executionclient.ExecutionEngineClientFactory
 import tech.pegasys.teku.ethereum.executionclient.auth.JwtAuthHttpInterceptor
 import tech.pegasys.teku.ethereum.executionclient.auth.JwtConfig
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.logging.EventLogger
 import tech.pegasys.teku.infrastructure.time.SystemTimeProvider
 import java.net.URL
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -55,8 +55,7 @@ object TekuWeb3JClientFactory {
     log: Logger = LogManager.getLogger("clients.web3j"),
     requestResponseLogLevel: Level = defaultRequestResponseLogLevel,
     failuresLogLevel: Level = defaultFailedRequestResponseLogLevel,
-    nonCriticalMethods: Set<String> = emptySet(),
-  ): Web3JClient {
+  ): Web3jClient {
     val okHttpClient: OkHttpClient =
       okHttpClientBuilder(
         logger = log,
@@ -64,6 +63,15 @@ object TekuWeb3JClientFactory {
         failuresLogLevel = failuresLogLevel,
       ).callTimeout(timeout.toJavaDuration())
         .readTimeout(timeout.toJavaDuration())
+        .eventListener(object : EventListener() {
+          override fun callStart(call: Call) {
+            // Set the limit before Teku's asynchronous call enters OkHttp's timeout watchdog.
+            if (timeout.isPositive()) {
+              val callTimeout = call.timeout()
+              callTimeout.timeout(minOf(callTimeout.timeoutNanos(), timeout.inWholeNanoseconds), TimeUnit.NANOSECONDS)
+            }
+          }
+        })
         .apply {
           jwtPath?.let {
             addInterceptor(
@@ -77,22 +85,14 @@ object TekuWeb3JClientFactory {
           }
         }.build()
 
-    val httpService: Web3jService = Jackson2HttpService(endpoint.toString(), okHttpClient)
-    // Same transport/auth (shares okHttpClient) as httpService above, but web3j's own vanilla
-    // HttpService, so its default Jackson 3 mapper resolves web3j-native response types (e.g.
-    // EthBlock) correctly. See Web3jClient's doc for why httpService alone can't do this.
-    val eth1Web3j: Web3j = Web3j.build(HttpService(endpoint.toString(), okHttpClient))
-    val web3jClient =
-      Web3jClient(
-        eventLogger,
-        web3jService = httpService,
-        timeProvider = SystemTimeProvider.SYSTEM_TIME_PROVIDER,
-        executionClientEventsPublisher = { elIsUp ->
-          log.info("client {} is {}", endpoint, if (elIsUp) "up" else "down")
-        },
-        eth1Web3j = eth1Web3j,
-        nonCriticalMethods = nonCriticalMethods,
-      )
-    return web3jClient
+    val engineClient = ExecutionEngineClientFactory.create(
+      endpoint.toString(),
+      SystemTimeProvider.SYSTEM_TIME_PROVIDER,
+      eventLogger,
+      { elIsUp -> log.info("client {} is {}", endpoint, if (elIsUp) "up" else "down") },
+      { okHttpClient },
+      { throw UnsupportedOperationException("IPC transport is not supported by this HTTP client factory") },
+    )
+    return Web3jClient(endpoint.toString(), okHttpClient, engineClient)
   }
 }

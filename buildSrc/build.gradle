@@ -11,7 +11,7 @@ configurations.configureEach {
   resolutionStrategy.eachDependency { details ->
     // buildSrc pulls web3j tooling that transitively brings bcprov 1.80; because buildSrc is loaded
     // by a parent classloader, jreleaser can resolve BigIntegers from 1.80 and fail with
-    // NoSuchMethodError(writeUnsignedByteArray). Force all BouncyCastle modules to the catalog pin (1.83).
+    // NoSuchMethodError(writeUnsignedByteArray). Force all BouncyCastle modules to the catalog pin.
     if (details.requested.group == 'org.bouncycastle') {
       details.useVersion(libs.versions.bouncycastle.get())
     }

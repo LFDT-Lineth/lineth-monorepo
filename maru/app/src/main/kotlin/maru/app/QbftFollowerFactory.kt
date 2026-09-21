@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import linea.teku.Web3jClient
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -28,14 +29,13 @@ import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import maru.p2p.P2PNetwork
 import maru.serialization.rlp.ForkAwareBlockHashing
 import net.consensys.linea.metrics.MetricsFacade
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class QbftFollowerFactory(
   private val p2pNetwork: P2PNetwork,
   private val beaconChain: BeaconChain,
-  private val validatorELNodeEngineApiWeb3JClient: Web3JClient?,
-  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
+  private val validatorELNodeEngineApiWeb3JClient: Web3jClient?,
+  private val followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient>,
   private val metricsFacade: MetricsFacade,
   private val allowEmptyBlocks: Boolean,
   private val finalizationStateProvider: FinalizationProvider,

@@ -20,6 +20,7 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
+import linea.teku.Web3jClient
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.timer.VertxTimerFactory
@@ -78,7 +79,6 @@ import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.LogManager
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.networking.p2p.network.config.GeneratingFilePrivateKeySource
 import java.nio.file.Files
 import java.nio.file.Path
@@ -256,7 +256,7 @@ class MaruAppFactory(
     val qbftFork = beaconGenesisConfig.getForkByConfigType(QbftConsensusConfig::class)
     val qbftConfig = qbftFork.configuration as QbftConsensusConfig
 
-    val engineApiWeb3jClient: Web3JClient? =
+    val engineApiWeb3jClient: Web3jClient? =
       config.validatorElNode?.let {
         Helpers.createWeb3jClient(
           apiEndpointConfig = it.engineApiEndpoint,
@@ -308,7 +308,7 @@ class MaruAppFactory(
       overridingFinalizationProvider
         ?: setupFinalizationProvider(config, overridingLineaContractClient, vertx, timerFactory)
     syncControllerImpl = if (config.p2p != null) {
-      val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient> =
+      val followerELNodeEngineApiWeb3JClients: Map<String, Web3jClient> =
         config.followers.followers.mapValues { (followerLabel, apiEndpointConfig) ->
           Helpers.createWeb3jClient(
             apiEndpointConfig = apiEndpointConfig,
