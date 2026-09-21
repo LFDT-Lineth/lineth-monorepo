@@ -123,9 +123,13 @@ class ConflationAppV2(
     )
 
     val batchProofHandler = BatchProofHandlerImpl(batchesRepository)
-    val l2ExecutionProofHandler = L2ExecutionProofHandler { proof ->
+    val l2ExecutionProofHandler = L2ExecutionProofHandler { proof, proofIndex ->
       batchProofHandler.acceptNewBatch(
-        Batch(startBlockNumber = proof.startBlockNumber, endBlockNumber = proof.endBlockNumber),
+        Batch(
+          startBlockNumber = proof.startBlockNumber,
+          endBlockNumber = proof.endBlockNumber,
+          proofIndexHash = proofIndex.hash,
+        ),
       )
     }
 
