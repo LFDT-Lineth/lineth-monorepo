@@ -116,7 +116,8 @@ class ProverClientFactory(
     val webClientOptions = WebClientOptions()
       .setProtocolVersion(HttpVersion.HTTP_1_1)
       .setDefaultHost(endpoint.host)
-      .setDefaultPort(endpoint.port)
+      .setDefaultPort(if (endpoint.port != -1) endpoint.port else endpoint.defaultPort)
+      .setSsl(endpoint.protocol == "https")
     return VertxHttpRestClient(
       webClientOptions,
       PoolOptions(),
