@@ -90,17 +90,17 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 proving-system-version = "0xabcdef1"
 fork-name = "amsterdam"
 [prover.l2-execution]
-programId = "0fedcba1"
+programId = "0xfedcba1"
 [prover.l2-execution.file-based-folder-config]
 fs-requests-directory = "/data/riscv-prover/v1/execution/requests"
 fs-responses-directory = "/data/riscv-prover/v1/execution/responses"
 [prover.rollup]
-programId = "0fedcba2"
+programId = "0xfedcba2"
 [prover.rollup.file-based-folder-config]
 fs-requests-directory = "/data/riscv-prover/v1/rollup/requests"
 fs-responses-directory = "/data/riscv-prover/v1/rollup/responses"
 [prover.rollup-aggregation]
-programId = "0fedcba3"
+programId = "0xfedcba3"
 [prover.rollup-aggregation.file-based-folder-config]
 fs-requests-directory = "/data/riscv-prover/v1/aggregation/requests"
 fs-responses-directory = "/data/riscv-prover/v1/aggregation/responses"
@@ -113,17 +113,17 @@ fs-responses-directory = "/data/riscv-prover/v1/aggregation/responses"
 #fork-name = "amsterdam"
 
 #[prover.new.l2-execution]
-#programId = "0fedcba4"
+#programId = "0xfedcba4"
 #[prover.new.l2-execution.file-based-folder-config]
 #fs-requests-directory = "/data/riscv-prover/v2/execution/requests"
 #fs-responses-directory = "/data/riscv-prover/v2/execution/responses"
 #[prover.new.rollup]
-#programId = "0fedcba5"
+#programId = "0xfedcba5"
 #[prover.new.rollup.file-based-folder-config]
 #fs-requests-directory = "/data/riscv-prover/v2/rollup/requests"
 #fs-responses-directory = "/data/riscv-prover/v2/rollup/responses"
 #[prover.new.rollup-aggregation]
-#programId = "0fedcba6"
+#programId = "0xfedcba6"
 #[prover.new.rollup-aggregation.file-based-folder-config]
 #fs-requests-directory = "/data/riscv-prover/v2/aggregation/requests"
 #fs-responses-directory = "/data/riscv-prover/v2/aggregation/responses"
