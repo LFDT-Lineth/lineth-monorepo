@@ -144,7 +144,22 @@ func (e *binaryEncoder) vanishing(s VanishingSystem) {
 					return
 				}
 				e.u(tag)
-				e.ints(expr.Operands)
+				// Operands are two fixed fields, not a length-prefixed slice:
+				// every operator emitted here is unary or binary, and the
+				// verifier reads `rhs` only for the binary ones. See
+				// verifier-ray/src/query/vanishing.zig's ExprOp for why the
+				// slice was removed. Guard the invariant rather than silently
+				// truncating if a wider operator is ever added upstream.
+				if len(expr.Operands) == 0 || len(expr.Operands) > 2 {
+					e.err = fmt.Errorf("expression operator %q has %d operands; only 1 or 2 are supported", expr.Operator, len(expr.Operands))
+					return
+				}
+				e.u(uint64(expr.Operands[0]))
+				if len(expr.Operands) == 2 {
+					e.u(uint64(expr.Operands[1]))
+				} else {
+					e.u(0)
+				}
 			case ExprLagrangeSelector:
 				e.i(int64(expr.SelectorPosition))
 			default:
