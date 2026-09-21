@@ -81,6 +81,10 @@ func (r *Runner) Run(ctx context.Context, req RunRequest) RunResult {
 	switch req.Type {
 	case backend.ProofTypeL2Execution:
 		return r.runL2Execution(ctx, req)
+	case backend.ProofTypeRollup:
+		return r.runRollup(ctx, req)
+	case backend.ProofTypeRollupAggregation:
+		return r.runAggregation(ctx, req)
 	default:
 		return failedRunResult(req.ID, FailureCodeInvalidInput, fmt.Errorf(
 			"proof type %q is not supported: %w", req.Type, backend.ErrNotImplemented))
@@ -113,16 +117,75 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		Payload:    payload.FramedSSZ,
 	})
 	if result.Status != backend.ResultStatusOK {
-		err := result.Err
-		if err == nil {
-			err = fmt.Errorf("prover returned status %s", result.Status)
-		}
-		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
+		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 	return RunResult{
 		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion, req.ProgramVk),
 		Status:       RunStatusSuccess,
 	}
+}
+
+// runRollup decodes a rollup request, proves, and shapes the V1 response. The
+// block range comes from the embedded l2-execution proofs (decoder-guaranteed
+// non-empty).
+func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
+	req, err := DecodeRollupRequest(runReq.Body)
+	if err != nil {
+		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
+	}
+
+	startBlock := req.L2ExecutionProofs[0].StartBlockNumber
+	endBlock := req.L2ExecutionProofs[len(req.L2ExecutionProofs)-1].PublicInputs.EndBlockNumber
+
+	result := r.prover.Prove(ctx, backend.Job{
+		ID:         runReq.ID,
+		Type:       runReq.Type,
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		Payload:    nil, // TODO: recursion guest input format undecided
+	})
+	if result.Status != backend.ResultStatusOK {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+	}
+	return RunResult{
+		ResponseBody: newRollupResponse(result, startBlock, r.proverVersion, req.ProgramVk),
+		Status:       RunStatusSuccess,
+	}
+}
+
+// runAggregation decodes an aggregation request, proves, and shapes the V1
+// response. The block range comes from the embedded rollup proofs.
+func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResult {
+	req, err := DecodeAggregationRequest(runReq.Body)
+	if err != nil {
+		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
+	}
+
+	startBlock := req.RollupProofs[0].StartBlockNumber
+	endBlock := req.RollupProofs[len(req.RollupProofs)-1].PublicInputs.EndBlockNumber
+
+	result := r.prover.Prove(ctx, backend.Job{
+		ID:         runReq.ID,
+		Type:       runReq.Type,
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		Payload:    nil, // TODO: recursion guest input format undecided
+	})
+	if result.Status != backend.ResultStatusOK {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+	}
+	return RunResult{
+		ResponseBody: newAggregationResponse(result, startBlock, r.proverVersion),
+		Status:       RunStatusSuccess,
+	}
+}
+
+// proverErr normalizes a non-OK prover result into an error.
+func proverErr(result backend.Result) error {
+	if result.Err != nil {
+		return result.Err
+	}
+	return fmt.Errorf("prover returned status %s", result.Status)
 }
 
 func failedRunResult(id string, code FailureCode, err error) RunResult {
