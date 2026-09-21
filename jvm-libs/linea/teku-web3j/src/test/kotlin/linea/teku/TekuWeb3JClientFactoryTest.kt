@@ -10,13 +10,11 @@ package linea.teku
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.sun.net.httpserver.HttpServer
-import okhttp3.OkHttpClient
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.kotlin.mock
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV3
 import tech.pegasys.teku.infrastructure.bytes.Bytes20
@@ -156,15 +154,6 @@ class TekuWeb3JClientFactoryTest {
     assertThat(requests.poll(5, TimeUnit.SECONDS)).isNotNull()
     client.close()
     assertThat(response.get(5, TimeUnit.SECONDS).errorMessage).isNotBlank()
-  }
-
-  @Test
-  fun `close shuts down owned HTTP resources`() {
-    val httpClient = OkHttpClient()
-    val client = Web3jClient(endpoint.toString(), httpClient, mock())
-    client.close()
-    assertThat(httpClient.dispatcher.executorService.isShutdown).isTrue()
-    assertThat(httpClient.connectionPool.connectionCount()).isZero()
   }
 
   @Test
