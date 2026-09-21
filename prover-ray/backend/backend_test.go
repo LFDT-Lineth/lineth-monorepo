@@ -10,7 +10,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
-	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/internal/minimal-elf"
+	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/util/source"
