@@ -142,7 +142,7 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 		Type:       runReq.Type,
 		StartBlock: startBlock,
 		EndBlock:   endBlock,
-		Payload:    nil, // TODO: recursion guest input format undecided
+		Payload:    nil, // recursion guest input format undecided; mock passes no payload
 	})
 	if result.Status != backend.ResultStatusOK {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
@@ -169,7 +169,7 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 		Type:       runReq.Type,
 		StartBlock: startBlock,
 		EndBlock:   endBlock,
-		Payload:    nil, // TODO: recursion guest input format undecided
+		Payload:    nil, // recursion guest input format undecided; mock passes no payload
 	})
 	if result.Status != backend.ResultStatusOK {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))

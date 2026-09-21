@@ -55,7 +55,7 @@ func newRollupResponse(
 }
 
 // placeholderRollupPublicInputs is a zero-valued but schema-valid rollup PI.
-// TODO: populate from backend.Result once rollup public-input extraction exists.
+// Populated from backend.Result once rollup public-input extraction exists.
 func placeholderRollupPublicInputs() rollupResponsePublicInputs {
 	zero := hexHash([32]byte{})
 	return rollupResponsePublicInputs{
