@@ -49,9 +49,10 @@ class L2ExecutionRequestBuilderImpl(
         val ftxState = ftxStateFuture.get()
 
         L2ExecutionProofRequestV1(
-          executions = allExecutionsListFuture.get().map { (payload, witness) ->
+          executions = allExecutionsListFuture.get().mapIndexed { index, (payload, witness) ->
             payload.toExecutionInfo(
               witness = witness,
+              parentBeaconBlockRoot = conflation.blocks[index].parentBeaconBlockRoot ?: ByteArray(32),
               forcedTransactions = ftxsByBlock[payload.blockNumber] ?: emptyList(),
             )
           },
@@ -64,13 +65,18 @@ class L2ExecutionRequestBuilderImpl(
   }
 }
 
-private fun ExecutionPayload.toExecutionInfo(witness: ExecutionWitness, forcedTransactions: List<ForcedTransaction>) =
+private fun ExecutionPayload.toExecutionInfo(
+  witness: ExecutionWitness,
+  forcedTransactions: List<ForcedTransaction>,
+  parentBeaconBlockRoot: ByteArray,
+) =
   ExecutionInfo(
     blockNumber = blockNumber,
     executionPayload = this,
     executionWitness = witness,
     executionRequests = emptyList(),
     forcedTransactions = forcedTransactions,
+    parentBeaconBlockRoot = parentBeaconBlockRoot,
   )
 
 private fun ForcedTransactionRecord.toDomain() = ForcedTransaction(

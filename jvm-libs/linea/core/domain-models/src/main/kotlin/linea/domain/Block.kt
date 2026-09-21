@@ -29,12 +29,16 @@ data class BlockData<TxData>(
   val size: ULong,
   val slotNumber: ULong? = null,
   val blockAccessListHash: ByteArray? = null,
+  val parentBeaconBlockRoot: ByteArray? = null,
 ) {
   companion object {
     // companion object to allow static extension functions
   }
 
   init {
+    require(parentBeaconBlockRoot == null || parentBeaconBlockRoot.size == 32) {
+      "parentBeaconBlockRoot must be 32 bytes"
+    }
     require((slotNumber == null) == (blockAccessListHash == null)) {
       "slotNumber and blockAccessListHash must either both be present or both be absent"
     }
@@ -88,6 +92,7 @@ data class BlockData<TxData>(
     if (ommers != other.ommers) return false
     if (headerSummary != other.headerSummary) return false
     if (size != other.size) return false
+    if (!parentBeaconBlockRoot.contentEquals(other.parentBeaconBlockRoot)) return false
     if (slotNumber != other.slotNumber) return false
     if (!blockAccessListHash.contentEquals(other.blockAccessListHash)) return false
 
@@ -124,6 +129,7 @@ data class BlockData<TxData>(
     result = 31 * result + size.hashCode()
     result = 31 * result + slotNumber.hashCode()
     result = 31 * result + blockAccessListHash.contentHashCode()
+    result = 31 * result + parentBeaconBlockRoot.contentHashCode()
     return result
   }
 
@@ -153,6 +159,7 @@ data class BlockData<TxData>(
       "baseFeePerGas=$baseFeePerGas, " +
       "transactions=$txStr, " +
       "ommers=$ommers, " +
+      "parentBeaconBlockRoot=${parentBeaconBlockRoot?.encodeHex()}, " +
       "slotNumber=$slotNumber, " +
       "blockAccessListHash=${blockAccessListHash?.encodeHex()}, " +
       "size=$size" + ")"

@@ -68,7 +68,7 @@ class RiscvProofRequestDtoMapperTest {
                 newPayloadRequest = NewPayloadRequestDto(
                   executionPayload = expectedExecutionPayloadDto(execution.executionPayload),
                   versionedHashes = emptyList(),
-                  parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+                  parentBeaconBlockRoot = execution.parentBeaconBlockRoot.encodeHex(),
                   executionRequests = execution.executionRequests.map { it.encodeHex() },
                 ),
                 executionWitness = ExecutionWitnessDto(
@@ -314,6 +314,7 @@ class RiscvProofRequestDtoMapperTest {
     executions = listOf(
       ExecutionInfo(
         blockNumber = 1000501UL,
+        parentBeaconBlockRoot = ByteArray(32) { 0x42 },
         executionPayload = executionPayload(),
         executionWitness = ExecutionWitness(
           state = listOf(byteArrayOf(0x11)),

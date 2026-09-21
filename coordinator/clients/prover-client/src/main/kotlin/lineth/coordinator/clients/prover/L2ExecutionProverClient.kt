@@ -31,7 +31,7 @@ internal class L2ExecutionProofRequestDtoMapper(
             totalGasUsed += it.gasUsed
           },
           versionedHashes = emptyList(),
-          parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+          parentBeaconBlockRoot = executionInfo.parentBeaconBlockRoot.encodeHex(),
           executionRequests = executionInfo.executionRequests.map { it.encodeHex() },
         ),
         executionWitness = executionInfo.executionWitness.fromDomainObject(),

@@ -121,12 +121,6 @@ fun validateLinethBlock(block: EthBlockExtended.Block) {
   require(block.blobGasUsed == BigInteger.ZERO && block.excessBlobGas == BigInteger.ZERO) {
     "Blob gas is not supported: block=${block.number}"
   }
-  require(
-    block.parentBeaconBlockRoot == null ||
-      block.parentBeaconBlockRoot.decodeHex().contentEquals(ByteArray(32)),
-  ) {
-    "Nonzero parent beacon block root: block=${block.number}"
-  }
   if (block.slotNumber != null) {
     require(
       block.withdrawalsRoot != null && block.requestsHash != null &&

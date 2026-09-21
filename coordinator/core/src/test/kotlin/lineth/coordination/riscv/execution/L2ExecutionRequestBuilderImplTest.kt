@@ -19,7 +19,10 @@ import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class L2ExecutionRequestBuilderImplTest {
-  private val blocks = listOf(createBlock(number = 1UL), createBlock(number = 2UL))
+  private val blocks = listOf(
+    createBlock(number = 1UL).copy(parentBeaconBlockRoot = ByteArray(32) { 1 }),
+    createBlock(number = 2UL),
+  )
   private val conflation = BlocksConflation(
     blocks,
     ConflationCalculationResult(1UL, 2UL, ConflationTrigger.BLOCKS_LIMIT, TracesCountersV2.EMPTY_TRACES_COUNT),
@@ -71,6 +74,14 @@ class L2ExecutionRequestBuilderImplTest {
     assertThat(witnessRequests).containsExactlyElementsOf(blocks.map { BlockParameter.fromHash(it.hash) })
     assertThat(request.chainId).isEqualTo(59144UL)
     assertThat(request.parentFtxNumber).isEqualTo(0UL)
+    assertThat(request.executions[0].parentBeaconBlockRoot).isEqualTo(blocks[0].parentBeaconBlockRoot)
+    assertThat(request.executions[1].parentBeaconBlockRoot).isEqualTo(ByteArray(32))
+    val execution = request.executions[0]
+    assertThat(execution.copy(parentBeaconBlockRoot = execution.parentBeaconBlockRoot.copyOf()))
+      .isEqualTo(execution).hasSameHashCodeAs(execution)
+    assertThat(execution.copy(parentBeaconBlockRoot = ByteArray(32))).isNotEqualTo(execution)
+    assertThatThrownBy { execution.copy(parentBeaconBlockRoot = byteArrayOf(1)) }
+      .isInstanceOf(IllegalArgumentException::class.java)
   }
 
   @Test

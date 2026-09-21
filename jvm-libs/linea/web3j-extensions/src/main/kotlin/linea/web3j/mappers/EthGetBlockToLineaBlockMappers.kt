@@ -61,6 +61,7 @@ fun <TxData> mapToDomain(web3jBlock: EthBlock.Block, txsMapper: (EthBlock.Block)
     ommers = web3jBlock.uncles.map { it.decodeHex() }, // List of uncle block hashes
     transactions = txsMapper(web3jBlock), // List of transactions
     size = web3jBlock.size.toULong(),
+    parentBeaconBlockRoot = web3jBlock.parentBeaconBlockRoot?.decodeHex(),
     slotNumber = (web3jBlock as? EthBlockExtended.Block)?.slotNumber?.uLongFromPrefixedHex(),
     blockAccessListHash = (web3jBlock as? EthBlockExtended.Block)?.blockAccessListHash?.decodeHex(),
   )

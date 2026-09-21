@@ -104,13 +104,14 @@ object MapperLineaDomainToBesu {
         .mixHash(Hash.wrap(Bytes32.wrap(block.mixHash)))
         .nonce(block.nonce.toLong())
         .baseFee(block.baseFeePerGas?.toWei())
+        .parentBeaconBlockRoot(block.parentBeaconBlockRoot?.let { Bytes32.wrap(it) })
         .apply {
           if (block.slotNumber != null) {
-            // Lineth Amsterdam headers: withdrawals, blobs, beacon roots and requests are unsupported.
+            // Lineth Amsterdam headers: withdrawals, blobs and requests are unsupported.
             withdrawalsRoot(Hash.EMPTY_TRIE_HASH)
             blobGasUsed(0L)
             excessBlobGas(BlobGas.of(0L))
-            parentBeaconBlockRoot(Bytes32.ZERO)
+            parentBeaconBlockRoot(block.parentBeaconBlockRoot?.let { Bytes32.wrap(it) } ?: Bytes32.ZERO)
             requestsHash(Hash.EMPTY_REQUESTS_HASH)
             balHash(Hash.wrap(Bytes32.wrap(block.blockAccessListHash!!)))
             slotNumber(block.slotNumber!!.toLong())

@@ -18,6 +18,7 @@ import linea.rlp.RLP
 import linea.web3j.EthBlockExtended
 import linea.web3j.createWeb3jHttpService
 import linea.web3j.mappers.toDomain
+import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.datatypes.Hash
@@ -161,9 +162,32 @@ class Web3jExecutionPayloadClientTest {
     stub("eth_getBlockByNumber", json)
     val acquired = requireNotNull(ethClient.ethFindBlockByNumberFullTxs(BlockParameter.fromNumber(20UL)).get())
     assertThat(acquired.slotNumber).isNull()
+    assertThat(acquired.parentBeaconBlockRoot).isNull()
     assertThat(RLP.encodeBlock(acquired.toBesu())).isEqualTo(RLP.encodeBlock(legacy))
     assertThat(client.getExecutionPayload(acquired).get().blockAccessList).isEmpty()
     server.verify(2, postRequestedFor(urlEqualTo("/")))
+  }
+
+  @Test
+  fun `preserves parent beacon block root through RPC acquisition and RLP encoding`() {
+    val root = ByteArray(32) { 0x42 }
+    val header = BlockHeaderBuilder.fromHeader(block.header).blockHeaderFunctions(MainnetBlockHeaderFunctions())
+      .parentBeaconBlockRoot(Bytes32.wrap(root)).buildBlockHeader()
+    val expected = Block(header, block.body)
+    val json = rpcBlock.copy().put("parentBeaconBlockRoot", root.encodeHex())
+      .put("hash", header.hash.bytes.toHexString())
+    stub("eth_getBlockByNumber", json)
+
+    val acquired = requireNotNull(ethClient.ethFindBlockByNumberFullTxs(BlockParameter.fromNumber(20UL)).get())
+    assertThat(acquired.parentBeaconBlockRoot).isEqualTo(root)
+    assertThat(RLP.encodeBlock(acquired.toBesu())).isEqualTo(RLP.encodeBlock(expected))
+    assertThat(acquired.toBesu().header.hash.bytes.toArray()).isEqualTo(acquired.hash)
+    assertThat(acquired.copy(parentBeaconBlockRoot = root.copyOf())).isEqualTo(acquired).hasSameHashCodeAs(acquired)
+    assertThat(acquired.copy(parentBeaconBlockRoot = ByteArray(32))).isNotEqualTo(acquired)
+
+    stub("eth_getBlockByNumber", json.put("transactions", block.body.transactions.map { it.hash.bytes.toHexString() }))
+    val hashesOnly = requireNotNull(ethClient.ethFindBlockByNumberTxHashes(BlockParameter.fromNumber(20UL)).get())
+    assertThat(hashesOnly.parentBeaconBlockRoot).isEqualTo(root)
   }
 
   @Test
@@ -190,7 +214,8 @@ class Web3jExecutionPayloadClientTest {
       "requestsHash" to ByteArray(32).encodeHex(),
       "blobGasUsed" to "0x1",
       "excessBlobGas" to "0x1",
-      "parentBeaconBlockRoot" to ByteArray(32) { 1 }.encodeHex(),
+      "parentBeaconBlockRoot" to "0x01",
+      "parentBeaconBlockRoot" to null,
       "requestsHash" to null,
       "blobGasUsed" to null,
     )
