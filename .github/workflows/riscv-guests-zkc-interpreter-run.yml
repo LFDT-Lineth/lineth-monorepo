@@ -118,7 +118,7 @@ jobs:
     name: Guest unit tests (host)
     needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -142,7 +142,7 @@ jobs:
     name: l2-execution extended-guest reference-test guards (host)
     needs: build-guest-artifacts
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
