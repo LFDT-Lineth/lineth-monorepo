@@ -43,7 +43,7 @@ type GateAPI interface {
 	Mul(i1, i2 Variable, in ...Variable) Variable
 
 	// Const introduces a constant.
-	Const(v field.Element) Variable
+	Const(v field.Ext) Variable
 }
 
 // GateFunction is a function that evaluates a polynomial over its inputs
@@ -160,14 +160,6 @@ type Compiled struct {
 	circuit   Circuit
 	schedule  ProvingSchedule
 	positions map[Identifier]Variable
-}
-
-func (c *Compiled) Serialize() []byte {
-	return nil
-}
-
-func (c *Compiled) Deserialize(data []byte) error {
-
 }
 
 type Assignment map[Identifier][]field.Ext

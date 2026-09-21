@@ -22,8 +22,10 @@ func TestAdd2(t *testing.T) {
 	api.Export(api.Add(x, y), zID)
 
 	c := api.Compile()
-	var c2 Compiled
-	require.NoError(t, c2.Deserialize(c.Serialize()))
+
+	// The calling protocol binds the statement by absorbing this into its
+	// transcript before drawing any challenge.
+	_ = c.Digest()
 
 	a := Assignment{
 		xID: exts(2),
@@ -31,7 +33,7 @@ func TestAdd2(t *testing.T) {
 		zID: exts(6),
 	}
 
-	p := NewProverState(&c2, a)
+	p := NewProverState(c, a)
 	require.NotNil(t, p)
 
 	var challenges []field.Ext
@@ -43,7 +45,7 @@ func TestAdd2(t *testing.T) {
 	aOuts := Assignment{
 		zID: exts(6),
 	}
-	_, err := Verify(&c2, aOuts, p.Proof, challenges)
+	_, err := Verify(c, aOuts, p.Proof, challenges)
 	require.NoError(t, err)
 }
 

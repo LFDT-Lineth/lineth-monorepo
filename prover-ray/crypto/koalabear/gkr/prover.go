@@ -2,6 +2,9 @@ package gkr
 
 import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 
+// Proof is the sequence of round messages the prover emits, one per Next.
+type Proof [][]field.Ext
+
 type ProverState struct {
 	Proof Proof
 }
@@ -13,11 +16,11 @@ func NewProverState(c *Compiled, a Assignment) *ProverState {
 }
 
 func (p *ProverState) HasNext() bool {
-
+	panic("gkr: not implemented")
 }
 
 // Next consumes a challenge and returns the resulting round message, a copy owned
 // by the caller. The same message is appended to p.Proof, which is authoritative.
 func (p *ProverState) Next(challenge field.Ext) []field.Ext {
-
+	panic("gkr: not implemented")
 }

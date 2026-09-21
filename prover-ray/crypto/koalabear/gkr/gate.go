@@ -1,9 +1,7 @@
 package gkr
 
 import (
-	"crypto/rand"
 	"errors"
-	"math/big"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
@@ -53,7 +51,7 @@ type GateInstruction struct {
 // GateBytecode represents a gate executable compiled into a sequence of instructions.
 type GateBytecode struct {
 	Instructions []GateInstruction
-	Constants    []*big.Int
+	Constants    []field.Ext
 }
 
 // IdentityBytecode returns the compiled form of the identity gate (x → x).
@@ -100,7 +98,7 @@ func (g *GateBytecode) EstimateDegree(nbIn int) int {
 // After compilation, indices are remapped to: constants, inputs, results.
 type gateCompiler struct {
 	instructions  []GateInstruction
-	constants     []*big.Int
+	constants     []field.Ext
 	constantIndex map[string]Variable // constant value → temp index
 	nbInputs      int
 }
@@ -127,17 +125,14 @@ func (gc *gateCompiler) addInstruction2Plus(op GateOp, i1, i2 Variable, in ...Va
 }
 
 // Const introduces a constant into the gate's value space.
-func (gc *gateCompiler) Const(v field.Element) Variable {
-	var val big.Int
-	v.BigInt(&val)
-
-	key := val.String()
+func (gc *gateCompiler) Const(v field.Ext) Variable {
+	key := v.String()
 	if i, ok := gc.constantIndex[key]; ok {
 		return i
 	}
 
 	i := Variable(len(gc.constants)) | constMarker
-	gc.constants = append(gc.constants, &val)
+	gc.constants = append(gc.constants, v)
 	gc.constantIndex[key] = i
 	return i
 }
@@ -212,7 +207,7 @@ func CompileGateFunction(f GateFunction, nbInputs int) (Gate, error) {
 		Constants:    compiler.constants,
 	}
 
-	tester := gateTester{mod: field.Modulus()}
+	tester := gateTester{}
 	tester.setGate(bytecode, nbInputs)
 
 	degree := len(tester.fitPoly(bytecode.EstimateDegree(nbInputs))) - 1
@@ -223,132 +218,126 @@ func CompileGateFunction(f GateFunction, nbInputs int) (Gate, error) {
 	return Gate{Evaluate: bytecode, NbIn: nbInputs, Degree: degree}, nil
 }
 
+// gateTester evaluates a gate over the degree-6 extension. Working in the
+// extension rather than the base field makes the randomized degree fit err with
+// probability ~deg/|Ext| rather than ~deg/p, so two independent compilations of
+// the same gate cannot realistically disagree on its degree.
 type gateTester struct {
-	mod  *big.Int
 	gate GateBytecode
-	vars []*big.Int
+	vars []field.Ext
 	nbIn int
 }
 
 func (t *gateTester) setGate(g GateBytecode, nbIn int) {
 	t.gate = g
-	t.vars = make([]*big.Int, g.NbConstants()+nbIn+len(g.Instructions))
+	t.vars = make([]field.Ext, g.NbConstants()+nbIn+len(g.Instructions))
 	t.nbIn = nbIn
 	copy(t.vars, g.Constants)
 }
 
-func (t *gateTester) isZero(a *big.Int) bool {
-	return new(big.Int).Mod(a, t.mod).BitLen() == 0
+func (t *gateTester) isZero(a field.Ext) bool { return a.IsZero() }
+
+func (t *gateTester) equal(a, b field.Ext) bool { return a.Equal(&b) }
+
+func (t *gateTester) add(a, b field.Ext) field.Ext {
+	var z field.Ext
+	z.Add(&a, &b)
+	return z
 }
 
-func (t *gateTester) equal(a, b *big.Int) bool { return a.Cmp(b) == 0 }
-
-func (t *gateTester) add(a, b *big.Int) *big.Int {
-	res := new(big.Int).Add(a, b)
-	return res.Mod(res, t.mod)
+func (t *gateTester) sub(a, b field.Ext) field.Ext {
+	var z field.Ext
+	z.Sub(&a, &b)
+	return z
 }
 
-func (t *gateTester) sub(a, b *big.Int) *big.Int {
-	res := new(big.Int).Sub(a, b)
-	return res.Mod(res, t.mod)
+func (t *gateTester) mul(a, b field.Ext) field.Ext {
+	var z field.Ext
+	z.Mul(&a, &b)
+	return z
 }
 
-func (t *gateTester) mul(a, b *big.Int) *big.Int {
-	res := new(big.Int).Mul(a, b)
-	return res.Mod(res, t.mod)
+func (t *gateTester) neg(a field.Ext) field.Ext {
+	var z field.Ext
+	z.Neg(&a)
+	return z
 }
 
-func (t *gateTester) neg(a *big.Int) *big.Int {
-	res := new(big.Int).Neg(a)
-	return res.Mod(res, t.mod)
+func (t *gateTester) inverse(a field.Ext) field.Ext {
+	var z field.Ext
+	z.Inverse(&a)
+	return z
 }
 
-func (t *gateTester) inverse(a *big.Int) *big.Int {
-	return new(big.Int).ModInverse(a, t.mod)
+func (t *gateTester) div(a, b field.Ext) field.Ext {
+	var z field.Ext
+	z.Div(&a, &b)
+	return z
 }
 
-func (t *gateTester) div(a, b *big.Int) *big.Int {
-	res := new(big.Int).ModInverse(b, t.mod)
-	return res.Mul(a, res).Mod(res, t.mod)
-}
-
-func (t *gateTester) randomElement() *big.Int {
-	res, err := rand.Int(rand.Reader, t.mod)
-	if err != nil {
-		panic(err)
-	}
-	return res
-}
-
-func (t *gateTester) randomElements(n int) []*big.Int {
-	res := make([]*big.Int, n)
+func (t *gateTester) randomElements(n int) []field.Ext {
+	res := make([]field.Ext, n)
 	for i := range res {
-		res[i] = t.randomElement()
+		res[i] = field.RandomElementExt()
 	}
 	return res
 }
 
-func (t *gateTester) evalPoly(p []*big.Int, x *big.Int) *big.Int {
+func (t *gateTester) evalPoly(p []field.Ext, x field.Ext) field.Ext {
 	res := p[len(p)-1]
 	for i := len(p) - 2; i >= 0; i-- {
-		res = t.mul(res, x)
-		res = t.add(res, p[i])
+		res = t.add(t.mul(res, x), p[i])
 	}
 	return res
 }
 
 // evaluate executes the gate bytecode with the given inputs.
-func (t *gateTester) evaluate(inputs ...*big.Int) *big.Int {
+func (t *gateTester) evaluate(inputs ...field.Ext) field.Ext {
 	frameSize := t.gate.NbConstants()
 	copy(t.vars[frameSize:], inputs)
 	frameSize += len(inputs)
 
 	for _, inst := range t.gate.Instructions {
-		dst := t.vars[frameSize]
-		if dst == nil {
-			dst = new(big.Int)
-			t.vars[frameSize] = dst
-		}
+		dst := &t.vars[frameSize]
 		switch inst.Op {
 		case OpAdd:
-			dst.Set(t.vars[inst.Inputs[0]])
+			dst.Set(&t.vars[inst.Inputs[0]])
 			for _, i := range inst.Inputs[1:] {
-				dst.Add(dst, t.vars[i])
+				dst.Add(dst, &t.vars[i])
 			}
 		case OpSub:
-			dst.Set(t.vars[inst.Inputs[0]])
+			dst.Set(&t.vars[inst.Inputs[0]])
 			for _, i := range inst.Inputs[1:] {
-				dst.Sub(dst, t.vars[i])
+				dst.Sub(dst, &t.vars[i])
 			}
 		case OpMul:
-			dst.Set(t.vars[inst.Inputs[0]])
+			dst.Set(&t.vars[inst.Inputs[0]])
 			for _, i := range inst.Inputs[1:] {
-				dst.Mul(dst, t.vars[i])
+				dst.Mul(dst, &t.vars[i])
 			}
 		case OpNeg:
-			dst.Neg(t.vars[inst.Inputs[0]])
+			dst.Neg(&t.vars[inst.Inputs[0]])
 		case OpMulAcc: // a + b*c
-			dst.Mul(t.vars[inst.Inputs[1]], t.vars[inst.Inputs[2]])
-			dst.Add(dst, t.vars[inst.Inputs[0]])
+			dst.Mul(&t.vars[inst.Inputs[1]], &t.vars[inst.Inputs[2]])
+			dst.Add(dst, &t.vars[inst.Inputs[0]])
 		default:
 			panic("unknown operation")
 		}
-		dst.Mod(dst, t.mod)
 		frameSize++
 	}
 
-	return new(big.Int).Set(t.vars[frameSize-1])
+	return t.vars[frameSize-1]
 }
 
 // fitPoly tries to fit a polynomial of degree no more than maxDegree to the gate.
 // It returns the polynomial if successful, nil otherwise.
-func (t *gateTester) fitPoly(maxDegree int) []*big.Int {
+func (t *gateTester) fitPoly(maxDegree int) []field.Ext {
 	// turn f univariate by defining p(x) as f(x, rx, ..., sx)
 	// where r, s, ... are random constants
-	fIn := make([]*big.Int, t.nbIn)
+	fIn := make([]field.Ext, t.nbIn)
 	consts := t.randomElements(t.nbIn - 1)
 
-	p := make([]*big.Int, maxDegree+1)
+	p := make([]field.Ext, maxDegree+1)
 
 	x := t.randomElements(maxDegree + 1)
 	for i := range x {
@@ -366,7 +355,7 @@ func (t *gateTester) fitPoly(maxDegree int) []*big.Int {
 	}
 
 	// check if p is equal to f. This not being the case means that f is of a degree higher than maxDegree
-	fIn[0] = t.randomElement()
+	fIn[0] = field.RandomElementExt()
 	for i := range consts {
 		fIn[i+1] = t.mul(fIn[0], consts[i])
 	}
@@ -384,17 +373,18 @@ func (t *gateTester) fitPoly(maxDegree int) []*big.Int {
 
 // interpolate fits a polynomial of degree len(X) - 1 = len(Y) - 1 to the points (X[i], Y[i]).
 // Note that the runtime is O(len(X)³).
-func (t *gateTester) interpolate(X, Y []*big.Int) ([]*big.Int, error) {
+func (t *gateTester) interpolate(X, Y []field.Ext) ([]field.Ext, error) {
 	if len(X) != len(Y) {
 		return nil, errors.New("same length expected for X and Y")
 	}
 
-	one := big.NewInt(1)
+	var one field.Ext
+	one.SetOne()
 
 	// solve the system of equations by Gaussian elimination
-	augmentedRows := make([][]*big.Int, len(X)) // the last column is the Y values
+	augmentedRows := make([][]field.Ext, len(X)) // the last column is the Y values
 	for i := range augmentedRows {
-		augmentedRows[i] = make([]*big.Int, len(X)+1)
+		augmentedRows[i] = make([]field.Ext, len(X)+1)
 		augmentedRows[i][0] = one
 		augmentedRows[i][1] = X[i]
 		for j := 2; j < len(augmentedRows[i])-1; j++ {
@@ -419,7 +409,7 @@ func (t *gateTester) interpolate(X, Y []*big.Int) ([]*big.Int, error) {
 	}
 
 	// back substitution
-	res := make([]*big.Int, len(X))
+	res := make([]field.Ext, len(X))
 	for i := len(augmentedRows) - 1; i >= 0; i-- {
 		res[i] = augmentedRows[i][len(augmentedRows[i])-1]
 		for j := i + 1; j < len(augmentedRows[i])-1; j++ {
