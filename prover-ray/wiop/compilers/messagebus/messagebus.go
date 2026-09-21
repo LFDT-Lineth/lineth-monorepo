@@ -24,16 +24,13 @@
 // is asserted by its own verifier action. See [wiop.MessageBus] for the
 // per-entry semantics.
 //
-// The pass allocates α and β itself, via [Round.NewCoinField] on a fresh
-// (or reused) coin round immediately after the latest participant round.
-// In a sharded protocol the caller is expected to pre-allocate that coin
-// round and register a [Round.RegisterPreSamplingHook] entry on it that
-// calls [Runtime.SetFSState] with shared randomness derived from a
-// cross-shard handoff. The compiler's ensureRoundAfter reuses any
-// pre-existing tail round at the right position, so messagebus's coin
-// allocation lands on the same round the hook is registered on — and every
-// shard's α, β therefore derive from the seeded FS state instead of the
-// local transcript.
+// The pass allocates α and β itself, via [Round.NewCoinField] on the round
+// right after round 0 (see registerSharedRandomness). They are ordinary
+// Fiat-Shamir coins.
+// In a sharded protocol what makes every shard draw the same pair is that
+// round 0 carries the same data on each, so the state the coins are sampled from is identical shard to shard.
+// With [CompileOptions.SharedRandomness] the pass enforces that layout rather
+// than trusting it.
 //
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
@@ -65,8 +62,8 @@ type CompileOptions struct {
 	// SharedRandomness makes the shard derive α and β from a γ handed to it from
 	// outside the proof instead of from its own Fiat-Shamir transcript, which is
 	// what lets several shards agree on those challenges. It declares γ and the
-	// shard's contribution to it as public inputs and wires the pre-sampling hook
-	// that seeds the transcript; see [registerSharedRandomness].
+	// shard's contribution to it as public inputs, and requires every bus column
+	// to sit on the coin round; see [registerSharedRandomness].
 	//
 	// Off by default: an unsharded protocol has no one to agree with and derives
 	// α and β from its own transcript. Turning it on obliges the prover to supply
@@ -88,18 +85,14 @@ type CompileOptions struct {
 // documentation for the full reduction.
 //
 // Set [CompileOptions.SharedRandomness] to make α and β derive from a
-// cross-shard γ rather than from this shard's transcript. Compile owns that
-// wiring because it is the same call that fixes the coin round: registering the
-// pre-sampling hook separately would leave the hook and the coins free to land
-// on different rounds, which silently desynchronizes the shards rather than
-// failing.
+// cross-shard γ rather than from this shard's own traffic.
 //
 // The pass appends up to two fresh interactive rounds to sys.Rounds: a
 // coin round where the shared α and β are declared, and a result round
 // where the [wiop.GrandProduct] result cells and the per-handle verifier
-// action live. Either round may already exist at the right position (e.g.
-// when a sharded protocol pre-allocates the coin round to attach a
-// [Round.RegisterPreSamplingHook]); ensureRoundAfter reuses existing tail
+// action live. Either round may already exist at the right position — a
+// sharded caller declares its bus columns on the coin round, which therefore
+// exists before this pass runs — and ensureRoundAfter reuses existing tail
 // rounds rather than appending duplicates.
 //
 // Compile must be invoked at most once per system: it tags each handle's

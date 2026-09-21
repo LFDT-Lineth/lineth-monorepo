@@ -175,6 +175,19 @@ func (s *seededShard) readSeedFromPI(t *testing.T, rt *wiop.Runtime) field.Octup
 	return g
 }
 
+// busCoins returns the α and β the shard actually folded under, as
+// [wiop.Runtime.AdvanceRound] drew them from the transcript.
+//
+// [buildSeededBidirectionalShard] has already asserted that the coin round
+// carries exactly these two coins, and [registerSharedRandomness] declares them
+// α-then-β, so indices 0 and 1 are those coins and nothing else.
+func (s *seededShard) busCoins(t *testing.T, rt *wiop.Runtime) (alpha, beta field.Gen) {
+	t.Helper()
+	coins := s.sys.Rounds[coinRoundID].Coins
+	require.Len(t, coins, 2, "the coin round must carry exactly α and β")
+	return rt.GetCoinValue(coins[0]), rt.GetCoinValue(coins[1])
+}
+
 // getBusAccFromSys returns handle i's accumulator, in the alphabetical order Compile
 // numbers the MessageBus public inputs by.
 func (s *seededShard) getBusAccFromSys(rt *wiop.Runtime, i int) field.Gen {
@@ -347,6 +360,71 @@ func TestSharedRandomness_SeedDerivedFromContributions(t *testing.T) {
 				"the shards' net positions on %q must be inverses under the shared α and β", h)
 		})
 	}
+}
+
+// TestSharedRandomness_CoinsFollowTheSeed checks the mechanism the cross-shard
+// tests only observe indirectly: α and β are a function of γ, so γ is what
+// synchronizes two shards.
+//   - two shards with different traffic, handed the same γ, draw the same α and β;
+//   - the same shard handed a different γ draws different ones;
+//
+// Both γ values come out of [preflight.Run] rather than being made up, so what
+// separates them is which shards contributed — the realistic way an orchestrator
+// gets this wrong.
+func TestSharedRandomness_CoinsFollowTheSeed(t *testing.T) {
+	shard1 := buildSeededBidirectionalShard(
+		t, "shard-1-bidir-coins", "shard-1", crossShardTrafficShard1)
+	shard2 := buildSeededBidirectionalShard(
+		t, "shard-2-bidir-coins", "shard-2", crossShardTrafficShard2)
+
+	// gPair is the seed the orchestrator hands out; gLone is what a shard gets if
+	// preflight ran over shard 1 alone — a real seed, derived from a different set
+	// of contributions.
+	gPair := seedOf(t, shard1, shard2)
+	gLone := seedOf(t, shard1)
+	require.NotEqual(t, gPair, gLone,
+		"the two seeds must differ, otherwise the comparisons below are vacuous")
+
+	rtPair1, _, _ := shard1.runProve(t, gPair)
+	rtPair2, _, _ := shard2.runProve(t, gPair)
+	rtLone1, _, _ := shard1.runProve(t, gLone)
+
+	alphaPair1, betaPair1 := shard1.busCoins(t, rtPair1)
+	alphaPair2, betaPair2 := shard2.busCoins(t, rtPair2)
+	alphaLone1, betaLone1 := shard1.busCoins(t, rtLone1)
+
+	t.Run("same seed, different shards", func(t *testing.T) {
+		// The two shards hold different bus traffic and publish different
+		// contributions, so anything but γ leaking into the coins would show up
+		// here as a mismatch.
+		require.True(t, equal(alphaPair1, alphaPair2),
+			"shards handed the same γ must draw the same α")
+		require.True(t, equal(betaPair1, betaPair2),
+			"shards handed the same γ must draw the same β")
+		require.False(t, equal(alphaPair1, betaPair1),
+			"α and β must be independent draws, not one coin read twice")
+	})
+
+	t.Run("different seed, same shard", func(t *testing.T) {
+		// Only γ changed between these two runs — same system, same columns, same
+		// contribution — so a coin that did not move would mean γ never reached the
+		// transcript and the seeding is decorative.
+		require.False(t, equal(alphaPair1, alphaLone1),
+			"α must change when the shard is handed a different γ")
+		require.False(t, equal(betaPair1, betaLone1),
+			"β must change when the shard is handed a different γ")
+	})
+
+	t.Run("different seeds, different shards", func(t *testing.T) {
+		// The failure mode itself: shard 1 seeded off shard 1 alone, shard 2 off the
+		// pair. Each still proves — nothing local detects it — but they are folding
+		// under unrelated challenges, so their per-handle products can no longer be
+		// compared.
+		require.False(t, equal(alphaLone1, alphaPair2),
+			"shards handed different γ must not share α")
+		require.False(t, equal(betaLone1, betaPair2),
+			"shards handed different γ must not share β")
+	})
 }
 
 // TestSharedRandomness_SeedDerivedFromContributions_Unbalanced is the soundness

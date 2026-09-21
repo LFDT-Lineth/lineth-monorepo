@@ -24,6 +24,9 @@ const (
 // Round 0 is
 // where  γ has to live: being absorbed into Fiat-Shamir on the way out of that
 // round is what lets the challenges drawn later depend on it.
+//
+// In that mode it also requires every participating bus column to sit on the
+// coin round, and panics otherwise
 func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta *wiop.CoinField) {
 	compCtx := sys.Context.Childf("message-bus")
 	seedRound := sys.Rounds[0]
@@ -34,6 +37,20 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 	beta = coinRound.NewCoinField(compCtx.Childf("beta"))
 
 	if opt.SharedRandomness {
+
+		// Every participating bus column has to be committed on the coin round,
+		if mb, cv := misplacedParticipantColumn(sys, coinRound.ID); mb != nil {
+			round := "no round"
+			if r := cv.Round(); r != nil {
+				round = fmt.Sprintf("round %d", r.ID)
+			}
+			panic(fmt.Sprintf(
+				"wiop/compilers/messagebus: with shared randomness every bus column must live on the coin "+
+					"round %d, but %q (handle %q) reads column %q on %s; a column off the coin round is not "+
+					"covered by this shard's contribution, so γ would not bind it",
+				coinRound.ID, mb.Context().Path(), mb.Handle, cv.Column.Context.Path(), round,
+			))
+		}
 
 		ctx := sys.Context.Childf("shared-randomness")
 		for i := range NumSharedRandomness {
@@ -64,7 +81,7 @@ func registerSharedRandomness(sys *wiop.System, opt CompileOptions) (alpha, beta
 }
 
 // GetSharedRandomnessSeed returns the god-given value of the shared randomness
-// that was provided by [AssignSharedRandomness].
+// that was provided by [AssignSharedRandomnessSeed].
 func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 	var gamma field.Octuplet
 	for i := range gamma {
@@ -119,14 +136,16 @@ func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 
 // SharedRandomnessContributionChecker is a verifier action that checks that the
 // public-input cells of the shared randomness contribution are correctly
-// computed against the commitment cell values. It is the verifier analog to
-// [SharedRandomnessContributionAssigner].
+// computed against the commitment cell values.
+//
+// It is the verifier counterpart of the lazy contribution cells declared in
+// [registerSharedRandomness]
 type SharedRandomnessContributionChecker struct{}
 
 // sharedRandomnessContribution returns this shard's contribution to the shared
 // randomness.
 // The preflight
-// columns are assumed isolated all landed on the same round — an assumption the backend enforces.
+// columns are isolated all landed on the same round
 func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 	if !rt.CurrentRound().HasCommitment {
 		logrus.Warnf(
