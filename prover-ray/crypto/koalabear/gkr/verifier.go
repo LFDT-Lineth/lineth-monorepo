@@ -8,6 +8,6 @@ type Opening struct {
 }
 
 // Verify checks the arithmetic relations of proof against the given challenges.
-func Verify(c *Compiled, outputs Assignment, proof Proof, challenges []field.Ext) (map[Identifier]Opening, error) {
+func Verify(_ *Compiled, _ Assignment, _ Proof, _ []field.Ext) (map[Identifier]Opening, error) {
 	panic("gkr: not implemented")
 }

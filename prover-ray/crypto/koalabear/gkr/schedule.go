@@ -235,11 +235,13 @@ func (c Circuit) UniqueInputIndices(schedule ProvingSchedule) [][]int {
 // sentinel for the initial challenge. finalize will map each src.Level to its final absolute index via
 // n-1-src.level, where n = len(levels), so -1 → n (initial challenge) and i → n-1-i (real levels).
 type scheduleBuilder struct {
-	circuit              Circuit
-	wireOutputs          [][]int // wireOutputs[i] indices of wires that wire i feeds into, in increasing order and deduplicated.
-	wireLevels           []int   // wireLevels[i] which level wire i has been put in
-	wireProcessed        []bool
-	claimSourcesCache    [][]ClaimSource // claimSourcesCache[i] is the result of claimSources(i), or nil if not yet computed.
+	circuit Circuit
+	// wireOutputs[i] indices of wires that wire i feeds into, in increasing order and deduplicated.
+	wireOutputs   [][]int
+	wireLevels    []int // wireLevels[i] which level wire i has been put in
+	wireProcessed []bool
+	// claimSourcesCache[i] is the result of claimSources(i), or nil if not yet computed.
+	claimSourcesCache    [][]ClaimSource
 	firstUnprocessedWire int
 	levels               ProvingSchedule
 }
@@ -290,7 +292,10 @@ func (b *scheduleBuilder) addSingleSourceZeroCheckLevel(wireIndices []int) error
 		return err
 	}
 	if len(claimGroups[0].ClaimSources) != 1 {
-		return fmt.Errorf("single source zerocheck level requires exactly 1 claim source, got %d", len(claimGroups[0].ClaimSources))
+		return fmt.Errorf(
+			"single source zerocheck level requires exactly 1 claim source, got %d",
+			len(claimGroups[0].ClaimSources),
+		)
 	}
 	lvl := SingleSourceZeroCheckLevel(claimGroups[0])
 	b.levels = append(b.levels, &lvl)
@@ -330,7 +335,8 @@ func (b *scheduleBuilder) buildClaimGroups(batches [][]int) ([]ClaimGroup, error
 			b.wireLevels[wI] = levelI
 			b.wireProcessed[wI] = true
 			if wI == b.firstUnprocessedWire {
-				for b.firstUnprocessedWire--; b.firstUnprocessedWire >= 0 && b.wireProcessed[b.firstUnprocessedWire]; b.firstUnprocessedWire-- {
+				for b.firstUnprocessedWire--; b.firstUnprocessedWire >= 0 &&
+					b.wireProcessed[b.firstUnprocessedWire]; b.firstUnprocessedWire-- {
 				}
 			}
 		}
@@ -441,7 +447,8 @@ const (
 func batchForWire(c Circuit, highWI int, readyWireClaimSources [][]ClaimSource) (batchWires []int, kind levelKind) {
 	batchWires = []int{highWI}
 	for len(batchWires) < len(readyWireClaimSources) {
-		if c[highWI].Gate.Degree != c[highWI-len(batchWires)].Gate.Degree || !slices.Equal(readyWireClaimSources[0], readyWireClaimSources[len(batchWires)]) {
+		if c[highWI].Gate.Degree != c[highWI-len(batchWires)].Gate.Degree ||
+			!slices.Equal(readyWireClaimSources[0], readyWireClaimSources[len(batchWires)]) {
 			break
 		}
 		batchWires = append(batchWires, highWI-len(batchWires))
