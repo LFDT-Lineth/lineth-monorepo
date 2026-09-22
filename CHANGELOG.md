@@ -33,6 +33,10 @@
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(maru)* Add Amsterdam support (#3939)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
+- *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
 
 ### 🐛 Bug Fixes
 
@@ -83,6 +87,7 @@
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
 - *(prover)* Empty-codehash check (#3913)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 
 ### 🚜 Refactor
 
@@ -156,3 +161,5 @@
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(coordinator)* Consolidate prover clients (#3944)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)

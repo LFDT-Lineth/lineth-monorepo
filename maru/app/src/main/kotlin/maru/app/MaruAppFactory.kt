@@ -20,6 +20,7 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
+import linea.teku.Web3JClient
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
 import linea.timer.VertxTimerFactory
@@ -30,6 +31,7 @@ import maru.api.ApiServerImpl
 import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
+import maru.config.QbftConfig
 import maru.config.SyncingConfig
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
@@ -77,7 +79,6 @@ import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.LogManager
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.networking.p2p.network.config.GeneratingFilePrivateKeySource
 import java.nio.file.Files
 import java.nio.file.Path
@@ -144,6 +145,8 @@ class MaruAppFactory(
   ): MaruApp {
     log.info("configs={}", config)
     log.info("beaconGenesisConfig={}", beaconGenesisConfig)
+
+    checkTargetGasLimitAndForks(config.qbft, beaconGenesisConfig)
 
     val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
 
@@ -577,6 +580,20 @@ class MaruAppFactory(
       )
     val qbftConsensusConfig = qbftForkConfig.configuration as QbftConsensusConfig
     beaconChainInitialization.ensureDbIsInitialized(qbftConsensusConfig.validatorSet)
+  }
+
+  internal fun checkTargetGasLimitAndForks(
+    qbftConfig: QbftConfig?,
+    forksSchedule: ForksSchedule,
+  ) {
+    if (qbftConfig != null && forksSchedule.forks.any {
+        it.configuration.fork.elFork.version >= ElFork.Amsterdam.version
+      }
+    ) {
+      requireNotNull(qbftConfig.targetGasLimit) {
+        "qbft.target-gas-limit must be configured for block-producing nodes with Amsterdam scheduled"
+      }
+    }
   }
 
   internal fun checkL2EthApiEndpointAndForks(

@@ -301,7 +301,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
-        end_offset=131072,
+        end_offset=0,
         program_vks=[_EXEC_VK],
     )
 
@@ -338,7 +338,9 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].compressed_segment == req.conflations[0].compressed_segment
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
+    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
+    assert req.chunks[0].is_calldata is False
+    assert req.chunks[0].calldata_length == 0
     assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
@@ -410,6 +412,53 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_decode_rollup_request_is_calldata_true_decodes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    req["proofRequest"]["chunks"][0]["calldataLength"] = 131073
+    out = decode_rollup_request(req)
+    assert out.chunks[0].is_calldata is True
+    assert out.chunks[0].calldata_length == 131073
+
+
+@pytest.mark.parametrize("field", ["isCalldata", "calldataLength"])
+def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
+    req = _valid_rollup_request()
+    del req["proofRequest"]["chunks"][0][field]
+    with pytest.raises(ProofIoError, match=field):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("bad", [-1, True, "one", 2**64])
+def test_decode_rollup_request_invalid_calldata_length_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["calldataLength"] = bad
+    with pytest.raises(ProofIoError, match="calldataLength"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_rejects_nonzero_blob_calldata_length() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["calldataLength"] = 1
+    with pytest.raises(ProofIoError, match="must be 0 for a blob"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_rejects_zero_calldata_length() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    with pytest.raises(ProofIoError, match="must be positive for calldata"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("bad", ["true", 1, 0, "false"])
+def test_decode_rollup_request_non_boolean_is_calldata_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = bad
+    with pytest.raises(ProofIoError, match="isCalldata"):
+        decode_rollup_request(req)
+
+
 def test_decode_rollup_request_json_round_trips() -> None:
     decoded = decode_rollup_request_json(json.dumps(_valid_rollup_request()))
     assert int(decoded.chain_id) == 59144
@@ -441,7 +490,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["startOffset"] == 4
-    assert pi["endOffset"] == 131072
+    assert pi["endOffset"] == 0
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # §ProgramVK anchoring: one combined programVks list (exec/rollup not

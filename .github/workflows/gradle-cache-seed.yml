@@ -15,6 +15,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/gradle-cache-seed.yml"
       - "gradle/**"
       - "gradle.properties"
       - "settings.gradle"
@@ -39,3 +40,8 @@ jobs:
 
       - name: Resolve all dependencies
         run: ./gradlew --init-script .github/gradle/resolve-all-dependencies.init.gradle resolveAllDependencies
+
+      # Formatter dependencies are provisioned lazily and are not covered by
+      # resolveAllDependencies. Warm them for PR jobs that restore this cache.
+      - name: Resolve Spotless formatter dependencies
+        run: ./gradlew spotlessInternalRegisterDependencies --stacktrace

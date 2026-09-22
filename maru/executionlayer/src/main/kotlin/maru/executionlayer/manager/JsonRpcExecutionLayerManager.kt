@@ -11,7 +11,6 @@ package maru.executionlayer.manager
 import maru.core.ExecutionPayload
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
 import maru.executionlayer.mappers.Mappers.toDomain
-import maru.executionlayer.mappers.Mappers.toPayloadAttributesV1
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
@@ -34,6 +33,8 @@ class JsonRpcExecutionLayerManager(
     nextBlockTimestamp: ULong,
     feeRecipient: ByteArray,
     prevRandao: ByteArray,
+    nextBlockSlotNumber: ULong?,
+    targetGasLimit: ULong?,
   ): SafeFuture<ForkChoiceUpdatedResult> {
     log.debug(
       "Trying to create a new block with timestamp={}, fork={}",
@@ -45,6 +46,8 @@ class JsonRpcExecutionLayerManager(
         timestamp = nextBlockTimestamp,
         suggestedFeeRecipient = feeRecipient,
         prevRandao = prevRandao,
+        slotNumber = nextBlockSlotNumber,
+        targetGasLimit = targetGasLimit,
       )
     log.debug(
       "Starting block building with payloadAttributes={}, fork={}",
@@ -133,7 +136,7 @@ class JsonRpcExecutionLayerManager(
           Bytes32.wrap(safeHash),
           Bytes32.wrap(finalizedHash),
         ),
-        payloadAttributes?.toPayloadAttributesV1(),
+        payloadAttributes,
       ).thenApply { response ->
         log.debug(
           "engine_forkchoiceUpdated response={} fork={}",

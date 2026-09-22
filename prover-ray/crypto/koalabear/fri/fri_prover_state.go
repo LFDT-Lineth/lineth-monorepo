@@ -160,10 +160,19 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 	}
 
 	st.RunningQueries = make([]RunningQuery, st.p.NumQueries)
+	capDepths := make([]int, st.p.numRounds())
+	if st.p.numRounds() > 1 {
+		st.RoundCaps = make([]MerkleCap, st.p.numRounds()-1)
+		for j := uint8(1); j < st.p.numRounds(); j++ {
+			depth := merkleCapDepth(st.p.NumQueries, int(st.p.LogCodewordSize-j))
+			capDepths[j] = depth
+			st.RoundCaps[j-1] = st.trees[j].OpenCap(depth)
+		}
+	}
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.RunningQueries[k] = st.openRunningQueryExt(s)
+		st.RunningQueries[k] = st.openRunningQueryExt(s, capDepths)
 	}
 
 	return st.Proof

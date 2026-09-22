@@ -67,6 +67,7 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
+    ChunkWitness,
     ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
@@ -417,6 +418,34 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     )
 
 
+def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
+    """
+    Decode one touched-chunk entry: `{chunkHash, isCalldata, calldataLength}`.
+
+    `chunkHash` is the anchored binding hash (a KZG versioned hash for a blob
+    chunk, `keccak256(_compressedData)` for a calldata chunk — §3.1).
+    `isCalldata` selects the in-guest check. `calldataLength` is zero for a
+    blob and the positive exact byte length for calldata.
+    """
+    chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
+    is_calldata = _require(obj, "isCalldata", ctx)
+    if not isinstance(is_calldata, bool):
+        raise ProofIoError(f"'{ctx}isCalldata' must be a boolean")
+    try:
+        calldata_length = int(_u64(_require(obj, "calldataLength", ctx), f"{ctx}calldataLength"))
+    except OverflowError as exc:
+        raise ProofIoError(f"'{ctx}calldataLength' exceeds uint64") from exc
+    if is_calldata and calldata_length == 0:
+        raise ProofIoError(f"'{ctx}calldataLength' must be positive for calldata")
+    if not is_calldata and calldata_length != 0:
+        raise ProofIoError(f"'{ctx}calldataLength' must be 0 for a blob")
+    return ChunkWitness(
+        chunk_hash=chunk_hash,
+        is_calldata=is_calldata,
+        calldata_length=calldata_length,
+    )
+
+
 def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     """
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
@@ -470,7 +499,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             for i, c in enumerate(conflations)
         ],
         chunks=[
-            Hash32(_bytes_from_hex(c, f"proofRequest.chunks[{i}]")) for i, c in enumerate(chunks)
+            _decode_chunk_witness(c, f"proofRequest.chunks[{i}].") for i, c in enumerate(chunks)
         ],
         l2_execution_proofs=[
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")

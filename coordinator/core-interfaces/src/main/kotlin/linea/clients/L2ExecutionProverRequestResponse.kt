@@ -15,7 +15,11 @@ data class ExecutionInfo(
   val executionWitness: ExecutionWitness,
   val executionRequests: List<ByteArray>,
   val forcedTransactions: List<ForcedTransaction>,
+  val parentBeaconBlockRoot: ByteArray = ByteArray(32),
 ) {
+  init {
+    require(parentBeaconBlockRoot.size == 32) { "parentBeaconBlockRoot must be 32 bytes" }
+  }
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -27,6 +31,7 @@ data class ExecutionInfo(
     if (executionWitness != other.executionWitness) return false
     if (!executionRequests.byteArrayListEquals(other.executionRequests)) return false
     if (forcedTransactions != other.forcedTransactions) return false
+    if (!parentBeaconBlockRoot.contentEquals(other.parentBeaconBlockRoot)) return false
 
     return true
   }
@@ -37,6 +42,7 @@ data class ExecutionInfo(
     result = 31 * result + executionWitness.hashCode()
     result = 31 * result + executionRequests.byteArrayListHashCode()
     result = 31 * result + forcedTransactions.hashCode()
+    result = 31 * result + parentBeaconBlockRoot.contentHashCode()
     return result
   }
 }
@@ -123,7 +129,7 @@ data class ForcedTransaction(
 /**
  * The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1).
  *
- * Domain twin of `lineth.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
+ * Domain twin of `lineth.coordinator.clients.prover.ExecutionPublicInputsDto`. Kept here (rather than reusing
  * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Field names
  * and types are identical to the DTO so the DTO -> domain mapping is a straight field copy.
  */
@@ -195,7 +201,7 @@ data class L2ExecutionProofPublicInputs(
 /**
  * Response of a l2-execution proof.
  *
- * Mirrors `lineth.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
+ * Mirrors `lineth.coordinator.clients.prover.L2ExecutionProofResponseDto` field-for-field so that a proof
  * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
  * directly onto this domain type.
  */

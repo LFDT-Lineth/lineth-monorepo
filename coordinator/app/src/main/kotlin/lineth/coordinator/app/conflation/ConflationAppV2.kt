@@ -9,8 +9,10 @@ import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
 import linea.web3j.createWeb3jHttpService
+import linea.web3j.ethapi.Web3jExecutionPayloadClient
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.ethapi.validateLinethBlock
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
@@ -23,7 +25,7 @@ import lineth.coordination.riscv.execution.L2ExecutionRequestBuilderImpl
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
-import lineth.coordinator.clients.prover.riscv.RiscvProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactory
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.BatchesRepository
@@ -49,11 +51,13 @@ import kotlin.time.Instant
  */
 class ConflationAppV2(
   private val vertx: Vertx,
+  private val chainId: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val metricsFacade: MetricsFacade,
+  private val proverClientFactory: ProverClientFactory,
   private val lastProvenBlockNumberProvider: LastProvenBlockNumberProviderSync,
   private val targetCheckpointPauseController: TargetCheckpointPauseController,
   private val lastProcessedBlocks: LastProcessedBlocks,
@@ -66,6 +70,9 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.riscvStartingBlockTimestampInclusive) {
       "riscvStartingBlockTimestampInclusive must be set to use ConflationAppV2"
     }
+    requireNotNull(configs.conflation.l2EngineEndpoint) {
+      "conflation.l2-engine-endpoint must be set to use ConflationAppV2"
+    }
     requireNotNull(configs.riscvProversConfig) {
       "riscvProversConfig must be set to use ConflationAppV2"
     }
@@ -76,15 +83,7 @@ class ConflationAppV2(
     log = LogManager.getLogger("clients.l2.eth.conflation"),
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
-  )
-
-  private val chainId: ULong = l2EthClient.ethChainId().get()
-
-  private val riscvProverClientFactory = RiscvProverClientFactory(
-    vertx = vertx,
-    config = configs.riscvProversConfig!!,
-    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
-    metricsFacade = metricsFacade,
+    blockValidator = ::validateLinethBlock,
   )
 
   private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
@@ -92,7 +91,7 @@ class ConflationAppV2(
       "conflation.blocksLimit must be set when riscv is enabled"
     }
 
-    val riscvCalculators = CalculatorsFactory.createForRiscV(
+    val riscvCalculators = CalculatorsFactory.createForRiscv(
       lastConflatedBlockNumber = lastProcessedBlocks.lastConflatedBlock.number,
       lastConflatedTimestamp = maxOf(
         configs.conflation.riscvStartingBlockTimestampInclusive!!,
@@ -108,21 +107,28 @@ class ConflationAppV2(
     val conflationCalculator = riscvCalculators.conflationCalculator
     val conflationService = riscvCalculators.conflationService
 
-    val l2ExecutionProverClient = riscvProverClientFactory.executionProverClient()
+    val l2ExecutionProverClient = proverClientFactory.executionProverClient()
 
-    val executionWitnessClient = Web3jExecutionWitnessClient(
-      web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString()),
+    val web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString())
+    val executionWitnessClient = Web3jExecutionWitnessClient(web3jService)
+    val executionPayloadClient = Web3jExecutionPayloadClient(
+      createWeb3jHttpService(rpcUrl = requireNotNull(configs.conflation.l2EngineEndpoint).toString()),
     )
     val requestBuilder = L2ExecutionRequestBuilderImpl(
       executionWitnessClient = executionWitnessClient,
+      executionPayloadClient = executionPayloadClient,
       forcedTransactionsDao = forcedTransactionsDao,
       chainId = chainId,
     )
 
     val batchProofHandler = BatchProofHandlerImpl(batchesRepository)
-    val l2ExecutionProofHandler = L2ExecutionProofHandler { proof ->
+    val l2ExecutionProofHandler = L2ExecutionProofHandler { proof, proofIndex ->
       batchProofHandler.acceptNewBatch(
-        Batch(startBlockNumber = proof.startBlockNumber, endBlockNumber = proof.endBlockNumber),
+        Batch(
+          startBlockNumber = proof.startBlockNumber,
+          endBlockNumber = proof.endBlockNumber,
+          proofIndexHash = proofIndex.hash,
+        ),
       )
     }
 

@@ -41,6 +41,12 @@
                 <AppenderRef ref="MemoryITR" />
               </Async>
             </Route>
+            <!--
+              Routed synchronously (bypassing the Async "Main" appender) so that acceptance tests
+              polling MemoryAppender for this line don't race the async logging disruptor thread
+              under CI CPU contention.
+            -->
+            <Route key="MODULE_LINE_COUNT_FULL" ref="Memory" />
             <Route ref="Main" />
           </Routes>
         </Routing>

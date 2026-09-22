@@ -37,7 +37,7 @@ from typing import Any, Optional
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
-from remerkleable.basic import uint64
+from remerkleable.basic import boolean, uint64
 from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
@@ -52,6 +52,7 @@ from .l2_execution_ssz import (
 )
 from .rollup import (
     BLOB_BYTES_LENGTH,
+    ChunkWitness,
     ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
@@ -85,6 +86,12 @@ class SszConflationWitness(Container):
     compressed_segment: ByteList[MAX_BYTES_PER_COMPRESSED_SEGMENT]
 
 
+class SszChunkWitness(Container):
+    chunk_hash: SszBytes32
+    is_calldata: boolean
+    calldata_length: uint64
+
+
 class SszRollupPublicInput(Container):
     # 20-field rollup public input tuple (Readme.md §2.4), field order matches
     # `rollup.py::RollupPublicInput`.
@@ -116,7 +123,7 @@ class SszRollupProofPrivateInput(Container):
     start_offset: uint64
     chain_id: uint64
     conflations: List[SszConflationWitness, MAX_CONFLATIONS_PER_ROLLUP]
-    chunks: List[SszBytes32, MAX_CHUNKS_PER_ROLLUP]
+    chunks: List[SszChunkWitness, MAX_CHUNKS_PER_ROLLUP]
     l2_execution_proofs: List[SszVerifiableL2ExecutionProof, MAX_L2_EXECUTION_PROOFS_PER_ROLLUP]
     opaque_prefix_bytes: ByteList[BLOB_BYTES_LENGTH]
     opaque_suffix_bytes: ByteList[BLOB_BYTES_LENGTH]
@@ -181,7 +188,14 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
         start_offset=int(private_input.start_offset),
         chain_id=int(private_input.chain_id),
         conflations=[_ssz_conflation_witness(c) for c in private_input.conflations],
-        chunks=[bytes(c) for c in private_input.chunks],
+        chunks=[
+            SszChunkWitness(
+                chunk_hash=bytes(c.chunk_hash),
+                is_calldata=c.is_calldata,
+                calldata_length=c.calldata_length,
+            )
+            for c in private_input.chunks
+        ],
         l2_execution_proofs=[
             _ssz_verifiable_l2_execution_proof(p) for p in private_input.l2_execution_proofs
         ],
@@ -240,7 +254,14 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
         start_offset=int(view.start_offset),
         chain_id=U64(int(view.chain_id)),
         conflations=[_conflation_witness_from_view(c) for c in view.conflations],
-        chunks=[Hash32(bytes(c)) for c in view.chunks],
+        chunks=[
+            ChunkWitness(
+                chunk_hash=Hash32(bytes(c.chunk_hash)),
+                is_calldata=bool(c.is_calldata),
+                calldata_length=int(c.calldata_length),
+            )
+            for c in view.chunks
+        ],
         l2_execution_proofs=[
             _verifiable_l2_execution_proof_from_view(p) for p in view.l2_execution_proofs
         ],

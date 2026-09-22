@@ -80,3 +80,44 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     schema = json.loads(schema_path.read_text())
     jsonschema.Draft202012Validator.check_schema(schema)
+
+
+@pytest.fixture
+def execution_request_and_validator():
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = json.loads(
+        (_SCHEMA_DIR / "getZkL2ExecutionProofV1.request.schema.json").read_text()
+    )
+    request = json.loads(
+        (_FIXTURE_DIR / "10-11-getZkL2ExecutionProofV1.request.json").read_text()
+    )
+    return request, jsonschema.Draft202012Validator(schema)
+
+
+def _execution_payloads(request: dict) -> list[dict]:
+    return [
+        payload["statelessInput"]["newPayloadRequest"]["executionPayload"]
+        for payload in request["proofRequest"]["payloads"]
+    ]
+
+
+def test_pre_amsterdam_payloads_can_omit_slot(execution_request_and_validator) -> None:
+    request, validator = execution_request_and_validator
+    request["proofRequest"]["chainConfig"]["forkName"] = "Prague"
+    for payload in _execution_payloads(request):
+        del payload["slotNumber"]
+    validator.validate(request)
+
+
+def test_slot_zero_is_valid(execution_request_and_validator) -> None:
+    request, validator = execution_request_and_validator
+    _execution_payloads(request)[0]["slotNumber"] = 0
+    validator.validate(request)
+
+
+@pytest.mark.parametrize("slot", [-1, "10"])
+def test_slot_requires_unsigned_integer(execution_request_and_validator, slot) -> None:
+    request, validator = execution_request_and_validator
+    _execution_payloads(request)[0]["slotNumber"] = slot
+    errors = list(validator.iter_errors(request))
+    assert any(list(error.path)[-1:] == ["slotNumber"] for error in errors)

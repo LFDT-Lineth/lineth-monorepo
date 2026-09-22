@@ -16,7 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
@@ -53,10 +53,10 @@ class ConflationAppOrchestrator(
   private val configs: CoordinatorConfig,
   private val metricsFacade: MetricsFacade,
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val proverClientFactory: ProverClientFactory,
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
+  private val proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppOrchestrator::class.java)
@@ -70,6 +70,16 @@ class ConflationAppOrchestrator(
       .thenApply { block -> Instant.fromEpochSeconds(block.timestamp.toLong()) }
       .get()
   }
+
+  private val chainId: ULong = l2EthClient.ethChainId().get()
+
+  private val preRiscvProverClientFactory = proverClientFactoryBuilder.build(
+    vertx = vertx,
+    config = configs.proversConfig,
+    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+    chainId = chainId,
+    metricsFacade = metricsFacade,
+  )
 
   private val forcedTransactionsApp: ForcedTransactionsApp = run {
     // Forced transactions are rollup-only for now; see ConflationAppHelper.forcedTransactionsEnabled.
@@ -129,7 +139,7 @@ class ConflationAppOrchestrator(
           ?: BlockParameter.Tag.EARLIEST,
       )
 
-      val ftxInvalidityProofService: LongRunningService = if (riscVCutoverCrossed()) {
+      val ftxInvalidityProofService: LongRunningService = if (riscvCutoverCrossed()) {
         log.info(
           "FTX invalidity proof service disabled: already past RISC-V cutover. " +
             "lastFinalizedBlockTimestamp={}, cutover={}",
@@ -145,7 +155,7 @@ class ConflationAppOrchestrator(
         ForcedTransactionsInvalidityProofService(
           ftxDao = forcedTransactionsDao,
           invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = proverClientFactory.createInvalidityProofClient(),
+            invalidityProofClient = preRiscvProverClientFactory.preRiscvInvalidityProverClient(),
             stateManagerClient = zkStateClient,
             accountProofClient = zkStateClient,
             ethApiLogsSearcher = l1EthLogsSearcherForFtx,
@@ -175,8 +185,8 @@ class ConflationAppOrchestrator(
     }
   }
 
-  private val lastProcessedBlocks = if (riscVCutoverCrossed()) {
-    ConflationAppHelper.getLastRiscVProcessedBlocks(lastFinalizedBlock, l2EthClient).get()
+  private val lastProcessedBlocks = if (riscvCutoverCrossed()) {
+    ConflationAppHelper.getLastRiscvProcessedBlocks(lastFinalizedBlock, l2EthClient).get()
   } else {
     ConflationAppHelper.getLastConflatedAndAggregatedBlocks(
       lastFinalizedBlock = lastFinalizedBlock,
@@ -232,7 +242,7 @@ class ConflationAppOrchestrator(
   private val targetCheckpointPauseControllerV1 = newTargetCheckpointPauseController()
   private val targetCheckpointPauseControllerV2 = newTargetCheckpointPauseController()
 
-  private val conflationAppV1: LongRunningService = if (riscVCutoverCrossed()) {
+  private val conflationAppV1: LongRunningService = if (riscvCutoverCrossed()) {
     DisabledService("conflation-app-v1")
   } else {
     ConflationAppV1(
@@ -244,8 +254,8 @@ class ConflationAppOrchestrator(
       forcedTransactionsDao = forcedTransactionsDao,
       configs = configs,
       metricsFacade = metricsFacade,
+      proverClientFactory = preRiscvProverClientFactory,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      proverClientFactory = proverClientFactory,
       l2EthClient = l2EthClient,
       zkStateClient = zkStateClient,
       tracesClients = tracesClients,
@@ -259,13 +269,23 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
+      val riscvProverClientFactory = proverClientFactoryBuilder.build(
+        vertx = vertx,
+        config = configs.riscvProversConfig!!,
+        l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+        // Read from the node rather than config, as ConflationAppV2 does for the same value.
+        chainId = chainId,
+        metricsFacade = metricsFacade,
+      )
       ConflationAppV2(
         vertx = vertx,
+        chainId = chainId,
         batchesRepository = batchesRepository,
         configs = configs,
         forcedTransactionsApp = forcedTransactionsApp,
         forcedTransactionsDao = forcedTransactionsDao,
         metricsFacade = metricsFacade,
+        proverClientFactory = riscvProverClientFactory,
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,
@@ -285,7 +305,7 @@ class ConflationAppOrchestrator(
       .thenCompose { provenBlockNumberMonitor.start() }
       .thenCompose { conflationAppV1.start() }
       .thenCompose {
-        if (riscVCutoverCrossed()) {
+        if (riscvCutoverCrossed()) {
           // Already past cutover: V2 resumes from a known block number, completes quickly.
           conflationAppV2.start()
         } else {
@@ -309,7 +329,7 @@ class ConflationAppOrchestrator(
       .thenCompose { provenBlockNumberMonitor.stop() }
   }
 
-  fun riscVCutoverCrossed(): Boolean =
+  fun riscvCutoverCrossed(): Boolean =
     riscvCutoverTimestamp != null && lastFinalizedBlockTimestamp >= riscvCutoverTimestamp
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> =

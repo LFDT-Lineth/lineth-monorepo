@@ -14,6 +14,9 @@
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
+- *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
 
 ### 🐛 Bug Fixes
 
@@ -21,6 +24,7 @@
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 
 ### 🚜 Refactor
 
@@ -40,6 +44,7 @@
 - *(coordinator)* Scaffold ConflationAppV2 for RISC-V cutover (#3771)
 - *(misc)* Enrich R5 request/response samples (#3806)
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
+- *(coordinator)* Consolidate prover clients (#3944)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

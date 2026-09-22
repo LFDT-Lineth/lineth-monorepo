@@ -4,6 +4,7 @@
 
 - *(maru)* Support Noise / Yamux (#3751)
 - *(maru)* Support custom validator signers (#3700)
+- *(maru)* Add Amsterdam support (#3939)
 
 ### 🐛 Bug Fixes
 
@@ -16,6 +17,7 @@
 - *(misc)* Rename gradle plugins (#3729)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
 - *(misc)* Docker image build streamlining (#3790)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [1.3.0] - 2026-07-14
 
 ### 🚀 Features
