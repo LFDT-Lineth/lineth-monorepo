@@ -58,6 +58,9 @@ internal class FileBasedRollupProofRequestDtoMapper(
             startBlockNumber = request.startBlockNumber.toLong(),
             endBlockNumber = request.endBlockNumber.toLong(),
             startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+            endBlockTimestamp = request.endBlockTimestamp.epochSeconds,
+            transactionsCount = request.transactionsCount,
+            totalGasUsed = request.totalGasUsed,
           ),
         )
       }
@@ -91,6 +94,9 @@ internal class RestfulRollupProofRequestDtoMapper(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
         startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        endBlockTimestamp = request.endBlockTimestamp.epochSeconds,
+        transactionsCount = request.transactionsCount,
+        totalGasUsed = request.totalGasUsed,
       ),
     )
     return SafeFuture.completedFuture(dto)

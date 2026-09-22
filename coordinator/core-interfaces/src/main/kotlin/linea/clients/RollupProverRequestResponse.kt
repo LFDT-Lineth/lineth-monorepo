@@ -2,6 +2,7 @@ package linea.clients
 
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import linea.domain.assertConsecutiveIntervals
 import linea.kotlin.byteArrayListEquals
@@ -17,7 +18,7 @@ data class RollupProofRequestV1(
   val opaquePrefixBytes: ByteArray = ByteArray(0),
   val opaqueSuffixBytes: ByteArray = ByteArray(0),
   val boundaryPrevDataRollingHash: ByteArray? = null,
-) : BlockInterval, StartBlockTimestampProvider {
+) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider {
   init {
     assertConsecutiveIntervals(l2Executions)
   }
@@ -28,6 +29,12 @@ data class RollupProofRequestV1(
     get() = l2Executions.last().endBlockNumber
   override val startBlockTimestamp: Instant
     get() = l2Executions.first().startBlockTimestamp
+  override val endBlockTimestamp: Instant
+    get() = l2Executions.last().endBlockTimestamp
+  override val transactionsCount: Long
+    get() = l2Executions.sumOf { it.transactionsCount }
+  override val totalGasUsed: Long
+    get() = l2Executions.sumOf { it.totalGasUsed }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

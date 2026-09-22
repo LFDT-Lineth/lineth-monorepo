@@ -10,7 +10,10 @@ data class BlockIntervalProofIndex(
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
   val hash: ByteArray,
-) : BlockInterval, ProofIndex {
+  override val endBlockTimestamp: Instant = startBlockTimestamp,
+  override val transactionsCount: Long = 0L,
+  override val totalGasUsed: Long = 0L,
+) : BlockInterval, ProofIndex, ProofRequestMetaDataProvider {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -21,6 +24,9 @@ data class BlockIntervalProofIndex(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!hash.contentEquals(other.hash)) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
+    if (endBlockTimestamp != other.endBlockTimestamp) return false
+    if (transactionsCount != other.transactionsCount) return false
+    if (totalGasUsed != other.totalGasUsed) return false
 
     return true
   }
@@ -30,6 +36,9 @@ data class BlockIntervalProofIndex(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + hash.contentHashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
+    result = 31 * result + endBlockTimestamp.hashCode()
+    result = 31 * result + transactionsCount.hashCode()
+    result = 31 * result + totalGasUsed.hashCode()
     return result
   }
 
@@ -37,6 +46,9 @@ data class BlockIntervalProofIndex(
     return "BlockIntervalProofIndex(startBlockNumber=$startBlockNumber, " +
       "endBlockNumber=$endBlockNumber,  " +
       "startBlockTimestamp=$startBlockTimestamp, " +
+      "endBlockTimestamp=$endBlockTimestamp, " +
+      "transactionsCount=$transactionsCount, " +
+      "totalGasUsed=$totalGasUsed, " +
       "hash=${hash.encodeHex()})"
   }
 }

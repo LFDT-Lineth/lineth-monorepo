@@ -2,6 +2,7 @@ package lineth.coordinator.clients.prover
 
 import linea.crypto.HashFunction
 import linea.domain.BlockInterval
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -10,7 +11,7 @@ import kotlin.time.Instant
 class BlockIntervalProofIndexProviderTest {
   @Test
   fun `builds an index from the request interval and content`() {
-    val request = TestRequest(10UL, 20UL, Instant.fromEpochSeconds(1234))
+    val request = TestRequest(10UL, 20UL, Instant.fromEpochSeconds(1234), Instant.fromEpochSeconds(5678), 42L, 100L)
     val expectedHash = ByteArray(32) { it.toByte() }
     var hashedContent: ByteArray? = null
     val hashFunction = HashFunction {
@@ -24,6 +25,9 @@ class BlockIntervalProofIndexProviderTest {
     assertThat(index.startBlockNumber).isEqualTo(request.startBlockNumber)
     assertThat(index.endBlockNumber).isEqualTo(request.endBlockNumber)
     assertThat(index.startBlockTimestamp).isEqualTo(request.startBlockTimestamp)
+    assertThat(index.endBlockTimestamp).isEqualTo(request.endBlockTimestamp)
+    assertThat(index.transactionsCount).isEqualTo(request.transactionsCount)
+    assertThat(index.totalGasUsed).isEqualTo(request.totalGasUsed)
     assertThat(index.hash).isEqualTo(expectedHash)
   }
 
@@ -31,5 +35,8 @@ class BlockIntervalProofIndexProviderTest {
     override val startBlockNumber: ULong,
     override val endBlockNumber: ULong,
     override val startBlockTimestamp: Instant,
-  ) : BlockInterval, StartBlockTimestampProvider
+    override val endBlockTimestamp: Instant,
+    override val transactionsCount: Long,
+    override val totalGasUsed: Long,
+  ) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider
 }

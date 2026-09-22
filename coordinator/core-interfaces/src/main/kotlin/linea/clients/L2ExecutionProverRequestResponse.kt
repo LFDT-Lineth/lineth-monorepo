@@ -2,6 +2,7 @@ package linea.clients
 
 import linea.domain.BlockInterval
 import linea.domain.ExecutionPayload
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
@@ -53,7 +54,7 @@ data class L2ExecutionProofRequestV1(
   val coinbase: String,
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
-) : BlockInterval, StartBlockTimestampProvider {
+) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider {
   init {
     require(executions.isNotEmpty()) { "executions must not be empty" }
     require(
@@ -71,6 +72,12 @@ data class L2ExecutionProofRequestV1(
     get() = executions.last().blockNumber
   override val startBlockTimestamp: Instant
     get() = Instant.fromEpochSeconds(executions.first().executionPayload.timestamp.toLong())
+  override val endBlockTimestamp: Instant
+    get() = Instant.fromEpochSeconds(executions.last().executionPayload.timestamp.toLong())
+  override val transactionsCount: Long
+    get() = executions.sumOf { it.executionPayload.transactions.size.toLong() }
+  override val totalGasUsed: Long
+    get() = executions.sumOf { it.executionPayload.gasUsed.toLong() }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

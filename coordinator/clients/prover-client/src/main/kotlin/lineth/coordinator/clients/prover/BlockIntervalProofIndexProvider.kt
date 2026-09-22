@@ -3,12 +3,13 @@ package lineth.coordinator.clients.prover
 import linea.crypto.HashFunction
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 
 internal class BlockIntervalProofIndexProvider<Request>(
   private val hashFunction: HashFunction,
 ) : (Request) -> BlockIntervalProofIndex
-  where Request : BlockInterval, Request : StartBlockTimestampProvider {
+  where Request : BlockInterval, Request : StartBlockTimestampProvider, Request : ProofRequestMetaDataProvider {
   override fun invoke(request: Request): BlockIntervalProofIndex {
     val content = request.toString().toByteArray()
     return BlockIntervalProofIndex(
@@ -16,6 +17,9 @@ internal class BlockIntervalProofIndexProvider<Request>(
       endBlockNumber = request.endBlockNumber,
       hash = hashFunction.hash(content),
       startBlockTimestamp = request.startBlockTimestamp,
+      endBlockTimestamp = request.endBlockTimestamp,
+      transactionsCount = request.transactionsCount,
+      totalGasUsed = request.totalGasUsed,
     )
   }
 }
