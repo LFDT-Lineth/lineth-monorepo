@@ -199,12 +199,10 @@ class ConflationBacktestingApp(
       log = log,
     )
 
-  // Deliberately pinned to the file-based factory rather than taking the injectable
-  // ProverClientFactoryBuilder: backtesting rewrites each job's prover request/response
-  // directories under its own job directory (see getUpdatedProverConfig), so it is inherently
-  // file-path-based and must not be redirected at a remote/embedded prover service.
   private val preRiscvProverClientFactory = DefaultProverClientFactory(
     vertx = vertx,
+    chainId = l2EthClient.ethChainId().get().toULong(),
+    l2MessageServiceAddress = mainCoordinatorConfig.protocol.l2.contractAddress,
     config = backtestingCoordinatorConfig.proversConfig,
     metricsFacade = metricsFacade,
   )

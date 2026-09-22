@@ -38,8 +38,8 @@ interface ProverClientFactory {
 
   fun preRiscvInvalidityProverClient(): InvalidityProverClientV1
 
-
   fun executionProverClient(): L2ExecutionProverClientV1
+
   /**
    * RISC-V rollup prover client: recursively verifies the execution proofs of the conflations it
    * covers.
@@ -52,17 +52,13 @@ interface ProverClientFactory {
 
 /**
  * Builds a [ProverClientFactory] for one prover configuration.
- *
- * A builder rather than a ready-made instance because the coordinator needs two factories with
- * different arguments — the RISC-V one is given [l2MessageServiceAddress] and [chainId], the
- * pre-RISC-V one is not — and both must come from the same (possibly overridden) implementation.
  */
 fun interface ProverClientFactoryBuilder {
   fun build(
     vertx: Vertx,
     config: ProversConfig,
-    l2MessageServiceAddress: String?,
-    chainId: Long?,
+    l2MessageServiceAddress: String,
+    chainId: ULong,
     metricsFacade: MetricsFacade,
   ): ProverClientFactory
 
@@ -135,9 +131,8 @@ class ProverClientFactorySupport(metricsFacade: MetricsFacade) {
 class DefaultProverClientFactory(
   private val vertx: Vertx,
   private val config: ProversConfig,
-  private val l2MessageServiceAddress: String? = null,
-  /** L2 chain id, stamped into RISC-V rollup proof requests; required by [rollupProverClient]. */
-  private val chainId: Long? = null,
+  private val l2MessageServiceAddress: String,
+  private val chainId: ULong,
   metricsFacade: MetricsFacade,
   private val support: ProverClientFactorySupport = ProverClientFactorySupport(metricsFacade),
 ) : ProverClientFactory {
@@ -256,9 +251,7 @@ class DefaultProverClientFactory(
         programVk = requireNotNull(rollupConfig.programVk) {
           "programVk must be configured for the RISC-V rollup prover"
         },
-        chainId = requireNotNull(chainId) {
-          "chainId must be configured for the RISC-V rollup prover"
-        },
+        chainId = chainId.toLong(),
       ).also { support.aggregationWaitingResponses.addReporter(it) }
     }
   }

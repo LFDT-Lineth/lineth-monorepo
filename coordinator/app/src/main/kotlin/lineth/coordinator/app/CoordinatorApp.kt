@@ -66,9 +66,6 @@ class CoordinatorApp(
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
   signerFactory: SignerFactory = DefaultSignerFactory,
-  // Builds the prover clients. Defaults to the built-in file-based factory; downstream
-  // distributions override it to route proof requests elsewhere (e.g. to an embedded
-  // prover-gateway over its REST protocol) without replacing the conflation pipeline.
   proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)

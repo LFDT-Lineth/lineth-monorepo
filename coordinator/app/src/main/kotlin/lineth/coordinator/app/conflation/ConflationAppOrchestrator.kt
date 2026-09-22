@@ -56,10 +56,6 @@ class ConflationAppOrchestrator(
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
-  /**
-   * Builds the prover clients. Defaults to the file-based factory; downstream distributions
-   * override it to route proof requests elsewhere (see [ProverClientFactoryBuilder]).
-   */
   private val proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) : LongRunningService {
 
@@ -75,11 +71,13 @@ class ConflationAppOrchestrator(
       .get()
   }
 
+  private val chainId: ULong = l2EthClient.ethChainId().get()
+
   private val preRiscvProverClientFactory = proverClientFactoryBuilder.build(
     vertx = vertx,
     config = configs.proversConfig,
-    l2MessageServiceAddress = null,
-    chainId = null,
+    l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+    chainId = chainId,
     metricsFacade = metricsFacade,
   )
 
@@ -276,11 +274,12 @@ class ConflationAppOrchestrator(
         config = configs.riscvProversConfig!!,
         l2MessageServiceAddress = configs.protocol.l2.contractAddress,
         // Read from the node rather than config, as ConflationAppV2 does for the same value.
-        chainId = l2EthClient.ethChainId().get().toLong(),
+        chainId = chainId,
         metricsFacade = metricsFacade,
       )
       ConflationAppV2(
         vertx = vertx,
+        chainId = chainId,
         batchesRepository = batchesRepository,
         configs = configs,
         forcedTransactionsApp = forcedTransactionsApp,
