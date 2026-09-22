@@ -8,6 +8,26 @@ Fiat-Shamir transcript, or the row hashing a FRI query performs.
 | row hashing | per query | 6,458 | ~1,478,000 |
 | transcript | once per proof | 13,423 | 13,423 |
 
+Both are driven by
+the **same 10,622 committed columns** — they just weight them differently:
+
+| | what it hashes | weighted by | elements |
+|---|---|---|---|
+| row hashing | the columns' committed **values** | field type: 1 per base column, 6 per extension | 25,832 per row |
+| transcript | those columns **evaluated at ζ** | shift count: one claim per (column, shift), always 6 limbs | 91,416 |
+
+Two consequences of that split are easy to get backwards:
+
+- A **base** column still produces an **extension** claim. A claim is `f(ζ)`, and
+  ζ is drawn from F_p^6 for soundness, so even a base-field polynomial evaluates
+  into the extension. Cheap to row-hash, full price in the transcript.
+- The claim count exceeds the column count. Claims are per (column, shift): 6,027
+  columns have one shift, 4,576 have two, 19 have three — 15,236 slots from 10,622
+  columns.
+
+So batch 0 (the execution trace) is 71% of the columns but only 29% of the
+row-hashing elements, while still supplying 9,892 of the 14,462 witness claims.
+
 ## Row hashing: 6,458 per query
 
 A FRI query authenticates **row preimages**, not bare digests, so its cost
@@ -165,7 +185,10 @@ then squeezes that round's coins. Each `randomExt` calls `sumDigest` and then
 absorbs a zero element, so the buffer is never empty at the next squeeze and
 every coin costs one compression.
 
-Measured against the committed proof image, every transcript cell is extension:
+Only rounds 2 and 4 carry cells at all — rounds 0, 1 and 3 commit columns (or
+draw coins) without sending any scalar in the clear, so a committed batch's
+values are revealed later as claims, not as cells. Every cell that does exist is
+extension, so the table needs no base/ext split:
 
 | round message | cells | cell elements | commitment |
 |---------------|-------|---------------|------------|
@@ -195,14 +218,30 @@ Round 4 alone is 87% of the absorbed elements.
 
 **Round 4 — 15,236 cells** are the PCS claim cells (`total_claim_slots`), one
 per opened (column, shift) pair, built by `pcsShiftClaimCells`
-(`codegen/pcs.go`) from `sys.LagrangeEvals`:
+(`codegen/pcs.go`) from `sys.LagrangeEvals`. Summing each column's shifts over
+the same 10,622 columns the row hashing walks gives exactly that total:
+
+| batch | columns | claim slots |
+|-------|---------|-------------|
+| 0 (witness/trace) | 7,546 | 9,892 |
+| 1 (logderiv/grandproduct) | 2,268 | 4,536 |
+| 2 (quotient) | 774 | 774 |
+| 3 (precomputed) | 34 | 34 |
+| total | 10,622 | 15,236 |
+
+The generated system splits the same 15,236 a second way, by role rather than by
+batch:
 
 ```
-total_witness_claims  = 14,462
-total_quotient_claims =    774
+total_witness_claims  = 14,462   (batches 0, 1 and 3 — i.e. everything non-quotient)
+total_quotient_claims =    774   (batch 2)
                         ------
                         15,236
 ```
+
+Note that `total_witness_claims` does **not** mean batch 0. "Witness" here is the
+PCS's own split between the thing being proven and the quotient that proves it,
+so it spans three batches; batch 0's own contribution is 9,892 of that 14,462.
 
 They land in round 4 because every claim is an opening at the shared eval point
 `r`, which is round 4's single coin.
