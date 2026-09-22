@@ -35,14 +35,13 @@ export var guest_allocator: extern struct { ptr: *anyopaque, vtable: *const anyo
 /// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success;
 /// on failure, exits with `guest_errors.exitCode(err)` — a deterministic, category-stable nonzero
 /// code per Readme.md §2.5 — after logging the failing error's name via `zkvm_log`.
-/// `read_input` is `linea_zkvm_io` (the memory-mapped IN region); `write_output` is the
+/// `read_input` is `lineth_zkvm_accel` (the memory-mapped IN region); `write_output` is the
 /// Lineth accelerator's custom-opcode implementation of the zkvm-standards io-interface. Where the
 /// input lives and how the output surfaces is the proving system's concern, not the guest's.
 ///
 /// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);
 /// the `--json`/`--ssz` toggle lives on the native `l2-execution-runner` tool instead.
 fn guestMain() callconv(.c) noreturn {
-    const zkvm_io = @import("linea_zkvm_io");
     const lineth_accel = @import("lineth_zkvm_accel");
 
     const heap = @as([*]u8, @ptrCast(&_heap_start))[0..GUEST_HEAP_SIZE];
@@ -52,7 +51,7 @@ fn guestMain() callconv(.c) noreturn {
 
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
-    zkvm_io.read_input(&buf_ptr, &buf_size);
+    lineth_accel.read_input(&buf_ptr, &buf_size);
     const raw_input = buf_ptr[0..buf_size];
 
     const out = runL2ExecutionGuest(allocator, raw_input) catch |err| {

@@ -66,13 +66,7 @@ pub fn build(b: *std.Build) void {
     zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
-    const block_rlp_size_mod = b.createModule(.{
-        .root_source_file = b.path("src/block_rlp_size.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    block_rlp_size_mod.addImport("zesu_primitives", zesu_guest.module("primitives"));
-    block_rlp_size_mod.addImport("zesu_input", zesu_guest.module("input"));
+    const block_rlp_size_mod = zesu_guest.module("block_rlp_size");
 
     // Expose the precompile providers as a standalone module for the exported zkvm_* symbols.
     const provide_mod = b.addModule("zkvm_provide", .{
@@ -85,12 +79,6 @@ pub fn build(b: *std.Build) void {
     provide_mod.addImport("guest_crypto", guest_crypto_mod);
     provide_mod.addObjectFile(guest_crypto_riscv_a);
     provide_mod.addOptions("build_options", guest_options);
-
-    const linea_io_mod = b.createModule(.{
-        .root_source_file = b.path("src/zkvm_io.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
 
     // Build the SSZ codec for the same target and optimize mode as the guest.
     const l2_execution_ssz_guest_mod = b.createModule(.{
@@ -111,7 +99,6 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
     guest_module.addImport("guest_crypto", guest_crypto_mod);
     guest_module.addObjectFile(guest_crypto_riscv_a);
-    guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
@@ -141,13 +128,7 @@ pub fn build(b: *std.Build) void {
         .@"crypto-backend" = .@"extern",
     });
     const native_imports = zesuImports(zesu_native);
-    const block_rlp_size_native_mod = b.createModule(.{
-        .root_source_file = b.path("src/block_rlp_size.zig"),
-        .target = native_target,
-        .optimize = host_optimize,
-    });
-    block_rlp_size_native_mod.addImport("zesu_primitives", zesu_native.module("primitives"));
-    block_rlp_size_native_mod.addImport("zesu_input", zesu_native.module("input"));
+    const block_rlp_size_native_mod = zesu_native.module("block_rlp_size");
 
     const guest_mod = b.createModule(.{
         .root_source_file = b.path(source),
@@ -157,6 +138,7 @@ pub fn build(b: *std.Build) void {
     addExecutionImports(guest_mod, native_imports, block_rlp_size_native_mod);
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
+    const block_rlp_size_test_step = b.step("test-block-rlp-size", "Run block RLP size accounting tests");
     const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
@@ -236,6 +218,22 @@ pub fn build(b: *std.Build) void {
         });
     }
     test_step.dependOn(&b.addRunArtifact(guest_crypto_tests).step);
+
+    const block_rlp_size_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/block_rlp_size_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    block_rlp_size_tests.root_module.addImport("block_rlp_size", block_rlp_size_native_mod);
+    block_rlp_size_tests.root_module.addImport("zesu_executor", native_imports.executor);
+    block_rlp_size_tests.root_module.addImport("zesu_input", native_imports.input);
+    block_rlp_size_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
+    linkNativeCryptoProvider(block_rlp_size_tests, provide_native_obj, guest_crypto_host_a);
+    const run_block_rlp_size_tests = b.addRunArtifact(block_rlp_size_tests);
+    test_step.dependOn(&run_block_rlp_size_tests.step);
+    block_rlp_size_test_step.dependOn(&run_block_rlp_size_tests.step);
 
     const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = host_optimize }).module("guest_common");
     const l2_execution_ssz_mod = b.createModule(.{

@@ -81,37 +81,12 @@ fn secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u
 /// P-256 ECDSA verify over a pre-hashed message, compact big-endian r‖s signature, and raw x‖y key.
 fn verifyP256(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8) !bool {
     const EcdsaP256 = std.crypto.sign.ecdsa.Ecdsa(std.crypto.ecc.P256, std.crypto.hash.sha2.Sha256);
-    const P256 = std.crypto.ecc.P256;
-    const Scalar = P256.scalar.Scalar;
     var sec1: [65]u8 = undefined;
     sec1[0] = 0x04;
     @memcpy(sec1[1..65], pubkey);
     const pk = try EcdsaP256.PublicKey.fromSec1(&sec1);
     const signature = EcdsaP256.Signature.fromBytes(sig.*);
-    const r = Scalar.fromBytes(signature.r, .big) catch return false;
-    const s = Scalar.fromBytes(signature.s, .big) catch return false;
-    if (r.isZero() or s.isZero()) return false;
-
-    const s_inv = s.invert();
-    const message_scalar = Scalar.fromBytes64(.{0} ** 32 ++ msg.*, .big);
-    const first_scalar = message_scalar.mul(s_inv);
-    const second_scalar = r.mul(s_inv);
-    const x = if (first_scalar.isZero()) blk: {
-        const point = u2pk: {
-            if (second_scalar.isZero()) return false;
-            break :u2pk pk.p.mulPublic(second_scalar.toBytes(.little), .little) catch return false;
-        };
-        break :blk point.affineCoordinates().x.toBytes(.big);
-    } else if (second_scalar.isZero()) blk: {
-        const point = P256.basePoint.mulPublic(first_scalar.toBytes(.little), .little) catch return false;
-        break :blk point.affineCoordinates().x.toBytes(.big);
-    } else blk: {
-        const u1g = P256.basePoint.mulPublic(first_scalar.toBytes(.little), .little) catch return false;
-        const u2pk = pk.p.mulPublic(second_scalar.toBytes(.little), .little) catch return false;
-        break :blk u1g.add(u2pk).affineCoordinates().x.toBytes(.big);
-    };
-    const x_scalar = Scalar.fromBytes64(.{0} ** 32 ++ x, .big);
-    if (!r.equivalent(x_scalar)) return false;
+    signature.verifyPrehashed(msg.*, pk) catch return false;
     return true;
 }
 fn modexp(base: [*]const u8, base_len: usize, exp: [*]const u8, exp_len: usize, modulus: [*]const u8, mod_len: usize, output: [*]u8) callconv(.c) i32 {
