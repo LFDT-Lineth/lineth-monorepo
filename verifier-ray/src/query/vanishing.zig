@@ -30,7 +30,8 @@ pub const Operator = enum {
 
 pub const ExprOp = struct {
     operator: Operator,
-    operands: []const usize,
+    lhs: usize,
+    rhs: usize = 0,
 };
 
 pub const ScalarRef = struct {
@@ -92,10 +93,10 @@ pub const CheckInput = struct {
     module_sizes: []const usize = &.{},
 };
 
-pub fn verify(comptime system: System, input: CheckInput) Error!void {
+pub fn verify(system: System, input: CheckInput) Error!void {
     if (input.witness_claims.len != system.total_witness_claims) return error.InvalidClaimCount;
     if (input.quotient_claims.len != system.total_quotient_claims) return error.InvalidClaimCount;
-    inline for (system.modules) |module| {
+    for (system.modules) |module| {
         const merge_coin = input.ctx.all_coins[module.merge_coin_index];
         const eval_coin = input.ctx.all_coins[module.eval_coin_index];
         switch (module.size) {
@@ -109,29 +110,19 @@ pub fn verify(comptime system: System, input: CheckInput) Error!void {
 }
 
 fn verifyModule(
-    comptime module: Module,
-    comptime static_n: usize,
+    module: Module,
+    static_n: usize,
     dynamic_n: usize,
     input: CheckInput,
     merge_coin: ext.Ext,
     eval_coin: ext.Ext,
 ) Error!void {
-    // Static module sizes are embedded in the generated System, so Zig can
-    // specialize this function at comptime. Dynamic modules use static_n == 0
-    // as a sentinel; the caller in verify() looks up n from module_sizes and
+    // Static module sizes are stored in the decoded System. Dynamic modules use
+    // static_n == 0 as a sentinel; the caller looks up n from module_sizes and
     // passes it here as dynamic_n.
-    //
-    // The inline loops below are intentional: they traverse generated metadata
-    // whose indices must stay comptime-known to avoid runtime expression-DAG
-    // dispatch. Data loops, such as quotient-share recombination, remain plain
-    // for loops.
-    comptime {
-        if (static_n != 0) {
-            if (!validModuleSize(static_n)) @compileError("static vanishing module size must be a non-zero power of two");
-            _ = field.rootOfUnityBy(static_n) catch @compileError("static vanishing module size exceeds supported KoalaBear root-of-unity order");
-        }
-    }
-    if (static_n == 0 and !validModuleSize(dynamic_n)) return error.InvalidModuleSize;
+    const n = if (static_n != 0) static_n else dynamic_n;
+    if (!validModuleSize(n)) return error.InvalidModuleSize;
+    _ = field.rootOfUnityBy(n) catch return error.InvalidModuleSize;
 
     // Let r be the evaluation coin and H the module domain of size n (= static_n
     // for static modules, else dynamic_n). The prover computes the domain
@@ -146,20 +137,16 @@ fn verifyModule(
     }
 }
 
-fn powModuleSize(r: ext.Ext, comptime static_n: usize, dynamic_n: usize) ext.Ext {
-    // When static_n is non-zero, the exponent n is part of the comptime System
-    // and powComptime emits a fixed exponentiation chain. Otherwise n is known
-    // only from the verifier input and we use the runtime exponentiation path.
-    if (static_n != 0) {
-        return r.powComptime(static_n);
-    }
-    return r.pow(@as(u64, dynamic_n));
+fn powModuleSize(r: ext.Ext, static_n: usize, dynamic_n: usize) ext.Ext {
+    // Both static and dynamic sizes arrive at runtime; static_n distinguishes
+    // decoded fixed sizes from proof-supplied dynamic sizes.
+    return r.pow(@intCast(if (static_n != 0) static_n else dynamic_n));
 }
 
 fn verifyBucket(
-    comptime module: Module,
+    module: Module,
     bucket: Bucket,
-    comptime static_n: usize,
+    static_n: usize,
     input: CheckInput,
     merge_coin: ext.Ext,
     ctx: EvalCtx,
@@ -180,9 +167,7 @@ fn verifyBucket(
     // (ratio, a slice of expression indices, a claim offset), the expression
     // indices are already consumed as runtime values by evalExpr, and
     // cancelled_positions is likewise handled at runtime by cancellationAtPoint.
-    // `module` and `static_n` stay comptime — there are only ~100 modules, and
-    // static_n legitimately folds static-size exponentiation and root-of-unity
-    // work at compile time.
+    // `module` and `static_n` are runtime values on the compact-system path.
 
     // r^n = Z_H(r) + 1, recovered from the annihilator carried in ctx.
     const r_pow_n = ctx.annihilator.add(ext.Ext.one());
@@ -215,10 +200,10 @@ fn verifyBucket(
 // by every node of an expression: the eval coin r, the domain annihilator
 // r^n - 1, and dynamic_n (the runtime module size, 0 for static modules). Only
 // lagrange_selector leaves read dynamic_n, and only on the dynamic path: a
-// static module's size is the comptime static_n threaded into the leaf, so its
-// size-derived terms fold at comptime and dynamic_n stays the unused 0
-// sentinel. The other node kinds ignore the context and merely forward it down
-// the recursion. Bundling it keeps evalExpr/evalOp from threading unused scalars.
+// static module's size is the decoded static_n threaded into the leaf, while
+// dynamic_n stays the unused 0 sentinel. The other node kinds ignore the
+// context and merely forward it down the recursion. Bundling it keeps
+// evalExpr/evalOp from threading unused scalars.
 const EvalCtx = struct {
     coin: ext.Ext,
     annihilator: ext.Ext,
@@ -231,7 +216,7 @@ const EvalCtx = struct {
 // module.expressions is built by codegen (see codegen/vanishing.go's
 // appendExpr) as a post-order flattening of each vanishing constraint's
 // expression tree: every operand is appended, and therefore assigned its
-// index, strictly before the node that references it. So op.operands[i] is
+// index, strictly before the node that references it. So op.lhs/op.rhs are
 // always < the node's own index, and recursion here always makes progress
 // toward index 0 (the array's leaves) — there is no cycle.
 //
@@ -242,17 +227,14 @@ const EvalCtx = struct {
 // inside verifyModule) well before any actual recursion depth problem: the
 // per-tree depth is shallow in practice (a few dozen levels for real modules),
 // but the sheer number of monomorphized node-specific function bodies bloated
-// the generated code and its stack frames. Keeping module/static_n comptime
-// (there are only ~100 modules total, and static_n legitimately folds
-// static-size exponentiation/root-of-unity work at compile time) while making
-// expr_index/op ordinary runtime values gives exactly one evalExpr/evalOp
-// instantiation per module, with recursion depth bounded by that module's
+// the generated code and its stack frames. Runtime module metadata gives one
+// evalExpr/evalOp implementation, with recursion depth bounded by the module's
 // actual (shallow) expression-tree depth — eliminating the blowup without
 // changing any evaluation semantics or error behavior.
 fn evalExpr(
-    comptime module: Module,
+    module: Module,
     expr_index: usize,
-    comptime static_n: usize,
+    static_n: usize,
     ctx: EvalCtx,
     input: CheckInput,
 ) Error!ext.Ext {
@@ -268,18 +250,18 @@ fn evalExpr(
 }
 
 fn evalOp(
-    comptime module: Module,
+    module: Module,
     op: ExprOp,
-    comptime static_n: usize,
+    static_n: usize,
     ctx: EvalCtx,
     input: CheckInput,
 ) Error!ext.Ext {
-    const a = try evalExpr(module, op.operands[0], static_n, ctx, input);
+    const a = try evalExpr(module, op.lhs, static_n, ctx, input);
     return switch (op.operator) {
-        .add => a.add(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .mul => a.mul(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .sub => a.sub(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .div => a.div(try evalExpr(module, op.operands[1], static_n, ctx, input)),
+        .add => a.add(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .mul => a.mul(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .sub => a.sub(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .div => a.div(try evalExpr(module, op.rhs, static_n, ctx, input)),
         .double => a.add(a),
         .square => a.square(),
         .negate => a.neg(),
@@ -305,15 +287,13 @@ fn evalOp(
 // (static_n != 0), codegen has already resolved a negative position into
 // [0, static_n) (the module size is known at codegen time), so
 // normalizePosition is a no-op there in practice, but is still used for
-// consistency with cancellationAtPoint. static_n itself stays comptime (it's
-// part of the comptime System), so staticRootPower's root-of-unity lookup
-// still folds at compile time; only the exponent (position-derived) is
-// runtime now, same cost as the already-runtime dynamic-module path below. A
-// DYNAMIC module's size is only known at verify time, so its position is
+// consistency with cancellationAtPoint. Both the root-of-unity lookup and the
+// position-derived exponent are runtime operations. A DYNAMIC module's size is
+// only known at verify time, so its position is
 // normalized into [0, ctx.dynamic_n) here at runtime before the runtime pow.
 // Everything else (the annihilator, the r - omega^position denominator, the
 // division) depends on the runtime eval coin r and stays runtime in both cases.
-fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) Error!ext.Ext {
+fn evalLagrangeSelector(position: i32, static_n: usize, ctx: EvalCtx) Error!ext.Ext {
     // Bounds-check before normalizing. For a DYNAMIC module n comes from the
     // proof-supplied module_sizes, so a hostile size can push a codegen-baked
     // position out of [-n, n): a position < -n would underflow
@@ -325,18 +305,14 @@ fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) E
     const n = if (static_n != 0) static_n else ctx.dynamic_n;
     if (!validPosition(position, n)) return error.LagrangeSelectorPositionOutOfRange;
 
-    const omega_pos = if (static_n != 0)
-        staticRootPower(static_n, normalizePosition(position, static_n, 0))
-    else blk: {
-        const omega = field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize;
-        break :blk omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
-    };
+    const omega = field.rootOfUnityBy(n) catch return error.InvalidModuleSize;
+    const omega_pos = omega.pow(@as(u64, normalizePosition(position, static_n, ctx.dynamic_n)));
 
     // numerator = omega^position * (r^n - 1).
     const numerator = ctx.annihilator.mulByBase(omega_pos);
 
     // denominator = n * (r - omega^position), where n = static_n for static
-    // modules (a comptime constant that folds here) else the runtime dynamic_n.
+    // modules else the runtime dynamic_n.
     // The field defines 1/0 = 0, so an in-domain eval coin (r == omega^position)
     // would silently yield 0; reject it explicitly to match the Go evaluator's
     // out-of-domain contract.
@@ -348,17 +324,17 @@ fn evalLagrangeSelector(position: i32, comptime static_n: usize, ctx: EvalCtx) E
 }
 
 // `positions` is a RUNTIME slice: it comes from a runtime Vanishing (see
-// verifyBucket). static_n stays comptime so the static root-of-unity lookup
-// still folds; only the position-derived exponent is runtime, which is what the
-// dynamic path already did.
+// verifyBucket). Both static and dynamic root-of-unity lookups happen at
+// runtime on the compact-system path.
 fn cancellationAtPoint(
     positions: []const i32,
-    comptime static_n: usize,
+    static_n: usize,
     ctx: EvalCtx,
 ) Error!ext.Ext {
     if (positions.len == 0) return ext.Ext.one();
 
-    const omega = if (static_n == 0) field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize else field.Element.one();
+    const n = if (static_n != 0) static_n else ctx.dynamic_n;
+    const omega = field.rootOfUnityBy(n) catch return error.InvalidModuleSize;
     var result = ext.Ext.one();
 
     for (positions) |position| {
@@ -366,26 +342,17 @@ fn cancellationAtPoint(
         // reason: on the dynamic path n is proof-supplied, so a hostile size
         // can push a codegen-baked position out of [-n, n) (usize underflow
         // when position < -n, silent mod-n reduction when position >= n). The
-        // static path normalizes at comptime against the trusted static_n, so
-        // an out-of-range position there is a codegen bug caught at compile
-        // time, not a proof-dependent condition.
+        // Static positions come from trusted generated metadata; the dynamic
+        // path additionally depends on the proof-supplied module size.
         if (static_n == 0 and !validPosition(position, ctx.dynamic_n)) {
             return error.LagrangeSelectorPositionOutOfRange;
         }
         // Cancellation polynomial for openings already enforced elsewhere:
         // C(r) = product_{k in cancelled} (r - omega_n^norm(k)).
-        const root = if (static_n != 0)
-            staticRootPower(static_n, normalizePosition(position, static_n, 0))
-        else
-            omega.pow(@as(u64, normalizePosition(position, 0, ctx.dynamic_n)));
+        const root = omega.pow(@as(u64, normalizePosition(position, static_n, ctx.dynamic_n)));
         result = result.mul(ctx.coin.sub(ext.Ext.lift(root)));
     }
     return result;
-}
-
-fn staticRootPower(comptime n: usize, k: usize) field.Element {
-    const omega = field.rootOfUnityBy(n) catch unreachable;
-    return omega.pow(@as(u64, k));
 }
 
 // Whether an (end-relative) selector position is addressable in a module of
@@ -403,7 +370,7 @@ fn validPosition(position: i32, n: usize) bool {
 
 // Resolves an end-relative position into [0, n). Precondition: position is in
 // [-n, n) — see validPosition; the subtraction below underflows otherwise.
-fn normalizePosition(position: i32, comptime static_n: usize, dynamic_n: usize) usize {
+fn normalizePosition(position: i32, static_n: usize, dynamic_n: usize) usize {
     const n = if (static_n != 0) static_n else dynamic_n;
     if (position < 0) return n - @as(usize, @intCast(-position));
     return @as(usize, @intCast(position));

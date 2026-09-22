@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
     // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
+    const decode_only = b.option(bool, "decode-only", "Decode the compact verifier system and exit") orelse false;
     const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
     const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
     const riscv_system_path = b.option(
@@ -130,6 +131,7 @@ pub fn build(b: *std.Build) void {
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
     embedded_data_opts.addOption(bool, "embed_input", embedded_input != EmbeddedInputType.none);
     embedded_data_opts.addOption(bool, "invalid_input", embedded_input == EmbeddedInputType.invalid);
+    embedded_data_opts.addOption(bool, "decode_only", decode_only);
     const embedded_data_mod = b.addModule("embedded_data", .{
         .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,

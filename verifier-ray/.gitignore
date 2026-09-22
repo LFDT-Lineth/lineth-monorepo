@@ -2,3 +2,4 @@
 zig-out/
 testdata/generated/riscv_system.zig
 testdata/riscv_proof_image.bin
+testdata/generated/riscv_system.bin

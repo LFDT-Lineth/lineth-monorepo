@@ -44,6 +44,43 @@ pub const Systems = struct {
     pcs: pcs.System,
 };
 
+pub const RuntimeLimits = struct {
+    public_input: public_input_mod.Limits,
+    replay: protocol.ReplayLimits,
+    pcs: pcs.Limits,
+    total_witness_claims: usize,
+    total_quotient_claims: usize,
+};
+
+pub fn runtimeLimitsFor(comptime spec: protocol.Spec, comptime systems: Systems) RuntimeLimits {
+    var max_cells: usize = 0;
+    var total_cells: usize = 0;
+    for (systems.public_input.round_cell_counts) |count| {
+        max_cells = @max(max_cells, count);
+        total_cells += count;
+    }
+    return .{
+        .public_input = .{
+            .round_count = systems.public_input.round_cell_counts.len,
+            .max_cells_per_round = max_cells,
+            .total_cells = total_cells,
+        },
+        .replay = .{ .total_round_coins = spec.total_round_coins },
+        .pcs = pcs.limitsFor(systems.pcs),
+        .total_witness_claims = systems.vanishing.total_witness_claims,
+        .total_quotient_claims = systems.vanishing.total_quotient_claims,
+    };
+}
+
+/// Scratch for the large bound-round-message buffer that must live across
+/// transcript replay and PCS verification. The R5 entry point owns this in
+/// .bss so it cannot consume the guest's fixed stack.
+pub fn RuntimeWorkspace(comptime limits: RuntimeLimits) type {
+    return struct {
+        bound_rounds: public_input_mod.RuntimeBoundRoundMessages(limits.public_input) = undefined,
+    };
+}
+
 /// Flat public-input statement in prover-ray registration order. Each entry is
 /// the verifier-visible scalar value of one cell registered via
 /// `System.RegisterPublicInputs` on the prover side.
@@ -81,7 +118,7 @@ pub const Proof = struct {
 ///
 /// It deliberately does NOT carry `roots`: the batch Merkle roots are rebuilt by
 /// `verify` from `pcs.System.batch_roots` — the transcript-bound round oracle
-/// commitments (and compile-time precomputed roots) — never from the proof. If a
+/// commitments (and codegen-precomputed roots) — never from the proof. If a
 /// prover could supply roots here, it could open against a forged root while zeta
 /// stays bound to the honest commitment. Coins (zeta, fold challenges, query
 /// positions) are likewise absent and derived by `verify`.
@@ -130,20 +167,46 @@ pub fn verify(
     comptime if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
         @compileError("verifier: public_input.round_cell_counts must have one entry per replayed round");
 
+    var workspace: RuntimeWorkspace(runtimeLimitsFor(spec, systems)) = undefined;
+    return verifyRuntimeWithWorkspace(runtimeLimitsFor(spec, systems), spec, systems, proof, public_inputs, &workspace);
+}
+
+pub fn verifyRuntime(
+    comptime limits: RuntimeLimits,
+    spec: protocol.Spec,
+    systems: Systems,
+    proof: Proof,
+    public_inputs: PublicInput,
+) !void {
+    var workspace: RuntimeWorkspace(limits) = undefined;
+    return verifyRuntimeWithWorkspace(limits, spec, systems, proof, public_inputs, &workspace);
+}
+
+pub fn verifyRuntimeWithWorkspace(
+    comptime limits: RuntimeLimits,
+    spec: protocol.Spec,
+    systems: Systems,
+    proof: Proof,
+    public_inputs: PublicInput,
+    workspace: *RuntimeWorkspace(limits),
+) !void {
+    if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
+        return error.InvalidRoundCount;
+
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
-    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, public_inputs);
-    const rounds = bound_rounds.rounds();
+    try public_input_mod.bindRoundMessagesRuntime(limits.public_input, systems.public_input, proof.rounds, public_inputs, &workspace.bound_rounds);
+    const rounds = workspace.bound_rounds.rounds();
 
     // Step 1 — replay transcript, derive all coins. The transcript is owned here
     // and threaded by pointer: `protocol` absorbs the round messages + squeezes
     // the protocol coins, leaving it at the state a transcript-continuing
     // sub-verifier (PCS, below) resumes from. `replayWithTranscript`
-    // comptime-validates `spec` internal consistency and returns the
+    // validates `spec` internal consistency and returns the bounded,
     // stack-allocated coin array.
     var transcript = fiat_shamir.Transcript.init();
-    const all_coins = try protocol.replayWithTranscript(&transcript, spec, rounds, proof.module_sizes);
+    const all_coins = try protocol.replayWithTranscriptRuntime(limits.replay, &transcript, spec, rounds, proof.module_sizes);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
@@ -161,27 +224,28 @@ pub fn verify(
     const opening = proof.pcs_opening;
 
     // Rebuild the per-batch Merkle roots from their transcript-bound
-    // provenance (round oracle commitments + compile-time precomputed roots),
+    // provenance (round oracle commitments + codegen-precomputed roots),
     // NOT from the proof. `pcs.verify` will reorder/deduplicate these into the
     // proof's input-opening order, so the root each batch is authenticated
     // against is provably the same octuplet zeta is bound to. Mirrors
     // prover-ray's `collectRoots` + `inputOpeningRoots`.
-    var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
-    try resolveRoots(pcs_system.batch_roots, rounds, &bound_roots);
+    if (pcs_system.num_batches > limits.pcs.num_batches) return error.BatchRootMismatch;
+    var bound_roots: [limits.pcs.num_batches]poseidon2.Digest = undefined;
+    try resolveRoots(pcs_system.batch_roots, rounds, bound_roots[0..pcs_system.num_batches]);
 
     // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring the
-    // index at comptime turns a mis-configured PCS system into a build error
-    // instead of a silent wrong-coin selection.
-    const zeta_index = comptime pcs_system.zeta_coin_index orelse
-        @compileError("pcs: System.zeta_coin_index must be set");
+    // index validation turns a mis-configured PCS system into an explicit
+    // verifier error instead of a silent wrong-coin selection.
+    const zeta_index = pcs_system.zeta_coin_index orelse return error.ClaimMapMismatch;
+    if (zeta_index >= all_coins.len) return error.ClaimMapMismatch;
 
     // Reconstruct the canonical PCS layout for THIS proof's dynamic sizes: one
-    // baked comptime System verifies proofs of different module sizes because the
+    // decoded System verifies proofs of different module sizes because the
     // bundle placement / entry order / restricted params are a runtime function
     // of `module_sizes` (mirroring prover-ray's GetLayout + canonicalLayout +
     // restrictTo). deriveChallenges needs the restricted params for the fold /
     // query-position counts.
-    const recon = try pcs.reconstruct(pcs_system, proof.module_sizes);
+    const recon = try pcs.reconstructRuntime(limits.pcs, pcs_system, proof.module_sizes);
 
     // Every claimed evaluation is an ordinary `LagrangeEval.EvaluationClaims`
     // cell, transcript-bound in `ctx.rounds`. The per-column `claim_cells`
@@ -189,13 +253,13 @@ pub fn verify(
     // backs each (column, shift) claim. This array is stack-local to this call
     // and passed straight into `pcs.verify` below, so its lifetime is fine:
     // nothing here escapes past `verify` returning.
-    var entry_claims_buf: pcs.EntryClaims(pcs_system) = .{};
-    try pcs.buildEntryClaims(pcs_system, recon, ctx, &entry_claims_buf);
+    var entry_claims_buf: pcs.RuntimeEntryClaims(limits.pcs) = .{};
+    try pcs.buildEntryClaimsRuntime(limits.pcs, pcs_system, &recon, ctx, &entry_claims_buf);
     const entry_claims = entry_claims_buf.slice();
 
-    const pcs_challenges = try pcs.deriveChallenges(pcs_system, recon, &transcript, opening.proof.fri_proof);
-    try pcs.verify(pcs_system, .{
-        .roots = &bound_roots,
+    const pcs_challenges = try pcs.deriveChallengesRuntime(limits.pcs, pcs_system, &recon, &transcript, opening.proof.fri_proof);
+    try pcs.verifyRuntime(limits.pcs, pcs_system, .{
+        .roots = bound_roots[0..pcs_system.num_batches],
         .entry_claims = entry_claims,
         .zeta = all_coins[zeta_index],
         .fold_alphas = pcs_challenges.foldAlphas(),
@@ -210,16 +274,19 @@ pub fn verify(
     // so the vanishing check runs on values the FRI opening just proved — never
     // on raw proof-supplied claims. This closes the "feed the two sub-verifiers
     // different values for the same column" gap.
-    var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
-    var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
-    try routeClaims(pcs_system, recon, pcs_system.witness_map, entry_claims, &derived_witness);
-    try routeClaims(pcs_system, recon, pcs_system.quotient_map, entry_claims, &derived_quotient);
+    if (systems.vanishing.total_witness_claims > limits.total_witness_claims or
+        systems.vanishing.total_quotient_claims > limits.total_quotient_claims)
+        return error.ClaimMapMismatch;
+    var derived_witness: [limits.total_witness_claims]ext.Ext = undefined;
+    var derived_quotient: [limits.total_quotient_claims]ext.Ext = undefined;
+    try routeClaims(pcs_system, &recon, pcs_system.witness_map, entry_claims, derived_witness[0..systems.vanishing.total_witness_claims]);
+    try routeClaims(pcs_system, &recon, pcs_system.quotient_map, entry_claims, derived_quotient[0..systems.vanishing.total_quotient_claims]);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
-        .witness_claims = &derived_witness,
-        .quotient_claims = &derived_quotient,
+        .witness_claims = derived_witness[0..systems.vanishing.total_witness_claims],
+        .quotient_claims = derived_quotient[0..systems.vanishing.total_quotient_claims],
         .module_sizes = proof.module_sizes,
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
@@ -243,8 +310,8 @@ pub fn verify(
 /// ClaimRef must be in range, else the PCS/vanishing metadata disagree — a
 /// codegen bug, surfaced as an error rather than an out-of-bounds panic.
 fn routeClaims(
-    comptime system: pcs.System,
-    recon: pcs.Reconstructed(system),
+    system: pcs.System,
+    recon: anytype,
     map: []const pcs.ClaimRef,
     entry_claims: []const []const ext.Ext,
     out: []ext.Ext,
