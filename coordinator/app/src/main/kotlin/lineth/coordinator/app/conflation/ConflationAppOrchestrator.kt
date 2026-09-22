@@ -16,7 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
@@ -56,6 +56,11 @@ class ConflationAppOrchestrator(
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
+  /**
+   * Builds the prover clients. Defaults to the file-based factory; downstream distributions
+   * override it to route proof requests elsewhere (see [ProverClientFactoryBuilder]).
+   */
+  private val proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppOrchestrator::class.java)
@@ -70,9 +75,11 @@ class ConflationAppOrchestrator(
       .get()
   }
 
-  private val preRiscvProverClientFactory = ProverClientFactory(
+  private val preRiscvProverClientFactory = proverClientFactoryBuilder.build(
     vertx = vertx,
     config = configs.proversConfig,
+    l2MessageServiceAddress = null,
+    chainId = null,
     metricsFacade = metricsFacade,
   )
 
@@ -264,10 +271,12 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
-      val riscvProverClientFactory = ProverClientFactory(
+      val riscvProverClientFactory = proverClientFactoryBuilder.build(
         vertx = vertx,
         config = configs.riscvProversConfig!!,
         l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+        // Read from the node rather than config, as ConflationAppV2 does for the same value.
+        chainId = l2EthClient.ethChainId().get().toLong(),
         metricsFacade = metricsFacade,
       )
       ConflationAppV2(

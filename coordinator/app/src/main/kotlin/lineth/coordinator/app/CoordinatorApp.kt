@@ -24,6 +24,7 @@ import lineth.coordinator.app.conflation.ConflationAppOrchestrator
 import lineth.coordinator.app.conflation.TracesClientFactory.createTracesClients
 import lineth.coordinator.app.conflation.TracesClients
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
+import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig
@@ -65,6 +66,10 @@ class CoordinatorApp(
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
   signerFactory: SignerFactory = DefaultSignerFactory,
+  // Builds the prover clients. Defaults to the built-in file-based factory; downstream
+  // distributions override it to route proof requests elsewhere (e.g. to an embedded
+  // prover-gateway over its REST protocol) without replacing the conflation pipeline.
+  proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val vertx: Vertx =
@@ -268,6 +273,7 @@ class CoordinatorApp(
     l2EthClient = l2EthClientForConflation,
     zkStateClient = zkStateClient,
     tracesClients = tracesClients,
+    proverClientFactoryBuilder = proverClientFactoryBuilder,
   )
 
   private val l1FinalizationMonitorApp = L1FinalizationMonitorApp(

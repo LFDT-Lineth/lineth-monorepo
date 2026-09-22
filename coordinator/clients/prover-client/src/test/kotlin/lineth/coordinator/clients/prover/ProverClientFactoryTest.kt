@@ -189,7 +189,7 @@ class ProverClientFactoryTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
         metricsFacade = metricsFacade,
@@ -198,7 +198,7 @@ class ProverClientFactoryTest {
 
   @Test
   fun `executionProverClient should build L2 execution prover client when programVk and forkName are set`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
@@ -211,7 +211,7 @@ class ProverClientFactoryTest {
 
   @Test
   fun `executionProverClient should fail when l2MessageServiceAddress is not configured`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
       l2MessageServiceAddress = null,
@@ -225,7 +225,7 @@ class ProverClientFactoryTest {
 
   @Test
   fun `executionProverClient should fail when l2MessageServiceAddress is empty`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
       l2MessageServiceAddress = "",
@@ -239,7 +239,7 @@ class ProverClientFactoryTest {
 
   @Test
   fun `executionProverClient should fail when programVk is not configured`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfigWithExecution(testTmpDir, programVk = null, forkName = "cancun"),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
@@ -253,7 +253,7 @@ class ProverClientFactoryTest {
 
   @Test
   fun `executionProverClient should fail when forkName is not configured`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = null),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
@@ -290,7 +290,7 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
         metricsFacade = metricsFacade,
@@ -304,7 +304,7 @@ class ProverClientFactoryTest {
   @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
         metricsFacade = metricsFacade,
@@ -331,7 +331,7 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         config = buildProversConfig(
           testTmpDir,
