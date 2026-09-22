@@ -26,9 +26,7 @@ fn sentinelU64(comptime tag: []const u8) u64 {
     return std.mem.readInt(u64, sentinelHash(tag)[0..8], .big);
 }
 
-pub const L2_L1_BRIDGE_TRANSACTION_TREE: [32]u8 = sentinelHash("lineth.stub.rollup.l2L1BridgeTransactionTree");
 pub const END_DATA_ROLLING_HASH: [32]u8 = sentinelHash("lineth.stub.rollup.endDataRollingHash");
-pub const FILTERED_ADDRESSES_HASH: [32]u8 = sentinelHash("lineth.stub.rollup.filteredAddressesHash");
 pub const END_OFFSET: u64 = sentinelU64("lineth.stub.rollup.endOffset");
 pub const L2_L1_ROOTS_ELEMENT: [32]u8 = sentinelHash("lineth.stub.rollup.l2L1Roots");
 
@@ -65,7 +63,6 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
         .public_inputs = .{
             .end_block_number = last.proof.public_inputs.end_block_number,
             .end_block_timestamp = last.proof.public_inputs.end_block_timestamp,
-            .l2_l1_bridge_transaction_tree = L2_L1_BRIDGE_TRANSACTION_TREE,
             .parent_l1_l2_bridge_rolling_hash = first.proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
             .parent_l1_l2_bridge_rolling_hash_message_number = first.proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number,
             .end_l1_l2_bridge_rolling_hash = last.proof.public_inputs.end_l1_l2_bridge_rolling_hash,
@@ -75,18 +72,17 @@ pub fn run(alloc: std.mem.Allocator, input: rollup_ssz.RollupProofPrivateInput) 
             .parent_ftx_number = first.proof.public_inputs.parent_ftx_number,
             .end_ftx_rolling_hash = last.proof.public_inputs.end_ftx_rolling_hash,
             .end_processed_ftx_number = last.proof.public_inputs.end_processed_ftx_number,
-            .filtered_addresses_hash = FILTERED_ADDRESSES_HASH,
             .parent_data_rolling_hash = input.parent_data_rolling_hash,
             .end_data_rolling_hash = END_DATA_ROLLING_HASH,
             .parent_block_hash = first.proof.public_inputs.parent_block_hash,
             .end_block_hash = last.proof.public_inputs.end_block_hash,
             .start_offset = input.start_offset,
             .end_offset = END_OFFSET,
+            .l2_l1_roots = l2_l1_roots,
+            .filtered_addresses = owned_filtered_addresses,
             .program_vks = program_vks,
         },
         .start_block_number = first.proof.start_block_number,
-        .l2_l1_roots = l2_l1_roots,
-        .filtered_addresses = owned_filtered_addresses,
     };
 }
 

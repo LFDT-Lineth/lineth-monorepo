@@ -86,18 +86,13 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
 
 const OUTPUT_PROGRAM_VK_0 = repeat32(0xaa);
 const OUTPUT_PROGRAM_VK_1 = repeat32(0xbb);
-const OUTPUT_L2_L1_ROOT_0 = repeat32(0x45);
-const OUTPUT_FILTERED_ADDRESS_0 = repeat20(0x03);
-const OUTPUT_FILTERED_ADDRESS_1 = repeat20(0x04);
 const OUTPUT_END_BLOCK_NUMBER: u64 = 14;
 const OUTPUT_END_BLOCK_TIMESTAMP: u64 = 1763000210;
-const OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE = repeat32(0xbc);
 const OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x02);
 const OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH = repeat32(0x03);
 const OUTPUT_DYNAMIC_CHAIN_CONFIG_HASH = repeat32(0xc0);
 const OUTPUT_PARENT_FTX_ROLLING_HASH = repeat32(0x04);
 const OUTPUT_END_FTX_ROLLING_HASH = repeat32(0x05);
-const OUTPUT_FILTERED_ADDRESSES_HASH = repeat32(0x8f);
 const OUTPUT_PARENT_DATA_ROLLING_HASH = repeat32(0x47);
 const OUTPUT_END_DATA_ROLLING_HASH = repeat32(0x1f);
 const OUTPUT_PARENT_BLOCK_HASH = repeat32(0x0a);
@@ -108,14 +103,13 @@ const OUTPUT_START_BLOCK_NUMBER: u64 = 10;
 
 fn sampleOutput(alloc: std.mem.Allocator) !rollup_ssz.RollupOutput {
     const program_vks = try alloc.dupe([32]u8, &[_][32]u8{ OUTPUT_PROGRAM_VK_0, OUTPUT_PROGRAM_VK_1 });
-    const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{OUTPUT_L2_L1_ROOT_0});
-    const filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{ OUTPUT_FILTERED_ADDRESS_0, OUTPUT_FILTERED_ADDRESS_1 });
+    const l2_l1_roots = try alloc.dupe([32]u8, &[_][32]u8{repeat32(0x45)});
+    const filtered_addresses = try alloc.dupe([20]u8, &[_][20]u8{ repeat20(0x03), repeat20(0x04) });
 
     return .{
         .public_inputs = .{
             .end_block_number = OUTPUT_END_BLOCK_NUMBER,
             .end_block_timestamp = OUTPUT_END_BLOCK_TIMESTAMP,
-            .l2_l1_bridge_transaction_tree = OUTPUT_L2_L1_BRIDGE_TRANSACTION_TREE,
             .parent_l1_l2_bridge_rolling_hash = OUTPUT_PARENT_L1L2_BRIDGE_ROLLING_HASH,
             .parent_l1_l2_bridge_rolling_hash_message_number = 0,
             .end_l1_l2_bridge_rolling_hash = OUTPUT_END_L1L2_BRIDGE_ROLLING_HASH,
@@ -125,22 +119,21 @@ fn sampleOutput(alloc: std.mem.Allocator) !rollup_ssz.RollupOutput {
             .parent_ftx_number = 15,
             .end_ftx_rolling_hash = OUTPUT_END_FTX_ROLLING_HASH,
             .end_processed_ftx_number = 18,
-            .filtered_addresses_hash = OUTPUT_FILTERED_ADDRESSES_HASH,
             .parent_data_rolling_hash = OUTPUT_PARENT_DATA_ROLLING_HASH,
             .end_data_rolling_hash = OUTPUT_END_DATA_ROLLING_HASH,
             .parent_block_hash = OUTPUT_PARENT_BLOCK_HASH,
             .end_block_hash = OUTPUT_END_BLOCK_HASH,
             .start_offset = OUTPUT_START_OFFSET,
             .end_offset = OUTPUT_END_OFFSET,
+            .l2_l1_roots = l2_l1_roots,
+            .filtered_addresses = filtered_addresses,
             .program_vks = program_vks,
         },
         .start_block_number = OUTPUT_START_BLOCK_NUMBER,
-        .l2_l1_roots = l2_l1_roots,
-        .filtered_addresses = filtered_addresses,
     };
 }
 
-test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 schema id" {
+test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1803 schema id" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -148,13 +141,13 @@ test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 
     const value = try sampleOutput(alloc);
     const encoded = try rollup_ssz.encodeOutput(alloc, value);
 
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x18, 0x01 }, encoded[0..2]);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x18, 0x03 }, encoded[0..2]);
 
     const decoded = try rollup_ssz.decodeOutput(alloc, encoded);
     try std.testing.expectEqual(value.start_block_number, decoded.start_block_number);
-    try std.testing.expectEqualSlices(u8, value.filtered_addresses[0][0..], decoded.filtered_addresses[0][0..]);
-    try std.testing.expectEqual(value.l2_l1_roots.len, decoded.l2_l1_roots.len);
-    try std.testing.expectEqualSlices(u8, &value.l2_l1_roots[0], &decoded.l2_l1_roots[0]);
+    try std.testing.expectEqualSlices(u8, value.public_inputs.filtered_addresses[0][0..], decoded.public_inputs.filtered_addresses[0][0..]);
+    try std.testing.expectEqual(value.public_inputs.l2_l1_roots.len, decoded.public_inputs.l2_l1_roots.len);
+    try std.testing.expectEqualSlices(u8, &value.public_inputs.l2_l1_roots[0], &decoded.public_inputs.l2_l1_roots[0]);
     try std.testing.expectEqual(value.public_inputs.end_block_number, decoded.public_inputs.end_block_number);
     try std.testing.expectEqual(value.public_inputs.start_offset, decoded.public_inputs.start_offset);
     try std.testing.expectEqual(value.public_inputs.end_offset, decoded.public_inputs.end_offset);
@@ -162,7 +155,6 @@ test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 
     for (value.public_inputs.program_vks, decoded.public_inputs.program_vks) |want, got| {
         try std.testing.expectEqualSlices(u8, &want, &got);
     }
-    try std.testing.expectEqualSlices(u8, &value.public_inputs.l2_l1_bridge_transaction_tree, &decoded.public_inputs.l2_l1_bridge_transaction_tree);
     try std.testing.expectEqualSlices(u8, &value.public_inputs.parent_block_hash, &decoded.public_inputs.parent_block_hash);
     try std.testing.expectEqualSlices(u8, &value.public_inputs.end_block_hash, &decoded.public_inputs.end_block_hash);
 }

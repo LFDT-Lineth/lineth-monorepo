@@ -5,7 +5,6 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from .l2_execution import hash_address_list, hash_digest_list
 from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
 
 
@@ -89,14 +88,13 @@ class LinethRollupState:
 class FinalizationSubmission:
     """
     The rollup-aggregation guest output as submitted to the L1 finalization
-    call. It is the guest output plus the `proof` bytes: the 20-field
-    `public_inputs` tuple and the revealed preimages L1 needs as calldata —
-    `l2_l1_roots` (preimage of `l2L1BridgeTransactionTree`) and
-    `filtered_addresses` (preimage of `filteredAddressesHash`).
+    call. It is the guest output plus the `proof` bytes: the
+    `public_inputs` tuple. L2-to-L1 roots and filtered addresses are bound
+    directly in the public inputs.
 
-    Guest/prover boundary: the aggregation guest emits `public_inputs` and the
-    preimage lists; `proof` is attached by the zkVM/prover layer above and is a
-    placeholder (`b""`) in this reference (see `run_rollup_aggregation_guest`).
+    Guest/prover boundary: the aggregation guest emits `public_inputs`; `proof`
+    is attached by the zkVM/prover layer above and is a placeholder (`b""`) in
+    this reference (see `run_rollup_aggregation_guest`).
     `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
     not yet consumed by `finalize_rollup`.
 
@@ -107,8 +105,6 @@ class FinalizationSubmission:
     """
     public_inputs: RollupPublicInput
     proof: bytes
-    l2_l1_roots: List[Hash32]
-    filtered_addresses: List[Address]
     l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
@@ -188,14 +184,10 @@ def finalize_rollup(
         pi.end_processed_ftx_number,
     )
 
-    if hash_digest_list(submission.l2_l1_roots) != pi.l2_l1_bridge_transaction_tree:
-        raise Exception("submitted L2-to-L1 roots do not match public input")
-    for root in submission.l2_l1_roots:
+    for root in pi.l2_l1_roots:
         state.l2_merkle_roots_depths[root] = L2_L1_TREE_DEPTH
 
-    if hash_address_list(submission.filtered_addresses) != pi.filtered_addresses_hash:
-        raise Exception("submitted filtered addresses do not match public input")
-    for address in submission.filtered_addresses:
+    for address in pi.filtered_addresses:
         if address not in state.sanctioned_addresses:
             raise Exception("filtered address is not sanctioned")
 

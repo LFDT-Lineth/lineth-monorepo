@@ -33,15 +33,14 @@ covers blocks 10-11), disambiguating multiple samples for the same guest program
 | `*-getZkRollupAggregationProofV1.request.json` | `RollupAggregationProofPrivateInput` | `rollup_aggregation.py` | `run_rollup_aggregation_guest` (input) |
 | `*-getZkRollupAggregationProofV1.response.json` | `FinalizationSubmission` | `l1_rollup.py` | `run_rollup_aggregation_guest` (output) |
 
-**Guest output vs prover output.** A guest emits its public-input tuple plus the
-revealed hash preimages (`l2L1Messages`, `txFroms`, `l2L1Roots`,
-`filteredAddresses`). The `proof` bytes are attached by the zkVM/prover layer,
+**Guest output vs prover output.** A guest emits its public-input tuple. The
+l2-execution response includes the revealed hash preimages (`l2L1Messages`,
+`txFroms`, `filteredAddresses`); rollup roots and filtered addresses are public-input
+lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures; a response
 equals the guest output plus `proof`. The aggregation response is a
-`FinalizationSubmission`: it additionally carries `l2L1Roots`,
-`filteredAddresses`, and `l2MessagingBlocksOffsets` — the preimages the L1
-`finalize_rollup` call consumes as calldata — so it is sufficient for L1
-finalization.
+`FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` alongside the
+public inputs, which L1 consumes directly for finalization.
 
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A

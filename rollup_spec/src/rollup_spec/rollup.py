@@ -407,7 +407,6 @@ class RollupPublicInput:
     """
     end_block_number: U64
     end_block_timestamp: U64
-    l2_l1_bridge_transaction_tree: Hash32
     parent_l1_l2_bridge_rolling_hash: Hash32
     parent_l1_l2_bridge_rolling_hash_message_number: U64
     end_l1_l2_bridge_rolling_hash: Hash32
@@ -417,13 +416,14 @@ class RollupPublicInput:
     parent_ftx_number: U64
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
-    filtered_addresses_hash: Hash32
     parent_data_rolling_hash: Hash32
     end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
     start_offset: int
     end_offset: int
+    l2_l1_roots: List[Hash32] = field(default_factory=list)
+    filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
 
 
@@ -466,12 +466,11 @@ class RollupProofPrivateInput:
 class RollupProof:
     """
     A rollup proof as the rollup guest emits it: the guest *output* (the
-    20-field `public_inputs` tuple + the root/address preimages) plus the
-    `proof` bytes the aggregation guest recursively verifies.
+    `public_inputs` tuple plus the `proof` bytes the aggregation guest
+    recursively verifies.
 
-    Guest/prover boundary: the guest emits `public_inputs` and the preimage
-    lists only; `proof` is attached by the zkVM/prover layer above — a guest
-    cannot prove itself — and is a placeholder (`b""`) in this reference.
+    Guest/prover boundary: the guest emits `public_inputs`; `proof` is attached
+    by the zkVM/prover layer above and is a placeholder (`b""`) in this reference.
 
     `end_block_number` is intentionally absent: it is already
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
@@ -485,8 +484,6 @@ class RollupProof:
     public_inputs: RollupPublicInput
     start_block_number: U64
     proof: bytes = b""
-    l2_l1_roots: List[Hash32] = field(default_factory=list)
-    filtered_addresses: List[Address] = field(default_factory=list)
 
 
 @dataclass
@@ -519,7 +516,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     against the L1-anchored `chunkHash` — folding the dataRollingHash chain
     across the touched chunks as it goes (§3.4). Recursively verifies the N
     l2-execution proofs, checks continuity, builds the L2->L1 Merkle-root
-    commitment, collects FTX outputs, and emits the 20-field rollup PI tuple
+    commitment, collects FTX outputs, and emits the rollup PI tuple
     (§2.4).
     """
     if len(rollup_input.conflations) == 0:
@@ -643,13 +640,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
-    l2_l1_roots, l2_l1_bridge_transaction_tree = build_l2_messages_tree(
-        concatenated_l2_l1_messages,
-    )
+    l2_l1_roots = build_l2_message_roots(concatenated_l2_l1_messages)
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
-        l2_l1_bridge_transaction_tree=l2_l1_bridge_transaction_tree,
+        l2_l1_roots=l2_l1_roots,
         parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=(
             first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
@@ -663,7 +658,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
-        filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
+        filtered_addresses=concatenated_filtered_addresses,
         parent_data_rolling_hash=rollup_input.parent_data_rolling_hash,
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
@@ -676,8 +671,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     return RollupProof(
         public_inputs=public_inputs,
         start_block_number=U64(rollup_start_block_number),
-        l2_l1_roots=l2_l1_roots,
-        filtered_addresses=concatenated_filtered_addresses,
     )
 
 
@@ -756,8 +749,8 @@ def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32
     - Merkle-hash each chunk as a complete depth-5 binary tree with keccak.
     - Flat-hash the ordered roots with keccak256(root_1 || ... || root_n).
 
-    The returned root list is the private preimage used by aggregation and L1
-    calldata; the returned hash is the public `l2L1BridgeTransactionTree`.
+    The returned root list is carried directly in the rollup public input. The
+    legacy hash return is retained only for callers that need the list digest.
     """
     roots = build_l2_message_roots(msgs)
     return roots, hash_digest_list(roots)
