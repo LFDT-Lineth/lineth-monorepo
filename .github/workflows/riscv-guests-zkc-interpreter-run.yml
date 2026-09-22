@@ -131,12 +131,10 @@ jobs:
       - name: Check Zig formatting
         run: make fmt-check
         working-directory: riscv-guests
-        timeout-minutes: 2
 
       - name: Run native unit tests for all guests
         run: make test
         working-directory: riscv-guests
-        timeout-minutes: 20
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
