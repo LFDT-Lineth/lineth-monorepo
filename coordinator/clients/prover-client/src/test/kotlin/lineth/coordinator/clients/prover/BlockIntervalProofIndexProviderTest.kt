@@ -25,9 +25,9 @@ class BlockIntervalProofIndexProviderTest {
     assertThat(index.startBlockNumber).isEqualTo(request.startBlockNumber)
     assertThat(index.endBlockNumber).isEqualTo(request.endBlockNumber)
     assertThat(index.startBlockTimestamp).isEqualTo(request.startBlockTimestamp)
-    assertThat(index.endBlockTimestamp).isEqualTo(request.endBlockTimestamp)
-    assertThat(index.transactionsCount).isEqualTo(request.transactionsCount)
-    assertThat(index.totalGasUsed).isEqualTo(request.totalGasUsed)
+    assertThat(index.proofRequestMetaData?.endBlockTimestamp).isEqualTo(request.endBlockTimestamp)
+    assertThat(index.proofRequestMetaData?.transactionsCount).isEqualTo(request.transactionsCount)
+    assertThat(index.proofRequestMetaData?.totalGasUsed).isEqualTo(request.totalGasUsed)
     assertThat(index.hash).isEqualTo(expectedHash)
   }
 

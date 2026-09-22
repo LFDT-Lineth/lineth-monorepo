@@ -3,6 +3,7 @@ package lineth.coordinator.clients.prover
 import linea.crypto.HashFunction
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ProofRequestMetaData
 import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 
@@ -17,9 +18,11 @@ internal class BlockIntervalProofIndexProvider<Request>(
       endBlockNumber = request.endBlockNumber,
       hash = hashFunction.hash(content),
       startBlockTimestamp = request.startBlockTimestamp,
-      endBlockTimestamp = request.endBlockTimestamp,
-      transactionsCount = request.transactionsCount,
-      totalGasUsed = request.totalGasUsed,
+      proofRequestMetaData = ProofRequestMetaData(
+        endBlockTimestamp = request.endBlockTimestamp,
+        transactionsCount = request.transactionsCount,
+        totalGasUsed = request.totalGasUsed,
+      ),
     )
   }
 }
