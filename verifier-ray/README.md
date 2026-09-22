@@ -10,6 +10,7 @@ The Zig library under `src/` is independent from `prover-ray` at runtime. Go tes
 - `docs/global-constraint.md` explains how the vanishing polynomial/global constraint check is asserted.
 - `docs/vanishing-pcs-integration-notes.md` tracks assumptions to revisit when PCS/FRI verification is wired in.
 - `docs/verifier-profiling.md` explains how to profile the R5 verifier path through zkc.
+- `docs/pcs-column-layout.md` explains where the PCS committed columns come from and how the base/extension split drives per-query Poseidon2 cost.
 
 ## Testdata Generation
 
