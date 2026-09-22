@@ -51,6 +51,7 @@ import kotlin.time.Instant
  */
 class ConflationAppV2(
   private val vertx: Vertx,
+  private val chainId: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
@@ -84,8 +85,6 @@ class ConflationAppV2(
     vertx = vertx,
     blockValidator = ::validateLinethBlock,
   )
-
-  private val chainId: ULong = l2EthClient.ethChainId().get()
 
   private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
