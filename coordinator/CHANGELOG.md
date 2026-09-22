@@ -16,6 +16,7 @@
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
 - *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
 
 ### 🐛 Bug Fixes
 
