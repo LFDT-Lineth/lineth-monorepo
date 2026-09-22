@@ -191,6 +191,8 @@ class ProverClientFactoryTest {
     proverClientFactory =
       DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
         metricsFacade = metricsFacade,
       )
@@ -200,6 +202,7 @@ class ProverClientFactoryTest {
   fun `executionProverClient should build L2 execution prover client when programVk and forkName are set`() {
     val factory = DefaultProverClientFactory(
       vertx = vertx,
+      chainId = 123UL,
       config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
       metricsFacade = metricsFacade,
@@ -210,37 +213,10 @@ class ProverClientFactoryTest {
   }
 
   @Test
-  fun `executionProverClient should fail when l2MessageServiceAddress is not configured`() {
-    val factory = DefaultProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
-      l2MessageServiceAddress = null,
-      metricsFacade = metricsFacade,
-    )
-
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
-  }
-
-  @Test
-  fun `executionProverClient should fail when l2MessageServiceAddress is empty`() {
-    val factory = DefaultProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
-      l2MessageServiceAddress = "",
-      metricsFacade = metricsFacade,
-    )
-
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
-  }
-
-  @Test
   fun `executionProverClient should fail when programVk is not configured`() {
     val factory = DefaultProverClientFactory(
       vertx = vertx,
+      chainId = 123UL,
       config = buildProversConfigWithExecution(testTmpDir, programVk = null, forkName = "cancun"),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
       metricsFacade = metricsFacade,
@@ -255,8 +231,9 @@ class ProverClientFactoryTest {
   fun `executionProverClient should fail when forkName is not configured`() {
     val factory = DefaultProverClientFactory(
       vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = null),
+      chainId = 123UL,
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = null),
       metricsFacade = metricsFacade,
     )
 
@@ -292,6 +269,8 @@ class ProverClientFactoryTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
         metricsFacade = metricsFacade,
       )
@@ -306,6 +285,8 @@ class ProverClientFactoryTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
         config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
         metricsFacade = metricsFacade,
       )
@@ -333,6 +314,8 @@ class ProverClientFactoryTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
         config = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
