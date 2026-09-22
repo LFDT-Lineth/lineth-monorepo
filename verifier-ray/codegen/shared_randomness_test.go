@@ -39,7 +39,6 @@ func newSharedRandomnessMessageBusHandle(t *testing.T) *wiop.System {
 	return sys
 }
 
-
 func TestBuildSharedRandomnessSystemExtractsContribution(t *testing.T) {
 	sys := newSharedRandomnessMessageBusHandle(t)
 
