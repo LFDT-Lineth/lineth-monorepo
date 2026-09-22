@@ -155,5 +155,4 @@ fn validateSpec(comptime spec: Spec) void {
     }
     if (spec.total_round_coins != expected_offset)
         @compileError("spec: total_round_coins must equal sum of round_coin_counts");
-
 }
