@@ -86,6 +86,7 @@
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
 - *(prover)* Empty-codehash check (#3913)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 
 ### 🚜 Refactor
 
