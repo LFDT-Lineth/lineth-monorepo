@@ -23,6 +23,7 @@
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 
 ### 🚜 Refactor
 

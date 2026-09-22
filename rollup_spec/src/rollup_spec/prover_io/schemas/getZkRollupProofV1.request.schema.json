@@ -32,17 +32,42 @@
           "items": { "$ref": "#/$defs/conflation" }
         },
         "chunks": {
-          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4): each entry is the chunk's L1-anchored KZG versioned hash.",
+          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4). Each entry carries the chunk's L1-anchored binding hash and its declared kind: a blob chunk (fixed 128 KiB, shareable across a range boundary via opaque bytes) or a range-aligned calldata chunk (a whole-segment extent owned by this proof).",
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/hash32" }
+          "items": {
+            "type": "object",
+            "required": ["chunkHash", "isCalldata", "calldataLength"],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": { "properties": { "isCalldata": { "const": true } } },
+                "then": { "properties": { "calldataLength": { "minimum": 1 } } },
+                "else": { "properties": { "calldataLength": { "const": 0 } } }
+              }
+            ],
+            "properties": {
+              "chunkHash": {
+                "description": "The chunk's L1-anchored binding hash: a KZG versioned hash for a blob chunk, keccak256(_compressedData) for a calldata chunk (§3.1).",
+                "$ref": "#/$defs/hash32"
+              },
+              "isCalldata": {
+                "description": "Selects the in-guest check (§3.1): false verifies the chunk as a blob via its KZG versioned hash; true verifies it as a range-aligned calldata chunk via keccak256 of its exact witnessed extent.",
+                "type": "boolean"
+              },
+              "calldataLength": {
+                "description": "Exact calldata chunk length in bytes (§3.1). Must be 0 for a blob chunk and positive for a calldata chunk.",
+                "$ref": "#/$defs/uint64"
+              }
+            }
+          }
         },
         "opaquePrefixBytes": {
           "description": "Foreign bytes before startOffset in the FIRST touched chunk only (§3.1); empty (0x) or absent otherwise.",
           "$ref": "#/$defs/hex"
         },
         "opaqueSuffixBytes": {
-          "description": "Foreign bytes after endOffset in the LAST touched chunk only (§3.1); empty (0x) or absent otherwise.",
+          "description": "Foreign bytes after this proof's positive terminal offset in the LAST touched blob only (§3.1); empty (0x) or absent when the terminal chunk is fully consumed and endOffset is canonically 0.",
           "$ref": "#/$defs/hex"
         },
         "parentDataRollingHash": {
@@ -50,8 +75,8 @@
           "$ref": "#/$defs/hash32"
         },
         "startOffset": {
-          "description": "This proof's start position within the first touched chunk (§3.4). 0 means a fresh chunk start; a value in (0, chunkSize) means a mid-chunk start requiring boundaryPrevDataRollingHash.",
-          "$ref": "#/$defs/uint"
+          "description": "This proof's canonical start position (§3.4). 0 means a fully consumed chunk boundary; a value in (0, chunkSize) means a position inside a shared blob and requires boundaryPrevDataRollingHash.",
+          "$ref": "#/$defs/offset"
         },
         "boundaryPrevDataRollingHash": {
           "description": "Required only when startOffset > 0 (§3.4): the dataRollingHash value before the first touched chunk, opening its preimage against parentDataRollingHash.",
@@ -67,6 +92,8 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
+    "uint64": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
+    "offset": { "type": "integer", "minimum": 0, "maximum": 131071 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },

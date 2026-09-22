@@ -15,7 +15,11 @@ data class ExecutionInfo(
   val executionWitness: ExecutionWitness,
   val executionRequests: List<ByteArray>,
   val forcedTransactions: List<ForcedTransaction>,
+  val parentBeaconBlockRoot: ByteArray = ByteArray(32),
 ) {
+  init {
+    require(parentBeaconBlockRoot.size == 32) { "parentBeaconBlockRoot must be 32 bytes" }
+  }
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -27,6 +31,7 @@ data class ExecutionInfo(
     if (executionWitness != other.executionWitness) return false
     if (!executionRequests.byteArrayListEquals(other.executionRequests)) return false
     if (forcedTransactions != other.forcedTransactions) return false
+    if (!parentBeaconBlockRoot.contentEquals(other.parentBeaconBlockRoot)) return false
 
     return true
   }
@@ -37,6 +42,7 @@ data class ExecutionInfo(
     result = 31 * result + executionWitness.hashCode()
     result = 31 * result + executionRequests.byteArrayListHashCode()
     result = 31 * result + forcedTransactions.hashCode()
+    result = 31 * result + parentBeaconBlockRoot.contentHashCode()
     return result
   }
 }

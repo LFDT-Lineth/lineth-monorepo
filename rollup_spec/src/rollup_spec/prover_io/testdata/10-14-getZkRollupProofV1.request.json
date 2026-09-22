@@ -22,7 +22,11 @@
       }
     ],
     "chunks": [
-      "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
+      {
+        "chunkHash": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+        "isCalldata": false,
+        "calldataLength": 0
+      }
     ],
     "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
     "startOffset": 4,
