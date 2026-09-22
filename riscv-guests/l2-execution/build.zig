@@ -66,13 +66,7 @@ pub fn build(b: *std.Build) void {
     zesu_crypto_backend_mod.addImport("zesu_modexp_impl", modexp_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_ripemd160_impl", ripemd160_impl_mod);
     zesu_crypto_backend_mod.addImport("zesu_blake2f_impl", blake2f_impl_mod);
-    const block_rlp_size_mod = b.createModule(.{
-        .root_source_file = b.path("src/block_rlp_size.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    block_rlp_size_mod.addImport("zesu_primitives", zesu_guest.module("primitives"));
-    block_rlp_size_mod.addImport("zesu_input", zesu_guest.module("input"));
+    const block_rlp_size_mod = zesu_guest.module("block_rlp_size");
 
     // Expose the precompile providers as a standalone module for the exported zkvm_* symbols.
     const provide_mod = b.addModule("zkvm_provide", .{
@@ -85,12 +79,6 @@ pub fn build(b: *std.Build) void {
     provide_mod.addImport("guest_crypto", guest_crypto_mod);
     provide_mod.addObjectFile(guest_crypto_riscv_a);
     provide_mod.addOptions("build_options", guest_options);
-
-    const linea_io_mod = b.createModule(.{
-        .root_source_file = b.path("src/zkvm_io.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
 
     // Build the SSZ codec for the same target and optimize mode as the guest.
     const l2_execution_ssz_guest_mod = b.createModule(.{
@@ -111,7 +99,6 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_crypto_backend", zesu_crypto_backend_mod);
     guest_module.addImport("guest_crypto", guest_crypto_mod);
     guest_module.addObjectFile(guest_crypto_riscv_a);
-    guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
@@ -144,13 +131,7 @@ pub fn build(b: *std.Build) void {
             .@"crypto-backend" = .@"extern",
         });
         const native_imports = zesuImports(zesu_native);
-        const block_rlp_size_native_mod = b.createModule(.{
-            .root_source_file = b.path("src/block_rlp_size.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        });
-        block_rlp_size_native_mod.addImport("zesu_primitives", zesu_native.module("primitives"));
-        block_rlp_size_native_mod.addImport("zesu_input", zesu_native.module("input"));
+        const block_rlp_size_native_mod = zesu_native.module("block_rlp_size");
 
         const guest_mod = b.createModule(.{
             .root_source_file = b.path(source),
