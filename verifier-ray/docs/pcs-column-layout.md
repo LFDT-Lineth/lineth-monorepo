@@ -262,3 +262,86 @@ last row of each running-sum column, which is what the check reads.
 Note that `round_cell_counts[2]` is 2,270 — one more than the proof's 2,269 —
 because the spec value is the highest referenced index plus one, i.e. a
 capacity. The arithmetic above uses the measured 2,269.
+
+## Ideas on reducing the cost
+
+Per-query hashing is dominated by the **extension** columns: batches 1 and 2 are
+29% of the columns but 71% of the hashed elements, purely from the 6x limb
+unpacking. So the levers all reduce extension columns; nothing here touches tree
+depth, and shrinking the base-field witness buys at most its 29% share.
+
+Two upstream quantities set those counts:
+
+- **Z columns (2,265)** scale with the number of lookup/permutation *fractions*,
+  packed `packingArity` per column.
+- **Quotient shares (774)** scale with constraint *degree*: they are exactly
+  `sum(bucket.ratio)` over all buckets.
+
+**None of the levers below have been implemented or measured.** The figures are
+arithmetic projections: they take the current column counts, apply the stated
+change, and re-run the element/compression formula from the top of this
+document. They are not benchmark results, and the `packingArity` rows in
+particular ignore a known feedback effect (see below), so they read high.
+
+| lever | per-query compressions (estimated) | change (estimated) |
+|-------|------------------------------------|--------------------|
+| current — **measured** | 6,458 | — |
+| `packingArity` 3 → 4 | ~5,600 | ~−13% |
+| `packingArity` 3 → 6 | ~4,800 | ~−26% |
+| halve the ratio-4 buckets | ~6,200 | ~−5% |
+| arity 6 + halved ratio-4 | ~4,500 | ~−31% |
+| floor: zero extension columns | 1,895 | −71% |
+
+Only the first and last rows are exact: the current cost is measured, and the
+floor is what the 7,580 base columns alone would cost.
+
+### 1. Raise `packingArity`
+
+`packingArity = 3` is a hardcoded constant in prover-ray
+(`wiop/compilers/logderivativesum/logderivativesum.go`), and its comment notes
+the value "matches the linea/logderivativesum compiler" — it is inherited, not
+tuned for this system. It caps how many fractions pack into one Z column, so
+Z columns ≈ fractions / arity, and 2,265 × 3 ≈ 6,795 fractions.
+
+The catch is that the Z recurrence multiplies the packed denominators, so the
+constraint degree grows roughly with the arity. That can push buckets into a
+higher `ratio` and add quotient shares back. The table above assumes no such
+feedback, so treat it as an upper bound: the real effect needs a recompile and a
+fresh ratio histogram. Which arity actually wins is unknown until that is run —
+the give-back could be small or could cancel the saving outright.
+
+Testing it is cheap: change the constant, regenerate, and compare the new column
+counts and ratio histogram against the ones in this document.
+
+### 2. Lower constraint degree
+
+Quotient shares are exactly `sum(ratio × count)`. This histogram is read from
+the current generated system, so unlike the projections above it is **measured**:
+
+| ratio | buckets | shares | % of 774 |
+|-------|---------|--------|----------|
+| 1 | 118 | 118 | 15% |
+| 2 | 112 | 224 | 29% |
+| **4** | **98** | **392** | **51%** |
+| 8 | 5 | 40 | 5% |
+
+**98 buckets at ratio 4 produce half the quotient columns**, so they are the
+targeted fix. Degree reduction usually means adding intermediate witness
+columns, which are base-field (1 element against the share's 6), so the trade is
+favourable even before the share count drops.
+
+### 3. Merge lookup arguments
+
+Fewer distinct `LogDerivativeSum` queries, or range-check tables shared across
+modules, cut the fraction count at the source. Unlike packing, this costs no
+constraint degree.
+
+### Scope
+
+All three are prover-ray compile-pipeline decisions, upstream of verifier-ray.
+
+They also mostly help prover time and proof size rather than the zkc cycle
+budget: with the Poseidon2 accelerator enabled (the default) each compression is
+a single zkVM instruction, so even 1.48M of them at `num_queries = 229` stays
+well under 1% of the guest's interpreted cycles. `system_decode` dominates that
+budget — see `docs/verifier-profiling.md`.
