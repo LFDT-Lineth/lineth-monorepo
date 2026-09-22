@@ -44,6 +44,11 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 # be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
 
+# Big-endian width of the per-conflation segment length prefix within the DA
+# stream (§3.1): `[len][zstd(rlp(conflation))]`. 4 bytes comfortably bounds any
+# realistic compressed conflation size well under 2**32.
+SEGMENT_LENGTH_PREFIX_BYTES = 4
+
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
 # the one already vendored in this repo for the hardhat contract tests. All
@@ -162,9 +167,11 @@ class ConflationWitness:
     witnessed truncated form.
 
     `compressed_segment` is the exact independently compressed zstd frame
-    published in the DA stream. The guest zstd-decompresses that one frame and
-    asserts that the result equals the canonical RLP derived above. It preserves
-    these exact witnessed bytes when reconstructing the chunk stream (§3.1).
+    published in the DA stream, without its length prefix. The guest
+    zstd-decompresses that one frame and asserts that the result equals the
+    canonical RLP derived above. When reconstructing the chunk stream it
+    publishes these exact witnessed bytes length-prefixed:
+    `[len][zstd(rlp(conflation))]` (§3.1).
     """
     block_rlps: List[bytes]
     compressed_segment: bytes
@@ -517,8 +524,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, derives the canonical truncated-block RLP
     from `block_rlps`, zstd-decompresses the corresponding witnessed
-    zstd frame, and asserts byte equality (§3.1). It concatenates
-    the exact witnessed segments into this proof's own byte stream, then slices
+    zstd frame, and asserts byte equality (§3.1). It length-prefixes each
+    exact witnessed frame and concatenates the resulting segments into this
+    proof's own byte stream, then slices
     that stream across the chunks it
     touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, recomputes each chunk's binding hash
@@ -561,7 +569,10 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 
         truncated_blocks.extend(conflation_truncated)
         parent_hashes.extend(conflation_parent_hashes)
-        segments.append(conflation.compressed_segment)
+        segments.append(
+            len(conflation.compressed_segment).to_bytes(SEGMENT_LENGTH_PREFIX_BYTES, "big")
+            + conflation.compressed_segment
+        )
 
     own_stream_bytes = b"".join(segments)
     # Cumulative byte offset of each segment's end within the stream. Calldata

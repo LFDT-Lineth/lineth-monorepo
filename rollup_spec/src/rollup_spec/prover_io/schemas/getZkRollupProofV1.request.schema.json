@@ -119,7 +119,7 @@
           "items": { "$ref": "#/$defs/hex" }
         },
         "compressedSegment": {
-          "description": "Exact witnessed DA segment: one zstd frame. The guest requires the frame to consume all segment bytes and its decompressed bytes to equal the canonical truncated-block RLP.",
+          "description": "Exact zstd frame of one DA segment, without its §3.1 length prefix (the guest adds it when reconstructing the stream). The guest requires the frame to consume all witnessed bytes and its decompressed bytes to equal the canonical truncated-block RLP.",
           "type": "string",
           "minLength": 4,
           "pattern": "^0x([0-9a-fA-F]{2})*$"
