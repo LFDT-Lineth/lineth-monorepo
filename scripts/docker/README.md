@@ -27,76 +27,14 @@ Each `docker-build-<image>` target mirrors the corresponding workflow: same
 pre-build step (`./gradlew …:installDist` where the workflow has one), same
 Dockerfile, context, build args and named build contexts.
 
-### Shared zkEVM / RISC-V local stack
+### Local stack
 
-From the repository root, with the required Java/Node/pnpm versions and dependencies installed:
-
-```bash
-make start-env-with-tracing-v2 # zkEVM
-make start-env-with-riscv      # RISC-V from genesis, with dummy execution proofs
-```
-
-Both targets use the **same environment**: Compose project, L1 Besu/Teku, Postgres,
-networks, service names and persistent state. By default either target **resets that
-shared chain, database, deployment metadata and proof files**. The RISC-V target first
-builds Besu, Maru and the coordinator for the Docker host, reusing build caches;
-a failed build leaves the existing environment intact.
-
-The RISC-V smoke scenario starts Amsterdam at genesis, deploys the V9 rollup stub,
-and produces execution requests and dummy responses. Real proving and L1 proof
-submission are disabled. Restarting its coordinator can replay blocks because
-L1 finalization is disabled.
-
-- L1 RPC: `localhost:8445`
-- L2 RPC: `localhost:8545`
-- Coordinator health: `localhost:9545/health`
-- Execution requests and responses: `tmp/local/prover/riscv/execution/`
-
-Restart the same scenario without resetting state or redeploying contracts:
+Run from the repository root:
 
 ```bash
-make start-env-with-riscv CLEAN_PREVIOUS_ENV=false SKIP_CONTRACTS_DEPLOYMENT=true
-# The same flags work with start-env-with-tracing-v2.
-
-COMPOSE_PROFILES=l1,l2,riscv docker compose \
-  -f docker/compose-tracing-v2.yml -f docker/compose-riscv.yml \
-  -f docker/compose-riscv-from-genesis.yml logs -f coordinator
-make clean-environment # clears shared state for either mode
-```
-
-`clean-riscv-environment` is an alias for `clean-environment`. L1 EL/CL, sequencer,
-Maru and Postgres data survive container recreation in shared named volumes.
-Genesis initialization reuses complete existing files and fails on incomplete
-state or an attempt to substitute the other smoke scenario's genesis.
-
-#### Preparing transition tests
-
-`compose-riscv.yml` is the reusable extension of `compose-tracing-v2.yml`: it adds
-RISC-V prover transport configuration while
-retaining the zkEVM services, execution clients, genesis, contract address and L1
-submission settings. The dummy responder is opt-in via the `riscv` profile.
-`compose-riscv-from-genesis.yml` contains the smoke-only execution clients,
-Amsterdam-at-genesis settings and disabled submissions; omit it for transition tests.
-
-A transition scenario should start with zkEVM, then use the common layers and its
-own final override through `make start-env COMPOSE_FILE="..."`, with
-`CLEAN_PREVIOUS_ENV=false SKIP_CONTRACTS_DEPLOYMENT=true`. It must retain L1/L2 chain
-history, deployed contracts and the coordinator database, schedule a consistent
-fork/cutover across Besu, Maru and coordinator, migrate the zkEVM FOREST database
-before using the RISC-V BONSAI client, and upgrade the existing rollup contract.
-Select compatible coordinator images explicitly (for example, build locally and
-use `LINEA_COORDINATOR_TAG=local-riscv` in both stages); the common overlay preserves
-the base image selection. Upgrading an existing coordinator database also requires
-compatible migration history; changing image tags alone does not guarantee this.
-Switching to the from-genesis target is **not** a transition test. This PR supplies
-the shared harness; actual fork activation, contract migration, real proving and
-finalization require a dedicated transition scenario.
-
-Check configuration, initialization and startup/restart behavior without launching
-containers (Docker Compose is required):
-
-```bash
-node --test scripts/docker/shared-stack.test.mjs
+make start-env-with-tracing-v2 # Start zkEVM
+make start-env-with-riscv      # Start RISC-V
+make clean-environment        # Stop and clear the shared environment
 ```
 
 ### linea-besu-package
