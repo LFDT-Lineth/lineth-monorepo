@@ -42,23 +42,26 @@ func (gv *Verifier) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 	annihilator := api.SubByBaseExt(rPowN, api.One())
 
 	for _, bkt := range gv.Buckets {
-		// Q(r) = Σ_k r^{kn} · Q_k(r)
-		qr := api.ZeroExt()
-		rPowKN := api.OneExt()
-		for _, claim := range bkt.QuotientClaims {
-			qr = api.AddExt(qr, api.MulExt(rPowKN, run.GetCellValue(claim)))
-			rPowKN = api.MulExt(rPowKN, rPowN)
+		// Q(r) = Σ_k r^{kn} · Q_k(r), evaluated by Horner in r^n: one
+		// extension multiplication per claim beyond the first, rather than one
+		// for the term and one to advance a running power of r^n.
+		qClaims := make([]circuit.Ext, len(bkt.QuotientClaims))
+		for k, claim := range bkt.QuotientClaims {
+			qClaims[k] = run.GetCellValue(claim)
 		}
+		qr := api.HornerExt(qClaims, rPowN)
 
-		// P_agg(r) = Σ_i coin^i · P_i(r) · C_i(r)
-		pagg := api.ZeroExt()
-		coinPow := api.OneExt()
-		for _, v := range bkt.Vanishings {
+		// P_agg(r) = Σ_i coin^i · P_i(r) · C_i(r), likewise by Horner in coin.
+		// The terms are built in forward order so the expression evaluations
+		// emit their constraints in the same order as before; only the
+		// recombination folds backwards.
+		terms := make([]circuit.Ext, len(bkt.Vanishings))
+		for i, v := range bkt.Vanishings {
 			pr := evalExprAtPointGnark(run, v.Expression, viewEvals, r, rPowN, n)
 			cr := evalCancellationAtPointGnark(api, r, v.CancelledPositions, n)
-			pagg = api.AddExt(pagg, api.MulExt(coinPow, pr, &cr))
-			coinPow = api.MulExt(coinPow, coin)
+			terms[i] = api.MulExt(pr, cr)
 		}
+		pagg := api.HornerExt(terms, coin)
 
 		api.AssertIsEqualExt(pagg, api.MulExt(annihilator, qr))
 	}

@@ -442,7 +442,7 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 	rq := gnarkResolvedQuery{
 		Rounds: make([]gnarkInputPair, numRounds+1),
 		Aux:    make(map[uint8]gnarkInputPair, len(vq.layout)),
-		Final:  evalPolyGnark(api, vq.finalPoly, xFinal),
+		Final:  api.HornerExt(vq.finalPoly, xFinal),
 		XInv:   domainPointInvGnark(api, pcs.Params.domainsLight[0], posBits),
 	}
 	zero := api.ZeroExt()
@@ -504,7 +504,7 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 	if numRounds == 0 {
 		pair := rq.Aux[0]
 		api.AssertIsEqualExt(pair.Self, rq.Final)
-		api.AssertIsEqualExt(pair.Sibling, evalPolyGnark(api, vq.finalPoly, api.NegExt(xFinal)))
+		api.AssertIsEqualExt(pair.Sibling, api.HornerExt(vq.finalPoly, api.NegExt(xFinal)))
 	}
 	return rq
 }
@@ -837,17 +837,4 @@ func domainPointBaseGnark(
 		pow.Square(&pow)
 	}
 	return acc
-}
-
-// evalPolyGnark evaluates the polynomial with coefficients coeffs (constant
-// term first) at x, by Horner's rule.
-func evalPolyGnark(api *circuit.API, coeffs []circuit.Ext, x circuit.Ext) circuit.Ext {
-	if len(coeffs) == 0 {
-		return api.ZeroExt()
-	}
-	res := coeffs[len(coeffs)-1]
-	for i := len(coeffs) - 2; i >= 0; i-- {
-		res = api.AddExt(api.MulExt(res, x), coeffs[i])
-	}
-	return res
 }
