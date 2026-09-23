@@ -1,7 +1,6 @@
 package net.consensys.linea.async
 
 import io.vertx.core.Future
-import io.vertx.core.Promise
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 
@@ -15,13 +14,8 @@ fun <T> Future<T>.toSafeFuture(): SafeFuture<T> = SafeFuture.of(this.toCompletio
 fun <T : Any> Future<T?>.toSafeFutureNonNull(): SafeFuture<T> =
   SafeFuture.of(this.toCompletionStage()) as SafeFuture<T>
 
-fun <T> SafeFuture<T>.toVertxFuture(): Future<T> {
-  val result = Promise.promise<T>()
-  this.thenAccept(result::complete)
-  this.handleException(result::fail)
-  return result.future()
-}
+fun <T> SafeFuture<T>.toVertxFuture(): Future<T> = Future.fromCompletionStage(this)
 
 fun <T> Future<T>.toCompletableFuture(): CompletableFuture<T> = this.toSafeFuture().toCompletableFuture()
 
-fun <T> CompletableFuture<T>.toVertxFuture(): Future<T> = this.toSafeFuture().toVertxFuture()
+fun <T> CompletableFuture<T>.toVertxFuture(): Future<T> = Future.fromCompletionStage(this)
