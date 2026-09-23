@@ -80,14 +80,26 @@ fn secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u
 
 /// P-256 ECDSA verify over a pre-hashed message, compact big-endian r‖s signature, and raw x‖y key.
 fn verifyP256(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8) !bool {
-    const EcdsaP256 = std.crypto.sign.ecdsa.Ecdsa(std.crypto.ecc.P256, std.crypto.hash.sha2.Sha256);
+    const P256 = std.crypto.ecc.P256;
     var sec1: [65]u8 = undefined;
     sec1[0] = 0x04;
     @memcpy(sec1[1..65], pubkey);
-    const pk = try EcdsaP256.PublicKey.fromSec1(&sec1);
-    const signature = EcdsaP256.Signature.fromBytes(sig.*);
-    signature.verifyPrehashed(msg.*, pk) catch return false;
-    return true;
+    const public_key = try P256.fromSec1(&sec1);
+    const r = P256.scalar.Scalar.fromBytes(sig[0..32].*, .big) catch return false;
+    const s = P256.scalar.Scalar.fromBytes(sig[32..64].*, .big) catch return false;
+    if (r.isZero() or s.isZero()) return false;
+
+    // EIP-7951 accepts message hashes that reduce to zero. Zig's generic ECDSA verifier rejects
+    // those hashes, so compute the standard verification equation directly.
+    const z = P256.scalar.Scalar.fromBytes48([_]u8{0} ** 16 ++ msg.*, .big);
+    const s_inv = s.invert();
+    const scalar_1 = z.mul(s_inv).toBytes(.little);
+    const scalar_2 = r.mul(s_inv).toBytes(.little);
+    const point = if (z.isZero()) P256.identityElement else P256.basePoint.mulPublic(scalar_1, .little) catch return false;
+    const sum = point.add(public_key.mulPublic(scalar_2, .little) catch return false);
+    const x = sum.affineCoordinates().x.toBytes(.big);
+    const computed_r = P256.scalar.Scalar.fromBytes48([_]u8{0} ** 16 ++ x, .big);
+    return r.equivalent(computed_r);
 }
 fn modexp(base: [*]const u8, base_len: usize, exp: [*]const u8, exp_len: usize, modulus: [*]const u8, mod_len: usize, output: [*]u8) callconv(.c) i32 {
     return if (zesu_crypto_backend.modexp(base[0..base_len], exp[0..exp_len], modulus[0..mod_len], output[0..mod_len])) OK else ERR;
