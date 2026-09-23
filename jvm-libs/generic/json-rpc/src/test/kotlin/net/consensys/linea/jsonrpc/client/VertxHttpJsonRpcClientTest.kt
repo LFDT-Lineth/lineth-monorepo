@@ -22,6 +22,7 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
+import lineth.vertx.runOnContextAsync
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
@@ -102,17 +103,7 @@ class VertxHttpJsonRpcClientTest {
   private fun makeRequestOnEventLoop(
     request: JsonRpcRequest,
   ): CompletableFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    val resultFuture = CompletableFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
-    vertx.runOnContext {
-      client.makeRequest(request).toSafeFuture().handle { result, throwable ->
-        if (throwable != null) {
-          resultFuture.completeExceptionally(throwable)
-        } else {
-          resultFuture.complete(result)
-        }
-      }
-    }
-    return resultFuture
+    return vertx.runOnContextAsync { client.makeRequest(request).toSafeFuture() }
   }
 
   @Test
