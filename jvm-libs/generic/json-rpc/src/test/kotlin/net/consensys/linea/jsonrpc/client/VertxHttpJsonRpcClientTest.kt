@@ -2,7 +2,6 @@ package net.consensys.linea.jsonrpc.client
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.ok
@@ -16,18 +15,18 @@ import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
+import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
-import lineth.vertx.runOnContextAsync
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
-import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.metrics.MetricsFacade
@@ -49,12 +48,12 @@ import java.net.ServerSocket
 import java.net.URI
 import java.net.URL
 import java.time.Duration
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
 class VertxHttpJsonRpcClientTest {
   private lateinit var vertx: Vertx
+  private lateinit var httpClient: HttpClient
   private lateinit var client: VertxHttpJsonRpcClient
   private lateinit var wiremock: WireMockServer
   private val path = "/api/v1?appKey=1234"
@@ -68,14 +67,15 @@ class VertxHttpJsonRpcClientTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2))
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2)),
+      httpClient,
       endpoint,
       metricsFacade,
     )
@@ -83,27 +83,9 @@ class VertxHttpJsonRpcClientTest {
 
   @AfterEach
   fun tearDown() {
+    httpClient.close().get()
     wiremock.stop()
-    vertx.close()
-  }
-
-  /**
-   * In Vert.x 5, a [Future] completed on the event-loop thread dispatches its listener inline only
-   * when the listener is attached from that same event-loop thread. Attaching from the JUnit thread
-   * (as `client.makeRequest(request).toSafeFuture()` normally does) can hit Vert.x's cross-thread
-   * `context.execute()` dispatch path, which schedules the callback via Netty's task queue instead of
-   * calling it directly. On loaded CI runners this scheduling can stall for several seconds, making
-   * otherwise-instant failure assertions flaky/timeout-prone.
-   *
-   * In production, `makeRequest(...).toSafeFuture()` is always observed from a Vert.x context (e.g.
-   * verticles, `vertx.setTimer` callbacks in [net.consensys.linea.async.AsyncRetryer]), so this is a
-   * test-only concern. Running the request and its listener attachment on the Vert.x context via
-   * [Vertx.runOnContext] mirrors production usage and keeps these assertions fast and deterministic.
-   */
-  private fun makeRequestOnEventLoop(
-    request: JsonRpcRequest,
-  ): CompletableFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    return vertx.runOnContextAsync { client.makeRequest(request).toSafeFuture() }
+    vertx.close().get()
   }
 
   @Test
@@ -309,9 +291,9 @@ class VertxHttpJsonRpcClientTest {
     )
 
     assertThat(
-      makeRequestOnEventLoop(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())),
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).toSafeFuture(),
     )
-      .failsWithin(Duration.ofSeconds(14))
+      .failsWithin(Duration.ofSeconds(2))
       .withThrowableOfType(ExecutionException::class.java)
       .withMessage(
         "java.lang.IllegalArgumentException: Invalid JSON-RPC response without result or error",
@@ -327,16 +309,18 @@ class VertxHttpJsonRpcClientTest {
     // test's own timeout.
     val closedPort = ServerSocket(0).also { it.close() }.localPort
     val endpoint = URI("http://localhost:$closedPort/api/v1?appKey=1234").toURL()
+    httpClient.close().get()
+    httpClient = vertx.createHttpClient(clientOptions)
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions),
+      httpClient,
       endpoint,
       metricsFacade,
       log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(makeRequestOnEventLoop(request))
-      .failsWithin(Duration.ofSeconds(14))
+    assertThat(client.makeRequest(request).toSafeFuture())
+      .failsWithin(Duration.ofSeconds(2))
       .withThrowableOfType(ExecutionException::class.java)
       .withMessageContaining("localhost")
 
@@ -355,16 +339,18 @@ class VertxHttpJsonRpcClientTest {
   fun makesRequest_502_response() {
     replyRequestWith(500, "Internal server error\n 2nd line of response to be ignored")
     val log: Logger = spy(LogManager.getLogger(VertxHttpJsonRpcClient::class.java))
+    httpClient.close().get()
+    httpClient = vertx.createHttpClient(clientOptions)
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions),
+      httpClient,
       endpoint,
       metricsFacade,
       log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(makeRequestOnEventLoop(request))
-      .failsWithin(Duration.ofSeconds(14))
+    assertThat(client.makeRequest(request).toSafeFuture())
+      .failsWithin(Duration.ofSeconds(2))
       .withThrowableOfType(ExecutionException::class.java)
       .withMessageContaining("HTTP errorCode=500, message=Server Error")
 

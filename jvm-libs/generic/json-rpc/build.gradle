@@ -22,7 +22,6 @@ dependencies {
   api "io.vertx:vertx-web"
   api "io.vertx:vertx-lang-kotlin"
 
-  testImplementation project(":jvm-libs:generic:vertx-helper")
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
   testImplementation "io.rest-assured:rest-assured:${libs.versions.restassured.get()}"

@@ -18,13 +18,14 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
 import io.vertx.core.json.JsonObject
-import io.vertx.junit5.VertxExtension
 import linea.kotlin.decodeHex
 import linea.s11n.jackson.ByteArrayToHexSerializer
 import linea.s11n.jackson.ULongToHexSerializer
 import linea.s11n.jackson.ethByteAsHexSerialisersModule
 import linea.s11n.jackson.ethNumberAsHexSerialisersModule
+import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -34,7 +35,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.ConnectException
 import java.net.URI
@@ -47,7 +47,6 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-@ExtendWith(VertxExtension::class)
 class JsonRpcV2ClientImplTest {
   private lateinit var vertx: Vertx
   private lateinit var factory: VertxHttpJsonRpcClientFactory
@@ -77,15 +76,12 @@ class JsonRpcV2ClientImplTest {
     backoffDelay = backoffDelay,
   )
 
-  private fun createClientAndSetupWireMockServer(
+  private fun createClientForWireMock(
     responseObjectMapper: ObjectMapper = defaultObjectMapper,
     requestObjectMapper: ObjectMapper = defaultObjectMapper,
     retryConfig: RequestRetryConfig = defaultRetryConfig,
     shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false },
   ): JsonRpcV2Client {
-    wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
-    wiremock.start()
-
     val uris = listOf(URI(wiremock.baseUrl() + path))
 
     return createClient(
@@ -114,17 +110,22 @@ class JsonRpcV2ClientImplTest {
   }
 
   @BeforeEach
-  fun beforeEach(vertx: Vertx) {
-    this.vertx = vertx
+  fun beforeEach() {
+    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
     this.meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     this.factory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)
-    this.client = createClientAndSetupWireMockServer()
+    wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
+    wiremock.start()
+    this.client = createClientForWireMock()
   }
 
   @AfterEach
   fun tearDown() {
-    wiremock.stop()
+    if (wiremock.isRunning) {
+      wiremock.stop()
+    }
+    vertx.close().get()
   }
 
   private fun WireMockServer.jsonRequest(requestIndex: Int = 0): String {
@@ -208,7 +209,7 @@ class JsonRpcV2ClientImplTest {
   fun `request params shall use defined objectMapper and not affect json-rpc envelope`() {
     val obj = User(name = "John", email = "email@example.com", address = "0x01ffbb".decodeHex(), value = 987UL)
 
-    createClientAndSetupWireMockServer(requestObjectMapper = defaultObjectMapper).also { client ->
+    createClientForWireMock(requestObjectMapper = defaultObjectMapper).also { client ->
       replyRequestWith(200, jsonRpcResultOk)
       client.makeRequest(
         method = "someMethod",
@@ -226,14 +227,14 @@ class JsonRpcV2ClientImplTest {
       }
       """,
       )
-      wiremock.stop()
+      wiremock.resetAll()
     }
 
     val objMapperWithNumbersAsHex = jacksonObjectMapper()
       .registerModules(ethNumberAsHexSerialisersModule)
       .registerModules(ethByteAsHexSerialisersModule)
 
-    createClientAndSetupWireMockServer(requestObjectMapper = objMapperWithNumbersAsHex).also { client ->
+    createClientForWireMock(requestObjectMapper = objMapperWithNumbersAsHex).also { client ->
       replyRequestWith(200, jsonRpcResultOk)
       client.makeRequest(
         method = "someMethod",
@@ -465,7 +466,7 @@ class JsonRpcV2ClientImplTest {
 
   @Test
   fun `when it gets an error propagates to shallRetryRequestPredicate and retries while is true`() {
-    createClientAndSetupWireMockServer(
+    createClientForWireMock(
       retryConfig = retryConfig(maxRetries = 10u),
     ).also { client ->
       val responses = listOf(
@@ -515,7 +516,7 @@ class JsonRpcV2ClientImplTest {
 
   @Test
   fun `when it has connection error propagates to shallRetryRequestPredicate and retries while is true`() {
-    createClientAndSetupWireMockServer(
+    createClientForWireMock(
       retryConfig = retryConfig(maxRetries = 10u),
     ).also { client ->
       // stop the server to simulate connection error
@@ -584,7 +585,7 @@ class JsonRpcV2ClientImplTest {
       it as Ok
       (it.value as String).startsWith("retry_a")
     }
-    createClientAndSetupWireMockServer(
+    createClientForWireMock(
       retryConfig = RequestRetryConfig(
         maxRetries = 10u,
         timeout = 5.minutes,
