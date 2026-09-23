@@ -54,8 +54,8 @@ OBJDUMP     ?= false
 # custom op) instead of the standard zig keccak.
 KECCAK_ACCEL ?= false
 
-# Shared body for zkc-smoke-exec / zkc-smoke-trace: pass the exact INPUT as the smoke operand.
-# $(1) = zkc makefile target (elf-exec | elf-trace)
+# Shared body for zkc-smoke-trace: pass the exact INPUT as the smoke operand.
+# $(1) = zkc makefile target (elf-trace)
 # $(2) = optional extra runner args (e.g. --zkc-flags "...")
 define zkc-smoke-run
 	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
@@ -90,9 +90,9 @@ reference-test: fetch-host
 reference-test-zkc: fetch-host
 	$(ZIG) build reference-test-zkc $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS) $(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
 
-# Smoke: compare the exact INPUT .ssz under ZkC with the host.
-zkc-smoke-exec: require-input fetch-host
-	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
+# Build the local guest ELF, then compare it through the prebuilt-ELF smoke target.
+zkc-smoke-exec: require-input compile
+	$(MAKE) zkc-smoke-external ELF="$(BIN)" INPUT="$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"
 
 # Smoke a prebuilt production ELF under ZkC and compare its result with the host machine.
 ELF ?=
