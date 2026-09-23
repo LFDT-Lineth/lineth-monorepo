@@ -5,6 +5,17 @@ volumes:
   logs:
     name: "linea-logs"
 
+  l1-el-data:
+    name: "linea-l1-el-data"
+  l1-cl-data:
+    name: "linea-l1-cl-data"
+  sequencer-data:
+    name: "linea-sequencer-data"
+  maru-data:
+    name: "linea-maru-data"
+  postgres-data:
+    name: "linea-postgres-data"
+
 networks:
   linea:
     driver: bridge
@@ -21,6 +32,17 @@ networks:
 # docker run --rm -it --network=docker_linea -v=linea-local-dev:/data -v=linea-logs:/logs weibeld/ubuntu-networking bash
 
 services:
+  local-data-initialization:
+    image: busybox:latest
+    user: "0:0"
+    # Besu and Teku run as uid/gid 1000. Their images do not contain these
+    # directories, so newly created volumes otherwise belong to root.
+    command: ["sh", "-ec", "chown 1000:1000 /l1-el /l1-cl /sequencer"]
+    volumes:
+      - l1-el-data:/l1-el
+      - l1-cl-data:/l1-cl
+      - sequencer-data:/sequencer
+
   l1-el-node:
     extends:
       file: compose-spec-l1-services.yml

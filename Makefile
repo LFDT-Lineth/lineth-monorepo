@@ -6,7 +6,15 @@ docker-pull-images-external-to-monorepo:
 
 clean-local-folders:
 		$(MAKE) clean-smc-folders
-		rm -rf tmp/local/* || true # ignore failure if folders do not exist already
+		# Containers may create root-owned data; clean it through Docker on Linux too.
+		@if [ -d tmp/local ]; then \
+			docker run --rm --network none --user 0:0 \
+				--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
+				busybox:latest find /data -mindepth 1 -delete; \
+		fi
+		rm -f docker/config/l2-genesis-initialization/genesis-besu.json \
+			docker/config/l2-genesis-initialization/genesis-maru.json \
+			docker/config/l2-genesis-initialization/fork-timestamp.txt
 
 clean-testnet-folders:
 		$(MAKE) clean-smc-folders
@@ -14,17 +22,13 @@ clean-testnet-folders:
 
 clean-environment:
 		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
-		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
+		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down --volumes --remove-orphans;
 		$(MAKE) clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
-		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
 
-RISCV_COMPOSE_FILE ?= docker/compose-riscv.yml
-RISCV_COMPOSE_PROJECT ?= linea-riscv-dev
-RISCV_COMPOSE = COMPOSE_PROFILES=l1,l2,riscv docker compose \
-	--project-name $(RISCV_COMPOSE_PROJECT) \
-	--file $(RISCV_COMPOSE_FILE)
+# RISC-V is an override of the shared local stack, including its Compose project.
+RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml -f docker/compose-riscv-from-genesis.yml
 
 .PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv
 
@@ -34,36 +38,17 @@ build-riscv-images:
 		PLATFORMS=$$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}') \
 		SKIP_PREBUILD=false DRY_RUN=false
 
-clean-riscv-environment:
-	$(RISCV_COMPOSE) down --volumes --remove-orphans
-	# Containers create root-owned directories on Linux; clear them before host-side removal.
-	@if [ -d tmp/riscv ]; then \
-		docker run --rm --network none --user 0:0 \
-			--mount "type=bind,source=$(CURDIR)/tmp/riscv,target=/data" \
-			busybox:latest find /data -mindepth 1 -delete; \
-	fi
-	rm -rf tmp/riscv
+# Compatibility alias: both execution modes now own the same environment.
+clean-riscv-environment: clean-environment
 
 start-env-with-riscv:
 	$(MAKE) build-riscv-images
-	$(MAKE) clean-riscv-environment
-	mkdir -p \
-		tmp/riscv/prover/riscv/execution/requests \
-		tmp/riscv/prover/riscv/execution/responses
-	chmod -R a+rwX tmp/riscv/prover
-	$(RISCV_COMPOSE) up --detach --wait --wait-timeout 600 \
-		l1-cl-node \
-		maru \
-		postgres
-	$(MAKE) deploy-contracts \
-		L2_GENESIS_TIMESTAMP_FILE=tmp/riscv/genesis/fork-timestamp.txt \
-		L1_CONTRACT_VERSION=9 \
-		LINETH_PROTOCOL_CONTRACTS_ONLY=true \
+	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" COMPOSE_PROFILES=l1,l2,riscv \
+		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
+		START_SERVICES_AFTER_DEPLOYMENT="riscv-proof-responder coordinator" \
+		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
-	$(RISCV_COMPOSE) up --detach --no-deps --wait --wait-timeout 600 \
-		riscv-proof-responder \
-		coordinator
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
@@ -80,16 +65,29 @@ start-env: L1_CONTRACT_VERSION:=8
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
+start-env: START_SERVICES_BEFORE_DEPLOYMENT:=
+start-env: START_SERVICES_AFTER_DEPLOYMENT:=
 start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 start-env:
-	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
+	@set -eu; \
+	if [ "$(CLEAN_PREVIOUS_ENV)" != "true" ] && [ "$(SKIP_CONTRACTS_DEPLOYMENT)" != "true" ]; then \
+		echo "State reuse requires SKIP_CONTRACTS_DEPLOYMENT=true to preserve existing contracts" >&2; \
+		exit 1; \
+	fi; \
+	if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
 	else \
 		echo "Starting stack reusing previous state"; \
 	fi; \
-	mkdir -p tmp/local; \
-	$(MAKE) seed-deny-list; \
-	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
+	mkdir -p tmp/local/prover/riscv/execution/requests tmp/local/prover/riscv/execution/responses; \
+	chmod -R a+rwX tmp/local/prover/riscv; \
+	touch docker/config/linea-besu-sequencer/deny-list.txt; \
+	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) run --rm --no-deps l2-genesis-initialization; \
+	if [ -n "$(START_SERVICES_BEFORE_DEPLOYMENT)" ]; then \
+		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --wait --wait-timeout 600 $(START_SERVICES_BEFORE_DEPLOYMENT); \
+	else \
+		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
+	fi; \
 	while [ "$(SKIP_L1_L2_NODE_HEALTH_CHECK)" = "false" ] && \
 			{ [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
 				[ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-cl-node | xargs -r docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
@@ -97,10 +95,13 @@ start-env:
   			sleep 2; \
   			echo "Checking health status of: l1-el-node, l1-cl-node and l2 sequencer..."; \
   	done
-	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
+	@if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
 		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET); \
+	fi
+	@if [ -n "$(START_SERVICES_AFTER_DEPLOYMENT)" ]; then \
+		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --no-deps --wait --wait-timeout 600 $(START_SERVICES_AFTER_DEPLOYMENT); \
 	fi
 
 start-env-with-validium:

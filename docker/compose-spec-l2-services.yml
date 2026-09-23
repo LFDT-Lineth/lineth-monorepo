@@ -7,6 +7,7 @@ services:
     container_name: l2-genesis-intialization
     environment:
       CREATE_EMPTY_BLOCKS: ${CREATE_EMPTY_BLOCKS:-false}
+      L2_GENESIS_MODE: ${L2_GENESIS_MODE:-zkevm}
     entrypoint: [ "sh","/initialization/init.sh" ]
     volumes:
       - ./config/l2-genesis-initialization/:/initialization:rw
@@ -36,6 +37,7 @@ services:
         exec "$$@"
 #    command: [ 'echo' , 'Forced exit to run in IntellIJ' ]
     volumes:
+      - maru-data:/tmp/maru-db
       - ./config/maru/sequencer.config.toml:/opt/consensys/maru/configs/config.toml:ro
       - ./config/maru/sequencer.extra-followers.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
       - ./config/maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
@@ -62,6 +64,8 @@ services:
     image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
+      local-data-initialization:
+        condition: service_completed_successfully
       l2-genesis-initialization:
         condition: service_completed_successfully
     ports:
@@ -87,6 +91,7 @@ services:
       - --plugin-linea-rejected-tx-endpoint=http://transaction-exclusion-api:8080
       - --plugin-linea-node-type=SEQUENCER
     volumes:
+      - sequencer-data:/opt/besu/data
       - ./config/linea-besu-sequencer/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
       - ./config/linea-besu-sequencer/deny-list.txt:/var/lib/besu/deny-list.txt:ro
       - ./config/linea-besu-sequencer/key:/var/lib/besu/key:ro
@@ -372,7 +377,12 @@ services:
     ports:
       - "9545:9545"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9545/health || exit 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
+          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
       interval: 1s
       timeout: 1s
       retries: 120
@@ -385,6 +395,7 @@ services:
       config__override__l1_submission__data_availability: ${LINETH_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
       dev_LINETH_COORDINATOR_DISABLED: ${dev_LINETH_COORDINATOR_DISABLED:-false}
       CONFIG_OVERRIDE_OPTS: ''
+      COORDINATOR_CONFIG_FILES: config/coordinator-config.toml
     command:
       - sh
       - -c
@@ -402,7 +413,7 @@ services:
             --traces-limits-v5 config/traces-limits-v5.toml \
             --smart-contract-errors config/smart-contract-errors.toml \
             --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml \
-            config/coordinator-config.toml
+            $$COORDINATOR_CONFIG_FILES
         fi
     volumes:
       - ./config/coordinator/coordinator-config-v2.toml:/opt/consensys/linea/coordinator/config/coordinator-config.toml:ro
@@ -486,6 +497,7 @@ services:
           memory: 128M
           cpus: '0.5'
     volumes:
+      - postgres-data:/data/postgres
       - ./postgres/init:/docker-entrypoint-initdb.d/
       - ./postgres/conf/:/etc/postgresql/
     networks:

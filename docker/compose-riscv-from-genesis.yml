@@ -1,0 +1,53 @@
+# Smoke scenario only: layer after compose-tracing-v2.yml and compose-riscv.yml.
+# These settings start a fresh Amsterdam chain; they are not a migration recipe.
+services:
+  l2-genesis-initialization:
+    environment:
+      L2_GENESIS_MODE: riscv
+
+  maru:
+    image: consensys/maru:local-riscv
+    pull_policy: never
+    environment:
+      LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
+    volumes:
+      - ./config/maru/sequencer.riscv.config.toml:/opt/consensys/maru/configs/config.toml:ro
+
+  sequencer:
+    image: lineth-besu:local-riscv
+    pull_policy: never
+    volumes:
+      - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
+      - ./config/riscv/besu-log4j.xml:/var/lib/besu/log4j.xml:ro
+    command:
+      - --config-file=/var/lib/besu/sequencer.config.toml
+      - --node-private-key-file=/var/lib/besu/key
+
+  # Keep zkEVM services available for explicit debugging, but exclude them from
+  # smoke startup. Transition scenarios use the common layer without this file.
+  l2-node-besu:
+    profiles: !override ["zkevm"]
+  prover-v3:
+    profiles: !override ["zkevm"]
+  shomei:
+    profiles: !override ["zkevm"]
+
+  coordinator:
+    image: consensys/linea-coordinator:local-riscv
+    pull_policy: never
+    depends_on: !override
+      l2-genesis-initialization:
+        condition: service_completed_successfully
+      l1-el-node:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      sequencer:
+        condition: service_healthy
+    environment:
+      COORDINATOR_CONFIG_FILES: >-
+        config/coordinator-config.toml
+        config/coordinator-config-riscv-prover.toml
+        config/coordinator-config-riscv.toml
+    volumes:
+      - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro

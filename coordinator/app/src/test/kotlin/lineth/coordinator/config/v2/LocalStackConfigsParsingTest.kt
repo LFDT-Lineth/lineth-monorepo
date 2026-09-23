@@ -31,11 +31,37 @@ class LocalStackConfigsParsingTest {
   }
 
   @Test
+  fun `shared RISC-V prover config should retain zkEVM operation until a cutover is configured`() {
+    loadConfigs(
+      coordinatorConfigFiles = listOf(
+        Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
+        Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
+        Path.of("../../docker/config/coordinator/coordinator-config-riscv-prover.toml"),
+      ),
+      tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
+      tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
+      gasPriceCapTimeOfDayMultipliersFile = Path.of(
+        "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
+      ),
+      smartContractErrorsFile = Path.of("../../docker/config/common/smart-contract-errors.toml"),
+      enforceStrict = true,
+    ).also { configs ->
+      assertThat(configs.protocol.l1.contractAddress).isEqualTo("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9")
+      assertThat(configs.conflation.riscvStartingBlockTimestampInclusive).isNull()
+      assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Amsterdam")
+      assertThat(configs.l1Submission.disabled).isFalse()
+      assertThat(configs.messageAnchoring?.disabled).isFalse()
+      assertThat(configs.forcedTransactions?.disabled).isFalse()
+    }
+  }
+
+  @Test
   fun `should load RISC-V local stack override`() {
     loadConfigs(
       coordinatorConfigFiles =
       listOf(
         Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
+        Path.of("../../docker/config/coordinator/coordinator-config-riscv-prover.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-riscv.toml"),
       ),
       tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
