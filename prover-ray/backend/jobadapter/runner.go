@@ -25,6 +25,15 @@ type Prover interface {
 type Runner struct {
 	prover        Prover
 	proverVersion string
+	mode          backend.ProverMode
+}
+
+// RunnerOption configures a Runner.
+type RunnerOption func(*Runner)
+
+// WithMode sets the prover mode; the default is backend.ProverModeFull.
+func WithMode(m backend.ProverMode) RunnerOption {
+	return func(r *Runner) { r.mode = m }
 }
 
 // RunRequest is one raw coordinator request plus the proof type selected by
@@ -65,14 +74,26 @@ type RunResult struct {
 }
 
 // NewRunner creates the reusable request-to-proof runner.
-func NewRunner(prover Prover, proverVersion string) (*Runner, error) {
+func NewRunner(prover Prover, proverVersion string, opts ...RunnerOption) (*Runner, error) {
 	if prover == nil {
 		return nil, fmt.Errorf("jobadapter.NewRunner: prover must not be nil")
 	}
 	if proverVersion == "" {
 		return nil, fmt.Errorf("jobadapter.NewRunner: proverVersion must be set")
 	}
-	return &Runner{prover: prover, proverVersion: proverVersion}, nil
+	r := &Runner{prover: prover, proverVersion: proverVersion, mode: backend.ProverModeFull}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r, nil
+}
+
+// responseVersion suffixes the prover version with the mode for dev modes.
+func (r *Runner) responseVersion() string {
+	if r.mode.IsDev() {
+		return r.proverVersion + "-" + string(r.mode)
+	}
+	return r.proverVersion
 }
 
 // Run runs one raw request. Decode, validation, and proof failures all map to a
@@ -96,31 +117,36 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 	if err != nil {
 		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
 	}
-	if len(req.Payloads) != 1 {
-		return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(
-			"multi-block requests are not supported (got %d payloads): %w",
-			len(req.Payloads), backend.ErrNotImplemented))
+
+	// dev-mock runs no guest, so it accepts ranges and forced transactions. The
+	// guest-running modes support a single block only, today.
+	if r.mode != backend.ProverModeDevMock {
+		if len(req.Payloads) != 1 {
+			return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(
+				"multi-block requests are not supported (got %d payloads): %w",
+				len(req.Payloads), backend.ErrNotImplemented))
+		}
+		if len(req.Payloads[0].ForcedTransactions) != 0 {
+			return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(
+				"forced transactions are not supported (got %d): %w",
+				len(req.Payloads[0].ForcedTransactions), backend.ErrNotImplemented))
+		}
 	}
 
-	payload := req.Payloads[0]
-	if len(payload.ForcedTransactions) != 0 {
-		return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(
-			"forced transactions are not supported (got %d): %w",
-			len(payload.ForcedTransactions), backend.ErrNotImplemented))
-	}
-
+	startBlock := req.Payloads[0].BlockNumber
+	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
 	result := r.prover.Prove(ctx, backend.Job{
 		ID:         runReq.ID,
 		Type:       runReq.Type,
-		StartBlock: payload.BlockNumber,
-		EndBlock:   payload.BlockNumber,
-		Payload:    payload.FramedSSZ,
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		Payload:    req.Payloads[0].FramedSSZ,
 	})
 	if result.Status != backend.ResultStatusOK {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion, req.ProgramVk),
+		ResponseBody: newExecutionResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -148,7 +174,7 @@ func (r *Runner) runRollup(ctx context.Context, runReq RunRequest) RunResult {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 	return RunResult{
-		ResponseBody: newRollupResponse(result, startBlock, r.proverVersion, req.ProgramVk),
+		ResponseBody: newRollupResponse(result, startBlock, r.responseVersion(), req.ProgramVk),
 		Status:       RunStatusSuccess,
 	}
 }
@@ -175,7 +201,7 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 	return RunResult{
-		ResponseBody: newAggregationResponse(result, startBlock, r.proverVersion),
+		ResponseBody: newAggregationResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
 	}
 }

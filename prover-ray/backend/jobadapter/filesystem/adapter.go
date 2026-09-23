@@ -46,6 +46,8 @@ type Config struct {
 	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
 	// responses and must be set by runtime config.
 	ProverVersion string
+	// Mode selects the prover mode; empty defaults to backend.ProverModeFull.
+	Mode backend.ProverMode
 }
 
 // failureResponseBody is used only when the filesystem adapter cannot read a
@@ -79,7 +81,11 @@ func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
 	}
-	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion)
+	var runnerOpts []jobadapter.RunnerOption
+	if cfg.Mode != "" {
+		runnerOpts = append(runnerOpts, jobadapter.WithMode(cfg.Mode))
+	}
+	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion, runnerOpts...)
 	if err != nil {
 		return nil, err
 	}

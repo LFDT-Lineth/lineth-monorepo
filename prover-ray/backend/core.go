@@ -27,6 +27,7 @@ const wiopSystemName = "lineth-riscv"
 // wiop.Runtime.
 type Core struct {
 	cfg     Config
+	mode    ProverMode
 	sys     *wiop.System
 	driver  *zkcdriver.ZkCDriver
 	program elfmapping.Program
@@ -40,6 +41,19 @@ type Core struct {
 // and wiop.Materialize are not yet wired. They must be added before the
 // system can produce sound proofs (see wiki backend-overview.md §4).
 func New(cfg Config) (*Core, error) {
+	mode := cfg.Mode
+	if mode == "" {
+		mode = ProverModeFull
+	}
+	if !mode.Valid() {
+		return nil, fmt.Errorf("invalid prover mode %q", cfg.Mode)
+	}
+
+	// dev-mock loads no circuit bin or guest ELF.
+	if !mode.needsArtifacts() {
+		return &Core{cfg: cfg, mode: mode}, nil
+	}
+
 	binFile, err := os.Open(cfg.CircuitBinPath)
 	if err != nil {
 		return nil, fmt.Errorf("opening circuit bin %q: %w", cfg.CircuitBinPath, err)
@@ -80,6 +94,7 @@ func New(cfg Config) (*Core, error) {
 
 	return &Core{
 		cfg:     cfg,
+		mode:    mode,
 		sys:     sys,
 		driver:  driver,
 		program: program,
@@ -87,8 +102,37 @@ func New(cfg Config) (*Core, error) {
 	}, nil
 }
 
-// Prove runs a single [Job] end-to-end and returns its [Result].
+// Prove runs a single [Job] and returns its [Result]. Each mode is dispatched
+// here; modes that cannot run yet return their blocker error.
 func (c *Core) Prove(ctx context.Context, job Job) Result {
+	switch c.mode {
+	case ProverModeDevMock:
+		return c.proveDevMock(job)
+	case ProverModeDevNative:
+		return failResult(job.ID, fmt.Errorf("dev-native mode not wired yet (plan Stage 3): %w", ErrNotImplemented))
+	case ProverModeDevZkVM:
+		return failResult(job.ID, fmt.Errorf("dev-zkvm mode not wired yet (plan Stage 4): %w", ErrNotImplemented))
+	case ProverModePartial:
+		return failResult(job.ID, fmt.Errorf("partial mode not runnable yet, memory-gated (plan Stage 8): %w", ErrNotImplemented))
+	case ProverModeFull:
+		return c.proveFull(ctx, job)
+	default:
+		return failResult(job.ID, fmt.Errorf("unknown prover mode %q: %w", c.mode, ErrNotImplemented))
+	}
+}
+
+// proveDevMock returns a placeholder result: success, a marker proof, zero
+// public inputs. It runs no guest and ignores Payload.
+func (c *Core) proveDevMock(job Job) Result {
+	return Result{
+		JobID:      job.ID,
+		Status:     ResultStatusOK,
+		ProofBytes: devMarkerProof(ProverModeDevMock),
+	}
+}
+
+// proveFull is the real proving path; it is blocked at SerializeProof today.
+func (c *Core) proveFull(ctx context.Context, job Job) Result {
 	inputs, err := c.buildInputs(job)
 	if err != nil {
 		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
