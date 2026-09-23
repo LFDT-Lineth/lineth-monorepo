@@ -72,7 +72,7 @@ jobs:
 
       - name: Trace l2-execution guest program with Amsterdam block 175k sharding 500000
         # 175k references the amount of gas used in the block
-        run: make -C riscv-guests/l2-execution zkc-smoke-trace
+        run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "main" # Empty to avoid installing zkc again
@@ -82,7 +82,7 @@ jobs:
 
       - name: Trace l2-execution guest program with Amsterdam block 175k sharding 500000
         # 175k references the amount of gas used in the block
-        run: make -C riscv-guests/l2-execution zkc-smoke-trace
+        run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
           ZKC_REF: "e1eca0b833d028570d952f01e4bf202a018b91ab" # Empty to avoid installing zkc again
