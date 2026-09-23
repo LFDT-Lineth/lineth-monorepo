@@ -18,7 +18,6 @@ services:
     pull_policy: never
     volumes:
       - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
-      - ./config/riscv/besu-log4j.xml:/var/lib/besu/log4j.xml:ro
     command:
       - --config-file=/var/lib/besu/sequencer.config.toml
       - --node-private-key-file=/var/lib/besu/key
