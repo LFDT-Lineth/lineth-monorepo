@@ -2,6 +2,7 @@ package net.consensys.linea.jsonrpc.client
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.ok
@@ -21,10 +22,12 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
+import lineth.vertx.runOnContextAsync
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
+import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.metrics.MetricsFacade
@@ -42,9 +45,11 @@ import org.mockito.Mockito.spy
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
+import java.net.ServerSocket
 import java.net.URI
 import java.net.URL
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
@@ -80,6 +85,25 @@ class VertxHttpJsonRpcClientTest {
   fun tearDown() {
     wiremock.stop()
     vertx.close()
+  }
+
+  /**
+   * In Vert.x 5, a [Future] completed on the event-loop thread dispatches its listener inline only
+   * when the listener is attached from that same event-loop thread. Attaching from the JUnit thread
+   * (as `client.makeRequest(request).toSafeFuture()` normally does) can hit Vert.x's cross-thread
+   * `context.execute()` dispatch path, which schedules the callback via Netty's task queue instead of
+   * calling it directly. On loaded CI runners this scheduling can stall for several seconds, making
+   * otherwise-instant failure assertions flaky/timeout-prone.
+   *
+   * In production, `makeRequest(...).toSafeFuture()` is always observed from a Vert.x context (e.g.
+   * verticles, `vertx.setTimer` callbacks in [net.consensys.linea.async.AsyncRetryer]), so this is a
+   * test-only concern. Running the request and its listener attachment on the Vert.x context via
+   * [Vertx.runOnContext] mirrors production usage and keeps these assertions fast and deterministic.
+   */
+  private fun makeRequestOnEventLoop(
+    request: JsonRpcRequest,
+  ): CompletableFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
+    return vertx.runOnContextAsync { client.makeRequest(request).toSafeFuture() }
   }
 
   @Test
@@ -285,9 +309,7 @@ class VertxHttpJsonRpcClientTest {
     )
 
     assertThat(
-      client
-        .makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
-        .toSafeFuture(),
+      makeRequestOnEventLoop(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())),
     )
       .failsWithin(Duration.ofSeconds(14))
       .withThrowableOfType(ExecutionException::class.java)
@@ -300,7 +322,11 @@ class VertxHttpJsonRpcClientTest {
   @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_connectionFailure() {
     val log: Logger = spy(LogManager.getLogger(VertxHttpJsonRpcClient::class.java))
-    val endpoint = URI("http://service-not-available:1234/api/v1?appKey=1234").toURL()
+    // Use localhost with a guaranteed-closed port for an immediate "connection refused" failure,
+    // rather than a non-routable hostname whose DNS resolution timeout can be slower than the
+    // test's own timeout.
+    val closedPort = ServerSocket(0).also { it.close() }.localPort
+    val endpoint = URI("http://localhost:$closedPort/api/v1?appKey=1234").toURL()
     client = VertxHttpJsonRpcClient(
       vertx.createHttpClient(clientOptions),
       endpoint,
@@ -309,10 +335,10 @@ class VertxHttpJsonRpcClientTest {
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(client.makeRequest(request).toSafeFuture())
+    assertThat(makeRequestOnEventLoop(request))
       .failsWithin(Duration.ofSeconds(14))
       .withThrowableOfType(ExecutionException::class.java)
-      .withMessageContaining("service-not-available")
+      .withMessageContaining("localhost")
 
     verify(log).log(
       eq(Level.DEBUG),
@@ -337,7 +363,7 @@ class VertxHttpJsonRpcClientTest {
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(client.makeRequest(request).toSafeFuture())
+    assertThat(makeRequestOnEventLoop(request))
       .failsWithin(Duration.ofSeconds(14))
       .withThrowableOfType(ExecutionException::class.java)
       .withMessageContaining("HTTP errorCode=500, message=Server Error")

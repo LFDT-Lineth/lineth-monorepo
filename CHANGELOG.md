@@ -163,3 +163,4 @@
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
 - *(coordinator)* Consolidate prover clients (#3944)
 - *(misc)* Upgrade teku libs to 26.9.0 (#3990)
+- *(misc)* Fix code licence header (#4009)

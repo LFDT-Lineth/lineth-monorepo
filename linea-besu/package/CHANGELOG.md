@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Fix code licence header (#4009)
+## [2.3.0] - 2026-09-23
+
 ### 🚀 Features
 
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
