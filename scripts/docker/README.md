@@ -36,7 +36,6 @@ make start-env               # Start zkEVM
 # Start RISC-V with prebuilt Amsterdam-capable images
 make start-env-with-riscv \
   LINEA_BESU_PACKAGE_TAG="<besu-tag>" MARU_TAG="<maru-tag>" LINEA_COORDINATOR_TAG="<coordinator-tag>"
-make test-riscv               # Check the RISC-V execution flow
 make clean-environment        # Stop and clear the shared environment
 ```
 

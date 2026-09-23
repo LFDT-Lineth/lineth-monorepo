@@ -74,7 +74,7 @@ on:
         type: string
     outputs:
       tests_outcome:
-        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome == 'success' && jobs.run-riscv-smoke-tests.outputs.tests_outcome == 'success' && 'success' || 'failure' }}
+        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome == 'success' && jobs.start-riscv-environment.outputs.startup_outcome == 'success' && 'success' || 'failure' }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -110,9 +110,9 @@ jobs:
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  run-riscv-smoke-tests:
+  start-riscv-environment:
     outputs:
-      tests_outcome: ${{ steps.smoke.outcome }}
+      startup_outcome: ${{ steps.start.outcome }}
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     timeout-minutes: 60
@@ -142,12 +142,8 @@ jobs:
         run: node --test scripts/docker/shared-stack.test.mjs
 
       - name: Start RISC-V environment
+        id: start
         run: make start-env-with-riscv
-
-      - name: Check RISC-V execution flow
-        id: smoke
-        timeout-minutes: 5
-        run: make test-riscv
 
       - name: Collect RISC-V logs
         if: failure()

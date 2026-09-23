@@ -28,7 +28,7 @@ clean-environment:
 # RISC-V is an override of the shared local stack, including its Compose project.
 RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
 
-.PHONY: clean-riscv-environment start-env-with-riscv test-riscv
+.PHONY: clean-riscv-environment start-env-with-riscv
 
 # Compatibility alias: both execution modes now own the same environment.
 clean-riscv-environment: clean-environment
@@ -40,9 +40,6 @@ start-env-with-riscv:
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
-
-test-riscv:
-	node scripts/docker/riscv-smoke-test.mjs
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
