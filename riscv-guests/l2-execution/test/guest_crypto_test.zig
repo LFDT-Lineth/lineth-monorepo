@@ -4,6 +4,8 @@
 const std = @import("std");
 const gc = @import("guest_crypto");
 
+extern fn zkvm_secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) i32;
+
 const Bls12G1MsmPair = extern struct { point: [96]u8, scalar: [32]u8 };
 const Bls12G2MsmPair = extern struct { point: [192]u8, scalar: [32]u8 };
 const Bls12PairingPair = extern struct { g1: [96]u8, g2: [192]u8 };
@@ -13,6 +15,24 @@ fn hexArr(comptime n: usize, hex: []const u8) [n]u8 {
     var out: [n]u8 = undefined;
     _ = std.fmt.hexToBytes(&out, hex) catch unreachable;
     return out;
+}
+
+test "P-256 accepts signatures whose hash reduces to zero" {
+    // EIP-7951's hash_0 vector: private key, nonce, and public key are all the scalar/point one.
+    const generator_x = hexArr(32, "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296");
+    const generator_y = hexArr(32, "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5");
+    const signature = generator_x ++ generator_x;
+    const public_key = generator_x ++ generator_y;
+
+    var verified = false;
+    try std.testing.expectEqual(@as(i32, 0), zkvm_secp256r1_verify(&[_]u8{0} ** 32, &signature, &public_key, &verified));
+    try std.testing.expect(verified);
+
+    // The P-256 group order also reduces to zero.
+    const order = hexArr(32, "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
+    verified = false;
+    try std.testing.expectEqual(@as(i32, 0), zkvm_secp256r1_verify(&order, &signature, &public_key, &verified));
+    try std.testing.expect(verified);
 }
 
 // Decodes a byte window from a CSV column.
