@@ -195,20 +195,42 @@ func (ls *LagrangeSelector) EvaluateOutOfDomain(rt *Runtime, x field.Gen) field.
 func (ls *LagrangeSelector) EvaluateOutOfDomainGnark(run *GnarkRuntime, x circuit.Ext) circuit.Ext {
 	api := run.API()
 	n := ls.module.Size()
-	pos := ls.resolvedRow(n)
-
-	var omegaPos field.Element
-	omegaPos.ExpInt64(field.RootOfUnityBy(n), int64(pos))
 
 	xPowN := x
 	for i := 0; i < bits.TrailingZeros(uint(n)); i++ {
 		xPowN = api.SquareExt(xPowN)
 	}
-	numerator := api.SubExt(xPowN, api.OneExt())
-	numerator = api.MulByFpExt(numerator, api.ConstBig(omegaPos.BigInt(new(big.Int))))
+	return ls.EvaluateOutOfDomainGnarkAt(api, x, xPowN)
+}
 
-	denominator := api.SubExt(x, api.ConstExt(field.Lift(omegaPos)))
-	denominator = api.MulConstExt(denominator, big.NewInt(int64(n)))
+// EvaluateOutOfDomainGnarkAt is [LagrangeSelector.EvaluateOutOfDomainGnark]
+// with x^n supplied by the caller. Callers evaluating several selectors of the
+// same module at the same point should compute the power chain once and use
+// this entry point: x^n costs log2(n) extension squarings, and the domain
+// annihilator x^n−1 is usually needed by the caller anyway.
+//
+// xPowN must be x raised to the module size; passing anything else silently
+// produces a wrong evaluation.
+func (ls *LagrangeSelector) EvaluateOutOfDomainGnarkAt(api *circuit.API, x, xPowN circuit.Ext) circuit.Ext {
+	n := ls.module.Size()
+	pos := ls.resolvedRow(n)
+
+	// omegaPos = ω^pos, the domain point at which the selector is 1.
+	var omegaPos field.Element
+	omegaPos.ExpInt64(field.RootOfUnityBy(n), int64(pos))
+
+	// Both scalar factors of the closed form — ω^pos on the numerator and n on
+	// the denominator — are compile-time constants, so they fold into the
+	// single base-field constant ω^pos/n applied to the numerator.
+	var scale, nInv field.Element
+	nInv.SetUint64(uint64(n))
+	nInv.Inverse(&nInv)
+	scale.Mul(&omegaPos, &nInv)
+
+	numerator := api.SubByBaseExt(xPowN, api.One())
+	numerator = api.MulByFpExt(numerator, api.ConstBig(scale.BigInt(new(big.Int))))
+
+	denominator := api.SubByBaseExt(x, api.ConstBig(omegaPos.BigInt(new(big.Int))))
 
 	return api.DivExt(numerator, denominator)
 }

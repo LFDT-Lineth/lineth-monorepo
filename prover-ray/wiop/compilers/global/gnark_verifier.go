@@ -2,6 +2,7 @@ package global
 
 import (
 	"fmt"
+	"math/big"
 	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
@@ -38,7 +39,7 @@ func (gv *Verifier) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 	for i := 0; i < bits.TrailingZeros(uint(n)); i++ {
 		rPowN = api.SquareExt(rPowN)
 	}
-	annihilator := api.SubExt(rPowN, api.OneExt())
+	annihilator := api.SubByBaseExt(rPowN, api.One())
 
 	for _, bkt := range gv.Buckets {
 		// Q(r) = Σ_k r^{kn} · Q_k(r)
@@ -53,7 +54,7 @@ func (gv *Verifier) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 		pagg := api.ZeroExt()
 		coinPow := api.OneExt()
 		for _, v := range bkt.Vanishings {
-			pr := evalExprAtPointGnark(run, v.Expression, viewEvals, r)
+			pr := evalExprAtPointGnark(run, v.Expression, viewEvals, r, rPowN, n)
 			cr := evalCancellationAtPointGnark(api, r, v.CancelledPositions, n)
 			pagg = api.AddExt(pagg, api.MulExt(coinPow, pr, &cr))
 			coinPow = api.MulExt(coinPow, coin)
@@ -66,9 +67,15 @@ func (gv *Verifier) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 // evalCancellationAtPointGnark mirrors [evalCancellationAtPoint]:
 // C(r) = Π_{k ∈ cancelled} (r − ω_n^{norm(k)}), the roots being constants.
 func evalCancellationAtPointGnark(api *circuit.API, r circuit.Ext, cancelled []int, n int) circuit.Ext {
-	result := api.OneExt()
-	for _, root := range cancellationRoots(cancelled, n) {
-		result = api.MulExt(result, api.SubExt(r, api.ConstExt(field.Lift(root))))
+	roots := cancellationRoots(cancelled, n)
+	if len(roots) == 0 {
+		return api.OneExt()
+	}
+	// Start from the first factor rather than from 1: the accumulator's first
+	// multiplication would otherwise be a full extension multiplication by one.
+	result := api.SubByBaseExt(r, api.ConstBig(roots[0].BigInt(new(big.Int))))
+	for _, root := range roots[1:] {
+		result = api.MulExt(result, api.SubByBaseExt(r, api.ConstBig(root.BigInt(new(big.Int)))))
 	}
 	return result
 }
@@ -76,8 +83,13 @@ func evalCancellationAtPointGnark(api *circuit.API, r circuit.Ext, cancelled []i
 // evalExprAtPointGnark mirrors [evalExprAtPoint]: column views resolve to
 // their claimed evaluations, Lagrange selectors to their closed form at r,
 // everything else through the runtime's scalar evaluator.
+//
+// rPowN is r^n for the module under verification; it is shared with every
+// Lagrange selector of that module so the power chain is paid for once per
+// CheckGnark rather than once per selector occurrence. A selector belonging to
+// a differently sized module falls back to computing its own power.
 func evalExprAtPointGnark(
-	run *wiop.GnarkRuntime, expr wiop.Expression, viewEvals map[colViewKey]circuit.Ext, r circuit.Ext,
+	run *wiop.GnarkRuntime, expr wiop.Expression, viewEvals map[colViewKey]circuit.Ext, r, rPowN circuit.Ext, n int,
 ) circuit.Ext {
 	return run.EvaluateSingle(expr, func(e wiop.Expression) (circuit.Ext, bool) {
 		switch leaf := e.(type) {
@@ -90,7 +102,10 @@ func evalExprAtPointGnark(
 			}
 			return v, true
 		case *wiop.LagrangeSelector:
-			return leaf.EvaluateOutOfDomainGnark(run, r), true
+			if leaf.Size() != n {
+				return leaf.EvaluateOutOfDomainGnark(run, r), true
+			}
+			return leaf.EvaluateOutOfDomainGnarkAt(run.API(), r, rPowN), true
 		}
 		return circuit.Ext{}, false
 	})
