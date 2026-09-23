@@ -379,6 +379,19 @@ func (a *API) AddByBaseExt(x Ext, y Element) Ext {
 	}
 }
 
+// SubByBaseExt subtracts a base field element from the constant term. It is
+// the cheap form of SubExt against an Ext whose only non-zero coordinate is
+// the constant term: the five subtractions against zero are elided, which
+// matters in emulated mode where each of them would be a real emulated
+// operation.
+func (a *API) SubByBaseExt(x Ext, y Element) Ext {
+	return Ext{
+		B0: E2{A0: a.Sub(x.B0.A0, y), A1: x.B0.A1},
+		B1: x.B1,
+		B2: x.B2,
+	}
+}
+
 // SumExt returns x + y + z...
 func (a *API) SumExt(xs ...Ext) Ext {
 	// One scratch slice reused across the six coordinate-wise reductions to
