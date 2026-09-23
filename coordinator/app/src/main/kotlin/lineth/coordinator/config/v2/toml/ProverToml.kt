@@ -40,7 +40,7 @@ data class ProverConfigToml(
   val fileBasedFolderConfig: FileBasedProverConfigToml? = null,
 )
 
-data class PreRiscvProverToml(
+data class ProverToml(
   @param:ConfigDoc(
     description = "Filename suffix appended while the coordinator is still writing a request file, " +
       "so provers ignore partially-written requests.",
@@ -84,7 +84,7 @@ data class PreRiscvProverToml(
   )
   val switchBlockTimestamp: Instant? = null,
   @param:ConfigSection("Next prover version to switch over to at the configured switch block/timestamp.")
-  val new: PreRiscvProverToml? = null,
+  val new: ProverToml? = null,
   @param:ConfigDoc(
     description = "Whether to delete request files after their responses are processed.",
     default = "false",
@@ -101,7 +101,7 @@ data class PreRiscvProverToml(
       pollingTimeout = fsPollingTimeout,
     )
 
-  private fun toPreRiscvProverConfig(t: PreRiscvProverToml): PreRiscvProverConfig =
+  private fun toPreRiscvProverConfig(t: ProverToml): PreRiscvProverConfig =
     PreRiscvProverConfig(
       execution = t.toFileBasedProverConfig(t.execution),
       blobCompression = t.toFileBasedProverConfig(t.blobCompression),
@@ -127,7 +127,7 @@ data class PreRiscvProverToml(
   }
 }
 
-data class ProverToml(
+data class RiscvProverToml(
   @param:ConfigSection("L2 execution RISC-V prover config.")
   val l2Execution: ProverConfigToml,
   @param:ConfigSection("Rollup RISC-V prover config.")
@@ -204,7 +204,7 @@ data class ProverToml(
   )
   val switchBlockTimestamp: Instant? = null,
   @param:ConfigSection("Next prover version to switch over to at the configured switch block/timestamp.")
-  val new: ProverToml? = null,
+  val new: RiscvProverToml? = null,
 ) {
   private fun toFileBasedProverConfig(proverConfigToml: ProverConfigToml): FileBasedProverConfig {
     return FileBasedProverConfig(
@@ -248,7 +248,7 @@ data class ProverToml(
     )
   }
 
-  private fun toProverConfig(t: ProverToml): ProverConfig =
+  private fun toProverConfig(t: RiscvProverToml): ProverConfig =
     ProverConfig(
       l2Execution = t.toProverClientConfig(t.l2Execution),
       rollup = t.toProverClientConfig(t.rollup),

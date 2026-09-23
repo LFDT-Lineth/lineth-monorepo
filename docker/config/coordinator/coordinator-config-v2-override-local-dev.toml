@@ -5,17 +5,17 @@ l2-endpoint = "http://127.0.0.1:8545"
 [conflation]
 l2-engine-endpoint = "http://127.0.0.1:8550"
 
-[pre-riscv-prover]
-[pre-riscv-prover.execution]
+[prover]
+[prover.execution]
 fs-requests-directory = "tmp/local/prover/v3/execution/requests"
 fs-responses-directory = "tmp/local/prover/v3/execution/responses"
-[pre-riscv-prover.blob-compression]
+[prover.blob-compression]
 fs-requests-directory = "tmp/local/prover/v3/compression/requests"
 fs-responses-directory = "tmp/local/prover/v3/compression/responses"
-[pre-riscv-prover.invalidity]
+[prover.invalidity]
 fs-requests-directory = "tmp/local/prover/v3/invalidity/requests"
 fs-responses-directory = "tmp/local/prover/v3/invalidity/responses"
-[pre-riscv-prover.proof-aggregation]
+[prover.proof-aggregation]
 fs-requests-directory = "tmp/local/prover/v3/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
 

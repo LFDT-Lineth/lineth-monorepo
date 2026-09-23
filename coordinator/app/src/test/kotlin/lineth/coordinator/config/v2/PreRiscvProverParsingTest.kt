@@ -1,7 +1,7 @@
 package lineth.coordinator.config.v2
 
 import lineth.coordinator.config.v2.toml.FileBasedProverConfigToml
-import lineth.coordinator.config.v2.toml.PreRiscvProverToml
+import lineth.coordinator.config.v2.toml.ProverToml
 import lineth.coordinator.config.v2.toml.parseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -12,57 +12,57 @@ class PreRiscvProverParsingTest {
   companion object {
     val toml =
       """
-      [pre-riscv-prover]
+      [prover]
       fs-inprogress-request-writing-suffix = ".coordinator_writing_request"
       fs-inprogress-proving-suffix-pattern = "\\.inprogress\\.prover_is_proving.*"
       fs-polling-interval = "PT1S"
       fs-polling-timeout = "PT10M"
-      [pre-riscv-prover.execution]
+      [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
       fs-responses-directory = "/data/prover/v2/execution/responses"
-      [pre-riscv-prover.blob-compression]
+      [prover.blob-compression]
       fs-requests-directory = "/data/prover/v2/compression/requests"
       fs-responses-directory = "/data/prover/v2/compression/responses"
-      [pre-riscv-prover.invalidity]
+      [prover.invalidity]
       fs-requests-directory = "/data/prover/v2/invalidity/requests"
       fs-responses-directory = "/data/prover/v2/invalidity/responses"
-      [pre-riscv-prover.proof-aggregation]
+      [prover.proof-aggregation]
       fs-requests-directory = "/data/prover/v2/aggregation/requests"
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
 
-      [pre-riscv-prover.new]
+      [prover.new]
       switch-block-number-inclusive=1000
-      [pre-riscv-prover.new.execution]
+      [prover.new.execution]
       fs-requests-directory = "/data/prover/v3/execution/requests"
       fs-responses-directory = "/data/prover/v3/execution/responses"
-      [pre-riscv-prover.new.blob-compression]
+      [prover.new.blob-compression]
       fs-requests-directory = "/data/prover/v3/compression/requests"
       fs-responses-directory = "/data/prover/v3/compression/responses"
-      [pre-riscv-prover.new.invalidity]
+      [prover.new.invalidity]
       fs-requests-directory = "/data/prover/v3/invalidity/requests"
       fs-responses-directory = "/data/prover/v3/invalidity/responses"
-      [pre-riscv-prover.new.proof-aggregation]
+      [prover.new.proof-aggregation]
       fs-requests-directory = "/data/prover/v3/aggregation/requests"
       fs-responses-directory = "/data/prover/v3/aggregation/responses"
       """.trimIndent()
 
     val tomlWithCleanupEnabled =
       """
-      [pre-riscv-prover]
+      [prover]
       enable-request-files-cleanup = true
-      [pre-riscv-prover.execution]
+      [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
       fs-responses-directory = "/data/prover/v2/execution/responses"
-      [pre-riscv-prover.blob-compression]
+      [prover.blob-compression]
       fs-requests-directory = "/data/prover/v2/compression/requests"
       fs-responses-directory = "/data/prover/v2/compression/responses"
-      [pre-riscv-prover.proof-aggregation]
+      [prover.proof-aggregation]
       fs-requests-directory = "/data/prover/v2/aggregation/requests"
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
       """.trimIndent()
 
     val config =
-      PreRiscvProverToml(
+      ProverToml(
         fsInprogressRequestWritingSuffix = ".coordinator_writing_request",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover_is_proving.*",
         fsPollingInterval = 1.seconds,
@@ -88,7 +88,7 @@ class PreRiscvProverParsingTest {
           fsResponsesDirectory = "/data/prover/v2/aggregation/responses",
         ),
         new =
-        PreRiscvProverToml(
+        ProverToml(
           switchBlockNumberInclusive = 1_000u,
           execution =
           FileBasedProverConfigToml(
@@ -115,20 +115,20 @@ class PreRiscvProverParsingTest {
 
     val tomlMinimal =
       """
-      [pre-riscv-prover]
-      [pre-riscv-prover.execution]
+      [prover]
+      [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
       fs-responses-directory = "/data/prover/v2/execution/responses"
-      [pre-riscv-prover.blob-compression]
+      [prover.blob-compression]
       fs-requests-directory = "/data/prover/v2/compression/requests"
       fs-responses-directory = "/data/prover/v2/compression/responses"
-      [pre-riscv-prover.proof-aggregation]
+      [prover.proof-aggregation]
       fs-requests-directory = "/data/prover/v2/aggregation/requests"
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
       """.trimIndent()
 
     val configMinimal =
-      PreRiscvProverToml(
+      ProverToml(
         fsInprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         execution = FileBasedProverConfigToml(
@@ -152,33 +152,33 @@ class PreRiscvProverParsingTest {
   }
 
   data class WrapperConfig(
-    val preRiscvProver: PreRiscvProverToml,
+    val prover: ProverToml,
   )
 
   @Test
   fun `should parse prover toml configs - full`() {
     assertThat(
-      parseConfig<WrapperConfig>(toml).preRiscvProver,
+      parseConfig<WrapperConfig>(toml).prover,
     ).isEqualTo(config)
   }
 
   @Test
   fun `should parse conflation toml configs and provide defaults`() {
     assertThat(
-      parseConfig<WrapperConfig>(tomlMinimal).preRiscvProver,
+      parseConfig<WrapperConfig>(tomlMinimal).prover,
     ).isEqualTo(configMinimal)
   }
 
   @Test
   fun `should parse prover toml configs with cleanup enabled`() {
     assertThat(
-      parseConfig<WrapperConfig>(tomlWithCleanupEnabled).preRiscvProver,
+      parseConfig<WrapperConfig>(tomlWithCleanupEnabled).prover,
     ).isEqualTo(configWithCleanupEnabled)
   }
 
   @Test
   fun `should default cleanup to false when not specified`() {
-    val parsed = parseConfig<WrapperConfig>(tomlMinimal).preRiscvProver
+    val parsed = parseConfig<WrapperConfig>(tomlMinimal).prover
     assertThat(parsed.enableRequestFilesCleanup).isFalse()
   }
 
@@ -186,20 +186,20 @@ class PreRiscvProverParsingTest {
   fun `should parse cleanup setting when explicitly set to false`() {
     val tomlWithCleanupDisabled =
       """
-      [pre-riscv-prover]
+      [prover]
       enable-request-files-cleanup = false
-      [pre-riscv-prover.execution]
+      [prover.execution]
       fs-requests-directory = "/data/prover/v2/execution/requests"
       fs-responses-directory = "/data/prover/v2/execution/responses"
-      [pre-riscv-prover.blob-compression]
+      [prover.blob-compression]
       fs-requests-directory = "/data/prover/v2/compression/requests"
       fs-responses-directory = "/data/prover/v2/compression/responses"
-      [pre-riscv-prover.proof-aggregation]
+      [prover.proof-aggregation]
       fs-requests-directory = "/data/prover/v2/aggregation/requests"
       fs-responses-directory = "/data/prover/v2/aggregation/responses"
       """.trimIndent()
 
-    val parsed = parseConfig<WrapperConfig>(tomlWithCleanupDisabled).preRiscvProver
+    val parsed = parseConfig<WrapperConfig>(tomlWithCleanupDisabled).prover
     assertThat(parsed.enableRequestFilesCleanup).isFalse()
   }
 }

@@ -3,7 +3,7 @@ package lineth.coordinator.config.v2
 import lineth.coordinator.clients.prover.RestfulBasedProverConfig
 import lineth.coordinator.config.v2.toml.FileBasedProverConfigToml
 import lineth.coordinator.config.v2.toml.ProverConfigToml
-import lineth.coordinator.config.v2.toml.ProverToml
+import lineth.coordinator.config.v2.toml.RiscvProverToml
 import lineth.coordinator.config.v2.toml.parseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
@@ -16,7 +16,7 @@ class ProverParsingTest {
   companion object {
     val toml =
       """
-      [prover]
+      [riscv-prover]
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
       polling-interval = "PT1S"
@@ -24,25 +24,25 @@ class ProverParsingTest {
       fs-inprogress-request-writing-suffix = ".inprogress_coordinator_riscv_writing"
       fs-inprogress-proving-suffix-pattern = "\\.inprogress\\.riscv-prover.*"
       fs-enable-request-files-cleanup = true
-      [prover.l2-execution]
+      [riscv-prover.l2-execution]
       programId = "0xdeadbeef1"
-      [prover.l2-execution.file-based-folder-config]
+      [riscv-prover.l2-execution.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/execution/requests"
       fs-responses-directory = "/data/riscv-prover/execution/responses"
-      [prover.rollup]
+      [riscv-prover.rollup]
       programId = "0xdeadbeef2"
-      [prover.rollup.file-based-folder-config]
+      [riscv-prover.rollup.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/rollup/requests"
       fs-responses-directory = "/data/riscv-prover/rollup/responses"
-      [prover.rollup-aggregation]
+      [riscv-prover.rollup-aggregation]
       programId = "0xdeadbeef3"
-      [prover.rollup-aggregation.file-based-folder-config]
+      [riscv-prover.rollup-aggregation.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/aggregation/requests"
       fs-responses-directory = "/data/riscv-prover/aggregation/responses"
       """.trimIndent()
 
     val config =
-      ProverToml(
+      RiscvProverToml(
         pollingInterval = 1.seconds,
         pollingTimeout = 10.minutes,
         forkName = "amsterdam",
@@ -75,28 +75,28 @@ class ProverParsingTest {
 
     val tomlMinimal =
       """
-      [prover]
+      [riscv-prover]
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
-      [prover.l2-execution]
+      [riscv-prover.l2-execution]
       programId = "0xdeadbeef1"
-      [prover.l2-execution.file-based-folder-config]
+      [riscv-prover.l2-execution.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/execution/requests"
       fs-responses-directory = "/data/riscv-prover/execution/responses"
-      [prover.rollup]
+      [riscv-prover.rollup]
       programId = "0xdeadbeef2"
-      [prover.rollup.file-based-folder-config]
+      [riscv-prover.rollup.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/rollup/requests"
       fs-responses-directory = "/data/riscv-prover/rollup/responses"
-      [prover.rollup-aggregation]
+      [riscv-prover.rollup-aggregation]
       programId = "0xdeadbeef3"
-      [prover.rollup-aggregation.file-based-folder-config]
+      [riscv-prover.rollup-aggregation.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/aggregation/requests"
       fs-responses-directory = "/data/riscv-prover/aggregation/responses"
       """.trimIndent()
 
     val configMinimal =
-      ProverToml(
+      RiscvProverToml(
         forkName = "amsterdam",
         provingSystemVersion = "0xabcdef123",
         l2Execution = ProverConfigToml(
@@ -124,7 +124,7 @@ class ProverParsingTest {
 
     val tomlRestful =
       """
-      [prover]
+      [riscv-prover]
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
       polling-interval = "PT1S"
@@ -132,16 +132,16 @@ class ProverParsingTest {
       restful-endpoint = "http://127.0.0.1:8090/"
       restful-api-base-path = "/api"
       restful-api-version = "v1"
-      [prover.l2-execution]
+      [riscv-prover.l2-execution]
       programId = "0xdeadbeef1"
-      [prover.rollup]
+      [riscv-prover.rollup]
       programId = "0xdeadbeef2"
-      [prover.rollup-aggregation]
+      [riscv-prover.rollup-aggregation]
       programId = "0xdeadbeef3"
       """.trimIndent()
 
     val configRestful =
-      ProverToml(
+      RiscvProverToml(
         pollingInterval = 1.seconds,
         pollingTimeout = 10.minutes,
         forkName = "amsterdam",
@@ -156,33 +156,33 @@ class ProverParsingTest {
   }
 
   data class WrapperConfig(
-    val prover: ProverToml,
+    val riscvProver: RiscvProverToml,
   )
 
   @Test
   fun `should parse riscv prover toml config`() {
     assertThat(
-      parseConfig<WrapperConfig>(toml).prover,
+      parseConfig<WrapperConfig>(toml).riscvProver,
     ).isEqualTo(config)
   }
 
   @Test
   fun `should parse riscv prover toml config with defaults`() {
     assertThat(
-      parseConfig<WrapperConfig>(tomlMinimal).prover,
+      parseConfig<WrapperConfig>(tomlMinimal).riscvProver,
     ).isEqualTo(configMinimal)
   }
 
   @Test
   fun `should parse riscv prover toml config with restful transport`() {
     assertThat(
-      parseConfig<WrapperConfig>(tomlRestful).prover,
+      parseConfig<WrapperConfig>(tomlRestful).riscvProver,
     ).isEqualTo(configRestful)
   }
 
   @Test
   fun `should reify restful prover config into RestfulBasedProverConfig for each prover client`() {
-    val proversConfig = parseConfig<WrapperConfig>(tomlRestful).prover.reified()
+    val proversConfig = parseConfig<WrapperConfig>(tomlRestful).riscvProver.reified()
 
     val expectedRestfulConfig = RestfulBasedProverConfig(
       endpoint = URI("http://127.0.0.1:8090/").toURL(),
@@ -204,20 +204,20 @@ class ProverParsingTest {
   fun `should fail reify when neither fileBasedFolderConfig nor restfulEndpoint is configured`() {
     val tomlMissingTransport =
       """
-      [prover]
+      [riscv-prover]
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
-      [prover.l2-execution]
+      [riscv-prover.l2-execution]
       programId = "0xdeadbeef1"
-      [prover.rollup]
+      [riscv-prover.rollup]
       programId = "0xdeadbeef2"
-      [prover.rollup-aggregation]
+      [riscv-prover.rollup-aggregation]
       programId = "0xdeadbeef3"
       """.trimIndent()
 
     assertThat(
       catchThrowable {
-        parseConfig<WrapperConfig>(tomlMissingTransport).prover.reified()
+        parseConfig<WrapperConfig>(tomlMissingTransport).riscvProver.reified()
       },
     ).isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("restfulEndpoint must be defined")
