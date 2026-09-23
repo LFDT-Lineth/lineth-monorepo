@@ -27,7 +27,7 @@ import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
-class PreRiscvProverClientFactoryTest {
+class ProverClientFactoryPreRiscvTest {
   private fun buildProversConfig(
     tmpDir: Path,
     switchBlockNumber: Int? = null,
@@ -96,7 +96,7 @@ class PreRiscvProverClientFactoryTest {
 
   private lateinit var meterRegistry: MeterRegistry
   private lateinit var metricsFacade: MetricsFacade
-  private lateinit var proverClientFactory: PreRiscvProverClientFactory
+  private lateinit var proverClientFactory: ProverClientFactory
   private lateinit var vertx: Vertx
   private lateinit var testTmpDir: Path
 
@@ -162,9 +162,9 @@ class PreRiscvProverClientFactoryTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      PreRiscvProverClientFactory(
+      ProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
+        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200),
         metricsFacade = metricsFacade,
       )
   }
@@ -194,9 +194,9 @@ class PreRiscvProverClientFactoryTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      PreRiscvProverClientFactory(
+      ProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
         metricsFacade = metricsFacade,
       )
 
@@ -208,9 +208,9 @@ class PreRiscvProverClientFactoryTest {
   @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
-      PreRiscvProverClientFactory(
+      ProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
         metricsFacade = metricsFacade,
       )
     val proverClient = factory.preRiscvProofAggregationProverClient()
@@ -235,9 +235,9 @@ class PreRiscvProverClientFactoryTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      PreRiscvProverClientFactory(
+      ProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(
+        preRiscvConfig = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,

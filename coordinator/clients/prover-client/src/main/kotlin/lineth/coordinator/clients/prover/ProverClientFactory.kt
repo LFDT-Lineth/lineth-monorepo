@@ -4,7 +4,11 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
+import linea.clients.BlobCompressionProverClientV2
+import linea.clients.ExecutionProverClientV2
+import linea.clients.InvalidityProverClientV1
 import linea.clients.L2ExecutionProverClientV1
+import linea.clients.ProofAggregationProverClientV2
 import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.clients.RollupAggregationProverClientV1
@@ -18,18 +22,24 @@ import net.consensys.linea.httprest.client.VertxHttpRestClient
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.net.URL
 
 class ProverClientFactory(
   private val vertx: Vertx,
-  private val config: ProversConfig<ProverConfig>,
-  private val chainId: Long,
+  private val preRiscvConfig: ProversConfig<PreRiscvProverConfig>? = null,
+  private val config: ProversConfig<ProverConfig>? = null,
+  private val chainId: Long = 0L,
   private val l2MessageServiceAddress: String? = null,
   metricsFacade: MetricsFacade,
 ) {
   private val l2ExecutionWaitingResponsesMetric = GaugeAggregator()
   private val rollupWaitingResponsesMetric = GaugeAggregator()
   private val rollupAggregationWaitingResponsesMetric = GaugeAggregator()
+  private val executionWaitingResponsesMetric = GaugeAggregator()
+  private val blobWaitingResponsesMetric = GaugeAggregator()
+  private val aggregationWaitingResponsesMetric = GaugeAggregator()
+  private val invalidityWaitingResponsesMetric = GaugeAggregator()
 
   init {
     metricsFacade.createGauge(
@@ -50,9 +60,40 @@ class ProverClientFactory(
       description = "Number of RISC-V rollup-aggregation proof waiting responses",
       measurementSupplier = rollupAggregationWaitingResponsesMetric,
     )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BATCH,
+      name = "prover.waiting",
+      description = "Number of execution proof waiting responses",
+      measurementSupplier = executionWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BLOB,
+      name = "prover.waiting",
+      description = "Number of blob compression proof waiting responses",
+      measurementSupplier = blobWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.AGGREGATION,
+      name = "prover.waiting",
+      description = "Number of aggregation proof waiting responses",
+      measurementSupplier = aggregationWaitingResponsesMetric,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.FORCED_TRANSACTION,
+      name = "prover.waiting",
+      description = "Number of invalidity proof waiting responses",
+      measurementSupplier = invalidityWaitingResponsesMetric,
+    )
   }
 
+  private fun requireRiscvConfig(): ProversConfig<ProverConfig> =
+    requireNotNull(config) { "RISC-V prover config must be configured" }
+
+  private fun requirePreRiscvConfig(): ProversConfig<PreRiscvProverConfig> =
+    requireNotNull(preRiscvConfig) { "Pre RISC-V prover config must be configured" }
+
   fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
+    val config = requireRiscvConfig()
     return ABProverClientRouter.create(
       proverAConfig = config.proverSwitch.current.l2Execution,
       proverBConfig = config.proverSwitch.next?.l2Execution,
@@ -65,6 +106,7 @@ class ProverClientFactory(
   }
 
   fun rollupProverClient(): RollupProverClientV1 {
+    val config = requireRiscvConfig()
     return ABProverClientRouter.create(
       proverAConfig = config.proverSwitch.current,
       proverBConfig = config.proverSwitch.next,
@@ -88,6 +130,7 @@ class ProverClientFactory(
   }
 
   fun rollupAggregationProverClient(): RollupAggregationProverClientV1 {
+    val config = requireRiscvConfig()
     return ABProverClientRouter.create(
       proverAConfig = config.proverSwitch.current,
       proverBConfig = config.proverSwitch.next,
@@ -109,6 +152,84 @@ class ProverClientFactory(
         )
       }
         .also { rollupAggregationWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
+    val preRiscvConfig = requirePreRiscvConfig()
+    return ABProverClientRouter.create(
+      proverAConfig = preRiscvConfig.proverSwitch.current.execution,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.execution,
+      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
+      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvExecutionProverClient(
+        config = proverConfig,
+        vertx = vertx,
+        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
+      ).also { executionWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvBlobCompressionProverClient(
+    log: Logger = PreRiscvBlobCompressionProverClient.LOG,
+  ): BlobCompressionProverClientV2 {
+    val preRiscvConfig = requirePreRiscvConfig()
+    return ABProverClientRouter.create(
+      proverAConfig = preRiscvConfig.proverSwitch.current.blobCompression,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.blobCompression,
+      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
+      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvBlobCompressionProverClient(
+        config = proverConfig,
+        vertx = vertx,
+        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
+        log = log,
+      )
+        .also { blobWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvProofAggregationProverClient(
+    log: Logger = PreRiscvProofAggregationClient.LOG,
+  ): ProofAggregationProverClientV2 {
+    val preRiscvConfig = requirePreRiscvConfig()
+    return ABProverClientRouter.create(
+      proverAConfig = preRiscvConfig.proverSwitch.current,
+      proverBConfig = preRiscvConfig.proverSwitch.next,
+      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
+      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvProofAggregationClient(
+        config = proverConfig.proofAggregation,
+        invalidityProverConfig = proverConfig.invalidity,
+        vertx = vertx,
+        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
+        log = log,
+      )
+        .also { aggregationWaitingResponsesMetric.addReporter(it) }
+    }
+  }
+
+  fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
+    val preRiscvConfig = requirePreRiscvConfig()
+    if (preRiscvConfig.proverSwitch.current.invalidity == null) {
+      throw IllegalStateException("Invalidity prover config is not configured")
+    }
+
+    return ABProverClientRouter.create(
+      proverAConfig = preRiscvConfig.proverSwitch.current,
+      proverBConfig = preRiscvConfig.proverSwitch.next,
+      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
+      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+    ) { proverConfig ->
+      PreRiscvInvalidityProverClient(
+        config = proverConfig.invalidity!!,
+        vertx = vertx,
+        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
+      )
+        .also { invalidityWaitingResponsesMetric.addReporter(it) }
     }
   }
 
@@ -149,7 +270,7 @@ class ProverClientFactory(
         ),
         requestFileNameProvider = requestFileNameProvider,
         responseFileNameProvider = responseFileNameProvider,
-        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+        enableRequestFilesCleanup = requireRiscvConfig().enableRequestFilesCleanup,
       )
     } else if (proverConfig.restfulBased != null) {
       RestfulProverProofTransport<
