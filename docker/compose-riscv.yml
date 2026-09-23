@@ -18,9 +18,6 @@ services:
       - --node-private-key-file=/var/lib/besu/key
       - --plugin-linea-node-type=SEQUENCER
       - --data-storage-format=BONSAI
-      - --sync-min-peers=0
-      - --p2p-enabled=false
-      - --engine-rpc-enabled=true
       - --plugin-linea-tracing-end-timestamp=0
       # The RISC-V local deployment does not include the liveness contract.
       - --plugin-linea-liveness-enabled=false

@@ -4,43 +4,18 @@ contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 [conflation]
 riscv-starting-block-timestamp-inclusive = 0
 
-[riscv-prover]
-fs-polling-interval = "PT1S"
-fs-polling-timeout = "PT10M"
-
 [riscv-prover.execution]
 # Execution program-vk is shared with the proof responder through Compose.
 fork-name = "Amsterdam"
 
-[riscv-prover.rollup]
-program-vk = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-[riscv-prover.proof-aggregation]
-program-vk = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-[type2-state-proof-provider]
-disabled = true
-
 [l1-submission.blob]
 disabled = true
-
-[l1-submission.blob.signer]
-type = "Web3j"
 
 [l1-submission.aggregation]
 disabled = true
 
-[l1-submission.aggregation.signer]
-type = "Web3j"
-
 [message-anchoring]
 disabled = true
 
-[message-anchoring.signer]
-type = "Web3j"
-
 [forced-transactions]
-disabled = true
-
-[l2-network-gas-pricing]
 disabled = true

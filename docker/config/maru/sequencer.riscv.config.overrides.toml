@@ -1,3 +1,4 @@
+# Keep local execution-proof requests progressing without a transaction generator.
 allow-empty-blocks = true
 
 [linea]

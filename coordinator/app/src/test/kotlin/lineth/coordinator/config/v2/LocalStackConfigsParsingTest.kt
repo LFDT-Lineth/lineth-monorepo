@@ -41,6 +41,7 @@ class LocalStackConfigsParsingTest {
       coordinatorConfigFiles =
       listOf(
         Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
+        Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-riscv.toml"),
         proverConfig,
       ),
@@ -63,7 +64,7 @@ class LocalStackConfigsParsingTest {
       assertThat(configs.l1Submission.disabled).isTrue()
       assertThat(configs.messageAnchoring?.disabled).isTrue()
       assertThat(configs.forcedTransactions?.disabled).isTrue()
-      assertThat(configs.l2NetworkGasPricing?.disabled).isTrue()
+      assertThat(configs.l2NetworkGasPricing?.disabled).isFalse()
     }
   }
 }
