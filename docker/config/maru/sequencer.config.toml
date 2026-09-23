@@ -31,9 +31,6 @@ ban-period = "30 seconds"
 engine-api-endpoint = { endpoint = "http://sequencer:8550" }
 payload-validation-enabled = true
 
-[follower-engine-apis]
-follower-besu = { endpoint = "http://l2-node-besu:8550" }
-
 [fork-transition]
 l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
 

@@ -29,7 +29,8 @@ services:
         set -- java -Xmx384m -Dlog4j2.configurationFile=configs/log4j.xml \
           -jar "$${LINETH_APP_JAR:-/opt/consensys/maru/maru.jar}" \
           --genesis-file /initialization/genesis-maru.json \
-          --config configs/config.toml
+          --config configs/config.toml \
+          --config configs/config.mode.toml
         if [ "$$LINETH_USE_MARU_OVERRIDE_CONFIG" = "true" ]; then
           set -- "$$@" --config configs/config.overrides.toml
         fi
@@ -37,6 +38,7 @@ services:
 #    command: [ 'echo' , 'Forced exit to run in IntellIJ' ]
     volumes:
       - ./config/maru/sequencer.config.toml:/opt/consensys/maru/configs/config.toml:ro
+      - ./config/maru/sequencer.zkevm.config.overrides.toml:/opt/consensys/maru/configs/config.mode.toml:ro
       - ./config/maru/sequencer.extra-followers.config.overrides.toml:/opt/consensys/maru/configs/config.overrides.toml:ro
       - ./config/maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
       - ./config/maru/0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5.key:/tmp/maru-db/private-key

@@ -39,6 +39,10 @@ make clean-environment        # Stop and clear the shared environment
 
 The RISC-V stack reuses the shared infrastructure, deploys the V9 stub, and uses a
 dummy execution-proof responder. L1 proof submission is disabled.
+Besu uses the shared sequencer configuration with CLI overrides; Maru loads the
+shared configuration followed by a mode-specific override. Set
+`R5_L2_EXECUTION_PROGRAM_VK` to override the execution key for both the coordinator
+and proof responder.
 
 ### linea-besu-package
 
