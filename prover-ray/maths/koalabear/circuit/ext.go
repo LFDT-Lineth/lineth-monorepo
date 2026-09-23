@@ -392,6 +392,24 @@ func (a *API) SubByBaseExt(x Ext, y Element) Ext {
 	}
 }
 
+// HornerExt evaluates Σ_i coeffs[i] · x^i by Horner's rule, coeffs being
+// ordered constant term first. It costs len(coeffs)−1 extension
+// multiplications, against the 2·len(coeffs) a naive sum with a running power
+// of x would spend. The empty sum is zero.
+//
+// Use it for any random linear combination in the extension field: a batching
+// coin's powers, a polynomial in coefficient form, a row hash.
+func (a *API) HornerExt(coeffs []Ext, x Ext) Ext {
+	if len(coeffs) == 0 {
+		return a.ZeroExt()
+	}
+	acc := coeffs[len(coeffs)-1]
+	for i := len(coeffs) - 2; i >= 0; i-- {
+		acc = a.AddExt(a.MulExt(acc, x), coeffs[i])
+	}
+	return acc
+}
+
 // SumExt returns x + y + z...
 func (a *API) SumExt(xs ...Ext) Ext {
 	// One scratch slice reused across the six coordinate-wise reductions to
