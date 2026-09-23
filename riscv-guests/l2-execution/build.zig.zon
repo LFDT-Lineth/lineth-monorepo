@@ -5,7 +5,7 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zesu = .{
-            .url = "https://github.com/Filter94/zesu/archive/7163df390d525b89cbd514f08d44931114bc4a61.tar.gz",
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/b5483dda21d72405c50a22cb6406a1231e51a579.tar.gz",
             .hash = "zesu-0.1.0-UtqpAHB-RQAWyvh9rADjDAhbD1pa3B8IPQUFYNJ8QTSW",
         },
         .execution_spec_tests_zkevm = .{
