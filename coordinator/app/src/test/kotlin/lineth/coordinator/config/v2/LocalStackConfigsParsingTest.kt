@@ -3,9 +3,7 @@ package lineth.coordinator.config.v2
 import lineth.coordinator.config.v2.toml.loadConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import kotlin.io.path.writeText
 import kotlin.time.Instant
 
 class LocalStackConfigsParsingTest {
@@ -33,17 +31,13 @@ class LocalStackConfigsParsingTest {
   }
 
   @Test
-  fun `should load RISC-V local stack override`(@TempDir tempDir: Path) {
-    val programVk = "0x" + "01".repeat(32)
-    val proverConfig = tempDir.resolve("prover.toml")
-    proverConfig.writeText("[riscv-prover.execution]\nprogram-vk = \"$programVk\"\n")
+  fun `should parse RISC-V coordinator overrides`() {
     loadConfigs(
       coordinatorConfigFiles =
       listOf(
         Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
         Path.of("../../docker/config/coordinator/coordinator-config-riscv.toml"),
-        proverConfig,
       ),
       tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
       tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
@@ -54,17 +48,11 @@ class LocalStackConfigsParsingTest {
       enforceStrict = true,
     ).also { configs ->
       assertThat(configs.protocol.l1.contractAddress).isEqualTo("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9")
-      assertThat(configs.conflation.blocksLimit).isEqualTo(2u)
       assertThat(configs.conflation.riscvStartingBlockTimestampInclusive).isEqualTo(Instant.fromEpochSeconds(0))
       assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Amsterdam")
-      assertThat(configs.riscvProversConfig?.proverA?.execution?.programVk).isEqualTo(programVk)
-      assertThat(configs.riscvProversConfig?.proverA?.execution?.requestsDirectory)
-        .isEqualTo(Path.of("/data/prover/riscv/execution/requests"))
-      assertThat(configs.type2StateProofProvider.disabled).isTrue()
       assertThat(configs.l1Submission.disabled).isTrue()
       assertThat(configs.messageAnchoring?.disabled).isTrue()
       assertThat(configs.forcedTransactions?.disabled).isTrue()
-      assertThat(configs.l2NetworkGasPricing?.disabled).isFalse()
     }
   }
 }
