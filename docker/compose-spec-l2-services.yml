@@ -7,7 +7,6 @@ services:
     container_name: l2-genesis-intialization
     environment:
       CREATE_EMPTY_BLOCKS: ${CREATE_EMPTY_BLOCKS:-false}
-      L2_GENESIS_MODE: ${L2_GENESIS_MODE:-zkevm}
     entrypoint: [ "sh","/initialization/init.sh" ]
     volumes:
       - ./config/l2-genesis-initialization/:/initialization:rw
@@ -373,12 +372,7 @@ services:
     ports:
       - "9545:9545"
     healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
-          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
-          grep -q "200 OK" <&3'
+      test: ["CMD-SHELL", "curl -f http://localhost:9545/health || exit 1"]
       interval: 1s
       timeout: 1s
       retries: 120

@@ -25,16 +25,10 @@ clean-environment:
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
 
-# RISC-V is an override of the shared local stack, including its Compose project.
-RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
-
-.PHONY: clean-riscv-environment start-env-with-riscv
-
-# Compatibility alias: both execution modes now own the same environment.
-clean-riscv-environment: clean-environment
+.PHONY: start-env-with-riscv
 
 start-env-with-riscv:
-	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" COMPOSE_PROFILES=l1,l2,riscv \
+	$(MAKE) start-env COMPOSE_FILE="docker/compose-tracing-v2.yml -f docker/compose-riscv.yml" COMPOSE_PROFILES=l1,l2,riscv \
 		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
 		START_SERVICES_AFTER_DEPLOYMENT="riscv-proof-responder coordinator" \
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
@@ -66,8 +60,7 @@ start-env:
 	else \
 		echo "Starting stack reusing previous state"; \
 	fi; \
-	mkdir -p tmp/local/prover/riscv/execution/requests tmp/local/prover/riscv/execution/responses; \
-	chmod -R a+rwX tmp/local/prover/riscv; \
+	mkdir -p tmp/local; \
 	$(MAKE) seed-deny-list; \
 	if [ -n "$(START_SERVICES_BEFORE_DEPLOYMENT)" ]; then \
 		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --wait --wait-timeout 600 $(START_SERVICES_BEFORE_DEPLOYMENT); \

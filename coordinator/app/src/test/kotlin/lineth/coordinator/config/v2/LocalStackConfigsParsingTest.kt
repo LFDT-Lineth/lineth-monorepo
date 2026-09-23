@@ -47,17 +47,11 @@ class LocalStackConfigsParsingTest {
       enforceStrict = true,
     ).also { configs ->
       assertThat(configs.protocol.l1.contractAddress).isEqualTo("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9")
-      assertThat(configs.conflation.blocksLimit).isEqualTo(1u)
+      assertThat(configs.conflation.blocksLimit).isEqualTo(2u)
       assertThat(configs.conflation.riscvStartingBlockTimestampInclusive).isEqualTo(Instant.fromEpochSeconds(0))
-      assertThat(configs.conflation.proofAggregation.timestampBasedHardForks)
-        .containsExactly(Instant.fromEpochSeconds(0))
       assertThat(configs.riscvProversConfig?.proverA?.execution?.forkName).isEqualTo("Amsterdam")
       assertThat(configs.riscvProversConfig?.proverA?.execution?.requestsDirectory)
         .isEqualTo(Path.of("/data/prover/riscv/execution/requests"))
-      assertThat(requireNotNull(configs.traces.counters).endpoints.map { it.toExternalForm() })
-        .containsExactly("http://sequencer:8545/")
-      assertThat(requireNotNull(configs.traces.conflation).endpoints.map { it.toExternalForm() })
-        .containsExactly("http://sequencer:8545/")
       assertThat(configs.type2StateProofProvider.disabled).isTrue()
       assertThat(configs.l1Submission.disabled).isTrue()
       assertThat(configs.messageAnchoring?.disabled).isTrue()

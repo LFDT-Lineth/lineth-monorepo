@@ -32,12 +32,13 @@ Dockerfile, context, build args and named build contexts.
 Run from the repository root:
 
 ```bash
-make start-env               # Start zkEVM
-# Start RISC-V with prebuilt Amsterdam-capable images
-make start-env-with-riscv \
-  LINEA_BESU_PACKAGE_TAG="<besu-tag>" MARU_TAG="<maru-tag>" LINEA_COORDINATOR_TAG="<coordinator-tag>"
+make start-env                # Start zkEVM
+make start-env-with-riscv     # Start RISC-V
 make clean-environment        # Stop and clear the shared environment
 ```
+
+The RISC-V stack reuses the shared infrastructure, deploys the V9 stub, and uses a
+dummy execution-proof responder. L1 proof submission is disabled.
 
 ### linea-besu-package
 

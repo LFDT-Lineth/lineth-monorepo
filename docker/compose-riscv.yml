@@ -1,4 +1,4 @@
-# RISC-V overrides for the shared local/CI stack in compose-tracing-v2.yml.
+# RISC-V overrides for the shared local stack in compose-tracing-v2.yml.
 services:
   l2-genesis-initialization:
     environment:
@@ -38,6 +38,13 @@ services:
       - linea
 
   coordinator:
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9545;
+          printf "GET /health HTTP/1.0\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
     depends_on: !override
       l2-genesis-initialization:
         condition: service_completed_successfully
