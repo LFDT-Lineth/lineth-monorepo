@@ -67,13 +67,12 @@ deploy-lineth-rollup-v7: deploy-lineth-rollup-v7_1
 deploy-lineth-rollup-v8:
 		$(MAKE) deploy-lineth-rollup L1_CONTRACT_VERSION=8
 
-deploy-lineth-rollup-v9-stub: L2_GENESIS_TIMESTAMP_FILE ?= docker/config/l2-genesis-initialization/fork-timestamp.txt
 deploy-lineth-rollup-v9-stub:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		# Deploys LinethRollupV9Stub, a temporary placeholder rollup implementation whose
 		# submitBlobs/finalizeBlocks are no-ops. No PlonkVerifier is deployed and guest-program
 		# verifier keys are randomly generated, since neither is exercised by this stub.
-		export FORK_TIMESTAMP=$$(cat "$(L2_GENESIS_TIMESTAMP_FILE)" 2>/dev/null || true) && \
+		export FORK_TIMESTAMP=$$(cat docker/config/l2-genesis-initialization/fork-timestamp.txt 2>/dev/null || true) && \
 		cd $(contracts_package_dir); \
 		DEPLOYER_PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80} \
 		RPC_URL=http:\\localhost:8445/ \

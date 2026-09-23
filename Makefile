@@ -12,9 +12,6 @@ clean-local-folders:
 				--mount "type=bind,source=$(CURDIR)/tmp/local,target=/data" \
 				busybox:latest find /data -mindepth 1 -delete; \
 		fi
-		rm -f docker/config/l2-genesis-initialization/genesis-besu.json \
-			docker/config/l2-genesis-initialization/genesis-maru.json \
-			docker/config/l2-genesis-initialization/fork-timestamp.txt
 
 clean-testnet-folders:
 		$(MAKE) clean-smc-folders
@@ -22,15 +19,16 @@ clean-testnet-folders:
 
 clean-environment:
 		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
-		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down --volumes --remove-orphans;
+		docker compose -f docker/compose-tracing-v2-ci-fleet-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down --remove-orphans || true;
 		$(MAKE) clean-local-folders;
 		$(MAKE) seed-deny-list; # truncate runtime deny-list and drop any stale lockfile from a crashed run
+		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker image prune -f || true;
 
 # RISC-V is an override of the shared local stack, including its Compose project.
-RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml -f docker/compose-riscv-from-genesis.yml
+RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
 
-.PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv
+.PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv test-riscv
 
 build-riscv-images:
 	$(MAKE) -j1 docker-build-riscv-besu docker-build-maru docker-build-coordinator \
@@ -49,6 +47,9 @@ start-env-with-riscv:
 		L1_CONTRACT_VERSION=9 LINETH_PROTOCOL_CONTRACTS_ONLY=true \
 		LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-lineth-rollup-v9-stub \
 		DEPLOY_FORCED_TRANSACTION_GATEWAY=false
+
+test-riscv:
+	node scripts/docker/riscv-smoke-test.mjs
 
 # Ensure the runtime sequencer deny-list exists (empty) before docker compose
 # bind-mounts it. Gitignored; may be mutated at test time by withDenyListAddresses.
@@ -70,10 +71,6 @@ start-env: START_SERVICES_AFTER_DEPLOYMENT:=
 start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 start-env:
 	@set -eu; \
-	if [ "$(CLEAN_PREVIOUS_ENV)" != "true" ] && [ "$(SKIP_CONTRACTS_DEPLOYMENT)" != "true" ]; then \
-		echo "State reuse requires SKIP_CONTRACTS_DEPLOYMENT=true to preserve existing contracts" >&2; \
-		exit 1; \
-	fi; \
 	if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
 	else \
@@ -81,8 +78,7 @@ start-env:
 	fi; \
 	mkdir -p tmp/local/prover/riscv/execution/requests tmp/local/prover/riscv/execution/responses; \
 	chmod -R a+rwX tmp/local/prover/riscv; \
-	touch docker/config/linea-besu-sequencer/deny-list.txt; \
-	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) run --rm --no-deps l2-genesis-initialization; \
+	$(MAKE) seed-deny-list; \
 	if [ -n "$(START_SERVICES_BEFORE_DEPLOYMENT)" ]; then \
 		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d --wait --wait-timeout 600 $(START_SERVICES_BEFORE_DEPLOYMENT); \
 	else \

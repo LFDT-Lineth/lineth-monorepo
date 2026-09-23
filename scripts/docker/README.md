@@ -34,6 +34,7 @@ Run from the repository root:
 ```bash
 make start-env-with-tracing-v2 # Start zkEVM
 make start-env-with-riscv      # Start RISC-V
+make test-riscv               # Check the RISC-V execution flow
 make clean-environment        # Stop and clear the shared environment
 ```
 

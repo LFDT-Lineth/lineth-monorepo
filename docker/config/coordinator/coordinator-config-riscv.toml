@@ -1,4 +1,3 @@
-# RISC-V-from-genesis smoke scenario; do not use for a zkEVM transition.
 [protocol.l1]
 contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 
@@ -8,6 +7,27 @@ riscv-starting-block-timestamp-inclusive = 0
 
 [conflation.proof-aggregation]
 timestamp-based-hard-forks = [0]
+
+[riscv-prover]
+fs-polling-interval = "PT1S"
+fs-polling-timeout = "PT10M"
+enable-request-files-cleanup = false
+
+[riscv-prover.execution]
+fs-requests-directory = "/data/prover/riscv/execution/requests"
+fs-responses-directory = "/data/prover/riscv/execution/responses"
+program-vk = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+fork-name = "Amsterdam"
+
+[riscv-prover.rollup]
+fs-requests-directory = "/data/prover/riscv/rollup/requests"
+fs-responses-directory = "/data/prover/riscv/rollup/responses"
+program-vk = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+[riscv-prover.proof-aggregation]
+fs-requests-directory = "/data/prover/riscv/aggregation/requests"
+fs-responses-directory = "/data/prover/riscv/aggregation/responses"
+program-vk = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 [traces.counters]
 endpoints = ["http://sequencer:8545/"]

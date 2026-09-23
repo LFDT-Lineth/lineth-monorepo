@@ -74,7 +74,7 @@ on:
         type: string
     outputs:
       tests_outcome:
-        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
+        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome == 'success' && jobs.run-riscv-smoke-tests.outputs.tests_outcome == 'success' && 'success' || 'failure' }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -109,3 +109,51 @@ jobs:
           e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  run-riscv-smoke-tests:
+    outputs:
+      tests_outcome: ${{ steps.smoke.outcome }}
+    if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '-F contracts --frozen-lockfile --prefer-offline'
+
+      - name: Check shared stack configuration
+        run: node --test scripts/docker/shared-stack.test.mjs
+
+      - name: Start RISC-V environment
+        run: make start-env-with-riscv
+
+      - name: Check RISC-V execution flow
+        id: smoke
+        timeout-minutes: 5
+        run: make test-riscv
+
+      - name: Collect RISC-V logs
+        if: failure()
+        run: |
+          mkdir -p docker_logs
+          docker compose -f docker/compose-tracing-v2.yml -f docker/compose-riscv.yml \
+            --profile l1 --profile l2 --profile riscv logs --no-color > docker_logs/riscv.log 2>&1 || true
+          docker ps -a > docker_logs/containers.txt || true
+
+      - name: Upload RISC-V logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: riscv-execution-debug-logs
+          path: docker_logs/
+
+      - name: Clean environment
+        if: always()
+        run: make clean-environment

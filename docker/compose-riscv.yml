@@ -1,7 +1,34 @@
-# Apply on top of compose-tracing-v2.yml. Both proof pipelines share the same
-# project, L1, databases, networks and /data directory. Fork activation, execution
-# client migration and contract upgrades belong to the transition scenario.
+# RISC-V overrides for the shared local/CI stack in compose-tracing-v2.yml.
 services:
+  l2-genesis-initialization:
+    environment:
+      L2_GENESIS_MODE: riscv
+
+  maru:
+    image: consensys/maru:local-riscv
+    pull_policy: never
+    environment:
+      LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
+    volumes:
+      - ./config/maru/sequencer.riscv.config.toml:/opt/consensys/maru/configs/config.toml:ro
+
+  sequencer:
+    image: lineth-besu:local-riscv
+    pull_policy: never
+    volumes:
+      - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
+    command:
+      - --config-file=/var/lib/besu/sequencer.config.toml
+      - --node-private-key-file=/var/lib/besu/key
+
+  # These zkEVM-only services are not used by the RISC-V execution flow.
+  l2-node-besu:
+    profiles: !override ["zkevm"]
+  prover-v3:
+    profiles: !override ["zkevm"]
+  shomei:
+    profiles: !override ["zkevm"]
+
   riscv-proof-responder:
     image: busybox:latest
     profiles: ["riscv"]
@@ -15,7 +42,18 @@ services:
       - linea
 
   coordinator:
+    image: consensys/linea-coordinator:local-riscv
+    pull_policy: never
+    depends_on: !override
+      l2-genesis-initialization:
+        condition: service_completed_successfully
+      l1-el-node:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      sequencer:
+        condition: service_healthy
     environment:
-      COORDINATOR_CONFIG_FILES: config/coordinator-config.toml config/coordinator-config-riscv-prover.toml
+      COORDINATOR_CONFIG_FILES: config/coordinator-config.toml config/coordinator-config-riscv.toml
     volumes:
-      - ./config/coordinator/coordinator-config-riscv-prover.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv-prover.toml:ro
+      - ./config/coordinator/coordinator-config-riscv.toml:/opt/consensys/linea/coordinator/config/coordinator-config-riscv.toml:ro

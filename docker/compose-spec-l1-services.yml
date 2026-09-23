@@ -5,8 +5,6 @@ services:
     image: ${BESU_PACKAGE_IMAGE_NAME:-consensys/linea-besu-package}:${LINEA_BESU_PACKAGE_TAG:-2.1.1-20260811-0f74f55}
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
-      local-data-initialization:
-        condition: service_completed_successfully
       l1-node-genesis-generator:
         condition: service_completed_successfully
     healthcheck:
@@ -24,7 +22,6 @@ services:
         rm -fr /opt/besu/plugins && \
         /opt/besu/bin/besu-untuned --config-file=/config/config.toml
     volumes:
-      - l1-el-data:/opt/besu/data
       - ./config/l1-node/el/besu.key:/config/keys/besu.key:ro
       - ./config/l1-node/el/config.toml:/config/config.toml:ro
       - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
@@ -52,8 +49,6 @@ services:
     image: consensys/teku:25.11.0-jdk24
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
-      local-data-initialization:
-        condition: service_completed_successfully
       l1-el-node:
         condition: service_started
       l1-node-genesis-generator:
@@ -66,9 +61,8 @@ services:
     environment:
       LOG4J_CONFIGURATION_FILE: /config/log4j.xml
       JAVA_OPTS: -Xmx1280m
-    command: [ "--config-file=/config/config-file.yaml", "--data-path=/var/lib/teku" ]
+    command: [ "--config-file=/config/config-file.yaml" ]
     volumes:
-      - l1-cl-data:/var/lib/teku
       - ./config/l1-node/cl/teku.key:/config/keys/teku.key:ro
       - ./config/l1-node/cl/teku-keys:/config/keys/teku-keys:ro
       - ./config/l1-node/cl/teku-secrets:/config/keys/teku-secrets:ro
@@ -97,14 +91,6 @@ services:
       - /bin/bash
       - -c
       - |
-        set -eu
-        if [ -e /data/l1-node-config/genesis.ssz ] || [ -e /data/l1-node-config/genesis.json ] || [ -e /data/l1-node-config/network-config.yml ]; then
-          test -s /data/l1-node-config/genesis.ssz
-          test -s /data/l1-node-config/genesis.json
-          test -s /data/l1-node-config/network-config.yml
-          echo "Reusing existing L1 genesis"
-          exit 0
-        fi
         bash /generate-genesis.sh
         /usr/local/bin/eth-genesis-state-generator devnet \
         --config /data/l1-node-config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME:-} \}
