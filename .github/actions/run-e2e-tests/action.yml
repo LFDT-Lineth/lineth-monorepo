@@ -78,6 +78,13 @@ runs:
         commands: |
           pnpm run -F "e2e^..." build
 
+    - name: Login to Docker Hub
+      if: ${{ inputs.dockerhub_username != '' && inputs.dockerhub_token != '' }}
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
+      with:
+        username: ${{ inputs.dockerhub_username }}
+        password: ${{ inputs.dockerhub_token }}
+
     - name: Create directory for conflated traces
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -85,21 +92,68 @@ runs:
         mkdir -p tmp/local/traces/v2/conflated
         chmod -R a+rw tmp/local/
 
-    - name: Prepare E2E images
-      id: load_images
-      uses: ./.github/actions/prepare-e2e-images
+    - name: Download local docker image artifacts
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      continue-on-error: true
       with:
-        image_tag: ${{ inputs.image_tag }}
-        linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
-        coordinator_tag: ${{ inputs.coordinator_tag }}
-        postman_tag: ${{ inputs.postman_tag }}
-        prover_tag: ${{ inputs.prover_tag }}
-        tx_exclusion_api_tag: ${{ inputs.tx_exclusion_api_tag }}
-        maru_tag: ${{ inputs.maru_tag }}
-        working-directory: ${{ inputs.working-directory }}
-        dockerhub_username: ${{ inputs.dockerhub_username }}
-        dockerhub_token: ${{ inputs.dockerhub_token }}
+        pattern: linea-*
+        path: ${{ github.workspace }}/${{ inputs.working-directory }}/tmp/artifacts
+        merge-multiple: true
 
+    - name: Load Docker image artifacts and select tags
+      id: load_images
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        IMAGE_TAG: ${{ inputs.image_tag }}
+        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+        LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
+        LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
+        LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
+        LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
+        MARU_TAG: ${{ inputs.maru_tag }}
+      run: |
+        set -euo pipefail
+        artifact_dir="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts"
+        loaded_images="$(mktemp)"
+        shopt -s nullglob
+        artifacts=("$artifact_dir"/*.tar.gz)
+
+        for artifact in "${artifacts[@]}"; do
+          if ! repo_tags="$(
+            tar -xOzf "$artifact" manifest.json 2>/dev/null |
+              jq -er '.[].RepoTags[]?'
+          )"; then
+            echo "Skipping non-Docker artifact ${artifact}."
+            continue
+          fi
+          echo "Loading Docker image artifact ${artifact}..."
+          printf '%s\n' "$repo_tags" >> "$loaded_images"
+          gunzip -c "$artifact" | docker load
+        done
+
+        while read -r env_var image; do
+          image_ref="${image}:${IMAGE_TAG}"
+          if grep -Fqx "$image_ref" "$loaded_images"; then
+            selected_tag="$IMAGE_TAG"
+            if [ "$env_var" = "LINEA_BESU_PACKAGE_TAG" ]; then
+              echo "besu_package_loaded=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -n "${!env_var:-}" ]; then
+            selected_tag="${!env_var}"
+          else
+            selected_tag="develop"
+          fi
+          echo "${env_var}=${selected_tag}" >> "$GITHUB_ENV"
+        done <<'EOF'
+        LINEA_BESU_PACKAGE_TAG consensys/linea-besu-package
+        LINEA_COORDINATOR_TAG consensys/linea-coordinator
+        LINEA_POSTMAN_TAG consensys/linea-postman
+        LINEA_PROVER_TAG consensys/linea-prover
+        LINEA_TRANSACTION_EXCLUSION_API_TAG consensys/linea-transaction-exclusion-api
+        MARU_TAG consensys/maru
+        EOF
+    
     - name: Pull all external-to-monorepo images with retry
       # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
       # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite

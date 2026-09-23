@@ -116,7 +116,6 @@ jobs:
       tracer: ${{ steps.filter.outputs.tracer }}
       tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
       maru: ${{ steps.filter.outputs.maru }}
-      riscv-stack: ${{ steps.filter.outputs.riscv-stack }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       has-changes-requiring-linea-besu-package-build: ${{ steps.filter.outputs.linea-sequencer-plugin == 'true' || steps.filter.outputs.tracer == 'true' || steps.filter.outputs.tracer-constraints == 'true' ||  steps.filter.outputs.linea-besu == 'true' || steps.filter.outputs.linea-besu-package == 'true' }}
     steps:
@@ -131,11 +130,6 @@ jobs:
           base: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/main' || github.ref }}
           list-files: "json"
           filters: |
-            riscv-stack:
-              - 'docker/compose-riscv.yml'
-              - 'docker/config/riscv/**'
-              - 'docker/config/maru/sequencer.riscv.config.toml'
-              - 'docker/config/coordinator/coordinator-config-riscv.toml'
             coordinator:
               - 'coordinator/**'
               - 'testdata/**'
@@ -339,15 +333,14 @@ jobs:
     with:
       commit_tag: ${{ needs.compute-commit-tags.outputs.commit_tag }}
       develop_tag: ${{ needs.compute-commit-tags.outputs.develop_tag }}
-      coordinator_changed: ${{ needs.filter-commit-changes.outputs.riscv-stack == 'true' && 'true' || needs.filter-commit-changes.outputs.coordinator }}
+      coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       lido_governance_monitor_changed: ${{ needs.filter-commit-changes.outputs.lido-governance-monitor }}
-      maru_changed: ${{ needs.filter-commit-changes.outputs.riscv-stack == 'true' && 'true' || needs.filter-commit-changes.outputs.maru }}
-      # RISC-V setup changes need current component artifacts, without changing release eligibility.
-      build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.riscv-stack == 'true' && 'true' || needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
+      maru_changed: ${{ needs.filter-commit-changes.outputs.maru }}
+      build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-linea-besu-package-build }}
     secrets: inherit
 
   run-e2e-tests:

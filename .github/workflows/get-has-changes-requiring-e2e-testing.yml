@@ -41,8 +41,6 @@ jobs:
               - 'prover/**/*.mod'
               - 'contracts/local-deployments-artifacts/**'
               - 'docker/**'
-              - 'scripts/docker/**'
-              - 'Makefile'
               - '**/Dockerfile'
               - 'e2e/src/**'
               - 'e2e/package.json'
