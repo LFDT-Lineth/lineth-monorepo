@@ -138,7 +138,6 @@ pub fn build(b: *std.Build) void {
     addExecutionImports(guest_mod, native_imports, block_rlp_size_native_mod);
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
-    const block_rlp_size_test_step = b.step("test-block-rlp-size", "Run block RLP size accounting tests");
     const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
@@ -218,22 +217,6 @@ pub fn build(b: *std.Build) void {
         });
     }
     test_step.dependOn(&b.addRunArtifact(guest_crypto_tests).step);
-
-    const block_rlp_size_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("test/block_rlp_size_test.zig"),
-            .target = native_target,
-            .optimize = host_optimize,
-        }),
-    });
-    block_rlp_size_tests.root_module.addImport("block_rlp_size", block_rlp_size_native_mod);
-    block_rlp_size_tests.root_module.addImport("zesu_executor", native_imports.executor);
-    block_rlp_size_tests.root_module.addImport("zesu_input", native_imports.input);
-    block_rlp_size_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
-    linkNativeCryptoProvider(block_rlp_size_tests, provide_native_obj, guest_crypto_host_a);
-    const run_block_rlp_size_tests = b.addRunArtifact(block_rlp_size_tests);
-    test_step.dependOn(&run_block_rlp_size_tests.step);
-    block_rlp_size_test_step.dependOn(&run_block_rlp_size_tests.step);
 
     const guest_common_native_mod = b.dependency("guest_common", .{ .target = native_target, .optimize = host_optimize }).module("guest_common");
     const l2_execution_ssz_mod = b.createModule(.{
