@@ -7,6 +7,14 @@ const (
 	// ProofTypeL2Execution proves a range of L2 blocks using the
 	// l2-execution guest ELF (riscv-guests/l2-execution/).
 	ProofTypeL2Execution ProofType = "l2-execution"
+
+	// ProofTypeRollup proves the compression / data-availability stage
+	// (getZkRollupProofV1). "rollup" matches rollup_spec.
+	ProofTypeRollup ProofType = "rollup"
+
+	// ProofTypeRollupAggregation proves the aggregation stage
+	// (getZkRollupAggregationProofV1).
+	ProofTypeRollupAggregation ProofType = "rollup-aggregation"
 )
 
 // Job is the normalized input to [Core.Prove], after request delivery and

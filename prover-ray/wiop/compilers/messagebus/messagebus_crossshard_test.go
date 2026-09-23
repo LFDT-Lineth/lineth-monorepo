@@ -9,9 +9,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Why the shards below agree on α and β, even though nothing coordinates them:
+// both reach their coin round in the same Fiat–Shamir state, so they draw the
+// same challenges. That is what makes their per-shard folds comparable and their
+// products joinable — the precondition the whole cross-shard argument rests on.
+//
+// Here it holds for a mundane reason rather than by construction: these shards
+// commit no round-0 cell, and without the PCS pass column data never enters the
+// transcript at all (binding it is the commitment scheme's job), so both
+// transcripts are still the initial state when α and β are sampled. A production
+// sharded protocol cannot rely on that — its shards commit different data and
+// their transcripts diverge — so the challenges have to come from a value the
+// shards agree on outside their own transcripts. The tests below pin the
+// cross-shard product identity; they do not pin how that agreement is reached.
+
 // buildSingleDirectionShard builds a self-contained shard whose single handle
-// carries exactly one entry — either a Send or a Receive — and drives it to a
-// product value.
+// carries exactly one entry — either a Send or a Receive — proves it, and
+// returns this shard's product on the handle as the aggregator would read it:
+// out of the public-input vector.
 //
 // Because a shard that only sends (resp. only receives) can never balance on
 // its own, the entry is marked [wiop.MessageBus.SkipInShardCheck] so the
@@ -21,22 +36,15 @@ import (
 //
 //   - A Send-only shard produces Result = ∏send folds (numerator only).
 //   - A Receive-only shard produces Result = 1 / ∏recv folds (denominator only).
-//
-// Every shard registers [setupMessageBusHook], seeding Fiat–Shamir with the
-// shared testMessageBusSeed so α and β are IDENTICAL across shards — the
-// precondition that makes the per-shard folds comparable and their products
-// joinable. This mirrors the production cross-shard layer, which feeds every
-// shard the same shared randomness.
 func buildSingleDirectionShard(
 	t *testing.T,
 	name, originShard string,
 	dir wiop.BusDirection,
 	vals []uint64,
-) (*wiop.Runtime, *wiop.Cell, *wiop.Cell) {
+) field.Gen {
 	t.Helper()
 	sys := wiop.NewSystemf("%s", name)
 	r0 := sys.NewRound()
-	setupMessageBusHook(sys) // shared seed → same α, β as every sibling shard
 
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 	col := mod.NewColumn(sys.Context.Childf("c"), r0)
@@ -58,13 +66,21 @@ func buildSingleDirectionShard(
 
 	compilePermutationBus(sys)
 
-	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, makeVec(vals...))
-	drive(rt)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, makeVec(vals...))
+	})
+
+	// The shard verifies despite being unbalanced: with the in-shard check
+	// suppressed, nothing on this shard asserts the product.
+	require.NoError(t, sys.Verify(proof, pub),
+		"a shard that defers its in-shard check must still verify on its own")
 
 	require.Len(t, sys.GrandProducts, 1,
 		"single-handle shard must emit exactly one GrandProduct")
-	return rt, sys.GrandProducts[0].Result, sys.PublicInputs[0]
+	require.Same(t, sys.GrandProducts[0].Result, sys.PublicInputs[0],
+		"the handle's accumulator must be the shard's MessageBus public input")
+	require.Len(t, pub, 1)
+	return pub[0]
 }
 
 // TestCrossShard_SendOnlyAndReceiveOnly_Balanced models the canonical
@@ -76,13 +92,10 @@ func buildSingleDirectionShard(
 // identity a downstream layer would assert in place of the suppressed in-shard
 // checks.
 func TestCrossShard_SendOnlyAndReceiveOnly_Balanced(t *testing.T) {
-	rtSend, sendRes, mbPISend := buildSingleDirectionShard(
+	pSend := buildSingleDirectionShard(
 		t, "shard-1-send-only", "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40})
-	rtRecv, recvRes, mbPIRecv := buildSingleDirectionShard(
+	pRecv := buildSingleDirectionShard(
 		t, "shard-2-recv-only", "shard-2", wiop.BusReceive, []uint64{40, 10, 30, 20})
-
-	pSend := rtSend.GetCellValue(sendRes)
-	pRecv := rtRecv.GetCellValue(recvRes)
 
 	// Each shard alone is unbalanced — the whole point of deferring the check.
 	sendResidual := pSend.Sub(field.ElemOne())
@@ -97,13 +110,6 @@ func TestCrossShard_SendOnlyAndReceiveOnly_Balanced(t *testing.T) {
 	crossResidual := crossShard.Sub(field.ElemOne())
 	require.True(t, crossResidual.IsZero(),
 		"cross-shard product must be one when the received rows are a permutation of the sent rows")
-
-	// The accumulator each shard exposes as a public input is the same one the
-	// cross-shard join above consumed.
-	require.Equal(t, pSend, rtSend.GetCellValue(mbPISend),
-		"MessageBus PublicInput has an unexpected value")
-	require.Equal(t, pRecv, rtRecv.GetCellValue(mbPIRecv),
-		"MessageBus PublicInput has an unexpected value")
 }
 
 // TestCrossShard_SendOnlyAndReceiveOnly_Unbalanced is the soundness counterpart:
@@ -112,23 +118,15 @@ func TestCrossShard_SendOnlyAndReceiveOnly_Balanced(t *testing.T) {
 // an error locally — the failure surfaces only at the cross-shard join, where
 // the product is no longer one.
 func TestCrossShard_SendOnlyAndReceiveOnly_Unbalanced(t *testing.T) {
-	rtSend, sendRes, mbPISend := buildSingleDirectionShard(
+	pSend := buildSingleDirectionShard(
 		t, "shard-1-send-only", "shard-1", wiop.BusSend, []uint64{10, 20, 30, 40})
-	rtRecv, recvRes, mbPIRecv := buildSingleDirectionShard(
+	pRecv := buildSingleDirectionShard(
 		t, "shard-2-recv-only", "shard-2", wiop.BusReceive, []uint64{40, 10, 30, 21})
-
-	pSend := rtSend.GetCellValue(sendRes)
-	pRecv := rtRecv.GetCellValue(recvRes)
 
 	crossShard := pSend.Mul(pRecv)
 	crossResidual := crossShard.Sub(field.ElemOne())
 	require.False(t, crossResidual.IsZero(),
 		"cross-shard product must differ from one when the sent and received multisets disagree")
-
-	require.Equal(t, pSend, rtSend.GetCellValue(mbPISend),
-		"MessageBus PublicInput has an unexpected value")
-	require.Equal(t, pRecv, rtRecv.GetCellValue(mbPIRecv),
-		"MessageBus PublicInput has an unexpected value")
 }
 
 // busTraffic is one handle's traffic within a single shard: the rows the shard
@@ -158,11 +156,10 @@ func buildBidirectionalShard(
 	t *testing.T,
 	name, originShard string,
 	traffic []busTraffic,
-) (*wiop.Runtime, map[string]*wiop.Cell, []*wiop.Cell) {
+) (pub wiop.PublicInput, byHandle map[string]field.Gen) {
 	t.Helper()
 	sys := wiop.NewSystemf("%s", name)
 	r0 := sys.NewRound()
-	setupMessageBusHook(sys) // shared seed → same α, β as every sibling shard
 
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
@@ -192,29 +189,36 @@ func buildBidirectionalShard(
 
 	compilePermutationBus(sys)
 
-	rt := wiop.NewRuntime(sys)
-	for _, a := range toAssign {
-		rt.AssignColumn(a.col, makeVec(a.vals...))
-	}
-	drive(rt)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		for _, a := range toAssign {
+			rt.AssignColumn(a.col, makeVec(a.vals...))
+		}
+	})
+
+	require.NoError(t, sys.Verify(proof, pub),
+		"a shard that defers its in-shard checks must still verify on its own")
 
 	require.Len(t, sys.GrandProducts, len(handles),
 		"each handle's send and receive must collapse into one GrandProduct")
 	require.Len(t, sys.PublicInputs, len(handles),
 		"every handle's accumulator must be registered as a MessageBus public input")
+	require.Len(t, pub, len(handles))
 
 	// Compile processes handles in alphabetical order, so GrandProducts[i] is
-	// handles[i] once sorted. Assert it via the query path rather than trusting
-	// the ordering silently — a change there would otherwise mis-key this map.
+	// handles[i] once sorted, and public input i is that query's accumulator.
+	// Assert it via the query path rather than trusting the ordering silently — a
+	// change there would otherwise mis-key this map.
 	sort.Strings(handles)
-	resultByHandle := make(map[string]*wiop.Cell, len(handles))
+	byHandle = make(map[string]field.Gen, len(handles))
 	for i, h := range handles {
 		gp := sys.GrandProducts[i]
 		require.Contains(t, gp.Context().Path(), "handle-"+h,
 			"GrandProduct %d must belong to handle %q (alphabetical order)", i, h)
-		resultByHandle[h] = gp.Result
+		require.Same(t, gp.Result, sys.PublicInputs[i],
+			"MessageBus[%d] must be handle %q's accumulator", i, h)
+		byHandle[h] = pub[i]
 	}
-	return rt, resultByHandle, sys.PublicInputs
+	return pub, byHandle
 }
 
 // crossShardHandles is the traffic both bidirectional tests below share. Two
@@ -258,18 +262,18 @@ var (
 // handles at once also pins down that they settle independently despite sharing
 // α and β, and that each occupies its own public-input position.
 func TestCrossShard_Bidirectional_Balanced(t *testing.T) {
-	rt1, res1, mbPI1 := buildBidirectionalShard(
+	pub1, res1 := buildBidirectionalShard(
 		t, "shard-1-bidir", "shard-1", crossShardTrafficShard1)
-	rt2, res2, mbPI2 := buildBidirectionalShard(
+	pub2, res2 := buildBidirectionalShard(
 		t, "shard-2-bidir", "shard-2", crossShardTrafficShard2)
 
-	require.Len(t, mbPI1, len(crossShardHandles))
-	require.Len(t, mbPI2, len(crossShardHandles))
+	require.Len(t, pub1, len(crossShardHandles))
+	require.Len(t, pub2, len(crossShardHandles))
 
 	for i, h := range crossShardHandles {
 		t.Run(h, func(t *testing.T) {
-			p1 := rt1.GetCellValue(res1[h])
-			p2 := rt2.GetCellValue(res2[h])
+			p1 := res1[h]
+			p2 := res2[h]
 
 			// Local cancellation is not enough: each shard still owes the other.
 			residual1 := p1.Sub(field.ElemOne())
@@ -287,15 +291,10 @@ func TestCrossShard_Bidirectional_Balanced(t *testing.T) {
 
 			// Position i refers to this same handle on BOTH shards — the invariant
 			// that lets the cross-shard layer join by position alone.
-			require.Same(t, res1[h], mbPI1[i],
-				"shard 1 MessageBus[%d] must be handle %q's accumulator", i, h)
-			require.Same(t, res2[h], mbPI2[i],
-				"shard 2 MessageBus[%d] must be handle %q's accumulator", i, h)
-
-			require.Equal(t, p1, rt1.GetCellValue(mbPI1[i]),
-				"MessageBus PublicInput has an unexpected value")
-			require.Equal(t, p2, rt2.GetCellValue(mbPI2[i]),
-				"MessageBus PublicInput has an unexpected value")
+			require.Equal(t, p1, pub1[i],
+				"shard 1 MessageBus[%d] must carry handle %q's accumulator", i, h)
+			require.Equal(t, p2, pub2[i],
+				"shard 2 MessageBus[%d] must carry handle %q's accumulator", i, h)
 		})
 	}
 }
@@ -315,18 +314,16 @@ func TestCrossShard_Bidirectional_Unbalanced(t *testing.T) {
 		{handle: "wire", sent: []uint64{150, 160, 170, 180}, received: []uint64{130, 140, 170, 180}},
 	}
 
-	rt1, res1, _ := buildBidirectionalShard(
+	_, res1 := buildBidirectionalShard(
 		t, "shard-1-bidir", "shard-1", crossShardTrafficShard1)
-	rt2, res2, _ := buildBidirectionalShard(
+	_, res2 := buildBidirectionalShard(
 		t, "shard-2-bidir", "shard-2", tampered)
 
-	routeResidual := rt1.GetCellValue(res1["route"]).
-		Mul(rt2.GetCellValue(res2["route"])).Sub(field.ElemOne())
+	routeResidual := res1["route"].Mul(res2["route"]).Sub(field.ElemOne())
 	require.False(t, routeResidual.IsZero(),
 		"a row received on no shard leaves route's joint product different from one")
 
-	wireResidual := rt1.GetCellValue(res1["wire"]).
-		Mul(rt2.GetCellValue(res2["wire"])).Sub(field.ElemOne())
+	wireResidual := res1["wire"].Mul(res2["wire"]).Sub(field.ElemOne())
 	require.True(t, wireResidual.IsZero(),
 		"wire is untouched and must still settle, despite sharing α and β with route")
 }

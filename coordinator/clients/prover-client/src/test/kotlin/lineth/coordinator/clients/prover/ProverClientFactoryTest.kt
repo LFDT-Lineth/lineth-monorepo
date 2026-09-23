@@ -97,21 +97,22 @@ class ProverClientFactoryTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
-        chainId = 59144L,
         metricsFacade = metricsFacade,
       )
   }
 
   @Test
   fun `l2ExecutionProverClient should build L2 execution prover client`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfig(testTmpDir),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
-      chainId = 59144L,
+      chainId = 59144UL,
       metricsFacade = metricsFacade,
     )
 
@@ -120,27 +121,12 @@ class ProverClientFactoryTest {
   }
 
   @Test
-  fun `l2ExecutionProverClient should fail when l2MessageServiceAddress is not configured`() {
-    val factory = ProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfig(testTmpDir),
-      l2MessageServiceAddress = null,
-      chainId = 59144L,
-      metricsFacade = metricsFacade,
-    )
-
-    assertThatThrownBy { factory.l2ExecutionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
-  }
-
-  @Test
   fun `l2ExecutionProverClient should fail when l2MessageServiceAddress is empty`() {
-    val factory = ProverClientFactory(
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
       config = buildProversConfig(testTmpDir),
       l2MessageServiceAddress = "",
-      chainId = 59144L,
+      chainId = 59144UL,
       metricsFacade = metricsFacade,
     )
 
@@ -152,10 +138,11 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
-        chainId = 59144L,
         metricsFacade = metricsFacade,
       )
 
@@ -167,14 +154,15 @@ class ProverClientFactoryTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
+        l2MessageServiceAddress = "0xa",
         config = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
         ),
-        chainId = 59144L,
+        chainId = 59144UL,
         metricsFacade = metricsFacade,
       )
 
@@ -280,11 +268,11 @@ class ProverClientFactoryTest {
   }
 
   private fun buildL2ExecutionClient(proversConfig: ProversConfig<ProverConfig>) =
-    ProverClientFactory(
+    DefaultProverClientFactory(
       vertx = vertx,
       config = proversConfig,
       l2MessageServiceAddress = RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS,
-      chainId = RiscvProverClientTestFixtures.CHAIN_ID,
+      chainId = 59144UL,
       metricsFacade = metricsFacade,
     ).l2ExecutionProverClient()
 
@@ -329,128 +317,5 @@ class ProverClientFactoryTest {
     val atSwitchDto = requestDtoFromFile(nextFileConfig, atSwitchProofIndex)
     assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
     assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
-  }
-
-  @Test
-  fun `should switch from current to next prover at switchBlockNumberInclusive when both are restful-based`() {
-    val currentWiremock = startProverWiremock()
-    val nextWiremock = startProverWiremock()
-    try {
-      val client = buildL2ExecutionClient(
-        buildSwitchProversConfig(
-          currentL2Execution = l2ExecutionClientConfig(
-            restfulBased = restfulProverConfig(currentWiremock),
-            programId = currentProgramId,
-            provingSystemVersion = currentProvingSystemVersion,
-          ),
-          nextL2Execution = l2ExecutionClientConfig(
-            restfulBased = restfulProverConfig(nextWiremock),
-            programId = nextProgramId,
-            provingSystemVersion = nextProvingSystemVersion,
-          ),
-          tmpDir = testTmpDir,
-        ),
-      )
-
-      client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive - 1UL)).get()
-      assertThat(postedCount(currentWiremock)).isEqualTo(1)
-      assertThat(postedCount(nextWiremock)).isEqualTo(0)
-      val beforeSwitchDto = requestDtoFromWiremock(currentWiremock)
-      assertThat(beforeSwitchDto.programId).isEqualTo(currentProgramId)
-      assertThat(beforeSwitchDto.provingSystemVersion).isEqualTo(currentProvingSystemVersion)
-
-      client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive)).get()
-      assertThat(postedCount(nextWiremock)).isEqualTo(1)
-      assertThat(postedCount(currentWiremock)).isEqualTo(1)
-      val atSwitchDto = requestDtoFromWiremock(nextWiremock)
-      assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
-      assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
-    } finally {
-      currentWiremock.stop()
-      nextWiremock.stop()
-    }
-  }
-
-  @Test
-  fun `should switch from current file-based prover to next restful-based prover at switchBlockNumberInclusive`() {
-    val currentFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
-      testTmpDir.resolve("v1/execution"),
-    )
-    val nextWiremock = startProverWiremock()
-    try {
-      val client = buildL2ExecutionClient(
-        buildSwitchProversConfig(
-          currentL2Execution = l2ExecutionClientConfig(
-            fileBased = currentFileConfig,
-            programId = currentProgramId,
-            provingSystemVersion = currentProvingSystemVersion,
-          ),
-          nextL2Execution = l2ExecutionClientConfig(
-            restfulBased = restfulProverConfig(nextWiremock),
-            programId = nextProgramId,
-            provingSystemVersion = nextProvingSystemVersion,
-          ),
-          tmpDir = testTmpDir,
-        ),
-      )
-
-      val beforeSwitchProofIndex = client.createProofRequest(
-        l2ExecutionRequestAt(switchBlockNumberInclusive - 1UL),
-      ).get()
-      assertThat(requestFilePath(currentFileConfig, beforeSwitchProofIndex)).exists()
-      assertThat(postedCount(nextWiremock)).isEqualTo(0)
-      val beforeSwitchDto = requestDtoFromFile(currentFileConfig, beforeSwitchProofIndex)
-      assertThat(beforeSwitchDto.programId).isEqualTo(currentProgramId)
-      assertThat(beforeSwitchDto.provingSystemVersion).isEqualTo(currentProvingSystemVersion)
-
-      client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive)).get()
-      assertThat(postedCount(nextWiremock)).isEqualTo(1)
-      val atSwitchDto = requestDtoFromWiremock(nextWiremock)
-      assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
-      assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
-    } finally {
-      nextWiremock.stop()
-    }
-  }
-
-  @Test
-  fun `should switch from current restful-based prover to next file-based prover at switchBlockNumberInclusive`() {
-    val currentWiremock = startProverWiremock()
-    val nextFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
-      testTmpDir.resolve("v2/execution"),
-    )
-    try {
-      val client = buildL2ExecutionClient(
-        buildSwitchProversConfig(
-          currentL2Execution = l2ExecutionClientConfig(
-            restfulBased = restfulProverConfig(currentWiremock),
-            programId = currentProgramId,
-            provingSystemVersion = currentProvingSystemVersion,
-          ),
-          nextL2Execution = l2ExecutionClientConfig(
-            fileBased = nextFileConfig,
-            programId = nextProgramId,
-            provingSystemVersion = nextProvingSystemVersion,
-          ),
-          tmpDir = testTmpDir,
-        ),
-      )
-
-      client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive - 1UL)).get()
-      assertThat(postedCount(currentWiremock)).isEqualTo(1)
-      val beforeSwitchDto = requestDtoFromWiremock(currentWiremock)
-      assertThat(beforeSwitchDto.programId).isEqualTo(currentProgramId)
-      assertThat(beforeSwitchDto.provingSystemVersion).isEqualTo(currentProvingSystemVersion)
-
-      val atSwitchProofIndex =
-        client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive)).get()
-      assertThat(requestFilePath(nextFileConfig, atSwitchProofIndex)).exists()
-      assertThat(postedCount(currentWiremock)).isEqualTo(1)
-      val atSwitchDto = requestDtoFromFile(nextFileConfig, atSwitchProofIndex)
-      assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
-      assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
-    } finally {
-      currentWiremock.stop()
-    }
   }
 }

@@ -16,7 +16,7 @@ import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import lineth.coordinator.blockcreation.ConflationTargetCheckpointPauseController
 import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
@@ -56,6 +56,7 @@ class ConflationAppOrchestrator(
   private val l2EthClient: EthApiClient,
   private val zkStateClient: StateManagerV1JsonRpcClient,
   private val tracesClients: TracesClients,
+  private val proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) : LongRunningService {
 
   private val log = LogManager.getLogger(ConflationAppOrchestrator::class.java)
@@ -70,14 +71,14 @@ class ConflationAppOrchestrator(
       .get()
   }
 
-  private val chainId = l2EthClient.ethChainId().get()
+  private val chainId: ULong = l2EthClient.ethChainId().get()
 
-  private val proverClientFactory = ProverClientFactory(
+  private val proverClientFactory = proverClientFactoryBuilder.build(
     vertx = vertx,
     preRiscvConfig = configs.preRiscvProversConfig,
     config = configs.proversConfig,
-    chainId = chainId.toLong(),
     l2MessageServiceAddress = configs.protocol.l2.contractAddress,
+    chainId = chainId,
     metricsFacade = metricsFacade,
   )
 

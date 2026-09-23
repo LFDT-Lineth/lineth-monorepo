@@ -162,9 +162,11 @@ class ProverClientFactoryPreRiscvTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     proverClientFactory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
       )
   }
@@ -194,9 +196,11 @@ class ProverClientFactoryPreRiscvTest {
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
       )
 
@@ -208,9 +212,11 @@ class ProverClientFactoryPreRiscvTest {
   @Test
   fun `should create a prover with routing when switchBlockTimestamp is defined`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         preRiscvConfig = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
       )
     val proverClient = factory.preRiscvProofAggregationProverClient()
@@ -235,13 +241,15 @@ class ProverClientFactoryPreRiscvTest {
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
     val factory =
-      ProverClientFactory(
+      DefaultProverClientFactory(
         vertx = vertx,
         preRiscvConfig = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
         ),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
       )
 
