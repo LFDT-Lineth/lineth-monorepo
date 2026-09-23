@@ -7,7 +7,7 @@ p2p-enabled=false
 host-allowlist=["*"]
 revert-reason-enabled=true
 
-target-gas-limit=30000000
+target-gas-limit=2000000000
 min-gas-price=0
 tx-pool-min-gas-price=0
 strict-tx-replay-protection-enabled=false

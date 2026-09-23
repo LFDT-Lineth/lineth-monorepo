@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-cd "${L2_GENESIS_DIRECTORY:-/initialization}"
+cd /initialization
 mode=${L2_GENESIS_MODE:-zkevm}
 case "$mode" in
   zkevm|riscv) ;;
@@ -13,7 +13,6 @@ if [ "$mode" = riscv ]; then
   fork_timestamp=$(date +%s)
   sed \
     -e "s/%FORK_TIME%/$fork_timestamp/g" \
-    -e 's/"gasLimit": "0x77359400"/"gasLimit": "0x1c9c380"/' \
     -e '/"osakaTime": 0,/a\
     "amsterdamTime": 0,\
     "builderDepositRequestContractAddress": "0x0000000000000000000000000000000000009999",\

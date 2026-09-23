@@ -12,7 +12,7 @@ services:
 
   sequencer:
     volumes:
-      - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
+      - ./config/linea-besu-sequencer/sequencer.riscv.config.toml:/var/lib/besu/sequencer.config.toml:ro
     command:
       - --config-file=/var/lib/besu/sequencer.config.toml
       - --node-private-key-file=/var/lib/besu/key
@@ -32,7 +32,7 @@ services:
     environment:
       R5_L2_EXECUTION_PROGRAM_VK: ${R5_L2_EXECUTION_PROGRAM_VK:-0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f}
     volumes:
-      - ./config/riscv/proof-responder.sh:/opt/linea/proof-responder.sh:ro
+      - ./config/prover/riscv/proof-responder.sh:/opt/linea/proof-responder.sh:ro
       - ../tmp/local/prover/riscv:/data/prover/riscv
     networks:
       - linea
