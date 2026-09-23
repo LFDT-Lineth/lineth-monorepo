@@ -16,7 +16,7 @@ runs:
       with:
         version: ${{ steps.zigversion.outputs.version }}
         dependency-hash-paths: riscv-guests/*/build.zig.zon
-        cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        cache-save: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') }}
 
     # Install Nim and clang for the freestanding Constantine build.
     - name: Install constantine build deps (nim, clang)
