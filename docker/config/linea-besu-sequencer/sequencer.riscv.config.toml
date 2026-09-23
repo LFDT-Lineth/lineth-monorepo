@@ -30,8 +30,8 @@ metrics-enabled=true
 metrics-host="0.0.0.0"
 metrics-port=9545
 
-# Keep gas estimation available without zkEVM bespoke tracing.
-plugins=["LineaEstimateGasEndpointPlugin"]
+# Keep gas estimation and transaction-pool validation without zkEVM bespoke tracing.
+plugins=["LineaEstimateGasEndpointPlugin","LineaTransactionPoolValidatorPlugin"]
 plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
 plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
 plugin-linea-tracing-end-timestamp=0
