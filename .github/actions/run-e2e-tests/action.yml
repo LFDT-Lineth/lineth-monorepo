@@ -5,6 +5,10 @@ description: >
   submodule) before invoking this action.
 
 inputs:
+  stack:
+    description: 'Local stack and test suite (zkevm or riscv)'
+    required: false
+    default: 'zkevm'
   image_tag:
     description: 'The commit tag to use'
     required: true
@@ -66,6 +70,25 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Select stack
+      id: stack
+      shell: bash
+      env:
+        STACK: ${{ inputs.stack }}
+        OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
+      run: |
+        case "$STACK" in
+          zkevm) echo "test_script=test:local" >> "$GITHUB_OUTPUT" ;;
+          riscv)
+            if [ -n "$OVERRIDE_COMPOSE_FILE" ]; then
+              echo "::error::override-compose-file is only supported for the zkEVM stack"
+              exit 1
+            fi
+            echo "test_script=test:riscv:local" >> "$GITHUB_OUTPUT"
+            ;;
+          *) echo "::error::Unknown stack: $STACK"; exit 1 ;;
+        esac
+
     - name: Setup upterm session
       if: ${{ inputs.e2e-tests-with-ssh == 'true' }}
       uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
@@ -105,6 +128,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        STACK: ${{ inputs.stack }}
         IMAGE_TAG: ${{ inputs.image_tag }}
         LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
@@ -141,6 +165,9 @@ runs:
             fi
           elif [ -n "${!env_var:-}" ]; then
             selected_tag="${!env_var}"
+          elif [ "$STACK" = "riscv" ]; then
+            # Use the shared Compose release default when no CI image/tag was supplied.
+            continue
           else
             selected_tag="develop"
           fi
@@ -158,7 +185,7 @@ runs:
       # Skip when a besu-package artifact/tag is supplied: the besu-package services carry the
       # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite
       # the image just loaded from the artifact. Missing external images are pulled on spin-up.
-      if: ${{ inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
+      if: ${{ inputs.stack == 'zkevm' && inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
       with:
         max_attempts: 10
@@ -172,6 +199,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        STACK: ${{ inputs.stack }}
         OVERRIDE_COMPOSE_FILE: ${{ inputs.override-compose-file }}
       run: |
         set -euo pipefail
@@ -186,7 +214,9 @@ runs:
           fi
         fi
 
-        if [ -n "$override_file" ]; then
+        if [ "$STACK" = "riscv" ]; then
+          target="start-env-with-riscv CLEAN_PREVIOUS_ENV=false"
+        elif [ -n "$override_file" ]; then
           target="start-env-with-tracing-v2-ci-override OVERRIDE_COMPOSE_FILE=$override_file CLEAN_PREVIOUS_ENV=false"
         else
           target="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false"
@@ -211,8 +241,10 @@ runs:
       id: run_e2e_tests
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        TEST_SCRIPT: ${{ steps.stack.outputs.test_script }}
       run: |
-        timeout 6m pnpm run -F e2e test:local
+        timeout 6m pnpm run -F e2e "$TEST_SCRIPT"
 
     - name: Show e2e tests result
       if: always()
@@ -239,13 +271,17 @@ runs:
         docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
         docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
         docker logs maru --since 1h &>> docker_logs/maru.txt || true
+        if [ -d tmp/local/prover/riscv ]; then
+          docker compose -f docker/compose-tracing-v2.yml -f docker/compose-riscv.yml logs --no-color riscv-proof-responder > docker_logs/riscv-proof-responder.txt || true
+          cp -r tmp/local/prover/riscv docker_logs/riscv-proofs || true
+        fi
         docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
 
     - name: Archive debug logs
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       if: ${{ failure() && inputs.e2e-tests-logs-dump == 'true' }}
       with:
-        name: end-2-end-debug-logs
+        name: end-2-end-debug-logs${{ inputs.stack == 'riscv' && '-riscv' || '' }}
         if-no-files-found: error
         path: |
           ${{ inputs.working-directory }}/docker_logs/**/*

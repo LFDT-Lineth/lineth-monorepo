@@ -82,12 +82,12 @@ on:
         required: false
 
 jobs:
-  # Required job
-  run-e2e-tests:
-    # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
-    if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
-    outputs:
-      tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
+  run-e2e-suite:
+    if: ${{ github.event_name == 'workflow_dispatch' || inputs.has-changes-requiring-e2e-testing == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [zkevm, riscv]
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Checkout
@@ -97,6 +97,7 @@ jobs:
         id: run-e2e-tests
         uses: ./.github/actions/run-e2e-tests
         with:
+          stack: ${{ matrix.stack }}
           image_tag: ${{ inputs.image_tag }}
           linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
           coordinator_tag: ${{ inputs.coordinator_tag }}
@@ -109,3 +110,16 @@ jobs:
           e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # Keep the existing required check and publish gate dependent on both stacks.
+  run-e2e-tests:
+    needs: run-e2e-suite
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || inputs.has-changes-requiring-e2e-testing == 'true') }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    outputs:
+      tests_outcome: ${{ needs.run-e2e-suite.result }}
+    steps:
+      - name: Check both suites passed
+        env:
+          RESULT: ${{ needs.run-e2e-suite.result }}
+        run: test "$RESULT" = success
