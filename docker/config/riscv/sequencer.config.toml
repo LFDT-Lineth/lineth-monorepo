@@ -27,4 +27,5 @@ metrics-enabled=true
 metrics-host="0.0.0.0"
 metrics-port=9545
 
-plugins=[]
+# Use the shared Besu package without its zkEVM plugins.
+Xplugins-external-enabled=false

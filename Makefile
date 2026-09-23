@@ -28,19 +28,12 @@ clean-environment:
 # RISC-V is an override of the shared local stack, including its Compose project.
 RISCV_COMPOSE_FILE := docker/compose-tracing-v2.yml -f docker/compose-riscv.yml
 
-.PHONY: build-riscv-images clean-riscv-environment start-env-with-riscv test-riscv
-
-build-riscv-images:
-	$(MAKE) -j1 docker-build-riscv-besu docker-build-maru docker-build-coordinator \
-		DOCKER_IMAGE_TAG=local-riscv \
-		PLATFORMS=$$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}') \
-		SKIP_PREBUILD=false DRY_RUN=false
+.PHONY: clean-riscv-environment start-env-with-riscv test-riscv
 
 # Compatibility alias: both execution modes now own the same environment.
 clean-riscv-environment: clean-environment
 
 start-env-with-riscv:
-	$(MAKE) build-riscv-images
 	$(MAKE) start-env COMPOSE_FILE="$(RISCV_COMPOSE_FILE)" COMPOSE_PROFILES=l1,l2,riscv \
 		START_SERVICES_BEFORE_DEPLOYMENT="l1-cl-node maru postgres" \
 		START_SERVICES_AFTER_DEPLOYMENT="riscv-proof-responder coordinator" \

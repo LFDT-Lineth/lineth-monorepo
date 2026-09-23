@@ -46,7 +46,6 @@ define prebuild
 endef
 
 DOCKER_IMAGE_TARGETS := \
-	docker-build-riscv-besu \
 	docker-build-linea-besu-package \
 	docker-build-coordinator \
 	docker-build-transaction-exclusion-api \
@@ -155,16 +154,3 @@ docker-build-linea-besu-package:
 		--image-name consensys/linea-besu-package \
 		--dockerfile linea-besu/package/linea-besu/Dockerfile \
 		--context linea-besu/package/tmp
-
-# RISC-V execution uses upstream Besu without zkEVM sequencer, tracer, or Shomei plugins.
-docker-build-riscv-besu:
-	$(call prebuild,./gradlew :linea-besu:besu:build -PskipDownloadBesuDist=false)
-	$(call prebuild,rm -rf tmp/riscv-besu-image && \
-		mkdir -p tmp/riscv-besu-image/besu && \
-		besu_version=$$(sed -n 's/^besuVersion=//p' linea-besu/besu/.besu-resolved) && \
-		tar -xzf "tmp/besu-eth/build/distributions/besu-$$besu_version.tar.gz" \
-		--strip-components=1 -C tmp/riscv-besu-image/besu)
-	$(DOCKER_BUILD) \
-		--image-name lineth-besu \
-		--dockerfile linea-besu/package/linea-besu/Dockerfile \
-		--context tmp/riscv-besu-image

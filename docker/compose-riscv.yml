@@ -5,16 +5,12 @@ services:
       L2_GENESIS_MODE: riscv
 
   maru:
-    image: consensys/maru:local-riscv
-    pull_policy: never
     environment:
       LINETH_USE_MARU_OVERRIDE_CONFIG: "false"
     volumes:
       - ./config/maru/sequencer.riscv.config.toml:/opt/consensys/maru/configs/config.toml:ro
 
   sequencer:
-    image: lineth-besu:local-riscv
-    pull_policy: never
     volumes:
       - ./config/riscv/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
     command:
@@ -42,8 +38,6 @@ services:
       - linea
 
   coordinator:
-    image: consensys/linea-coordinator:local-riscv
-    pull_policy: never
     depends_on: !override
       l2-genesis-initialization:
         condition: service_completed_successfully

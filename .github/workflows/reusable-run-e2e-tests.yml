@@ -120,13 +120,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup Java and Gradle
-        uses: ./.github/actions/setup-java-and-gradle
-
       - name: Setup Node.js
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: '-F contracts --frozen-lockfile --prefer-offline'
+
+      - name: Prepare E2E images
+        uses: ./.github/actions/prepare-e2e-images
+        with:
+          image_tag: ${{ inputs.image_tag }}
+          linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
+          coordinator_tag: ${{ inputs.coordinator_tag }}
+          postman_tag: ${{ inputs.postman_tag }}
+          prover_tag: ${{ inputs.prover_tag }}
+          tx_exclusion_api_tag: ${{ inputs.tx_exclusion_api_tag }}
+          maru_tag: ${{ inputs.maru_tag }}
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Check shared stack configuration
         run: node --test scripts/docker/shared-stack.test.mjs

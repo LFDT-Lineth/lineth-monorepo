@@ -9,20 +9,30 @@ import { test } from "node:test";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const run = (command, args, env = {}) =>
   execFileSync(command, args, { cwd: root, encoding: "utf8", env: { ...process.env, ...env } });
-const compose = (files) =>
+const compose = (files, env = {}) =>
   JSON.parse(
     run("docker", ["compose", ...files.flatMap((file) => ["-f", file]), "config", "--format", "json"], {
       COMPOSE_PROFILES: "l1,l2,riscv",
+      ...env,
     }),
   );
 
 test("RISC-V uses the shared infrastructure and coordinator runtime", () => {
-  const base = compose(["docker/compose-tracing-v2.yml"]);
-  const riscv = compose(["docker/compose-tracing-v2.yml", "docker/compose-riscv.yml"]);
+  const tags = {
+    LINEA_BESU_PACKAGE_TAG: "test-besu",
+    LINEA_COORDINATOR_TAG: "test-coordinator",
+    MARU_TAG: "test-maru",
+  };
+  const base = compose(["docker/compose-tracing-v2.yml"], tags);
+  const riscv = compose(["docker/compose-tracing-v2.yml", "docker/compose-riscv.yml"], tags);
   assert.equal(riscv.name, base.name);
   assert.deepEqual(riscv.networks, base.networks);
   for (const service of ["l1-el-node", "l1-cl-node", "l1-node-genesis-generator", "postgres"]) {
     assert.deepEqual(riscv.services[service], base.services[service], service);
+  }
+  for (const service of ["sequencer", "maru", "coordinator"]) {
+    assert.equal(riscv.services[service].image, base.services[service].image);
+    assert.notEqual(riscv.services[service].pull_policy, "never");
   }
   assert.deepEqual(riscv.services.coordinator.command, base.services.coordinator.command);
   for (const [service, target] of [
