@@ -472,6 +472,17 @@ pub fn build(b: *std.Build) void {
         run_zkc_smoke.step.dependOn(b.getInstallStep());
         zkc_smoke_step.dependOn(&run_zkc_smoke.step);
 
+        // Compare an externally prepared production ELF with the native host machine.
+        const zkc_smoke_external_step = b.step(
+            "zkc-smoke-external",
+            "Run an external guest ELF under ZkC and compare it with the host machine",
+        );
+        const run_zkc_smoke_external = b.addRunArtifact(zkc_reference_runner_exe);
+        run_zkc_smoke_external.addArg("--makefile");
+        run_zkc_smoke_external.addFileArg(b.path("../../arithmetization/src/test/Makefile"));
+        if (b.args) |extra| run_zkc_smoke_external.addArgs(extra);
+        zkc_smoke_external_step.dependOn(&run_zkc_smoke_external.step);
+
         // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
         // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
         // output on stdout. See test/l2_execution_runner.zig's doc comment for why the SSZ/JSON toggle

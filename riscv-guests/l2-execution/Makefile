@@ -10,7 +10,7 @@
 # itself (ELF->JSON via elf_to_json, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input
+.PHONY: fetch fetch-host test reference-test reference-test-zkc zkc-smoke-exec zkc-smoke-external zkc-smoke-trace prep-execution-specs-json-fixtures clean compile exec debug require-input require-elf
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -94,6 +94,14 @@ reference-test-zkc: fetch-host
 zkc-smoke-exec: require-input fetch-host
 	$(call zkc-smoke-run,elf-exec,$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)"))
 
+# Smoke a prebuilt production ELF under ZkC and compare its result with the host machine.
+ELF ?=
+zkc-smoke-external: require-input require-elf fetch-host
+	$(ZIG) build zkc-smoke-external $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -- \
+		--elf "$(abspath $(ELF))" \
+		"$(abspath $(INPUT))" \
+		$(if $(ZKC_EXEC_FLAGS),--zkc-flags "$(ZKC_EXEC_FLAGS)")
+
 zkc-smoke-trace: require-input fetch-host
 	$(call zkc-smoke-run,elf-trace,--zkc-flags "$(ZKC_TRACE_FLAGS)")
 
@@ -119,6 +127,9 @@ compile:
 # Fail early on a missing/empty INPUT instead of building then erroring in the converter.
 require-input:
 	@[ -n "$(INPUT)" ] && [ -f "$(INPUT)" ] || { echo "INPUT not found: '$(INPUT)' (set INPUT=path/to/input.ssz)"; exit 1; }
+
+require-elf:
+	@[ -n "$(ELF)" ] && [ -f "$(ELF)" ] || { echo "ELF not found: '$(ELF)' (set ELF=path/to/evm_execution_guest)"; exit 1; }
 
 exec: require-input compile
 	$(MAKE) -f $(ARITHMETIZATION_TESTING_MAKEFILE) elf-exec BIN_EXT="$(BIN)" IN_BYTES="@$(INPUT)" ZKC_EXEC_FLAGS="$(ZKC_EXEC_FLAGS)"

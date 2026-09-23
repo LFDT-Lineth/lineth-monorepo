@@ -104,6 +104,7 @@ jobs:
           name: l2-execution-accel-${{ github.sha }}
           path: riscv-guests/l2-execution/zig-out/bin/evm_execution_guest
           if-no-files-found: error
+          overwrite: true
           retention-days: 1
 
       - name: Upload prepared rollup artifacts
@@ -112,6 +113,7 @@ jobs:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
           if-no-files-found: error
+          overwrite: true
           retention-days: 1
 
   host-tests:
@@ -138,7 +140,7 @@ jobs:
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
-    needs: build-guest-artifacts
+    needs: host-tests
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
@@ -156,7 +158,8 @@ jobs:
 
   zkc-interpreter-run:
     name: l2-execution guest in ZKC interpreter (accel)
-    needs: build-guest-artifacts
+    # The host comparator fetches the same Zig dependency graph as the host reference suite.
+    needs: reference-tests
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
@@ -177,6 +180,9 @@ jobs:
           name: rollup-accel-${{ github.sha }}
           path: riscv-guests/rollup/zig-out
 
+      - name: Setup RISC-V guests environment
+        uses: ./.github/actions/setup-riscv-guests
+
       # Install Go for the module-pinned zkc and elf_to_json tools.
       - name: Install Go
         uses: ./.github/actions/setup-go
@@ -190,12 +196,12 @@ jobs:
         env:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
-      # The downloaded ELF was built with the production keccak configuration.
-      - name: Run l2-execution guest under zkc (fast, accel keccak) and check guest_output
+      # Compare the downloaded production ELF against the native host machine on the committed input.
+      - name: Compare l2-execution guest output under zkc (fast, accel keccak)
         run: >-
-          make -f arithmetization/src/test/Makefile elf-exec
-          BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
-          IN_BYTES=@${{ github.workspace }}/riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+          make -C riscv-guests/l2-execution zkc-smoke-external
+          ELF=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
+          KECCAK_ACCEL=true
           ZKC_EXEC_FLAGS="--fast"
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
@@ -238,7 +244,7 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
 
-      - name: Trace l2-execution guest under zkc and check guest_output
+      - name: Trace l2-execution guest under zkc (accel keccak)
         run: >-
           make -f arithmetization/src/test/Makefile elf-trace
           BIN_EXT=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
@@ -249,6 +255,7 @@ jobs:
   # scope with reference-args.
   zkc-reference-test:
     name: l2-execution zkc reference-test (manual)
+    needs: reference-tests
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
