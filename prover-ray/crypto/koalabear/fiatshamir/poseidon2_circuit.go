@@ -16,7 +16,7 @@ import (
 // must be kept in lock-step or the circuit derives different coins than the
 // native verifier.
 type GnarkFiatShamir struct {
-	api *circuit.API
+	api *circuit.KoalaBearAPI
 	h   *poseidon2.KoalagnarkMDHasher
 }
 
@@ -30,7 +30,7 @@ func NewGnarkFiatShamir(api frontend.API) *GnarkFiatShamir {
 }
 
 // API returns the koalagnark API the transcript operates with.
-func (fs *GnarkFiatShamir) API() *circuit.API { return fs.api }
+func (fs *GnarkFiatShamir) API() *circuit.KoalaBearAPI { return fs.api }
 
 // Update mirrors [FiatShamir.Update].
 func (fs *GnarkFiatShamir) Update(vec ...circuit.Element) {

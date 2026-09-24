@@ -323,7 +323,7 @@ func checkGnarkOpeningProofShape(p Params, prf GnarkProof, foldAlphas []circuit.
 // zeta lies in a codeword domain of cardinality c iff zeta^c == 1 (the roots
 // of X^c - 1 are exactly that base-field subgroup), so the base-field test of
 // the native version is not needed.
-func (pcs *PCS) assertClaimPointsOutOfDomainGnark(api *circuit.API, layout layout, zeta circuit.Ext) {
+func (pcs *PCS) assertClaimPointsOutOfDomainGnark(api *circuit.KoalaBearAPI, layout layout, zeta circuit.Ext) {
 	for _, bundle := range layout {
 		if int(bundle.SizeLog2) >= len(pcs.Encoders) {
 			panic(fmt.Sprintf("fri: pcs.VerifyGnark: size %d is outside params schedule", bundle.SizeLog2))
@@ -370,7 +370,7 @@ type gnarkQuotientClaim struct {
 // native Verify does before the query loop. Claim points are zeta scaled by a
 // constant root of unity.
 func (pcs *PCS) layoutClaimsGnark(
-	api *circuit.API, layout layout, claimed []GnarkBatchClaimedValues, zeta circuit.Ext,
+	api *circuit.KoalaBearAPI, layout layout, claimed []GnarkBatchClaimedValues, zeta circuit.Ext,
 ) [][][]gnarkQuotientClaim {
 	res := make([][][]gnarkQuotientClaim, len(layout))
 	for levelIdx, bundle := range layout {
@@ -417,7 +417,7 @@ type gnarkResolvedQuery struct {
 
 // gnarkVerifyQueryCtx mirrors [verifyQueryCtx].
 type gnarkVerifyQueryCtx struct {
-	api               *circuit.API
+	api               *circuit.KoalaBearAPI
 	pcs               *PCS
 	layout            layout
 	proof             GnarkOpeningProof
@@ -510,7 +510,7 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 }
 
 // checkFoldsGnark mirrors [checkFolds].
-func checkFoldsGnark(api *circuit.API, p Params, resolved []gnarkResolvedQuery, foldAlphas []circuit.Ext) {
+func checkFoldsGnark(api *circuit.KoalaBearAPI, p Params, resolved []gnarkResolvedQuery, foldAlphas []circuit.Ext) {
 	halfBig := new(big.Int).Add(field.Modulus(), big.NewInt(1))
 	halfBig.Rsh(halfBig, 1)
 
@@ -549,7 +549,7 @@ func checkFoldsGnark(api *circuit.API, p Params, resolved []gnarkResolvedQuery, 
 
 // reconstructQueryValueAtGnark mirrors [reconstructQueryValueAt].
 func reconstructQueryValueAtGnark(
-	api *circuit.API,
+	api *circuit.KoalaBearAPI,
 	bundle sizeBundle,
 	entryClaims [][]gnarkQuotientClaim,
 	opening GnarkInputQuery,
@@ -577,7 +577,7 @@ func reconstructQueryValueAtGnark(
 	return value
 }
 
-func rowValueGnark(api *circuit.API, row GnarkRowOpening, entry deepEntry) circuit.Ext {
+func rowValueGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening, entry deepEntry) circuit.Ext {
 	if entry.IsExt {
 		return row.Ext[entry.RowIdx]
 	}
@@ -586,7 +586,7 @@ func rowValueGnark(api *circuit.API, row GnarkRowOpening, entry deepEntry) circu
 
 // quotientAtValueGnark mirrors [quotientAtValue]. A claim point equal to the
 // query point makes the division unsatisfiable, matching the native rejection.
-func quotientAtValueGnark(api *circuit.API, value, x circuit.Ext, claims []gnarkQuotientClaim) circuit.Ext {
+func quotientAtValueGnark(api *circuit.KoalaBearAPI, value, x circuit.Ext, claims []gnarkQuotientClaim) circuit.Ext {
 	res := api.ZeroExt()
 	for _, claim := range claims {
 		numerator := api.SubExt(value, claim.Value)
@@ -656,7 +656,7 @@ func levelIndexGnark(numLevels, levelSize int) (int, error) {
 
 // authenticateInputQueryGnark mirrors [authenticateInputQuery].
 func authenticateInputQueryGnark(
-	api *circuit.API, p Params, opening GnarkInputQuery,
+	api *circuit.KoalaBearAPI, p Params, opening GnarkInputQuery,
 	roots []poseidon2.KoalagnarkOctuplet, posBits []frontend.Variable,
 ) {
 	if len(opening) != len(roots) {
@@ -683,7 +683,7 @@ func authenticateInputQueryGnark(
 // recoverInputRootGnark mirrors [InputTreeOpening.RecoverRoot]. idxBits are the
 // little-endian bits of the leaf index, one per level.
 func recoverInputRootGnark(
-	api *circuit.API, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
+	api *circuit.KoalaBearAPI, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
 ) poseidon2.KoalagnarkOctuplet {
 	numLevels := len(branch.Leaves)
 	bottom := branch.Leaves[numLevels-1]
@@ -702,7 +702,7 @@ func recoverInputRootGnark(
 }
 
 // recoverRootGnark mirrors [Branch.RecoverRoot] for aux-free running trees.
-func recoverRootGnark(api *circuit.API, branch GnarkBranch, idxBits []frontend.Variable) poseidon2.KoalagnarkOctuplet {
+func recoverRootGnark(api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable) poseidon2.KoalagnarkOctuplet {
 	ancestor := branch.Leaf
 	n := len(branch.Siblings)
 	for i := n - 1; i >= 0; i-- {
@@ -714,7 +714,7 @@ func recoverRootGnark(api *circuit.API, branch GnarkBranch, idxBits []frontend.V
 // foldOneLevelGnark mirrors [foldOneLevel]. isOdd is the current position bit:
 // when set, the ancestor is the right child.
 func foldOneLevelGnark(
-	api *circuit.API, ancestor, sibling poseidon2.KoalagnarkOctuplet, aux *GnarkRowPair, isOdd frontend.Variable,
+	api *circuit.KoalaBearAPI, ancestor, sibling poseidon2.KoalagnarkOctuplet, aux *GnarkRowPair, isOdd frontend.Variable,
 ) poseidon2.KoalagnarkOctuplet {
 	var left, right poseidon2.KoalagnarkOctuplet
 	for i := range left {
@@ -730,7 +730,7 @@ func foldOneLevelGnark(
 }
 
 // hashRowOpeningGnark mirrors [hashRowOpening].
-func hashRowOpeningGnark(api *circuit.API, row GnarkRowOpening) poseidon2.KoalagnarkOctuplet {
+func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) poseidon2.KoalagnarkOctuplet {
 	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
 	absorbLeafHeaderGnark(api, h, len(row.Base), len(row.Ext))
 	h.Write(rowOpeningElementsGnark(row)...)
@@ -739,7 +739,7 @@ func hashRowOpeningGnark(api *circuit.API, row GnarkRowOpening) poseidon2.Koalag
 
 // hashAuxPairGnark mirrors [hashAuxPair]: rows are absorbed even-first, so the
 // order depends on the (variable) position bit and is resolved element-wise.
-func hashAuxPairGnark(api *circuit.API, pair GnarkRowPair, isOdd frontend.Variable) poseidon2.KoalagnarkOctuplet {
+func hashAuxPairGnark(api *circuit.KoalaBearAPI, pair GnarkRowPair, isOdd frontend.Variable) poseidon2.KoalagnarkOctuplet {
 	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
 	absorbLeafHeaderGnark(api, h, len(pair[0].Base), len(pair[0].Ext))
 	first := rowOpeningElementsGnark(pair[0])
@@ -759,7 +759,7 @@ func hashAuxPairGnark(api *circuit.API, pair GnarkRowPair, isOdd frontend.Variab
 }
 
 // absorbLeafHeaderGnark mirrors [absorbLeafHeader].
-func absorbLeafHeaderGnark(api *circuit.API, h *poseidon2.KoalagnarkMDHasher, baseWidth, extWidth int) {
+func absorbLeafHeaderGnark(api *circuit.KoalaBearAPI, h *poseidon2.KoalagnarkMDHasher, baseWidth, extWidth int) {
 	var tag field.Element
 	tag.SetUint64(leafDomainTag)
 	h.Write(
@@ -781,14 +781,14 @@ func rowOpeningElementsGnark(row GnarkRowOpening) []circuit.Element {
 	return res
 }
 
-func assertOctupletEqual(api *circuit.API, a, b poseidon2.KoalagnarkOctuplet) {
+func assertOctupletEqual(api *circuit.KoalaBearAPI, a, b poseidon2.KoalagnarkOctuplet) {
 	for i := range a {
 		api.AssertIsEqual(a[i], b[i])
 	}
 }
 
 // octupletToExtGnark mirrors [octupletToExt]: coordinates 6 and 7 must be zero.
-func octupletToExtGnark(api *circuit.API, o poseidon2.KoalagnarkOctuplet) circuit.Ext {
+func octupletToExtGnark(api *circuit.KoalaBearAPI, o poseidon2.KoalagnarkOctuplet) circuit.Ext {
 	api.AssertIsEqual(o[6], api.Zero())
 	api.AssertIsEqual(o[7], api.Zero())
 	return circuit.Ext{
@@ -807,20 +807,20 @@ func octupletToExtGnark(api *circuit.API, o poseidon2.KoalagnarkOctuplet) circui
 // log2(cardinality) of them; extra high bits are ignored, matching the native
 // masking through bitReverseExponent). Position bit i is exponent bit
 // logSize-1-i, so the point is a product of selected constant powers.
-func domainPointGnark(api *circuit.API, domain domainLight, posBits []frontend.Variable) circuit.Ext {
+func domainPointGnark(api *circuit.KoalaBearAPI, domain domainLight, posBits []frontend.Variable) circuit.Ext {
 	return api.FromBaseExt(domainPointBaseGnark(api, domain.generator, domain.cardinality, posBits))
 }
 
 // domainPointInvGnark returns the inverse of [domainPointGnark], built from the
 // inverse generator so no in-circuit inversion is needed.
-func domainPointInvGnark(api *circuit.API, domain domainLight, posBits []frontend.Variable) circuit.Element {
+func domainPointInvGnark(api *circuit.KoalaBearAPI, domain domainLight, posBits []frontend.Variable) circuit.Element {
 	var genInv field.Element
 	genInv.Inverse(&domain.generator)
 	return domainPointBaseGnark(api, genInv, domain.cardinality, posBits)
 }
 
 func domainPointBaseGnark(
-	api *circuit.API, generator field.Element, cardinality uint64, posBits []frontend.Variable,
+	api *circuit.KoalaBearAPI, generator field.Element, cardinality uint64, posBits []frontend.Variable,
 ) circuit.Element {
 	logSize := bits.TrailingZeros64(cardinality)
 	if len(posBits) < logSize {

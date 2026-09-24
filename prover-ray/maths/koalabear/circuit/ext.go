@@ -99,19 +99,19 @@ func FromBaseVar(v Element) Ext {
 // --- Ext Constants (in-circuit) ---
 
 // ZeroExt returns the additive identity in the extension field.
-func (a *API) ZeroExt() Ext {
+func (a *KoalaBearAPI) ZeroExt() Ext {
 	z := a.Zero()
 	return Ext{B0: E2{A0: z, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
 
 // OneExt returns the multiplicative identity in the extension field.
-func (a *API) OneExt() Ext {
+func (a *KoalaBearAPI) OneExt() Ext {
 	z, o := a.Zero(), a.One()
 	return Ext{B0: E2{A0: o, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
 
 // FromBaseExt creates an Ext element with a base field value in the constant term.
-func (a *API) FromBaseExt(x Element) Ext {
+func (a *KoalaBearAPI) FromBaseExt(x Element) Ext {
 	z := a.Zero()
 	return Ext{B0: E2{A0: x, A1: z}, B1: E2{A0: z, A1: z}, B2: E2{A0: z, A1: z}}
 }
@@ -119,7 +119,7 @@ func (a *API) FromBaseExt(x Element) Ext {
 // ConstExt creates a constant Ext element from a field.Ext.
 // This should be used during circuit definition to create constant extension field values.
 // For witness assignment, use NewExt instead.
-func (a *API) ConstExt(v field.Ext) Ext {
+func (a *KoalaBearAPI) ConstExt(v field.Ext) Ext {
 	return Ext{
 		B0: E2{
 			A0: a.Const(int64(v.B0.A0.Uint64())),
@@ -139,7 +139,7 @@ func (a *API) ConstExt(v field.Ext) Ext {
 // --- Ext Arithmetic Operations ---
 
 // AddExt returns x + y in the extension field.
-func (a *API) AddExt(x, y Ext) Ext {
+func (a *KoalaBearAPI) AddExt(x, y Ext) Ext {
 	return Ext{
 		B0: a.e2Add(x.B0, y.B0),
 		B1: a.e2Add(x.B1, y.B1),
@@ -148,7 +148,7 @@ func (a *API) AddExt(x, y Ext) Ext {
 }
 
 // SubExt returns x - y in the extension field.
-func (a *API) SubExt(x, y Ext) Ext {
+func (a *KoalaBearAPI) SubExt(x, y Ext) Ext {
 	return Ext{
 		B0: a.e2Sub(x.B0, y.B0),
 		B1: a.e2Sub(x.B1, y.B1),
@@ -157,7 +157,7 @@ func (a *API) SubExt(x, y Ext) Ext {
 }
 
 // NegExt returns -x in the extension field.
-func (a *API) NegExt(x Ext) Ext {
+func (a *KoalaBearAPI) NegExt(x Ext) Ext {
 	z := a.Zero()
 	zero := E2{A0: z, A1: z}
 	return Ext{
@@ -168,7 +168,7 @@ func (a *API) NegExt(x Ext) Ext {
 }
 
 // DoubleExt returns 2*x in the extension field.
-func (a *API) DoubleExt(x Ext) Ext {
+func (a *KoalaBearAPI) DoubleExt(x Ext) Ext {
 	two := big.NewInt(2)
 	return Ext{
 		B0: a.e2MulConst(x.B0, two),
@@ -182,7 +182,7 @@ var qnrE2 = big.NewInt(3)
 
 // e2MulByCubicNonResidue multiplies an E2 by the cubic non-residue (u+1).
 // Given x = a0 + a1*u, (a0 + a1*u)*(1+u) = (a0+3*a1) + (a0+a1)*u (because u^2=3).
-func (a *API) e2MulByCubicNonResidue(x E2) E2 {
+func (a *KoalaBearAPI) e2MulByCubicNonResidue(x E2) E2 {
 	z1 := a.Add(x.A0, x.A1)
 	z0 := a.MulConst(x.A1, qnrE2) // 3*a1
 	z0 = a.Add(z0, x.A0)          // a0 + 3*a1
@@ -190,18 +190,18 @@ func (a *API) e2MulByCubicNonResidue(x E2) E2 {
 }
 
 // e2Add returns x + y in E2.
-func (a *API) e2Add(x, y E2) E2 {
+func (a *KoalaBearAPI) e2Add(x, y E2) E2 {
 	return E2{A0: a.Add(x.A0, y.A0), A1: a.Add(x.A1, y.A1)}
 }
 
 // e2Sub returns x - y in E2.
-func (a *API) e2Sub(x, y E2) E2 {
+func (a *KoalaBearAPI) e2Sub(x, y E2) E2 {
 	return E2{A0: a.Sub(x.A0, y.A0), A1: a.Sub(x.A1, y.A1)}
 }
 
 // e2Mul returns x * y in E2 using Karatsuba.
 // (a0 + a1*u) * (b0 + b1*u) where u^2 = 3
-func (a *API) e2Mul(x, y E2) E2 {
+func (a *KoalaBearAPI) e2Mul(x, y E2) E2 {
 	l1 := a.Add(x.A0, x.A1)
 	l2 := a.Add(y.A0, y.A1)
 	u := a.Mul(l1, l2)      // (a0+a1)(b0+b1)
@@ -218,7 +218,7 @@ func (a *API) e2Mul(x, y E2) E2 {
 }
 
 // e2Square returns x^2 in E2.
-func (a *API) e2Square(x E2) E2 {
+func (a *KoalaBearAPI) e2Square(x E2) E2 {
 	a0sq := a.Mul(x.A0, x.A0)
 	a1sq := a.Mul(x.A1, x.A1)
 	a1sq3 := a.MulConst(a1sq, qnrE2)
@@ -230,7 +230,7 @@ func (a *API) e2Square(x E2) E2 {
 }
 
 // e2MulByFp multiplies an E2 by a base field element.
-func (a *API) e2MulByFp(x E2, c Element) E2 {
+func (a *KoalaBearAPI) e2MulByFp(x E2, c Element) E2 {
 	return E2{
 		A0: a.Mul(x.A0, c),
 		A1: a.Mul(x.A1, c),
@@ -238,7 +238,7 @@ func (a *API) e2MulByFp(x E2, c Element) E2 {
 }
 
 // e2MulConst multiplies an E2 by a constant.
-func (a *API) e2MulConst(x E2, c *big.Int) E2 {
+func (a *KoalaBearAPI) e2MulConst(x E2, c *big.Int) E2 {
 	return E2{
 		A0: a.MulConst(x.A0, c),
 		A1: a.MulConst(x.A1, c),
@@ -248,7 +248,7 @@ func (a *API) e2MulConst(x E2, c *big.Int) E2 {
 // MulExt returns x * y in the extension field using Karatsuba over E2.
 // Implements Algorithm 13 from https://eprint.iacr.org/2010/354.pdf, specialized
 // for E6 = E2[v]/(v^3 - (u+1)). Costs 6 E2 multiplications (≈18 variable base muls).
-func (a *API) MulExt(x, y Ext, more ...*Ext) Ext {
+func (a *KoalaBearAPI) MulExt(x, y Ext, more ...*Ext) Ext {
 	t0 := a.e2Mul(x.B0, y.B0)
 	t1 := a.e2Mul(x.B1, y.B1)
 	t2 := a.e2Mul(x.B2, y.B2)
@@ -289,7 +289,7 @@ func (a *API) MulExt(x, y Ext, more ...*Ext) Ext {
 
 // SquareExt returns x^2 in the extension field, following Algorithm 16 from
 // https://eprint.iacr.org/2010/354.pdf, specialized for E6 = E2[v]/(v^3-(u+1)).
-func (a *API) SquareExt(x Ext) Ext {
+func (a *KoalaBearAPI) SquareExt(x Ext) Ext {
 	// c4 = 2*B0*B1
 	c4 := a.e2Mul(x.B0, x.B1)
 	c4 = a.e2MulConst(c4, big.NewInt(2))
@@ -331,7 +331,7 @@ func (a *API) SquareExt(x Ext) Ext {
 }
 
 // MulByE2Ext multiplies an Ext by an E2 element.
-func (a *API) MulByE2Ext(x Ext, c E2) Ext {
+func (a *KoalaBearAPI) MulByE2Ext(x Ext, c E2) Ext {
 	return Ext{
 		B0: a.e2Mul(x.B0, c),
 		B1: a.e2Mul(x.B1, c),
@@ -340,7 +340,7 @@ func (a *API) MulByE2Ext(x Ext, c E2) Ext {
 }
 
 // MulByFpExt multiplies an Ext by a base field element.
-func (a *API) MulByFpExt(x Ext, c Element) Ext {
+func (a *KoalaBearAPI) MulByFpExt(x Ext, c Element) Ext {
 	return Ext{
 		B0: a.e2MulByFp(x.B0, c),
 		B1: a.e2MulByFp(x.B1, c),
@@ -349,7 +349,7 @@ func (a *API) MulByFpExt(x Ext, c Element) Ext {
 }
 
 // MulConstExt multiplies an Ext by a constant.
-func (a *API) MulConstExt(x Ext, c *big.Int) Ext {
+func (a *KoalaBearAPI) MulConstExt(x Ext, c *big.Int) Ext {
 	return Ext{
 		B0: a.e2MulConst(x.B0, c),
 		B1: a.e2MulConst(x.B1, c),
@@ -358,7 +358,7 @@ func (a *API) MulConstExt(x Ext, c *big.Int) Ext {
 }
 
 // ModReduceExt reduces an Ext element (no-op in native mode).
-func (a *API) ModReduceExt(x Ext) Ext {
+func (a *KoalaBearAPI) ModReduceExt(x Ext) Ext {
 	if a.IsNative() {
 		// in native mode, no reduction is necessary
 		return x
@@ -371,7 +371,7 @@ func (a *API) ModReduceExt(x Ext) Ext {
 }
 
 // AddByBaseExt adds a base field element to the constant term.
-func (a *API) AddByBaseExt(x Ext, y Element) Ext {
+func (a *KoalaBearAPI) AddByBaseExt(x Ext, y Element) Ext {
 	return Ext{
 		B0: E2{A0: a.Add(x.B0.A0, y), A1: x.B0.A1},
 		B1: x.B1,
@@ -384,7 +384,7 @@ func (a *API) AddByBaseExt(x Ext, y Element) Ext {
 // the constant term: the five subtractions against zero are elided, which
 // matters in emulated mode where each of them would be a real emulated
 // operation.
-func (a *API) SubByBaseExt(x Ext, y Element) Ext {
+func (a *KoalaBearAPI) SubByBaseExt(x Ext, y Element) Ext {
 	return Ext{
 		B0: E2{A0: a.Sub(x.B0.A0, y), A1: x.B0.A1},
 		B1: x.B1,
@@ -399,7 +399,7 @@ func (a *API) SubByBaseExt(x Ext, y Element) Ext {
 //
 // Use it for any random linear combination in the extension field: a batching
 // coin's powers, a polynomial in coefficient form, a row hash.
-func (a *API) HornerExt(coeffs []Ext, x Ext) Ext {
+func (a *KoalaBearAPI) HornerExt(coeffs []Ext, x Ext) Ext {
 	if len(coeffs) == 0 {
 		return a.ZeroExt()
 	}
@@ -411,7 +411,7 @@ func (a *API) HornerExt(coeffs []Ext, x Ext) Ext {
 }
 
 // SumExt returns x + y + z...
-func (a *API) SumExt(xs ...Ext) Ext {
+func (a *KoalaBearAPI) SumExt(xs ...Ext) Ext {
 	// One scratch slice reused across the six coordinate-wise reductions to
 	// avoid allocating 6× len(xs) Elements per call on the hot witness path.
 	coords := make([]Element, len(xs))
@@ -442,7 +442,7 @@ func (a *API) SumExt(xs ...Ext) Ext {
 // MulByNonResidueExt multiplies x by v, where v is the irreducible cubic root
 // generator (v^3 = u+1). Equivalent to a single-coordinate cyclic shift with
 // (u+1) wrap on the highest slot.
-func (a *API) MulByNonResidueExt(x Ext) Ext {
+func (a *KoalaBearAPI) MulByNonResidueExt(x Ext) Ext {
 	return Ext{
 		B0: a.e2MulByCubicNonResidue(x.B2),
 		B1: x.B0,
@@ -453,7 +453,7 @@ func (a *API) MulByNonResidueExt(x Ext) Ext {
 // --- Ext Comparison and Selection ---
 
 // IsZeroExt returns 1 if x == 0, 0 otherwise.
-func (a *API) IsZeroExt(x Ext) frontend.Variable {
+func (a *KoalaBearAPI) IsZeroExt(x Ext) frontend.Variable {
 	b0Zero := a.And(a.IsZero(x.B0.A0), a.IsZero(x.B0.A1))
 	b1Zero := a.And(a.IsZero(x.B1.A0), a.IsZero(x.B1.A1))
 	b2Zero := a.And(a.IsZero(x.B2.A0), a.IsZero(x.B2.A1))
@@ -461,7 +461,7 @@ func (a *API) IsZeroExt(x Ext) frontend.Variable {
 }
 
 // SelectExt returns x if sel=1, y otherwise.
-func (a *API) SelectExt(sel frontend.Variable, x, y Ext) Ext {
+func (a *KoalaBearAPI) SelectExt(sel frontend.Variable, x, y Ext) Ext {
 	return Ext{
 		B0: E2{
 			A0: a.Select(sel, x.B0.A0, y.B0.A0),
@@ -479,7 +479,7 @@ func (a *API) SelectExt(sel frontend.Variable, x, y Ext) Ext {
 }
 
 // AssertIsEqualExt constrains x == y.
-func (a *API) AssertIsEqualExt(x, y Ext) {
+func (a *KoalaBearAPI) AssertIsEqualExt(x, y Ext) {
 	a.AssertIsEqual(x.B0.A0, y.B0.A0)
 	a.AssertIsEqual(x.B0.A1, y.B0.A1)
 	a.AssertIsEqual(x.B1.A0, y.B1.A0)
@@ -491,7 +491,7 @@ func (a *API) AssertIsEqualExt(x, y Ext) {
 // --- Ext Division and Inverse ---
 
 // InverseExt returns 1/x in the extension field.
-func (a *API) InverseExt(x Ext) Ext {
+func (a *KoalaBearAPI) InverseExt(x Ext) Ext {
 	hint := a.inverseExtHint()
 	res, err := a.NewHint(hint, extDegree,
 		x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1, x.B2.A0, x.B2.A1)
@@ -507,7 +507,7 @@ func (a *API) InverseExt(x Ext) Ext {
 }
 
 // DivExt returns x / y in the extension field.
-func (a *API) DivExt(x, y Ext) Ext {
+func (a *KoalaBearAPI) DivExt(x, y Ext) Ext {
 	hint := a.divExtHint()
 	res, err := a.NewHint(hint, extDegree,
 		x.B0.A0, x.B0.A1, x.B1.A0, x.B1.A1, x.B2.A0, x.B2.A1,
@@ -524,7 +524,7 @@ func (a *API) DivExt(x, y Ext) Ext {
 }
 
 // DivByBaseExt divides an Ext by a base field element.
-func (a *API) DivByBaseExt(x Ext, y Element) Ext {
+func (a *KoalaBearAPI) DivByBaseExt(x Ext, y Element) Ext {
 	return Ext{
 		B0: E2{A0: a.Div(x.B0.A0, y), A1: a.Div(x.B0.A1, y)},
 		B1: E2{A0: a.Div(x.B1.A0, y), A1: a.Div(x.B1.A1, y)},
@@ -535,7 +535,7 @@ func (a *API) DivByBaseExt(x Ext, y Element) Ext {
 const extDegree = field.ExtensionDegree
 
 // extFromVars creates an Ext from 6 Vars.
-func (a *API) extFromVars(v []Element) Ext {
+func (a *KoalaBearAPI) extFromVars(v []Element) Ext {
 	return Ext{
 		B0: E2{A0: v[0], A1: v[1]},
 		B1: E2{A0: v[2], A1: v[3]},
@@ -547,7 +547,7 @@ func (a *API) extFromVars(v []Element) Ext {
 
 // ExpExt computes x^n using square-and-multiply.
 // Optimized for power-of-two exponents.
-func (a *API) ExpExt(x Ext, n *big.Int) Ext {
+func (a *KoalaBearAPI) ExpExt(x Ext, n *big.Int) Ext {
 	if n.Sign() == 0 {
 		return a.OneExt()
 	}
@@ -580,7 +580,7 @@ func (a *API) ExpExt(x Ext, n *big.Int) Ext {
 }
 
 // ExpVariableExponentExt computes x^exp where exp is a circuit variable.
-func (a *API) ExpVariableExponentExt(x Ext, exp frontend.Variable, expNumBits int) Ext {
+func (a *KoalaBearAPI) ExpVariableExponentExt(x Ext, exp frontend.Variable, expNumBits int) Ext {
 	expBits := a.nativeAPI.ToBinary(exp, expNumBits)
 	res := a.OneExt()
 
@@ -597,7 +597,7 @@ func (a *API) ExpVariableExponentExt(x Ext, exp frontend.Variable, expNumBits in
 // --- Ext Debug ---
 
 // PrintlnExt prints Ext variables for debugging.
-func (a *API) PrintlnExt(vars ...Ext) {
+func (a *KoalaBearAPI) PrintlnExt(vars ...Ext) {
 	for i := range vars {
 		a.Println(vars[i].B0.A0, vars[i].B0.A1, vars[i].B1.A0, vars[i].B1.A1, vars[i].B2.A0, vars[i].B2.A1)
 	}
@@ -606,7 +606,7 @@ func (a *API) PrintlnExt(vars ...Ext) {
 // --- Ext Hints ---
 
 // NewHintExt calls a hint function with Ext inputs and outputs.
-func (a *API) NewHintExt(f solver.Hint, nbOutputs int, inputs ...Ext) ([]Ext, error) {
+func (a *KoalaBearAPI) NewHintExt(f solver.Hint, nbOutputs int, inputs ...Ext) ([]Ext, error) {
 	if a.IsNative() {
 		flatInputs := make([]frontend.Variable, extDegree*len(inputs))
 		for i, r := range inputs {
@@ -699,7 +699,7 @@ func inverseExtHintEmulated(_ *big.Int, inputs []*big.Int, output []*big.Int) er
 	return emulated.UnwrapHint(inputs, output, inverseExtHintNative)
 }
 
-func (a *API) inverseExtHint() solver.Hint {
+func (a *KoalaBearAPI) inverseExtHint() solver.Hint {
 	if a.IsNative() {
 		return inverseExtHintNative
 	}
@@ -719,7 +719,7 @@ func divExtHintEmulated(_ *big.Int, inputs []*big.Int, output []*big.Int) error 
 	return emulated.UnwrapHint(inputs, output, divExtHintNative)
 }
 
-func (a *API) divExtHint() solver.Hint {
+func (a *KoalaBearAPI) divExtHint() solver.Hint {
 	if a.IsNative() {
 		return divExtHintNative
 	}
@@ -740,7 +740,7 @@ func mulExtHintEmulated(_ *big.Int, inputs []*big.Int, output []*big.Int) error 
 }
 
 // IsConstantZeroExt returns true if e is a constant zero element.
-func (a *API) IsConstantZeroExt(e Ext) bool {
+func (a *KoalaBearAPI) IsConstantZeroExt(e Ext) bool {
 	return a.IsConstantZero(e.B0.A0) &&
 		a.IsConstantZero(e.B0.A1) &&
 		a.IsConstantZero(e.B1.A0) &&
@@ -752,7 +752,7 @@ func (a *API) IsConstantZeroExt(e Ext) bool {
 // BaseValueOfElement returns true if the Ext element actually represents a
 // base field element and returns it as an [Element]. The function checks that
 // every non-constant coordinate is a zero constant.
-func (a *API) BaseValueOfElement(e Ext) (*Element, bool) {
+func (a *KoalaBearAPI) BaseValueOfElement(e Ext) (*Element, bool) {
 	if !a.IsConstantZero(e.B0.A1) ||
 		!a.IsConstantZero(e.B1.A0) ||
 		!a.IsConstantZero(e.B1.A1) ||

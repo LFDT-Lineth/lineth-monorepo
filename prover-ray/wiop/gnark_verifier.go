@@ -280,7 +280,7 @@ type GnarkRuntime struct {
 	// when the protocol was not PCS-compiled.
 	PCSOpeningProof *fri.GnarkOpeningProof
 
-	api          *circuit.API
+	api          *circuit.KoalaBearAPI
 	fs           *fiatshamir.GnarkFiatShamir
 	cellsBase    map[ObjectID]circuit.Element
 	cells        map[ObjectID]circuit.Ext
@@ -353,7 +353,7 @@ func (run *GnarkRuntime) advanceRound(r *Round) {
 }
 
 // API returns the koalagnark arithmetic API.
-func (run *GnarkRuntime) API() *circuit.API { return run.api }
+func (run *GnarkRuntime) API() *circuit.KoalaBearAPI { return run.api }
 
 // FS returns the in-circuit Fiat-Shamir transcript, positioned exactly where
 // the native verifier's transcript is when verifier actions run.
