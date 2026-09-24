@@ -25,7 +25,7 @@ var ErrNotImplemented = errors.New("not yet implemented")
 const wiopSystemName = "lineth-riscv"
 
 // guestOutputMemory is the ZkC Execute output-map key carrying the guest's
-// wire output (confirmed by the Stage 0 spike, see zkc_execute_spike_test.go).
+// wire output.
 const guestOutputMemory = "guest_output"
 
 // guestOutputSize is the fixed 0x0003 wire-output length: a 2-byte schema id
@@ -53,7 +53,7 @@ type Core struct {
 //
 // Compiler passes (rangecheck → lookup → logderiv → localvanishing → global)
 // and wiop.Materialize are not yet wired. They must be added before the
-// system can produce sound proofs (see wiki backend-overview.md §4).
+// system can produce sound proofs.
 func New(cfg Config) (*Core, error) {
 	mode := cfg.Mode
 	if mode == "" {
@@ -166,7 +166,7 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	case ProverModeDevZkVM:
 		return c.proveDevZkVM(job)
 	case ProverModePartial:
-		return failResult(job.ID, fmt.Errorf("partial mode not runnable yet, memory-gated (plan Stage 8): %w", ErrNotImplemented))
+		return failResult(job.ID, fmt.Errorf("partial mode not runnable yet, memory-gated: %w", ErrNotImplemented))
 	case ProverModeFull:
 		return c.proveFull(ctx, job)
 	default:
@@ -312,7 +312,7 @@ func sanityCheckJobs(job Job) error {
 	return nil
 }
 
-// runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
+// runProve traces the inputs, assigns the shard, then runs sys.Prove and sys.Verify.
 func (c *Core) runProve(
 	ctx context.Context,
 	preRead *zkcdriver.PreReadInputs,
@@ -321,7 +321,7 @@ func (c *Core) runProve(
 
 	traces := c.driver.TraceZkcInputs(preRead)
 	if len(traces) > 1 {
-		logrus.Fatalf("the test case is expected to only use a single public inputs")
+		logrus.Fatalf("expected a single public input")
 	}
 
 	proof, pub := c.sys.Prove(func(rt *wiop.Runtime) {
@@ -338,7 +338,7 @@ func (c *Core) runProve(
 // SerializeProof encodes a wiop.Proof into the wire bytes the coordinator
 // expects in the "proof" field of the response.
 //
-// Wire format not yet decided (wiki backend-overview.md §6).
+// Wire format not yet decided.
 func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }

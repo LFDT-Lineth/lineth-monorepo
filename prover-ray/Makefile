@@ -14,7 +14,7 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 	docker-build \
 	docker-smoke
 
-# One prover-ray image for all modes; the mode is chosen at runtime via --mode.
+# One prover-ray image for all modes; the mode is set per pipeline in the config.
 # DOCKER overridable for rootful/rootless or podman, e.g. DOCKER='sudo docker'.
 DOCKER     ?= docker
 IMAGE_NAME ?= consensys/linea-prover-ray

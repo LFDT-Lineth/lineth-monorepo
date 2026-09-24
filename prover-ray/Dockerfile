@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 #
-# One prover-ray image for all modes; the mode is chosen at runtime via --mode.
+# One prover-ray image for all modes; the mode is set per pipeline in the mounted
+# config (CONFIG_FILE), not on the command line.
 # Build (from prover-ray/, so the positional context is prover-ray):
 #   make docker-build
 # which runs, in effect:
@@ -90,8 +91,8 @@ COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_gue
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
 
-# Configuration is a TOML file, like the legacy prover. No default is baked in
-# (fail loudly rather than run a wrong config): mount one at CONFIG_FILE. The
+# Configuration is a TOML file. No default is baked in (fail loudly rather than
+# run a wrong config): mount one at CONFIG_FILE. The
 # prover reads CONFIG_FILE directly, so no shell is needed (distroless has none).
 # Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
 #   docker run -v ./config-dev-zkvm.toml:/opt/linea/prover-ray/config/config.toml \

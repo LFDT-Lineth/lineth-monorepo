@@ -41,9 +41,8 @@ type Job struct {
 	// 0x0001 schema id followed by the SSZ StatelessInput, exactly the output of
 	// utils/ssz.EncodeStatelessInput.
 	//
-	// Multi-block conflation encoding is not yet decided (open question #1
-	// in wiki backend-overview.md); [Core.Prove] rejects jobs spanning more
-	// than one block.
+	// Multi-block conflation encoding is not yet decided; [Core.Prove] rejects
+	// jobs spanning more than one block.
 	Payload []byte
 }
 
@@ -57,20 +56,12 @@ const (
 
 // PublicInputs carries the 16 public output fields of the coordinator
 // response. Some are read from the guest's 105-byte
-// SszStatelessValidationResult; that result is too small to hold all 16, so
-// the rest are computed by the Lineth wrapper (run_l2_execution_guest).
-//
-// The wiop mechanism is in place: col.At(pos).Open(ctx) exposes a column position
-// as a cell, [wiop.System.RegisterPublicInputs] registers that cell under a
-// [wiop.PublicInputTag], and sys.Prove returns its value at the matching position
-// of wiop.PublicInput. A field spanning several cells (every [32]byte below) is
-// registered one cell at a time under a numeric suffix. What remains is
-// establishing which columns/positions in RISCV-ZKC.bin carry each field, and
-// which fields come from the wrapper instead (open question #5); see
+// SszStatelessValidationResult; the rest are computed by the Lineth wrapper
+// (run_l2_execution_guest). Which columns of RISCV-ZKC.bin carry each field,
+// and which come from the wrapper, is not yet established; see
 // zkcdriver/risc5.RegisterPublicInputs.
 //
-// Count and field names follow the coordinator response schema
-// (rollup_spec/src/rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.response.schema.json).
+// Count and field names follow the getZkL2ExecutionProofV1 response schema.
 type PublicInputs struct {
 	ParentBlockHash                          [32]byte
 	EndBlockHash                             [32]byte
@@ -96,8 +87,8 @@ type Result struct {
 	Status ResultStatus
 
 	// ProofBytes is the proof output for the mode. For full it is the serialized
-	// wiop.Proof (wire format not yet decided, wiki backend-overview.md §6); for
-	// dev-zkvm it is the guest's 0x0003 wire output (2-byte schema id +
+	// wiop.Proof (wire format not yet decided); for dev-zkvm it is the guest's
+	// 0x0003 wire output (2-byte schema id +
 	// keccak256(SSZ(public inputs))) from the ZkC Execute run, which the runner
 	// cross-checks against the native oracle. nil when Status is
 	// ResultStatusFailed.

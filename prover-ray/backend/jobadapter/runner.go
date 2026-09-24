@@ -1,9 +1,8 @@
 // Package jobadapter turns coordinator proof requests into backend jobs.
 //
 // Runner is the shared request-to-proof path used by protocol adapters such as
-// filesystem and a future prover-side gateway adapter. It dispatches a typed
-// request to the matching decoder, builds a backend.Job, calls the Prover, and
-// formats the response body.
+// the filesystem queue. It dispatches a typed request to the matching decoder,
+// builds a backend.Job, calls the Prover, and formats the response body.
 package jobadapter
 
 import (
@@ -76,9 +75,8 @@ const (
 	RunStatusFailed  RunStatus = "failed"
 )
 
-// FailureCode classifies failed outcomes in the same style as the future
-// gateway result flow. Filesystem responses are still provisional, but keeping
-// a code here avoids reducing failures to a bool.
+// FailureCode classifies a failed outcome. Keeping a code, rather than a bool,
+// lets callers act on the failure kind (retry, alert, etc.).
 type FailureCode string
 
 const (
@@ -89,7 +87,7 @@ const (
 
 // RunResult is the outcome for one request body. Callers write ResponseBody
 // back to their queue and use Status/FailureCode for protocol-specific result
-// handling such as archive suffixes or future gateway result submission.
+// handling such as archive suffixes.
 type RunResult struct {
 	ResponseBody any
 	Status       RunStatus
@@ -148,8 +146,9 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return r.runL2ExecutionZkVM(ctx, runReq, req)
 	}
 
-	// dev-mock runs no guest, so it accepts ranges and forced transactions. The
-	// guest-running modes support a single block only, today.
+	// dev-mock accepts ranges and forced transactions (it runs no guest); dev-zkvm
+	// is handled above. The real proving modes (full, partial) support a single
+	// block only, today.
 	if r.mode != backend.ProverModeDevMock {
 		if len(req.Payloads) != 1 {
 			return failedRunResult(runReq.ID, FailureCodeInvalidInput, fmt.Errorf(

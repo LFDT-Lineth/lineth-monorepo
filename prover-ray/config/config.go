@@ -1,5 +1,5 @@
-// Package config loads the prover-ray TOML configuration, mirroring the legacy
-// prover: viper reads the file and UnmarshalExact rejects any unknown key.
+// Package config loads the prover-ray TOML configuration: viper reads the file
+// and UnmarshalExact rejects any unknown key.
 package config
 
 import (
@@ -9,8 +9,8 @@ import (
 )
 
 // Config is the top-level prover-ray configuration: top-level metadata plus a
-// section per proof pipeline, like the legacy prover. [execution] is required;
-// [rollup] and [aggregation] are optional (watched only when configured).
+// section per proof pipeline. [execution] is required; [rollup] and
+// [aggregation] are optional (watched only when configured).
 type Config struct {
 	// Version is echoed to the coordinator as proverVersion.
 	Version string `mapstructure:"version"`
@@ -43,14 +43,15 @@ type Pipeline struct {
 	RequestsRootDir string `mapstructure:"requests_root_dir"`
 }
 
-// Configured reports whether the pipeline is set (both fields present).
+// Configured reports whether the pipeline is set (either field is set). validate
+// then requires both fields when one is present.
 func (p Pipeline) Configured() bool {
 	return p.ProverMode != "" || p.RequestsRootDir != ""
 }
 
-// NewConfigFromFile reads and validates a TOML config. Like the legacy prover it
-// uses viper with UnmarshalExact, so an unknown key is an error rather than
-// being silently ignored.
+// NewConfigFromFile reads and validates a TOML config. It uses viper with
+// UnmarshalExact, so an unknown key is an error rather than being silently
+// ignored.
 func NewConfigFromFile(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)

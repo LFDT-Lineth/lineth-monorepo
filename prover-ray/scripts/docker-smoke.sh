@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docker smoke test for the prover-ray image (reusable by CI, plan Stage 6).
+# Docker smoke test for the prover-ray image (reusable by CI).
 #
 # Checks two things:
 #   1. dev-mock turns a dropped request file into a valid response file.

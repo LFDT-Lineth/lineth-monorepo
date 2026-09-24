@@ -1,10 +1,10 @@
-// Command prover runs either the queue adapter or a one-shot prove worker:
+// Command prover runs either the queue adapter or a one-shot prover:
 //
-//	prover --config <toml>                                 watch the queue, prove each request
+//	prover --config <toml>                                 watch the queues, prove each request
 //	prover prove --config <toml> --in <req> --out <resp>   prove one request file, exit with a code
 //
-// Config is a TOML file (--config or CONFIG_FILE). The worker also serves to
-// prove a single request by hand.
+// Config is a TOML file (--config or CONFIG_FILE). The one-shot form also serves
+// to prove a single request by hand.
 package main
 
 import (

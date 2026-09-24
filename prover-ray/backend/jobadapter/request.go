@@ -69,8 +69,7 @@ type L2ExecutionPayload struct {
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
 	// ProgramVk is routing metadata; this decoder validates its shape but
-	// does not verify it against the configured guest ELF (open question #6 in
-	// wiki backend-overview.md).
+	// does not verify it against the configured guest ELF.
 	ProgramVk               []byte
 	ChainID                 uint64
 	ForkName                string
