@@ -12,6 +12,19 @@ plugins {
   alias(libs.plugins.besuPluginLibrary)
 }
 
+// The Besu BOM (applied via besuPluginLibrary as an enforcedPlatform) imports kotlin-bom,
+// which strictly pins kotlin-stdlib to Besu's chosen Kotlin version. Keep stdlib artifacts
+// aligned with the repository Kotlin version instead, matching the sibling sequencer and
+// acceptance-tests modules that apply the same besuPluginLibrary plugin.
+configurations.configureEach {
+  resolutionStrategy.eachDependency { details ->
+    if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
+      details.useVersion("${libs.versions.kotlin.get()}")
+      details.because('Align Kotlin stdlib with the repository Kotlin version')
+    }
+  }
+}
+
 dependencies {
   implementation project(':linea-besu:plugins:sequencer-interfaces')
 }

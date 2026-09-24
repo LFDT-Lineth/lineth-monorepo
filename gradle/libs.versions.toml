@@ -19,7 +19,7 @@ commonsIo = { group = "commons-io", name = "commons-io", version.ref = "commonsI
 
 [versions]
 # Build
-kotlin = "2.4.0"
+kotlin = "2.4.20"
 
 # Testing
 assertj = "3.27.7"
@@ -61,7 +61,7 @@ picoli = "4.7.7"
 slf4j="2.0.16"
 teku = "26.9.0"
 tuweni = "2.8.0"
-vertx = "5.1.5"
+vertx = "5.2.0"
 web3j = "6.0.0"
 web3jPlugin = "5.0.2"
 secp = "1.4.2"
