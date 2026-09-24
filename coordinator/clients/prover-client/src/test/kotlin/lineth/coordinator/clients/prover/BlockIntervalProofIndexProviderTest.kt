@@ -1,8 +1,12 @@
 package lineth.coordinator.clients.prover
 
+import linea.clients.L2ExecutionProofRequestV1
 import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
 import linea.domain.BlockInterval
+import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofRequestV1
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant
@@ -10,7 +14,7 @@ import kotlin.time.Instant
 class BlockIntervalProofIndexProviderTest {
   @Test
   fun `builds an index from the request interval and content`() {
-    val request = TestRequest(10UL, 20UL, Instant.fromEpochSeconds(1234))
+    val request = TestRequest(10UL, 20UL, Instant.fromEpochSeconds(1234), Instant.fromEpochSeconds(5678), 42L, 100L)
     val expectedHash = ByteArray(32) { it.toByte() }
     var hashedContent: ByteArray? = null
     val hashFunction = HashFunction {
@@ -27,9 +31,23 @@ class BlockIntervalProofIndexProviderTest {
     assertThat(index.hash).isEqualTo(expectedHash)
   }
 
+  @Test
+  fun `derives a stable hash for identical requests built separately`() {
+    val request1 = l2ExecutionProofRequestV1()
+    val request2 = l2ExecutionProofRequestV1()
+    // Distinct ByteArray instances (different identities) with equal content.
+    assertThat(request1.parentFtxRollingHash).isNotSameAs(request2.parentFtxRollingHash)
+
+    val provider = BlockIntervalProofIndexProvider<L2ExecutionProofRequestV1>(Sha256HashFunction())
+    assertThat(provider.invoke(request1).hash).isEqualTo(provider.invoke(request2).hash)
+  }
+
   private data class TestRequest(
     override val startBlockNumber: ULong,
     override val endBlockNumber: ULong,
     override val startBlockTimestamp: Instant,
-  ) : BlockInterval, StartBlockTimestampProvider
+    override val endBlockTimestamp: Instant,
+    override val transactionsCount: Long,
+    override val totalGasUsed: Long,
+  ) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider
 }

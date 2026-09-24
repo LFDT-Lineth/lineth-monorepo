@@ -24,13 +24,10 @@ internal class L2ExecutionProofRequestDtoMapper(
   private val forkName: String,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
-    var totalGasUsed = 0L
     val payloads = request.executions.map { executionInfo ->
       val statelessInputDto = StatelessInputDto(
         newPayloadRequest = NewPayloadRequestDto(
-          executionPayload = executionInfo.executionPayload.fromDomainObject().also {
-            totalGasUsed += it.gasUsed
-          },
+          executionPayload = executionInfo.executionPayload.fromDomainObject(),
           versionedHashes = emptyList(),
           parentBeaconBlockRoot = executionInfo.parentBeaconBlockRoot.encodeHex(),
           executionRequests = executionInfo.executionRequests.map { it.encodeHex() },
@@ -63,7 +60,9 @@ internal class L2ExecutionProofRequestDtoMapper(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
         startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-        totalGasUsed = totalGasUsed,
+        endBlockTimestamp = request.endBlockTimestamp.epochSeconds,
+        transactionsCount = request.transactionsCount,
+        totalGasUsed = request.totalGasUsed,
       ),
     )
 

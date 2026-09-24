@@ -32,7 +32,7 @@ test "encodeOutputJson matches the Python reference response shape (minus proof/
             .end_l1_l2_bridge_rolling_hash_message_number = 5,
             .dynamic_chain_config_hash = repeat(32, 0xc0),
             .parent_ftx_rolling_hash = repeat(32, 0x04),
-            .parent_processed_ftx_number = 16,
+            .parent_ftx_number = 16,
             .end_ftx_rolling_hash = repeat(32, 0x05),
             .end_processed_ftx_number = 18,
             .filtered_addresses_hash = repeat(32, 0x06),
@@ -61,7 +61,7 @@ test "encodeOutputJson matches the Python reference response shape (minus proof/
         "\"endL1L2BridgeRollingHashMessageNumber\":5," ++
         "\"dynamicChainConfigHash\":\"0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0\"," ++
         "\"parentFtxRollingHash\":\"0x0404040404040404040404040404040404040404040404040404040404040404\"," ++
-        "\"parentProcessedFtxNumber\":16," ++
+        "\"parentFtxNumber\":16," ++
         "\"endFtxRollingHash\":\"0x0505050505050505050505050505050505050505050505050505050505050505\"," ++
         "\"endProcessedFtxNumber\":18," ++
         "\"filteredAddressesHash\":\"0x0606060606060606060606060606060606060606060606060606060606060606\"," ++

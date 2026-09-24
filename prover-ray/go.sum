@@ -1,5 +1,5 @@
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907081205-20e4172711a4 h1:mbvSEPWqPp+5xK/7arKDkVGoeq1iExsnqocOgB47XVc=
-github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260907081205-20e4172711a4/go.mod h1:umx/RI/g2j3klWgMV8kUfjso4eKPbPDiFAfBe+/b/8s=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260917123943-b75b5ca955d8 h1:7BjZtnow4tIXHIENIb73cSRzejUzqJN308XoV3nCE6w=
+github.com/LFDT-Lineth/lineth-monorepo/arithmetization v0.0.0-20260917123943-b75b5ca955d8/go.mod h1:S7wlNn3LfmF4XWpF8LKnx2oYmZK+nQ0NoSIFDtHCdss=
 github.com/LFDT-Lineth/zkc v1.2.32 h1:+KztPR6eIieERgYlWgHd65STh268cTB6O/pNhfylOtk=
 github.com/LFDT-Lineth/zkc v1.2.32/go.mod h1:sBRNMvovYHKzGBhayuSA5m5HMadXWmI/rX8nNsaMidE=
 github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251001021608-1fe7b43fc4d6 h1:1zYrtlhrZ6/b6SAjLSfKzWtdgqK0U+HtH/VcBWh1BaU=
