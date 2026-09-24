@@ -33,10 +33,31 @@ type selfAssignLagrange struct{ le *wiop.LagrangeEval }
 
 func (a *selfAssignLagrange) Run(rt *wiop.Runtime) { a.le.SelfAssign(rt) }
 
+// constVec is only safe for tests that never reach the PCS opening: a constant
+// column interpolates to a constant polynomial, which makes FRI's deep quotient
+// degenerate. Use [nonConstVec] for anything that proves and verifies.
 func constVec(n int, val uint64) *wiop.ConcreteVector {
 	elems := make([]field.Element, n)
 	for i := range elems {
 		elems[i].SetUint64(val)
+	}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
+
+// nonConstVec returns a column whose interpolant is not constant.
+//
+// This matters for every test that exercises the PCS. FRI verifies the deep
+// quotient (f(x) − claim)/(x − zeta). When f is constant, the claimed
+// evaluation equals that constant at *every* zeta and the encoded codeword is
+// that constant at every position, so the numerator vanishes identically. The
+// quotient is then zero whatever zeta and the fold challenges are, zeros fold
+// to zeros, and no constraint in checkFolds depends on the transcript any
+// more — leaving the circuit's Fiat-Shamir derivation completely untested
+// while the test still reports success.
+func nonConstVec(n int) *wiop.ConcreteVector {
+	elems := make([]field.Element, n)
+	for i := range elems {
+		elems[i].SetUint64(uint64(i*i + 1))
 	}
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
@@ -86,7 +107,10 @@ func solveVerifierCircuit(
 func TestVerifierCircuit_PCSOnly(t *testing.T) {
 	useSmallFRI(t)
 	sys, col, le := newPCSOnlySystem()
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, constVec(8, 3)) })
+	// Must be non-constant, or the deep quotient vanishes and the circuit's
+	// Fiat-Shamir derivation stops being constrained by anything. See
+	// [nonConstVec].
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
 	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
 
 	t.Run("honest-native", func(t *testing.T) {
