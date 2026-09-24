@@ -176,7 +176,17 @@ func exprNodeLiteral(expr ExprNode) string {
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = .{ .value = %d } },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, IntSlice(expr.Operands))
+		// Unary operators carry only lhs; rhs is a don't-care the verifier never
+		// reads (see vanishing.zig's ExprOp). Reject anything wider rather than
+		// silently dropping operands into a verifier that cannot represent them.
+		if len(expr.Operands) == 0 || len(expr.Operands) > 2 {
+			panic(fmt.Sprintf("expression operator %q has %d operands; only 1 or 2 are supported", expr.Operator, len(expr.Operands)))
+		}
+		rhs := 0
+		if len(expr.Operands) == 2 {
+			rhs = expr.Operands[1]
+		}
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .lhs = %d, .rhs = %d } },", expr.Operator, expr.Operands[0], rhs)
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:

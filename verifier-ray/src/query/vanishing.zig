@@ -28,9 +28,20 @@ pub const Operator = enum {
     inverse,
 };
 
+/// One arithmetic node of an expression tree.
+///
+/// The operands are two fixed fields rather than a slice because every operator
+/// this codebase emits is unary or binary: `rhs` is read only by the binary
+/// operators, and is a don't-care (written as 0 by codegen) for the unary ones.
+///
+/// This is deliberately not a slice. A `[]const usize` is a 16-byte fat pointer
+/// ({ptr, len}) whatever its element type, which makes it the widest arm of
+/// `ExprNode` and pins the whole union at 32 bytes — so narrowing the index type
+/// alone saves nothing there. Two scalar fields let the union shrink with them.
 pub const ExprOp = struct {
     operator: Operator,
-    operands: []const usize,
+    lhs: usize,
+    rhs: usize = 0,
 };
 
 pub const ScalarRef = struct {
@@ -231,7 +242,7 @@ const EvalCtx = struct {
 // module.expressions is built by codegen (see codegen/vanishing.go's
 // appendExpr) as a post-order flattening of each vanishing constraint's
 // expression tree: every operand is appended, and therefore assigned its
-// index, strictly before the node that references it. So op.operands[i] is
+// index, strictly before the node that references it. So op.lhs/op.rhs are
 // always < the node's own index, and recursion here always makes progress
 // toward index 0 (the array's leaves) — there is no cycle.
 //
@@ -274,12 +285,12 @@ fn evalOp(
     ctx: EvalCtx,
     input: CheckInput,
 ) Error!ext.Ext {
-    const a = try evalExpr(module, op.operands[0], static_n, ctx, input);
+    const a = try evalExpr(module, op.lhs, static_n, ctx, input);
     return switch (op.operator) {
-        .add => a.add(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .mul => a.mul(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .sub => a.sub(try evalExpr(module, op.operands[1], static_n, ctx, input)),
-        .div => a.div(try evalExpr(module, op.operands[1], static_n, ctx, input)),
+        .add => a.add(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .mul => a.mul(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .sub => a.sub(try evalExpr(module, op.rhs, static_n, ctx, input)),
+        .div => a.div(try evalExpr(module, op.rhs, static_n, ctx, input)),
         .double => a.add(a),
         .square => a.square(),
         .negate => a.neg(),
