@@ -21,8 +21,8 @@ const (
 	// shard and zero otherwise. Being a single cell, it is registered unsuffixed.
 	IsLastShardPI wiop.PublicInputTag = "IsLastShard"
 
-	// NumGuestPublicOutputs = 8 because this is a poseidon hash of the other
-	// public outputs.
+	// NumGuestPublicOutputs = 8 because the guest output hash is a keccak-256
+	// digest of the guest program's output, held as eight words in the interpreter.
 	NumGuestPublicOutputs = 8
 
 	// NumSharedRandomness is the number of shared randomness cells. 8 because
