@@ -50,10 +50,34 @@ runs:
         echo "node=$(node -v | sed 's/^v//')" >> "$GITHUB_OUTPUT"
         echo "pnpm=$(pnpm -v)" >> "$GITHUB_OUTPUT"
 
+    # pnpm re-verifies every lockfile entry against minimumReleaseAge/trustPolicy on each install,
+    # regardless of --filter (~30s of registry round trips). The verdict is keyed on lockfile content
+    # and policy, and lives in pnpm's cacheDir, which the store cache above doesn't cover.
+    - id: verdict
+      name: Locate pnpm lockfile verification cache
+      shell: bash
+      run: echo "path=${XDG_CACHE_HOME:-$HOME/.cache}/pnpm/lockfile-verified.jsonl" >> "$GITHUB_OUTPUT"
+
+    - id: verdict-restore
+      name: Restore pnpm lockfile verification cache
+      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ steps.verdict.outputs.path }}
+        key: pnpm-lockfile-verified-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        # Safe fallback: pnpm only reuses a record matching the lockfile hash and current policy.
+        restore-keys: pnpm-lockfile-verified-${{ runner.os }}-
+
     - name: pnpm install
       working-directory: ${{ inputs.working-directory }}
       run: pnpm i ${{ inputs.pnpm-install-options }}
       shell: bash
+
+    - name: Save pnpm lockfile verification cache
+      if: ${{ github.ref == 'refs/heads/main' && !startsWith(github.event_name, 'pull_request') && steps.verdict-restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ${{ steps.verdict.outputs.path }}
+        key: ${{ steps.verdict-restore.outputs.cache-primary-key }}
 
     - name: Run post-install commands
       if: inputs.commands != ''
