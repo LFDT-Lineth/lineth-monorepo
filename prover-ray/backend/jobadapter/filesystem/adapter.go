@@ -1,5 +1,5 @@
 // Package filesystem is the queue supervisor. It finds request files, claims each
-// with an atomic rename, hands it to a Prover (which writes the response), and
+// with an atomic rename, runs a prover on it (which writes the response), and
 // archives the request tagged with the prover's exit code.
 package filesystem
 
@@ -26,12 +26,10 @@ const (
 	dirPerm = 0o750
 )
 
-// Prover proves one request file into a response file. Prove returns the worker's
-// exit code (0 = success); a non-nil error means the worker could not be run at
-// all, which is different from running and failing (a non-zero exit code).
-type Prover interface {
-	Prove(ctx context.Context, requestPath, responsePath string) (exitCode int, err error)
-}
+// RunProver runs a prover for one request file, writing the response file, and
+// returns its exit code (0 = success). A non-nil error means the prover could not
+// be run at all, which is different from running and failing (a non-zero code).
+type RunProver func(ctx context.Context, requestPath, responsePath string) (exitCode int, err error)
 
 // Config holds the queue layout and poll cadence.
 type Config struct {
@@ -43,26 +41,26 @@ type Config struct {
 	PollInterval time.Duration
 }
 
-// Adapter polls the request queue and spawns a Prover for each request.
+// Adapter polls the request queue and runs a prover for each request.
 type Adapter struct {
-	cfg    Config
-	prover Prover
+	cfg   Config
+	spawn RunProver
 }
 
 // New creates the requests/, responses/, and requests-done/ subdirectories under
 // cfg.RequestsRootDir and returns an [Adapter] ready to run.
-func New(cfg Config, prover Prover) (*Adapter, error) {
+func New(cfg Config, spawn RunProver) (*Adapter, error) {
 	if cfg.RequestsRootDir == "" {
 		return nil, fmt.Errorf("jobadapter/filesystem.New: RequestsRootDir must be set")
 	}
-	if prover == nil {
-		return nil, fmt.Errorf("jobadapter/filesystem.New: prover must not be nil")
+	if spawn == nil {
+		return nil, fmt.Errorf("jobadapter/filesystem.New: spawn function must not be nil")
 	}
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
 	}
 
-	a := &Adapter{cfg: cfg, prover: prover}
+	a := &Adapter{cfg: cfg, spawn: spawn}
 	for _, dir := range []string{a.requestsDir(), a.responsesDir(), a.doneDir()} {
 		if err := os.MkdirAll(dir, dirPerm); err != nil {
 			return nil, fmt.Errorf("jobadapter/filesystem.New: creating %s: %w", dir, err)
@@ -128,22 +126,22 @@ func (a *Adapter) processOnce(ctx context.Context) (int, error) {
 
 // processRequest claims one request, spawns the prover on it, publishes the
 // response, and archives the request tagged with the exit code. It returns false
-// without error when the claim is lost or the worker could not be run (the request
+// without error when the claim is lost or the prover could not be run (the request
 // is left for the next scan). A returned error is a filesystem failure.
 func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error) {
 	src := filepath.Join(a.requestsDir(), name)
 	claimed := src + inProgressSuffix
 	if err := os.Rename(src, claimed); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return false, nil // another worker claimed it first
+			return false, nil // another supervisor claimed it first
 		}
 		return false, fmt.Errorf("jobadapter: claiming %s: %w", name, err)
 	}
 
 	respTmp := filepath.Join(a.responsesDir(), name+inProgressSuffix)
-	exitCode, err := a.prover.Prove(ctx, claimed, respTmp)
+	exitCode, err := a.spawn(ctx, claimed, respTmp)
 	if err != nil {
-		// The worker could not be run; leave the request for the next scan.
+		// The prover could not be run; leave the request for the next scan.
 		_ = os.Remove(respTmp)
 		_ = os.Rename(claimed, src)
 		return false, nil
@@ -160,7 +158,7 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-// publishResponse moves the worker's response into place atomically. A worker that
+// publishResponse moves the prover's response into place atomically. A prover that
 // crashed before writing leaves no temp file, which is not an error here.
 func (a *Adapter) publishResponse(respTmp, name string) error {
 	if _, err := os.Stat(respTmp); err != nil {

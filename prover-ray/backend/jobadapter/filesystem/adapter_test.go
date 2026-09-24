@@ -14,9 +14,9 @@ import (
 
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
-// fakeProver stands in for the subprocess prover: it records calls, runs an
-// optional hook (to observe the claim), writes a canned response, and returns a
-// configurable exit code or run error.
+// fakeProver stands in for the real spawn: it records calls, runs an optional
+// hook (to observe the claim), writes a canned response, and returns a
+// configurable exit code or run error. Its run method is a RunProver.
 type fakeProver struct {
 	exitCode int
 	runErr   error
@@ -25,7 +25,7 @@ type fakeProver struct {
 	calls    int
 }
 
-func (f *fakeProver) Prove(_ context.Context, reqPath, respPath string) (int, error) {
+func (f *fakeProver) run(_ context.Context, reqPath, respPath string) (int, error) {
 	f.calls++
 	if f.onProve != nil {
 		f.onProve(reqPath)
@@ -41,10 +41,10 @@ func (f *fakeProver) Prove(_ context.Context, reqPath, respPath string) (int, er
 	return f.exitCode, nil
 }
 
-func newAdapter(t *testing.T, prover Prover) (*Adapter, string) {
+func newAdapter(t *testing.T, prover *fakeProver) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
-	a, err := New(Config{RequestsRootDir: root, PollInterval: 5 * time.Millisecond}, prover)
+	a, err := New(Config{RequestsRootDir: root, PollInterval: 5 * time.Millisecond}, prover.run)
 	require.NoError(t, err)
 	return a, root
 }
@@ -153,17 +153,17 @@ func TestAdapter_LostClaim(t *testing.T) {
 
 func TestNew_Validation(t *testing.T) {
 	t.Run("EmptyRequestsRootDir", func(t *testing.T) {
-		_, err := New(Config{}, &fakeProver{})
+		_, err := New(Config{}, (&fakeProver{}).run)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "RequestsRootDir")
 	})
-	t.Run("NilProver", func(t *testing.T) {
+	t.Run("NilSpawn", func(t *testing.T) {
 		_, err := New(Config{RequestsRootDir: t.TempDir()}, nil)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "prover")
+		assert.Contains(t, err.Error(), "spawn")
 	})
 	t.Run("DefaultsPollInterval", func(t *testing.T) {
-		a, err := New(Config{RequestsRootDir: t.TempDir()}, &fakeProver{})
+		a, err := New(Config{RequestsRootDir: t.TempDir()}, (&fakeProver{}).run)
 		require.NoError(t, err)
 		assert.Equal(t, defaultPollInterval, a.cfg.PollInterval)
 	})
@@ -173,7 +173,7 @@ func TestNew_MkdirFailure(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
 
-	_, err := New(Config{RequestsRootDir: file}, &fakeProver{})
+	_, err := New(Config{RequestsRootDir: file}, (&fakeProver{}).run)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "creating")
 }

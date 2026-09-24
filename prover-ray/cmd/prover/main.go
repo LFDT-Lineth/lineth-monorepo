@@ -10,9 +10,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -21,7 +23,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/sirupsen/logrus"
 )
@@ -96,7 +97,7 @@ func runAdapter(args []string) error {
 
 	adapter, err := filesystem.New(
 		filesystem.Config{RequestsRootDir: cfg.Execution.RequestsRootDir},
-		subprocess.Prover{BinPath: self, ConfigPath: path},
+		spawnProver(self, path),
 	)
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)
@@ -112,7 +113,26 @@ func runAdapter(args []string) error {
 	return adapter.Run(ctx)
 }
 
-// runProve is the worker: prove one request file, write the response, exit with
+// spawnProver returns the adapter's default RunProver: run "prover prove" as a
+// child process and report its exit code.
+func spawnProver(bin, configPath string) filesystem.RunProver {
+	return func(ctx context.Context, reqPath, respPath string) (int, error) {
+		cmd := exec.CommandContext(ctx, bin, "prove",
+			"--config", configPath, "--in", reqPath, "--out", respPath)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		err := cmd.Run()
+		if err == nil {
+			return 0, nil
+		}
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return exitErr.ExitCode(), nil
+		}
+		return -1, err
+	}
+}
+
+// runProve is the prover: prove one request file, write the response, exit with
 // a code.
 func runProve(args []string) error {
 	fs := flag.NewFlagSet("prover prove", flag.ContinueOnError)
