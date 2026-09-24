@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Fix code licence header (#4009)
 ## [2.3.0] - 2026-09-23
 
 ### 🚀 Features
