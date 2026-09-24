@@ -1,0 +1,38 @@
+pub input data(address:u8) -> (byte:u8)
+pub output guest_output(address:u8) -> (byte:u8)
+pub output guest_output_hash(address:u3) -> (word:u32)
+
+// Mirrors the shape of the RISC-V interpreter's memory.zkc: a byte-wide public
+// output holding the guest program's raw output, and a second public output
+// holding its 256-bit hash as eight 32-bit words.
+//
+// Both properties that matter are present here and in no other fixture:
+//
+//  1. two `pub output` memories coexist, and only guest_output_hash may reach the
+//     public inputs;
+//  2. `word:u32` exceeds the field's register width, so the schema subdivides it
+//     and the memory has more than one data column.
+//
+// The eight words are written unconditionally, exactly as the interpreter writes
+// them at termination, so the memory is always full and its last address is 7.
+fn main() {
+    guest_output[0] = data[0]
+    guest_output[1] = data[1]
+    guest_output[2] = data[2]
+    guest_output[3] = data[3]
+    guest_output[4] = data[4]
+    guest_output[5] = data[5]
+    guest_output[6] = data[6]
+    guest_output[7] = data[7]
+
+    // Values whose high and low halves differ, so a limb taken for its sibling
+    // cannot pass unnoticed.
+    guest_output_hash[0] = 0x00010002
+    guest_output_hash[1] = 0x00030004
+    guest_output_hash[2] = 0x00050006
+    guest_output_hash[3] = 0x00070008
+    guest_output_hash[4] = 0x0009000a
+    guest_output_hash[5] = 0x000b000c
+    guest_output_hash[6] = 0x000d000e
+    guest_output_hash[7] = 0x000f0010
+}

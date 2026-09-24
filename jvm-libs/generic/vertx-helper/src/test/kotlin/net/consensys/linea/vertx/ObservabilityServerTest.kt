@@ -12,7 +12,12 @@ import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode
 
+// Vert.x Micrometer metrics use a JVM-wide "default" registry that is stopped when any Vert.x
+// instance using it is closed, so tests running concurrently would scrape each other's registry.
+@Execution(ExecutionMode.SAME_THREAD)
 class ObservabilityServerTest {
   private lateinit var vertx: Vertx
   private lateinit var monitorRequestSpecification: RequestSpecification
