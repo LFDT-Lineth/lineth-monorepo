@@ -57,16 +57,6 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
     return _computeDataRollingHash(_parentDataRollingHash, _chunkHash);
   }
 
-  function computeShnarf(
-    bytes32 _parentShnarf,
-    bytes32 _snarkHash,
-    bytes32 _finalStateRootHash,
-    bytes32 _dataEvaluationPoint,
-    bytes32 _dataEvaluationClaim
-  ) external pure returns (bytes32) {
-    return _computeShnarf(_parentShnarf, _snarkHash, _finalStateRootHash, _dataEvaluationPoint, _dataEvaluationClaim);
-  }
-
   function setLastFinalizedStateV6(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
     currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
   }

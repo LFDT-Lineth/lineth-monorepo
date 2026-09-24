@@ -28,18 +28,6 @@ export type CalldataSubmissionData = {
   compressedData: string;
 };
 
-/**
- * Legacy KZG-point-evaluation-based shnarf data, supplied once to migrate the last live legacy shnarf into
- * the blob-spanning dataRollingHash model. All-zero fields select the standard (non-migration) path.
- */
-export type ShnarfDataForMigration = {
-  parentShnarf: string;
-  snarkHash: string;
-  finalStateRootHash: string;
-  blobHash: string;
-  dataEvaluationClaim: string;
-};
-
 export type FinalizationData = {
   aggregatedProof: string;
   endBlockNumber: bigint;
@@ -63,7 +51,6 @@ export type FinalizationData = {
   endDataRollingHash: string;
   startOffset: bigint;
   endOffset: bigint;
-  shnarfData: ShnarfDataForMigration;
   verifierKeys: string[];
 };
 

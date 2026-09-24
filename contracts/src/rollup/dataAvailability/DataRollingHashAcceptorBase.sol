@@ -18,18 +18,16 @@ abstract contract DataRollingHashAcceptorBase is LinethRollupBase, IDataRollingH
    * @dev Anchoring only stores the final dataRollingHash of a submission; intermediate chunk
    *   folds are not persisted. A stream is continued across submissions by chaining from any
    *   previously-anchored parent dataRollingHash.
-   * @dev `currentFinalizedShnarf_DEPRECATED` is permanently treated as an anchored parent. For a
-   *   genuine genesis fresh-start (or once the one-time legacy-shnarf migration has completed) it
-   *   is EMPTY_HASH, matching prior behavior. While a network is still awaiting that migration it
-   *   instead holds the bridged legacy shnarf value, so the first post-upgrade chunk explicitly
-   *   chains from the pre-migration state rather than an arbitrary EMPTY_HASH reset.
+   * @dev Every valid parent is anchored directly in `_dataRollingHashExists`: the deterministic
+   *   genesis hash seeded at `__LinethRollup_init` for fresh networks, or the migrated legacy
+   *   shnarf seeded at `reinitializeLineaRollupV10` for in-place upgrades. No special-case
+   *   fallback is needed.
    * @param _parentDataRollingHash The parent dataRollingHash.
    * @param _storedDataRollingHash The dataRollingHash to anchor.
    */
   function _acceptDataRollingHash(bytes32 _parentDataRollingHash, bytes32 _storedDataRollingHash) internal virtual {
     require(
-      _dataRollingHashExists[_parentDataRollingHash] != 0 ||
-        _parentDataRollingHash == currentFinalizedShnarf_DEPRECATED,
+      _dataRollingHashExists[_parentDataRollingHash] != 0,
       ParentDataRollingHashNotAnchored(_parentDataRollingHash)
     );
     require(

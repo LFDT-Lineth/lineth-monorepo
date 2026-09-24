@@ -35,6 +35,7 @@ import {
   expectRevertWithCustomError,
   expectRevertWithReason,
   expectRevertWhenPaused,
+  computeDataRollingHash,
 } from "../common/helpers";
 
 describe("Validium contract", () => {
@@ -51,8 +52,8 @@ describe("Validium contract", () => {
   let addressFilterAddress: string;
 
   const { parentStateRootHash } = firstCompressedDataContent;
-  // Genesis accumulator is the empty hash (EMPTY_HASH); each anchor chains from a previously-anchored parent.
-  const prevShnarf = () => HASH_ZERO;
+  // Genesis accumulator is the deterministic anchor keccak256(EMPTY_HASH || initialBlockHash).
+  const prevShnarf = () => computeDataRollingHash(HASH_ZERO, parentStateRootHash);
   const expectedShnarf = generateRandomBytes(32);
   const secondExpectedShnarf = generateRandomBytes(32);
 

@@ -153,8 +153,10 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Initializes LinethRollup and underlying service dependencies - used for new networks only.
-   * @dev `currentDataRollingHash`/`currentDataAvailabilityOffset`/`currentFinalizedShnarf_DEPRECATED` are left at
-   *   their zero defaults — fresh networks have no legacy shnarf to migrate from.
+   * @dev `currentDataRollingHash` is deterministically seeded from `initialBlockHash`
+   *   (`keccak256(EMPTY_HASH || initialBlockHash)`) and anchored into `_dataRollingHashExists`.
+   *   `currentDataAvailabilityOffset`/`currentFinalizedShnarf_DEPRECATED` are left at their zero
+   *   defaults — fresh networks have no legacy shnarf to migrate from.
    * @param _initializationData The initial data used for contract initialization.
    */
   function __LinethRollup_init(BaseInitializationData calldata _initializationData) internal virtual onlyInitializing {
@@ -187,6 +189,13 @@ abstract contract LinethRollupBase is
     require(_initializationData.initialBlockHash != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
     currentL2BlockNumber = _initializationData.initialL2BlockNumber;
     blockHashes[_initializationData.initialL2BlockNumber] = _initializationData.initialBlockHash;
+
+    bytes32 genesisDataRollingHash = EfficientLeftRightKeccak._efficientKeccak(
+      EMPTY_HASH,
+      _initializationData.initialBlockHash
+    );
+    currentDataRollingHash = genesisDataRollingHash;
+    _dataRollingHashExists[genesisDataRollingHash] = 1;
 
     currentFinalizedState = FinalizedStateHashing._computeLastFinalizedState(
       0,
@@ -404,37 +413,6 @@ abstract contract LinethRollupBase is
   }
 
   /**
-   * @notice Computes the legacy 5-input shnarf, used solely by the one-time legacy-shnarf migration
-   *   in `_finalizeBlocks`.
-   * @dev Same formula and field layout as `main`'s `_computeShnarf`/`ShnarfData`
-   *   (`CONTRACT_VERSION() == "8.0"`, see `contracts/deployments/bytecode/2026-07-29`).
-   * @dev Using assembly this way is cheaper gas wise.
-   * @param _parentShnarf The shnarf of the parent legacy data item.
-   * @param _snarkHash The snark hash of the legacy data item.
-   * @param _finalStateRootHash The final state root hash of the legacy data item.
-   * @param _dataEvaluationPoint The KZG point-evaluation point (z) of the legacy data item.
-   * @param _dataEvaluationClaim The KZG point-evaluation claim of the legacy data item.
-   * @return shnarf The computed legacy shnarf.
-   */
-  function _computeShnarf(
-    bytes32 _parentShnarf,
-    bytes32 _snarkHash,
-    bytes32 _finalStateRootHash,
-    bytes32 _dataEvaluationPoint,
-    bytes32 _dataEvaluationClaim
-  ) internal pure returns (bytes32 shnarf) {
-    assembly {
-      let mPtr := mload(0x40)
-      mstore(mPtr, _parentShnarf)
-      mstore(add(mPtr, 0x20), _snarkHash)
-      mstore(add(mPtr, 0x40), _finalStateRootHash)
-      mstore(add(mPtr, 0x60), _dataEvaluationPoint)
-      mstore(add(mPtr, 0x80), _dataEvaluationClaim)
-      shnarf := keccak256(mPtr, 0xA0)
-    }
-  }
-
-  /**
    * @notice Finalize compressed blocks with proof.
    * @dev OPERATOR_ROLE is required to execute.
    * @param _aggregatedProof The aggregated proof.
@@ -485,8 +463,6 @@ abstract contract LinethRollupBase is
    * @notice Internal function to finalize compressed blocks.
    * @dev If blockHashes[lastFinalizedBlock] is EMPTY_HASH, validates the legacy parent state root
    *   (block-hash/state-root migration).
-   * @dev If `_finalizationData.shnarfData` is non-empty, also runs the one-time legacy-shnarf ->
-   *   dataRollingHash migration (see `_computeShnarf`), guarded by `LegacyShnarfAlreadyMigrated`.
    * @param _finalizationData The full finalization data.
    * @param _lastFinalizedBlock The last finalized block number.
    * @param _finalForcedTransactionRollingHash The rolling hash for the final forced transaction.
@@ -555,51 +531,6 @@ abstract contract LinethRollupBase is
     }
 
     require(_finalizationData.finalBlockHash != EMPTY_HASH, FinalizationBlockHashIsZeroHash());
-
-    // One-time legacy shnarf -> dataRollingHash migration. Non-empty shnarfData selects this path.
-    if (
-      _finalizationData.shnarfData.parentShnarf != EMPTY_HASH ||
-      _finalizationData.shnarfData.snarkHash != EMPTY_HASH ||
-      _finalizationData.shnarfData.finalStateRootHash != EMPTY_HASH ||
-      _finalizationData.shnarfData.blobHash != EMPTY_HASH ||
-      _finalizationData.shnarfData.dataEvaluationClaim != EMPTY_HASH
-    ) {
-      require(
-        currentDataRollingHash == EMPTY_HASH && currentDataAvailabilityOffset == 0,
-        LegacyShnarfAlreadyMigrated()
-      );
-
-      // dataEvaluationPoint = keccak256(snarkHash || blobHash), matching
-      // Eip4844BlobAcceptor._submitBlobs on `main`.
-      bytes32 reconstructedShnarf = _computeShnarf(
-        _finalizationData.shnarfData.parentShnarf,
-        _finalizationData.shnarfData.snarkHash,
-        _finalizationData.shnarfData.finalStateRootHash,
-        EfficientLeftRightKeccak._efficientKeccak(
-          _finalizationData.shnarfData.snarkHash,
-          _finalizationData.shnarfData.blobHash
-        ),
-        _finalizationData.shnarfData.dataEvaluationClaim
-      );
-
-      require(
-        reconstructedShnarf == currentFinalizedShnarf_DEPRECATED,
-        LegacyShnarfMismatch(currentFinalizedShnarf_DEPRECATED, reconstructedShnarf)
-      );
-
-      // Wipe the legacy value — the migration is one-way and can never be repeated.
-      currentFinalizedShnarf_DEPRECATED = EMPTY_HASH;
-
-      // Seed the new dataRollingHash chain from the bridged legacy shnarf (offset 0, fresh-start
-      // semantics) instead of EMPTY_HASH, explicitly tying post-migration continuity to the
-      // pre-migration state root rather than an arbitrary reset point. Anchoring it permanently
-      // into the membership set lets the first post-upgrade submission chain from it (see the
-      // matching check in `DataRollingHashAcceptorBase._acceptDataRollingHash`).
-      currentDataRollingHash = reconstructedShnarf;
-      _dataRollingHashExists[reconstructedShnarf] = 1;
-
-      emit LegacyShnarfMigrated(reconstructedShnarf, _finalizationData.shnarfData.blobHash);
-    }
 
     // Checked as a pair against currentDataRollingHash/currentDataAvailabilityOffset: the same
     // dataRollingHash can recur at different offsets, so both must match exactly.
@@ -762,15 +693,10 @@ abstract contract LinethRollupBase is
    * 0x1e0   endDataRollingHash
    * 0x200   startOffset
    * 0x220   endOffset
-   * 0x240   shnarfData.parentShnarf (legacy migration only, not part of the public input)
-   * 0x260   shnarfData.snarkHash
-   * 0x280   shnarfData.finalStateRootHash
-   * 0x2a0   shnarfData.blobHash
-   * 0x2c0   shnarfData.dataEvaluationClaim
-   * 0x2e0   l2MerkleRootsLengthLocation
-   * 0x300   filteredAddressesLengthLocation
-   * 0x320   verifierKeysLengthLocation
-   * 0x340   l2MessagingBlocksOffsetsLengthLocation
+   * 0x240   l2MerkleRootsLengthLocation
+   * 0x260   filteredAddressesLengthLocation
+   * 0x280   verifierKeysLengthLocation
+   * 0x2a0   l2MessagingBlocksOffsetsLengthLocation
    * Dynamic l2MerkleRootsLength
    * Dynamic l2MerkleRoots
    * Dynamic filteredAddressesLength

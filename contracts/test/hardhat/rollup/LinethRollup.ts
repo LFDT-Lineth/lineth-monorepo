@@ -50,6 +50,7 @@ import {
   calculateLastFinalizedState,
   expectNoEvent,
   expectEventDirectFromReceiptData,
+  computeDataRollingHash,
 } from "../common/helpers";
 import { LinethRollupInitializationData, PauseTypeRole } from "../common/types";
 
@@ -258,6 +259,10 @@ describe("Lineth Rollup contract", () => {
       );
 
       expect(await linethRollup.blockHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
+
+      const expectedGenesisDataRollingHash = computeDataRollingHash(HASH_ZERO, initializationData.initialBlockHash);
+      expect(await linethRollup.currentDataRollingHash()).to.equal(expectedGenesisDataRollingHash);
+      expect(await linethRollup.dataRollingHashExists(expectedGenesisDataRollingHash)).to.equal(1n);
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to both SecurityCouncil and Operator", async () => {
@@ -331,8 +336,7 @@ describe("Lineth Rollup contract", () => {
   describe("Upgrading / reinitialisation V10", () => {
     beforeEach(async () => {
       // Simulate a pre-upgrade state: lower the initialized version so reinitializer(10) can run.
-      // No data migration happens here anymore — reinitializeLineaRollupV10 is a no-op version bump;
-      // the legacy shnarf -> dataRollingHash migration is validated and applied inside finalizeBlocks itself.
+      // Migration now happens inside reinitializeLineaRollupV10 itself (unconditionally, once).
       await linethRollup.setSlotValue(0, 9);
     });
 
@@ -351,15 +355,23 @@ describe("Lineth Rollup contract", () => {
       expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
     });
 
-    it("Does not touch currentFinalizedShnarf_DEPRECATED, currentDataRollingHash, or currentDataAvailabilityOffset", async () => {
+    it("Migrates currentFinalizedShnarf_DEPRECATED into currentDataRollingHash and anchors it", async () => {
       const legacyFinalizedShnarf = generateRandomBytes(32);
       await linethRollup.setLegacyFinalizedShnarf(legacyFinalizedShnarf);
 
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", []);
+      const upgradeCall = reinitializeUpgradeableProxy(
+        linethRollup,
+        LinethRollup__factory.abi,
+        "reinitializeLineaRollupV10",
+        [],
+      );
 
-      expect(await linethRollup.currentFinalizedShnarf_DEPRECATED()).to.equal(legacyFinalizedShnarf);
-      expect(await linethRollup.currentDataRollingHash()).to.equal(HASH_ZERO);
+      await expectEvent(linethRollup, upgradeCall, "LegacyShnarfMigrated", [legacyFinalizedShnarf]);
+
+      expect(await linethRollup.currentFinalizedShnarf_DEPRECATED()).to.equal(HASH_ZERO);
+      expect(await linethRollup.currentDataRollingHash()).to.equal(legacyFinalizedShnarf);
       expect(await linethRollup.currentDataAvailabilityOffset()).to.equal(0n);
+      expect(await linethRollup.dataRollingHashExists(legacyFinalizedShnarf)).to.equal(1n);
     });
 
     it("Fails to reinitialize twice", async () => {
