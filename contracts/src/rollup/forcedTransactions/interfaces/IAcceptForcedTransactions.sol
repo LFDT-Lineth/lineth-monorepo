@@ -25,7 +25,7 @@ interface IAcceptForcedTransactions {
    * @param forcedTransactionNumber The indexed forced transaction number.
    * @param from The recovered signer's from address.
    * @param blockNumberDeadline The maximum expected L2 block number processing will occur by.
-   * @param forcedTransactionRollingHash The computed rolling Mimc based hash.
+   * @param forcedTransactionRollingHash The computed rolling keccak256 based hash.
    * @param rlpEncodedSignedTransaction The RLP encoded type 02 transaction payload including signature.
    */
   event ForcedTransactionAdded(

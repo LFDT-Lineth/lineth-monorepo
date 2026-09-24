@@ -60,7 +60,6 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_COINBASE | true | address | Coinbase address passed to the verifier constructor |
 | L2_MESSAGE_SERVICE_ADDRESS | registry\|env | address | L2 Message Service address passed to the verifier constructor. Read from registry on stable networks; env var used as fallback. |
 | VERIFIER_IS_ALLOWED_CIRCUIT_ID | true | uint256 | Allowed-circuit bit mask passed to the verifier constructor and folded into the verifier chain configuration hash. This value must match the prover-side `isAllowedCircuitID` used to generate aggregation proofs. |
-| VERIFIER_MIMC_ADDRESS | false | address | Optional. Reuse an existing deployed `Mimc` library for PlonkVerifier instead of deploying a new one (see [verifier.md](l1/verifier.md)). |
 | YIELD_MANAGER_ADDRESS | registry\|env | address | Yield Manager contract address. Read from registry on stable networks; env var used as fallback. |
 | LINETH_ROLLUP_ADDRESS_FILTER | registry\|env | address | AddressFilter contract address. Read from registry if present; env var used as fallback. |
 

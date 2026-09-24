@@ -4,7 +4,6 @@ import { IGenericErrors } from "../../interfaces/IGenericErrors.sol";
 import { IAcceptForcedTransactions } from "./interfaces/IAcceptForcedTransactions.sol";
 import { IForcedTransactionGateway } from "./interfaces/IForcedTransactionGateway.sol";
 import { IAddressFilter } from "./interfaces/IAddressFilter.sol";
-import { Mimc } from "../../libraries/Mimc.sol";
 import { FinalizedStateHashing } from "../../libraries/FinalizedStateHashing.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -17,7 +16,6 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @custom:security-contact security-report@linea.build
  */
 contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
-  using Mimc for *;
   using LibRLP for *;
   using FinalizedStateHashing for *;
 
@@ -206,7 +204,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     transactionFieldList = LibRLP.p(transactionFieldList, _forcedTransaction.s);
 
     LINEA_ROLLUP.storeForcedTransaction{ value: msg.value }(
-      Mimc.hash(
+      keccak256(
         abi.encode(
           previousForcedTransactionRollingHash,
           hashedPayloadMsb,

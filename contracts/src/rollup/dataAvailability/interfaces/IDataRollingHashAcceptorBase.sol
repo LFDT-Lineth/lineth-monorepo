@@ -6,7 +6,7 @@ pragma solidity ^0.8.33;
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-interface IShnarfDataAcceptorBase {
+interface IDataRollingHashAcceptorBase {
   /**
    * @dev Thrown when the dataRollingHash being submitted is the zero hash.
    */
@@ -25,7 +25,7 @@ interface IShnarfDataAcceptorBase {
   /**
    * @dev Thrown when the computed dataRollingHash does not match what is expected.
    */
-  error FinalDataRollingHashWrong(bytes32 expected, bytes32 value);
+  error DataRollingHashMismatch(bytes32 expected, bytes32 value);
 
   /**
    * @notice Emitted when compressed data is being submitted and anchored successfully on L1.

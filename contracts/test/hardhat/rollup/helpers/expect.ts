@@ -117,12 +117,17 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.finalForcedTransactionNumber,
       finalizationData.lastFinalizedForcedTransactionRollingHash,
       finalizationData.finalBlockHash,
-      finalizationData.prevDataRollingHash,
-      finalizationData.prevOffset,
       finalizationData.parentDataRollingHash,
       finalizationData.endDataRollingHash,
       finalizationData.startOffset,
       finalizationData.endOffset,
+      [
+        finalizationData.shnarfData.parentShnarf,
+        finalizationData.shnarfData.snarkHash,
+        finalizationData.shnarfData.finalStateRootHash,
+        finalizationData.shnarfData.blobHash,
+        finalizationData.shnarfData.dataEvaluationClaim,
+      ],
       finalizationData.l2MerkleRoots,
       finalizationData.filteredAddresses,
       finalizationData.verifierKeys,
@@ -130,8 +135,8 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     ],
   ];
 
-  // Encode via the contract interface so the selector always matches the current FinalizationDataV6
-  // struct (the V5->V6 struct change altered the function selector).
+  // Encode via the contract interface so the selector always matches the current FinalizationDataV5
+  // struct (the V4->V5 struct change altered the function selector).
   const encodedCall = upgradedContract.interface.encodeFunctionData("finalizeBlocks", [
     txData[0],
     txData[1],

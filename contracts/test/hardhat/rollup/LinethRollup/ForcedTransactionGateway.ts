@@ -6,7 +6,7 @@ import {
   FORCED_TRANSACTION_FEE_SETTER_ROLE,
   PRECOMPILES_ADDRESSES,
 } from "contracts/common/constants";
-import { ForcedTransactionGateway, AddressFilter, Mimc, TestLinethRollup } from "contracts/typechain-types";
+import { ForcedTransactionGateway, AddressFilter, TestLinethRollup } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
 import {
@@ -51,8 +51,6 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
   let linethRollup: TestLinethRollup;
   let addressFilter: AddressFilter;
   let forcedTransactionGateway: ForcedTransactionGateway;
-  let mimcLibrary: Mimc;
-  let mimcLibraryAddress: string;
 
   let securityCouncil: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
@@ -69,13 +67,9 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
   });
 
   beforeEach(async () => {
-    ({
-      linethRollup,
-      forcedTransactionGateway,
-      addressFilter,
-      mimc: mimcLibrary,
-    } = await loadFixture(deployForcedTransactionGatewayFixture));
-    mimcLibraryAddress = await mimcLibrary.getAddress();
+    ({ linethRollup, forcedTransactionGateway, addressFilter } = await loadFixture(
+      deployForcedTransactionGatewayFixture,
+    ));
 
     await linethRollup
       .connect(securityCouncil)
@@ -188,9 +182,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
 
     constructorValidationCases.forEach(({ description, override, expectedError }) => {
       it(`Should fail if the ${description}`, async () => {
-        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-          libraries: { Mimc: mimcLibraryAddress },
-        });
+        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
 
         const defaultConfig: ConstructorConfig = {
           linethRollupAddr: await linethRollup.getAddress(),
@@ -215,9 +207,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     });
 
     it("Should fail if the l2 block time is set to zero", async () => {
-      const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-        libraries: { Mimc: mimcLibraryAddress },
-      });
+      const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
 
       await expectRevertWithCustomError(
         forcedTransactionGateway,
@@ -237,9 +227,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     });
 
     it("Should fail if the block number deadline buffer is set to zero", async () => {
-      const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-        libraries: { Mimc: mimcLibraryAddress },
-      });
+      const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
 
       await expectRevertWithCustomError(
         forcedTransactionGateway,
@@ -666,7 +654,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     });
 
     it("Should emit the ForcedTransactionAdded event on adding a transaction", async () => {
-      // use a way future dated timestamp and mimc the calculation for the block number
+      // use a way future dated timestamp and replicate the calculation for the block number
       const blockNumberDeadline = await setNextExpectedL2BlockNumberForForcedTx(
         linethRollup,
         1954213624n,
@@ -675,8 +663,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
 
       const expectedForcedTransactionNumber = 1n;
 
-      const expectedMimcHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
-        mimcLibrary,
+      const expectedRollingHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
         linethRollup,
         buildEip1559Transaction(l2SendMessageTransaction.result),
         blockNumberDeadline,
@@ -688,7 +675,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         expectedForcedTransactionNumber,
         ethers.getAddress(l2SendMessageTransaction.result.from),
         blockNumberDeadline,
-        expectedMimcHashWithPreviousZeroValueRollingHash,
+        expectedRollingHashWithPreviousZeroValueRollingHash,
         l2SendMessageTransaction.rlpEncodedSigned,
       ];
 
@@ -724,9 +711,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     blockTimeTestCases.forEach(({ description, l2BlockTimeSeconds, networkTimestamp }) => {
       it(`Should calculate correct blockNumberDeadline with ${description}`, async () => {
         // Deploy a new ForcedTransactionGateway with custom block time
-        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-          libraries: { Mimc: mimcLibraryAddress },
-        });
+        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
         const forcedTransactionGatewayWithCustomBlockTime = await forcedTransactionGatewayFactory.deploy(
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
@@ -753,8 +738,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
 
         const expectedForcedTransactionNumber = 1n;
 
-        const expectedMimcHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
-          mimcLibrary,
+        const expectedRollingHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
           linethRollup,
           buildEip1559Transaction(l2SendMessageTransaction.result),
           blockNumberDeadline,
@@ -766,7 +750,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
           expectedForcedTransactionNumber,
           ethers.getAddress(l2SendMessageTransaction.result.from),
           blockNumberDeadline,
-          expectedMimcHashWithPreviousZeroValueRollingHash,
+          expectedRollingHashWithPreviousZeroValueRollingHash,
           l2SendMessageTransaction.rlpEncodedSigned,
         ];
 
@@ -791,9 +775,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       let firstTimestamp: bigint;
 
       beforeEach(async () => {
-        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-          libraries: { Mimc: mimcLibraryAddress },
-        });
+        const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
         customGateway = (await forcedTransactionGatewayFactory.deploy(
           await linethRollup.getAddress(),
           LINEA_MAINNET_CHAIN_ID,
@@ -874,7 +856,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
     });
 
     it("Should change rolling hash with different expected block number", async () => {
-      // use a way future dated timestamp and mimic the calculation for the block number
+      // use a way future dated timestamp and replicate the calculation for the block number
       const blockNumberDeadline = await setNextExpectedL2BlockNumberForForcedTx(
         linethRollup,
         1854213624n,
@@ -883,8 +865,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
 
       const expectedForcedTransactionNumber = 1n;
 
-      const expectedMimcHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
-        mimcLibrary,
+      const expectedRollingHashWithPreviousZeroValueRollingHash = await getForcedTransactionRollingHash(
         linethRollup,
         buildEip1559Transaction(l2SendMessageTransaction.result),
         blockNumberDeadline,
@@ -896,7 +877,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         expectedForcedTransactionNumber,
         ethers.getAddress(l2SendMessageTransaction.result.from),
         blockNumberDeadline,
-        expectedMimcHashWithPreviousZeroValueRollingHash,
+        expectedRollingHashWithPreviousZeroValueRollingHash,
         l2SendMessageTransaction.rlpEncodedSigned,
       ];
 
@@ -997,7 +978,6 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
         defaultFinalizedState.timestamp,
       );
       const expectedForcedTxRollingHash = await getForcedTransactionRollingHash(
-        mimcLibrary,
         linethRollup,
         buildEip1559Transaction(l2SendMessageTransaction.result),
         blockNumberDeadline,

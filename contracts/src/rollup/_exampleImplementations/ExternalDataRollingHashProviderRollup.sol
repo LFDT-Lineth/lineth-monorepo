@@ -8,7 +8,7 @@ import { LinethRollupBase } from "../LinethRollupBase.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract ExternalShnarfStorageRollup is LinethRollupBase {
+contract ExternalDataRollingHashProviderRollup is LinethRollupBase {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -22,7 +22,7 @@ contract ExternalShnarfStorageRollup is LinethRollupBase {
    * @param _initializationData The initial data used for proof verification.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    __LinethRollup_init(_initializationData, _computePositionCommitment(EMPTY_HASH, 0));
+    __LinethRollup_init(_initializationData);
   }
 
   /**
@@ -32,7 +32,7 @@ contract ExternalShnarfStorageRollup is LinethRollupBase {
    * @return dataRollingHashExists The dataRollingHash's existence value.
    */
   function dataRollingHashExists(bytes32 _dataRollingHash) public view returns (uint256 dataRollingHashExists) {
-    dataRollingHashExists = shnarfProvider.dataRollingHashExists(_dataRollingHash);
+    dataRollingHashExists = dataRollingHashProvider.dataRollingHashExists(_dataRollingHash);
   }
 
   /**

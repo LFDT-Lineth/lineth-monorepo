@@ -6,7 +6,7 @@ pragma solidity 0.8.33;
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-interface IProvideShnarf {
+interface IProvideDataRollingHash {
   /**
    * @notice Returns if the dataRollingHash has been anchored.
    * @dev Value > 0 means that it exists. Default is 1.
