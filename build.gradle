@@ -171,7 +171,7 @@ allprojects {
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
     systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
-    maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 9)
+    maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 6)
   }
 
   tasks.withType(Test).matching { it.name == 'integrationTest' }.configureEach {
