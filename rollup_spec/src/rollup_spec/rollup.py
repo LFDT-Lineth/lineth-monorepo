@@ -303,7 +303,7 @@ class RollupPublicInput:
     recompression), not trusted witness input.
 
     `program_vks` is the set of ALL guest program VKs verified beneath this proof
-    (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
+    (§ProgramVK anchoring), checked against L1's single combined `verifierKeys`
     set. It is semantically a SET, encoded as a CANONICAL sorted, distinct list
     (ascending by byte value): order carries no meaning, and sorting makes the
     commitment a pure function of the set's contents, so the guest and L1 agree
