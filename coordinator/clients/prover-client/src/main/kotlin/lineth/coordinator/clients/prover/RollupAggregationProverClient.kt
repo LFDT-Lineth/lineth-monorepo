@@ -47,9 +47,6 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
             startBlockNumber = request.startBlockNumber.toLong(),
             endBlockNumber = request.endBlockNumber.toLong(),
             startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-            endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-            transactionsCount = request.transactionsCount,
-            totalGasUsed = request.totalGasUsed,
           ),
         )
       }
@@ -74,9 +71,6 @@ internal class RestfulRollupAggregationProofRequestDtoMapper(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
         startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-        endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-        transactionsCount = request.transactionsCount,
-        totalGasUsed = request.totalGasUsed,
       ),
     )
 

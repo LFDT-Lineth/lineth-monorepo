@@ -2,17 +2,15 @@ package linea.clients
 
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
-import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
 import linea.domain.assertConsecutiveIntervals
-import linea.domain.sumOfMetaDataOrNull
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
 import kotlin.time.Instant
 
 data class RollupAggregationProofRequestV1(
   val rollupProofs: List<BlockIntervalProofIndex>,
-) : BlockInterval, StartBlockTimestampProvider, ProofRequestMetaDataProvider {
+) : BlockInterval, StartBlockTimestampProvider {
   init {
     assertConsecutiveIntervals(rollupProofs)
   }
@@ -22,12 +20,6 @@ data class RollupAggregationProofRequestV1(
     get() = rollupProofs.last().endBlockNumber
   override val startBlockTimestamp: Instant
     get() = rollupProofs.first().startBlockTimestamp
-  override val endBlockTimestamp: Instant?
-    get() = rollupProofs.last().proofRequestMetaData?.endBlockTimestamp
-  override val transactionsCount: Long?
-    get() = rollupProofs.sumOfMetaDataOrNull { it.transactionsCount }
-  override val totalGasUsed: Long?
-    get() = rollupProofs.sumOfMetaDataOrNull { it.totalGasUsed }
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false

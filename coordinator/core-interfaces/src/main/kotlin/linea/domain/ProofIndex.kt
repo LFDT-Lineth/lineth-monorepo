@@ -10,7 +10,6 @@ data class BlockIntervalProofIndex(
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
   val hash: ByteArray,
-  val proofRequestMetaData: ProofRequestMetaData? = null,
 ) : BlockInterval, ProofIndex {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -22,7 +21,6 @@ data class BlockIntervalProofIndex(
     if (endBlockNumber != other.endBlockNumber) return false
     if (!hash.contentEquals(other.hash)) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (proofRequestMetaData != other.proofRequestMetaData) return false
 
     return true
   }
@@ -32,7 +30,6 @@ data class BlockIntervalProofIndex(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + hash.contentHashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + (proofRequestMetaData?.hashCode() ?: 0)
     return result
   }
 
@@ -40,7 +37,6 @@ data class BlockIntervalProofIndex(
     return "BlockIntervalProofIndex(startBlockNumber=$startBlockNumber, " +
       "endBlockNumber=$endBlockNumber,  " +
       "startBlockTimestamp=$startBlockTimestamp, " +
-      "proofRequestMetaData=$proofRequestMetaData, " +
       "hash=${hash.encodeHex()})"
   }
 }
