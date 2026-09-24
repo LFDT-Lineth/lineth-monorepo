@@ -8,7 +8,7 @@
 // circuit code to work in both native KoalaBear circuits and emulated circuits
 // (e.g., BLS12-377).
 //
-// The [API] type provides arithmetic operations for both [Element] and [Ext]:
+// The [KoalaBearAPI] type provides arithmetic operations for both [Element] and [Ext]:
 //   - Base field operations: Add, Sub, Mul, MulConst, etc.
 //   - Extension field operations: AddExt, SubExt, MulExt, MulConstExt, etc.
 //

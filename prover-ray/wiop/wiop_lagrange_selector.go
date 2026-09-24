@@ -211,7 +211,7 @@ func (ls *LagrangeSelector) EvaluateOutOfDomainGnark(run *GnarkRuntime, x circui
 //
 // xPowN must be x raised to the module size; passing anything else silently
 // produces a wrong evaluation.
-func (ls *LagrangeSelector) EvaluateOutOfDomainGnarkAt(api *circuit.API, x, xPowN circuit.Ext) circuit.Ext {
+func (ls *LagrangeSelector) EvaluateOutOfDomainGnarkAt(api *circuit.KoalaBearAPI, x, xPowN circuit.Ext) circuit.Ext {
 	n := ls.module.Size()
 	pos := ls.resolvedRow(n)
 

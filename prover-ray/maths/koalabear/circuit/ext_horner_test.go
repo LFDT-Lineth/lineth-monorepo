@@ -13,9 +13,9 @@ import (
 
 const hornerTestDegree = 5
 
-// TestHornerCircuit checks [API.HornerExt] against a witness-computed
-// evaluation, and [API.SubByBaseExt] against the general [API.SubExt] it is a
-// specialization of.
+// TestHornerCircuit checks [KoalaBearAPI.HornerExt] against a witness-computed
+// evaluation, and [KoalaBearAPI.SubByBaseExt] against the general
+// [KoalaBearAPI.SubExt] it is a specialization of.
 type TestHornerCircuit struct {
 	Coeffs [hornerTestDegree]Ext
 	X      Ext

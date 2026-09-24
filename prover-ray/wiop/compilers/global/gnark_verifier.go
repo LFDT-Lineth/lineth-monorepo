@@ -69,7 +69,7 @@ func (gv *Verifier) CheckGnark(_ frontend.API, run *wiop.GnarkRuntime) {
 
 // evalCancellationAtPointGnark mirrors [evalCancellationAtPoint]:
 // C(r) = Π_{k ∈ cancelled} (r − ω_n^{norm(k)}), the roots being constants.
-func evalCancellationAtPointGnark(api *circuit.API, r circuit.Ext, cancelled []int, n int) circuit.Ext {
+func evalCancellationAtPointGnark(api *circuit.KoalaBearAPI, r circuit.Ext, cancelled []int, n int) circuit.Ext {
 	roots := cancellationRoots(cancelled, n)
 	if len(roots) == 0 {
 		return api.OneExt()
