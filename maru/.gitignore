@@ -1,18 +1,3 @@
-# Maru-specific ignores. Generic Gradle/IDE rules live in the monorepo root .gitignore.
-
-# JVM artifacts not covered by the root .gitignore
-*.class
-*.hprof
-hs_err_pid*
-replay_pid*
-
-# Local config overrides
-*.local.toml
-
+# Maru-specific ignores. Generic Gradle/IDE rules live in the monorepo root .gitignore
 # Generated files
 docker/initialization/*.json
-
-# Ignore .cursor config but commit shared team rules (BUGBOT.md, rules/).
-.cursor/*
-!.cursor/BUGBOT.md
-!.cursor/rules/

@@ -166,3 +166,4 @@
 - *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 - *(misc)* Fix code licence header (#4009)
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
