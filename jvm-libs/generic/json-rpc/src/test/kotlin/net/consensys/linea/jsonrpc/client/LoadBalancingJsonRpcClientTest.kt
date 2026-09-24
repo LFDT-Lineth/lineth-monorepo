@@ -91,21 +91,22 @@ class LoadBalancingJsonRpcClientTest {
     val requestHandler = { request: JsonRpcRequest ->
       JsonRpcSuccessResponse(request.id, "success")
     }
+    // Hold the replies to the requests fired right away until all requests are in the
+    // LoadBalancer queue; a fixed delay is not enough on loaded CI runners.
+    val allRequestsSent = Promise.promise<Unit>()
     val client1 = FakeJsonRpcHandler(
       requestHandled = requestsReceivedByClients,
       defaultResponseDelay = 10.milliseconds,
       defaultResponseSupplier = requestHandler,
     ).apply {
-      // 1st N requests should have high delay, otherwise it's replies arrive before
-      // they all request are sent LoadBalancer queue
-      requestsCallOrder.take(4).forEach { onRequest(it, 300.milliseconds, requestHandler) }
+      requestsCallOrder.take(2).forEach { onRequest(it, allRequestsSent.future(), requestHandler) }
     }
     val client2 = FakeJsonRpcHandler(
       requestHandled = requestsReceivedByClients,
       defaultResponseDelay = 20.milliseconds,
       defaultResponseSupplier = requestHandler,
     ).apply {
-      requestsCallOrder.take(4).forEach { onRequest(it, 300.milliseconds, requestHandler) }
+      requestsCallOrder.take(2).forEach { onRequest(it, allRequestsSent.future(), requestHandler) }
     }
     // Custom logger to help debugging
     val log = LogManager.getLogger(
@@ -125,15 +126,14 @@ class LoadBalancingJsonRpcClientTest {
     // send requests in reverse order
     requests.reversed()
       .map { loadBalancer.makeRequest(it).toSafeFuture() }
-      // .also { log.trace("before collection") }
+      .also { allRequestsSent.complete() }
       .let { SafeFuture.collectAll(it.stream()).get() }
 
     // assert that queued requests were fired in correct priority
     // Expected order:
     // 20 -- fired right away to client1, que is empty
     // 19 -- fired right away to client2, que is empty
-    // 18..17 -- may be queued or fired, depends on client1/client2 response time and thread scheduling
-    // 1,2,3,...17 were queued and fired regarding priority
+    // 1,2,3,...18 were queued while 20 and 19 replies were held and fired regarding priority
     assertThat(requestsReceivedByClients.take(2)).isEqualTo(requests.takeLast(2).reversed())
     assertThat(requestsReceivedByClients.drop(4))
       .containsSubsequence(requests.drop(4).dropLast(4))
