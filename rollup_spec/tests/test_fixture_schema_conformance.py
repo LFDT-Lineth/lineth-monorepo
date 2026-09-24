@@ -80,3 +80,23 @@ def test_schema_is_valid_draft_2020_12(schema_path: Path) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     schema = json.loads(schema_path.read_text())
     jsonschema.Draft202012Validator.check_schema(schema)
+
+
+@pytest.mark.parametrize(
+    "schema_name",
+    [
+        "getZkRollupProofV1.request",
+        "getZkRollupProofV1.response",
+        "getZkRollupAggregationProofV1.request",
+        "getZkRollupAggregationProofV1.response",
+    ],
+)
+def test_blob_offset_bounds_in_v1_schemas(schema_name: str) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = json.loads((_SCHEMA_DIR / f"{schema_name}.schema.json").read_text())
+    offset = jsonschema.Draft202012Validator(schema["$defs"]["offset"])
+
+    for valid in (0, 130046):
+        offset.validate(valid)
+    for invalid in (130047, 131071):
+        assert not offset.is_valid(invalid)

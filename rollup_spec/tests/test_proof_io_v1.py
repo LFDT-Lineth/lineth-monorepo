@@ -71,6 +71,25 @@ def _valid_request() -> dict:
     return _load(_fixture("getZkL2ExecutionProofV1.request.json"))
 
 
+@pytest.mark.parametrize("name, decoder", [
+    ("getZkL2ExecutionProofV1.request.json", decode_request),
+    ("getZkRollupProofV1.request.json", decode_rollup_request),
+    ("getZkRollupAggregationProofV1.request.json", decode_aggregation_request),
+])
+def test_request_selects_guest_without_reusing_response_vk(name, decoder) -> None:
+    request = _load(_fixture(name))
+    assert len(bytes.fromhex(request["guestProgramId"][2:])) == 32
+    assert request["provingSystem"]
+    assert "programVk" not in request
+    decoder(request)
+    with pytest.raises(ProofIoError, match="programVk"):
+        decoder({**request, "programVk": request["guestProgramId"]})
+    with pytest.raises(ProofIoError, match="guestProgramId"):
+        decoder({**request, "guestProgramId": "0x00"})
+    with pytest.raises(ProofIoError, match="provingSystem"):
+        decoder({**request, "provingSystem": ""})
+
+
 def _expected_response() -> dict:
     return _load(_fixture("getZkL2ExecutionProofV1.response.json"))
 

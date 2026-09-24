@@ -170,7 +170,7 @@ def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) ->
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> None:
+def test_decode_rejects_extra_byte_in_noncanonical_frame(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
     if schema_id == 0x1003:
         # A list offset of five skips a byte of its variable section.

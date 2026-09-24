@@ -12,7 +12,7 @@ The JSON Schemas under `schemas/` are the versioned wire contract; `../proof_io_
 l2-execution proofs -> rollup proof -> rollup-aggregation proof + emulation
 ```
 
-The **rollup-aggregation proof is the final proof** of the chain — same as today.
+The **rollup-aggregation proof is the final proof** of the chain — same as today. It is SNARK-wrapped and verified by L1, rather than recursively verified by another guest; its own verifier key is configured on L1 and is exempt from the response's recursively verified `programVks` set.
 
 These files are scoped to prover/guest inputs. L1 continuity anchors from the
 currently finalized rollup state are checked by the contract-facing logic in
@@ -22,9 +22,9 @@ One request/response pair per guest layer (fully-valid fixtures in `testdata/`):
 
 | Fixture (`testdata/`) | Layer | What it proves |
 |---|---|---|
-| `getZkL2ExecutionProofV1.{request,response}.json` | l2-execution proof (per block range, M ≥ 1 conflated payloads) | EVM state transition for a contiguous range of Engine API `NewPayloadRequest`s; emits the 16-field l2-execution PI tuple. |
+| `getZkL2ExecutionProofV1.{request,response}.json` | l2-execution proof (per block range, M ≥ 1 conflated payloads) | EVM state transition for a contiguous range of Engine API `NewPayloadRequest`s; emits the execution PI with proven messaging-block offsets and block count. |
 | `getZkRollupProofV1.{request,response}.json` | rollup proof over N ≥ 1 conflations and their touched chunks | Validates witnessed zstd frames by decompression against canonical truncated-block RLP from `blockRlps`, walks the mixed blob/calldata chunk sequence, verifies each chunk's kind-specific binding hash, folds the dataRollingHash, and recursively verifies the l2-execution proofs whose ranges tile the combined block range. Stream offsets are canonical: 0 at every fully consumed chunk boundary and positive only inside a shared blob. The PI carries the ordered L2L1 roots and filtered-address lists. |
-| `getZkRollupAggregationProofV1.{request,response}.json` | rollup-aggregation proof + emulation (the final proof, SNARK-wrapped for L1) | Recursively verifies all M rollup proofs covering the finalization range, asserts exact pairwise stream-position and execution continuity, merges the ordered L2L1 root arrays and FTX filtered-address lists into public inputs, and performs the STARK→SNARK emulation wrap in the same rollup-aggregation request. Flat (one guest invocation over all M); hierarchical aggregation is a future option. There is no separate emulation file. The response retains `l2MessagingBlocksOffsets` as top-level calldata metadata. |
+| `getZkRollupAggregationProofV1.{request,response}.json` | rollup-aggregation proof + emulation (the final proof, SNARK-wrapped for L1) | Recursively verifies all M rollup proofs covering the finalization range, asserts exact pairwise stream-position and execution continuity, merges the ordered L2L1 root arrays, FTX filtered-address lists, and rebased messaging-block offsets into public inputs, and performs the STARK→SNARK emulation wrap in the same rollup-aggregation request. Flat (one guest invocation over all M); hierarchical aggregation is a future option. There is no separate emulation file. |
 
 
 ## Rollup-Proof Generalization: T ≥ 1 chunks in one proof
@@ -33,7 +33,8 @@ A single rollup proof can fold `T ≥ 1` mixed blob or calldata chunks. `chunks[
 
 ## Common conventions
 
-- `programVk` — identifies the guest program/circuit the request targets; routing metadata that wraps the `proofRequest` envelope and is not a guest input.
+- `guestProgramId` — opaque 32-byte ELF-derived guest identifier in each request envelope. The host selects the guest using this field; nested proofs and proof responses retain proving-system-specific `programVk` values. The fixture guest IDs are synthetic placeholders; the guest-ID-to-VK correspondence remains WIP.
+- `provingSystem` — request-only non-empty string selecting the arithmetization/prover-ray combination.
 - `proverVersion` — same string the existing prover responds with (e.g. `"4.0.0-riscv"`); carried on each response and forwarded to L1.
 - `chainConfig` — the dynamic chain configuration supplied at the l2-execution range layer (`l2MessageServiceAddress`, `coinbase`, `chainID`, `baseFee`). `dynamicChainConfigHash = keccak256(uint256_be(chainID) || coinbase || l2MessageServiceAddress || uint256_be(baseFee))`, where integer fields are 32-byte big-endian values and addresses are canonical 20-byte values. `baseFee` is read from the first `NewPayloadRequest.executionPayload.baseFeePerGas` and asserted equal across the range. The range-level `chainID` intentionally duplicates the chain id decoded from each vanilla `StatelessInput`; the guest rejects the proof if any inner value differs. Rollup and rollup-aggregation proofs do not carry `chainConfig` — they inherit the hash from inner-proof PIs.
 - `statelessInput` — the decoded stateless guest input as a readable JSON object (mirroring SSZ `StatelessInput`). The codec SSZ-encodes it into the length-delimited bytes `run_l2_execution_guest` reads (the prover's encode step), which the Python reference decodes with `remerkleable`, accepting the same raw/Ere-prefixed shape the underlying engine's decoder accepts. Lineth extension bytes are parsed outside this slice and must not be appended to it.

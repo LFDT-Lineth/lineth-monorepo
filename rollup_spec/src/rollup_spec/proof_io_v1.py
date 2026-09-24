@@ -39,7 +39,7 @@ Design notes:
     (schema-checked by the schemas' conformance test, round-trip-checked by
     `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
-    (on responses) and `programVk` (on requests) are routing metadata.
+    (on responses) and `guestProgramId` and `provingSystem` (on requests) are routing metadata.
 
 Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
@@ -137,6 +137,17 @@ def _hx(value: Any) -> str:
     return "0x" + bytes(value).hex()
 
 
+def _validate_guest_request_envelope(obj: dict) -> None:
+    guest_id = _bytes_from_hex(_require(obj, "guestProgramId", ""), "guestProgramId")
+    if len(guest_id) != 32:
+        raise ProofIoError("'guestProgramId' must be 32 bytes")
+    proving_system = _require(obj, "provingSystem", "")
+    if not isinstance(proving_system, str) or not proving_system:
+        raise ProofIoError("'provingSystem' must be a non-empty string")
+    if "programVk" in obj:
+        raise ProofIoError("'programVk' belongs on proof responses and nested proofs")
+
+
 # ── request: JSON dict -> guest dataclass ─────────────────────────────────────
 
 
@@ -223,13 +234,14 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
     input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by the payloads. The single
     `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
     the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
     latter when SSZ-encoding each payload's readable `statelessInput`.
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     payloads = _require(proof_request, "payloads", "proofRequest.")
     if not isinstance(payloads, list) or not payloads:
@@ -459,7 +471,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by `conflations` (paired
     1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
     touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
@@ -470,6 +482,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
     (`startOffset > 0`, §3.4).
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     conflations = _require_list(proof_request, "conflations", "proofRequest.")
     if not conflations:
@@ -533,8 +546,7 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 
 
 def _encode_rollup_public_inputs(pi: RollupPublicInput, *, aggregation: bool = False) -> dict:
-    """The rollup PI tuple (§2.4) as JSON — shared by the rollup and
-    rollup-aggregation responses, which expose the identical PI structure."""
+    """Encode the rollup PI fields shared with finalization; finalization omits blockCount."""
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
@@ -574,9 +586,9 @@ def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_v
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
 
-    §ProgramVK anchoring: `program_vk` is host-attached metadata the coordinator
-    supplies from the request envelope and the prover echoes on the response —
-    mirroring the L2-execution response pattern.
+    §ProgramVK anchoring: `program_vk` is prover-attached metadata identifying
+    the guest that produced this proof, carried on the response for recursive
+    verification rather than sourced from the request envelope.
     """
     return {
         "proverVersion": prover_version,
@@ -687,12 +699,13 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the aggregation guest input is just the flat list of
     rollup proofs. There is no `chainId` (unlike the rollup request): the
     aggregation guest does no sender recovery and inherits chain-config integrity
     from the inner proofs' `dynamicChainConfigHash`.
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     rollup_proofs = _require_list(proof_request, "rollupProofs", "proofRequest.")
     if not rollup_proofs:
@@ -723,8 +736,9 @@ def encode_aggregation_response(
     `getZkRollupAggregationProofV1.response.json` object the coordinator's
     Jackson mapper consumes directly.
 
-    The response equals the guest output plus `proof` and the
-    `l2MessagingBlocksOffsets` calldata list. `endBlockNumber` lives in
+    The response equals the guest output plus the prover-attached `proof` and
+    host-supplied `startBlockNumber`. `l2MessagingBlocksOffsets` is already
+    included in the guest's public inputs. `endBlockNumber` lives in
     `publicInputs`; only `startBlockNumber` (not in the PI tuple) is supplied as
     host-side range metadata.
     """

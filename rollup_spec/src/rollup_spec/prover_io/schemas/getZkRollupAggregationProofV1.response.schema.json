@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.response.schema.json",
   "title": "getZkRollupAggregationProof V1 response",
-  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (a FinalizationSubmission) and the coordinator's Jackson mapper. The public inputs carry L2-to-L1 roots and filtered addresses; l2MessagingBlocksOffsets remains top-level calldata metadata.",
+  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (a FinalizationSubmission) and the coordinator's Jackson mapper. The public inputs carry L2-to-L1 roots, filtered addresses, and verified l2MessagingBlocksOffsets.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -59,11 +59,11 @@
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "startOffset": {
-          "description": "Canonical start position: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
+          "description": "Canonical start position: 0 at a fully consumed chunk boundary, positive only inside a shared blob's unpacked payload (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "endOffset": {
-          "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
+          "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared blob's unpacked payload (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "l2L1TreeDepth": { "type": "integer", "const": 5 },
@@ -87,7 +87,7 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
-    "offset": { "type": "integer", "minimum": 0, "maximum": 131071 },
+    "offset": { "type": "integer", "minimum": 0, "maximum": 130046 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
