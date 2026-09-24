@@ -1,0 +1,24 @@
+# prover-ray E2E config, mirroring docker/config/prover/v3/prover-config.toml.
+# Mounted into the prover-ray container at CONFIG_FILE; requests_root_dir paths
+# are under the shared /data mount, one folder per pipeline.
+#
+# execution runs dev-zkvm (real public inputs from the native oracle, cross-checked
+# against the guest under ZkC Execute). rollup and aggregation run dev-mock until
+# their real paths land. For a quick plumbing check, set execution prover_mode to
+# dev-mock (then it needs no native runner or guest ELF).
+version = "0.0.0-riscv"
+log_level = 4
+
+[execution]
+prover_mode = "dev-zkvm"
+requests_root_dir = "/data/prover-ray/execution"
+native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+guest_elf = "/opt/linea/prover-ray/evm_execution_guest"
+
+[rollup]
+prover_mode = "dev-mock"
+requests_root_dir = "/data/prover-ray/rollup"
+
+[aggregation]
+prover_mode = "dev-mock"
+requests_root_dir = "/data/prover-ray/aggregation"

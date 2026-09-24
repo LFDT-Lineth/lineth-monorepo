@@ -1,0 +1,27 @@
+# prover-ray E2E service, mirroring the prover-v3 block in
+# compose-spec-l2-services.yml. Add this service to that spec (next to prover-v3)
+# so it joins the same `linea` network and `/data` mount, then bring it up with
+# the `l2` profile.
+#
+# Coordinator side: configure the coordinator to write prover-ray requests to
+#   /data/prover-ray/{execution,rollup,aggregation}/requests
+# and read responses from the matching responses/ folders. The prover-ray config
+# (config/prover-ray/prover-ray-config.toml) points each pipeline at those paths.
+#
+# No prover-assets mount: the native runner and guest ELF are bundled in the image.
+# Logs go to stdout (container logs), so no /logs mount is needed.
+services:
+  prover-ray:
+    container_name: prover-ray
+    hostname: prover-ray
+    image: consensys/linea-prover-ray:${LINEA_PROVER_RAY_TAG:-dev}
+    platform: linux/amd64
+    profiles: [ "l2" ]
+    environment:
+      CONFIG_FILE: "/opt/linea/prover-ray/config/config.toml"
+    volumes:
+      - ../tmp/local/:/data/
+      - ./config/prover-ray/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro
+    # No network entry: prover-ray only shares files via the /data bind mount and
+    # logs to stdout, so nothing connects to it. Add `networks: [ linea ]` only if
+    # your spec requires every service on that network.
