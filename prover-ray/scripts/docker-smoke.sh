@@ -66,10 +66,11 @@ if ! grep -q '"proverVersion": "smoke-dev-mock"' "$WORK/responses/req.json"; the
 fi
 echo "    ok: response written with proverVersion smoke-dev-mock"
 
-echo "==> dev-zkvm: native runner executes (exercises glibc/mcl/secp256k1/crypto)"
-# Run the bundled native runner directly on a fixture and check it emits a
-# 34-byte 0x0003 commitment, proving every shared library the runner links
-# actually resolves in the image.
+echo "==> native runner: emits the dev-zkvm commitment from an extended input"
+# Run the bundled native execution runner on an extended (0x0002) input and check
+# it emits a 34-byte 0x0003 commitment (schema id + keccak256(SSZ(public inputs))).
+# This is the commitment dev-zkvm cross-checks the guest against, and it confirms
+# the runner and its shared libraries (glibc/mcl/secp256k1/crypto) run in the image.
 FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
 if ! $DOCKER run --rm \
         --entrypoint /opt/linea/prover-ray/l2-execution-runner \
@@ -84,6 +85,6 @@ if [ "$sz" -ne 34 ] || [ "$prefix" != "0003" ]; then
     echo "FAIL: native runner output is not a 34-byte 0x0003 commitment (size=$sz prefix=$prefix)"
     exit 1
 fi
-echo "    ok: native runner produced a valid 0x0003 commitment"
+echo "    ok: native runner emitted a valid 0x0003 commitment (runner + libs OK)"
 
 echo "SMOKE PASSED"

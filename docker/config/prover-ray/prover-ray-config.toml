@@ -2,7 +2,7 @@
 # Mounted into the prover-ray container at CONFIG_FILE; requests_root_dir paths
 # are under the shared /data mount, one folder per pipeline.
 #
-# execution runs dev-zkvm (real public inputs from the native oracle, cross-checked
+# execution runs dev-zkvm (real public inputs from the native runner, cross-checked
 # against the guest under ZkC Execute). rollup and aggregation run dev-mock until
 # their real paths land. For a quick plumbing check, set execution prover_mode to
 # dev-mock (then it needs no native runner or guest ELF).

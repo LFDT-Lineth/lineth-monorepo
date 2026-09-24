@@ -1,6 +1,6 @@
-// Package nativerunner runs the native l2-execution-runner (the dev-zkvm
-// oracle) on an extended (0x0002) input and parses its --json output into the
-// guest's real public inputs and revealed preimage arrays.
+// Package nativerunner runs the native l2-execution-runner on an extended
+// (0x0002) input and parses its --json output into the guest's real public
+// inputs and revealed preimage arrays.
 package nativerunner
 
 import (
@@ -37,7 +37,7 @@ func Run(ctx context.Context, binPath string, extendedInput []byte) (Output, err
 // RunSSZ runs `<binPath> <file> --ssz` and returns the raw 0x0003 wire output
 // (the 2-byte schema id followed by keccak256(SSZ(public inputs))). It is
 // byte-identical to what the guest writes to guest_output, so dev-zkvm compares
-// it against the ZkC Execute output to cross-check the native oracle.
+// it against the ZkC Execute output to cross-check the native runner.
 func RunSSZ(ctx context.Context, binPath string, extendedInput []byte) ([]byte, error) {
 	return run(ctx, binPath, extendedInput, "--ssz")
 }

@@ -33,7 +33,7 @@ func decodeHexOrPanic(s string) []byte {
 
 // fakeRunnerJSONSSZ builds a native runner stub that answers --json with the
 // given response shape and --ssz with the given raw wire bytes, so dev-zkvm can
-// exercise both oracle calls without the real binary.
+// exercise both runner calls without the real binary.
 func fakeRunnerJSONSSZ(t *testing.T, jsonOut string, sszBytes []byte) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -64,7 +64,7 @@ func devZkVMProver(guestOutput []byte) *mockProver {
 	}}
 }
 
-// dev-zkvm fills the response from the native oracle and passes when the guest's
+// dev-zkvm fills the response from the native runner and passes when the guest's
 // ZkC commitment matches the native runner's --ssz commitment.
 func TestRunner_DevZkVM_CrossCheckPasses(t *testing.T) {
 	mock := devZkVMProver(devZkVMCommitment)
@@ -89,7 +89,7 @@ func TestRunner_DevZkVM_CrossCheckPasses(t *testing.T) {
 		"proof is a placeholder marker; the commitment is an internal cross-check artifact")
 }
 
-// A guest commitment that disagrees with the native oracle is refused.
+// A guest commitment that disagrees with the native runner is refused.
 func TestRunner_DevZkVM_CrossCheckFails(t *testing.T) {
 	wrong := append([]byte(nil), devZkVMCommitment...)
 	wrong[2] ^= 0xff

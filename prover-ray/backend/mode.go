@@ -9,8 +9,8 @@ const (
 	// no guest ELF or circuit bin.
 	ProverModeDevMock ProverMode = "dev-mock"
 	// ProverModeDevZkVM runs the guest under ZkC Execute for its real public
-	// inputs (via the native oracle) and cross-checks the guest's commitment
-	// against that oracle.
+	// inputs (via the native runner) and cross-checks the guest's commitment
+	// against that runner.
 	ProverModeDevZkVM ProverMode = "dev-zkvm"
 	// ProverModePartial traces and checks the trace against the constraints, no
 	// proof; memory-gated.

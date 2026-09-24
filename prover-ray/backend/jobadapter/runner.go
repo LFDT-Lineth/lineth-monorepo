@@ -140,7 +140,7 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
 	}
 
-	// dev-zkvm gets its real public inputs from the native oracle and the guest's
+	// dev-zkvm gets its real public inputs from the native runner and the guest's
 	// commitment from ZkC Execute, then cross-checks the two.
 	if r.mode == backend.ProverModeDevZkVM {
 		return r.runL2ExecutionZkVM(ctx, runReq, req)
@@ -235,11 +235,11 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	}
 }
 
-// runL2ExecutionZkVM shapes the response from the native oracle (real public
+// runL2ExecutionZkVM shapes the response from the native runner (real public
 // inputs and revealed arrays) and additionally runs the guest under ZkC Execute,
 // asserting the two commit to the same public inputs: the guest's ZkC
 // guest_output must equal the native runner's --ssz output byte for byte. A
-// mismatch means the native oracle and the real prover-to-guest path disagree,
+// mismatch means the native runner and the real prover-to-guest path disagree,
 // so the response is refused.
 func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
 	if r.nativeRunnerBin == "" {
@@ -248,7 +248,7 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 	}
 	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
 
-	// Native oracle: the response fields (--json) and its commitment (--ssz).
+	// Native runner: the response fields (--json) and its commitment (--ssz).
 	out, err := nativerunner.Run(ctx, r.nativeRunnerBin, extended)
 	if err != nil {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
@@ -272,7 +272,7 @@ func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req 
 		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
 	}
 
-	// The guest's ZkC commitment (Result.ProofBytes) must equal the native oracle's.
+	// The guest's ZkC commitment (Result.ProofBytes) must equal the native runner's.
 	if !bytes.Equal(result.ProofBytes, nativeCommitment) {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
 			"dev-zkvm cross-check failed: guest commitment %x != native commitment %x",

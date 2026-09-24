@@ -90,7 +90,7 @@ type Result struct {
 	// wiop.Proof (wire format not yet decided); for dev-zkvm it is the guest's
 	// 0x0003 wire output (2-byte schema id +
 	// keccak256(SSZ(public inputs))) from the ZkC Execute run, which the runner
-	// cross-checks against the native oracle. nil when Status is
+	// cross-checks against the native runner. nil when Status is
 	// ResultStatusFailed.
 	ProofBytes []byte
 

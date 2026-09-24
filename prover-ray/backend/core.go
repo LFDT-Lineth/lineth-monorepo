@@ -186,7 +186,7 @@ func (c *Core) proveDevMock(job Job) Result {
 
 // proveDevZkVM runs the guest under ZkC Execute and returns its 0x0003 wire
 // output as [Result.ProofBytes], so the runner can cross-check it against the
-// native oracle. It runs no real proof; Payload is the whole extended (0x0002)
+// native runner. It runs no real proof; Payload is the whole extended (0x0002)
 // input, the same bytes the native runner consumes.
 func (c *Core) proveDevZkVM(job Job) Result {
 	inputs, err := c.encodeGuestInputs(job)

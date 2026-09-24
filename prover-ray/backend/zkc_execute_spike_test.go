@@ -45,7 +45,7 @@ func TestDevZkVM_Integration(t *testing.T) {
 	assert.Equal(t, []byte{0x00, 0x03}, result.ProofBytes[:2], "0x0003 schema id")
 	t.Logf("guest_output = %s", hex.EncodeToString(result.ProofBytes))
 
-	// The native oracle must commit to the same public inputs.
+	// The native runner must commit to the same public inputs.
 	nativeSSZ, err := exec.Command(nativeBin, sszInput, "--ssz").Output()
 	require.NoError(t, err, "native runner --ssz")
 	assert.True(t, bytes.Equal(result.ProofBytes, nativeSSZ),
