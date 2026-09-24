@@ -164,3 +164,4 @@
 - *(coordinator)* Consolidate prover clients (#3944)
 - *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 - *(misc)* Fix code licence header (#4009)
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)

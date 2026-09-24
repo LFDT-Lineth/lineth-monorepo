@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features
