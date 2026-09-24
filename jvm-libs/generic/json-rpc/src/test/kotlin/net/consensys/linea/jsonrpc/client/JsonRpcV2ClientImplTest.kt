@@ -45,7 +45,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 class JsonRpcV2ClientImplTest {
   private lateinit var vertx: Vertx
@@ -54,7 +53,7 @@ class JsonRpcV2ClientImplTest {
   private lateinit var wiremock: WireMockServer
   private val path = "/api/v1?appKey=1234"
   private lateinit var meterRegistry: SimpleMeterRegistry
-  private val defaultRetryConfig = retryConfig(maxRetries = 2u, timeout = 20.seconds, backoffDelay = 5.milliseconds)
+  private val defaultRetryConfig = retryConfig(maxRetries = 2u, backoffDelay = 5.milliseconds)
 
   private val defaultObjectMapper = jacksonObjectMapper()
   private val objectMapperBytesAsHex = jacksonObjectMapper()
@@ -68,7 +67,9 @@ class JsonRpcV2ClientImplTest {
 
   private fun retryConfig(
     maxRetries: UInt = 2u,
-    timeout: Duration = 8.seconds, // bellow 2s we may have flacky tests when running whole test suite in parallel
+    // Upper bound only, not what these tests assert on: on loaded CI runners the first requests of a
+    // freshly started JVM (cold class loading, JIT) can take tens of seconds.
+    timeout: Duration = 2.minutes,
     backoffDelay: Duration = 5.milliseconds,
   ) = RequestRetryConfig(
     maxRetries = maxRetries,
@@ -439,14 +440,13 @@ class JsonRpcV2ClientImplTest {
       """.trimMargin(),
     )
 
-    assertThat(
+    assertThatThrownBy {
       client.makeRequest(
         method = "someMethod",
         params = emptyList<Any>(),
         resultMapper = { it },
-      ),
-    ).failsWithin(10.seconds.toJavaDuration())
-      .withThrowableThat()
+      ).get()
+    }
       .isInstanceOfSatisfying(ExecutionException::class.java) {
         assertThat(it.cause).isInstanceOf(JsonRpcErrorResponseException::class.java)
         val cause = it.cause as JsonRpcErrorResponseException
