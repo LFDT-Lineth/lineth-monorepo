@@ -15,7 +15,6 @@ const transition_mod = executor.executor_transition;
 const output_mod = executor.executor_output;
 const tx_decode = executor.executor_tx_decode;
 const block_validation = executor.executor_block_validation;
-const block_rlp_size = @import("zesu_block_rlp_size");
 
 // Error classification (zesu-error re-namespacing and the exit-code taxonomy) lives in
 // guest_errors; this file only wraps zesu calls with it.
@@ -74,7 +73,6 @@ fn buildEnv(
     block_hashes: []types.BlockHashEntry,
     withdrawals: []types.Withdrawal,
     parent: ?rlp_decode.ParentHeader,
-    spec: primitives.SpecId,
 ) types.Env {
     const ep = &req.execution_payload;
     return .{
@@ -91,7 +89,6 @@ fn buildEnv(
         .block_hashes = block_hashes,
         .withdrawals = withdrawals,
         .slot_number = ep.slot_number,
-        .block_rlp_size = block_rlp_size.compute(ep, spec),
         .gas_used_header = ep.gas_used,
         .blob_gas_used_header = ep.blob_gas_used,
         .parent_gas_limit = if (parent) |p| p.gas_limit else null,
@@ -231,7 +228,7 @@ fn computeBlockStatelessWithLogs(
 
     const spec = hardfork.specForBlock(fork_name, ep.timestamp) orelse return error.UnsupportedFork;
 
-    const env = buildEnv(req, block_hashes, &.{}, parent_header, spec);
+    const env = buildEnv(req, block_hashes, &.{}, parent_header);
     block_validation.validateBlock(env, spec) catch |e| return zesuErr(e);
     const txs = tx_decode.decodeTxsFromInput(alloc, ep.transactions) catch |e| return zesuErr(e);
 
