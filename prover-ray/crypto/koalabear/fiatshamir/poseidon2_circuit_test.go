@@ -138,6 +138,25 @@ func fsReplayWitness(t *testing.T) *fsReplayCircuit {
 	return witness
 }
 
+// TestGnarkFiatShamir_MatchesNative is the primary guard on the two transcripts
+// agreeing. It solves the replay circuit against challenges the native
+// transcript produced, in both field modes: native KoalaBear, and emulated over
+// BN254 — the mode the recursion actually uses.
+//
+// If the two drift apart, the consequence splits. A circuit that derives
+// *different* coins rejects honest proofs, so the recursive prover simply
+// cannot produce a proof: expensive, but loud and safe. A circuit whose
+// transcript is *weaker* — absorbing less than the native one, say — lets a
+// prover choose its message after seeing the challenge. The outer proof still
+// verifies while attesting to nothing. That is the failure this test exists to
+// prevent, and it is silent everywhere else.
+//
+// Do not treat this as redundant with the end-to-end verifier-circuit tests.
+// Those only notice a transcript divergence through whatever constraint happens
+// to consume a coin, which depends on the protocol and on the witness: a
+// degenerate fixture can make them blind to divergences this test catches
+// immediately. It is also the only place that points at the transcript itself
+// rather than at some failed constraint far downstream of it.
 func TestGnarkFiatShamir_MatchesNative(t *testing.T) {
 	// gnark also mutates the assignment while building a witness, so each
 	// subtest builds its own.
@@ -158,6 +177,10 @@ func TestGnarkFiatShamir_MatchesNative(t *testing.T) {
 	})
 }
 
+// TestGnarkFiatShamir_RejectsWrongCoin is the negative control for
+// [TestGnarkFiatShamir_MatchesNative]: it swaps in a forged coin and requires
+// the circuit to become unsatisfiable. Without it, a circuit that constrained
+// nothing at all would pass the positive test just as happily.
 func TestGnarkFiatShamir_RejectsWrongCoin(t *testing.T) {
 	witness := fsReplayWitness(t)
 	one := field.One()
