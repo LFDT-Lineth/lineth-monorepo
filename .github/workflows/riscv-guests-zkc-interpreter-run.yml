@@ -1,19 +1,19 @@
-# L2 execution guest CI pipeline.
+# Guest-in-ZKC-interpreter CI for the RISC-V guest programs.
 #
 # Builds each guest as a statically-linked rv64im ELF (l2-execution with KECCAK_ACCEL=true — the
 # prover-accelerated custom keccak op, the production proving config), converts it to zkc's JSON
 # input, and executes it under zkc in fast mode (--fast). This gate only needs to prove each guest
-# runs, and the trace job validates the production guest path on every PR and push. The weekly
-# metrics workflow collects the detailed tracing measurements.
+# runs, and skipping tracing keeps it cheap. Tracing and constraint checking are measured by
+# arithmetization-weekly-zkc-metrics.yml.
 # This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
 # on changes to either.
 #
-# The production ELF build is the single prerequisite for every automatic L2 guest check. A broken
-# guest build therefore prevents the expensive host reference suite and ZkC execution/trace jobs from
-# starting in parallel.
-name: l2-execution guest pipeline
+# Scope: this is a *runnability* smoke gate — it proves the build -> ELF -> ELF->JSON -> `zkc exec`
+# pipeline runs one representative committed block end-to-end under the production keccak op and exits
+# cleanly. Output/correctness equivalence over the full EF zkevm corpus is the native host suite's job.
+name: riscv-guests zkc interpreter run
 
 on:
   pull_request:
@@ -22,7 +22,6 @@ on:
     paths:
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**" # main.zkc — the interpreter (ZKC_MAIN)
-      - "arithmetization/src/main/common/**" # shared constants used by the RISC-V program
       - "arithmetization/src/main/lib/**" # zkc stdlib used by the interpreter
       - "arithmetization/src/test/Makefile" # elf-exec / elf-to-json / linker-script
       - "arithmetization/cmd/elf_to_json/**"
@@ -40,7 +39,6 @@ on:
     paths:
       - "riscv-guests/**"
       - "arithmetization/src/main/riscv/**"
-      - "arithmetization/src/main/common/**"
       - "arithmetization/src/main/lib/**"
       - "arithmetization/src/test/Makefile"
       - "arithmetization/cmd/elf_to_json/**"
@@ -78,9 +76,11 @@ permissions:
   actions: read
 
 jobs:
-  build-guest-artifacts:
-    name: build guest artifacts (accel)
+  zkc-interpreter-run:
+    name: guests in ZKC interpreter (accel)
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Fast-mode execution is light (~tens of MB, seconds), so this job is build-bound, not
+    # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -88,7 +88,10 @@ jobs:
         with:
           submodules: false
 
-      # The production build constructs only the freestanding guest graph.
+      # Pinned Zig (from .zigversion) + zig-pkg/.zig-cache caches that make the zesu graph build a
+      # near-no-op. This action also builds native crypto libs (blst/mcl/…) that the FREESTANDING
+      # guest ELF does not link (its precompiles are pure-Zig or a custom op) — that work is cached
+      # and harmless; we reuse the action for the Zig pin + caching, so do not "optimize" it away.
       - name: Setup RISC-V guests environment (Zig + caches)
         uses: ./.github/actions/setup-riscv-guests
 
@@ -196,13 +199,13 @@ jobs:
         env:
           ZKC_REF: ${{ inputs.zkc-ref }}
         run: make -C arithmetization prepare-zkc
-      # Compare the downloaded production ELF against the native host machine on the committed input.
-      - name: Compare l2-execution guest output under zkc (fast, accel keccak)
-        run: >-
-          make -C riscv-guests/l2-execution zkc-smoke-external
-          ELF=${{ github.workspace }}/riscv-guests/l2-execution/zig-out/evm_execution_guest
-          KECCAK_ACCEL=true
-          ZKC_EXEC_FLAGS="--fast"
+      # Execute the guest under zkc in fast mode (--fast): a runnability check, so it skips tracing
+      # to stay light. Tracing and constraint checking are measured weekly instead — see
+      # arithmetization-weekly-zkc-metrics.yml. Uses exec's default
+      # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
+      # ZKC_REF is step-scoped above, so elf-exec does not apply the override a second time.
+      - name: Run l2-execution guest under zkc (fast, accel keccak) and check guest_output
+        run: make -C riscv-guests/l2-execution zkc-smoke-exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
       # The stub guest decodes a freshly-generated sample request and emits the echo/sentinel
       # output. Running it here proves the build -> ELF -> ELF->JSON -> `zkc exec` pipeline
@@ -255,7 +258,6 @@ jobs:
   # scope with reference-args.
   zkc-reference-test:
     name: l2-execution zkc reference-test (manual)
-    needs: reference-tests
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
