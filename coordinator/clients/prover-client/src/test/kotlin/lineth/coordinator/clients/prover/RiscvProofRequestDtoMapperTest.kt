@@ -159,9 +159,6 @@ class RiscvProofRequestDtoMapperTest {
           startBlockNumber = 1000501,
           endBlockNumber = 1000510,
           startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-          endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-          transactionsCount = request.transactionsCount,
-          totalGasUsed = request.totalGasUsed,
         ),
       ),
     )
@@ -182,9 +179,6 @@ class RiscvProofRequestDtoMapperTest {
           startBlockNumber = 1000501,
           endBlockNumber = 1000520,
           startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-          endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-          transactionsCount = request.transactionsCount,
-          totalGasUsed = request.totalGasUsed,
         ),
       ),
     )
@@ -242,9 +236,6 @@ class RiscvProofRequestDtoMapperTest {
           startBlockNumber = 1000501,
           endBlockNumber = 1000520,
           startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-          endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-          transactionsCount = request.transactionsCount,
-          totalGasUsed = request.totalGasUsed,
         ),
       ),
     )
@@ -301,9 +292,6 @@ class RiscvProofRequestDtoMapperTest {
           startBlockNumber = 1000501,
           endBlockNumber = 1000567,
           startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-          endBlockTimestamp = request.endBlockTimestamp?.epochSeconds,
-          transactionsCount = request.transactionsCount,
-          totalGasUsed = request.totalGasUsed,
         ),
       ),
     )
