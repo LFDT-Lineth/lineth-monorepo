@@ -51,7 +51,7 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
   });
 
   it("Should successfully submit blobs", async () => {
-    const { blobDataSubmission, compressedBlobs, parentDataRollingHash, finalDataRollingHash } =
+    const { blobDataSubmission, compressedBlobs, parentDataRollingHash, storedDataRollingHash } =
       generateBlobDataSubmission(0, 1);
 
     const receipt = await submitBlobsAndGetReceipt({
@@ -59,16 +59,16 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
       blobSubmission: blobDataSubmission,
       compressedBlobs,
       parentDataRollingHash,
-      finalDataRollingHash,
+      storedDataRollingHash,
     });
 
     expect(receipt).is.not.null;
 
-    const expectedEventArgs = [parentDataRollingHash, finalDataRollingHash];
+    const expectedEventArgs = [parentDataRollingHash, storedDataRollingHash];
 
     expectEventDirectFromReceiptData(linethRollup as BaseContract, receipt!, "DataSubmittedV4", expectedEventArgs);
 
-    const dataRollingHashExists = await linethRollup.dataRollingHashExists(finalDataRollingHash);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(storedDataRollingHash);
     expect(dataRollingHashExists).to.equal(1n);
   });
 
@@ -76,9 +76,9 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
     const linethRollupAddress = await linethRollup.getAddress();
     const { blobDataSubmission, compressedBlobs } = generateBlobDataSubmission(0, 1);
     const nonExistingParent = generateRandomBytes(32);
-    const wrongExpected = computeDataRollingHash(nonExistingParent, blobDataSubmission[0].dataHash);
+    const wrongStored = computeDataRollingHash(nonExistingParent, blobDataSubmission[0].dataHash);
 
-    const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [nonExistingParent, wrongExpected]);
+    const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [nonExistingParent, wrongStored]);
 
     const transaction = await buildBlobTransaction({
       linethRollupAddress,
@@ -98,20 +98,20 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
 
   it("Fails when the blob submission data is missing", async () => {
     // A plain (non-blob) call to submitBlobs finds blobhash(0) == EMPTY_HASH on-chain and reverts.
-    const { parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 1);
+    const { parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 1);
 
     await expectRevertWithCustomError(
       linethRollup,
-      linethRollup.connect(operator).submitBlobs(parentDataRollingHash, finalDataRollingHash),
+      linethRollup.connect(operator).submitBlobs(parentDataRollingHash, storedDataRollingHash),
       "BlobSubmissionDataIsMissing",
     );
   });
 
   it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
-    const { parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 1);
+    const { parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 1);
 
     await expectRevertWithReason(
-      linethRollup.connect(nonAuthorizedAccount).submitBlobs(parentDataRollingHash, finalDataRollingHash),
+      linethRollup.connect(nonAuthorizedAccount).submitBlobs(parentDataRollingHash, storedDataRollingHash),
       buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE),
     );
   });
@@ -123,25 +123,25 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
 
   blobSubmissionPauseTypes.forEach(({ pauseType, name }) => {
     it(`Should revert if ${name} is enabled`, async () => {
-      const { parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 1);
+      const { parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 1);
 
       await linethRollup.connect(securityCouncil).pauseByType(pauseType);
 
       await expectRevertWhenPaused(
         linethRollup,
-        linethRollup.connect(operator).submitBlobs(parentDataRollingHash, finalDataRollingHash),
+        linethRollup.connect(operator).submitBlobs(parentDataRollingHash, storedDataRollingHash),
         pauseType,
       );
     });
   });
 
-  it("Should revert if the folded dataRollingHash does not match the declared final", async () => {
+  it("Should revert if the folded dataRollingHash does not match the declared stored value", async () => {
     const linethRollupAddress = await linethRollup.getAddress();
-    const { compressedBlobs, parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 2);
-    // Declare a final hash that does not match the on-chain fold of the 2 attached blobs.
-    const badFinal = generateRandomBytes(32);
+    const { compressedBlobs, parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 2);
+    // Declare a stored hash that does not match the on-chain fold of the 2 attached blobs.
+    const badStored = generateRandomBytes(32);
 
-    const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [parentDataRollingHash, badFinal]);
+    const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [parentDataRollingHash, badStored]);
 
     const transaction = await buildBlobTransaction({
       linethRollupAddress,
@@ -154,8 +154,8 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
     await expectRevertWithCustomError(
       linethRollup,
       ethers.provider.broadcastTransaction(signedTx),
-      "FinalDataRollingHashWrong",
-      [badFinal, finalDataRollingHash],
+      "DataRollingHashMismatch",
+      [badStored, storedDataRollingHash],
     );
   });
 
@@ -163,11 +163,11 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
     await sendBlobTransaction(linethRollup, 0, 1);
 
     const linethRollupAddress = await linethRollup.getAddress();
-    const { compressedBlobs, parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 1);
+    const { compressedBlobs, parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 1);
 
     const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
       parentDataRollingHash,
-      finalDataRollingHash,
+      storedDataRollingHash,
     ]);
 
     const transaction = await buildBlobTransaction({
@@ -182,19 +182,19 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
       linethRollup,
       ethers.provider.broadcastTransaction(signedTx),
       "DataRollingHashAlreadyAnchored",
-      [finalDataRollingHash],
+      [storedDataRollingHash],
     );
   });
 
-  it("Should revert when fewer blobs are attached than the declared final requires", async () => {
+  it("Should revert when fewer blobs are attached than the declared stored value requires", async () => {
     const linethRollupAddress = await linethRollup.getAddress();
 
     // Build the 2-blob expectation but attach only 1 blob: the fold stops early and mismatches.
-    const { compressedBlobs, parentDataRollingHash, finalDataRollingHash } = generateBlobDataSubmission(0, 2, true);
+    const { compressedBlobs, parentDataRollingHash, storedDataRollingHash } = generateBlobDataSubmission(0, 2, true);
 
     const encodedCall = linethRollup.interface.encodeFunctionData("submitBlobs", [
       parentDataRollingHash,
-      finalDataRollingHash,
+      storedDataRollingHash,
     ]);
 
     const transaction = await buildBlobTransaction({
@@ -205,11 +205,11 @@ describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
 
     const signedTx = await getWalletForIndex(2).signTransaction(transaction);
 
-    // The single-blob fold produces a different accumulator than the declared 2-blob final.
+    // The single-blob fold produces a different accumulator than the declared 2-blob stored value.
     await expectRevertWithCustomError(
       linethRollup,
       ethers.provider.broadcastTransaction(signedTx),
-      "FinalDataRollingHashWrong",
+      "DataRollingHashMismatch",
     );
   });
 });

@@ -65,7 +65,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
         unpauseTypeRoles,
         verifierKeys,
         defaultAdmin: validiumSecurityCouncil,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter,
       },
     ],

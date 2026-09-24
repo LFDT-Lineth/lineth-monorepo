@@ -11,7 +11,7 @@ import {
   generateRandomBytes,
   generateCallDataSubmission,
   generateCallDataSubmissionWithHashes,
-  generateParentAndExpectedDataRollingHashForIndex,
+  generateParentAndStoredDataRollingHashForIndex,
   expectEvent,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
@@ -37,24 +37,24 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
   });
 
   const [DATA_ONE] = generateCallDataSubmission(0, 1);
-  const { parentDataRollingHash: PARENT_ONE, expectedDataRollingHash: EXPECTED_ONE } =
-    generateParentAndExpectedDataRollingHashForIndex(0);
+  const { parentDataRollingHash: PARENT_ONE, storedDataRollingHash: STORED_ONE } =
+    generateParentAndStoredDataRollingHashForIndex(0);
 
   it("Fails when the compressed data is empty", async () => {
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(EMPTY_CALLDATA, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(EMPTY_CALLDATA, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
     await expectRevertWithCustomError(linethRollup, submitDataCall, "EmptySubmissionData");
   });
 
   it("Should fail when the parent dataRollingHash is not anchored", async () => {
     const [submissionData] = generateCallDataSubmission(0, 1);
     const nonExistingParent = generateRandomBytes(32);
-    const wrongExpected = computeDataRollingHash(nonExistingParent, ethers.keccak256(submissionData.compressedData));
+    const wrongStored = computeDataRollingHash(nonExistingParent, ethers.keccak256(submissionData.compressedData));
 
     const asyncCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData.compressedData, nonExistingParent, wrongExpected, {
+      .submitDataAsCalldata(submissionData.compressedData, nonExistingParent, wrongStored, {
         gasLimit: MAX_GAS_LIMIT,
       });
 
@@ -67,10 +67,10 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
     await expect(
       linethRollup
         .connect(operator)
-        .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT }),
+        .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT }),
     ).to.not.be.reverted;
 
-    const dataRollingHashExists = await linethRollup.dataRollingHashExists(EXPECTED_ONE);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(STORED_ONE);
     expect(dataRollingHashExists).to.equal(1n);
   });
 
@@ -83,7 +83,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         .submitDataAsCalldata(
           submissions[0].compressedData,
           submissions[0].parentDataRollingHash,
-          submissions[0].expectedDataRollingHash,
+          submissions[0].storedDataRollingHash,
           { gasLimit: MAX_GAS_LIMIT },
         ),
     ).to.not.be.reverted;
@@ -94,14 +94,14 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         .submitDataAsCalldata(
           submissions[1].compressedData,
           submissions[1].parentDataRollingHash,
-          submissions[1].expectedDataRollingHash,
+          submissions[1].storedDataRollingHash,
           {
             gasLimit: MAX_GAS_LIMIT,
           },
         ),
     ).to.not.be.reverted;
 
-    const dataRollingHashExists = await linethRollup.dataRollingHashExists(submissions[0].expectedDataRollingHash);
+    const dataRollingHashExists = await linethRollup.dataRollingHashExists(submissions[0].storedDataRollingHash);
     expect(dataRollingHashExists).to.equal(1n);
   });
 
@@ -110,29 +110,29 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
-    const eventArgs = [PARENT_ONE, EXPECTED_ONE];
+      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
+    const eventArgs = [PARENT_ONE, STORED_ONE];
 
     await expectEvent(linethRollup, submitDataCall, "DataSubmittedV4", eventArgs);
   });
 
-  it("Should fail if the compressed data yields a wrong expected dataRollingHash", async () => {
+  it("Should fail if the compressed data yields a wrong stored dataRollingHash", async () => {
     const [submissionData] = generateCallDataSubmission(0, 1);
     const wrongCompressedData = generateRandomBytes(64);
-    const wrongExpected = computeDataRollingHash(PARENT_ONE, ethers.keccak256(wrongCompressedData));
+    const wrongStored = computeDataRollingHash(PARENT_ONE, ethers.keccak256(wrongCompressedData));
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, wrongExpected, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(submissionData.compressedData, PARENT_ONE, wrongStored, { gasLimit: MAX_GAS_LIMIT });
 
     const actualDataRollingHash = computeDataRollingHash(PARENT_ONE, ethers.keccak256(submissionData.compressedData));
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalDataRollingHashWrong", [
-      wrongExpected,
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashMismatch", [
+      wrongStored,
       actualDataRollingHash,
     ]);
   });
 
-  it("Should fail to submit where expected dataRollingHash is wrong", async () => {
+  it("Should fail to submit where the stored dataRollingHash is wrong", async () => {
     const submissions = generateCallDataSubmissionWithHashes(0, 2);
 
     await expect(
@@ -141,7 +141,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         .submitDataAsCalldata(
           submissions[0].compressedData,
           submissions[0].parentDataRollingHash,
-          submissions[0].expectedDataRollingHash,
+          submissions[0].storedDataRollingHash,
           { gasLimit: MAX_GAS_LIMIT },
         ),
     ).to.not.be.reverted;
@@ -154,16 +154,16 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
         gasLimit: MAX_GAS_LIMIT,
       });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "FinalDataRollingHashWrong", [
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashMismatch", [
       wrongComputed,
-      submissions[1].expectedDataRollingHash,
+      submissions[1].storedDataRollingHash,
     ]);
   });
 
   it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
     const submitDataCall = linethRollup
       .connect(nonAuthorizedAccount)
-      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
   });
@@ -179,7 +179,7 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
 
       const submitDataCall = linethRollup
         .connect(operator)
-        .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+        .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
       await expectRevertWhenPaused(linethRollup, submitDataCall, pauseType);
     });
@@ -188,26 +188,26 @@ describe("Lineth Rollup contract: Calldata Submission", () => {
   it("Should revert with DataRollingHashAlreadyAnchored when submitting same compressed data twice in 2 separate transactions", async () => {
     await linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [EXPECTED_ONE]);
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [STORED_ONE]);
   });
 
   it("Should revert with DataRollingHashAlreadyAnchored when submitting same data twice", async () => {
     await linethRollup
       .connect(operator)
-      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(DATA_ONE.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
     const [dataOneCopy] = generateCallDataSubmission(0, 1);
 
     const submitDataCall = linethRollup
       .connect(operator)
-      .submitDataAsCalldata(dataOneCopy.compressedData, PARENT_ONE, EXPECTED_ONE, { gasLimit: MAX_GAS_LIMIT });
+      .submitDataAsCalldata(dataOneCopy.compressedData, PARENT_ONE, STORED_ONE, { gasLimit: MAX_GAS_LIMIT });
 
-    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [EXPECTED_ONE]);
+    await expectRevertWithCustomError(linethRollup, submitDataCall, "DataRollingHashAlreadyAnchored", [STORED_ONE]);
   });
 });

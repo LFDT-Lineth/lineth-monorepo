@@ -19,13 +19,25 @@ export type DataRollingChainEntry = {
   byteLength: number;
 };
 
-export type ParentAndExpectedDataRollingHash = {
+export type ParentAndStoredDataRollingHash = {
   parentDataRollingHash: string;
-  expectedDataRollingHash: string;
+  storedDataRollingHash: string;
 };
 
 export type CalldataSubmissionData = {
   compressedData: string;
+};
+
+/**
+ * Legacy KZG-point-evaluation-based shnarf data, supplied once to migrate the last live legacy shnarf into
+ * the blob-spanning dataRollingHash model. All-zero fields select the standard (non-migration) path.
+ */
+export type ShnarfDataForMigration = {
+  parentShnarf: string;
+  snarkHash: string;
+  finalStateRootHash: string;
+  blobHash: string;
+  dataEvaluationClaim: string;
 };
 
 export type FinalizationData = {
@@ -47,19 +59,18 @@ export type FinalizationData = {
   finalForcedTransactionNumber: bigint;
   lastFinalizedForcedTransactionRollingHash: string;
   finalBlockHash: string;
-  prevDataRollingHash: string;
-  prevOffset: bigint;
   parentDataRollingHash: string;
   endDataRollingHash: string;
   startOffset: bigint;
   endOffset: bigint;
+  shnarfData: ShnarfDataForMigration;
   verifierKeys: string[];
 };
 
 export type ShnarfDataGenerator = (
   blobParentShnarfIndex: number,
   isMultiple?: boolean,
-) => ParentAndExpectedDataRollingHash;
+) => ParentAndStoredDataRollingHash;
 
 export type Eip1559Transaction = {
   nonce: bigint;
@@ -115,7 +126,7 @@ export type LinethRollupInitializationData = {
   unpauseTypeRoles: PauseTypeRole[];
   verifierKeys: string[];
   defaultAdmin: string;
-  shnarfProvider: string;
+  dataRollingHashProvider: string;
   addressFilter: string;
 };
 

@@ -2,15 +2,19 @@
 pragma solidity ^0.8.33;
 
 import { IAcceptEip4844Blobs } from "./interfaces/IAcceptEip4844Blobs.sol";
-import { LocalShnarfProvider } from "./LocalShnarfProvider.sol";
-import { ShnarfDataAcceptorBase } from "./ShnarfDataAcceptorBase.sol";
+import { LocalDataRollingHashProvider } from "./LocalDataRollingHashProvider.sol";
+import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
 /**
  * @title Contract to manage EIP-4844 blob submission.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptorBase, IAcceptEip4844Blobs {
+abstract contract Eip4844BlobAcceptor is
+  LocalDataRollingHashProvider,
+  DataRollingHashAcceptorBase,
+  IAcceptEip4844Blobs
+{
   /**
    * @notice Submit one or more EIP-4844 blobs.
    * @dev OPERATOR_ROLE is required to execute.
@@ -18,13 +22,13 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
    *   (via the EIP-4844 `blobhash` opcode) is folded into the dataRollingHash accumulator.
    *   Chunk boundaries carry no block/conflation semantics, so no per-blob calldata is supplied.
    * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
-   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
+   * @param _storedDataRollingHash The dataRollingHash to store after folding all blobs.
    */
   function submitBlobs(
     bytes32 _parentDataRollingHash,
-    bytes32 _finalDataRollingHash
+    bytes32 _storedDataRollingHash
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
-    _submitBlobs(_parentDataRollingHash, _finalDataRollingHash);
+    _submitBlobs(_parentDataRollingHash, _storedDataRollingHash);
   }
 
   /**
@@ -34,28 +38,30 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
    *   submission is persisted; a stream is continued across submissions by chaining from any
    *   previously-anchored parent dataRollingHash.
    * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
-   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
+   * @param _storedDataRollingHash The dataRollingHash to store after folding all blobs.
    */
-  function _submitBlobs(bytes32 _parentDataRollingHash, bytes32 _finalDataRollingHash) internal virtual {
+  function _submitBlobs(bytes32 _parentDataRollingHash, bytes32 _storedDataRollingHash) internal virtual {
     require(blobhash(0) != EMPTY_HASH, BlobSubmissionDataIsMissing());
 
     bytes32 computedDataRollingHash = _parentDataRollingHash;
+    bytes32 currentBlobHash;
+    unchecked {
+      for (uint256 i; ; i++) {
+        currentBlobHash = blobhash(i);
 
-    for (uint256 i; ; i++) {
-      bytes32 currentBlobHash = blobhash(i);
+        if (currentBlobHash == EMPTY_HASH) {
+          break;
+        }
 
-      if (currentBlobHash == EMPTY_HASH) {
-        break;
+        computedDataRollingHash = _computeDataRollingHash(computedDataRollingHash, currentBlobHash);
       }
-
-      computedDataRollingHash = _computeDataRollingHash(computedDataRollingHash, currentBlobHash);
     }
 
     require(
-      _finalDataRollingHash == computedDataRollingHash,
-      FinalDataRollingHashWrong(_finalDataRollingHash, computedDataRollingHash)
+      _storedDataRollingHash == computedDataRollingHash,
+      DataRollingHashMismatch(_storedDataRollingHash, computedDataRollingHash)
     );
 
-    _acceptShnarfData(_parentDataRollingHash, _finalDataRollingHash);
+    _acceptDataRollingHash(_parentDataRollingHash, _storedDataRollingHash);
   }
 }

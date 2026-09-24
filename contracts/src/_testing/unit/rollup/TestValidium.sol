@@ -32,8 +32,13 @@ contract TestValidium is Validium {
     currentL2BlockNumber = _blockNumber;
   }
 
-  function setLastFinalizedShnarf(bytes32 _lastFinalizedPositionCommitment) external {
-    currentFinalizedShnarf = _lastFinalizedPositionCommitment;
+  function setLegacyFinalizedShnarf(bytes32 _legacyShnarf) external {
+    currentFinalizedShnarf_DEPRECATED = _legacyShnarf;
+  }
+
+  function setCurrentDataPosition(bytes32 _dataRollingHash, uint256 _offset) external {
+    currentDataRollingHash = _dataRollingHash;
+    currentDataAvailabilityOffset = _offset;
   }
 
   function setDataRollingHashExistenceValue(bytes32 _dataRollingHash, uint256 _value) external {

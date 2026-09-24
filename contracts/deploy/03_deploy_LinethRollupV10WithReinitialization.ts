@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar, requireAddressFromRegistryOrEnv } from "../common/helpers";
+import { tryVerifyContract, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
@@ -12,9 +12,6 @@ const func: DeployFunction = withSignerUiSession(
     const signer = await getUiSigner(hre);
 
     const proxyAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
-    // The exact on-chain `currentFinalizedShnarf` value at upgrade time. The bridge reverts with
-    // BridgedShnarfMismatch if live state has drifted from what governance approved.
-    const currentFinalizedShnarf = getRequiredEnvVar("LINETH_ROLLUP_CURRENT_FINALIZED_SHNARF");
 
     const contractName = "LinethRollup";
 
@@ -38,9 +35,7 @@ const func: DeployFunction = withSignerUiSession(
         [
           proxyAddress,
           newImplementation,
-          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV10", [
-            currentFinalizedShnarf,
-          ]),
+          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV10", []),
         ],
       ),
     ]);

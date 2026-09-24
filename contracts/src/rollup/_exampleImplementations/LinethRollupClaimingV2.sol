@@ -3,7 +3,7 @@ pragma solidity 0.8.33;
 
 import { Eip4844BlobAcceptor } from "../dataAvailability/Eip4844BlobAcceptor.sol";
 import { CalldataBlobAcceptor } from "../dataAvailability/CalldataBlobAcceptor.sol";
-import { IProvideShnarf } from "../dataAvailability/interfaces/IProvideShnarf.sol";
+import { IProvideDataRollingHash } from "../dataAvailability/interfaces/IProvideDataRollingHash.sol";
 import { LinethRollupBase } from "../LinethRollupBase.sol";
 /**
  * @title Contract to manage cross-chain messaging on L1, L2 data submission, and rollup proof verification.
@@ -24,17 +24,13 @@ contract LinethRollupClaimingV2 is LinethRollupBase, Eip4844BlobAcceptor, Callda
    * @param _initializationData The initial data used for contract initialization.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    bytes32 genesisDataRollingHash = EMPTY_HASH;
-    _dataRollingHashExists[genesisDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
-    bytes32 genesisPositionCommitment = _computePositionCommitment(genesisDataRollingHash, 0);
-
-    __LinethRollup_init(_initializationData, genesisPositionCommitment);
+    __LinethRollup_init(_initializationData);
   }
 
   /**
-   * @notice Reinitializes LinethRollup and sets the _shnarfProvider to itself.
+   * @notice Reinitializes LinethRollup and sets the _dataRollingHashProvider to itself.
    */
   function reinitializeV8() external reinitializer(8) {
-    shnarfProvider = IProvideShnarf(address(this));
+    dataRollingHashProvider = IProvideDataRollingHash(address(this));
   }
 }

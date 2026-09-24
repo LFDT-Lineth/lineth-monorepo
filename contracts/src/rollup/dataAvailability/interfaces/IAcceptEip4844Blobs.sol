@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.33;
-import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
+import { IDataRollingHashAcceptorBase } from "./IDataRollingHashAcceptorBase.sol";
 
 /**
  * @title Interface for defining EIP-4844 blob submission functions, structs and errors.
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-interface IAcceptEip4844Blobs is IShnarfDataAcceptorBase {
+interface IAcceptEip4844Blobs is IDataRollingHashAcceptorBase {
   /**
    * @dev Thrown when the blobhash at an index equals to the zero hash.
    */
@@ -25,7 +25,7 @@ interface IAcceptEip4844Blobs is IShnarfDataAcceptorBase {
    *   (via the EIP-4844 `blobhash` opcode) is folded into the dataRollingHash accumulator.
    *   No per-blob calldata is supplied: chunk boundaries carry no block/conflation semantics.
    * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
-   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
+   * @param _storedDataRollingHash The dataRollingHash to store after folding all blobs.
    */
-  function submitBlobs(bytes32 _parentDataRollingHash, bytes32 _finalDataRollingHash) external;
+  function submitBlobs(bytes32 _parentDataRollingHash, bytes32 _storedDataRollingHash) external;
 }

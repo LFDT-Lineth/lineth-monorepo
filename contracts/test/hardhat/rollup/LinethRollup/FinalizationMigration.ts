@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 
 import { OPERATOR_ROLE } from "../../common/constants";
 import { deployUpgradableFromFactory } from "../../common/deployment";
-import { generateRandomBytes, computePositionCommitment, computeDataRollingHash } from "../../common/helpers";
+import { generateRandomBytes, computeDataRollingHash, EMPTY_SHNARF_DATA } from "../../common/helpers";
 
 const EMPTY_HASH = ethers.ZeroHash;
 const INITIAL_BLOCK_NUMBER = 100n;
@@ -38,7 +38,7 @@ describe("LinethRollup finalization migration", () => {
       unpauseTypeRoles: [],
       verifierKeys: [],
       defaultAdmin: defaultAdmin.address,
-      shnarfProvider: ethers.ZeroAddress,
+      dataRollingHashProvider: ethers.ZeroAddress,
       addressFilter: defaultAdmin.address,
     };
 
@@ -60,9 +60,7 @@ describe("LinethRollup finalization migration", () => {
     // forced-tx number 0, empty forced-tx rolling hash, lastFinalizedTimestamp 1.
     await linethRollup.setLastFinalizedState(0, EMPTY_HASH, 0, EMPTY_HASH, 1n);
 
-    // Genesis position commitment: the stored commitment that migration opens with prev=(0,0).
-    await linethRollup.setLastFinalizedShnarf(computePositionCommitment(EMPTY_HASH, 0n));
-
+    // Fresh deploy: currentDataRollingHash/currentDataAvailabilityOffset default to 0, no legacy shnarf to migrate.
     return { linethRollup, operator, initializationData };
   }
 
@@ -84,12 +82,11 @@ describe("LinethRollup finalization migration", () => {
       finalForcedTransactionNumber: 0n,
       lastFinalizedForcedTransactionRollingHash: EMPTY_HASH,
       finalBlockHash: generateRandomBytes(32),
-      prevDataRollingHash: EMPTY_HASH,
-      prevOffset: 0n,
       parentDataRollingHash: EMPTY_HASH,
       endDataRollingHash,
       startOffset: 0n,
       endOffset: 0n,
+      shnarfData: EMPTY_SHNARF_DATA,
       l2MerkleRoots: [],
       filteredAddresses: [],
       verifierKeys: [],
@@ -111,10 +108,9 @@ describe("LinethRollup finalization migration", () => {
 
     expect(await linethRollup.blockHashes(finalizationData.endBlockNumber)).to.equal(finalizationData.finalBlockHash);
     expect(await linethRollup.stateRootHashes(finalizationData.endBlockNumber)).to.equal(EMPTY_HASH);
-    // The position commitment is sealed for the finalized end stream position.
-    expect(await linethRollup.currentFinalizedShnarf()).to.equal(
-      computePositionCommitment(finalizationData.endDataRollingHash, 0n),
-    );
+    // The live DA stream position is updated directly (no opaque commitment).
+    expect(await linethRollup.currentDataRollingHash()).to.equal(finalizationData.endDataRollingHash);
+    expect(await linethRollup.currentDataAvailabilityOffset()).to.equal(0n);
   });
 
   it("rejects a nonzero declared parent block hash during migration", async () => {
@@ -174,18 +170,17 @@ describe("LinethRollup finalization migration", () => {
       .withArgs(unanchoredEnd);
   });
 
-  it("rejects a position commitment that does not match the stored commitment", async () => {
+  it("rejects a parentDataRollingHash that does not continue the live currentDataRollingHash", async () => {
     const { linethRollup, operator } = await loadFixture(deployFixture);
+    const wrongParent = generateRandomBytes(32);
     const finalizationData = await createFinalizationData(linethRollup, {
-      // Wrong prev position: the stored commitment is commit(0,0), this opens a different one.
-      prevDataRollingHash: generateRandomBytes(32),
+      // Wrong parent: the live currentDataRollingHash is still EMPTY_HASH (fresh deploy).
+      parentDataRollingHash: wrongParent,
     });
-    // Keep parent == prev so the DA-continuity check isn't what fires.
-    finalizationData.parentDataRollingHash = finalizationData.prevDataRollingHash;
 
-    await expect(
-      linethRollup.connect(operator).finalizeBlocks(PROOF, 0, finalizationData),
-    ).to.be.revertedWithCustomError(linethRollup, "PositionCommitmentMismatch");
+    await expect(linethRollup.connect(operator).finalizeBlocks(PROOF, 0, finalizationData))
+      .to.be.revertedWithCustomError(linethRollup, "DataRollingHashNotContinuous")
+      .withArgs(EMPTY_HASH, wrongParent);
   });
 
   it("uses the migrated final block hash as the next round parent", async () => {
@@ -199,7 +194,6 @@ describe("LinethRollup finalization migration", () => {
       parentStateRootHash: EMPTY_HASH,
       parentBlockHash: migrationData.finalBlockHash,
       endBlockNumber: 300n,
-      prevDataRollingHash: migrationEnd,
       parentDataRollingHash: migrationEnd,
       endDataRollingHash: nextEndDataRollingHash,
       lastFinalizedTimestamp: migrationData.finalTimestamp,
@@ -212,7 +206,8 @@ describe("LinethRollup finalization migration", () => {
     expect(await linethRollup.blockHashes(nextFinalizationData.endBlockNumber)).to.equal(
       nextFinalizationData.finalBlockHash,
     );
-    expect(await linethRollup.currentFinalizedShnarf()).to.equal(computePositionCommitment(nextEndDataRollingHash, 0n));
+    expect(await linethRollup.currentDataRollingHash()).to.equal(nextEndDataRollingHash);
+    expect(await linethRollup.currentDataAvailabilityOffset()).to.equal(0n);
   });
 
   it("rejects an incorrect parent block hash after migration", async () => {
@@ -225,7 +220,6 @@ describe("LinethRollup finalization migration", () => {
       parentStateRootHash: EMPTY_HASH,
       parentBlockHash: generateRandomBytes(32),
       endBlockNumber: 300n,
-      prevDataRollingHash: migrationEnd,
       parentDataRollingHash: migrationEnd,
       endDataRollingHash: computeDataRollingHash(migrationEnd, generateRandomBytes(32)),
       lastFinalizedTimestamp: migrationData.finalTimestamp,

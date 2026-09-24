@@ -33,9 +33,7 @@ contract Eip4844OnlyDaRollup is LinethRollupBase, Eip4844BlobAcceptor {
   }
 
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    bytes32 genesisDataRollingHash = EMPTY_HASH;
-    _dataRollingHashExists[genesisDataRollingHash] = DATA_ROLLING_HASH_EXISTS_DEFAULT_VALUE;
-    __LinethRollup_init(_initializationData, _computePositionCommitment(genesisDataRollingHash, 0));
+    __LinethRollup_init(_initializationData);
   }
 
   function setAllowedMessageSenderState(

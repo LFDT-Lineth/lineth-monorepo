@@ -14,8 +14,9 @@ import {
   CalldataSubmissionData,
   BlobSubmission,
   AggregatedProofData,
-  ParentAndExpectedDataRollingHash,
+  ParentAndStoredDataRollingHash,
   ShnarfDataGenerator,
+  ShnarfDataForMigration,
 } from "../types";
 import { generateRandomBytes, range } from "./general";
 
@@ -64,12 +65,12 @@ export type StreamPosition = {
 
 export type ComputedCalldataSubmission = CalldataSubmissionData & {
   parentDataRollingHash: string;
-  expectedDataRollingHash: string;
+  storedDataRollingHash: string;
 };
 
 export type ComputedBlobSubmission = BlobSubmission & {
   parentDataRollingHash: string;
-  expectedDataRollingHash: string;
+  storedDataRollingHash: string;
 };
 
 /**
@@ -80,12 +81,32 @@ export function computeDataRollingHash(parentDataRollingHash: string, chunkHash:
   return ethers.keccak256(ethers.concat([parentDataRollingHash, chunkHash]));
 }
 
+/** All-zero ShnarfData sentinel selecting the standard (non-migration) finalization path. */
+export const EMPTY_SHNARF_DATA: ShnarfDataForMigration = {
+  parentShnarf: HASH_ZERO,
+  snarkHash: HASH_ZERO,
+  finalStateRootHash: HASH_ZERO,
+  blobHash: HASH_ZERO,
+  dataEvaluationClaim: HASH_ZERO,
+};
+
 /**
- * Mirrors the Solidity `_computePositionCommitment`:
- * keccak256(abi.encodePacked(dataRollingHash, offset-as-uint256)).
+ * Mirrors the Solidity legacy 5-input `_computeShnarf`:
+ * keccak256(abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)),
+ * where dataEvaluationPoint = keccak256(abi.encodePacked(snarkHash, blobHash)).
  */
-export function computePositionCommitment(dataRollingHash: string, offset: bigint | number): string {
-  return ethers.solidityPackedKeccak256(["bytes32", "uint256"], [dataRollingHash, offset]);
+export function computeLegacyShnarf(shnarfData: ShnarfDataForMigration): string {
+  const dataEvaluationPoint = computeDataRollingHash(shnarfData.snarkHash, shnarfData.blobHash);
+  return ethers.solidityPackedKeccak256(
+    ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
+    [
+      shnarfData.parentShnarf,
+      shnarfData.snarkHash,
+      shnarfData.finalStateRootHash,
+      dataEvaluationPoint,
+      shnarfData.dataEvaluationClaim,
+    ],
+  );
 }
 
 /**
@@ -108,11 +129,11 @@ function buildCalldataChain(
     const data = dataSet[i];
     const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
     const chunkHash = ethers.keccak256(compressedData);
-    const expectedDataRollingHash = computeDataRollingHash(parentDataRollingHash, chunkHash);
+    const storedDataRollingHash = computeDataRollingHash(parentDataRollingHash, chunkHash);
     if (i >= startDataIndex) {
-      chain.push({ compressedData, parentDataRollingHash, expectedDataRollingHash });
+      chain.push({ compressedData, parentDataRollingHash, storedDataRollingHash });
     }
-    parentDataRollingHash = expectedDataRollingHash;
+    parentDataRollingHash = storedDataRollingHash;
   }
   return chain;
 }
@@ -130,17 +151,17 @@ function buildBlobChain(
     const data = dataSet[i];
     const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
     const dataHash = computeBlobVersionedHash(data.commitment!);
-    const expectedDataRollingHash = computeDataRollingHash(parentDataRollingHash, dataHash);
+    const storedDataRollingHash = computeDataRollingHash(parentDataRollingHash, dataHash);
     if (i >= startDataIndex) {
       chain.push({
         dataHash,
         compressedData,
         kzgCommitment: data.commitment!,
         parentDataRollingHash,
-        expectedDataRollingHash,
+        storedDataRollingHash,
       });
     }
-    parentDataRollingHash = expectedDataRollingHash;
+    parentDataRollingHash = storedDataRollingHash;
   }
   return chain;
 }
@@ -166,7 +187,7 @@ export function generateBlobDataSubmission(
   blobDataSubmission: BlobSubmission[];
   compressedBlobs: string[];
   parentDataRollingHash: string;
-  finalDataRollingHash: string;
+  storedDataRollingHash: string;
 } {
   const dataSet = isMultiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
   const chain = buildBlobChain(dataSet, startDataIndex, finalDataIndex);
@@ -178,7 +199,7 @@ export function generateBlobDataSubmission(
     })),
     compressedBlobs: chain.map((item) => item.compressedData),
     parentDataRollingHash: chain[0].parentDataRollingHash,
-    finalDataRollingHash: chain[chain.length - 1].expectedDataRollingHash,
+    storedDataRollingHash: chain[chain.length - 1].storedDataRollingHash,
   };
 }
 
@@ -186,7 +207,7 @@ export function generateBlobDataSubmissionFromFile(filePath: string): {
   blobDataSubmission: BlobSubmission[];
   compressedBlobs: string[];
   parentDataRollingHash: string;
-  finalDataRollingHash: string;
+  storedDataRollingHash: string;
 } {
   const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8")) as FixtureSubmission;
   const compressedData = ethers.hexlify(ethers.decodeBase64(fileContents.compressedData));
@@ -194,7 +215,7 @@ export function generateBlobDataSubmissionFromFile(filePath: string): {
   // Single-file helpers are used after a known parent; fall back to fixture prevShnarf when present,
   // otherwise treat parent as the genesis accumulator (empty hash).
   const parentDataRollingHash = fileContents.prevShnarf ?? HASH_ZERO;
-  const finalDataRollingHash = computeDataRollingHash(parentDataRollingHash, dataHash);
+  const storedDataRollingHash = computeDataRollingHash(parentDataRollingHash, dataHash);
 
   return {
     compressedBlobs: [compressedData],
@@ -206,19 +227,19 @@ export function generateBlobDataSubmissionFromFile(filePath: string): {
       },
     ],
     parentDataRollingHash,
-    finalDataRollingHash,
+    storedDataRollingHash,
   };
 }
 
-function emptyStreamPosition(parentDataRollingHash: string): ParentAndExpectedDataRollingHash {
-  return { parentDataRollingHash, expectedDataRollingHash: parentDataRollingHash };
+function emptyStreamPosition(parentDataRollingHash: string): ParentAndStoredDataRollingHash {
+  return { parentDataRollingHash, storedDataRollingHash: parentDataRollingHash };
 }
 
 /**
  * Returns the parent dataRollingHash that precedes chunk `index` (i.e. the accumulator after folding
  * chunks `[0, index)`), used to seed a finalization's stream position.
  */
-export function generateParentDataRollingHash(index: number, multiple?: boolean): ParentAndExpectedDataRollingHash {
+export function generateParentDataRollingHash(index: number, multiple?: boolean): ParentAndStoredDataRollingHash {
   if (index === 0) {
     return emptyStreamPosition(HASH_ZERO);
   }
@@ -226,11 +247,11 @@ export function generateParentDataRollingHash(index: number, multiple?: boolean)
   const chain = buildCalldataChain(dataSet, index - 1, index);
   return {
     parentDataRollingHash: chain[0].parentDataRollingHash,
-    expectedDataRollingHash: chain[0].expectedDataRollingHash,
+    storedDataRollingHash: chain[0].storedDataRollingHash,
   };
 }
 
-export function generateBlobParentDataRollingHash(index: number, multiple?: boolean): ParentAndExpectedDataRollingHash {
+export function generateBlobParentDataRollingHash(index: number, multiple?: boolean): ParentAndStoredDataRollingHash {
   if (index === 0) {
     return emptyStreamPosition(HASH_ZERO);
   }
@@ -238,60 +259,56 @@ export function generateBlobParentDataRollingHash(index: number, multiple?: bool
   const chain = buildBlobChain(dataSet, index - 1, index);
   return {
     parentDataRollingHash: chain[0].parentDataRollingHash,
-    expectedDataRollingHash: chain[0].expectedDataRollingHash,
+    storedDataRollingHash: chain[0].storedDataRollingHash,
   };
 }
 
 /**
  * Stream position anchors for a finalization that ends after the submission range `[0, blobParentShnarfIndex)`.
- * `finalDataRollingHash` is the accumulator after folding every chunk in the range (the value that must have
+ * `storedDataRollingHash` is the accumulator after folding every chunk in the range (the value that must have
  * been anchored by the last submission); offsets are chunk-boundary positions (0 == fresh-start sentinel).
  */
 export function getFinalizationStreamPosition(
   blobParentShnarfIndex: number,
   options: { isMultiple?: boolean; isBlob?: boolean; base?: StreamPosition } = {},
-): { prevDataRollingHash: string; parentDataRollingHash: string; endDataRollingHash: string } | undefined {
+): { parentDataRollingHash: string; endDataRollingHash: string } | undefined {
   const { isMultiple = false, isBlob = false, base } = options;
   if (blobParentShnarfIndex < 0) {
     return undefined;
   }
 
-  // Fresh start (first finalization): open the genesis position commitment with the empty accumulator.
+  // Fresh start (first finalization): the live currentDataRollingHash is the empty accumulator.
   if (!base) {
     const gen = isBlob ? generateBlobParentDataRollingHash : generateParentDataRollingHash;
-    const { expectedDataRollingHash } = gen(blobParentShnarfIndex, isMultiple);
+    const { storedDataRollingHash } = gen(blobParentShnarfIndex, isMultiple);
     return {
-      prevDataRollingHash: HASH_ZERO,
       parentDataRollingHash: HASH_ZERO,
-      endDataRollingHash: expectedDataRollingHash,
+      endDataRollingHash: storedDataRollingHash,
     };
   }
 
-  // Second finalization: open the position stored by the first finalize. The fixtures submit a single
-  // continuous chunk chain `[0, N)` and the second range's tail index points past the last fixture chunk,
-  // so no new chunks are folded — the end accumulator equals the first range's end (the chain tail).
+  // Second finalization: continue from the position stored by the first finalize. The fixtures submit a
+  // single continuous chunk chain `[0, N)` and the second range's tail index points past the last fixture
+  // chunk, so no new chunks are folded — the end accumulator equals the first range's end (the chain tail).
   return {
-    prevDataRollingHash: base.dataRollingHash,
     parentDataRollingHash: base.dataRollingHash,
     endDataRollingHash: base.dataRollingHash,
   };
 }
 
-export function generateParentAndExpectedDataRollingHashForIndex(index: number): ParentAndExpectedDataRollingHash {
+export function generateParentAndStoredDataRollingHashForIndex(index: number): ParentAndStoredDataRollingHash {
   const chain = buildCalldataChain(COMPRESSED_SUBMISSION_DATA, index, index + 1);
   return {
     parentDataRollingHash: chain[0].parentDataRollingHash,
-    expectedDataRollingHash: chain[0].expectedDataRollingHash,
+    storedDataRollingHash: chain[0].storedDataRollingHash,
   };
 }
 
-export function generateParentAndExpectedDataRollingHashForMultipleIndex(
-  index: number,
-): ParentAndExpectedDataRollingHash {
+export function generateParentAndStoredDataRollingHashForMultipleIndex(index: number): ParentAndStoredDataRollingHash {
   const chain = buildCalldataChain(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF, index, index + 1);
   return {
     parentDataRollingHash: chain[0].parentDataRollingHash,
-    expectedDataRollingHash: chain[0].expectedDataRollingHash,
+    storedDataRollingHash: chain[0].storedDataRollingHash,
   };
 }
 
@@ -333,13 +350,12 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
     finalForcedTransactionNumber: BigInt(proofData.finalFtxNumber),
     filteredAddresses: proofData.filteredAddresses,
     finalBlockHash: proofData.finalStateRootHash,
-    // Fresh-start stream position: open the genesis position commitment (0 || 0) and span to the end.
-    prevDataRollingHash: stream?.prevDataRollingHash ?? HASH_ZERO,
-    prevOffset: 0n,
+    // Fresh-start stream position: continue from the live currentDataRollingHash (0 == genesis) and span to the end.
     parentDataRollingHash: stream?.parentDataRollingHash ?? HASH_ZERO,
     endDataRollingHash: stream?.endDataRollingHash ?? HASH_ZERO,
     startOffset: 0n,
     endOffset: 0n,
+    shnarfData: EMPTY_SHNARF_DATA,
     verifierKeys: [],
   };
 }
@@ -364,12 +380,11 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
     finalForcedTransactionNumber: 0n,
     lastFinalizedForcedTransactionRollingHash: HASH_ZERO,
     finalBlockHash: generateRandomBytes(32),
-    prevDataRollingHash: HASH_ZERO,
-    prevOffset: 0n,
     parentDataRollingHash: HASH_ZERO,
     endDataRollingHash: HASH_ZERO,
     startOffset: 0n,
     endOffset: 0n,
+    shnarfData: EMPTY_SHNARF_DATA,
     verifierKeys: [],
     ...overrides,
   };
@@ -419,16 +434,16 @@ export async function submitCalldataBeforeFinalization(
     : generateCallDataSubmission(startIndex, finalIndex);
 
   const getHashesFn = useMultipleProofs
-    ? generateParentAndExpectedDataRollingHashForMultipleIndex
-    : generateParentAndExpectedDataRollingHashForIndex;
+    ? generateParentAndStoredDataRollingHashForMultipleIndex
+    : generateParentAndStoredDataRollingHashForIndex;
 
   let index = startIndex;
   for (const data of submissionData) {
-    const parentAndExpected = getHashesFn(index);
+    const parentAndStored = getHashesFn(index);
     await linethRollup.submitDataAsCalldata(
       data.compressedData,
-      parentAndExpected.parentDataRollingHash,
-      parentAndExpected.expectedDataRollingHash,
+      parentAndStored.parentDataRollingHash,
+      parentAndStored.storedDataRollingHash,
       { gasLimit: maxGasLimit },
     );
     index++;

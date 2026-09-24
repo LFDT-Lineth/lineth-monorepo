@@ -13,11 +13,11 @@ contract LinethRollupV9Stub is LinethRollup {
   /**
    * @notice No-op placeholder for EIP-4844 blob submission.
    * @param _parentDataRollingHash The parent dataRollingHash used in continuity checks.
-   * @param _finalDataRollingHash The expected final dataRollingHash after folding all blobs.
+   * @param _storedDataRollingHash The dataRollingHash to store after folding all blobs.
    */
   function submitBlobs(
     bytes32 _parentDataRollingHash,
-    bytes32 _finalDataRollingHash
+    bytes32 _storedDataRollingHash
   ) public override whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {}
 
   /**
@@ -29,6 +29,6 @@ contract LinethRollupV9Stub is LinethRollup {
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV6 calldata _finalizationData
+    FinalizationDataV5 calldata _finalizationData
   ) external override whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE) {}
 }

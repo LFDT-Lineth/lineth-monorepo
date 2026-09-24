@@ -92,31 +92,6 @@ deploy-lineth-rollup-v9-stub:
 		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
 		pnpm exec ts-node local-deployments-artifacts/deployLinethRollupV9Stub.ts
 
-deploy-lineth-rollup-v9-stub:
-		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
-		# Deploys LinethRollupV9Stub, a temporary placeholder rollup implementation whose
-		# submitBlobs/finalizeBlocks are no-ops. No PlonkVerifier is deployed and guest-program
-		# verifier keys are randomly generated, since neither is exercised by this stub.
-		export FORK_TIMESTAMP=$$(cat docker/config/l2-genesis-initialization/fork-timestamp.txt 2>/dev/null || true) && \
-		cd $(contracts_package_dir); \
-		DEPLOYER_PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80} \
-		RPC_URL=http:\\localhost:8445/ \
-		INITIAL_L2_BLOCK_HASH=0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101 \
-		INITIAL_L2_BLOCK_NUMBER=0 \
-		L2_GENESIS_TIMESTAMP=$${FORK_TIMESTAMP:-1683325137} \
-		L1_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
-		LINEA_ROLLUP_OPERATORS=$${LINEA_ROLLUP_OPERATORS:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC} \
-		LINEA_ROLLUP_RATE_LIMIT_PERIOD=86400 \
-		LINEA_ROLLUP_RATE_LIMIT_AMOUNT=1000000000000000000000 \
-		FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID=1337 \
-		FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER=2000 \
-		FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT=300000 \
-		FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER=1000 \
-		FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS=2 \
-		FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER=10 \
-		SECURITY_COUNCIL_PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
-		pnpm exec ts-node local-deployments-artifacts/deployLinethRollupV9Stub.ts
-
 deploy-validium: L1_CONTRACT_VERSION:=2
 deploy-validium:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -205,8 +180,8 @@ deploy-contracts: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
 deploy-contracts: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 deploy-contracts:
 	cd $(contracts_package_dir); \
-	export L1_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
-	export L2_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
+	export L1_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445 | tail -n 1) && \
+	export L2_NONCE=$$(pnpm exec ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545 | tail -n 1) && \
 	cd .. && \
 	if [ "$(LINETH_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
 		$(MAKE) -j7 $(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \

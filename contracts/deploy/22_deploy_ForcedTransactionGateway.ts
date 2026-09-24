@@ -35,15 +35,8 @@ const func: DeployFunction = withSignerUiSession(
       "AddressFilter",
       "FORCED_TRANSACTION_ADDRESS_FILTER",
     );
-    const mimcLibraryAddress = requireAddressFromRegistryOrEnv(
-      hre.network.name,
-      "MIMC_LIBRARY_ADDRESS",
-      "MIMC_LIBRARY_ADDRESS",
-    );
 
-    const factory = await ethers.getContractFactory(contractName, {
-      libraries: { Mimc: mimcLibraryAddress },
-    });
+    const factory = await ethers.getContractFactory(contractName);
     const l2BlockDurationSeconds = getRequiredEnvVar("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS");
     const blockNumberDeadlineBuffer = getRequiredEnvVar("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER");
 
@@ -79,7 +72,6 @@ const func: DeployFunction = withSignerUiSession(
       contractAddress,
       "src/rollup/forcedTransactions/ForcedTransactionGateway.sol:ForcedTransactionGateway",
       args,
-      { Mimc: mimcLibraryAddress },
     );
   },
 );
