@@ -10,7 +10,16 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 .PHONY: \
 	test \
 	ci-lint \
-	download-zkc-testdata
+	download-zkc-testdata \
+	docker-build \
+	docker-smoke
+
+# One prover-ray image for all modes; the mode is chosen at runtime via --mode.
+# DOCKER overridable for rootful/rootless or podman, e.g. DOCKER='sudo docker'.
+DOCKER     ?= docker
+IMAGE_NAME ?= consensys/linea-prover-ray
+IMAGE_TAG  ?= dev
+REPO_ROOT  := $(shell git rev-parse --show-toplevel)
 
 ##
 ## Run all the unit-tests
@@ -45,3 +54,19 @@ download-zkc-testdata:
 	find $(ZKC_TESTDATA_SYNC_DST_DIR) -type f -name "*.rejects" -delete
 
 	# we don't compile binaries. They are compiled as-needed during integration tests (to be up-to-date)
+
+##
+## Build the one prover-ray image (Go prover + native runner + guest ELF).
+## The native runner is built from riscv-guests, passed in as a build context.
+##
+docker-build:
+	$(DOCKER) build -f Dockerfile \
+		--build-context riscv-guests=$(REPO_ROOT)/riscv-guests \
+		-t $(IMAGE_NAME):$(IMAGE_TAG) \
+		.
+
+##
+## Smoke-test the built image: dev-mock request->response + dev-zkvm artifacts.
+##
+docker-smoke:
+	DOCKER="$(DOCKER)" ./scripts/docker-smoke.sh $(IMAGE_NAME):$(IMAGE_TAG)
