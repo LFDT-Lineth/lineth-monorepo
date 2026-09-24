@@ -85,7 +85,7 @@ jobs:
         run: make -C riscv-guests/l2-execution trace
         timeout-minutes: 45
         env:
-          ZKC_REF: "e1eca0b833d028570d952f01e4bf202a018b91ab" # Empty to avoid installing zkc again
+          ZKC_REF: "b5cc0fd91ca8f5b4c1026766dd0c33ff01cd570b" # Empty to avoid installing zkc again
           INPUT: test/testdata/block_amsterdam_175k.ssz
           KECCAK_ACCEL: true
           ZKC_TRACE_FLAGS: "--stats -vv"
