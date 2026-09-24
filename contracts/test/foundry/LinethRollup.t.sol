@@ -15,18 +15,14 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 
 /// @dev Mirrors TestLinethRollup: production LinethRollup plus calldata DA for unit tests.
 contract LinethRollupTestHelper is LinethRollup, CalldataBlobAcceptor {
-  function computeShnarf(
-    bytes32 _parentShnarf,
-    bytes32 _snarkHash,
-    bytes32 _finalStateRootHash,
-    bytes32 _dataEvaluationPoint,
-    bytes32 _dataEvaluationClaim
-  ) external pure returns (bytes32 shnarf) {
-    return _computeShnarf(_parentShnarf, _snarkHash, _finalStateRootHash, _dataEvaluationPoint, _dataEvaluationClaim);
-  }
-
   function computeDataRollingHash(bytes32 _parentDataRollingHash, bytes32 _chunkHash) external pure returns (bytes32) {
     return _computeDataRollingHash(_parentDataRollingHash, _chunkHash);
+  }
+
+  function setSlotValue(uint256 _slot, uint256 _value) external {
+    assembly {
+      sstore(_slot, _value)
+    }
   }
 
   function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
@@ -66,6 +62,7 @@ contract LinethRollupTest is Test {
   bytes32 DEFAULT_ADMIN_ROLE;
 
   bytes32 constant INITIAL_BLOCK_HASH = keccak256("initial-block-hash");
+  bytes32 GENESIS_DATA_ROLLING_HASH;
 
   function setUp() public {
     operator = address(0x1);
@@ -117,6 +114,8 @@ contract LinethRollupTest is Test {
     OPERATOR_ROLE = linethRollup.OPERATOR_ROLE();
     DEFAULT_ADMIN_ROLE = linethRollup.DEFAULT_ADMIN_ROLE();
 
+    GENESIS_DATA_ROLLING_HASH = linethRollup.computeDataRollingHash(bytes32(0), INITIAL_BLOCK_HASH);
+
     assertEq(linethRollup.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin), true, "Default admin not set");
     assertEq(linethRollup.hasRole(OPERATOR_ROLE, operator), true, "Operator not set");
   }
@@ -129,8 +128,8 @@ contract LinethRollupTest is Test {
   function testSubmitDataAsCalldata() public {
     bytes memory compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
-    // Genesis DA stream position: parent dataRollingHash is the empty accumulator (offset 0).
-    bytes32 parentDataRollingHash = bytes32(0);
+    // Genesis DA stream position: parent dataRollingHash is the deterministic genesis anchor.
+    bytes32 parentDataRollingHash = GENESIS_DATA_ROLLING_HASH;
     bytes32 chunkHash = keccak256(compressedData);
     bytes32 storedDataRollingHash = linethRollup.computeDataRollingHash(parentDataRollingHash, chunkHash);
 
@@ -145,8 +144,8 @@ contract LinethRollupTest is Test {
     bytes memory compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
     bytes32 finalBlockHash = keccak256("final-block-hash");
 
-    // Genesis position: parent dataRollingHash = 0, offset = 0 (fresh start sentinel).
-    bytes32 parentDataRollingHash = bytes32(0);
+    // Genesis position: parent dataRollingHash = deterministic genesis anchor, offset = 0.
+    bytes32 parentDataRollingHash = GENESIS_DATA_ROLLING_HASH;
 
     bytes32 chunkHash = keccak256(compressedData);
     bytes32 endDataRollingHash = linethRollup.computeDataRollingHash(parentDataRollingHash, chunkHash);
@@ -178,6 +177,7 @@ contract LinethRollupTest is Test {
     assertEq(linethRollup.currentL2BlockNumber(), 10, "Current L2 block not updated");
     assertEq(linethRollup.currentDataRollingHash(), endDataRollingHash, "currentDataRollingHash not updated");
     assertEq(linethRollup.currentDataAvailabilityOffset(), 100, "currentDataAvailabilityOffset not updated");
+    assertEq(linethRollup.dataRollingHashExists(GENESIS_DATA_ROLLING_HASH), 1, "genesis dataRollingHash not anchored");
   }
 
   function testComputeDataRollingHash() public view {
@@ -185,22 +185,6 @@ contract LinethRollupTest is Test {
     bytes32 chunk = keccak256("chunk");
     bytes32 expected = keccak256(abi.encodePacked(parent, chunk));
     assertEq(linethRollup.computeDataRollingHash(parent, chunk), expected, "2-input dataRollingHash mismatch");
-  }
-
-  function testComputeShnarf() public view {
-    bytes32 parentShnarf = keccak256("parent-shnarf");
-    bytes32 snarkHash = keccak256("snark-hash");
-    bytes32 finalStateRootHash = keccak256("final-state-root-hash");
-    bytes32 dataEvaluationPoint = keccak256("data-evaluation-point");
-    bytes32 dataEvaluationClaim = keccak256("data-evaluation-claim");
-    bytes32 expected = keccak256(
-      abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)
-    );
-    assertEq(
-      linethRollup.computeShnarf(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim),
-      expected,
-      "Legacy shnarf mismatch"
-    );
   }
 
   function testSubmitDataAsCalldataRevertsOnUnanchoredParent() public {
@@ -237,7 +221,7 @@ contract LinethRollupTest is Test {
   }
 
   function testFinalizeBlocksRevertsOnUnanchoredEndDataRollingHash() public {
-    bytes32 parentDataRollingHash = bytes32(0);
+    bytes32 parentDataRollingHash = GENESIS_DATA_ROLLING_HASH;
 
     ILinethRollupBase.FinalizationDataV5 memory finalizationData;
     finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
@@ -264,10 +248,13 @@ contract LinethRollupTest is Test {
 
   function testFinalizeBlocksRevertsOnDataRollingHashNotContinuous() public {
     bytes memory compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
-    bytes32 endDataRollingHash = linethRollup.computeDataRollingHash(bytes32(0), keccak256(compressedData));
+    bytes32 endDataRollingHash = linethRollup.computeDataRollingHash(
+      GENESIS_DATA_ROLLING_HASH,
+      keccak256(compressedData)
+    );
 
     vm.prank(operator);
-    linethRollup.submitDataAsCalldata(compressedData, bytes32(0), endDataRollingHash);
+    linethRollup.submitDataAsCalldata(compressedData, GENESIS_DATA_ROLLING_HASH, endDataRollingHash);
 
     ILinethRollupBase.FinalizationDataV5 memory finalizationData;
     finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
@@ -275,7 +262,7 @@ contract LinethRollupTest is Test {
     finalizationData.lastFinalizedTimestamp = 1;
     finalizationData.finalTimestamp = 2;
     finalizationData.finalBlockHash = keccak256("final-block-hash");
-    // Wrong parent: does not match the live currentDataRollingHash (0 == genesis fresh-start).
+    // Wrong parent: does not match the live currentDataRollingHash (deliberately wrong value).
     finalizationData.parentDataRollingHash = keccak256("wrong-prev");
     finalizationData.endDataRollingHash = endDataRollingHash;
     finalizationData.startOffset = 0;
@@ -290,183 +277,46 @@ contract LinethRollupTest is Test {
     vm.expectRevert(
       abi.encodeWithSelector(
         bytes4(keccak256("DataRollingHashNotContinuous(bytes32,bytes32)")),
-        bytes32(0),
+        GENESIS_DATA_ROLLING_HASH,
         keccak256("wrong-prev")
       )
     );
     linethRollup.finalizeBlocks(hex"01", 0, finalizationData);
   }
 
-  function _buildLegacyShnarfData()
-    internal
-    pure
-    returns (
-      bytes32 parentShnarf,
-      bytes32 snarkHash,
-      bytes32 finalStateRootHash,
-      bytes32 blobHash,
-      bytes32 dataEvaluationClaim,
-      bytes32 legacyShnarf
-    )
-  {
-    parentShnarf = keccak256("legacy-parent-shnarf");
-    snarkHash = keccak256("legacy-snark-hash");
-    finalStateRootHash = keccak256("legacy-final-state-root-hash");
-    blobHash = keccak256("legacy-blob-hash");
-    dataEvaluationClaim = keccak256("legacy-data-evaluation-claim");
-    bytes32 dataEvaluationPoint = keccak256(abi.encodePacked(snarkHash, blobHash));
-    legacyShnarf = keccak256(
-      abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)
-    );
+  function testReinitializeLineaRollupV10AlreadyInitializedReverts() public {
+    // setUp() already ran `initialize`, which itself uses reinitializer(10); calling
+    // reinitializeLineaRollupV10 again must revert since version 10 was already consumed on this proxy.
+    vm.expectRevert(); // InvalidInitialization
+    linethRollup.reinitializeLineaRollupV10();
   }
 
-  function testFinalizeBlocksLegacyShnarfMigrationSuccess() public {
-    (
-      bytes32 parentShnarf,
-      bytes32 snarkHash,
-      bytes32 finalStateRootHash,
-      bytes32 blobHash,
-      bytes32 dataEvaluationClaim,
-      bytes32 legacyShnarf
-    ) = _buildLegacyShnarfData();
+  function testReinitializeLineaRollupV10MigratesLegacyShnarf() public {
+    // Simulate a pre-v10 upgrade: lower the initialized version so reinitializer(10) can run again.
+    linethRollup.setSlotValue(0, 9);
 
+    bytes32 legacyShnarf = keccak256("legacy-shnarf-to-migrate");
     linethRollup.setLegacyFinalizedShnarf(legacyShnarf);
 
-    // Post-migration submissions chain from the bridged legacy shnarf rather than EMPTY_HASH, so
-    // the first post-upgrade chunk's parent must be the legacy shnarf value itself.
-    bytes memory compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
-    bytes32 endDataRollingHash = linethRollup.computeDataRollingHash(legacyShnarf, keccak256(compressedData));
+    linethRollup.reinitializeLineaRollupV10();
 
-    vm.prank(operator);
-    linethRollup.submitDataAsCalldata(compressedData, legacyShnarf, endDataRollingHash);
-
-    ILinethRollupBase.FinalizationDataV5 memory finalizationData;
-    finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
-    finalizationData.endBlockNumber = 10;
-    finalizationData.lastFinalizedTimestamp = 1;
-    finalizationData.finalTimestamp = 2;
-    finalizationData.finalBlockHash = keccak256("final-block-hash");
-    finalizationData.parentDataRollingHash = legacyShnarf;
-    finalizationData.endDataRollingHash = endDataRollingHash;
-    finalizationData.startOffset = 0;
-    finalizationData.endOffset = 100;
-    finalizationData.shnarfData = ILinethRollupBase.ShnarfData({
-      parentShnarf: parentShnarf,
-      snarkHash: snarkHash,
-      finalStateRootHash: finalStateRootHash,
-      blobHash: blobHash,
-      dataEvaluationClaim: dataEvaluationClaim
-    });
-    finalizationData.l2MerkleRoots = new bytes32[](0);
-    finalizationData.filteredAddresses = new address[](0);
-    finalizationData.verifierKeys = new bytes32[](0);
-    finalizationData.l2MessagingBlocksOffsets = hex"";
-
-    vm.warp(10);
-    vm.prank(operator);
-    linethRollup.finalizeBlocks(hex"01", 0, finalizationData);
-
-    assertEq(linethRollup.currentFinalizedShnarf_DEPRECATED(), bytes32(0), "Legacy shnarf not wiped after migration");
-    assertEq(linethRollup.currentDataRollingHash(), endDataRollingHash, "currentDataRollingHash not updated");
-    assertEq(linethRollup.currentDataAvailabilityOffset(), 100, "currentDataAvailabilityOffset not updated");
+    assertEq(
+      linethRollup.currentFinalizedShnarf_DEPRECATED(),
+      bytes32(0),
+      "Legacy shnarf not wiped after reinitializer migration"
+    );
+    assertEq(linethRollup.currentDataRollingHash(), legacyShnarf, "currentDataRollingHash not migrated");
+    assertEq(linethRollup.dataRollingHashExists(legacyShnarf), 1, "migrated legacy shnarf not anchored");
   }
 
-  function testFinalizeBlocksLegacyShnarfMigrationRevertsOnMismatch() public {
-    bytes32 liveLegacyShnarf = keccak256("some-other-legacy-shnarf");
-    linethRollup.setLegacyFinalizedShnarf(liveLegacyShnarf);
+  function testReinitializeLineaRollupV10EmitsLegacyShnarfMigrated() public {
+    linethRollup.setSlotValue(0, 9);
 
-    (
-      bytes32 parentShnarf,
-      bytes32 snarkHash,
-      bytes32 finalStateRootHash,
-      bytes32 blobHash,
-      bytes32 dataEvaluationClaim,
+    bytes32 legacyShnarf = keccak256("legacy-shnarf-for-event");
+    linethRollup.setLegacyFinalizedShnarf(legacyShnarf);
 
-    ) = _buildLegacyShnarfData();
-
-    // Submission must chain from the currently-live legacy shnarf to pass anchoring; the mismatch
-    // under test is between the *reconstructed* shnarf (from shnarfData below) and this live value.
-    bytes memory compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
-    bytes32 endDataRollingHash = linethRollup.computeDataRollingHash(liveLegacyShnarf, keccak256(compressedData));
-
-    vm.prank(operator);
-    linethRollup.submitDataAsCalldata(compressedData, liveLegacyShnarf, endDataRollingHash);
-
-    ILinethRollupBase.FinalizationDataV5 memory finalizationData;
-    finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
-    finalizationData.endBlockNumber = 10;
-    finalizationData.lastFinalizedTimestamp = 1;
-    finalizationData.finalTimestamp = 2;
-    finalizationData.finalBlockHash = keccak256("final-block-hash");
-    finalizationData.parentDataRollingHash = liveLegacyShnarf;
-    finalizationData.endDataRollingHash = endDataRollingHash;
-    finalizationData.startOffset = 0;
-    finalizationData.endOffset = 100;
-    finalizationData.shnarfData = ILinethRollupBase.ShnarfData({
-      parentShnarf: parentShnarf,
-      snarkHash: snarkHash,
-      finalStateRootHash: finalStateRootHash,
-      blobHash: blobHash,
-      dataEvaluationClaim: dataEvaluationClaim
-    });
-    finalizationData.l2MerkleRoots = new bytes32[](0);
-    finalizationData.filteredAddresses = new address[](0);
-    finalizationData.verifierKeys = new bytes32[](0);
-    finalizationData.l2MessagingBlocksOffsets = hex"";
-
-    vm.warp(10);
-    vm.prank(operator);
-    vm.expectRevert(); // LegacyShnarfMismatch
-    linethRollup.finalizeBlocks(hex"01", 0, finalizationData);
-  }
-
-  function testFinalizeBlocksLegacyShnarfMigrationRevertsWhenAlreadyCompleted() public {
-    // A finalization that has already progressed past the migration sentinel (currentDataAvailabilityOffset != 0)
-    // must reject any further shnarfData-supplied migration attempt.
-    linethRollup.setCurrentDataPosition(keccak256("already-migrated"), 1);
-
-    (
-      bytes32 parentShnarf,
-      bytes32 snarkHash,
-      bytes32 finalStateRootHash,
-      bytes32 blobHash,
-      bytes32 dataEvaluationClaim,
-
-    ) = _buildLegacyShnarfData();
-
-    ILinethRollupBase.FinalizationDataV5 memory finalizationData;
-    finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
-    finalizationData.endBlockNumber = 10;
-    finalizationData.lastFinalizedTimestamp = 1;
-    finalizationData.finalTimestamp = 2;
-    finalizationData.finalBlockHash = keccak256("final-block-hash");
-    finalizationData.parentDataRollingHash = keccak256("already-migrated");
-    finalizationData.endDataRollingHash = keccak256("does-not-matter");
-    finalizationData.startOffset = 1;
-    finalizationData.endOffset = 100;
-    finalizationData.shnarfData = ILinethRollupBase.ShnarfData({
-      parentShnarf: parentShnarf,
-      snarkHash: snarkHash,
-      finalStateRootHash: finalStateRootHash,
-      blobHash: blobHash,
-      dataEvaluationClaim: dataEvaluationClaim
-    });
-    finalizationData.l2MerkleRoots = new bytes32[](0);
-    finalizationData.filteredAddresses = new address[](0);
-    finalizationData.verifierKeys = new bytes32[](0);
-    finalizationData.l2MessagingBlocksOffsets = hex"";
-
-    vm.warp(10);
-    vm.prank(operator);
-    vm.expectRevert(bytes4(keccak256("LegacyShnarfAlreadyMigrated()")));
-    linethRollup.finalizeBlocks(hex"01", 0, finalizationData);
-  }
-
-  function testReinitializeLineaRollupV10AlreadyInitializedReverts() public {
-    // setUp() already ran `initialize`, which itself uses reinitializer(10); calling the (now
-    // no-op, version-bump-only) reinitializeLineaRollupV10 again must revert since version 10 was
-    // already consumed on this proxy.
-    vm.expectRevert(); // InvalidInitialization
+    vm.expectEmit(true, false, false, false);
+    emit ILinethRollupBase.LegacyShnarfMigrated(legacyShnarf);
     linethRollup.reinitializeLineaRollupV10();
   }
 

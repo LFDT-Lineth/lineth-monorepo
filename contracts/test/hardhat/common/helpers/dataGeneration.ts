@@ -2,6 +2,7 @@ import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "ethers";
 import * as fs from "fs";
 
+import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
 import {
   HASH_ZERO,
   COMPRESSED_SUBMISSION_DATA,
@@ -16,7 +17,6 @@ import {
   AggregatedProofData,
   ParentAndStoredDataRollingHash,
   ShnarfDataGenerator,
-  ShnarfDataForMigration,
 } from "../types";
 import { generateRandomBytes, range } from "./general";
 
@@ -81,33 +81,15 @@ export function computeDataRollingHash(parentDataRollingHash: string, chunkHash:
   return ethers.keccak256(ethers.concat([parentDataRollingHash, chunkHash]));
 }
 
-/** All-zero ShnarfData sentinel selecting the standard (non-migration) finalization path. */
-export const EMPTY_SHNARF_DATA: ShnarfDataForMigration = {
-  parentShnarf: HASH_ZERO,
-  snarkHash: HASH_ZERO,
-  finalStateRootHash: HASH_ZERO,
-  blobHash: HASH_ZERO,
-  dataEvaluationClaim: HASH_ZERO,
-};
-
 /**
- * Mirrors the Solidity legacy 5-input `_computeShnarf`:
- * keccak256(abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)),
- * where dataEvaluationPoint = keccak256(abi.encodePacked(snarkHash, blobHash)).
+ * Deterministic genesis dataRollingHash anchor: `keccak256(EMPTY_HASH || initialBlockHash)`, matching
+ * production `__LinethRollup_init`'s `EfficientLeftRightKeccak._efficientKeccak(EMPTY_HASH, initialBlockHash)`.
+ * `initialBlockHash` for every `LinethRollup`-family Hardhat fixture is `firstCompressedDataContent.parentStateRootHash`.
  */
-export function computeLegacyShnarf(shnarfData: ShnarfDataForMigration): string {
-  const dataEvaluationPoint = computeDataRollingHash(shnarfData.snarkHash, shnarfData.blobHash);
-  return ethers.solidityPackedKeccak256(
-    ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-    [
-      shnarfData.parentShnarf,
-      shnarfData.snarkHash,
-      shnarfData.finalStateRootHash,
-      dataEvaluationPoint,
-      shnarfData.dataEvaluationClaim,
-    ],
-  );
-}
+export const GENESIS_DATA_ROLLING_HASH = computeDataRollingHash(
+  HASH_ZERO,
+  firstCompressedDataContent.parentStateRootHash,
+);
 
 /**
  * EIP-4844 versioned blob hash from a KZG commitment: 0x01 || sha256(commitment)[1:].
@@ -122,7 +104,7 @@ function buildCalldataChain(
   finalDataIndex: number,
 ): ComputedCalldataSubmission[] {
   // Genesis accumulator is the empty hash; each chunk folds keccak256(compressedData).
-  let parentDataRollingHash = HASH_ZERO;
+  let parentDataRollingHash = GENESIS_DATA_ROLLING_HASH;
 
   const chain: ComputedCalldataSubmission[] = [];
   for (let i = 0; i < finalDataIndex; i++) {
@@ -144,7 +126,7 @@ function buildBlobChain(
   finalDataIndex: number,
 ): ComputedBlobSubmission[] {
   // Genesis accumulator is the empty hash; each blob folds its versioned blobhash.
-  let parentDataRollingHash = HASH_ZERO;
+  let parentDataRollingHash = GENESIS_DATA_ROLLING_HASH;
 
   const chain: ComputedBlobSubmission[] = [];
   for (let i = 0; i < finalDataIndex; i++) {
@@ -214,7 +196,7 @@ export function generateBlobDataSubmissionFromFile(filePath: string): {
   const dataHash = computeBlobVersionedHash(fileContents.commitment!);
   // Single-file helpers are used after a known parent; fall back to fixture prevShnarf when present,
   // otherwise treat parent as the genesis accumulator (empty hash).
-  const parentDataRollingHash = fileContents.prevShnarf ?? HASH_ZERO;
+  const parentDataRollingHash = fileContents.prevShnarf ?? GENESIS_DATA_ROLLING_HASH;
   const storedDataRollingHash = computeDataRollingHash(parentDataRollingHash, dataHash);
 
   return {
@@ -241,7 +223,7 @@ function emptyStreamPosition(parentDataRollingHash: string): ParentAndStoredData
  */
 export function generateParentDataRollingHash(index: number, multiple?: boolean): ParentAndStoredDataRollingHash {
   if (index === 0) {
-    return emptyStreamPosition(HASH_ZERO);
+    return emptyStreamPosition(GENESIS_DATA_ROLLING_HASH);
   }
   const dataSet = multiple ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF : COMPRESSED_SUBMISSION_DATA;
   const chain = buildCalldataChain(dataSet, index - 1, index);
@@ -253,7 +235,7 @@ export function generateParentDataRollingHash(index: number, multiple?: boolean)
 
 export function generateBlobParentDataRollingHash(index: number, multiple?: boolean): ParentAndStoredDataRollingHash {
   if (index === 0) {
-    return emptyStreamPosition(HASH_ZERO);
+    return emptyStreamPosition(GENESIS_DATA_ROLLING_HASH);
   }
   const dataSet = multiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
   const chain = buildBlobChain(dataSet, index - 1, index);
@@ -282,7 +264,7 @@ export function getFinalizationStreamPosition(
     const gen = isBlob ? generateBlobParentDataRollingHash : generateParentDataRollingHash;
     const { storedDataRollingHash } = gen(blobParentShnarfIndex, isMultiple);
     return {
-      parentDataRollingHash: HASH_ZERO,
+      parentDataRollingHash: GENESIS_DATA_ROLLING_HASH,
       endDataRollingHash: storedDataRollingHash,
     };
   }
@@ -351,11 +333,10 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
     filteredAddresses: proofData.filteredAddresses,
     finalBlockHash: proofData.finalStateRootHash,
     // Fresh-start stream position: continue from the live currentDataRollingHash (0 == genesis) and span to the end.
-    parentDataRollingHash: stream?.parentDataRollingHash ?? HASH_ZERO,
-    endDataRollingHash: stream?.endDataRollingHash ?? HASH_ZERO,
+    parentDataRollingHash: stream?.parentDataRollingHash ?? GENESIS_DATA_ROLLING_HASH,
+    endDataRollingHash: stream?.endDataRollingHash ?? GENESIS_DATA_ROLLING_HASH,
     startOffset: 0n,
     endOffset: 0n,
-    shnarfData: EMPTY_SHNARF_DATA,
     verifierKeys: [],
   };
 }
@@ -380,11 +361,10 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
     finalForcedTransactionNumber: 0n,
     lastFinalizedForcedTransactionRollingHash: HASH_ZERO,
     finalBlockHash: generateRandomBytes(32),
-    parentDataRollingHash: HASH_ZERO,
+    parentDataRollingHash: GENESIS_DATA_ROLLING_HASH,
     endDataRollingHash: HASH_ZERO,
     startOffset: 0n,
     endOffset: 0n,
-    shnarfData: EMPTY_SHNARF_DATA,
     verifierKeys: [],
     ...overrides,
   };

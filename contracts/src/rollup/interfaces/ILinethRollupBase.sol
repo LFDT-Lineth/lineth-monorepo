@@ -56,28 +56,8 @@ interface ILinethRollupBase {
   }
 
   /**
-   * @notice Legacy shnarf data, supplied once to migrate the last live legacy shnarf into the
-   *   blob-spanning dataRollingHash model.
-   * @dev Matches `main`'s `ShnarfData` (`CONTRACT_VERSION() == "8.0"`), except `dataEvaluationPoint`
-   *   is replaced with `blobHash`; the point is re-derived on-chain as `keccak256(snarkHash || blobHash)`.
-   * @param parentShnarf The parent shnarf of the last legacy data item.
-   * @param snarkHash The snark hash of the last legacy data item.
-   * @param finalStateRootHash The final state root hash of the last legacy data item.
-   * @param blobHash The real blob versioned hash (`blobhash(i)`) of the last legacy data item.
-   * @param dataEvaluationClaim The data evaluation claim of the last legacy data item.
-   */
-  struct ShnarfData {
-    bytes32 parentShnarf;
-    bytes32 snarkHash;
-    bytes32 finalStateRootHash;
-    bytes32 blobHash;
-    bytes32 dataEvaluationClaim;
-  }
-
-  /**
    * @notice Supporting data for finalization with proof.
    * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
-   * @dev V5 replaces the shnarf linkage with the blob-spanning dataRollingHash stream-position model.
    * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
    * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Execution-rooting continuity check.
    * @param endBlockNumber is the end block finalizing until.
@@ -98,8 +78,6 @@ interface ILinethRollupBase {
    * @param startOffset The starting stream offset of this finalization range. Must match the on-chain
    *   `currentDataAvailabilityOffset`.
    * @param endOffset The ending stream offset of this finalization range (bytes consumed of the last chunk).
-   * @param shnarfData The legacy shnarf data used to migrate the DA model once. All-zero fields select
-   *   the standard (non-migration) path.
    * @param l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
    * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
    * @param verifierKeys is an array of guest-program verifier keys used in this finalization batch.
@@ -124,7 +102,6 @@ interface ILinethRollupBase {
     bytes32 endDataRollingHash;
     uint256 startOffset;
     uint256 endOffset;
-    ShnarfData shnarfData;
     bytes32[] l2MerkleRoots;
     address[] filteredAddresses;
     bytes32[] verifierKeys;
@@ -187,12 +164,11 @@ interface ILinethRollupBase {
   );
 
   /**
-   * @notice Emitted once, on the finalization that migrates the legacy shnarf into the blob-spanning
-   *   dataRollingHash model.
-   * @param migratedShnarf The legacy shnarf value that was reconstructed, validated, and wiped.
-   * @param blobHash The real blob versioned hash supplied to reconstruct the legacy shnarf.
+   * @notice Emitted once, on `reinitializeLineaRollupV10`, indicating the legacy shnarf was set
+   *   as the live currentDataRollingHash and anchored into the dataRollingHash membership set.
+   * @param migratedDataRollingHash The legacy shnarf value that was migrated.
    */
-  event LegacyShnarfMigrated(bytes32 indexed migratedShnarf, bytes32 blobHash);
+  event LegacyShnarfMigrated(bytes32 indexed migratedDataRollingHash);
 
   /**
    * @notice Emitted when L2 blocks have been finalized and the state is updated.
@@ -273,16 +249,6 @@ interface ILinethRollupBase {
    * @dev Thrown when the start offset does not equal `currentDataAvailabilityOffset`.
    */
   error StartOffsetNotContinuous(uint256 previousOffset, uint256 startOffset);
-
-  /**
-   * @dev Thrown when the shnarf supplied to the legacy-shnarf migration does not match the live finalized value.
-   */
-  error LegacyShnarfMismatch(bytes32 expected, bytes32 value);
-
-  /**
-   * @dev Thrown when shnarfData is supplied but the legacy-shnarf migration has already been completed.
-   */
-  error LegacyShnarfAlreadyMigrated();
 
   /**
    * @dev Thrown when the rollup is missing a forced transaction in the finalization block range.

@@ -121,13 +121,6 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.endDataRollingHash,
       finalizationData.startOffset,
       finalizationData.endOffset,
-      [
-        finalizationData.shnarfData.parentShnarf,
-        finalizationData.shnarfData.snarkHash,
-        finalizationData.shnarfData.finalStateRootHash,
-        finalizationData.shnarfData.blobHash,
-        finalizationData.shnarfData.dataEvaluationClaim,
-      ],
       finalizationData.l2MerkleRoots,
       finalizationData.filteredAddresses,
       finalizationData.verifierKeys,
