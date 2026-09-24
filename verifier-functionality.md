@@ -7,13 +7,23 @@ interpreter/arithmetization overhead per RISC-V instruction, and to ease
 recursive proof composition). This document only describes the *current* Zig
 implementation — the zkc design itself is in `verifier-ray-zkc-plan.md`.
 
-All citations are to file:line in this repo as of 2026-09-16 (`origin/main`
-at `b75b5ca95`), **with PRs #3950 and #3959 assumed merged**: they remove the
-Fiat–Shamir pre-sampling hook from prover-ray and from
-`verifier-ray/src/protocol/root.zig`, and reshape
-`verifier-ray/src/query/shared_randomness.zig`. Those two files are cited at
-the PR #3959 head; every other verifier-ray file is identical on `main` and on
-that PR. Treat line numbers as pointers to re-verify, not eternal truths.
+All citations are to file:line in this repo as of 2026-09-24, on
+`ad/zkc-recursion-experiment` after merging `main` (`5ab76abb8`). PRs #3940,
+#3950, #3959 and #3977 have all landed, so the earlier "assumed merged"
+caveats are gone and the text below describes shipped code. Treat line numbers
+as pointers to re-verify, not eternal truths.
+
+Two behaviours changed with that merge and are easy to get wrong from memory:
+
+- **The Fiat–Shamir transcript has no state override, and no way to have one.**
+  #3950 removed `Round.PreSamplingHooks` and `Runtime.SetFSState` from
+  prover-ray, #3959 removed the `gammaDigest` mirror from
+  `protocol/root.zig`, and `Transcript.setState` is now **deleted** from
+  `crypto/fiat_shamir.zig` rather than merely unused. See §1.
+- **The shared-randomness check still runs but currently binds nothing.** It is
+  a live sub-verifier with a live 328-limb public-input group, yet on the R5
+  system as compiled today it compares two constants. See §5, which is the
+  section to read before treating it as a cross-shard mechanism.
 
 ---
 
@@ -56,7 +66,7 @@ The ordered call chain inside `verify`:
 | :227 | `logderivativesum.verify(...)` | lookup/log-derivative-sum scalar check |
 | :231 | `grandproduct.verify(...)` | permutation/message-bus boundary scalar check |
 | :233 | `rowlimit.verify(...)` | row-count bound check |
-| :235 | `shared_randomness.verify(...)` | cross-shard shared-randomness check |
+| :235 | `shared_randomness.verify(...)` | cross-shard shared-randomness check; **vacuous on today's R5 system**, §5 |
 
 After replay, **no sub-verifier ever touches the transcript again**
 (`docs/verifier-design.md:69-72`) — everything downstream is a pure "given
@@ -145,7 +155,7 @@ positions).
 `verifier.zig:146` before any sub-verifier runs. Per round, in order:
 
 ```zig
-// protocol/root.zig:118-138 at PR #3959 (abridged)
+// protocol/root.zig:118-137 (abridged)
 for (module_sizes[0..spec.dynamic_module_count]) |size|
     transcript.updateElement(field.Element.init(@intCast(size)));  // 1. dynamic sizes
 if (message.commitment) |c| transcript.updateElements(&c);          // 2. round commitment
@@ -159,10 +169,13 @@ from a codegen-emitted `protocol.Spec`), so which coins are drawn after which
 round is fixed per compiled protocol, not decided at runtime. **There is no
 state override anywhere in the replay.** Before PR #3959 a `gammaDigest` hook
 overwrote the sponge state at the shared-randomness coin round (mirroring
-prover-ray's `Round.PreSamplingHooks`); PR #3950 removed the hooks and
-`Runtime.SetFSState` from prover-ray and PR #3959 removed the mirror from
-verifier-ray. `Transcript.setState` (`fiat_shamir.zig:54-56`) survives as dead
-code and must not be ported.
+prover-ray's `Round.PreSamplingHooks`); #3950 removed the hooks and
+`Runtime.SetFSState` from prover-ray and #3959 removed the mirror from
+verifier-ray. The wrapper `Transcript.setState` is now **deleted** from
+`crypto/fiat_shamir.zig` as well, so there is no longer any way to splice a
+state into the transcript. `MDHasher.getState`/`setState`
+(`crypto/poseidon2.zig:139-147`) still exist one layer down, unused by the
+transcript; do not port them and do not reintroduce a wrapper for them.
 
 **`zeta` is just one of these ordinary coins** — selected via
 `pcs_system.zeta_coin_index` (`verifier.zig:175-176,200`), not specially
@@ -360,7 +373,7 @@ committed/opened "Lagrange column" for either.
 
 ### 3a. Lagrange selector — lifting a local (single-row) constraint to global
 
-`evalLagrangeSelector` (`query/vanishing.zig:277-335`):
+`evalLagrangeSelector` (`query/vanishing.zig:316-348`):
 
 ```zig
 // L_position(r) = omega^position * (r^n - 1) / (n * (r - omega^position))
@@ -389,7 +402,7 @@ Global"):
 
 ### 3b. Cancellation polynomial — excluding wrap-around rows
 
-`cancellationAtPoint` (`query/vanishing.zig:337-369`) computes
+`cancellationAtPoint` (`query/vanishing.zig:354-386`) computes
 `C(z) = Π_{k∈cancelled}(z - ω^k)` — another closed form, used to zero out a
 shifted global constraint (e.g. a recurrence `Z[i]-Z[i-1] = ...`) at rows
 where the shift would wrap around (e.g. row 0). Matches prover-side
@@ -405,10 +418,10 @@ numerator for every Lagrange-selector evaluation in that module.
 
 ### 4a. Bundling every constraint with a random linear combination
 
-`verifyBucket` (`verifier-ray/src/query/vanishing.zig:157-199`):
+`verifyBucket` (`verifier-ray/src/query/vanishing.zig:159-212`):
 
 ```zig
-// vanishing.zig:185-199 (abridged)
+// vanishing.zig:198-211 (abridged)
 var aggregate = ext.Ext.zero();
 var coin_power = ext.Ext.one();
 for (bucket.vanishings) |v| {
@@ -432,7 +445,20 @@ Z-column recurrence and row-0 boundary are ordinary vanishing constraints").
 Buckets group constraints sharing the same **quotient ratio** (§4c), each
 with its own running power of that module's `merge_coin`.
 
-`evalExpr`/`evalOp` (`query/vanishing.zig:239-275`) evaluate the constraint's
+**PR #3977 made both bucket loops runtime.** `bucket` used to be a `comptime`
+parameter and `inline for (bucket.vanishings)` unrolled every constraint of
+every bucket into straight-line code, which on the real R5 arithmetization
+produced 85 `verifyBucket` instantiations totalling ~6.0 MiB of a ~7.9 MiB
+`.text` — enough to push the guest past `elf_to_json`'s 2,000,000-record
+pre-decoding cap and to dominate interpreted instruction fetch under zkc. Only
+`module` and `static_n` are still comptime, because there are ~100 modules and
+`static_n` legitimately folds the size-derived exponentiation and root-of-unity
+work. Anything reasoning about this verifier's code size or its comptime/runtime
+split should start from the post-#3977 shape, not from
+`docs/system-codegen.md`'s "use inline metadata loops" rule, which that PR
+partly reverses.
+
+`evalExpr`/`evalOp` (`query/vanishing.zig:252-288`) evaluate the constraint's
 expression DAG at `z`: leaves are a routed PCS claim, a transcript cell, a
 coin, a constant, or a Lagrange selector (§3a); nodes are
 `add/mul/sub/div/double/square/negate/inverse`.
@@ -445,7 +471,7 @@ already-authenticated scalar claims, not per-row polynomial identities.
 
 ### 4b. Computing `z^n - 1`
 
-`verifyModule` (`query/vanishing.zig:136-141`):
+`verifyModule` (`query/vanishing.zig:111-146`):
 
 ```zig
 const annihilator = powModuleSize(eval_coin, static_n, dynamic_n).sub(ext.Ext.one());
@@ -468,7 +494,7 @@ like witness columns (`prover-ray/wiop/compilers/global/global.go:353-355`).
 The verifier recombines them treating each share as a "digit" in base `z^n`:
 
 ```zig
-// vanishing.zig:174-183 (abridged)
+// vanishing.zig:187-196 (abridged)
 const r_pow_n = ctx.annihilator.add(ext.Ext.one());   // = z^n
 var quotient = ext.Ext.zero();
 var r_pow_kn = ext.Ext.one();
@@ -528,15 +554,45 @@ user's four steps focus on FS replay / FRI / vanishing:
   permutation/message-bus argument.
 - **`rowlimit.verify`** (`verifier.zig:233`) — checks declared dynamic
   module sizes against their bounds.
-- **`shared_randomness.verify`** (`verifier.zig:235`; body at PR #3959's
+- **`shared_randomness.verify`** (`verifier.zig:235`, body at
   `query/shared_randomness.zig:56-86`) — this shard's claimed contribution to
   the cross-shard shared randomness must equal `multiset_hashing.hash` of
   **one** digest: the message-bus coin round's own commitment
   (`system.commitment_round`), or the zero octuplet when that round committed
-  no column. The 328 claimed limbs (`41 × 8`, `crypto/multiset_hashing.zig`)
-  are read from the transcript cells named by `contribution_refs` and must be
-  base-field scalars. Before #3959 the preimage was every committed round
-  preceding the coin round; that is gone.
+  no column (`:64`, `@splat(field.Element.zero())`). The 328 claimed limbs
+  (`41 × 8`, `crypto/multiset_hashing.zig`) are read from the transcript cells
+  named by `contribution_refs` and must be base-field scalars. Before #3959 the
+  preimage was every committed round preceding the coin round; that is gone.
+
+  **On the R5 system as it compiles today this check is a tautology.** The coin
+  round carries no commitment, so both sides take the zero-octuplet branch and
+  compare `multiset_hashing.hash(0)`, a constant, against a public input holding
+  that same constant. Nothing about the shard's data enters it. Two independent
+  signals confirm the cause is an empty message bus rather than a wiring slip:
+  prover-ray warns `"No commitment found for round"` when computing the
+  contribution (`messagebus/shared_randomness.go:152-163`), and
+  `messagebus.Compile` panics if any bus participant column sits off the coin
+  round (`messagebus.go:142-155`) — that guard passes while the round is
+  uncommitted, which together mean there are no bus participant columns at all.
+  Consistent with this, `grandproduct`'s only query has `HasExpected == true`
+  and `logderivativesum`'s has `ResultIsZero == true`, so neither defers
+  anything to a cross-shard layer.
+
+  Two further gaps worth knowing before relying on any of this. γ itself
+  (`SharedRandomnessSeedPI`, 8 limbs on round 0) is still registered as a public
+  input but, with the pre-sampling hook removed by #3950, **no constraint reads
+  it**. And `preflight/preflight.go:48-53` still derives a seed as
+  `ToSeed(Σ Hash(tree.Root()))` over *preflight column-set trees*, which is a
+  different object from the PCS commitment the contribution hashes. The two
+  paths need reconciling before either can be checked.
+
+  What remains true and reusable: `multiset_hashing.Combine` is componentwise
+  field addition, so contributions form an additive group and combining two of
+  them is 328 additions. That is the property a future aggregator would use —
+  see `wiop-agg-design.md` §6.1 — once contributions carry information.
+
+  Reproduce with `go test -run TestR5SystemShape ./codegen -v` from
+  `verifier-ray/`; the `CROSS-SHARD READINESS` block reports it directly.
 
 ---
 
@@ -565,7 +621,9 @@ user's four steps focus on FS replay / FRI / vanishing:
    recombine the split quotient shares at `z` (§4c); check
    `aggregate(z) == (z^n - 1) · quotient(z)`.
 7. Run the remaining scalar sub-verifiers (log-derivative-sum total,
-   grand-product boundaries, row limits, shared randomness).
+   grand-product boundaries, row limits, shared randomness). The last of
+   these compares two constants on today's R5 system and constrains nothing
+   (§5).
 8. Accept iff every step above succeeded.
 
 ---
@@ -605,15 +663,23 @@ user's four steps focus on FS replay / FRI / vanishing:
   (variable number of rounds/queries depending on proof shape).
 - The Lagrange-selector and cancellation-polynomial closed forms (§3), and
   the per-module bucket/quotient-recombination logic (§4).
+- The multiset hash (`crypto/multiset_hashing.zig`): 41 chunks of 8 limbs,
+  each chunk a `sumDigest` with 8 zeros written between chunks. Needed for
+  §5's shared-randomness check — but **port it knowing that check currently
+  constrains nothing** (§5). Reproducing it faithfully yields a faithful
+  no-op, which is correct but must not be mistaken for having implemented
+  cross-shard binding.
 
-**Open questions this document deliberately leaves unanswered** (for the
-later design phase): whether a zkc port keeps consuming the exact
-`proof_abi.zig`-pinned byte image as guest RAM (as the current Zig verifier
-does) or takes proof data through zkc's native input-map/column mechanism
-instead; how dynamic per-proof values (`module_sizes`, `num_rounds`,
-`num_queries`) map onto zkc's arithmetization model, since several of the
-loops above (§2b/§2c in particular) are sized by proof-dependent, not
-program-dependent, bounds.
+**Open questions, and where they are now answered.** Whether a zkc port keeps
+consuming the `proof_abi.zig`-pinned byte image as guest RAM or takes proof
+data through zkc's native input mechanism is settled differently for the two
+targets: the R5 accelerator keeps the image (`verifier-ray-zkc-plan.md` §4.3),
+while a standalone aggregator uses flat felt-addressed `input` memories and
+drops the pointer ABI entirely (`wiop-agg-design.md` §7). How proof-dependent
+bounds (`module_sizes`, `num_rounds`, `num_queries`) map onto zkc is answered
+by recursion over runtime counts rather than unrolled loops
+(`verifier-ray-zkc-plan.md` §3). What remains genuinely open is upstream, not
+in zkc: the cross-shard binding of §5.
 
 ---
 
@@ -695,7 +761,7 @@ flowchart TD
         Sub["logderivativesum.verify()<br/>verifier.zig:227"] --> Sub2
         Sub2["grandproduct.verify()<br/>verifier.zig:231"] --> Sub3
         Sub3["rowlimit.verify()<br/>verifier.zig:233"] --> Sub4
-        Sub4["shared_randomness.verify()<br/>verifier.zig:235"]
+        Sub4["shared_randomness.verify()<br/>verifier.zig:235<br/>(vacuous today — §5)"]
     end
 
     Sub4 --> Accept(["Accept"])

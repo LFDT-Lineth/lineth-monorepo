@@ -2,6 +2,13 @@
 
 Status: planning document, 2026-09-18. Nothing in this plan is implemented yet.
 
+**This plan covers the ACCELERATOR use case only.** For porting the same verifier as a
+**standalone** zkc program that compresses a shard proof, see
+`verifier-ray-zkc/PLAN.md`, which imports this document's cost model, data
+representation and port specification but changes the shape, the input format, the
+failure convention and the optimisation target. That plan's §12 tabulates the
+differences. If you are building the recursion path, start there, not here.
+
 Companion background docs (read first, they are cited as "§" below):
 
 - `lineth_overview.md` — zkc toolchain, Go APIs, how traces are obtained.
