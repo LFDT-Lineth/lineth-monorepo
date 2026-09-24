@@ -21,12 +21,15 @@ RUN go mod download
 COPY . .
 # CGO off: the prover is pure Go (the R5 arithmetization compiles at startup from
 # embedded source), so the binary is static and base-image independent.
-RUN CGO_ENABLED=0 go build -trimpath -o /out/prover ./cmd/prover
+# -ldflags "-s -w" strips the symbol table and DWARF for a smaller prod binary.
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prover
 
 ########################################
 # Zig builder: the native runner + guest ELF
 ########################################
-FROM docker.io/library/ubuntu:24.04 AS zig-builder
+# debian:bookworm = glibc 2.36, matching the distroless/cc-debian12 final stage,
+# so the native runner is built on the same glibc it runs on.
+FROM docker.io/library/debian:bookworm AS zig-builder
 ARG ZIG_VERSION=0.16.0
 # Override if 0.16.0 is not a tagged release (e.g. a nightly under /builds/).
 ARG ZIG_URL=https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz
@@ -60,38 +63,31 @@ RUN git clone https://github.com/herumi/mcl.git /tmp/mcl \
 # (build_common, guest-common, lineth-accelerators) are siblings in riscv-guests;
 # the rest are fetched by zig from the network.
 COPY --from=riscv-guests . /riscv-guests
-RUN make -C /riscv-guests/l2-execution compile
+# strip the native runner's debug_info (the guest ELF is already stripped); the
+# ReleaseSafe build keeps its runtime checks, we just drop symbols for prod size.
+RUN make -C /riscv-guests/l2-execution compile \
+    && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
 
 ########################################
-# Final runtime image (glibc, for the native runner). Ubuntu 24.04 for now,
-# because it has a shell for first-build debugging.
-#
-# PLANNED SLIM STEP (once the build is green): switch this final stage to
-# gcr.io/distroless/cc-debian12 (~55MB total, no shell; logs still go to stdout).
-# When doing so, ALSO switch the zig-builder above to debian:bookworm, so the
-# native runner is built on the same glibc it runs on (debian12 = glibc 2.36);
-# building on ubuntu's newer glibc and running on debian's older one can break.
+# Final runtime image: distroless/cc-debian12 (~55MB, glibc + libstdc++ + libgcc,
+# no shell/apt). Logs still go to stdout, which is all we read (Grafana etc.).
+# distroless can't run any RUN step (no shell), so everything here is COPY only:
+# the native runner's other libs are copied straight in, and /usr/lib/<arch> plus
+# absolute /usr/local/lib are default linker search paths, so no ldconfig needed.
 ########################################
-FROM docker.io/library/ubuntu:24.04 AS final
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-        ca-certificates libstdc++6 libgcc-s1 \
-    && rm -rf /var/lib/apt/lists/*
-# The native runner links these; copy them from the builder (same ubuntu 24.04,
-# so same glibc/ABI). libmcl.so is source-built; libsecp256k1/libcrypto come from
-# apt — glob the SONAME so we don't hard-code a version that may differ.
+FROM gcr.io/distroless/cc-debian12 AS final
+# libmcl.so is source-built; libsecp256k1/libcrypto come from the builder's apt
+# (same debian12, so same version). Glob the SONAME rather than hard-code it.
 COPY --from=zig-builder /usr/local/lib/libmcl.so /usr/local/lib/
 COPY --from=zig-builder /usr/lib/x86_64-linux-gnu/libsecp256k1.so* /usr/lib/x86_64-linux-gnu/
 COPY --from=zig-builder /usr/lib/x86_64-linux-gnu/libcrypto.so* /usr/lib/x86_64-linux-gnu/
-RUN ldconfig
 
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
 COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner /opt/linea/prover-ray/l2-execution-runner
 COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_guest /opt/linea/prover-ray/evm_execution_guest
 
-RUN mkdir -p /opt/linea/prover-ray/requests
-ENV PATH="${PATH}:/opt/linea/prover-ray"
+ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
 
 # Mode is a runtime choice. Default: dev-mock (needs nothing extra). For dev-zkvm:

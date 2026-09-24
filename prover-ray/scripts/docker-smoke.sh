@@ -26,11 +26,13 @@ mkdir -p "$WORK/requests"
 cp "$FIXTURE" "$WORK/requests/req.json"
 
 echo "==> dev-mock: turning a request into a response"
-# Make the bind mount writable by the container. Rootless podman remaps the host
-# UID, so keep-id passes it through; docker just runs as the given user.
+# Make the bind mount readable/writable by the container as the caller.
+# Rootless podman already maps container-root -> the host user, so no flags are
+# needed (and --user/keep-id fight that). Rootful docker needs --user so the
+# files it writes are owned by the caller, not root.
 run_opts=(--user "$(id -u):$(id -g)")
 case "$DOCKER" in
-    *podman*) run_opts=(--userns=keep-id) ;;
+    *podman*) run_opts=() ;;
 esac
 $DOCKER run -d --name "$CONTAINER" \
     "${run_opts[@]}" \
@@ -55,17 +57,24 @@ if ! grep -q '"proverVersion": "smoke-dev-mock"' "$WORK/responses/req.json"; the
 fi
 echo "    ok: response written with proverVersion smoke-dev-mock"
 
-echo "==> dev-zkvm: artifacts present and linkable"
-$DOCKER run --rm --entrypoint sh "$IMAGE" -c '
-    set -e
-    test -x /opt/linea/prover-ray/l2-execution-runner
-    test -f /opt/linea/prover-ray/evm_execution_guest
-    if ldd /opt/linea/prover-ray/l2-execution-runner | grep -q "not found"; then
-        echo "unresolved shared libraries:"
-        ldd /opt/linea/prover-ray/l2-execution-runner | grep "not found"
-        exit 1
-    fi
-'
-echo "    ok: native runner + guest ELF present, all libraries resolve"
+echo "==> dev-zkvm: native runner executes (exercises glibc/mcl/secp256k1/crypto)"
+# Run the bundled native runner directly on a fixture and check it emits a
+# 34-byte 0x0003 commitment. This needs no shell (works on distroless) and
+# proves every shared library the runner links actually resolves in the image.
+FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
+if ! $DOCKER run --rm \
+        --entrypoint /opt/linea/prover-ray/l2-execution-runner \
+        -v "$FIXTURE_DIR:/in:ro" \
+        "$IMAGE" /in/stateless_input.ssz --ssz > "$WORK/commitment.bin" 2>/dev/null; then
+    echo "FAIL: native runner failed to run (missing library or exec error)"
+    exit 1
+fi
+sz=$(wc -c < "$WORK/commitment.bin")
+prefix=$(head -c 2 "$WORK/commitment.bin" | od -An -tx1 | tr -d ' \n')
+if [ "$sz" -ne 34 ] || [ "$prefix" != "0003" ]; then
+    echo "FAIL: native runner output is not a 34-byte 0x0003 commitment (size=$sz prefix=$prefix)"
+    exit 1
+fi
+echo "    ok: native runner produced a valid 0x0003 commitment"
 
 echo "SMOKE PASSED"
