@@ -112,9 +112,6 @@ func checkCircuitSupport(sys *System) {
 		}
 	}
 	for _, r := range sys.Rounds {
-		if len(r.PreSamplingHooks) > 0 {
-			panic(fmt.Sprintf("wiop: VerifierCircuit: round %d has pre-sampling hooks, not supported", r.ID))
-		}
 		for _, va := range r.VerifierActions {
 			if _, ok := va.(GnarkVerifierAction); !ok {
 				panic(fmt.Sprintf(

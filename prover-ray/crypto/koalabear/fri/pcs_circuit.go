@@ -29,7 +29,23 @@ import (
 // GnarkOpeningProof mirrors [OpeningProof].
 type GnarkOpeningProof struct {
 	InputQueries []GnarkInputQuery
+	InputCaps    []GnarkInputCap
 	FRIProof     GnarkProof
+}
+
+// GnarkInputCap mirrors [InputCap]: the input tree's frontier, plus the tables
+// whose auxiliary rows sit above it and are therefore revealed in full rather
+// than opened per query.
+type GnarkInputCap struct {
+	Nodes  []poseidon2.KoalagnarkOctuplet
+	Tables []GnarkInputCapTable
+}
+
+// GnarkInputCapTable mirrors [InputCapTable]. SizeLog2 is structural and stays
+// native; only the rows are circuit variables.
+type GnarkInputCapTable struct {
+	SizeLog2 uint8
+	Rows     []GnarkRowOpening
 }
 
 // GnarkInputQuery mirrors [InputQuery].
@@ -54,10 +70,13 @@ type GnarkRowOpening struct {
 
 func (r GnarkRowOpening) isAbsent() bool { return len(r.Base) == 0 && len(r.Ext) == 0 }
 
-// GnarkProof mirrors [Proof]. RunningQueries[k][j-1] is the single branch of
-// folding round j for query k (running layers are backed by exactly one tree).
+// GnarkProof mirrors [Proof]. RunningQueries[k][j-1] is the branch of folding
+// round j for query k (running layers are backed by exactly one tree), opened
+// only down to the depth-d frontier that RoundCaps[j-1] authenticates against
+// RoundRoots[j-1].
 type GnarkProof struct {
 	RoundRoots     []poseidon2.KoalagnarkOctuplet
+	RoundCaps      []GnarkMerkleCap
 	FinalPoly      []circuit.Ext
 	RunningQueries []GnarkRunningQuery
 }
@@ -112,8 +131,10 @@ func AllocateGnarkOpeningProof(p OpeningProof) GnarkOpeningProof {
 func convertOpeningProof(p OpeningProof, withValues bool) GnarkOpeningProof {
 	res := GnarkOpeningProof{
 		InputQueries: make([]GnarkInputQuery, len(p.InputQueries)),
+		InputCaps:    make([]GnarkInputCap, len(p.InputCaps)),
 		FRIProof: GnarkProof{
 			RoundRoots:     make([]poseidon2.KoalagnarkOctuplet, len(p.FRIProof.RoundRoots)),
+			RoundCaps:      make([]GnarkMerkleCap, len(p.FRIProof.RoundCaps)),
 			FinalPoly:      make([]circuit.Ext, len(p.FRIProof.FinalPoly)),
 			RunningQueries: make([]GnarkRunningQuery, len(p.FRIProof.RunningQueries)),
 		},
@@ -130,17 +151,35 @@ func convertOpeningProof(p OpeningProof, withValues bool) GnarkOpeningProof {
 	for i, c := range p.FRIProof.FinalPoly {
 		res.FRIProof.FinalPoly[i] = convertExt(c, withValues)
 	}
+	for i, c := range p.InputCaps {
+		res.InputCaps[i] = convertInputCap(c, withValues)
+	}
+	for j, c := range p.FRIProof.RoundCaps {
+		res.FRIProof.RoundCaps[j] = convertMerkleCap(c, withValues)
+	}
 	for k, rq := range p.FRIProof.RunningQueries {
 		res.FRIProof.RunningQueries[k] = make(GnarkRunningQuery, len(rq))
-		for j, layer := range rq {
-			if len(layer) != 1 {
-				panic(fmt.Sprintf("fri: running layer must be backed by exactly one tree, got %d", len(layer)))
-			}
+		for j, branch := range rq {
 			res.FRIProof.RunningQueries[k][j] = GnarkBranch{
-				Leaf:     convertOctuplet(layer[0].Leaf, withValues),
-				Siblings: convertOctuplets(layer[0].Siblings, withValues),
+				Leaf:     convertOctuplet(branch.Leaf, withValues),
+				Siblings: convertOctuplets(branch.Siblings, withValues),
 			}
 		}
+	}
+	return res
+}
+
+func convertInputCap(c InputCap, withValues bool) GnarkInputCap {
+	res := GnarkInputCap{
+		Nodes:  convertOctuplets(c.Nodes, withValues),
+		Tables: make([]GnarkInputCapTable, len(c.Tables)),
+	}
+	for i, table := range c.Tables {
+		rows := make([]GnarkRowOpening, len(table.Rows))
+		for j, row := range table.Rows {
+			rows[j] = convertRowOpening(row, withValues)
+		}
+		res.Tables[i] = GnarkInputCapTable{SizeLog2: table.SizeLog2, Rows: rows}
 	}
 	return res
 }
@@ -234,10 +273,44 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 
 	orders := batchOrders(layout)
 	inputRoots, inputIndexByBatch := inputOpeningRootsGnark(layout, orders, in.Roots)
+	if len(proof.InputCaps) != len(inputRoots) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: got %d input caps, want %d", len(proof.InputCaps), len(inputRoots)))
+	}
 
-	runningRoots := make([]poseidon2.KoalagnarkOctuplet, pcs.Params.numRounds())
+	// Shape per deduplicated input tree, then one cap authentication each,
+	// outside the query loop. Mirrors the inputShapes/inputFrontiers block of
+	// [PCS.Verify].
+	inputShapes := make([]Shape, len(inputRoots))
+	for batchIdx, treeIdx := range inputIndexByBatch {
+		if treeIdx < 0 {
+			continue
+		}
+		if inputShapes[treeIdx] == nil {
+			inputShapes[treeIdx] = in.Shapes[batchIdx]
+		}
+	}
+	inputFrontiers := make([][]poseidon2.KoalagnarkOctuplet, len(inputRoots))
+	inputCapInfos := make([]inputCapInfo, len(inputRoots))
+	for treeIdx := range inputRoots {
+		info, err := inputCapShapeInfo(pcs.Params, inputShapes[treeIdx])
+		if err != nil {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: input cap %d: %v", treeIdx, err))
+		}
+		inputCapInfos[treeIdx] = info
+		inputFrontiers[treeIdx] = authenticateInputCapGnark(
+			kapi, info, proof.InputCaps[treeIdx], inputShapes[treeIdx], inputRoots[treeIdx],
+		)
+	}
+
+	// Authenticate each round's cap against its root once, outside the query
+	// loop: the frontier is shared by every query's branch, which is exactly
+	// what capping buys. Mirrors the runningFrontiers loop in [PCS.Verify].
+	runningFrontiers := make([][]poseidon2.KoalagnarkOctuplet, pcs.Params.numRounds())
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
-		runningRoots[j] = proof.FRIProof.RoundRoots[j-1]
+		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
+		runningFrontiers[j] = authenticateCapGnark(
+			kapi, proof.FRIProof.RoundCaps[j-1], depth, proof.FRIProof.RoundRoots[j-1],
+		)
 	}
 
 	vq := gnarkVerifyQueryCtx{
@@ -245,8 +318,9 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 		pcs:               pcs,
 		layout:            layout,
 		proof:             proof,
-		inputRoots:        inputRoots,
-		runningRoots:      runningRoots,
+		inputFrontiers:    inputFrontiers,
+		inputCapInfos:     inputCapInfos,
+		runningFrontiers:  runningFrontiers,
 		layoutClaims:      pcs.layoutClaimsGnark(kapi, layout, in.ClaimedValues, in.Zeta),
 		inputIndexByBatch: inputIndexByBatch,
 		orders:            orders,
@@ -421,8 +495,9 @@ type gnarkVerifyQueryCtx struct {
 	pcs               *PCS
 	layout            layout
 	proof             GnarkOpeningProof
-	inputRoots        []poseidon2.KoalagnarkOctuplet
-	runningRoots      []poseidon2.KoalagnarkOctuplet
+	inputFrontiers    [][]poseidon2.KoalagnarkOctuplet
+	inputCapInfos     []inputCapInfo
+	runningFrontiers  [][]poseidon2.KoalagnarkOctuplet
 	layoutClaims      [][][]gnarkQuotientClaim
 	inputIndexByBatch []int
 	orders            [][]int
@@ -451,16 +526,32 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 	}
 
 	inputOpening := vq.proof.InputQueries[queryIdx]
-	authenticateInputQueryGnark(api, pcs.Params, inputOpening, vq.inputRoots, posBits)
+	authenticateInputQueryGnark(api, pcs.Params, inputOpening, vq.inputFrontiers, vq.inputCapInfos, posBits)
+
+	inputSource := gnarkInputQuerySource{
+		api:               api,
+		opening:           inputOpening,
+		caps:              vq.proof.InputCaps,
+		capInfos:          vq.inputCapInfos,
+		inputIndexByBatch: vq.inputIndexByBatch,
+		params:            pcs.Params,
+		posBits:           posBits,
+	}
 
 	for j := uint8(1); j < numRounds; j++ {
 		branch := vq.proof.FRIProof.RunningQueries[queryIdx][j-1]
-		if want := int(pcs.Params.LogCodewordSize - j); len(branch.Siblings) != want {
+		// Capping shortens the branch: it stops at the frontier instead of
+		// climbing to the root, so it carries height−depth siblings.
+		height := int(pcs.Params.LogCodewordSize - j)
+		depth := merkleCapDepth(pcs.Params.NumQueries, height)
+		if want := height - depth; len(branch.Siblings) != want {
 			panic(fmt.Sprintf("fri: pcs.VerifyGnark: query %d round %d: branch has %d siblings, want %d",
 				queryIdx, j, len(branch.Siblings), want))
 		}
-		root := recoverRootGnark(api, branch, posBits[j:])
-		assertOctupletEqual(api, root, vq.runningRoots[j])
+		if len(branch.Siblings) == 0 {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: query %d round %d: branch carries no sibling", queryIdx, j))
+		}
+		authenticateToCapGnark(api, branch, posBits[j:], vq.runningFrontiers[j])
 		rq.Rounds[j] = gnarkInputPair{
 			Self:    octupletToExtGnark(api, branch.Leaf),
 			Sibling: octupletToExtGnark(api, branch.Siblings[len(branch.Siblings)-1]),
@@ -478,7 +569,7 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 		}
 		domain := pcs.Params.domainsLight[round]
 		levelSize := int(domain.cardinality)
-		bindInputTreeOpeningsGnark(inputOpening, vq.inputIndexByBatch, levelSize, vq.orders[levelIdx], bundle, vq.shapes)
+		bindInputTreeOpeningsGnark(inputSource, levelSize, vq.orders[levelIdx], bundle, vq.shapes)
 
 		var alphaDeep circuit.Ext
 		switch {
@@ -494,9 +585,9 @@ func (vq gnarkVerifyQueryCtx) resolve(queryIdx int, posBits []frontend.Variable)
 		xSib := api.NegExt(xSelf)
 		entryClaims := vq.layoutClaims[levelIdx]
 		rq.Aux[round] = gnarkInputPair{
-			Self: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputOpening, vq.inputIndexByBatch,
+			Self: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputSource,
 				levelSize, alphaDeep, xSelf, false, rq.Rounds[round].Self),
-			Sibling: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputOpening, vq.inputIndexByBatch,
+			Sibling: reconstructQueryValueAtGnark(api, bundle, entryClaims, inputSource,
 				levelSize, alphaDeep, xSib, true, rq.Rounds[round].Sibling),
 		}
 	}
@@ -552,8 +643,7 @@ func reconstructQueryValueAtGnark(
 	api *circuit.KoalaBearAPI,
 	bundle sizeBundle,
 	entryClaims [][]gnarkQuotientClaim,
-	opening GnarkInputQuery,
-	inputIndexByBatch []int,
+	source gnarkInputQuerySource,
 	levelSize int,
 	alphaDeep circuit.Ext,
 	x circuit.Ext,
@@ -563,8 +653,7 @@ func reconstructQueryValueAtGnark(
 	value := running
 	for i := len(bundle.Entries) - 1; i >= 0; i-- {
 		entry := bundle.Entries[i]
-		branch := opening[inputIndexByBatch[entry.BatchIdx]]
-		pair := pairAtLevelGnark(branch, levelSize)
+		pair := source.pairAtLevel(entry.BatchIdx, levelSize)
 		row := pair[0]
 		if sibling {
 			row = pair[1]
@@ -599,15 +688,12 @@ func quotientAtValueGnark(api *circuit.KoalaBearAPI, value, x circuit.Ext, claim
 // bindInputTreeOpeningsGnark mirrors [bindInputTreeOpenings]; it is purely
 // structural so every failure is a panic.
 func bindInputTreeOpeningsGnark(
-	opening GnarkInputQuery, inputIndexByBatch []int,
+	source gnarkInputQuerySource,
 	levelSize int, order []int, bundle sizeBundle, shapes []Shape,
 ) {
 	for _, batchIdx := range order {
-		branchIdx := inputIndexByBatch[batchIdx]
-		if branchIdx < 0 || branchIdx >= len(opening) {
-			panic(fmt.Sprintf("fri: pcs.VerifyGnark: batch %d has no input opening", batchIdx))
-		}
-		pair := pairAtLevelGnark(opening[branchIdx], levelSize)
+		branchIdx := source.inputIndexByBatch[batchIdx]
+		pair := source.pairAtLevel(batchIdx, levelSize)
 		shape := shapes[batchIdx][bundle.SizeLog2]
 		for s := range pair {
 			if len(pair[s].Base) != shape.BaseWidth || len(pair[s].Ext) != shape.ExtWidth {
@@ -615,6 +701,116 @@ func bindInputTreeOpeningsGnark(
 			}
 		}
 	}
+}
+
+// gnarkInputQuerySource mirrors [inputQuerySource]: it resolves a batch's row
+// pair at a level either from this query's branch, or — when the level's
+// auxiliary rows sit above the tree's cap, so the branch does not carry them —
+// from the cap's revealed table.
+type gnarkInputQuerySource struct {
+	api               *circuit.KoalaBearAPI
+	opening           GnarkInputQuery
+	caps              []GnarkInputCap
+	capInfos          []inputCapInfo
+	inputIndexByBatch []int
+	params            Params
+	posBits           []frontend.Variable
+}
+
+// pairAtLevel mirrors [inputQuerySource.pairAtLevel].
+func (source gnarkInputQuerySource) pairAtLevel(batchIdx, levelSize int) GnarkRowPair {
+	branchIdx := source.inputIndexByBatch[batchIdx]
+	if branchIdx < 0 || branchIdx >= len(source.opening) || branchIdx >= len(source.caps) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: batch %d has no input tree opening", batchIdx))
+	}
+	info := source.capInfos[branchIdx]
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	sizeLog2 := levelLog - info.rateLog
+	auxDepth, isAux := inputAuxDepth(info.rateLog, sizeLog2, info.height-info.rateLog)
+	if !isAux || auxDepth >= info.depth {
+		return pairAtLevelGnark(source.opening[branchIdx], levelSize)
+	}
+	return source.revealedPairAtLevel(branchIdx, sizeLog2, levelLog, levelSize)
+}
+
+// revealedPairAtLevel selects the queried row pair out of a fully revealed
+// table. The row index is derived from the query position, so unlike the
+// branch case the selection is a multiplexer over every row of the table.
+func (source gnarkInputQuerySource) revealedPairAtLevel(
+	branchIdx, sizeLog2, levelLog, levelSize int,
+) GnarkRowPair {
+	info := source.capInfos[branchIdx]
+	for _, table := range source.caps[branchIdx].Tables {
+		if int(table.SizeLog2) != sizeLog2 {
+			continue
+		}
+		numLeaves := 1 << info.height
+		codewordSize := 1 << source.params.LogCodewordSize
+		if levelSize > numLeaves || codewordSize%numLeaves != 0 || numLeaves%levelSize != 0 {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: level size %d is incompatible with input tree", levelSize))
+		}
+		if len(table.Rows) != levelSize {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: revealed table for size %d has %d rows, want %d",
+				sizeLog2, len(table.Rows), levelSize))
+		}
+		// base = leafIndex / (numLeaves/levelSize): the top levelLog bits of
+		// the leaf index, which are the top levelLog bits of the position.
+		baseBits := source.posBits[int(source.params.LogCodewordSize)-levelLog:]
+		// The sibling is base^1, i.e. the same index with its low bit flipped.
+		sibBits := append([]frontend.Variable(nil), baseBits...)
+		sibBits[0] = source.api.Frontend().Sub(1, sibBits[0])
+		return GnarkRowPair{
+			selectRowGnark(source.api, table.Rows, baseBits),
+			selectRowGnark(source.api, table.Rows, sibBits),
+		}
+	}
+	panic(fmt.Sprintf("fri: pcs.VerifyGnark: revealed table for size %d is absent", sizeLog2))
+}
+
+// selectRowGnark returns rows[idx], idx being the little-endian bits selBits.
+// Every row shares the shape checked by [authenticateInputCapGnark], so the
+// selection is a per-coordinate multiplexer.
+func selectRowGnark(
+	api *circuit.KoalaBearAPI, rows []GnarkRowOpening, selBits []frontend.Variable,
+) GnarkRowOpening {
+	if len(rows) == 1 {
+		return rows[0]
+	}
+	sel := api.Frontend().FromBinary(selBits...)
+	res := GnarkRowOpening{
+		Base: make([]circuit.Element, len(rows[0].Base)),
+		Ext:  make([]circuit.Ext, len(rows[0].Ext)),
+	}
+	pick := make([]circuit.Element, len(rows))
+
+	for i := range res.Base {
+		for r := range rows {
+			pick[r] = rows[r].Base[i]
+		}
+		res.Base[i] = api.Mux(sel, pick...)
+	}
+	for i := range res.Ext {
+		var coords [6]circuit.Element
+		for c := range coords {
+			for r := range rows {
+				pick[r] = extCoordGnark(rows[r].Ext[i], c)
+			}
+			coords[c] = api.Mux(sel, pick...)
+		}
+		res.Ext[i] = circuit.Ext{
+			B0: circuit.E2{A0: coords[0], A1: coords[1]},
+			B1: circuit.E2{A0: coords[2], A1: coords[3]},
+			B2: circuit.E2{A0: coords[4], A1: coords[5]},
+		}
+	}
+	return res
+}
+
+// extCoordGnark returns the c-th coordinate of an extension element, in the
+// canonical order used everywhere else in this file.
+func extCoordGnark(e circuit.Ext, c int) circuit.Element {
+	b0a0, b0a1, b1a0, b1a1, b2a0, b2a1 := e.Coordinates()
+	return [6]circuit.Element{b0a0, b0a1, b1a0, b1a1, b2a0, b2a1}[c]
 }
 
 // pairAtLevelGnark mirrors [InputTreeOpening.pairAtLevel].
@@ -654,13 +850,80 @@ func levelIndexGnark(numLevels, levelSize int) (int, error) {
 // Merkle authentication
 // =============================================================================
 
-// authenticateInputQueryGnark mirrors [authenticateInputQuery].
+// authenticateInputCapGnark mirrors [authenticateInputCap]: rebuild the cap's
+// auxiliary digests from the revealed tables, constrain the cap to reconstruct
+// the tree's trusted root, and return the frontier every query branch of that
+// tree is then checked against.
+//
+// The revealed tables are proof values, so their rows become constraints; which
+// tables are revealed, and the heap slot each of their row pairs occupies, is
+// fixed by the shape and stays native.
+func authenticateInputCapGnark(
+	api *circuit.KoalaBearAPI, info inputCapInfo, treeCap GnarkInputCap, shape Shape,
+	root poseidon2.KoalagnarkOctuplet,
+) []poseidon2.KoalagnarkOctuplet {
+	if info.depth == 0 {
+		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
+			panic("fri: pcs.VerifyGnark: depth-zero input cap must be empty")
+		}
+		return []poseidon2.KoalagnarkOctuplet{root}
+	}
+	if want := 1 << info.depth; len(treeCap.Nodes) != want {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input cap has %d nodes, want %d", len(treeCap.Nodes), want))
+	}
+	if len(treeCap.Tables) != len(info.revealed) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input cap has %d revealed tables, want %d",
+			len(treeCap.Tables), len(info.revealed)))
+	}
+
+	// selfIsEven is constant true natively: a revealed pair is absorbed in
+	// index order, not in the query-dependent order of an opened aux row.
+	evenFirst := api.Frontend().FromBinary(0)
+
+	aux := make([]*poseidon2.KoalagnarkOctuplet, len(treeCap.Nodes)-1)
+	for i, sizeLog2 := range info.revealed {
+		table := treeCap.Tables[i]
+		if int(table.SizeLog2) != sizeLog2 {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: revealed table %d has size %d, want %d",
+				i, table.SizeLog2, sizeLog2))
+		}
+		encodedLog := info.rateLog + sizeLog2
+		if len(table.Rows) != 1<<encodedLog {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: revealed table %d has %d rows, want %d",
+				i, len(table.Rows), 1<<encodedLog))
+		}
+		shapeAtSize := shape[sizeLog2]
+		for rowIdx, row := range table.Rows {
+			if !gnarkRowMatchesShape(row, shapeAtSize) {
+				panic(fmt.Sprintf("fri: pcs.VerifyGnark: revealed table %d row %d has wrong shape", i, rowIdx))
+			}
+		}
+		levelStart := (1 << (encodedLog - 1)) - 1
+		for pairIdx := range len(table.Rows) / 2 {
+			pair := GnarkRowPair{table.Rows[2*pairIdx], table.Rows[2*pairIdx+1]}
+			digest := hashAuxPairGnark(api, pair, evenFirst)
+			aux[levelStart+pairIdx] = &digest
+		}
+	}
+
+	assertOctupletEqual(api, recoverCapRootGnark(api, treeCap.Nodes, aux), root)
+	return treeCap.Nodes
+}
+
+// gnarkRowMatchesShape mirrors [rowOpeningMatchesShape] on circuit rows.
+func gnarkRowMatchesShape(row GnarkRowOpening, sized SizedShape) bool {
+	return len(row.Base) == sized.BaseWidth && len(row.Ext) == sized.ExtWidth
+}
+
+// authenticateInputQueryGnark mirrors [authenticateInputQuery] under capping:
+// each branch is folded up to its tree's frontier rather than to the root.
 func authenticateInputQueryGnark(
 	api *circuit.KoalaBearAPI, p Params, opening GnarkInputQuery,
-	roots []poseidon2.KoalagnarkOctuplet, posBits []frontend.Variable,
+	frontiers [][]poseidon2.KoalagnarkOctuplet, infos []inputCapInfo, posBits []frontend.Variable,
 ) {
-	if len(opening) != len(roots) {
-		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input query has %d tree openings, want %d", len(opening), len(roots)))
+	if len(opening) != len(frontiers) {
+		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input query has %d tree openings, want %d",
+			len(opening), len(frontiers)))
 	}
 	for i, branch := range opening {
 		numLevels := len(branch.Leaves)
@@ -670,47 +933,42 @@ func authenticateInputQueryGnark(
 		if numLevels > int(p.LogCodewordSize) {
 			panic(fmt.Sprintf("fri: pcs.VerifyGnark: input tree %d: tree deeper than the codeword domain", i))
 		}
-		if len(branch.Siblings) != numLevels-1 {
-			panic(fmt.Sprintf("fri: pcs.VerifyGnark: input tree %d: malformed branch", i))
+		depth := infos[i].depth
+		if len(branch.Siblings) != numLevels-1-depth {
+			panic(fmt.Sprintf("fri: pcs.VerifyGnark: input tree %d: branch has %d siblings, want %d",
+				i, len(branch.Siblings), numLevels-1-depth))
 		}
 		// leafIndex = position / (codewordSize / numLeaves): drop the low bits.
 		idxBits := posBits[int(p.LogCodewordSize)-numLevels:]
-		root := recoverInputRootGnark(api, branch, idxBits)
-		assertOctupletEqual(api, root, roots[i])
+		authenticateInputToCapGnark(api, branch, idxBits, frontiers[i], depth)
 	}
 }
 
-// recoverInputRootGnark mirrors [InputTreeOpening.RecoverRoot]. idxBits are the
-// little-endian bits of the leaf index, one per level.
-func recoverInputRootGnark(
+// authenticateInputToCapGnark mirrors [InputTreeOpening.AuthenticateToCap]:
+// fold the bottom row pair and the retained lower path, then constrain the
+// result to equal the frontier node the leaf index lands on.
+//
+// idxBits are the little-endian bits of the leaf index, one per level. The fold
+// consumes the low numLevels−depth of them; the top depth bits select the
+// frontier node, mirroring the native `ancestor == frontier[currPos]`.
+func authenticateInputToCapGnark(
 	api *circuit.KoalaBearAPI, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
-) poseidon2.KoalagnarkOctuplet {
+	frontier []poseidon2.KoalagnarkOctuplet, depth int,
+) {
 	numLevels := len(branch.Leaves)
 	bottom := branch.Leaves[numLevels-1]
 	ancestor := hashRowOpeningGnark(api, bottom[0])
 	sibling := hashRowOpeningGnark(api, bottom[1])
 	ancestor = foldOneLevelGnark(api, ancestor, sibling, nil, idxBits[0])
 
-	for i := numLevels - 2; i >= 0; i-- {
+	for level := numLevels - 2; level >= depth; level-- {
 		var aux *GnarkRowPair
-		if !branch.Leaves[i][0].isAbsent() {
-			aux = &branch.Leaves[i]
+		if !branch.Leaves[level][0].isAbsent() {
+			aux = &branch.Leaves[level]
 		}
-		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[i], aux, idxBits[numLevels-1-i])
+		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[level-depth], aux, idxBits[numLevels-1-level])
 	}
-	return ancestor
-}
-
-// recoverRootGnark mirrors [Branch.RecoverRoot] for aux-free running trees.
-func recoverRootGnark(
-	api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable,
-) poseidon2.KoalagnarkOctuplet {
-	ancestor := branch.Leaf
-	n := len(branch.Siblings)
-	for i := n - 1; i >= 0; i-- {
-		ancestor = foldOneLevelGnark(api, ancestor, branch.Siblings[i], nil, idxBits[n-1-i])
-	}
-	return ancestor
+	assertOctupletEqual(api, ancestor, selectFrontierNodeGnark(api, frontier, idxBits[numLevels-depth:numLevels]))
 }
 
 // foldOneLevelGnark mirrors [foldOneLevel]. isOdd is the current position bit:
