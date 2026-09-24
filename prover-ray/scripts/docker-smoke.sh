@@ -41,11 +41,13 @@ run_opts=(--user "$(id -u):$(id -g)")
 case "$DOCKER" in
     *podman*) run_opts=() ;;
 esac
+# The image's default CMD runs the adapter, expanding CONFIG_FILE and WORKER_ID.
 $DOCKER run -d --name "$CONTAINER" \
     "${run_opts[@]}" \
+    -e CONFIG_FILE=/data/config.toml \
+    -e WORKER_ID=smoke \
     -v "$WORK:/data" \
-    "$IMAGE" \
-    --config /data/config.toml >/dev/null
+    "$IMAGE" >/dev/null
 
 for _ in $(seq 1 30); do
     [ -f "$WORK/responses/req.json" ] && break
@@ -66,8 +68,8 @@ echo "    ok: response written with proverVersion smoke-dev-mock"
 
 echo "==> dev-zkvm: native runner executes (exercises glibc/mcl/secp256k1/crypto)"
 # Run the bundled native runner directly on a fixture and check it emits a
-# 34-byte 0x0003 commitment. This needs no shell (works on distroless) and
-# proves every shared library the runner links actually resolves in the image.
+# 34-byte 0x0003 commitment, proving every shared library the runner links
+# actually resolves in the image.
 FIXTURE_DIR="$SCRIPT_DIR/../../riscv-guests/l2-execution/test/testdata"
 if ! $DOCKER run --rm \
         --entrypoint /opt/linea/prover-ray/l2-execution-runner \

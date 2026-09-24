@@ -28,7 +28,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/prover ./cmd/prove
 ########################################
 # Zig builder: the native runner + guest ELF
 ########################################
-# debian:bookworm = glibc 2.36, matching the distroless/cc-debian12 final stage,
+# debian:bookworm = glibc 2.36, matching the debian:bookworm-slim final stage,
 # so the native runner is built on the same glibc it runs on.
 FROM docker.io/library/debian:bookworm AS zig-builder
 ARG ZIG_VERSION=0.16.0
@@ -70,18 +70,19 @@ RUN make -C /riscv-guests/l2-execution compile \
     && strip /riscv-guests/l2-execution/zig-out/bin/l2-execution-runner
 
 ########################################
-# Final runtime image: distroless/cc-debian12 (~55MB, glibc + libstdc++ + libgcc,
-# no shell/apt). Logs still go to stdout, which is all we read (Grafana etc.).
-# distroless can't run any RUN step (no shell), so everything here is COPY only:
-# the native runner's other libs are copied straight in, and /usr/lib/<arch> plus
-# absolute /usr/local/lib are default linker search paths, so no ldconfig needed.
+# Final runtime image: debian:bookworm-slim (glibc 2.36, same release as the
+# builders, with a shell so the CMD expands $CONFIG_FILE and $WORKER_ID like the
+# legacy prover). The native runner links glibc, libstdc++, libmcl, libsecp256k1
+# and libcrypto: the apt ones come from the same bookworm release, and libmcl.so
+# is source-built so it is copied in.
 ########################################
-FROM gcr.io/distroless/cc-debian12 AS final
-# libmcl.so is source-built; libsecp256k1/libcrypto come from the builder's apt
-# (same debian12, so same version). Glob the SONAME rather than hard-code it.
+FROM docker.io/library/debian:bookworm-slim AS final
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+        libstdc++6 libsecp256k1-1 libssl3 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=zig-builder /usr/local/lib/libmcl.so /usr/local/lib/
-COPY --from=zig-builder /usr/lib/x86_64-linux-gnu/libsecp256k1.so* /usr/lib/x86_64-linux-gnu/
-COPY --from=zig-builder /usr/lib/x86_64-linux-gnu/libcrypto.so* /usr/lib/x86_64-linux-gnu/
+RUN ldconfig
 
 # Prover binary (static), native runner, and guest ELF.
 COPY --from=go-builder  /out/prover                                             /opt/linea/prover-ray/prover
@@ -92,10 +93,10 @@ ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
 
 # Configuration is a TOML file. No default is baked in (fail loudly rather than
-# run a wrong config): mount one at CONFIG_FILE. The
-# prover reads CONFIG_FILE directly, so no shell is needed (distroless has none).
+# run a wrong config): mount one and point CONFIG_FILE at it. The CMD runs the
+# queue adapter, expanding CONFIG_FILE and WORKER_ID like the legacy prover.
 # Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
-#   docker run -v ./config-dev-zkvm.toml:/opt/linea/prover-ray/config/config.toml \
-#              -v ./requests:/opt/linea/prover-ray/requests <image>
+#   docker run -e CONFIG_FILE=/data/config.toml -e WORKER_ID=prover-ray-0 \
+#              -v ./config-dev-zkvm.toml:/data/config.toml -v ./data:/data <image>
 ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
-ENTRYPOINT ["/opt/linea/prover-ray/prover"]
+CMD ["sh", "-c", "exec prover --config \"$CONFIG_FILE\" --local-id \"$WORKER_ID\""]

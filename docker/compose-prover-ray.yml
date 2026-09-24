@@ -19,6 +19,7 @@ services:
     profiles: [ "l2" ]
     environment:
       CONFIG_FILE: "/opt/linea/prover-ray/config/config.toml"
+      WORKER_ID: prover-ray-0 # worker id for job claiming and crash recovery
     volumes:
       - ../tmp/local/:/data/
       - ./config/prover-ray/prover-ray-config.toml:/opt/linea/prover-ray/config/config.toml:ro

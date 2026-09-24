@@ -45,7 +45,7 @@ func (f *fakeProver) run(_ context.Context, reqPath, respPath string) (int, erro
 func newAdapter(t *testing.T, prover *fakeProver) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
-	a, err := New(Config{Queues: []Queue{{RequestsRootDir: root}}, PollInterval: 5 * time.Millisecond}, prover.run)
+	a, err := New(Config{Queues: []Queue{{RequestsRootDir: root}}, WorkerID: "test", PollInterval: 5 * time.Millisecond}, prover.run)
 	require.NoError(t, err)
 	return a, root
 }
@@ -137,7 +137,7 @@ func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	var claimed, originalGone bool
 	var root string
 	prover := &fakeProver{onProve: func(_ string) {
-		_, errClaim := os.Stat(filepath.Join(root, "requests", singleReqName+".inprogress"))
+		_, errClaim := os.Stat(filepath.Join(root, "requests", singleReqName+".inprogress.test"))
 		claimed = errClaim == nil
 		_, errOrig := os.Stat(filepath.Join(root, "requests", singleReqName))
 		originalGone = errors.Is(errOrig, os.ErrNotExist)
@@ -205,6 +205,29 @@ func TestAdapter_LostClaim(t *testing.T) {
 	assert.Equal(t, 0, prover.calls)
 }
 
+// TestAdapter_RecoverOrphans: on startup a worker requeues its own in-progress
+// files (and drops their partial response temps) but leaves a sibling's alone.
+func TestAdapter_RecoverOrphans(t *testing.T) {
+	root := t.TempDir()
+	reqDir := filepath.Join(root, "requests")
+	respDir := filepath.Join(root, "responses")
+	require.NoError(t, os.MkdirAll(reqDir, dirPerm))
+	require.NoError(t, os.MkdirAll(respDir, dirPerm))
+
+	require.NoError(t, os.WriteFile(filepath.Join(reqDir, singleReqName+".inprogress.myworker"), []byte("{}"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(respDir, singleReqName+".inprogress.myworker"), []byte("partial"), 0o600))
+	sibling := "10-20-getZkL2ExecutionProofV1.json.inprogress.other"
+	require.NoError(t, os.WriteFile(filepath.Join(reqDir, sibling), []byte("{}"), 0o600))
+
+	_, err := New(Config{Queues: []Queue{{RequestsRootDir: root}}, WorkerID: "myworker"}, (&fakeProver{}).run)
+	require.NoError(t, err)
+
+	assert.FileExists(t, filepath.Join(reqDir, singleReqName))
+	assert.NoFileExists(t, filepath.Join(reqDir, singleReqName+".inprogress.myworker"))
+	assert.NoFileExists(t, filepath.Join(respDir, singleReqName+".inprogress.myworker"))
+	assert.FileExists(t, filepath.Join(reqDir, sibling))
+}
+
 func TestNew_Validation(t *testing.T) {
 	t.Run("NoQueues", func(t *testing.T) {
 		_, err := New(Config{}, (&fakeProver{}).run)
@@ -252,7 +275,7 @@ func TestAdapter_ArchiveError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "archiving")
 	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress.test"))
 }
 
 func TestAdapter_Run_ReturnsProcessError(t *testing.T) {

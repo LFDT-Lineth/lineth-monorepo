@@ -122,6 +122,7 @@ func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
 func runAdapter(args []string) error {
 	fs := flag.NewFlagSet("prover", flag.ContinueOnError)
 	configPath := fs.String("config", "", "path to the TOML config file (or set CONFIG_FILE)")
+	localID := fs.String("local-id", "", "worker id for job claiming and crash recovery (or set WORKER_ID)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -150,7 +151,9 @@ func runAdapter(args []string) error {
 	if err != nil {
 		return fmt.Errorf("finding prover binary: %w", err)
 	}
-	adapter, err := filesystem.New(filesystem.Config{Queues: queues}, spawnProver(self, path))
+	adapter, err := filesystem.New(
+		filesystem.Config{Queues: queues, WorkerID: resolveWorkerID(*localID)},
+		spawnProver(self, path))
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)
 	}
@@ -158,6 +161,21 @@ func runAdapter(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	return adapter.Run(ctx)
+}
+
+// resolveWorkerID picks the worker id from the flag, then WORKER_ID, then the
+// hostname. A stable id lets a restarted worker requeue its own crashed jobs.
+func resolveWorkerID(flagID string) string {
+	if flagID != "" {
+		return flagID
+	}
+	if env := os.Getenv("WORKER_ID"); env != "" {
+		return env
+	}
+	if h, err := os.Hostname(); err == nil && h != "" {
+		return h
+	}
+	return "prover-ray"
 }
 
 // spawnProver returns the adapter's default RunProver: run "prover prove" as a
