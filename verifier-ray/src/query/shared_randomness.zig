@@ -7,6 +7,7 @@ pub const Error = error{
     MissingRoundCommitment,
     ContributionMismatch,
     ContributionNotBaseField,
+    ContributionCountMismatch,
 } || protocol.CellError;
 
 /// ScalarRef locates a cell in ctx.rounds by its (round, index) coordinates.
@@ -53,10 +54,12 @@ pub const System = struct {
 /// A `System{}` zero value (no contribution_refs) verifies trivially: a
 /// protocol compiled without messagebus.CompileOptions.SharedRandomness
 /// registers no checker and has nothing for this sub-verifier to enforce.
-pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
+pub fn verify(system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
+    // `system` is runtime now, so this shape check is a returned error rather
+    // than a compile-time assertion. Codegen only ever emits a full Octuplet.
     if (system.contribution_refs.len != multiset_hashing.size)
-        @compileError("shared_randomness: contribution_refs must match multiset_hashing.size");
+        return error.ContributionCountMismatch;
 
     // A round that committed no column has no Octuplet to hash; prover-ray's
     // `rt.Commitments[...]` map lookup yields the zero value there, so hash
@@ -69,7 +72,7 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     }
     const contribution = multiset_hashing.hash(commitment);
 
-    inline for (system.contribution_refs, 0..) |ref, i| {
+    for (system.contribution_refs, 0..) |ref, i| {
         // The contribution limbs are base-field by protocol contract:
         // prover-ray's messagebus.contributionCell panics on an extension
         // cell. Reject an ext-encoded limb here too rather than
