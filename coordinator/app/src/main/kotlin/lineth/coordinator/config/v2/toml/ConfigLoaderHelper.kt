@@ -18,6 +18,7 @@ import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.toml.decoders.BlockParameterDecoder
 import lineth.coordinator.config.v2.toml.decoders.BlockParameterNumberDecoder
 import lineth.coordinator.config.v2.toml.decoders.BlockParameterTagDecoder
+import lineth.coordinator.config.v2.toml.decoders.TomlProverTypeDecoder
 import lineth.coordinator.config.v2.toml.decoders.TomlSignerTypeDecoder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -33,6 +34,7 @@ fun ConfigLoaderBuilder.addCoordinatorTomlDecoders(strict: Boolean): ConfigLoade
     .addDecoder(TomlKotlinDurationDecoder())
     .addDecoder(TomlKotlinInstantDecoder())
     .addDecoder(TomlSignerTypeDecoder())
+    .addDecoder(TomlProverTypeDecoder())
     .apply { if (strict) this.strict() }
 }
 

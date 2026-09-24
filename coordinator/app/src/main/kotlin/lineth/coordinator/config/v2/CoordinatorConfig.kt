@@ -1,15 +1,12 @@
 package lineth.coordinator.config.v2
 
 import linea.web3j.SmartContractErrors
-import lineth.coordinator.clients.prover.PreRiscvProverConfig
-import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.clients.prover.ProversConfig
 
 data class CoordinatorConfig(
   val protocol: ProtocolConfig,
   val conflation: ConflationConfig,
-  val preRiscvProversConfig: ProversConfig<PreRiscvProverConfig>,
-  val proversConfig: ProversConfig<ProverConfig>? = null,
+  val proversConfig: ProversConfig,
   val traces: TracesConfig,
   val stateManager: StateManagerConfig,
   val type2StateProofProvider: Type2StateProofManagerConfig,

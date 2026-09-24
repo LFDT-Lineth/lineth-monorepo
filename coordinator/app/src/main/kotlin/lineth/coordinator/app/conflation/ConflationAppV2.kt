@@ -86,7 +86,7 @@ class ConflationAppV2(
     blockValidator = ::validateLinethBlock,
   )
 
-  private val executionPipeline: ExecutionPipeline = configs.proversConfig!!.let { riscvProversConfig ->
+  private val executionPipeline: ExecutionPipeline = configs.proversConfig.let { riscvProversConfig ->
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
       "conflation.blocksLimit must be set when riscv is enabled"
     }
@@ -140,8 +140,7 @@ class ConflationAppV2(
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
         executionProofPollingInterval =
-        riscvProversConfig.proverSwitch.current.l2Execution.fileBased?.pollingInterval
-          ?: riscvProversConfig.proverSwitch.current.l2Execution.restfulBased?.pollingInterval!!,
+        riscvProversConfig.proverSwitch.current.riscvConfig!!.l2Execution.fileBased.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )

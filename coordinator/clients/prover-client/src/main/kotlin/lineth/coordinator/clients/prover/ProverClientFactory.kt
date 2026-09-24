@@ -61,8 +61,7 @@ interface ProverClientFactory {
 fun interface ProverClientFactoryBuilder {
   fun build(
     vertx: Vertx,
-    preRiscvConfig: ProversConfig<PreRiscvProverConfig>?,
-    config: ProversConfig<ProverConfig>?,
+    config: ProversConfig,
     l2MessageServiceAddress: String,
     chainId: ULong,
     metricsFacade: MetricsFacade,
@@ -72,13 +71,12 @@ fun interface ProverClientFactoryBuilder {
     /** The built-in, file-based factory. */
     val FILE_BASED = ProverClientFactoryBuilder {
         vertx,
-        preRiscvConfig,
         config,
         l2MessageServiceAddress,
         chainId,
         metricsFacade,
       ->
-      DefaultProverClientFactory(vertx, preRiscvConfig, config, chainId, l2MessageServiceAddress, metricsFacade)
+      DefaultProverClientFactory(vertx, config, chainId, l2MessageServiceAddress, metricsFacade)
     }
   }
 }
@@ -154,24 +152,34 @@ class ProverClientFactorySupport(metricsFacade: MetricsFacade) {
 
 class DefaultProverClientFactory(
   private val vertx: Vertx,
-  private val preRiscvConfig: ProversConfig<PreRiscvProverConfig>? = null,
-  private val config: ProversConfig<ProverConfig>? = null,
+  private val config: ProversConfig,
   private val chainId: ULong,
   private val l2MessageServiceAddress: String,
   metricsFacade: MetricsFacade,
   private val support: ProverClientFactorySupport = ProverClientFactorySupport(metricsFacade),
 ) : ProverClientFactory {
-  private fun requireRiscvConfig(): ProversConfig<ProverConfig> =
-    requireNotNull(config) { "RISC-V prover config must be configured" }
+  private fun requireRiscvConfig(): ProversConfig {
+    require(
+      config.proverSwitch.current.riscvConfig != null ||
+        config.proverSwitch.next?.riscvConfig != null,
+    ) {
+      "RISC-V prover config must be configured in either current or next"
+    }
+    return config
+  }
 
-  private fun requirePreRiscvConfig(): ProversConfig<PreRiscvProverConfig> =
-    requireNotNull(preRiscvConfig) { "Pre RISC-V prover config must be configured" }
+  private fun requirePreRiscvConfig(): ProversConfig {
+    require(config.proverSwitch.current.preRiscvConfig != null) {
+      "Pre RISC-V prover config must be configured in current"
+    }
+    return config
+  }
 
   override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current.l2Execution,
-      proverBConfig = config.proverSwitch.next?.l2Execution,
+      proverAConfig = config.proverSwitch.current.riscvConfig?.l2Execution,
+      proverBConfig = config.proverSwitch.next?.riscvConfig?.l2Execution,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
@@ -183,19 +191,15 @@ class DefaultProverClientFactory(
   override fun rollupProverClient(): RollupProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current,
-      proverBConfig = config.proverSwitch.next,
+      proverAConfig = config.proverSwitch.current.riscvConfig,
+      proverBConfig = config.proverSwitch.next?.riscvConfig,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      if (proverConfig.rollup.fileBased != null) {
-        buildFileBasedRollupProverClient(
-          proverConfig = proverConfig.rollup,
-          l2ExecutionProverConfig = proverConfig.l2Execution,
-        )
-      } else {
-        throw IllegalStateException("fileBased in rollup prover config cannot be null")
-      }
+      buildFileBasedRollupProverClient(
+        proverConfig = proverConfig.rollup,
+        l2ExecutionProverConfig = proverConfig.l2Execution,
+      )
         .also { support.rollupWaitingResponses.addReporter(it) }
     }
   }
@@ -203,21 +207,15 @@ class DefaultProverClientFactory(
   override fun rollupAggregationProverClient(): RollupAggregationProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current,
-      proverBConfig = config.proverSwitch.next,
+      proverAConfig = config.proverSwitch.current.riscvConfig,
+      proverBConfig = config.proverSwitch.next?.riscvConfig,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      if (proverConfig.rollupAggregation.fileBased != null) {
-        buildFileBasedRollupAggregationProverClient(
-          proverConfig = proverConfig.rollupAggregation,
-          rollupProverConfig = proverConfig.rollup,
-        )
-      } else {
-        throw IllegalStateException(
-          "fileBased in rollup aggregation prover config cannot be null",
-        )
-      }
+      buildFileBasedRollupAggregationProverClient(
+        proverConfig = proverConfig.rollupAggregation,
+        rollupProverConfig = proverConfig.rollup,
+      )
         .also { support.rollupAggregationWaitingResponses.addReporter(it) }
     }
   }
@@ -225,8 +223,8 @@ class DefaultProverClientFactory(
   override fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.execution,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.execution,
+      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig?.execution,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.execution,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -243,8 +241,8 @@ class DefaultProverClientFactory(
   ): BlobCompressionProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.blobCompression,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.blobCompression,
+      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig!!.blobCompression,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.blobCompression,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -263,8 +261,8 @@ class DefaultProverClientFactory(
   ): ProofAggregationProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current,
-      proverBConfig = preRiscvConfig.proverSwitch.next,
+      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig!!,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -281,18 +279,18 @@ class DefaultProverClientFactory(
 
   override fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
     val preRiscvConfig = requirePreRiscvConfig()
-    if (preRiscvConfig.proverSwitch.current.invalidity == null) {
+    if (preRiscvConfig.proverSwitch.current.preRiscvConfig!!.invalidity == null) {
       throw IllegalStateException("Invalidity prover config is not configured")
     }
 
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current,
-      proverBConfig = preRiscvConfig.proverSwitch.next,
+      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig.invalidity,
+      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.invalidity,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
       PreRiscvInvalidityProverClient(
-        config = proverConfig.invalidity!!,
+        config = proverConfig,
         vertx = vertx,
         enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
       )
@@ -306,28 +304,23 @@ class DefaultProverClientFactory(
     responseFileNameProvider: ProverFileNameProvider<BlockIntervalProofIndex>,
     responseDtoClass: Class<ResponseDto>,
   ): ProverProofTransport<RequestDto, ResponseDto, BlockIntervalProofIndex> {
-    val transport = if (proverConfig.fileBased != null) {
-      FileBasedProverProofTransport<
-        RequestDto,
-        ResponseDto,
-        BlockIntervalProofIndex,
-        >(
-        config = proverConfig.fileBased,
-        vertx = vertx,
-        fileWriter = FileWriter(vertx, JsonSerialization.proofResponseMapperV1),
-        fileReader = FileReader(
-          vertx,
-          JsonSerialization.proofResponseMapperV1,
-          responseDtoClass,
-        ),
-        requestFileNameProvider = requestFileNameProvider,
-        responseFileNameProvider = responseFileNameProvider,
-        enableRequestFilesCleanup = requireRiscvConfig().enableRequestFilesCleanup,
-      )
-    } else {
-      throw IllegalStateException("RISC-V prover file-based transport configuration is not configured")
-    }
-    return transport
+    return FileBasedProverProofTransport<
+      RequestDto,
+      ResponseDto,
+      BlockIntervalProofIndex,
+      >(
+      config = proverConfig.fileBased,
+      vertx = vertx,
+      fileWriter = FileWriter(vertx, JsonSerialization.proofResponseMapperV1),
+      fileReader = FileReader(
+        vertx,
+        JsonSerialization.proofResponseMapperV1,
+        responseDtoClass,
+      ),
+      requestFileNameProvider = requestFileNameProvider,
+      responseFileNameProvider = responseFileNameProvider,
+      enableRequestFilesCleanup = requireRiscvConfig().enableRequestFilesCleanup,
+    )
   }
 
   private fun buildL2ExecutionProofTransport(proverConfig: ProverClientConfig) =

@@ -1,225 +1,310 @@
 package lineth.coordinator.config.v2
 
-import lineth.coordinator.clients.prover.RestfulBasedProverConfig
-import lineth.coordinator.config.v2.toml.FileBasedProverConfigToml
-import lineth.coordinator.config.v2.toml.ProverConfigToml
-import lineth.coordinator.config.v2.toml.RiscvProverToml
+import lineth.coordinator.config.v2.toml.ProverToml
+import lineth.coordinator.config.v2.toml.ProverToml.FileBasedProverConfigToml
 import lineth.coordinator.config.v2.toml.parseConfig
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.jupiter.api.Test
-import java.net.URI
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class ProverParsingTest {
   companion object {
+    val preRiscvToml =
+      """
+      [prover]
+      type = "pre_riscv"
+      fs-inprogress-request-writing-suffix = ".coordinator_writing_request"
+      fs-inprogress-proving-suffix-pattern = "\\.inprogress\\.prover_is_proving.*"
+      fs-polling-interval = "PT1S"
+      fs-polling-timeout = "PT10M"
+      [prover.execution]
+      fs-requests-directory = "/data/prover/v2/execution/requests"
+      fs-responses-directory = "/data/prover/v2/execution/responses"
+      [prover.blob-compression]
+      fs-requests-directory = "/data/prover/v2/compression/requests"
+      fs-responses-directory = "/data/prover/v2/compression/responses"
+      [prover.invalidity]
+      fs-requests-directory = "/data/prover/v2/invalidity/requests"
+      fs-responses-directory = "/data/prover/v2/invalidity/responses"
+      [prover.proof-aggregation]
+      fs-requests-directory = "/data/prover/v2/aggregation/requests"
+      fs-responses-directory = "/data/prover/v2/aggregation/responses"
+
+      [prover.new]
+      switch-block-number-inclusive=1000
+      [prover.new.execution]
+      fs-requests-directory = "/data/prover/v3/execution/requests"
+      fs-responses-directory = "/data/prover/v3/execution/responses"
+      [prover.new.blob-compression]
+      fs-requests-directory = "/data/prover/v3/compression/requests"
+      fs-responses-directory = "/data/prover/v3/compression/responses"
+      [prover.new.invalidity]
+      fs-requests-directory = "/data/prover/v3/invalidity/requests"
+      fs-responses-directory = "/data/prover/v3/invalidity/responses"
+      [prover.new.proof-aggregation]
+      fs-requests-directory = "/data/prover/v3/aggregation/requests"
+      fs-responses-directory = "/data/prover/v3/aggregation/responses"
+      """.trimIndent()
+
+    val preRiscvTomlWithCleanupEnabled =
+      """
+      [prover]
+      enable-request-files-cleanup = true
+      [prover.execution]
+      fs-requests-directory = "/data/prover/v2/execution/requests"
+      fs-responses-directory = "/data/prover/v2/execution/responses"
+      [prover.blob-compression]
+      fs-requests-directory = "/data/prover/v2/compression/requests"
+      fs-responses-directory = "/data/prover/v2/compression/responses"
+      [prover.proof-aggregation]
+      fs-requests-directory = "/data/prover/v2/aggregation/requests"
+      fs-responses-directory = "/data/prover/v2/aggregation/responses"
+      """.trimIndent()
+
+    val preRiscvConfig =
+      ProverToml(
+        fsInprogressRequestWritingSuffix = ".coordinator_writing_request",
+        fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover_is_proving.*",
+        fsPollingInterval = 1.seconds,
+        fsPollingTimeout = 10.minutes,
+        execution = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/execution/requests",
+          fsResponsesDirectory = "/data/prover/v2/execution/responses",
+        ),
+        blobCompression = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/compression/requests",
+          fsResponsesDirectory = "/data/prover/v2/compression/responses",
+        ),
+        invalidity = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/invalidity/requests",
+          fsResponsesDirectory = "/data/prover/v2/invalidity/responses",
+        ),
+        proofAggregation = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/aggregation/requests",
+          fsResponsesDirectory = "/data/prover/v2/aggregation/responses",
+        ),
+        new =
+        ProverToml(
+          switchBlockNumberInclusive = 1_000u,
+          execution = FileBasedProverConfigToml(
+            fsRequestsDirectory = "/data/prover/v3/execution/requests",
+            fsResponsesDirectory = "/data/prover/v3/execution/responses",
+          ),
+          blobCompression = FileBasedProverConfigToml(
+            fsRequestsDirectory = "/data/prover/v3/compression/requests",
+            fsResponsesDirectory = "/data/prover/v3/compression/responses",
+          ),
+          invalidity = FileBasedProverConfigToml(
+            fsRequestsDirectory = "/data/prover/v3/invalidity/requests",
+            fsResponsesDirectory = "/data/prover/v3/invalidity/responses",
+          ),
+          proofAggregation = FileBasedProverConfigToml(
+            fsRequestsDirectory = "/data/prover/v3/aggregation/requests",
+            fsResponsesDirectory = "/data/prover/v3/aggregation/responses",
+          ),
+        ),
+      )
+
+    val preRiscvTomlMinimal =
+      """
+      [prover]
+      [prover.execution]
+      fs-requests-directory = "/data/prover/v2/execution/requests"
+      fs-responses-directory = "/data/prover/v2/execution/responses"
+      [prover.blob-compression]
+      fs-requests-directory = "/data/prover/v2/compression/requests"
+      fs-responses-directory = "/data/prover/v2/compression/responses"
+      [prover.proof-aggregation]
+      fs-requests-directory = "/data/prover/v2/aggregation/requests"
+      fs-responses-directory = "/data/prover/v2/aggregation/responses"
+      """.trimIndent()
+
+    val preRiscvConfigMinimal =
+      ProverToml(
+        fsInprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+        fsInprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
+        execution = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/execution/requests",
+          fsResponsesDirectory = "/data/prover/v2/execution/responses",
+        ),
+        blobCompression = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/compression/requests",
+          fsResponsesDirectory = "/data/prover/v2/compression/responses",
+        ),
+        invalidity = null,
+        proofAggregation = FileBasedProverConfigToml(
+          fsRequestsDirectory = "/data/prover/v2/aggregation/requests",
+          fsResponsesDirectory = "/data/prover/v2/aggregation/responses",
+        ),
+        switchBlockNumberInclusive = null,
+        new = null,
+      )
+
+    val preRiscvConfigWithCleanupEnabled = preRiscvConfigMinimal.copy(enableRequestFilesCleanup = true)
+
     val toml =
       """
-      [riscv-prover]
+      [prover]
+      type = "riscv"
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
-      polling-interval = "PT1S"
-      polling-timeout = "PT10M"
+      fs-polling-interval = "PT1S"
+      fs-polling-timeout = "PT10M"
       fs-inprogress-request-writing-suffix = ".inprogress_coordinator_riscv_writing"
       fs-inprogress-proving-suffix-pattern = "\\.inprogress\\.riscv-prover.*"
-      fs-enable-request-files-cleanup = true
-      [riscv-prover.l2-execution]
+      enable-request-files-cleanup = true
+      [prover.l2-execution]
       programId = "0xdeadbeef1"
-      [riscv-prover.l2-execution.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/execution/requests"
       fs-responses-directory = "/data/riscv-prover/execution/responses"
-      [riscv-prover.rollup]
+      [prover.rollup]
       programId = "0xdeadbeef2"
-      [riscv-prover.rollup.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/rollup/requests"
       fs-responses-directory = "/data/riscv-prover/rollup/responses"
-      [riscv-prover.rollup-aggregation]
+      [prover.rollup-aggregation]
       programId = "0xdeadbeef3"
-      [riscv-prover.rollup-aggregation.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/aggregation/requests"
       fs-responses-directory = "/data/riscv-prover/aggregation/responses"
       """.trimIndent()
 
     val config =
-      RiscvProverToml(
-        pollingInterval = 1.seconds,
-        pollingTimeout = 10.minutes,
+      ProverToml(
+        type = ProverToml.ProverType.RISCV,
+        fsPollingInterval = 1.seconds,
+        fsPollingTimeout = 10.minutes,
         forkName = "amsterdam",
         provingSystemVersion = "0xabcdef123",
         fsInprogressRequestWritingSuffix = ".inprogress_coordinator_riscv_writing",
         fsInprogressProvingSuffixPattern = "\\.inprogress\\.riscv-prover.*",
-        fsEnableRequestFilesCleanup = true,
-        l2Execution = ProverConfigToml(
+        enableRequestFilesCleanup = true,
+        l2Execution = FileBasedProverConfigToml(
           programId = "0xdeadbeef1",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/execution/requests",
-            fsResponsesDirectory = "/data/riscv-prover/execution/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/execution/requests",
+          fsResponsesDirectory = "/data/riscv-prover/execution/responses",
         ),
-        rollup = ProverConfigToml(
+        rollup = FileBasedProverConfigToml(
           programId = "0xdeadbeef2",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/rollup/requests",
-            fsResponsesDirectory = "/data/riscv-prover/rollup/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/rollup/requests",
+          fsResponsesDirectory = "/data/riscv-prover/rollup/responses",
         ),
-        rollupAggregation = ProverConfigToml(
+        rollupAggregation = FileBasedProverConfigToml(
           programId = "0xdeadbeef3",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/aggregation/requests",
-            fsResponsesDirectory = "/data/riscv-prover/aggregation/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/aggregation/requests",
+          fsResponsesDirectory = "/data/riscv-prover/aggregation/responses",
         ),
       )
 
     val tomlMinimal =
       """
-      [riscv-prover]
+      [prover]
+      type = "riscv"
       proving-system-version = "0xabcdef123"
       fork-name = "amsterdam"
-      [riscv-prover.l2-execution]
+      [prover.l2-execution]
       programId = "0xdeadbeef1"
-      [riscv-prover.l2-execution.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/execution/requests"
       fs-responses-directory = "/data/riscv-prover/execution/responses"
-      [riscv-prover.rollup]
+      [prover.rollup]
       programId = "0xdeadbeef2"
-      [riscv-prover.rollup.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/rollup/requests"
       fs-responses-directory = "/data/riscv-prover/rollup/responses"
-      [riscv-prover.rollup-aggregation]
+      [prover.rollup-aggregation]
       programId = "0xdeadbeef3"
-      [riscv-prover.rollup-aggregation.file-based-folder-config]
       fs-requests-directory = "/data/riscv-prover/aggregation/requests"
       fs-responses-directory = "/data/riscv-prover/aggregation/responses"
       """.trimIndent()
 
     val configMinimal =
-      RiscvProverToml(
+      ProverToml(
+        type = ProverToml.ProverType.RISCV,
         forkName = "amsterdam",
         provingSystemVersion = "0xabcdef123",
-        l2Execution = ProverConfigToml(
+        l2Execution = FileBasedProverConfigToml(
           programId = "0xdeadbeef1",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/execution/requests",
-            fsResponsesDirectory = "/data/riscv-prover/execution/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/execution/requests",
+          fsResponsesDirectory = "/data/riscv-prover/execution/responses",
         ),
-        rollup = ProverConfigToml(
+        rollup = FileBasedProverConfigToml(
           programId = "0xdeadbeef2",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/rollup/requests",
-            fsResponsesDirectory = "/data/riscv-prover/rollup/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/rollup/requests",
+          fsResponsesDirectory = "/data/riscv-prover/rollup/responses",
         ),
-        rollupAggregation = ProverConfigToml(
+        rollupAggregation = FileBasedProverConfigToml(
           programId = "0xdeadbeef3",
-          fileBasedFolderConfig = FileBasedProverConfigToml(
-            fsRequestsDirectory = "/data/riscv-prover/aggregation/requests",
-            fsResponsesDirectory = "/data/riscv-prover/aggregation/responses",
-          ),
+          fsRequestsDirectory = "/data/riscv-prover/aggregation/requests",
+          fsResponsesDirectory = "/data/riscv-prover/aggregation/responses",
         ),
-      )
-
-    val tomlRestful =
-      """
-      [riscv-prover]
-      proving-system-version = "0xabcdef123"
-      fork-name = "amsterdam"
-      polling-interval = "PT1S"
-      polling-timeout = "PT10M"
-      restful-endpoint = "http://127.0.0.1:8090/"
-      restful-api-base-path = "/api"
-      restful-api-version = "v1"
-      [riscv-prover.l2-execution]
-      programId = "0xdeadbeef1"
-      [riscv-prover.rollup]
-      programId = "0xdeadbeef2"
-      [riscv-prover.rollup-aggregation]
-      programId = "0xdeadbeef3"
-      """.trimIndent()
-
-    val configRestful =
-      RiscvProverToml(
-        pollingInterval = 1.seconds,
-        pollingTimeout = 10.minutes,
-        forkName = "amsterdam",
-        provingSystemVersion = "0xabcdef123",
-        restfulEndpoint = URI("http://127.0.0.1:8090/").toURL(),
-        restfulApiBasePath = "/api",
-        restfulApiVersion = "v1",
-        l2Execution = ProverConfigToml(programId = "0xdeadbeef1"),
-        rollup = ProverConfigToml(programId = "0xdeadbeef2"),
-        rollupAggregation = ProverConfigToml(programId = "0xdeadbeef3"),
       )
   }
 
-  data class WrapperConfig(
-    val riscvProver: RiscvProverToml,
+  data class PreRiscvWrapperConfig(
+    val prover: ProverToml,
   )
 
   @Test
-  fun `should parse riscv prover toml config`() {
+  fun `should parse pre-riscv prover toml configs - full`() {
     assertThat(
-      parseConfig<WrapperConfig>(toml).riscvProver,
+      parseConfig<PreRiscvWrapperConfig>(preRiscvToml).prover,
+    ).isEqualTo(preRiscvConfig)
+  }
+
+  @Test
+  fun `should parse pre-riscv prover toml configs and provide defaults`() {
+    assertThat(
+      parseConfig<PreRiscvWrapperConfig>(preRiscvTomlMinimal).prover,
+    ).isEqualTo(preRiscvConfigMinimal)
+  }
+
+  @Test
+  fun `should parse pre-riscv prover toml configs with cleanup enabled`() {
+    assertThat(
+      parseConfig<PreRiscvWrapperConfig>(preRiscvTomlWithCleanupEnabled).prover,
+    ).isEqualTo(preRiscvConfigWithCleanupEnabled)
+  }
+
+  @Test
+  fun `should default pre-riscv cleanup to false when not specified`() {
+    val parsed = parseConfig<PreRiscvWrapperConfig>(preRiscvTomlMinimal).prover
+    assertThat(parsed.enableRequestFilesCleanup).isFalse()
+  }
+
+  @Test
+  fun `should parse pre-riscv cleanup setting when explicitly set to false`() {
+    val tomlWithCleanupDisabled =
+      """
+      [prover]
+      enable-request-files-cleanup = false
+      [prover.execution]
+      fs-requests-directory = "/data/prover/v2/execution/requests"
+      fs-responses-directory = "/data/prover/v2/execution/responses"
+      [prover.blob-compression]
+      fs-requests-directory = "/data/prover/v2/compression/requests"
+      fs-responses-directory = "/data/prover/v2/compression/responses"
+      [prover.proof-aggregation]
+      fs-requests-directory = "/data/prover/v2/aggregation/requests"
+      fs-responses-directory = "/data/prover/v2/aggregation/responses"
+      """.trimIndent()
+
+    val parsed = parseConfig<PreRiscvWrapperConfig>(tomlWithCleanupDisabled).prover
+    assertThat(parsed.enableRequestFilesCleanup).isFalse()
+  }
+
+  data class WrapperConfig(
+    val prover: ProverToml,
+  )
+
+  @Test
+  fun `should parse prover toml configs - full`() {
+    assertThat(
+      parseConfig<WrapperConfig>(toml).prover,
     ).isEqualTo(config)
   }
 
   @Test
-  fun `should parse riscv prover toml config with defaults`() {
+  fun `should parse prover toml configs and provide defaults`() {
     assertThat(
-      parseConfig<WrapperConfig>(tomlMinimal).riscvProver,
+      parseConfig<WrapperConfig>(tomlMinimal).prover,
     ).isEqualTo(configMinimal)
-  }
-
-  @Test
-  fun `should parse riscv prover toml config with restful transport`() {
-    assertThat(
-      parseConfig<WrapperConfig>(tomlRestful).riscvProver,
-    ).isEqualTo(configRestful)
-  }
-
-  @Test
-  fun `should reify restful prover config into RestfulBasedProverConfig for each prover client`() {
-    val proversConfig = parseConfig<WrapperConfig>(tomlRestful).riscvProver.reified()
-
-    val expectedRestfulConfig = RestfulBasedProverConfig(
-      endpoint = URI("http://127.0.0.1:8090/").toURL(),
-      restfulApiBasePath = "/api",
-      restfulApiVersion = "v1",
-      pollingInterval = 1.seconds,
-      pollingTimeout = 10.minutes,
-    )
-
-    assertThat(proversConfig.proverSwitch.current.l2Execution.restfulBased).isEqualTo(expectedRestfulConfig)
-    assertThat(proversConfig.proverSwitch.current.l2Execution.fileBased).isNull()
-    assertThat(proversConfig.proverSwitch.current.rollup.restfulBased).isEqualTo(expectedRestfulConfig)
-    assertThat(proversConfig.proverSwitch.current.rollup.fileBased).isNull()
-    assertThat(proversConfig.proverSwitch.current.rollupAggregation.restfulBased).isEqualTo(expectedRestfulConfig)
-    assertThat(proversConfig.proverSwitch.current.rollupAggregation.fileBased).isNull()
-  }
-
-  @Test
-  fun `should fail reify when neither fileBasedFolderConfig nor restfulEndpoint is configured`() {
-    val tomlMissingTransport =
-      """
-      [riscv-prover]
-      proving-system-version = "0xabcdef123"
-      fork-name = "amsterdam"
-      [riscv-prover.l2-execution]
-      programId = "0xdeadbeef1"
-      [riscv-prover.rollup]
-      programId = "0xdeadbeef2"
-      [riscv-prover.rollup-aggregation]
-      programId = "0xdeadbeef3"
-      """.trimIndent()
-
-    assertThat(
-      catchThrowable {
-        parseConfig<WrapperConfig>(tomlMissingTransport).riscvProver.reified()
-      },
-    ).isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("restfulEndpoint must be defined")
   }
 }

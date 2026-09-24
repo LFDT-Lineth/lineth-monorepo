@@ -17,10 +17,8 @@ data class CoordinatorConfigFileToml(
   val protocol: ProtocolToml,
   @param:ConfigSection("Block conflation, blob compression, and proof aggregation settings.")
   val conflation: ConflationToml = ConflationToml(),
-  @param:ConfigSection("Pre RISC-V File-based prover request/response directories and switch-over settings.")
+  @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
   val prover: ProverToml,
-  @param:ConfigSection("RISC-V prover request/response directories for execution, rollup, and aggregation proofs.")
-  val riscvProver: RiscvProverToml? = null,
   @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
   @param:ConfigSection("Shomei state manager client settings.")
@@ -86,6 +84,16 @@ data class CoordinatorConfigToml(
   val l1DynamicGasPriceCapTimeOfDayMultipliers: GasPriceCapTimeOfDayMultipliersConfigFileToml? = null,
   val smartContractErrors: SmartContractErrorCodesConfigFileToml? = null,
 ) {
+  init {
+    if (configs.prover.type == ProverToml.ProverType.PRE_RISCV &&
+      configs.prover.new?.type == ProverToml.ProverType.RISCV
+    ) {
+      require(configs.conflation.riscvStartingBlockTimestampInclusive == configs.prover.switchBlockTimestamp) {
+        "conflation.riscvStartingBlockTimestampInclusive must be equal to prover.switchBlockTimestamp for" + "" +
+          " switching from pre RISC-V to RISC-V provers"
+      }
+    }
+  }
   fun reified(): CoordinatorConfig {
     return CoordinatorConfig(
       protocol = configs.protocol.reified(),
@@ -95,8 +103,7 @@ data class CoordinatorConfigToml(
         tracesCountersLimitsV4 = tracesLimitsV4?.let { TracesCountersV4(it.tracesLimits) },
         tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
-      preRiscvProversConfig = this.configs.prover.reified(),
-      proversConfig = this.configs.riscvProver?.reified(),
+      proversConfig = this.configs.prover.reified(),
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),

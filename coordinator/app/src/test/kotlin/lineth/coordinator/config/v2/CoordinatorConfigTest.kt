@@ -13,7 +13,6 @@ class CoordinatorConfigTest {
       ${DefaultsParsingTest.toml}
       ${ProtocolParsingTest.toml}
       ${ConflationParsingTest.toml}
-      ${PreRiscvProverParsingTest.toml}
       ${ProverParsingTest.toml}
       ${TracesParsingTest.toml}
       ${StateManagerParsingTest.toml}
@@ -31,8 +30,7 @@ class CoordinatorConfigTest {
         defaults = DefaultsParsingTest.config,
         protocol = ProtocolParsingTest.config,
         conflation = ConflationParsingTest.config,
-        prover = PreRiscvProverParsingTest.config,
-        riscvProver = ProverParsingTest.config,
+        prover = ProverParsingTest.config,
         traces = TracesParsingTest.config,
         stateManager = StateManagerParsingTest.config,
         type2StateProofProvider = Type2StateProofProviderParsingTest.config,
@@ -54,7 +52,7 @@ class CoordinatorConfigTest {
       ${DefaultsParsingTest.tomlMinimal}
       ${ProtocolParsingTest.tomlMinimal}
       ${ConflationParsingTest.tomlMinimal}
-      ${PreRiscvProverParsingTest.tomlMinimal}
+      ${ProverParsingTest.tomlMinimal}
       ${TracesParsingTest.tomlMinimal}
       ${StateManagerParsingTest.tomlMinimal}
       ${Type2StateProofProviderParsingTest.tomlMinimal}
@@ -70,7 +68,7 @@ class CoordinatorConfigTest {
         defaults = DefaultsParsingTest.configMinimal,
         protocol = ProtocolParsingTest.configMinimal,
         conflation = ConflationParsingTest.configMinimal,
-        prover = PreRiscvProverParsingTest.configMinimal,
+        prover = ProverParsingTest.configMinimal,
         traces = TracesParsingTest.configMinimal,
         stateManager = StateManagerParsingTest.configMinimal,
         type2StateProofProvider = Type2StateProofProviderParsingTest.configMinimal,

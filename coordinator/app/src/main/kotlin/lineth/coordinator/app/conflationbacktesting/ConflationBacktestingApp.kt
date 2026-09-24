@@ -41,6 +41,7 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
 import lineth.coordinator.clients.prover.DefaultProverClientFactory
+import lineth.coordinator.clients.prover.GenericProverConfig
 import lineth.coordinator.clients.prover.PreRiscvProverConfig
 import lineth.coordinator.clients.prover.ProverConfigSwitch
 import lineth.coordinator.config.toJsonRpcRetry
@@ -111,20 +112,24 @@ class ConflationBacktestingApp(
           .toMutableList().also { it.add(conflationBacktestingAppConfig.endBlockNumber) },
       ),
     ),
-    preRiscvProversConfig = mainCoordinatorConfig.preRiscvProversConfig.copy(
+    proversConfig = mainCoordinatorConfig.proversConfig.copy(
       proverSwitch = ProverConfigSwitch(
-        current = getUpdatedProverConfig(
-          proverConfig = mainCoordinatorConfig.preRiscvProversConfig.proverSwitch.current,
-          backtestingDirectory = requireNotNull(mainCoordinatorConfig.conflation.backtestingDirectory) {
-            "conflation.backtestingDirectory must be set when running in backtesting mode"
-          },
-          conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
-        ),
-        next = mainCoordinatorConfig.preRiscvProversConfig.proverSwitch.next?.let { proverB ->
-          getUpdatedProverConfig(
-            proverConfig = proverB,
-            backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory,
+        current = GenericProverConfig(
+          preRiscvConfig = getUpdatedProverConfig(
+            proverConfig = mainCoordinatorConfig.proversConfig.proverSwitch.current.preRiscvConfig!!,
+            backtestingDirectory = requireNotNull(mainCoordinatorConfig.conflation.backtestingDirectory) {
+              "conflation.backtestingDirectory must be set when running in backtesting mode"
+            },
             conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
+          ),
+        ),
+        next = mainCoordinatorConfig.proversConfig.proverSwitch.next?.preRiscvConfig?.let { proverB ->
+          GenericProverConfig(
+            preRiscvConfig = getUpdatedProverConfig(
+              proverConfig = proverB,
+              backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory,
+              conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
+            ),
           )
         },
       ),
@@ -206,7 +211,7 @@ class ConflationBacktestingApp(
     vertx = vertx,
     chainId = l2EthClient.ethChainId().get().toULong(),
     l2MessageServiceAddress = mainCoordinatorConfig.protocol.l2.contractAddress,
-    preRiscvConfig = backtestingCoordinatorConfig.preRiscvProversConfig,
+    config = backtestingCoordinatorConfig.proversConfig,
     metricsFacade = metricsFacade,
   )
 

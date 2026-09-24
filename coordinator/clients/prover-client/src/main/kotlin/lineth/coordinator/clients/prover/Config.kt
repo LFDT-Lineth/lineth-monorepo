@@ -1,21 +1,31 @@
 package lineth.coordinator.clients.prover
 
-import java.net.URL
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-data class ProverConfigSwitch<TProverConfig>(
-  val current: TProverConfig,
-  val next: TProverConfig? = null,
+data class ProverConfigSwitch(
+  val current: GenericProverConfig,
+  val next: GenericProverConfig? = null,
 )
 
-data class ProversConfig<TProverConfig>(
-  val proverSwitch: ProverConfigSwitch<TProverConfig>,
+data class ProversConfig(
+  val proverSwitch: ProverConfigSwitch,
   val switchBlockNumberInclusive: ULong?,
   val switchBlockTimestamp: Instant?,
   val enableRequestFilesCleanup: Boolean = false,
 )
+
+data class GenericProverConfig(
+  val preRiscvConfig: PreRiscvProverConfig? = null,
+  val riscvConfig: ProverConfig? = null,
+) {
+  init {
+    require((preRiscvConfig != null) != (riscvConfig != null)) {
+      "Either preRiscvConfig or riscvConfig must be configured but not both"
+    }
+  }
+}
 
 data class PreRiscvProverConfig(
   val execution: FileBasedProverConfig,
@@ -31,25 +41,10 @@ data class ProverConfig(
 )
 
 data class ProverClientConfig(
-  val fileBased: FileBasedProverConfig?,
-  val restfulBased: RestfulBasedProverConfig?,
+  val fileBased: FileBasedProverConfig,
   val programId: String,
   val provingSystemVersion: String,
   val forkName: String,
-) {
-  init {
-    require((fileBased != null) != (restfulBased != null)) {
-      "Either FileBased or restfulBased must be configured but not both"
-    }
-  }
-}
-
-data class RestfulBasedProverConfig(
-  val endpoint: URL,
-  val restfulApiBasePath: String,
-  val restfulApiVersion: String,
-  val pollingInterval: Duration,
-  val pollingTimeout: Duration,
 )
 
 data class FileBasedProverConfig(

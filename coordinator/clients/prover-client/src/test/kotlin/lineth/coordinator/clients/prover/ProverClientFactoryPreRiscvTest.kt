@@ -33,7 +33,7 @@ class ProverClientFactoryPreRiscvTest {
     switchBlockNumber: Int? = null,
     switchBlockTimestamp: Instant? = null,
     withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
-  ): ProversConfig<PreRiscvProverConfig> {
+  ): ProversConfig {
     require(!(switchBlockNumber != null && switchBlockTimestamp != null)) {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
     }
@@ -68,9 +68,13 @@ class ProverClientFactoryPreRiscvTest {
 
     return ProversConfig(
       proverSwitch = ProverConfigSwitch(
-        current = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
+        current = GenericProverConfig(
+          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
+        ),
         next = if (withProverB) {
-          buildPreRiscvProverConfig(tmpDir.resolve("prover/v3"))
+          GenericProverConfig(
+            preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
+          )
         } else {
           null
         },
@@ -78,19 +82,6 @@ class ProverClientFactoryPreRiscvTest {
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
       switchBlockTimestamp = switchBlockTimestamp,
       enableRequestFilesCleanup = false,
-    )
-  }
-
-  private fun buildFileBasedProverConfig(
-    proverDir: Path,
-  ): FileBasedProverConfig {
-    return FileBasedProverConfig(
-      requestsDirectory = proverDir.resolve("requests"),
-      responsesDirectory = proverDir.resolve("responses"),
-      pollingInterval = 100.milliseconds,
-      pollingTimeout = 500.milliseconds,
-      inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-      inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
     )
   }
 
@@ -164,7 +155,7 @@ class ProverClientFactoryPreRiscvTest {
     proverClientFactory =
       DefaultProverClientFactory(
         vertx = vertx,
-        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200),
+        config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
         chainId = 59144UL,
         l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
@@ -198,7 +189,7 @@ class ProverClientFactoryPreRiscvTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
-        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
         chainId = 59144UL,
         l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
@@ -214,7 +205,7 @@ class ProverClientFactoryPreRiscvTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
-        preRiscvConfig = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
         chainId = 59144UL,
         l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
@@ -243,7 +234,7 @@ class ProverClientFactoryPreRiscvTest {
     val factory =
       DefaultProverClientFactory(
         vertx = vertx,
-        preRiscvConfig = buildProversConfig(
+        config = buildProversConfig(
           testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
