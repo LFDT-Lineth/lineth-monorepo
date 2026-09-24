@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
