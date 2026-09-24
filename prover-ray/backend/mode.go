@@ -41,11 +41,18 @@ func (m ProverMode) IsDev() bool {
 }
 
 // needsArtifacts reports whether New must load the circuit bin and guest ELF.
+// dev-mock runs no guest and dev-native uses the native runner, so neither needs
+// the ZkC artifacts.
 func (m ProverMode) needsArtifacts() bool {
-	return m != ProverModeDevMock
+	switch m {
+	case ProverModeDevMock, ProverModeDevNative:
+		return false
+	default:
+		return true
+	}
 }
 
-// devMarkerProof is the provisional dev-mode proof: a marker, not a real proof.
-func devMarkerProof(m ProverMode) []byte {
+// DevMarkerProof is the provisional dev-mode proof: a marker, not a real proof.
+func DevMarkerProof(m ProverMode) []byte {
 	return []byte("dev-proof:" + string(m))
 }

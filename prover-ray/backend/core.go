@@ -127,7 +127,7 @@ func (c *Core) proveDevMock(job Job) Result {
 	return Result{
 		JobID:      job.ID,
 		Status:     ResultStatusOK,
-		ProofBytes: devMarkerProof(ProverModeDevMock),
+		ProofBytes: DevMarkerProof(ProverModeDevMock),
 	}
 }
 

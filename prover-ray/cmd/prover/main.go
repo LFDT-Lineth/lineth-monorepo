@@ -29,7 +29,9 @@ func run(args []string) error {
 	proverVersion := fs.String("prover-version", "0.0.0-riscv",
 		"prover version echoed to the coordinator")
 	modeStr := fs.String("mode", string(backend.ProverModeDevMock),
-		"prover mode; only dev-mock is runnable today")
+		"prover mode (dev-mock or dev-native are runnable today)")
+	nativeRunnerBin := fs.String("native-runner-bin", "",
+		"path to the native l2-execution-runner binary (required for dev-native)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -48,9 +50,10 @@ func run(args []string) error {
 	}
 
 	adapter, err := filesystem.New(filesystem.Config{
-		RequestsRootDir: *requestsDir,
-		ProverVersion:   *proverVersion,
-		Mode:            mode,
+		RequestsRootDir:     *requestsDir,
+		ProverVersion:       *proverVersion,
+		Mode:                mode,
+		NativeRunnerBinPath: *nativeRunnerBin,
 	}, core)
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)

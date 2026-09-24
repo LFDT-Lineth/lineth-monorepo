@@ -11,6 +11,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
 
 // Prover is the proving engine: it receives a backend.Job and returns the proof
@@ -23,9 +25,10 @@ type Prover interface {
 // Runner owns the request-to-proof flow: decode the coordinator request body,
 // build a backend.Job, call the prover, and format the response.
 type Runner struct {
-	prover        Prover
-	proverVersion string
-	mode          backend.ProverMode
+	prover          Prover
+	proverVersion   string
+	mode            backend.ProverMode
+	nativeRunnerBin string
 }
 
 // RunnerOption configures a Runner.
@@ -34,6 +37,12 @@ type RunnerOption func(*Runner)
 // WithMode sets the prover mode; the default is backend.ProverModeFull.
 func WithMode(m backend.ProverMode) RunnerOption {
 	return func(r *Runner) { r.mode = m }
+}
+
+// WithNativeRunnerBin sets the path to the native l2-execution-runner binary,
+// required by dev-native mode.
+func WithNativeRunnerBin(path string) RunnerOption {
+	return func(r *Runner) { r.nativeRunnerBin = path }
 }
 
 // RunRequest is one raw coordinator request plus the proof type selected by
@@ -116,6 +125,12 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 	req, err := DecodeL2ExecutionRequest(runReq.Body)
 	if err != nil {
 		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
+	}
+
+	// dev-native runs the real guest logic via the native runner over the whole
+	// request (all payloads, forced transactions included).
+	if r.mode == backend.ProverModeDevNative {
+		return r.runL2ExecutionNative(ctx, runReq, req)
 	}
 
 	// dev-mock runs no guest, so it accepts ranges and forced transactions. The
@@ -203,6 +218,46 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	return RunResult{
 		ResponseBody: newAggregationResponse(result, startBlock, r.responseVersion()),
 		Status:       RunStatusSuccess,
+	}
+}
+
+// runL2ExecutionNative builds the extended (0x0002) input from the whole request,
+// runs the native l2-execution-runner, and shapes the response from its real
+// public inputs and revealed arrays. No proof is produced (dev marker only).
+func (r *Runner) runL2ExecutionNative(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
+	if r.nativeRunnerBin == "" {
+		return failedRunResult(runReq.ID, FailureCodeInternalError,
+			fmt.Errorf("dev-native mode requires a native runner binary path"))
+	}
+	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
+	out, err := nativerunner.Run(ctx, r.nativeRunnerBin, extended)
+	if err != nil {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
+	}
+	return RunResult{
+		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.ProgramVk),
+		Status:       RunStatusSuccess,
+	}
+}
+
+// buildExtendedInput assembles the ssz.ExtendedInput from a decoded request.
+func buildExtendedInput(req *L2ExecutionRequest) ssz.ExtendedInput {
+	payloads := make([]ssz.PayloadInput, len(req.Payloads))
+	for i, p := range req.Payloads {
+		payloads[i] = ssz.PayloadInput{
+			StatelessInputSSZ:  p.FramedSSZ,
+			ForcedTransactions: p.ForcedTransactions,
+		}
+	}
+	return ssz.ExtendedInput{
+		ParentFtxRollingHash:         req.ParentFtxRollingHash,
+		ParentLastProcessedFtxNumber: req.ParentFtxNumber,
+		ChainConfig: ssz.ChainConfig{
+			L2MessageServiceAddress: req.L2MessageServiceAddress,
+			Coinbase:                req.Coinbase,
+			ChainID:                 req.ChainID,
+		},
+		Payloads: payloads,
 	}
 }
 

@@ -48,6 +48,9 @@ type Config struct {
 	ProverVersion string
 	// Mode selects the prover mode; empty defaults to backend.ProverModeFull.
 	Mode backend.ProverMode
+	// NativeRunnerBinPath is the native l2-execution-runner binary, required by
+	// dev-native mode.
+	NativeRunnerBinPath string
 }
 
 // failureResponseBody is used only when the filesystem adapter cannot read a
@@ -84,6 +87,9 @@ func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
 	var runnerOpts []jobadapter.RunnerOption
 	if cfg.Mode != "" {
 		runnerOpts = append(runnerOpts, jobadapter.WithMode(cfg.Mode))
+	}
+	if cfg.NativeRunnerBinPath != "" {
+		runnerOpts = append(runnerOpts, jobadapter.WithNativeRunnerBin(cfg.NativeRunnerBinPath))
 	}
 	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion, runnerOpts...)
 	if err != nil {
