@@ -3277,15 +3277,15 @@
         "section": true,
         "required": true,
         "default": null,
-        "description": "Pre RISC-V File-based prover request/response directories and switch-over settings.",
+        "description": "File-based prover request/response directories and switch-over settings.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
       "prover.blob-compression": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
@@ -3312,6 +3312,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.blob-compression.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3323,9 +3333,9 @@
         "replacement": null
       },
       "prover.execution": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
@@ -3349,6 +3359,26 @@
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3422,6 +3452,56 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.invalidity.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L2 execution RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3433,9 +3513,9 @@
         "replacement": null
       },
       "prover.new.blob-compression": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
@@ -3462,6 +3542,16 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.blob-compression.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3473,9 +3563,9 @@
         "replacement": null
       },
       "prover.new.execution": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
@@ -3499,6 +3589,26 @@
         "default": null,
         "description": "Directory the coordinator reads prover response files from.",
         "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3572,6 +3682,56 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.invalidity.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L2 execution RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3583,9 +3743,9 @@
         "replacement": null
       },
       "prover.new.proof-aggregation": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Proof aggregation prover request/response directories.",
         "example": null,
@@ -3612,6 +3772,106 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.proof-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.new.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3632,10 +3892,20 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.new.type": {
+        "type": "ProverType",
+        "section": false,
+        "required": false,
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.proof-aggregation": {
-        "type": "FileBasedProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Proof aggregation prover request/response directories.",
         "example": null,
@@ -3662,6 +3932,106 @@
         "deprecated": false,
         "replacement": null
       },
+      "prover.proof-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
       "prover.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3682,573 +4052,13 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover": {
-        "type": "RiscvProverToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "RISC-V prover request/response directories for execution, rollup, and aggregation proofs.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fork-name": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
-        "example": "amsterdam",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-enable-request-files-cleanup": {
-        "type": "Boolean",
+      "prover.type": {
+        "type": "ProverType",
         "section": false,
         "required": false,
-        "default": "false",
-        "description": "Whether to delete request files after their responses are processed. Effective only if the prover is in file-based transport",
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-inprogress-proving-suffix-pattern": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "\\.inprogress\\.prover.*",
-        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. Effective only if the prover is in file-based transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-inprogress-request-writing-suffix": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": ".inprogress_coordinator_writing",
-        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. Effective only if the prover is in file-based transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.l2-execution": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "L2 execution RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.l2-execution.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.l2-execution.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.l2-execution.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.l2-execution.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new": {
-        "type": "RiscvProverToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fork-name": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
-        "example": "amsterdam",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-enable-request-files-cleanup": {
-        "type": "Boolean",
-        "section": false,
-        "required": false,
-        "default": "false",
-        "description": "Whether to delete request files after their responses are processed. Effective only if the prover is in file-based transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-inprogress-proving-suffix-pattern": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "\\.inprogress\\.prover.*",
-        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress. Effective only if the prover is in file-based transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-inprogress-request-writing-suffix": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": ".inprogress_coordinator_writing",
-        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests. Effective only if the prover is in file-based transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.l2-execution": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "L2 execution RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.l2-execution.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.l2-execution.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.l2-execution.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.l2-execution.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.new": {
-        "type": "RiscvProverToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.polling-interval": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "PT15S",
-        "description": "Interval between scans of the prover response for new responses.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.polling-timeout": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "infinite",
-        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proving-system-version": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Version for the RISC-V proving system.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.restful-api-base-path": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "/api",
-        "description": "Base path the JSON API is served under the RESTful prover gateway service. (\"/api\" -> /api/health, /api/v1/...); \"\" or \"/\" serves the API at the root. Effective only if the prover is in RESTful transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.restful-api-version": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "v1",
-        "description": "Version of the JSON API served under the RESTful prover gateway service. Effective only if the prover is in RESTful transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.restful-endpoint": {
-        "type": "URL?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "URL endpoint of the RESTful prover gateway service. Effective only if the prover is in RESTful transport",
-        "example": "http://127.0.0.1:8090/",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Rollup RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup-aggregation": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Rollup aggregation RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup-aggregation.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup-aggregation.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup-aggregation.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup-aggregation.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.switch-block-number-inclusive": {
-        "type": "ULong?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
-        "example": "1000000",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.switch-block-timestamp": {
-        "type": "Instant?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
-        "example": "2024-01-01T00:00:00Z",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.polling-interval": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "PT15S",
-        "description": "Interval between scans of the prover response for new responses.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.polling-timeout": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "infinite",
-        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proving-system-version": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Version for the RISC-V proving system.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.restful-api-base-path": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "/api",
-        "description": "Base path the JSON API is served under the RESTful prover gateway service. (\"/api\" -> /api/health, /api/v1/...); \"\" or \"/\" serves the API at the root. Effective only if the prover is in RESTful transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.restful-api-version": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "v1",
-        "description": "Version of the JSON API served under the RESTful prover gateway service. Effective only if the prover is in RESTful transport",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.restful-endpoint": {
-        "type": "URL?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "URL endpoint of the RESTful prover gateway service. Effective only if the prover is in RESTful transport",
-        "example": "http://127.0.0.1:8090/",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Rollup RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup-aggregation": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Rollup aggregation RISC-V prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup-aggregation.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup-aggregation.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup-aggregation.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup-aggregation.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.file-based-folder-config": {
-        "type": "FileBasedProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Prover request/response directories for the file-based RISC-V prover.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.file-based-folder-config.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.file-based-folder-config.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.program-id": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Guest program identifier for the RISC-V prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.switch-block-number-inclusive": {
-        "type": "ULong?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
-        "example": "1000000",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.switch-block-timestamp": {
-        "type": "Instant?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
-        "example": "2024-01-01T00:00:00Z",
         "deprecated": false,
         "replacement": null
       },
