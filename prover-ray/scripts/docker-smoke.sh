@@ -24,6 +24,13 @@ trap cleanup EXIT
 
 mkdir -p "$WORK/requests"
 cp "$FIXTURE" "$WORK/requests/req.json"
+cat > "$WORK/config.toml" <<'TOML'
+version = "smoke"
+log_level = 4
+[execution]
+prover_mode = "dev-mock"
+requests_root_dir = "/data"
+TOML
 
 echo "==> dev-mock: turning a request into a response"
 # Make the bind mount readable/writable by the container as the caller.
@@ -38,7 +45,7 @@ $DOCKER run -d --name "$CONTAINER" \
     "${run_opts[@]}" \
     -v "$WORK:/data" \
     "$IMAGE" \
-    --requests-dir /data --mode dev-mock --prover-version smoke >/dev/null
+    --config /data/config.toml >/dev/null
 
 for _ in $(seq 1 30); do
     [ -f "$WORK/responses/req.json" ] && break

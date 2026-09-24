@@ -67,16 +67,20 @@ func TestDevMockSmoke(t *testing.T) {
 	assert.Equal(t, 1000501, int(start))
 }
 
-func TestRun_RequiresRequestsDir(t *testing.T) {
+func TestRun_RequiresConfig(t *testing.T) {
+	t.Setenv("CONFIG_FILE", "")
 	err := run([]string{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "requests-dir")
+	assert.Contains(t, err.Error(), "config")
 }
 
 func TestRun_RejectsInvalidMode(t *testing.T) {
-	err := run([]string{"--requests-dir", t.TempDir(), "--mode", "bogus"})
+	cfg := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(cfg, []byte(
+		"version = \"t\"\n[execution]\nprover_mode = \"bogus\"\nrequests_root_dir = \"/tmp\"\n"), 0o600))
+	err := run([]string{"--config", cfg})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid --mode")
+	assert.Contains(t, err.Error(), "invalid execution.prover_mode")
 }
 
 func drop(t *testing.T, root, name, fixture string) {

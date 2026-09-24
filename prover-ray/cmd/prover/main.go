@@ -1,6 +1,7 @@
 // Command prover runs the prover-ray backend against a filesystem request queue.
-// dev-mock and dev-zkvm are runnable today; partial and full still return their
-// blocker errors. dev-zkvm needs --native-runner-bin and --guest-elf.
+// Configuration is a TOML file, like the legacy prover: pass --config (or set
+// CONFIG_FILE). dev-mock and dev-zkvm are runnable today; partial and full still
+// return their blocker errors.
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,38 +26,42 @@ func main() {
 
 func run(args []string) error {
 	fs := flag.NewFlagSet("prover", flag.ContinueOnError)
-	requestsDir := fs.String("requests-dir", "",
-		"directory holding requests/, responses/, requests-done/ (required)")
-	proverVersion := fs.String("prover-version", "0.0.0-riscv",
-		"prover version echoed to the coordinator")
-	modeStr := fs.String("mode", string(backend.ProverModeDevMock),
-		"prover mode (dev-mock or dev-zkvm are runnable today)")
-	nativeRunnerBin := fs.String("native-runner-bin", "",
-		"path to the native l2-execution-runner binary (required for dev-zkvm)")
-	guestELF := fs.String("guest-elf", "",
-		"path to the l2-execution guest ELF (required for dev-zkvm)")
+	configPath := fs.String("config", "", "path to the TOML config file (or set CONFIG_FILE)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	if *requestsDir == "" {
-		return fmt.Errorf("--requests-dir is required")
+	path := *configPath
+	if path == "" {
+		path = os.Getenv("CONFIG_FILE")
 	}
-	mode := backend.ProverMode(*modeStr)
-	if !mode.Valid() {
-		return fmt.Errorf("invalid --mode %q", *modeStr)
+	if path == "" {
+		return fmt.Errorf("--config (or CONFIG_FILE) is required")
 	}
 
-	core, err := backend.New(backend.Config{Mode: mode, GuestELFPath: *guestELF})
+	cfg, err := config.NewConfigFromFile(path)
+	if err != nil {
+		return err
+	}
+	if cfg.LogLevel >= int(logrus.PanicLevel) && cfg.LogLevel <= int(logrus.TraceLevel) {
+		logrus.SetLevel(logrus.Level(cfg.LogLevel))
+	}
+
+	mode := backend.ProverMode(cfg.Execution.ProverMode)
+	if !mode.Valid() {
+		return fmt.Errorf("invalid execution.prover_mode %q", cfg.Execution.ProverMode)
+	}
+
+	core, err := backend.New(backend.Config{Mode: mode, GuestELFPath: cfg.Execution.GuestELF})
 	if err != nil {
 		return fmt.Errorf("building prover core: %w", err)
 	}
 
 	adapter, err := filesystem.New(filesystem.Config{
-		RequestsRootDir:     *requestsDir,
-		ProverVersion:       *proverVersion,
+		RequestsRootDir:     cfg.Execution.RequestsRootDir,
+		ProverVersion:       cfg.Version,
 		Mode:                mode,
-		NativeRunnerBinPath: *nativeRunnerBin,
+		NativeRunnerBinPath: cfg.Execution.NativeRunnerBin,
 	}, core)
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)
@@ -63,7 +69,7 @@ func run(args []string) error {
 
 	if mode.IsDev() {
 		logrus.Warnf("prover-ray running in DEV mode %q against %s: responses are NOT real proofs",
-			mode, *requestsDir)
+			mode, cfg.Execution.RequestsRootDir)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

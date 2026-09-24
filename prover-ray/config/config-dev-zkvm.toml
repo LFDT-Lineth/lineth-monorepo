@@ -1,0 +1,10 @@
+# dev-zkvm: real public inputs from the native oracle, cross-checked against the
+# guest run under ZkC Execute. Paths point at the artifacts bundled in the image.
+version = "0.0.0-riscv"
+log_level = 4
+
+[execution]
+prover_mode = "dev-zkvm"
+requests_root_dir = "/opt/linea/prover-ray/requests"
+native_runner_bin = "/opt/linea/prover-ray/l2-execution-runner"
+guest_elf = "/opt/linea/prover-ray/evm_execution_guest"

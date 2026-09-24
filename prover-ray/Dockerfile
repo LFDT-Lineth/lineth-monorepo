@@ -90,9 +90,11 @@ COPY --from=zig-builder /riscv-guests/l2-execution/zig-out/bin/evm_execution_gue
 ENV PATH="/opt/linea/prover-ray:${PATH}"
 WORKDIR /opt/linea/prover-ray
 
-# Mode is a runtime choice. Default: dev-mock (needs nothing extra). For dev-zkvm:
-#   docker run ... <image> --requests-dir /data --mode dev-zkvm \
-#     --native-runner-bin /opt/linea/prover-ray/l2-execution-runner \
-#     --guest-elf /opt/linea/prover-ray/evm_execution_guest
+# Configuration is a TOML file, like the legacy prover. No default is baked in
+# (fail loudly rather than run a wrong config): mount one at CONFIG_FILE. The
+# prover reads CONFIG_FILE directly, so no shell is needed (distroless has none).
+# Samples: prover-ray/config/config-dev-mock.toml, config-dev-zkvm.toml.
+#   docker run -v ./config-dev-zkvm.toml:/opt/linea/prover-ray/config/config.toml \
+#              -v ./requests:/opt/linea/prover-ray/requests <image>
+ENV CONFIG_FILE="/opt/linea/prover-ray/config/config.toml"
 ENTRYPOINT ["/opt/linea/prover-ray/prover"]
-CMD ["--requests-dir", "/opt/linea/prover-ray/requests", "--mode", "dev-mock"]
