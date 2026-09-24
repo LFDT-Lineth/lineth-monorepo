@@ -702,7 +702,9 @@ func recoverInputRootGnark(
 }
 
 // recoverRootGnark mirrors [Branch.RecoverRoot] for aux-free running trees.
-func recoverRootGnark(api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable) poseidon2.KoalagnarkOctuplet {
+func recoverRootGnark(
+	api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable,
+) poseidon2.KoalagnarkOctuplet {
 	ancestor := branch.Leaf
 	n := len(branch.Siblings)
 	for i := n - 1; i >= 0; i-- {
@@ -739,7 +741,9 @@ func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) poseido
 
 // hashAuxPairGnark mirrors [hashAuxPair]: rows are absorbed even-first, so the
 // order depends on the (variable) position bit and is resolved element-wise.
-func hashAuxPairGnark(api *circuit.KoalaBearAPI, pair GnarkRowPair, isOdd frontend.Variable) poseidon2.KoalagnarkOctuplet {
+func hashAuxPairGnark(
+	api *circuit.KoalaBearAPI, pair GnarkRowPair, isOdd frontend.Variable,
+) poseidon2.KoalagnarkOctuplet {
 	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
 	absorbLeafHeaderGnark(api, h, len(pair[0].Base), len(pair[0].Ext))
 	first := rowOpeningElementsGnark(pair[0])
