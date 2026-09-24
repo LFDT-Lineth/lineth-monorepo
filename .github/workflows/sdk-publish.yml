@@ -80,7 +80,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts --trust-lockfile"
 
       - name: Build sdk-core
         run: pnpm -F @lfdt-lineth/sdk-core run build
@@ -209,7 +209,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts --trust-lockfile"
 
       - name: Verify sdk-core dependency is published on npm
         run: |

@@ -150,7 +150,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts --trust-lockfile"
 
       - name: Lint
         env:

@@ -43,7 +43,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
+          pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts --trust-lockfile'
       - name: Staterecovery - Build plugin shadowJar
         run: |
           ./gradlew linea-besu:plugins:state-recovery:besu-plugin:shadowJar
