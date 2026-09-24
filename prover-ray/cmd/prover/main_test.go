@@ -69,7 +69,7 @@ func TestRun_RejectsInvalidMode(t *testing.T) {
 		"version = \"t\"\n[execution]\nprover_mode = \"bogus\"\nrequests_root_dir = \"/tmp\"\n"), 0o600))
 	err := run([]string{"--config", cfg})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid execution.prover_mode")
+	assert.Contains(t, err.Error(), "invalid prover_mode")
 }
 
 func devMockConfig(t *testing.T, dir string) string {

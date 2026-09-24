@@ -8,16 +8,20 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config is the top-level prover-ray configuration. It follows the legacy
-// prover's layout: top-level metadata plus a section per proof pipeline. Only
-// [execution] is wired today.
+// Config is the top-level prover-ray configuration: top-level metadata plus a
+// section per proof pipeline, like the legacy prover. [execution] is required;
+// [rollup] and [aggregation] are optional (watched only when configured).
 type Config struct {
 	// Version is echoed to the coordinator as proverVersion.
 	Version string `mapstructure:"version"`
 	// LogLevel is a logrus level (0=panic … 6=trace); 4 is info.
 	LogLevel int `mapstructure:"log_level"`
-	// Execution configures the L2-execution proof pipeline.
+	// Execution configures the L2-execution pipeline.
 	Execution Execution `mapstructure:"execution"`
+	// Rollup configures the rollup (compression) pipeline.
+	Rollup Pipeline `mapstructure:"rollup"`
+	// Aggregation configures the aggregation pipeline.
+	Aggregation Pipeline `mapstructure:"aggregation"`
 }
 
 // Execution holds the L2-execution pipeline settings.
@@ -30,6 +34,18 @@ type Execution struct {
 	NativeRunnerBin string `mapstructure:"native_runner_bin"`
 	// GuestELF is the l2-execution guest ELF, required by dev-zkvm.
 	GuestELF string `mapstructure:"guest_elf"`
+}
+
+// Pipeline holds the rollup and aggregation pipeline settings (no guest, so no
+// native runner or ELF).
+type Pipeline struct {
+	ProverMode      string `mapstructure:"prover_mode"`
+	RequestsRootDir string `mapstructure:"requests_root_dir"`
+}
+
+// Configured reports whether the pipeline is set (both fields present).
+func (p Pipeline) Configured() bool {
+	return p.ProverMode != "" || p.RequestsRootDir != ""
 }
 
 // NewConfigFromFile reads and validates a TOML config. Like the legacy prover it
@@ -60,6 +76,11 @@ func (c *Config) validate() error {
 	}
 	if c.Execution.RequestsRootDir == "" {
 		return fmt.Errorf("execution.requests_root_dir must be set")
+	}
+	for name, p := range map[string]Pipeline{"rollup": c.Rollup, "aggregation": c.Aggregation} {
+		if p.Configured() && (p.ProverMode == "" || p.RequestsRootDir == "") {
+			return fmt.Errorf("%s: prover_mode and requests_root_dir must be set together", name)
+		}
 	}
 	return nil
 }

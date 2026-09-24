@@ -40,72 +40,119 @@ func run(args []string) error {
 	return runAdapter(args)
 }
 
-// loadConfig loads the config (--config or CONFIG_FILE), sets the log level, and
-// validates the mode. It also returns the resolved path, which the adapter passes
-// to the worker it spawns.
-func loadConfig(configPath string) (*config.Config, backend.ProverMode, string, error) {
+// loadConfig loads the config (--config or CONFIG_FILE) and sets the log level.
+// It returns the resolved path, which the adapter passes to the provers it spawns.
+func loadConfig(configPath string) (*config.Config, string, error) {
 	path := configPath
 	if path == "" {
 		path = os.Getenv("CONFIG_FILE")
 	}
 	if path == "" {
-		return nil, "", "", fmt.Errorf("--config (or CONFIG_FILE) is required")
+		return nil, "", fmt.Errorf("--config (or CONFIG_FILE) is required")
 	}
 	cfg, err := config.NewConfigFromFile(path)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 	if cfg.LogLevel >= int(logrus.PanicLevel) && cfg.LogLevel <= int(logrus.TraceLevel) {
 		logrus.SetLevel(logrus.Level(cfg.LogLevel))
 	}
-	mode := backend.ProverMode(cfg.Execution.ProverMode)
-	if !mode.Valid() {
-		return nil, "", "", fmt.Errorf("invalid execution.prover_mode %q", cfg.Execution.ProverMode)
-	}
-	return cfg, mode, path, nil
+	return cfg, path, nil
 }
 
-// buildRunner builds the request-to-response runner backed by an in-process Core.
-func buildRunner(cfg *config.Config, mode backend.ProverMode) (*jobadapter.Runner, error) {
-	core, err := backend.New(backend.Config{Mode: mode, GuestELFPath: cfg.Execution.GuestELF})
+// pipeline is one proof type's resolved config. priority is the queue tiebreaker
+// (execution 0, rollup 1, aggregation 2).
+type pipeline struct {
+	mode            backend.ProverMode
+	requestsRootDir string
+	nativeRunnerBin string
+	guestELF        string
+	priority        int
+}
+
+// proofTypes lists the proof types in priority order (lower priority value first).
+var proofTypes = []backend.ProofType{
+	backend.ProofTypeL2Execution,
+	backend.ProofTypeRollup,
+	backend.ProofTypeRollupAggregation,
+}
+
+// pipelineFor resolves the config for a proof type. ok is false when the pipeline
+// is not configured (rollup and aggregation are optional).
+func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) {
+	switch t {
+	case backend.ProofTypeL2Execution:
+		return pipeline{
+			mode:            backend.ProverMode(cfg.Execution.ProverMode),
+			requestsRootDir: cfg.Execution.RequestsRootDir,
+			nativeRunnerBin: cfg.Execution.NativeRunnerBin,
+			guestELF:        cfg.Execution.GuestELF,
+			priority:        0,
+		}, true
+	case backend.ProofTypeRollup:
+		if !cfg.Rollup.Configured() {
+			return pipeline{}, false
+		}
+		return pipeline{mode: backend.ProverMode(cfg.Rollup.ProverMode), requestsRootDir: cfg.Rollup.RequestsRootDir, priority: 1}, true
+	case backend.ProofTypeRollupAggregation:
+		if !cfg.Aggregation.Configured() {
+			return pipeline{}, false
+		}
+		return pipeline{mode: backend.ProverMode(cfg.Aggregation.ProverMode), requestsRootDir: cfg.Aggregation.RequestsRootDir, priority: 2}, true
+	}
+	return pipeline{}, false
+}
+
+// buildRunner builds the request-to-response runner for one pipeline, backed by an
+// in-process Core.
+func buildRunner(version string, p pipeline) (*jobadapter.Runner, error) {
+	core, err := backend.New(backend.Config{Mode: p.mode, GuestELFPath: p.guestELF})
 	if err != nil {
 		return nil, fmt.Errorf("building prover core: %w", err)
 	}
-	opts := []jobadapter.RunnerOption{jobadapter.WithMode(mode)}
-	if cfg.Execution.NativeRunnerBin != "" {
-		opts = append(opts, jobadapter.WithNativeRunnerBin(cfg.Execution.NativeRunnerBin))
+	opts := []jobadapter.RunnerOption{jobadapter.WithMode(p.mode)}
+	if p.nativeRunnerBin != "" {
+		opts = append(opts, jobadapter.WithNativeRunnerBin(p.nativeRunnerBin))
 	}
-	return jobadapter.NewRunner(core, cfg.Version, opts...)
+	return jobadapter.NewRunner(core, version, opts...)
 }
 
-// runAdapter watches the request queue and spawns a "prover prove" worker for
-// each request.
+// runAdapter watches one queue per configured pipeline and spawns a "prover
+// prove" child for each request.
 func runAdapter(args []string) error {
 	fs := flag.NewFlagSet("prover", flag.ContinueOnError)
 	configPath := fs.String("config", "", "path to the TOML config file (or set CONFIG_FILE)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cfg, mode, path, err := loadConfig(*configPath)
+	cfg, path, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
+
+	var queues []filesystem.Queue
+	for _, t := range proofTypes {
+		p, ok := pipelineFor(cfg, t)
+		if !ok {
+			continue
+		}
+		if !p.mode.Valid() {
+			return fmt.Errorf("invalid prover_mode %q for %s", p.mode, t)
+		}
+		queues = append(queues, filesystem.Queue{RequestsRootDir: p.requestsRootDir, Priority: p.priority})
+		if p.mode.IsDev() {
+			logrus.Warnf("prover-ray %s in DEV mode %q against %s: responses are NOT real proofs",
+				t, p.mode, p.requestsRootDir)
+		}
+	}
+
 	self, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("finding prover binary: %w", err)
 	}
-
-	adapter, err := filesystem.New(
-		filesystem.Config{RequestsRootDir: cfg.Execution.RequestsRootDir},
-		spawnProver(self, path),
-	)
+	adapter, err := filesystem.New(filesystem.Config{Queues: queues}, spawnProver(self, path))
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)
-	}
-
-	if mode.IsDev() {
-		logrus.Warnf("prover-ray running in DEV mode %q against %s: responses are NOT real proofs",
-			mode, cfg.Execution.RequestsRootDir)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -145,11 +192,22 @@ func runProve(args []string) error {
 	if *inPath == "" || *outPath == "" {
 		return fmt.Errorf("--in and --out are required")
 	}
-	cfg, mode, _, err := loadConfig(*configPath)
+	cfg, _, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
-	runner, err := buildRunner(cfg, mode)
+
+	// Proof type comes from the request filename; it selects the pipeline config.
+	name := filepath.Base(*inPath)
+	proofType := jobadapter.ProofTypeForName(name)
+	p, ok := pipelineFor(cfg, proofType)
+	if !ok {
+		return fmt.Errorf("proof type %q is not configured", proofType)
+	}
+	if !p.mode.Valid() {
+		return fmt.Errorf("invalid prover_mode %q for %s", p.mode, proofType)
+	}
+	runner, err := buildRunner(cfg.Version, p)
 	if err != nil {
 		return err
 	}
@@ -158,12 +216,10 @@ func runProve(args []string) error {
 	if err != nil {
 		return fmt.Errorf("reading request file: %w", err)
 	}
-	// Proof type comes from the request filename.
-	name := filepath.Base(*inPath)
 	id := strings.TrimSuffix(name, filepath.Ext(name))
 
 	result := runner.Run(context.Background(),
-		jobadapter.RunRequest{ID: id, Type: jobadapter.ProofTypeForName(name), Body: body})
+		jobadapter.RunRequest{ID: id, Type: proofType, Body: body})
 
 	data, err := json.MarshalIndent(result.ResponseBody, "", "  ")
 	if err != nil {
