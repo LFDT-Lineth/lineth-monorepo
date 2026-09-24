@@ -337,6 +337,15 @@ test "non-empty execution requests are rejected" {
     try plan.expectReject(arena.allocator(), error.ExecutionRequestsNotSupported);
 }
 
+test "blob transaction fields are rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const hashes = [_][32]u8{@splat(1)};
+    const blocks = [_]conflation_plan.BlockPlan{ .{}, .{ .versioned_hashes = &hashes } };
+    const plan = conflation_plan.ConflationPlan{ .blocks = &blocks };
+    try plan.expectReject(arena.allocator(), error.BlobTransactionsNotSupported);
+}
+
 test "non-empty withdrawals are rejected" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
