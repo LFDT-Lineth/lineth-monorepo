@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Fix code licence header (#4009)
+## [2.3.0] - 2026-09-23
+
 ### 🚀 Features
 
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
@@ -11,6 +16,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [2.2.0] - 2026-08-21
 
 ### 🚀 Features
