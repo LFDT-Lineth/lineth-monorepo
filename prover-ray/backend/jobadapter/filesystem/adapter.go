@@ -49,7 +49,7 @@ type Config struct {
 	// Mode selects the prover mode; empty defaults to backend.ProverModeFull.
 	Mode backend.ProverMode
 	// NativeRunnerBinPath is the native l2-execution-runner binary, required by
-	// dev-native mode.
+	// dev-zkvm mode.
 	NativeRunnerBinPath string
 }
 

@@ -95,8 +95,12 @@ type Result struct {
 	JobID  string
 	Status ResultStatus
 
-	// ProofBytes is the serialized wiop.Proof. Wire format not yet decided
-	// (wiki backend-overview.md §6); nil when Status is ResultStatusFailed.
+	// ProofBytes is the proof output for the mode. For full it is the serialized
+	// wiop.Proof (wire format not yet decided, wiki backend-overview.md §6); for
+	// dev-zkvm it is the guest's 0x0003 wire output (2-byte schema id +
+	// keccak256(SSZ(public inputs))) from the ZkC Execute run, which the runner
+	// cross-checks against the native oracle. nil when Status is
+	// ResultStatusFailed.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs

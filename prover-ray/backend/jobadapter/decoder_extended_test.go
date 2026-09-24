@@ -17,7 +17,7 @@ func repeatBytes(n int, b byte) []byte {
 }
 
 // TestDecodeL2ExecutionRequest_ExtendedFields checks the envelope fields and the
-// structured forced transactions the extended (dev-native) path needs.
+// structured forced transactions the extended (dev-zkvm) path needs.
 func TestDecodeL2ExecutionRequest_ExtendedFields(t *testing.T) {
 	data, err := os.ReadFile(referenceL2ExecutionRequest)
 	require.NoError(t, err)

@@ -1,4 +1,4 @@
-// Package nativerunner runs the native l2-execution-runner (the dev-native
+// Package nativerunner runs the native l2-execution-runner (the dev-zkvm
 // oracle) on an extended (0x0002) input and parses its --json output into the
 // guest's real public inputs and revealed preimage arrays.
 package nativerunner
@@ -27,24 +27,42 @@ type Output struct {
 // Run writes the extended input to a temp file, runs `<binPath> <file> --json`,
 // and parses stdout. binPath is the native l2-execution-runner binary.
 func Run(ctx context.Context, binPath string, extendedInput []byte) (Output, error) {
+	out, err := run(ctx, binPath, extendedInput, "--json")
+	if err != nil {
+		return Output{}, err
+	}
+	return Parse(out)
+}
+
+// RunSSZ runs `<binPath> <file> --ssz` and returns the raw 0x0003 wire output
+// (the 2-byte schema id followed by keccak256(SSZ(public inputs))). It is
+// byte-identical to what the guest writes to guest_output, so dev-zkvm compares
+// it against the ZkC Execute output to cross-check the native oracle.
+func RunSSZ(ctx context.Context, binPath string, extendedInput []byte) ([]byte, error) {
+	return run(ctx, binPath, extendedInput, "--ssz")
+}
+
+// run writes the extended input to a temp file and runs the native runner with
+// the given output flag, returning its stdout.
+func run(ctx context.Context, binPath string, extendedInput []byte, flag string) ([]byte, error) {
 	tmp, err := os.CreateTemp("", "l2-exec-input-*.ssz")
 	if err != nil {
-		return Output{}, fmt.Errorf("creating temp input: %w", err)
+		return nil, fmt.Errorf("creating temp input: %w", err)
 	}
 	defer os.Remove(tmp.Name())
 	if _, err := tmp.Write(extendedInput); err != nil {
 		tmp.Close()
-		return Output{}, fmt.Errorf("writing temp input: %w", err)
+		return nil, fmt.Errorf("writing temp input: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
-		return Output{}, fmt.Errorf("closing temp input: %w", err)
+		return nil, fmt.Errorf("closing temp input: %w", err)
 	}
 
-	out, err := exec.CommandContext(ctx, binPath, tmp.Name(), "--json").Output()
+	out, err := exec.CommandContext(ctx, binPath, tmp.Name(), flag).Output()
 	if err != nil {
-		return Output{}, fmt.Errorf("running native runner %q: %w", binPath, err)
+		return nil, fmt.Errorf("running native runner %q: %w", binPath, err)
 	}
-	return Parse(out)
+	return out, nil
 }
 
 // jsonOutput mirrors the runner's --json shape: getZkL2ExecutionProofV1.response

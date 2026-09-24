@@ -43,7 +43,8 @@ func TestProve_DevMock_ReturnsPlaceholder(t *testing.T) {
 }
 
 func TestProve_UnwiredModes_ReturnBlockerError(t *testing.T) {
-	for _, mode := range []ProverMode{ProverModeDevNative, ProverModeDevZkVM, ProverModePartial} {
+	// dev-zkvm's Core.Prove runs the guest under Execute, so it is not here.
+	for _, mode := range []ProverMode{ProverModePartial} {
 		c := &Core{mode: mode}
 		result := c.Prove(context.Background(), Job{ID: "job"})
 		assert.Equal(t, ResultStatusFailed, result.Status, mode)

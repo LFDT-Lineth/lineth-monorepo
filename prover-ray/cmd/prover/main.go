@@ -1,6 +1,6 @@
 // Command prover runs the prover-ray backend against a filesystem request queue.
-// Only dev-mock mode is runnable today; the guest-running modes need circuit-bin
-// and guest-ELF flags added here once wired.
+// dev-mock and dev-zkvm are runnable today; partial and full still return their
+// blocker errors. dev-zkvm needs --native-runner-bin and --guest-elf.
 package main
 
 import (
@@ -29,9 +29,11 @@ func run(args []string) error {
 	proverVersion := fs.String("prover-version", "0.0.0-riscv",
 		"prover version echoed to the coordinator")
 	modeStr := fs.String("mode", string(backend.ProverModeDevMock),
-		"prover mode (dev-mock or dev-native are runnable today)")
+		"prover mode (dev-mock or dev-zkvm are runnable today)")
 	nativeRunnerBin := fs.String("native-runner-bin", "",
-		"path to the native l2-execution-runner binary (required for dev-native)")
+		"path to the native l2-execution-runner binary (required for dev-zkvm)")
+	guestELF := fs.String("guest-elf", "",
+		"path to the l2-execution guest ELF (required for dev-zkvm)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -44,7 +46,7 @@ func run(args []string) error {
 		return fmt.Errorf("invalid --mode %q", *modeStr)
 	}
 
-	core, err := backend.New(backend.Config{Mode: mode})
+	core, err := backend.New(backend.Config{Mode: mode, GuestELFPath: *guestELF})
 	if err != nil {
 		return fmt.Errorf("building prover core: %w", err)
 	}

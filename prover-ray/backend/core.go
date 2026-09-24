@@ -8,11 +8,13 @@ import (
 	"os"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
+	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/risc5"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,6 +23,14 @@ var ErrNotImplemented = errors.New("not yet implemented")
 
 // wiopSystemName names the wiop constraint system built in [New].
 const wiopSystemName = "lineth-riscv"
+
+// guestOutputMemory is the ZkC Execute output-map key carrying the guest's
+// wire output (confirmed by the Stage 0 spike, see zkc_execute_spike_test.go).
+const guestOutputMemory = "guest_output"
+
+// guestOutputSize is the fixed 0x0003 wire-output length: a 2-byte schema id
+// plus a 32-byte keccak256(SSZ(public inputs)).
+const guestOutputSize = 34
 
 // Core is the shared proving kernel. Initialize once via [New]; it is
 // safe for concurrent use after that; each [Prove] call gets its own
@@ -32,6 +42,10 @@ type Core struct {
 	driver  *zkcdriver.ZkCDriver
 	program elfmapping.Program
 	decoded predecoding.DecodedProgram
+
+	// binaryFile is the compiled R5 arithmetization, used by dev-zkvm to run the
+	// guest under ZkC Execute (the no-trace path). nil outside dev-zkvm.
+	binaryFile *zkcdriver.BinaryFile
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -49,9 +63,16 @@ func New(cfg Config) (*Core, error) {
 		return nil, fmt.Errorf("invalid prover mode %q", cfg.Mode)
 	}
 
-	// dev-mock loads no circuit bin or guest ELF.
+	// dev-mock runs no guest, so it loads no circuit bin or guest ELF.
 	if !mode.needsArtifacts() {
 		return &Core{cfg: cfg, mode: mode}, nil
+	}
+
+	// dev-zkvm runs the guest under ZkC Execute (no trace, no AIR), so it needs
+	// the compiled arithmetization and the guest ELF but not the wiop system,
+	// driver, or public-output columns the proving modes build.
+	if mode == ProverModeDevZkVM {
+		return newDevZkVM(cfg, mode)
 	}
 
 	binFile, err := os.Open(cfg.CircuitBinPath)
@@ -102,16 +123,48 @@ func New(cfg Config) (*Core, error) {
 	}, nil
 }
 
+// newDevZkVM builds an Execute-only Core: the compiled R5 arithmetization plus
+// the predecoded guest ELF, without the wiop system, driver, or AIR the proving
+// modes construct. dev-zkvm uses [zkcdriver.BinaryFile.Execute], the no-trace
+// path, so those are unnecessary.
+func newDevZkVM(cfg Config, mode ProverMode) (*Core, error) {
+	binf, err := embedded.CompiledBinaryFile()
+	if err != nil {
+		return nil, fmt.Errorf("compiling R5 arithmetization: %w", err)
+	}
+
+	elfFile, err := os.Open(cfg.GuestELFPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
+	}
+	defer elfFile.Close()
+
+	program, err := elfmapping.Load(elfFile)
+	if err != nil {
+		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
+	}
+	decoded, err := predecoding.Predecode(program)
+	if err != nil {
+		return nil, fmt.Errorf("predecoding guest ELF %q: %w", cfg.GuestELFPath, err)
+	}
+
+	return &Core{
+		cfg:        cfg,
+		mode:       mode,
+		program:    program,
+		decoded:    decoded,
+		binaryFile: binf,
+	}, nil
+}
+
 // Prove runs a single [Job] and returns its [Result]. Each mode is dispatched
 // here; modes that cannot run yet return their blocker error.
 func (c *Core) Prove(ctx context.Context, job Job) Result {
 	switch c.mode {
 	case ProverModeDevMock:
 		return c.proveDevMock(job)
-	case ProverModeDevNative:
-		return failResult(job.ID, fmt.Errorf("dev-native mode not wired yet (plan Stage 3): %w", ErrNotImplemented))
 	case ProverModeDevZkVM:
-		return failResult(job.ID, fmt.Errorf("dev-zkvm mode not wired yet (plan Stage 4): %w", ErrNotImplemented))
+		return c.proveDevZkVM(job)
 	case ProverModePartial:
 		return failResult(job.ID, fmt.Errorf("partial mode not runnable yet, memory-gated (plan Stage 8): %w", ErrNotImplemented))
 	case ProverModeFull:
@@ -129,6 +182,62 @@ func (c *Core) proveDevMock(job Job) Result {
 		Status:     ResultStatusOK,
 		ProofBytes: DevMarkerProof(ProverModeDevMock),
 	}
+}
+
+// proveDevZkVM runs the guest under ZkC Execute and returns its 0x0003 wire
+// output as [Result.ProofBytes], so the runner can cross-check it against the
+// native oracle. It runs no real proof; Payload is the whole extended (0x0002)
+// input, the same bytes the native runner consumes.
+func (c *Core) proveDevZkVM(job Job) Result {
+	inputs, err := c.encodeGuestInputs(job)
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
+	}
+
+	guestOutput, err := executeGuest(c.binaryFile, inputs)
+	if err != nil {
+		return failResult(job.ID, err)
+	}
+
+	return Result{
+		JobID:      job.ID,
+		Status:     ResultStatusOK,
+		ProofBytes: guestOutput,
+	}
+}
+
+// executeGuest runs the guest under ZkC Execute (the no-trace path) and returns
+// its validated 0x0003 wire output.
+func executeGuest(binf *zkcdriver.BinaryFile, inputs map[string][]byte) ([]byte, error) {
+	output, errs := binf.Execute(inputs)
+	return classifyGuestOutput(output, errs)
+}
+
+// classifyGuestOutput turns a ZkC Execute result into either the guest's
+// validated 0x0003 output or an error that distinguishes a guest block rejection
+// (a recognized [vm.Failure], the guest's own exit on an invalid block) from an
+// internal VM failure (a prover-side bug). A guest that rejects the block writes
+// no output, so a missing or malformed guest_output is also a rejection.
+func classifyGuestOutput(output map[string][]byte, errs []error) ([]byte, error) {
+	if len(errs) > 0 {
+		var failure *vm.Failure
+		if errors.As(errors.Join(errs...), &failure) {
+			return nil, fmt.Errorf("guest rejected the block (invalid): %s", failure.Message)
+		}
+		return nil, fmt.Errorf("guest VM execution failed: %w", errors.Join(errs...))
+	}
+
+	out, ok := output[guestOutputMemory]
+	if !ok {
+		return nil, fmt.Errorf("guest wrote no %s output (block likely invalid)", guestOutputMemory)
+	}
+	if len(out) != guestOutputSize {
+		return nil, fmt.Errorf("guest output is %d bytes, want %d", len(out), guestOutputSize)
+	}
+	if out[0] != 0x00 || out[1] != 0x03 {
+		return nil, fmt.Errorf("guest output schema id is 0x%04x, want 0x0003", uint16(out[0])<<8|uint16(out[1]))
+	}
+	return out, nil
 }
 
 // proveFull is the real proving path; it is blocked at SerializeProof today.
@@ -162,6 +271,15 @@ func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
 	}
+	return c.encodeGuestInputs(job)
+}
+
+// encodeGuestInputs converts a Job's Payload into the guest and memory inputs
+// ZkC expects, without the proving-path single-block check. dev-zkvm passes the
+// whole extended (0x0002) input and lets the guest conflate the range; a
+// conflation disagreement surfaces as a cross-check failure, not silent
+// corruption.
+func (c *Core) encodeGuestInputs(job Job) (map[string][]byte, error) {
 	dataBlobs, err := elfmapping.NewData(
 		elfmapping.DefaultInputOrigin,
 		decodePayload(job),

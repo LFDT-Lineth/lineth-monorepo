@@ -7,6 +7,7 @@
 package jobadapter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -40,7 +41,7 @@ func WithMode(m backend.ProverMode) RunnerOption {
 }
 
 // WithNativeRunnerBin sets the path to the native l2-execution-runner binary,
-// required by dev-native mode.
+// required by dev-zkvm mode.
 func WithNativeRunnerBin(path string) RunnerOption {
 	return func(r *Runner) { r.nativeRunnerBin = path }
 }
@@ -127,10 +128,10 @@ func (r *Runner) runL2Execution(ctx context.Context, runReq RunRequest) RunResul
 		return failedRunResult(runReq.ID, FailureCodeInvalidInput, err)
 	}
 
-	// dev-native runs the real guest logic via the native runner over the whole
-	// request (all payloads, forced transactions included).
-	if r.mode == backend.ProverModeDevNative {
-		return r.runL2ExecutionNative(ctx, runReq, req)
+	// dev-zkvm gets its real public inputs from the native oracle and the guest's
+	// commitment from ZkC Execute, then cross-checks the two.
+	if r.mode == backend.ProverModeDevZkVM {
+		return r.runL2ExecutionZkVM(ctx, runReq, req)
 	}
 
 	// dev-mock runs no guest, so it accepts ranges and forced transactions. The
@@ -221,19 +222,50 @@ func (r *Runner) runAggregation(ctx context.Context, runReq RunRequest) RunResul
 	}
 }
 
-// runL2ExecutionNative builds the extended (0x0002) input from the whole request,
-// runs the native l2-execution-runner, and shapes the response from its real
-// public inputs and revealed arrays. No proof is produced (dev marker only).
-func (r *Runner) runL2ExecutionNative(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
+// runL2ExecutionZkVM shapes the response from the native oracle (real public
+// inputs and revealed arrays) and additionally runs the guest under ZkC Execute,
+// asserting the two commit to the same public inputs: the guest's ZkC
+// guest_output must equal the native runner's --ssz output byte for byte. A
+// mismatch means the native oracle and the real prover-to-guest path disagree,
+// so the response is refused.
+func (r *Runner) runL2ExecutionZkVM(ctx context.Context, runReq RunRequest, req *L2ExecutionRequest) RunResult {
 	if r.nativeRunnerBin == "" {
 		return failedRunResult(runReq.ID, FailureCodeInternalError,
-			fmt.Errorf("dev-native mode requires a native runner binary path"))
+			fmt.Errorf("dev-zkvm mode requires a native runner binary path"))
 	}
 	extended := ssz.EncodeExtendedInput(buildExtendedInput(req))
+
+	// Native oracle: the response fields (--json) and its commitment (--ssz).
 	out, err := nativerunner.Run(ctx, r.nativeRunnerBin, extended)
 	if err != nil {
 		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
 	}
+	nativeCommitment, err := nativerunner.RunSSZ(ctx, r.nativeRunnerBin, extended)
+	if err != nil {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, err)
+	}
+
+	// Real prover-to-guest path: run the guest under ZkC Execute for its commitment.
+	startBlock := req.Payloads[0].BlockNumber
+	endBlock := req.Payloads[len(req.Payloads)-1].BlockNumber
+	result := r.prover.Prove(ctx, backend.Job{
+		ID:         runReq.ID,
+		Type:       runReq.Type,
+		StartBlock: startBlock,
+		EndBlock:   endBlock,
+		Payload:    extended,
+	})
+	if result.Status != backend.ResultStatusOK {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, proverErr(result))
+	}
+
+	// The guest's ZkC commitment (Result.ProofBytes) must equal the native oracle's.
+	if !bytes.Equal(result.ProofBytes, nativeCommitment) {
+		return failedRunResult(runReq.ID, FailureCodeInternalError, fmt.Errorf(
+			"dev-zkvm cross-check failed: guest commitment %x != native commitment %x",
+			result.ProofBytes, nativeCommitment))
+	}
+
 	return RunResult{
 		ResponseBody: newExecutionResponseFromNative(out, r.responseVersion(), req.ProgramVk),
 		Status:       RunStatusSuccess,

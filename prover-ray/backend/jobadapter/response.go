@@ -68,14 +68,15 @@ func newExecutionResponse(
 }
 
 // newExecutionResponseFromNative builds a response from the native runner's
-// output (dev-native): real public inputs and revealed preimage arrays, a marker
-// proof, and the echoed programVk.
+// output (dev-zkvm): real public inputs and revealed preimage arrays, a
+// placeholder marker proof (dev-zkvm produces no real proof), and the echoed
+// programVk.
 func newExecutionResponseFromNative(
 	out nativerunner.Output, proverVersion string, programVk []byte,
 ) executionResponse {
 	return executionResponse{
 		ProverVersion:     proverVersion,
-		ProofHex:          hexBytes(backend.DevMarkerProof(backend.ProverModeDevNative)),
+		ProofHex:          hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
 		StartBlockNumber:  out.StartBlockNumber,
 		PublicInputs:      publicInputs(out.PublicInputs),
 		L2L1Messages:      hexHashList(out.L2L1Messages),

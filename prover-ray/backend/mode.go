@@ -8,10 +8,9 @@ const (
 	// ProverModeDevMock runs no guest and returns a placeholder response. Needs
 	// no guest ELF or circuit bin.
 	ProverModeDevMock ProverMode = "dev-mock"
-	// ProverModeDevNative fills fields from a native guest build; not wired yet.
-	ProverModeDevNative ProverMode = "dev-native"
-	// ProverModeDevZkVM runs the guest under ZkC Execute and cross-checks it
-	// against the native fields; not wired yet.
+	// ProverModeDevZkVM runs the guest under ZkC Execute for its real public
+	// inputs (via the native oracle) and cross-checks the guest's commitment
+	// against that oracle.
 	ProverModeDevZkVM ProverMode = "dev-zkvm"
 	// ProverModePartial traces and checks the trace against the constraints, no
 	// proof; memory-gated.
@@ -23,7 +22,7 @@ const (
 // Valid reports whether m is a known mode.
 func (m ProverMode) Valid() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevNative, ProverModeDevZkVM, ProverModePartial, ProverModeFull:
+	case ProverModeDevMock, ProverModeDevZkVM, ProverModePartial, ProverModeFull:
 		return true
 	default:
 		return false
@@ -33,19 +32,18 @@ func (m ProverMode) Valid() bool {
 // IsDev reports whether m is a non-production mode.
 func (m ProverMode) IsDev() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevNative, ProverModeDevZkVM:
+	case ProverModeDevMock, ProverModeDevZkVM:
 		return true
 	default:
 		return false
 	}
 }
 
-// needsArtifacts reports whether New must load the circuit bin and guest ELF.
-// dev-mock runs no guest and dev-native uses the native runner, so neither needs
-// the ZkC artifacts.
+// needsArtifacts reports whether New must load ZkC artifacts (the circuit bin
+// and guest ELF). Only dev-mock runs no guest at all.
 func (m ProverMode) needsArtifacts() bool {
 	switch m {
-	case ProverModeDevMock, ProverModeDevNative:
+	case ProverModeDevMock:
 		return false
 	default:
 		return true
