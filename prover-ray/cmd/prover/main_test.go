@@ -4,67 +4,56 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const fixtureDir = "../../backend/jobadapter/testdata"
 
-// TestDevMockSmoke runs the dev-mock binary path over a request folder end to end.
-func TestDevMockSmoke(t *testing.T) {
-	root := t.TempDir()
-
-	core, err := backend.New(backend.Config{Mode: backend.ProverModeDevMock})
-	require.NoError(t, err)
-	adapter, err := filesystem.New(filesystem.Config{
-		RequestsRootDir: root,
-		ProverVersion:   "0.0.0-test",
-		PollInterval:    5 * time.Millisecond,
-		Mode:            backend.ProverModeDevMock,
-	}, core)
-	require.NoError(t, err)
-
-	drop(t, root, "single.json", "request_single_block.json")
-	drop(t, root, "multi.json", "request_multi_block.json")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	done := make(chan error, 1)
-	go func() { done <- adapter.Run(ctx) }()
-
-	for _, name := range []string{"single.json", "multi.json"} {
-		require.Eventually(t, func() bool {
-			_, err := os.Stat(filepath.Join(root, "responses", name))
-			return err == nil
-		}, 2*time.Second, 5*time.Millisecond, "response for %s must be written", name)
+// TestIntegration_AdapterSpawnsWorker builds the binary and runs the adapter,
+// which spawns a "prover prove" worker per request and writes the response.
+func TestIntegration_AdapterSpawnsWorker(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the binary and spawns worker processes")
 	}
-	cancel()
-	require.NoError(t, <-done, "Run must return cleanly on shutdown")
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "prover")
+	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+		t.Fatalf("build: %v\n%s", err, out)
+	}
 
-	// Single-block response is schema-shaped, dev-labelled, with a marker proof.
-	resp := readJSON(t, filepath.Join(root, "responses", "single.json"))
-	assert.Equal(t, "0.0.0-test-dev-mock", resp["proverVersion"])
-	proof, ok := resp["proof"].(string)
-	require.True(t, ok)
-	assert.True(t, strings.HasPrefix(proof, "0x"))
-	assert.Greater(t, len(proof), 2, "proof marker is non-empty")
-	pi, ok := resp["publicInputs"].(map[string]any)
-	require.True(t, ok)
-	assert.Len(t, pi, 16, "all 16 public-input fields present (placeholder zeros)")
-	assert.Empty(t, resp["l2L1Messages"])
+	queue := filepath.Join(dir, "queue")
+	require.NoError(t, os.MkdirAll(filepath.Join(queue, "requests"), 0o750))
+	cfg := filepath.Join(dir, "config.toml")
+	require.NoError(t, os.WriteFile(cfg, []byte(
+		"version = \"t\"\n[execution]\nprover_mode = \"dev-mock\"\nrequests_root_dir = \""+queue+"\"\n"), 0o600))
 
-	// Conflated response carries the range start.
-	multi := readJSON(t, filepath.Join(root, "responses", "multi.json"))
-	start, ok := multi["startBlockNumber"].(float64)
-	require.True(t, ok)
-	assert.Equal(t, 1000501, int(start))
+	name := "10-11-getZkL2ExecutionProofV1.json"
+	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(queue, "requests", name), reqData, 0o600))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, "--config", cfg)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	require.NoError(t, cmd.Start())
+	defer func() { _ = cmd.Process.Kill() }()
+
+	respPath := filepath.Join(queue, "responses", name)
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(respPath)
+		return statErr == nil
+	}, 30*time.Second, 200*time.Millisecond, "adapter must spawn a worker and produce a response")
+
+	resp := readJSON(t, respPath)
+	assert.Equal(t, "t-dev-mock", resp["proverVersion"])
+	assert.FileExists(t, filepath.Join(queue, "requests-done", name+".success"))
 }
 
 func TestRun_RequiresConfig(t *testing.T) {
@@ -119,13 +108,6 @@ func TestRunProve_RequiresInOut(t *testing.T) {
 	err := run([]string{"prove", "--config", cfg})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "--in and --out")
-}
-
-func drop(t *testing.T, root, name, fixture string) {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join(fixtureDir, fixture))
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), data, 0o600))
 }
 
 func readJSON(t *testing.T, path string) map[string]any {

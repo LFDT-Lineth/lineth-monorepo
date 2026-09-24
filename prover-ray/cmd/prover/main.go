@@ -21,6 +21,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/filesystem"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter/subprocess"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/config"
 	"github.com/sirupsen/logrus"
 )
@@ -39,27 +40,28 @@ func run(args []string) error {
 }
 
 // loadConfig loads the config (--config or CONFIG_FILE), sets the log level, and
-// validates the mode.
-func loadConfig(configPath string) (*config.Config, backend.ProverMode, error) {
+// validates the mode. It also returns the resolved path, which the adapter passes
+// to the worker it spawns.
+func loadConfig(configPath string) (*config.Config, backend.ProverMode, string, error) {
 	path := configPath
 	if path == "" {
 		path = os.Getenv("CONFIG_FILE")
 	}
 	if path == "" {
-		return nil, "", fmt.Errorf("--config (or CONFIG_FILE) is required")
+		return nil, "", "", fmt.Errorf("--config (or CONFIG_FILE) is required")
 	}
 	cfg, err := config.NewConfigFromFile(path)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 	if cfg.LogLevel >= int(logrus.PanicLevel) && cfg.LogLevel <= int(logrus.TraceLevel) {
 		logrus.SetLevel(logrus.Level(cfg.LogLevel))
 	}
 	mode := backend.ProverMode(cfg.Execution.ProverMode)
 	if !mode.Valid() {
-		return nil, "", fmt.Errorf("invalid execution.prover_mode %q", cfg.Execution.ProverMode)
+		return nil, "", "", fmt.Errorf("invalid execution.prover_mode %q", cfg.Execution.ProverMode)
 	}
-	return cfg, mode, nil
+	return cfg, mode, path, nil
 }
 
 // buildRunner builds the request-to-response runner backed by an in-process Core.
@@ -75,29 +77,27 @@ func buildRunner(cfg *config.Config, mode backend.ProverMode) (*jobadapter.Runne
 	return jobadapter.NewRunner(core, cfg.Version, opts...)
 }
 
-// runAdapter watches the filesystem request queue and proves each request.
+// runAdapter watches the request queue and spawns a "prover prove" worker for
+// each request.
 func runAdapter(args []string) error {
 	fs := flag.NewFlagSet("prover", flag.ContinueOnError)
 	configPath := fs.String("config", "", "path to the TOML config file (or set CONFIG_FILE)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cfg, mode, err := loadConfig(*configPath)
+	cfg, mode, path, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
-
-	core, err := backend.New(backend.Config{Mode: mode, GuestELFPath: cfg.Execution.GuestELF})
+	self, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("building prover core: %w", err)
+		return fmt.Errorf("finding prover binary: %w", err)
 	}
 
-	adapter, err := filesystem.New(filesystem.Config{
-		RequestsRootDir:     cfg.Execution.RequestsRootDir,
-		ProverVersion:       cfg.Version,
-		Mode:                mode,
-		NativeRunnerBinPath: cfg.Execution.NativeRunnerBin,
-	}, core)
+	adapter, err := filesystem.New(
+		filesystem.Config{RequestsRootDir: cfg.Execution.RequestsRootDir},
+		subprocess.Prover{BinPath: self, ConfigPath: path},
+	)
 	if err != nil {
 		return fmt.Errorf("building filesystem adapter: %w", err)
 	}
@@ -125,7 +125,7 @@ func runProve(args []string) error {
 	if *inPath == "" || *outPath == "" {
 		return fmt.Errorf("--in and --out are required")
 	}
-	cfg, mode, err := loadConfig(*configPath)
+	cfg, mode, _, err := loadConfig(*configPath)
 	if err != nil {
 		return err
 	}
