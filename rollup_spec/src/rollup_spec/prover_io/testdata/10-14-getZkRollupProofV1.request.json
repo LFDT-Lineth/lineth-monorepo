@@ -3,7 +3,9 @@
   "metadata": {
     "startBlockNumber": 10,
     "endBlockNumber": 14,
-    "startBlockTimestamp": 1763000457
+    "startBlockTimestamp": 1763000457,
+    "endBlockTimestamp": 1763000210,
+    "transactionsCount": 5
   },
   "proofRequest": {
     "chainId": 59144,

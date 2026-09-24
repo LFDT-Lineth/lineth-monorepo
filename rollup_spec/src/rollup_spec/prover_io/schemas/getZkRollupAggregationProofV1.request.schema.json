@@ -39,6 +39,8 @@
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "startBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "transactionsCount": { "$ref": "#/$defs/uint" },
         "totalGasUsed": { "$ref": "#/$defs/uint" }
       }
     },
