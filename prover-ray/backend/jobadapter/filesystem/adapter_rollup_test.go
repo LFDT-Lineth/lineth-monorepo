@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,7 @@ func TestProofTypeForName(t *testing.T) {
 		"bad.json": backend.ProofTypeL2Execution,
 	}
 	for name, want := range cases {
-		assert.Equal(t, want, proofTypeForName(name), name)
+		assert.Equal(t, want, jobadapter.ProofTypeForName(name), name)
 	}
 }
 

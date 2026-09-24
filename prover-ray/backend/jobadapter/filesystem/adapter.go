@@ -207,22 +207,9 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunR
 	}
 	return a.runner.Run(ctx, jobadapter.RunRequest{
 		ID:   id,
-		Type: proofTypeForName(name),
+		Type: jobadapter.ProofTypeForName(name),
 		Body: data,
 	})
-}
-
-// proofTypeForName selects the proof type from the request filename, which the
-// coordinator names by endpoint. Unknown names default to L2 execution.
-func proofTypeForName(name string) backend.ProofType {
-	switch {
-	case strings.Contains(name, "getZkRollupAggregationProofV1"):
-		return backend.ProofTypeRollupAggregation
-	case strings.Contains(name, "getZkRollupProofV1"):
-		return backend.ProofTypeRollup
-	default:
-		return backend.ProofTypeL2Execution
-	}
 }
 
 func failureResponse(id string, code jobadapter.FailureCode, err error) failureResponseBody {

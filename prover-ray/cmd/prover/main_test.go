@@ -83,6 +83,44 @@ func TestRun_RejectsInvalidMode(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid execution.prover_mode")
 }
 
+func devMockConfig(t *testing.T, dir string) string {
+	t.Helper()
+	cfg := filepath.Join(dir, "config.toml")
+	require.NoError(t, os.WriteFile(cfg, []byte(
+		"version = \"t\"\n[execution]\nprover_mode = \"dev-mock\"\nrequests_root_dir = \""+dir+"\"\n"), 0o600))
+	return cfg
+}
+
+// TestRunProve_DevMock runs the one-shot worker: read a request file, prove it,
+// write the response file.
+func TestRunProve_DevMock(t *testing.T) {
+	dir := t.TempDir()
+	cfg := devMockConfig(t, dir)
+
+	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
+	require.NoError(t, err)
+	inPath := filepath.Join(dir, "request.json")
+	require.NoError(t, os.WriteFile(inPath, reqData, 0o600))
+	outPath := filepath.Join(dir, "response.json")
+
+	require.NoError(t, run([]string{
+		"prove", "--config", cfg, "--in", inPath, "--out", outPath,
+	}))
+
+	resp := readJSON(t, outPath)
+	assert.Equal(t, "t-dev-mock", resp["proverVersion"])
+	pi, ok := resp["publicInputs"].(map[string]any)
+	require.True(t, ok)
+	assert.Len(t, pi, 16, "all 16 public-input fields present (placeholder zeros)")
+}
+
+func TestRunProve_RequiresInOut(t *testing.T) {
+	cfg := devMockConfig(t, t.TempDir())
+	err := run([]string{"prove", "--config", cfg})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--in and --out")
+}
+
 func drop(t *testing.T, root, name, fixture string) {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(fixtureDir, fixture))

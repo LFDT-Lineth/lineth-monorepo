@@ -10,11 +10,25 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
+
+// ProofTypeForName selects the proof type from the request filename, which the
+// coordinator names by endpoint. Unknown names default to L2 execution.
+func ProofTypeForName(name string) backend.ProofType {
+	switch {
+	case strings.Contains(name, "getZkRollupAggregationProofV1"):
+		return backend.ProofTypeRollupAggregation
+	case strings.Contains(name, "getZkRollupProofV1"):
+		return backend.ProofTypeRollup
+	default:
+		return backend.ProofTypeL2Execution
+	}
+}
 
 // Prover is the proving engine: it receives a backend.Job and returns the proof
 // result. backend.Core satisfies this role; tests use a mock so they never need
