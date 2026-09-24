@@ -1,9 +1,12 @@
 package lineth.coordinator.clients.prover
 
+import linea.clients.L2ExecutionProofRequestV1
 import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
 import linea.domain.BlockInterval
 import linea.domain.ProofRequestMetaDataProvider
 import linea.domain.StartBlockTimestampProvider
+import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofRequestV1
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant
@@ -29,6 +32,17 @@ class BlockIntervalProofIndexProviderTest {
     assertThat(index.proofRequestMetaData?.transactionsCount).isEqualTo(request.transactionsCount)
     assertThat(index.proofRequestMetaData?.totalGasUsed).isEqualTo(request.totalGasUsed)
     assertThat(index.hash).isEqualTo(expectedHash)
+  }
+
+  @Test
+  fun `derives a stable hash for identical requests built separately`() {
+    val request1 = l2ExecutionProofRequestV1()
+    val request2 = l2ExecutionProofRequestV1()
+    // Distinct ByteArray instances (different identities) with equal content.
+    assertThat(request1.parentFtxRollingHash).isNotSameAs(request2.parentFtxRollingHash)
+
+    val provider = BlockIntervalProofIndexProvider<L2ExecutionProofRequestV1>(Sha256HashFunction())
+    assertThat(provider.invoke(request1).hash).isEqualTo(provider.invoke(request2).hash)
   }
 
   private data class TestRequest(
