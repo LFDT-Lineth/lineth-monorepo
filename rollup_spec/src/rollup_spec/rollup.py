@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import ckzg
-import zstandard
+import zstandard as zstd
+
 
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.crypto.kzg import (
@@ -43,11 +44,6 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 # evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
 # be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
-
-# Big-endian width of the per-conflation segment length prefix within the DA
-# stream (§3.1): `[len][zstd(rlp(conflation))]`. 4 bytes comfortably bounds any
-# realistic compressed conflation size well under 2**32.
-SEGMENT_LENGTH_PREFIX_BYTES = 4
 
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
@@ -166,13 +162,12 @@ class ConflationWitness:
     happens *inside* the guest from these full RLPs; there is no separately-
     witnessed truncated form.
 
-    Each conflation is compressed INDEPENDENTLY — truncate → RLP-encode →
-    zstd-compress, one segment per conflation, length-prefixed — and the
-    resulting segments are concatenated in order to form the DA byte stream
-    (§3.1). zstd back-references never cross a segment boundary, so this proof
-    can recompress its own conflations without any foreign witness data.
+    `compressed_segment` is the exact independently compressed zstd frame
+    published in the DA stream. The guest decompresses that frame and checks
+    its output against the canonical truncated-block RLP.
     """
     block_rlps: List[bytes]
+    compressed_segment: bytes
 
 
 def _truncate_conflation(
@@ -209,15 +204,16 @@ def _truncate_conflation(
     return truncated, parent_hashes
 
 
-def _compress_conflation_segment(truncated: Sequence["TruncatedEthereumBlock"]) -> bytes:
-    """
-    Independently RLP-encode and zstd-compress one conflation's truncated
-    blocks, and prefix the result with its compressed length (§3.1):
-    `[len][zstd(rlp(conflation))]`. The sequencer and the rollup guest must
-    agree byte-for-byte on this framing for the KZG verifier to accept.
-    """
-    segment = compress_zstd(rlp_encode_truncated_blocks(truncated))
-    return len(segment).to_bytes(SEGMENT_LENGTH_PREFIX_BYTES, "big") + segment
+def _validate_conflation_segment(segment: bytes, expected_rlp: bytes) -> None:
+    """Validate the entire witnessed zstd frame against canonical truncation."""
+    try:
+        decompressed = zstd.ZstdDecompressor().decompress(
+            segment, max_output_size=len(expected_rlp), allow_extra_data=False,
+        )
+    except zstd.ZstdError as exc:
+        raise Exception("compressed segment contains invalid zstd data") from exc
+    if decompressed != expected_rlp:
+        raise Exception("zstd-decompressed segment does not match canonical truncated-block RLP")
 
 
 def _verify_and_fold_chunks(
@@ -389,8 +385,8 @@ class RollupPublicInput:
     public-input fields rather than folded into the DA accumulator (§3.1).
     `start_offset` / `end_offset` are the byte positions (§3.4) that pair with
     `parent_data_rolling_hash` / `end_data_rolling_hash` to form this proof's start and end stream
-    positions; `end_offset` is a derived output (computed from the guest's own
-    recompression), not trusted witness input.
+    positions; `end_offset` is a derived output (computed from the length of
+    the witnessed segments), not trusted witness input.
 
     `program_vks` is the set of ALL guest program VKs verified beneath this proof
     (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
@@ -442,7 +438,7 @@ class RollupProofPrivateInput:
     `boundary_prev_data_rolling_hash` is required only for a mid-chunk start
     (`start_offset > 0`) — the dataRollingHash value before the first touched chunk, used
     to open its preimage. `end_data_rolling_hash` and `end_offset` are not request inputs:
-    the guest derives them from its own recompression.
+    the guest derives them from the witnessed segment lengths.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
     step 2). It is committed transitively via the l2-execution proofs'
@@ -505,10 +501,10 @@ class VerifiableRollupProof:
 
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
-    rollup: for each conflation, independently computes the canonical
-    compressed segment from `block_rlps` (truncate → RLP-encode →
-    zstd-compress, length-prefixed, §3.1) and concatenates the segments into
+    rollup: for each conflation, validates each witnessed zstd frame against the canonical
+    truncated-block RLP derived from `block_rlps` (§3.1) and concatenates the segments into
     this proof's own byte stream. Slices that stream across the chunks it
+
     touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, recomputes each chunk's binding hash
     (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
@@ -545,9 +541,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         if len(conflation_truncated) == 0:
             raise Exception("rollup proof cannot include an empty conflation")
 
+        canonical_truncated_rlp = rlp_encode_truncated_blocks(conflation_truncated)
+        _validate_conflation_segment(conflation.compressed_segment, canonical_truncated_rlp)
+
         truncated_blocks.extend(conflation_truncated)
         parent_hashes.extend(conflation_parent_hashes)
-        segments.append(_compress_conflation_segment(conflation_truncated))
+        segments.append(conflation.compressed_segment)
 
     own_stream_bytes = b"".join(segments)
     # Cumulative byte offset of each segment's end within the stream. Calldata
@@ -895,25 +894,3 @@ def rlp_encode_truncated_blocks(blocks: Sequence[TruncatedEthereumBlock]) -> byt
         for b in blocks
     ]
     return rlp.encode(items)
-
-
-def compress_zstd(data: bytes) -> bytes:
-    """
-    zstd-compress the canonical RLP-encoded truncated-block payload (§3.1).
-    This produces one segment in the continuous DA stream.
-
-    The compression profile is a protocol-level decision pinned byte-for-byte
-    (§3.2) so the sequencer, this reference, and the guest all produce the same
-    segment bytes for the KZG verifier to accept: the zstd reference C library
-    at version 1.5.6, one-shot `ZSTD_compress` at the default level (3), no
-    dictionary, a single frame with the content-size flag set and the content
-    checksum disabled. zstd guarantees identical output only for a fixed library
-    version and level, so the version pin is part of the profile.
-
-    `zstandard.ZstdCompressor` defaults match that profile: level 3, no
-    dictionary, a content-size-bearing frame, no content checksum. The guest
-    runs ordinary in-guest code — the same vendored zstd C source compiled into
-    the RISC-V guest — and soundness comes from KZG verification on the computed
-    payload (§2.2 step 1), not from the zstd internals.
-    """
-    return zstandard.ZstdCompressor(level=3).compress(data)
