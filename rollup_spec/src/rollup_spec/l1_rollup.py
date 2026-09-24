@@ -8,11 +8,7 @@ from ethereum_types.numeric import U64
 from .l2_execution import hash_address_list, hash_digest_list
 from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
 
-
-def _encode_offset(offset: int) -> bytes:
-    """32-byte big-endian encoding of a stream byte offset, matching how the
-    L1 contract ABI-packs a `uint256` into a keccak256 preimage."""
-    return offset.to_bytes(32, "big")
+ZERO_HASH32 = Hash32(b"\x00" * 32)
 
 
 @dataclass
@@ -50,16 +46,20 @@ class LinethRollupState:
     `verifier.get_chain_configuration()` (modelled by the `PlonkVerifier`
     field below).
 
-    `current_finalized_position_commitment` is the enforced-offset variant
-    (§3.6, §8 Q2): `keccak256(endDataRollingHash || encode_offset(endOffset))`, sealed
-    into the same slot that used to hold a plain shnarf — zero additional
-    storage. The next finalization supplies the previous `(data_rolling_hash, offset)` pair
-    as calldata (`finalize_rollup`'s `prev_data_rolling_hash`/`prev_offset` params); the
-    contract verifies the preimage against this commitment before applying
-    the continuity disjunction.
+    The finalized DA stream position is tracked DIRECTLY and readably on-chain as the
+    plain pair `current_data_rolling_hash` / `current_data_availability_offset`
+    (`currentDataRollingHash` / `currentDataAvailabilityOffset` on-chain). There is no
+    opaque position commitment to open: the coordinator reads the live position off the
+    contract to build the next submission/finalization, and finalization asserts the
+    supplied `parent_data_rolling_hash` / `start_offset` equal these stored values exactly.
+
+    `current_finalized_shnarf_deprecated` is the retained legacy `currentFinalizedShnarf`
+    slot (the pre-upgrade contract's live finalized shnarf). It is consumed exactly once by
+    `reinitialize_linea_rollup_v10` (the legacy-shnarf migration) and wiped to `ZERO_HASH32`
+    there; `finalize_rollup` never reads or writes it.
     """
-    current_finalized_position_commitment: Hash32
-    current_finalized_last_block_hash: Hash32
+    current_data_rolling_hash: Hash32
+    current_data_availability_offset: int
     current_l2_block_number: U64
     current_l2_block_timestamp: U64
     current_finalized_l1_l2_bridge_rolling_hash: Hash32
@@ -67,6 +67,12 @@ class LinethRollupState:
     current_finalized_ftx_rolling_hash: Hash32
     current_finalized_processed_ftx_number: U64
     verifier: PlonkVerifier
+    current_finalized_shnarf_deprecated: Hash32 = ZERO_HASH32
+    block_hashes: Dict[U64, Hash32] = field(default_factory=dict)
+    # Legacy per-block-number state roots (`stateRootHashes` on-chain), consulted only on
+    # the state-root → block-hash migration path: when `block_hashes` has no entry for the
+    # last finalized block, finalization falls back to matching `parent_state_root_hash`.
+    state_root_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     l1_l2_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_deadlines: Dict[U64, U64] = field(default_factory=dict)
@@ -77,11 +83,10 @@ class LinethRollupState:
     anchored_data_rolling_hashes: Set[Hash32] = field(default_factory=set)
     l2_merkle_roots_depths: Dict[Hash32, int] = field(default_factory=dict)
     # The single, combined security-council-managed approved-VK list
-    # (§ProgramVK anchoring). Exec and rollup VKs are NOT distinguished on L1 —
-    # a finalization's single `public_inputs.program_vks` list is checked against
-    # this one set. On-chain this is managed by an add/remove setter analogous
-    # to `setVerifierAddress` (replace on soundness bug, add on non-soundness
-    # guest update, periodic cleanup); not modelled as a method here.
+    # (§ProgramVK anchoring; `verifierKeys` on-chain). Exec and rollup VKs are NOT
+    # distinguished on L1 — a finalization's single `public_inputs.program_vks` list is
+    # checked against this one set. On-chain this is managed by `setVerifierKeys` /
+    # `unsetVerifierKeys`; not modelled as a method here.
     approved_vks: Set[Hash32] = field(default_factory=set)
 
 
@@ -104,11 +109,17 @@ class FinalizationSubmission:
     `public_inputs.program_vks` so its order is bound to the proof; it is NOT a
     separate submission field. `finalize_rollup` checks every entry against the
     L1 `approved_vks` set.
+
+    `parent_state_root_hash` is the legacy continuity value (`FinalizationDataV5.parentStateRootHash`),
+    consulted ONLY on the state-root → block-hash migration path: when `block_hashes` has no
+    entry for the last finalized block, finalization matches it against `state_root_hashes`
+    instead of `parent_block_hash`. It is ignored once the block-hash path is active.
     """
     public_inputs: RollupPublicInput
     proof: bytes
     l2_l1_roots: List[Hash32]
     filtered_addresses: List[Address]
+    parent_state_root_hash: Hash32 = ZERO_HASH32
     l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
@@ -129,33 +140,86 @@ def anchor_chunk_submission(
     return end_data_rolling_hash
 
 
+def seed_genesis_position(
+    state: LinethRollupState,
+    initial_block_hash: Hash32,
+    initial_l2_block_number: U64,
+) -> Hash32:
+    """
+    Fresh-network genesis seeding (`__LinethRollup_init`, new testnets / local / CI).
+
+    The genesis DA stream position is seeded deterministically from the genesis block
+    hash — `current_data_rolling_hash = keccak256(EMPTY_HASH || initialBlockHash)` (the
+    `EfficientLeftRightKeccak._efficientKeccak(EMPTY_HASH, initialBlockHash)` fold) — and
+    anchored into `_dataRollingHashExists` so the first submission can chain from it.
+    `current_data_availability_offset` stays `0` (fresh-start) and
+    `current_finalized_shnarf_deprecated` stays `ZERO_HASH32` (no legacy shnarf to migrate).
+    The genesis block hash is also anchored into `block_hashes`.
+    """
+    if initial_block_hash == ZERO_HASH32:
+        raise Exception("initialBlockHash cannot be the zero hash")
+    genesis_data_rolling_hash = keccak256(ZERO_HASH32 + initial_block_hash)
+    state.current_data_rolling_hash = genesis_data_rolling_hash
+    state.current_data_availability_offset = 0
+    state.anchored_data_rolling_hashes.add(genesis_data_rolling_hash)
+    state.block_hashes[initial_l2_block_number] = initial_block_hash
+    return genesis_data_rolling_hash
+
+
+def reinitialize_linea_rollup_v10(state: LinethRollupState) -> Hash32:
+    """
+    Legacy-shnarf migration (`LinethRollup.reinitializeLineaRollupV10()`, in-place upgrades).
+
+    One-way bridge from the legacy shnarf model to the blob-spanning dataRollingHash model.
+    It trusts the on-chain `current_finalized_shnarf_deprecated` slot directly (that value was
+    itself the proven output of the prior contract version's `finalizeBlocks`) and reinterprets
+    it as the live end dataRollingHash: the value becomes `current_data_rolling_hash`, is
+    anchored into the dataRollingHash membership set so post-upgrade submissions chain from it,
+    and the legacy slot is wiped to `ZERO_HASH32` (never written again). The migration runs
+    exactly once per proxy (enforced on-chain by `reinitializer(10)`); on any real in-place
+    upgrade the slot can never be `ZERO_HASH32`, so no emptiness guard is needed.
+    """
+    migrated_data_rolling_hash = state.current_finalized_shnarf_deprecated
+    state.current_data_rolling_hash = migrated_data_rolling_hash
+    state.anchored_data_rolling_hashes.add(migrated_data_rolling_hash)
+    state.current_finalized_shnarf_deprecated = ZERO_HASH32
+    return migrated_data_rolling_hash
+
+
 def finalize_rollup(
     state: LinethRollupState,
     submission: FinalizationSubmission,
-    prev_data_rolling_hash: Hash32,
-    prev_offset: int,
 ) -> None:
-    """
-    `prev_data_rolling_hash` / `prev_offset` are the previously-finalized end position,
-    supplied as calldata so the contract can open the stored position
-    commitment (§3.6, enforced variant) — the caller reads them from the
-    prior finalization's event/return value rather than the contract storing
-    them in the clear.
-    """
+    """Apply a finalized rollup range after checking stored DA and block continuity."""
     pi = submission.public_inputs
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
         raise Exception("invalid rollup-aggregation proof")
-    if keccak256(prev_data_rolling_hash + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
-        raise Exception("prevDataRollingHash/prevOffset do not match the finalized position commitment")
-    if pi.parent_data_rolling_hash != prev_data_rolling_hash:
-        raise Exception("parentDataRollingHash does not match the finalized position")
-    if not (pi.start_offset == prev_offset or pi.start_offset == 0):
-        raise Exception("startOffset neither continues the finalized position nor is a fresh start")
+    if pi.parent_data_rolling_hash != state.current_data_rolling_hash:
+        raise Exception("parentDataRollingHash does not match the current data rolling hash")
+    if pi.start_offset != state.current_data_availability_offset:
+        raise Exception("startOffset does not match the current data availability offset")
     if pi.end_data_rolling_hash not in state.anchored_data_rolling_hashes:
         raise Exception("endDataRollingHash was not anchored by a chunk submission")
-    if pi.parent_block_hash != state.current_finalized_last_block_hash:
-        raise Exception("parentBlockHash does not match the currently finalized block hash")
+
+    # Execution rooting, with the state-root → block-hash migration path (§5.4):
+    # `blockHashes[lastFinalizedBlock]` is the authoritative anchor on the new path.
+    # EMPTY_HASH (absent) signals the migration path — the parent was committed under the
+    # old state-root-hash model, so the caller supplies `parentBlockHash == EMPTY_HASH` and
+    # the contract instead matches the legacy `stateRootHashes[lastFinalizedBlock]`.
+    parent_block_hash = state.block_hashes.get(state.current_l2_block_number, ZERO_HASH32)
+    if parent_block_hash == ZERO_HASH32:
+        if pi.parent_block_hash != ZERO_HASH32:
+            raise Exception("parentBlockHash must be EMPTY_HASH on the migration path")
+        parent_state_root_hash = state.state_root_hashes.get(state.current_l2_block_number, ZERO_HASH32)
+        if parent_state_root_hash == ZERO_HASH32 or parent_state_root_hash != submission.parent_state_root_hash:
+            raise Exception("parentStateRootHash does not match the stored state root hash")
+    else:
+        if pi.parent_block_hash != parent_block_hash:
+            raise Exception("parentBlockHash does not match the current block hash")
+
+    if pi.end_block_hash == ZERO_HASH32:
+        raise Exception("finalBlockHash cannot be the zero hash")
     if pi.parent_l1_l2_bridge_rolling_hash != state.current_finalized_l1_l2_bridge_rolling_hash:
         raise Exception("L1-to-L2 rolling hash continuity mismatch")
     if (
@@ -209,10 +273,9 @@ def finalize_rollup(
         if vk not in state.approved_vks:
             raise Exception("program VK is not approved")
 
-    state.current_finalized_position_commitment = keccak256(
-        pi.end_data_rolling_hash + _encode_offset(pi.end_offset)
-    )
-    state.current_finalized_last_block_hash = pi.end_block_hash
+    state.current_data_rolling_hash = pi.end_data_rolling_hash
+    state.current_data_availability_offset = pi.end_offset
+    state.block_hashes[pi.end_block_number] = pi.end_block_hash
     state.current_l2_block_number = pi.end_block_number
     state.current_l2_block_timestamp = pi.end_block_timestamp
     state.current_finalized_l1_l2_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash

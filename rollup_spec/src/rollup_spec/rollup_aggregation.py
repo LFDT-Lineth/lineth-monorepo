@@ -55,7 +55,7 @@ def run_rollup_aggregation_guest(
 
     # §ProgramVK anchoring: emit ONE `program_vks` set as a CANONICAL sorted,
     # distinct list — L1 does not distinguish exec vs rollup VKs (single combined
-    # `approvedVks` set), and sorting makes the commitment a pure function of the
+    # `verifierKeys` set), and sorting makes the commitment a pure function of the
     # set's contents. The set is the union of every rollup proof's bubbled
     # `public_inputs.program_vks` (the exec VKs it verified) and each proof's own
     # `program_vk`. `rollup_vks` is kept only as internal trace of the distinct
