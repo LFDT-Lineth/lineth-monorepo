@@ -13,6 +13,7 @@ import com.sun.net.httpserver.HttpServer
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
@@ -21,6 +22,7 @@ import tech.pegasys.teku.infrastructure.bytes.Bytes20
 import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.net.InetSocketAddress
 import java.net.URI
+import java.net.URL
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.LinkedBlockingQueue
@@ -31,10 +33,16 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class TekuWeb3JClientFactoryTest {
-  private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply { start() }
+  private lateinit var server: HttpServer
+  private lateinit var endpoint: URL
   private val requests = LinkedBlockingQueue<Pair<String, String?>>()
   private val clients = mutableListOf<Web3JClient>()
-  private val endpoint = URI("http://127.0.0.1:${server.address.port}").toURL()
+
+  @BeforeEach
+  fun setUp() {
+    server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply { start() }
+    endpoint = URI("http://127.0.0.1:${server.address.port}").toURL()
+  }
 
   @AfterEach
   fun tearDown() {

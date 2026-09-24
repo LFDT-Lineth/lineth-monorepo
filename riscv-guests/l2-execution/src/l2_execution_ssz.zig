@@ -88,7 +88,7 @@ pub const L2ExecutionProofPublicInput = struct {
     end_l1_l2_bridge_rolling_hash_message_number: u64,
     dynamic_chain_config_hash: [32]u8,
     parent_ftx_rolling_hash: [32]u8,
-    parent_processed_ftx_number: u64,
+    parent_ftx_number: u64,
     end_ftx_rolling_hash: [32]u8,
     end_processed_ftx_number: u64,
     filtered_addresses_hash: [32]u8,
@@ -292,7 +292,7 @@ fn encodePublicInputs(out: []u8, pi: L2ExecutionProofPublicInput) void {
     putU64(out, &pos, pi.end_l1_l2_bridge_rolling_hash_message_number);
     putHash(out, &pos, pi.dynamic_chain_config_hash);
     putHash(out, &pos, pi.parent_ftx_rolling_hash);
-    putU64(out, &pos, pi.parent_processed_ftx_number);
+    putU64(out, &pos, pi.parent_ftx_number);
     putHash(out, &pos, pi.end_ftx_rolling_hash);
     putU64(out, &pos, pi.end_processed_ftx_number);
     putHash(out, &pos, pi.filtered_addresses_hash);
