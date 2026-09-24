@@ -29,7 +29,7 @@ One request/response pair per guest layer (fully-valid fixtures in `testdata/`):
 
 ## Rollup-Proof Generalization: T ≥ 1 chunks in one proof
 
-A single rollup proof can fold `T ≥ 1` mixed blob or calldata chunks. `chunks[]` carries the ordered chunk witnesses, `conflations[]` carries the independently compressed segments, and `l2ExecutionProofs[]` carries the proofs that tile the combined block range. The public-input tuple covers the entire fold regardless of the number or kinds of chunks touched.
+A single rollup proof can fold `T ≥ 1` mixed blob or calldata chunks. `chunks[]` carries the ordered chunk witnesses, `conflations[]` carries exact independently compressed zstd frames without stream prefixes, and `l2ExecutionProofs[]` carries the proofs that tile the combined block range. The guest prepends each frame's 4-byte big-endian compressed length and binds the resulting stream to the chunks. The public-input tuple covers the entire fold regardless of the number or kinds of chunks touched.
 
 ## Common conventions
 

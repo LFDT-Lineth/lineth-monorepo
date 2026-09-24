@@ -4,4 +4,7 @@
 #   https://github.com/ethereum/execution-specs/tree/a456712e04153ebeb17ff892446a01b6ba537f65
 ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712e04153ebeb17ff892446a01b6ba537f65
 ckzg>=2.1
-zstandard>=0.25
+zstandard==0.23.*
+remerkleable>=0.1.28
+jsonschema>=4.18
+pytest>=7.0

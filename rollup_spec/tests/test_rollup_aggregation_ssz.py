@@ -154,8 +154,13 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
 def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
-    with pytest.raises(InvalidSsz):
-        decode_fn(encoded[: len(encoded) - 1])
+    if schema_id == 0x1003:
+        # A final proof byte is variable-length; the framing offset is fixed-size.
+        with pytest.raises(InvalidSsz):
+            decode_fn(encoded[:5])
+    else:
+        with pytest.raises(InvalidSsz):
+            decode_fn(encoded[:-1])
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
@@ -167,10 +172,15 @@ def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) ->
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
 def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> None:
-    # A trailing byte either breaks the outer container's own offset/length
-    # bookkeeping (remerkleable raises directly) or decodes as if absorbed and
-    # is then caught by the canonical-encoding re-check — either way it must
-    # surface as InvalidSsz, not succeed silently.
     encoded = encode_bytes()
+    if schema_id == 0x1003:
+        # A list offset of five skips a byte of its variable section.
+        encoded = encoded[:2] + (5).to_bytes(4, "little") + encoded[6:]
     with pytest.raises(InvalidSsz):
         decode_fn(encoded + b"\x00")
+
+
+def test_aggregation_input_accepts_variable_length_proof_bytes() -> None:
+    encoded = _aggregation_input_bytes()
+    assert decode_aggregation_input_ssz(encoded[:-1]).rollup_proofs[0].proof.proof == b"\xab\xcd\xef"
+    assert decode_aggregation_input_ssz(encoded + b"\x00").rollup_proofs[-1].proof.proof.endswith(b"\x00")

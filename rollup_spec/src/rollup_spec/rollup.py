@@ -162,9 +162,9 @@ class ConflationWitness:
     happens *inside* the guest from these full RLPs; there is no separately-
     witnessed truncated form.
 
-    `compressed_segment` is the exact independently compressed zstd frame
-    published in the DA stream. The guest decompresses that frame and checks
-    its output against the canonical truncated-block RLP.
+    `compressed_segment` is the exact independently compressed zstd frame,
+    excluding its 4-byte length prefix. The guest checks the entire frame
+    against the canonical truncated-block RLP and adds the prefix in the stream.
     """
     block_rlps: List[bytes]
     compressed_segment: bytes
@@ -502,10 +502,9 @@ class VerifiableRollupProof:
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
     rollup: for each conflation, validates each witnessed zstd frame against the canonical
-    truncated-block RLP derived from `block_rlps` (§3.1) and concatenates the segments into
-    this proof's own byte stream. Slices that stream across the chunks it
-
-    touches, reconstructing each chunk's full published bytes together with
+    truncated-block RLP derived from `block_rlps` (§3.1) and concatenates the
+    length-prefixed frames into this proof's own byte stream. Slices that stream
+    across the chunks it touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, recomputes each chunk's binding hash
     (dispatched per chunk on the witnessed `is_calldata` flag, §3.1: KZG
     commitment for a blob chunk, keccak256 for a calldata chunk), and checks it
@@ -546,10 +545,13 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 
         truncated_blocks.extend(conflation_truncated)
         parent_hashes.extend(conflation_parent_hashes)
-        segments.append(conflation.compressed_segment)
+        segment = conflation.compressed_segment
+        if not 0 < len(segment) <= 0xFFFFFFFF:
+            raise Exception("compressed segment length must fit in a nonzero uint32")
+        segments.append(len(segment).to_bytes(4, "big") + segment)
 
     own_stream_bytes = b"".join(segments)
-    # Cumulative byte offset of each segment's end within the stream. Calldata
+    # Cumulative byte offset of each length-prefixed segment's end. Calldata
     # chunks pack a whole number of segments (§3.1), so their boundaries fall
     # only at these offsets; each exact witnessed extent must end at one.
     segment_end_offsets: List[int] = []

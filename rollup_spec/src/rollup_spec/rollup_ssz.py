@@ -69,8 +69,8 @@ MAX_L2_EXECUTION_PROOFS_PER_ROLLUP = 2**10     # paired 1:1 with conflations (ro
 MAX_CHUNKS_PER_ROLLUP = 2**12                  # chunks touched by one rollup proof's dataRollingHash fold
 MAX_BLOCK_RLPS_PER_CONFLATION = 2**12          # full block RLPs (one per block) in a single conflation
 MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block RLP including all tx bodies
-# An exact witnessed segment cannot exceed the complete owned stream range.
-MAX_BYTES_PER_COMPRESSED_SEGMENT = MAX_CHUNKS_PER_ROLLUP * BLOB_BYTES_LENGTH
+# A witnessed frame fits in the complete owned stream range, less its 4-byte prefix.
+MAX_BYTES_PER_COMPRESSED_SEGMENT = MAX_CHUNKS_PER_ROLLUP * BLOB_BYTES_LENGTH - 4
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
 MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
 MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged at the rollup layer
@@ -83,6 +83,7 @@ MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged 
 
 class SszConflationWitness(Container):
     block_rlps: List[ByteList[MAX_BYTES_PER_BLOCK_RLP], MAX_BLOCK_RLPS_PER_CONFLATION]
+    # The four-byte big-endian frame length is derived when building the DA stream.
     compressed_segment: ByteList[MAX_BYTES_PER_COMPRESSED_SEGMENT]
 
 

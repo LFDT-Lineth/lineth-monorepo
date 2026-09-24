@@ -333,7 +333,12 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[0].compressed_segment == bytes.fromhex(
         "28b52ffd201189000063616e6f6e6963616c207061796c6f6164"
     )
-    assert req.conflations[1].compressed_segment == req.conflations[0].compressed_segment
+    assert req.conflations[1].compressed_segment == bytes.fromhex(
+        "28b52ffd000089000063616e6f6e6963616c207061796c6f6164"
+    )
+    assert req.conflations[1].compressed_segment != req.conflations[0].compressed_segment
+    frame = req.conflations[0].compressed_segment
+    assert len(frame).to_bytes(4, "big") + frame == bytes.fromhex("0000001a") + frame
 
     assert len(req.chunks) == 1
     assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
