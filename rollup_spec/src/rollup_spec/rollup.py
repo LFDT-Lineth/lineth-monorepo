@@ -44,6 +44,42 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 # evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
 # be exactly `BLOB_BYTES_LENGTH` bytes.
 BLOB_BYTES_LENGTH = 4096 * 32
+PACKING_BITS_PER_ELEMENT = 254
+BLOB_PAYLOAD_CAPACITY = (4096 * PACKING_BITS_PER_ELEMENT) // 8 - 1
+
+
+def pack_blob_payload(payload: bytes) -> bytes:
+    """Pack payload and its 0xff terminal into 4096 big-endian 254-bit elements."""
+    if len(payload) > BLOB_PAYLOAD_CAPACITY:
+        raise ValueError("blob payload exceeds 254-bit packing capacity")
+    bits = int.from_bytes(payload + b"\xff", "big")
+    width = (len(payload) + 1) * 8
+    bits <<= 4096 * PACKING_BITS_PER_ELEMENT - width
+    return b"".join(
+        ((bits >> ((4095 - i) * PACKING_BITS_PER_ELEMENT)) & ((1 << PACKING_BITS_PER_ELEMENT) - 1))
+        .to_bytes(32, "big")
+        for i in range(4096)
+    )
+
+
+def unpack_blob_payload(blob: bytes) -> bytes:
+    """Decode a physical EIP-4844 blob with canonical zero padding and terminal."""
+    if len(blob) != BLOB_BYTES_LENGTH:
+        raise ValueError("physical blob must contain 4096 field elements")
+    bits = 0
+    for i in range(0, len(blob), 32):
+        element = int.from_bytes(blob[i:i + 32], "big")
+        if element >= 1 << PACKING_BITS_PER_ELEMENT:
+            raise ValueError("blob field element exceeds 254 bits")
+        bits = (bits << PACKING_BITS_PER_ELEMENT) | element
+    unpacked = bits.to_bytes(BLOB_PAYLOAD_CAPACITY + 1, "big")
+    terminal = len(unpacked.rstrip(b"\x00")) - 1
+    if terminal < 0 or unpacked[terminal] != 0xff:
+        raise ValueError("invalid blob terminal symbol")
+    payload = unpacked[:terminal]
+    if pack_blob_payload(payload) != blob:
+        raise ValueError("noncanonical blob padding")
+    return payload
 
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
@@ -99,8 +135,8 @@ class ChunkWitness:
     """
     One touched chunk's anchored hash, declared kind, and calldata length (§3.1).
 
-    - **Blob chunk** (`is_calldata=False`): fixed
-      `BLOB_BYTES_LENGTH` bytes (EIP-4844 pads every blob to 128 KiB), bound by
+    - **Blob chunk** (`is_calldata=False`): at most
+      `BLOB_PAYLOAD_CAPACITY` unpacked bytes, committed as a 128 KiB physical blob, bound by
       its KZG commitment / versioned hash. A blob chunk may be *shared* with a
       neighbouring proof across a range boundary (§3.1), reconstructed from
       this proof's own slice plus witnessed opaque prefix/suffix bytes.
@@ -237,8 +273,8 @@ def _verify_and_fold_chunks(
     bytes. Both arms end in `recomputed == chunk_hash`, so the flag selects
     which recomputation runs while the anchored hash carries the soundness.
 
-    A **blob chunk** is fixed at `BLOB_BYTES_LENGTH` (EIP-4844 pads every blob
-    to 128 KiB) and may be shared with a neighbouring proof across a range
+    A **blob chunk** has at most `BLOB_PAYLOAD_CAPACITY` unpacked bytes
+    (EIP-4844 uses 128 KiB physical blobs) and may be shared with a neighbouring proof across a range
     boundary: `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes
     not owned by this proof, relevant only at the two ends of the touched
     range, never per-chunk — `opaque_prefix_bytes` fills the start of the FIRST
@@ -273,7 +309,7 @@ def _verify_and_fold_chunks(
     chunk_count = len(chunks)
     if chunk_count == 0:
         raise Exception("rollup proof must touch at least one chunk")
-    if not (0 <= start_offset < BLOB_BYTES_LENGTH):
+    if not (0 <= start_offset < BLOB_PAYLOAD_CAPACITY):
         raise Exception("startOffset must be within [0, chunkSize)")
     if len(opaque_prefix_bytes) != start_offset:
         raise Exception("opaquePrefixBytes length does not match startOffset")
@@ -299,19 +335,20 @@ def _verify_and_fold_chunks(
         if chunk.is_blob:
             if chunk.calldata_length != 0:
                 raise Exception(f"blob chunk {i} must have calldataLength 0")
-            # Fixed-size blob: own slice fills whatever the opaque boundary
-            # bytes don't, reconstructing exactly BLOB_BYTES_LENGTH.
-            own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
+            # Offsets and opaque bytes are in unpacked payload space. Each
+            # physical blob has its own terminal and zero bit padding.
+            remaining = len(own_stream_bytes) - cursor
+            own_slice_len = min(BLOB_PAYLOAD_CAPACITY - len(prefix) - len(suffix), remaining)
             if own_slice_len < 0:
                 raise Exception(f"chunk {i} opaque bytes exceed the blob chunk size")
-            last_chunk_len = BLOB_BYTES_LENGTH - len(suffix)
+            last_chunk_len = len(prefix) + own_slice_len
             if own_slice_len <= 0:
                 raise Exception(f"chunk {i} must contain owned bytes")
             own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
             cursor += own_slice_len
-            full_chunk_bytes = prefix + own_slice + suffix
-            if len(full_chunk_bytes) != BLOB_BYTES_LENGTH:
-                raise Exception(f"chunk {i} reconstructed bytes do not fill the chunk")
+            if not is_last and last_chunk_len + len(suffix) != BLOB_PAYLOAD_CAPACITY:
+                raise Exception(f"chunk {i} requires a full payload before the next chunk")
+            full_chunk_bytes = pack_blob_payload(prefix + own_slice + suffix)
             try:
                 # Ordinary in-guest code (production guest): the EIP-4844 blob
                 # commitment is computed in software as a BLS12-381 G1
@@ -371,7 +408,7 @@ def _verify_and_fold_chunks(
 
     # Fully consumed chunks have the canonical boundary offset 0. A positive
     # offset identifies only a position inside a shared terminal blob.
-    end_offset = last_chunk_len if chunks[-1].is_blob and len(opaque_suffix_bytes) > 0 else 0
+    end_offset = (last_chunk_len if last_chunk_len < BLOB_PAYLOAD_CAPACITY else 0) if chunks[-1].is_blob else 0
     return data_rolling_hash, end_offset
 
 

@@ -2,7 +2,7 @@ import pytest
 from ethereum.crypto.hash import Hash32, keccak256
 
 from rollup_spec import rollup
-from rollup_spec.rollup import BLOB_BYTES_LENGTH, ChunkWitness, _verify_and_fold_chunks
+from rollup_spec.rollup import BLOB_BYTES_LENGTH, BLOB_PAYLOAD_CAPACITY, ChunkWitness, _verify_and_fold_chunks
 
 
 _PARENT_HASH = Hash32(bytes([0x11]) * 32)
@@ -67,14 +67,14 @@ def test_blob_chunk_rejects_nonzero_calldata_length(monkeypatch) -> None:
     monkeypatch.setattr(rollup, "_trusted_setup", lambda: object())
     with pytest.raises(Exception, match="blob chunk 0 must have calldataLength 0"):
         _verify_and_fold_chunks(
-            own_stream_bytes=bytes(BLOB_BYTES_LENGTH),
+            own_stream_bytes=bytes(BLOB_PAYLOAD_CAPACITY),
             start_offset=0,
             chunks=[ChunkWitness(_CHUNK_HASH, is_calldata=False, calldata_length=1)],
             opaque_prefix_bytes=b"",
             opaque_suffix_bytes=b"",
             parent_data_rolling_hash=_PARENT_HASH,
             boundary_prev_data_rolling_hash=None,
-            segment_end_offsets=[BLOB_BYTES_LENGTH],
+            segment_end_offsets=[BLOB_PAYLOAD_CAPACITY],
         )
 
 
@@ -109,7 +109,7 @@ def test_calldata_chunk_rejects_start_between_segments(monkeypatch) -> None:
     monkeypatch.setattr(rollup.ckzg, "blob_to_kzg_commitment", lambda blob, setup: bytes(48))
     monkeypatch.setattr(rollup, "kzg_commitment_to_versioned_hash", lambda commitment: _CHUNK_HASH)
     calldata = b"segment"
-    own_bytes = bytes(BLOB_BYTES_LENGTH) + calldata
+    own_bytes = bytes(BLOB_PAYLOAD_CAPACITY) + calldata
     with pytest.raises(Exception, match="does not start at a segment boundary"):
         _verify_and_fold_chunks(
             own_stream_bytes=own_bytes,
@@ -127,16 +127,16 @@ def test_calldata_chunk_rejects_start_between_segments(monkeypatch) -> None:
 
 
 def test_completely_consumed_terminal_blob_uses_canonical_boundary_offset(monkeypatch) -> None:
-    assert _fold_blob(monkeypatch, bytes(BLOB_BYTES_LENGTH), b"") == 0
+    assert _fold_blob(monkeypatch, bytes(BLOB_PAYLOAD_CAPACITY), b"") == 0
 
 
 def test_partially_consumed_terminal_blob_uses_consumed_byte_offset(monkeypatch) -> None:
     suffix = bytes(17)
-    assert _fold_blob(monkeypatch, bytes(BLOB_BYTES_LENGTH - len(suffix)), suffix) == BLOB_BYTES_LENGTH - len(suffix)
+    assert _fold_blob(monkeypatch, bytes(BLOB_PAYLOAD_CAPACITY - len(suffix)), suffix) == BLOB_PAYLOAD_CAPACITY - len(suffix)
 
 
 def test_terminal_blob_must_contain_owned_bytes(monkeypatch) -> None:
     monkeypatch.setattr(rollup, "_trusted_setup", lambda: object())
 
     with pytest.raises(Exception, match="must contain owned bytes"):
-        _fold_blob(monkeypatch, b"", bytes(BLOB_BYTES_LENGTH))
+        _fold_blob(monkeypatch, b"", bytes(BLOB_PAYLOAD_CAPACITY))
