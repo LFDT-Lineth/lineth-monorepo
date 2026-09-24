@@ -93,6 +93,7 @@ def _sample_proof() -> L2ExecutionProof:
         end_processed_ftx_number=U64(18),
         filtered_addresses_hash=Hash32(bytes([0x06]) * 32),
         tx_froms_hash=Hash32(bytes([0x07]) * 32),
+        block_count=3,
     )
     return L2ExecutionProof(
         public_inputs=pi,
@@ -246,7 +247,8 @@ def test_encode_response_shape_and_values() -> None:
         "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
         "parentFtxRollingHash", "parentFtxNumber", "endFtxRollingHash",
-        "endProcessedFtxNumber", "filteredAddressesHash", "txFromsHash",
+            "endProcessedFtxNumber", "filteredAddressesHash", "txFromsHash",
+            "blockCount", "l2MessagingBlocksOffsets",
     }
 
     assert out["l2L1Messages"] == ["0x" + ("08" * 32)]
@@ -303,6 +305,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
         filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
         program_vks=[_EXEC_VK],
+        block_count=20,
     )
 
 
@@ -505,7 +508,8 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
+            "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
+            "blockCount", "l2MessagingBlocksOffsets",
     }
 
     assert out["programVk"] == "0x" + ("bb" * 32)
@@ -543,10 +547,10 @@ def _sample_finalization_submission() -> FinalizationSubmission:
                 Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
             ],
             filtered_addresses=[Address(bytes([0x01]) * 20), Address(bytes([0x01]) * 20)],
-            program_vks=[_EXEC_VK, _ROLLUP_VK],
+                program_vks=[_EXEC_VK, _ROLLUP_VK],
+                block_count=0,
         ),
         proof=b"\xde\xad\xbe\xef",
-        l2_messaging_blocks_offsets=[],
     )
 
 
@@ -652,10 +656,9 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     ]
     assert out["publicInputs"]["filteredAddresses"] == ["0x" + ("01" * 20)] * 2
     assert "programVks" not in out
-    assert out["l2MessagingBlocksOffsets"] == []
+    assert out["publicInputs"]["l2MessagingBlocksOffsets"] == []
     assert set(out.keys()) == {
         "proverVersion", "proof", "startBlockNumber", "publicInputs",
-        "l2MessagingBlocksOffsets",
     }
 
     pi = out["publicInputs"]
@@ -674,6 +677,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
+        "l2MessagingBlocksOffsets",
     }
 
 

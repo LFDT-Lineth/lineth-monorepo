@@ -29,7 +29,7 @@
           "startOffset": 0,
           "endOffset": 0,
           "l2L1TreeDepth": 5,
-      "l2L1Roots": [
+          "l2L1Roots": [
             "0x7777777777777777777777777777777777777777777777777777777777777777",
             "0x8888888888888888888888888888888888888888888888888888888888888888"
           ],
@@ -38,7 +38,9 @@
           ],
           "programVks": [
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          ]
+          ],
+          "blockCount": 2,
+          "l2MessagingBlocksOffsets": []
         },
         "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       },
@@ -64,7 +66,7 @@
           "startOffset": 0,
           "endOffset": 0,
           "l2L1TreeDepth": 5,
-      "l2L1Roots": [
+          "l2L1Roots": [
             "0x7777777777777777777777777777777777777777777777777777777777777777",
             "0x8888888888888888888888888888888888888888888888888888888888888888"
           ],
@@ -73,7 +75,9 @@
           ],
           "programVks": [
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          ]
+          ],
+          "blockCount": 4,
+          "l2MessagingBlocksOffsets": []
         },
         "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }

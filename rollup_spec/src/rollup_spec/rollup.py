@@ -408,7 +408,7 @@ def _verify_and_fold_chunks(
 
     # Fully consumed chunks have the canonical boundary offset 0. A positive
     # offset identifies only a position inside a shared terminal blob.
-    end_offset = (last_chunk_len if last_chunk_len < BLOB_PAYLOAD_CAPACITY else 0) if chunks[-1].is_blob else 0
+    end_offset = last_chunk_len if chunks[-1].is_blob and opaque_suffix_bytes else 0
     return data_rolling_hash, end_offset
 
 
@@ -459,6 +459,8 @@ class RollupPublicInput:
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
+    block_count: int = 0
+    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -633,6 +635,21 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
 
+    messaging_offsets: List[int] = []
+    for proof in l2_execution_proofs:
+        count = int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
+        if count <= 0 or proof.public_inputs.block_count != count:
+            raise Exception("l2-execution blockCount does not match proven range")
+        previous = 0
+        for offset in proof.public_inputs.l2_messaging_blocks_offsets:
+            if type(offset) is not int or not previous < offset <= count or offset > 0xFFFF:
+                raise Exception("invalid l2-execution messaging block offset")
+            rebased = int(proof.start_block_number) - rollup_start_block_number + offset
+            if rebased > 0xFFFF:
+                raise Exception("rollup messaging block offset exceeds uint16")
+            messaging_offsets.append(rebased)
+            previous = offset
+
     # The exec program VKs verified beneath this rollup proof, emitted as a
     # CANONICAL sorted, distinct list (§ProgramVK anchoring): semantically a set,
     # sorted so the commitment is a pure function of its contents. `Hash32` is a
@@ -706,6 +723,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_offset=end_offset,
         l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_vks=program_vks,
+        block_count=rollup_end_block_number - rollup_start_block_number + 1,
+        l2_messaging_blocks_offsets=messaging_offsets,
     )
 
     return RollupProof(

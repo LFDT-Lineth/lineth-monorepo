@@ -7,7 +7,8 @@ dataclasses in `rollup_aggregation.py` / `l1_rollup.py` / `rollup.py`, plus
 the framing and bounds needed to serialize them unambiguously. This Python
 spec is the source of truth for the wire format. The framing helpers are imported from
 the sibling `l2_execution_ssz.py`, and the shared `SszRollupPublicInput` container plus common bounds
-are imported from the sibling `rollup_ssz.py`.
+are imported from the sibling `rollup_ssz.py`. Finalization has its own
+public-input container with the proven messaging offsets and no block count.
 
 Framing: exactly like `stateless_input.py::STATELESS_INPUT_SCHEMA_ID`, every
 message is `schema_id (2 bytes, big-endian) || SSZ bytes`. Two schema ids are
@@ -32,7 +33,7 @@ from typing import Any
 
 from ethereum.crypto.hash import Hash32
 from ethereum_types.numeric import U64
-from remerkleable.basic import uint64
+from remerkleable.basic import uint16, uint64
 from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
@@ -48,6 +49,9 @@ from .l2_execution_ssz import (
 )
 from .rollup_ssz import (
     SszRollupPublicInput,
+    MAX_L2_L1_ROOTS,
+    MAX_FILTERED_ADDRESSES,
+    MAX_PROGRAM_VKS,
     _rollup_public_input_from_view,
     _ssz_rollup_public_input,
 )
@@ -81,12 +85,36 @@ class SszRollupAggregationProofPrivateInput(Container):
     rollup_proofs: List[SszVerifiableRollupProof, MAX_ROLLUP_PROOFS_PER_AGGREGATION]
 
 
+class SszFinalizationPublicInput(Container):
+    end_block_number: uint64
+    end_block_timestamp: uint64
+    parent_l1_l2_bridge_rolling_hash: SszBytes32
+    parent_l1_l2_bridge_rolling_hash_message_number: uint64
+    end_l1_l2_bridge_rolling_hash: SszBytes32
+    end_l1_l2_bridge_rolling_hash_message_number: uint64
+    dynamic_chain_config_hash: SszBytes32
+    parent_ftx_rolling_hash: SszBytes32
+    parent_ftx_number: uint64
+    end_ftx_rolling_hash: SszBytes32
+    end_processed_ftx_number: uint64
+    parent_data_rolling_hash: SszBytes32
+    end_data_rolling_hash: SszBytes32
+    parent_block_hash: SszBytes32
+    end_block_hash: SszBytes32
+    start_offset: uint64
+    end_offset: uint64
+    l2_l1_tree_depth: uint64
+    l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
+    filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
+    program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
+    l2_messaging_blocks_offsets: List[uint16, MAX_L2_MESSAGING_BLOCKS_OFFSETS]
+
+
 class SszRollupAggregationOutput(Container):
     # The rollup-aggregation guest's own output: `FinalizationSubmission` with
     # `proof` omitted. Field order matches the remaining fields of
     # `l1_rollup.py::FinalizationSubmission`.
-    public_inputs: SszRollupPublicInput
-    l2_messaging_blocks_offsets: List[uint64, MAX_L2_MESSAGING_BLOCKS_OFFSETS]
+    public_inputs: SszFinalizationPublicInput
 
 
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
@@ -158,10 +186,9 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     prover-attached placeholder in `FinalizationSubmission`, never part of the
     guest-emitted bytes.
     """
-    ssz_output = SszRollupAggregationOutput(
-        public_inputs=_ssz_rollup_public_input(submission.public_inputs),
-        l2_messaging_blocks_offsets=[int(o) for o in submission.l2_messaging_blocks_offsets],
-    )
+    rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
+    fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
+    ssz_output = SszRollupAggregationOutput(public_inputs=SszFinalizationPublicInput(**fields))
     return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, ssz_output.encode_bytes())
 
 
@@ -177,5 +204,4 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=_rollup_public_input_from_view(view.public_inputs),
         proof=b"",
-        l2_messaging_blocks_offsets=[int(o) for o in view.l2_messaging_blocks_offsets],
     )

@@ -21,7 +21,7 @@
     "startOffset": 0,
     "endOffset": 0,
     "l2L1TreeDepth": 5,
-      "l2L1Roots": [
+    "l2L1Roots": [
       "0x7777777777777777777777777777777777777777777777777777777777777777",
       "0x8888888888888888888888888888888888888888888888888888888888888888",
       "0x7777777777777777777777777777777777777777777777777777777777777777",
@@ -34,7 +34,7 @@
     "programVks": [
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    ]
-  },
-  "l2MessagingBlocksOffsets": []
+    ],
+    "l2MessagingBlocksOffsets": []
+  }
 }

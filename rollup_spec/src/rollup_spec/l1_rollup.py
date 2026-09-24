@@ -95,8 +95,7 @@ class FinalizationSubmission:
     Guest/prover boundary: the aggregation guest emits `public_inputs`; `proof`
     is attached by the zkVM/prover layer above and is a placeholder (`b""`) in
     this reference (see `run_rollup_aggregation_guest`).
-    `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
-    not yet consumed by `finalize_rollup`.
+    `public_inputs.l2_messaging_blocks_offsets` is bound inside the PI and emitted by L1.
 
     The single combined program-VK list (§ProgramVK anchoring) lives inside
     `public_inputs.program_vks` so its order is bound to the proof; it is NOT a
@@ -105,7 +104,6 @@ class FinalizationSubmission:
     """
     public_inputs: RollupPublicInput
     proof: bytes
-    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 def anchor_chunk_submission(
@@ -130,7 +128,7 @@ def finalize_rollup(
     submission: FinalizationSubmission,
     prev_data_rolling_hash: Hash32,
     prev_offset: int,
-) -> None:
+) -> bytes:
     """
     `prev_data_rolling_hash` / `prev_offset` are the previously-finalized end position,
     supplied as calldata so the contract can open the stored position
@@ -142,6 +140,16 @@ def finalize_rollup(
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
         raise Exception("invalid rollup-aggregation proof")
+    previous_messaging_offset = 0
+    finalized_block_count = int(pi.end_block_number) - int(state.current_l2_block_number)
+    for offset in pi.l2_messaging_blocks_offsets:
+        if (
+            type(offset) is not int
+            or not previous_messaging_offset < offset <= finalized_block_count
+            or offset > 0xFFFF
+        ):
+            raise Exception("invalid finalized messaging block offset")
+        previous_messaging_offset = offset
     if keccak256(prev_data_rolling_hash + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
         raise Exception("prevDataRollingHash/prevOffset do not match the finalized position commitment")
     if pi.parent_data_rolling_hash != prev_data_rolling_hash:
@@ -213,6 +221,8 @@ def finalize_rollup(
     )
     state.current_finalized_ftx_rolling_hash = pi.end_ftx_rolling_hash
     state.current_finalized_processed_ftx_number = pi.end_processed_ftx_number
+
+    return b"".join(offset.to_bytes(2, "big") for offset in pi.l2_messaging_blocks_offsets)
 
 
 def verify_rollup_aggregation_snark(proof: bytes, public_inputs: RollupPublicInput) -> bool:

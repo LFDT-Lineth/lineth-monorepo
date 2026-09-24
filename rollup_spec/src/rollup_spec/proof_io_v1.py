@@ -304,6 +304,8 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
             "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
             "txFromsHash": _hx(pi.tx_froms_hash),
+            "blockCount": pi.block_count,
+            "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
         },
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
         "txFroms": [_hx(a) for a in proof.tx_froms],
@@ -369,6 +371,11 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
         tx_froms_hash=h("txFromsHash"),
+        block_count=int(n("blockCount")),
+        l2_messaging_blocks_offsets=[
+            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
+            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
+        ],
     )
 
 
@@ -525,7 +532,7 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 # ── rollup response: guest dataclass -> JSON dict ─────────────────────────────
 
 
-def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
+def _encode_rollup_public_inputs(pi: RollupPublicInput, *, aggregation: bool = False) -> dict:
     """The rollup PI tuple (§2.4) as JSON — shared by the rollup and
     rollup-aggregation responses, which expose the identical PI structure."""
     return {
@@ -557,6 +564,8 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         # program VKs verified beneath this proof, checked against L1's single
         # combined approved-VK set (exec vs rollup not distinguished).
         "programVks": [_hx(v) for v in pi.program_vks],
+        **({} if aggregation else {"blockCount": pi.block_count}),
+        "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
     }
 
 
@@ -646,6 +655,11 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
             for i, v in enumerate(program_vks)
         ],
+        block_count=int(n("blockCount")) if "blockCount" in obj else 0,
+        l2_messaging_blocks_offsets=[
+            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
+            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
+        ],
     )
 
 
@@ -718,8 +732,7 @@ def encode_aggregation_response(
         "proverVersion": prover_version,
         "proof": _hx(submission.proof),
         "startBlockNumber": int(start_block_number),
-        "publicInputs": _encode_rollup_public_inputs(submission.public_inputs),
-        "l2MessagingBlocksOffsets": list(submission.l2_messaging_blocks_offsets),
+        "publicInputs": _encode_rollup_public_inputs(submission.public_inputs, aggregation=True),
     }
 
 

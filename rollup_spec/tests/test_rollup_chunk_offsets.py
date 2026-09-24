@@ -135,6 +135,22 @@ def test_partially_consumed_terminal_blob_uses_consumed_byte_offset(monkeypatch)
     assert _fold_blob(monkeypatch, bytes(BLOB_PAYLOAD_CAPACITY - len(suffix)), suffix) == BLOB_PAYLOAD_CAPACITY - len(suffix)
 
 
+def test_short_terminal_blob_ends_at_canonical_boundary(monkeypatch) -> None:
+    assert _fold_blob(monkeypatch, b"complete zstd frame", b"") == 0
+
+
+def test_next_proof_starts_after_short_terminal_blob(monkeypatch) -> None:
+    from ethereum_types.numeric import U64
+    from rollup_spec.rollup import RollupProof
+    from rollup_spec.rollup_aggregation import assert_rollup_proof_continuity
+    from tests.test_rollup_aggregation import _left_pi, _right_pi
+
+    left_end = _fold_blob(monkeypatch, b"complete zstd frame", b"")
+    left = RollupProof(public_inputs=_left_pi(end_offset=left_end), start_block_number=U64(1))
+    right = RollupProof(public_inputs=_right_pi(start_offset=0), start_block_number=U64(2))
+    assert_rollup_proof_continuity(left, right)
+
+
 def test_terminal_blob_must_contain_owned_bytes(monkeypatch) -> None:
     monkeypatch.setattr(rollup, "_trusted_setup", lambda: object())
 

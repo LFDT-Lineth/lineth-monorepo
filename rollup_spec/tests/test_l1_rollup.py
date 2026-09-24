@@ -105,8 +105,23 @@ def _base_submission(program_vks, start_offset: int = 0) -> FinalizationSubmissi
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
-        l2_messaging_blocks_offsets=[],
     )
+
+
+def test_finalization_emits_exact_proven_messaging_offsets() -> None:
+    state = _base_state(approved_vks=set())
+    submission = _base_submission(program_vks=[])
+    submission.public_inputs.l2_messaging_blocks_offsets = [1, 7, 20]
+    assert finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, 0) == b"\x00\x01\x00\x07\x00\x14"
+
+
+def test_finalization_rejects_out_of_range_or_repeated_messaging_offsets() -> None:
+    for offsets in ([0], [21], [7, 7], [65536]):
+        state = _base_state(approved_vks=set())
+        submission = _base_submission(program_vks=[])
+        submission.public_inputs.l2_messaging_blocks_offsets = offsets
+        with pytest.raises(Exception, match="messaging block offset"):
+            finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, 0)
 
 
 def _finalize(state: LinethRollupState, submission: FinalizationSubmission) -> None:

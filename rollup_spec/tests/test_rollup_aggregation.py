@@ -61,6 +61,7 @@ def _left_pi(**overrides) -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=U64(4),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
+        block_count=10,
     )
     defaults.update(overrides)
     return _base_public_input(**defaults)
@@ -75,6 +76,7 @@ def _right_pi(**overrides) -> RollupPublicInput:
         parent_l1_l2_bridge_rolling_hash_message_number=U64(4),
         parent_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         parent_ftx_number=U64(12),
+        block_count=10,
     )
     defaults.update(overrides)
     return _base_public_input(**defaults)
@@ -98,10 +100,28 @@ def test_aggregation_carries_proven_tree_depth() -> None:
 def test_aggregation_rejects_mismatched_tree_depth() -> None:
     proofs = [
         VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32))),
-        VerifiableRollupProof(_proof(_right_pi(l2_l1_tree_depth=4)), Hash32(bytes(32))),
+        VerifiableRollupProof(RollupProof(_right_pi(l2_l1_tree_depth=4, end_block_number=U64(1000520)), U64(1000511)), Hash32(bytes(32))),
     ]
     with pytest.raises(Exception, match="tree depth"):
         run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=proofs))
+
+
+def test_aggregation_rebases_only_proven_messaging_blocks() -> None:
+    left = RollupProof(_left_pi(l2_messaging_blocks_offsets=[1, 10]), U64(1000501))
+    right = RollupProof(_right_pi(end_block_number=U64(1000520), l2_messaging_blocks_offsets=[2]), U64(1000511))
+    result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
+        VerifiableRollupProof(left, Hash32(bytes(32))),
+        VerifiableRollupProof(right, Hash32(bytes(32))),
+    ]))
+    assert result.public_inputs.l2_messaging_blocks_offsets == [1, 10, 12]
+
+
+def test_aggregation_rejects_unproven_messaging_offset() -> None:
+    proof = RollupProof(_left_pi(l2_messaging_blocks_offsets=[11]), U64(1000501))
+    with pytest.raises(Exception, match="messaging block offset"):
+        run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
+            VerifiableRollupProof(proof, Hash32(bytes(32))),
+        ]))
 
 
 def test_data_rolling_hash_mismatch_is_rejected() -> None:

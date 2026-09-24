@@ -43,6 +43,8 @@ def run_rollup_aggregation_guest(
     # guest-emitted `RollupProof`, not the coordinator-attached VK.
     rollup_proofs = [vp.proof for vp in aggregation_input.rollup_proofs]
     for left, right in zip(rollup_proofs, rollup_proofs[1:]):
+        if int(right.start_block_number) != int(left.public_inputs.end_block_number) + 1:
+            raise Exception("rollup proofs must tile a contiguous block range")
         assert_rollup_proof_continuity(left, right)
 
     first_proof = rollup_proofs[0]
@@ -53,6 +55,7 @@ def run_rollup_aggregation_guest(
             raise Exception("rollup proofs disagree on L2-to-L1 tree depth")
     merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
+    messaging_offsets: List[int] = []
 
     # §ProgramVK anchoring: emit ONE `program_vks` set as a CANONICAL sorted,
     # distinct list — L1 does not distinguish exec vs rollup VKs (single combined
@@ -66,6 +69,19 @@ def run_rollup_aggregation_guest(
     program_vk_set: Set[Hash32] = set()
 
     for vp in aggregation_input.rollup_proofs:
+        proof = vp.proof
+        count = int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
+        if count <= 0 or proof.public_inputs.block_count != count:
+            raise Exception("rollup blockCount does not match proven range")
+        previous = 0
+        for offset in proof.public_inputs.l2_messaging_blocks_offsets:
+            if type(offset) is not int or not previous < offset <= count or offset > 0xFFFF:
+                raise Exception("invalid rollup messaging block offset")
+            rebased = int(proof.start_block_number) - int(first_proof.start_block_number) + offset
+            if rebased > 0xFFFF:
+                raise Exception("aggregation messaging block offset exceeds uint16")
+            messaging_offsets.append(rebased)
+            previous = offset
         merged_l2_l1_roots.extend(vp.proof.public_inputs.l2_l1_roots)
         merged_filtered_addresses.extend(vp.proof.public_inputs.filtered_addresses)
         if vp.program_vk not in seen_rollup_vks:
@@ -107,12 +123,12 @@ def run_rollup_aggregation_guest(
         end_offset=last_proof.public_inputs.end_offset,
         l2_l1_tree_depth=depth,
         program_vks=program_vks,
+        l2_messaging_blocks_offsets=messaging_offsets,
     )
 
     return FinalizationSubmission(
         public_inputs=public_inputs,
         proof=bytes(),  # Placeholder: filled by zkVM prover at layer above
-        l2_messaging_blocks_offsets=[],  # Not populated from rollup proofs; defaults to empty
     )
 
 

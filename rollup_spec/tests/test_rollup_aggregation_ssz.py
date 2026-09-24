@@ -66,7 +66,6 @@ def _aggregation_output_from_response(resp: dict) -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
-        l2_messaging_blocks_offsets=list(resp["l2MessagingBlocksOffsets"]),
     )
 
 
@@ -102,7 +101,7 @@ def test_aggregation_output_preserves_messaging_block_offsets() -> None:
     submission = _aggregation_output_from_response(
         _load_json("getZkRollupAggregationProofV1.response.json")
     )
-    submission.l2_messaging_blocks_offsets = [3, 8]
+    submission.public_inputs.l2_messaging_blocks_offsets = [3, 8]
 
     recovered = decode_aggregation_output_ssz(encode_aggregation_output(submission))
     response = encode_aggregation_response(
@@ -111,8 +110,8 @@ def test_aggregation_output_preserves_messaging_block_offsets() -> None:
         start_block_number=10,
     )
 
-    assert recovered.l2_messaging_blocks_offsets == [3, 8]
-    assert response["l2MessagingBlocksOffsets"] == [3, 8]
+    assert recovered.public_inputs.l2_messaging_blocks_offsets == [3, 8]
+    assert response["publicInputs"]["l2MessagingBlocksOffsets"] == [3, 8]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
