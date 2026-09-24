@@ -1,0 +1,102 @@
+# Build + smoke-test + publish the prover-ray image. Mirrors
+# prover-build-and-publish.yml. Reusable (workflow_call), so it is inert until
+# reusable-component-release.yml adds a build-local-prover-ray job that calls it
+# (see the release-integration note at the bottom).
+name: prover-ray-build-and-publish
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      image_tag_with_suffix:
+        required: false
+        type: string
+        default: ''
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        required: false
+        type: string
+        default: consensys/linea-prover-ray
+      push_image:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+concurrency:
+  group: prover-ray-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  GOPROXY: "https://proxy.golang.org"
+
+jobs:
+  build-and-publish:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    name: Prover-ray build
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_TAG_WITH_SUFFIX: ${{ inputs.image_tag_with_suffix }}
+      DEVELOP_TAG: ${{ inputs.develop_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish Docker image
+        uses: ./.github/actions/docker-build-publish
+        with:
+          image_name: ${{ env.IMAGE_NAME }}
+          image_tags: ${{ env.IMAGE_TAG_WITH_SUFFIX && format('{0},{1}', env.IMAGE_TAG, env.IMAGE_TAG_WITH_SUFFIX) || env.IMAGE_TAG }}
+          develop_tag: ${{ env.DEVELOP_TAG }}
+          push_image: ${{ env.PUSH_IMAGE }}
+          dockerfile_path: ./prover-ray/Dockerfile
+          # positional context is prover-ray (bare COPYs); the native runner is
+          # built from riscv-guests, passed as a named build context.
+          docker_context: prover-ray
+          build_contexts: riscv-guests=riscv-guests/
+          # amd64 only: the zig native runner + native crypto target x86-64.
+          push_platforms: linux/amd64
+          save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
+          artifact_name: linea-prover-ray
+
+      # Smoke gate: on the local (push_image=false) build the image is loaded
+      # locally, so run the same smoke test used in dev. If it fails, the release
+      # is blocked before anything is pushed.
+      - name: Smoke test the image
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}"
+
+# --- Release integration TODO: add to reusable-component-release.yml ---
+# 1. A build-local-prover-ray job mirroring build-local-prover, gated on
+#    inputs.component-name == 'prover-ray' and needs: [compute-release-metadata,
+#    run-test-prover-ray], calling ./.github/workflows/prover-ray-build-and-publish.yml
+#    with { image_tag: local, develop_tag: develop, push_image: false }.
+# 2. Add build-local-prover-ray to run-e2e-tests' needs list and success check.
+# Open items: image_name/registry (consensys/linea-prover-ray?), self-hosted
+# runner label, and whether a run-test-prover-ray gate exists yet.
