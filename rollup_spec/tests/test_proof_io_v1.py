@@ -505,7 +505,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "l2L1Roots", "filteredAddresses", "programVks",
+        "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
     }
 
     assert out["programVk"] == "0x" + ("bb" * 32)
@@ -673,7 +673,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "l2L1Roots", "filteredAddresses", "programVks",
+        "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
     }
 
 

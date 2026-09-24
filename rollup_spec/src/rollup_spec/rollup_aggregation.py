@@ -47,6 +47,10 @@ def run_rollup_aggregation_guest(
 
     first_proof = rollup_proofs[0]
     last_proof = rollup_proofs[-1]
+    depth = first_proof.public_inputs.l2_l1_tree_depth
+    for proof in rollup_proofs:
+        if proof.public_inputs.l2_l1_tree_depth != depth:
+            raise Exception("rollup proofs disagree on L2-to-L1 tree depth")
     merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
 
@@ -101,6 +105,7 @@ def run_rollup_aggregation_guest(
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=first_proof.public_inputs.start_offset,
         end_offset=last_proof.public_inputs.end_offset,
+        l2_l1_tree_depth=depth,
         program_vks=program_vks,
     )
 

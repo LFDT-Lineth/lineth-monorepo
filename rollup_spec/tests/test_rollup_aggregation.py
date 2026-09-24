@@ -16,8 +16,12 @@ import pytest
 from ethereum.crypto.hash import Hash32
 from ethereum_types.numeric import U64
 
-from rollup_spec.rollup import RollupProof, RollupPublicInput
-from rollup_spec.rollup_aggregation import assert_rollup_proof_continuity
+from rollup_spec.rollup import RollupProof, RollupPublicInput, VerifiableRollupProof
+from rollup_spec.rollup_aggregation import (
+    RollupAggregationProofPrivateInput,
+    assert_rollup_proof_continuity,
+    run_rollup_aggregation_guest,
+)
 
 
 def _base_public_input(**overrides) -> RollupPublicInput:
@@ -82,6 +86,22 @@ def _proof(public_inputs: RollupPublicInput) -> RollupProof:
 
 def test_fully_continuous_proofs_pass() -> None:
     assert_rollup_proof_continuity(_proof(_left_pi()), _proof(_right_pi()))
+
+
+def test_aggregation_carries_proven_tree_depth() -> None:
+    result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(
+        rollup_proofs=[VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32)))],
+    ))
+    assert result.public_inputs.l2_l1_tree_depth == 5
+
+
+def test_aggregation_rejects_mismatched_tree_depth() -> None:
+    proofs = [
+        VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32))),
+        VerifiableRollupProof(_proof(_right_pi(l2_l1_tree_depth=4)), Hash32(bytes(32))),
+    ]
+    with pytest.raises(Exception, match="tree depth"):
+        run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=proofs))
 
 
 def test_data_rolling_hash_mismatch_is_rejected() -> None:

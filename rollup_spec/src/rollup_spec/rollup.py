@@ -455,6 +455,7 @@ class RollupPublicInput:
     end_block_hash: Hash32
     start_offset: int
     end_offset: int
+    l2_l1_tree_depth: int = L2_L1_TREE_DEPTH
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
@@ -703,6 +704,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=rollup_input.start_offset,
         end_offset=end_offset,
+        l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_vks=program_vks,
     )
 

@@ -5,7 +5,7 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
+from .rollup import DataRollingHashWitness, RollupPublicInput
 
 
 def _encode_offset(offset: int) -> bytes:
@@ -185,7 +185,7 @@ def finalize_rollup(
     )
 
     for root in pi.l2_l1_roots:
-        state.l2_merkle_roots_depths[root] = L2_L1_TREE_DEPTH
+        state.l2_merkle_roots_depths[root] = pi.l2_l1_tree_depth
 
     for address in pi.filtered_addresses:
         if address not in state.sanctioned_addresses:

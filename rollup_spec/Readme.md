@@ -1,4 +1,8 @@
 # Lineth Type-1 RISC-V Migration
+The rollup guest builds L2-to-L1 message roots at fixed depth 5 (32 leaves).
+The rollup public inputs expose `l2L1TreeDepth`; aggregation checks that all
+input rollup proofs agree and emits that proven depth, which L1 stores with
+each root.
 ## The Path to a Type-1 RISC-V Architecture
 
 ---

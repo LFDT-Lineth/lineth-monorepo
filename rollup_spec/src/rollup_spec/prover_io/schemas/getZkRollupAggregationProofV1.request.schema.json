@@ -64,6 +64,7 @@
         "startOffset",
         "endOffset",
         "l2L1Roots",
+        "l2L1TreeDepth",
         "filteredAddresses",
         "programVks"
       ],
@@ -91,6 +92,7 @@
           "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
+        "l2L1TreeDepth": { "type": "integer", "const": 5 },
         "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVks": {

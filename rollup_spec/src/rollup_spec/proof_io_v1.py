@@ -551,6 +551,7 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "startOffset": int(pi.start_offset),
         "endOffset": int(pi.end_offset),
         "l2L1Roots": [_hx(r) for r in pi.l2_l1_roots],
+        "l2L1TreeDepth": pi.l2_l1_tree_depth,
         "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
         # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
         # program VKs verified beneath this proof, checked against L1's single
@@ -636,6 +637,7 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
             Hash32(_bytes_from_hex(r, f"{ctx}l2L1Roots[{i}]"))
             for i, r in enumerate(_require_list(obj, "l2L1Roots", ctx))
         ],
+        l2_l1_tree_depth=int(n("l2L1TreeDepth")),
         filtered_addresses=[
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
