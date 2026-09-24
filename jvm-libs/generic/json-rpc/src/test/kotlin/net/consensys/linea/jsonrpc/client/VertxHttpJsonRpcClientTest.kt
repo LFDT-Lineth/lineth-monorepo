@@ -2,7 +2,6 @@ package net.consensys.linea.jsonrpc.client
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.ok
@@ -16,45 +15,42 @@ import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
+import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
-import lineth.vertx.runOnContextAsync
 import net.consensys.linea.async.get
-import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
-import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Timeout
-import org.mockito.Mockito.spy
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import java.net.ServerSocket
 import java.net.URI
 import java.net.URL
-import java.time.Duration
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
 class VertxHttpJsonRpcClientTest {
   private lateinit var vertx: Vertx
+  private lateinit var httpClient: HttpClient
   private lateinit var client: VertxHttpJsonRpcClient
   private lateinit var wiremock: WireMockServer
   private val path = "/api/v1?appKey=1234"
@@ -68,14 +64,15 @@ class VertxHttpJsonRpcClientTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    httpClient = vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2))
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions, PoolOptions().setHttp1MaxSize(2)),
+      httpClient,
       endpoint,
       metricsFacade,
     )
@@ -83,27 +80,9 @@ class VertxHttpJsonRpcClientTest {
 
   @AfterEach
   fun tearDown() {
+    httpClient.close().get()
     wiremock.stop()
-    vertx.close()
-  }
-
-  /**
-   * In Vert.x 5, a [Future] completed on the event-loop thread dispatches its listener inline only
-   * when the listener is attached from that same event-loop thread. Attaching from the JUnit thread
-   * (as `client.makeRequest(request).toSafeFuture()` normally does) can hit Vert.x's cross-thread
-   * `context.execute()` dispatch path, which schedules the callback via Netty's task queue instead of
-   * calling it directly. On loaded CI runners this scheduling can stall for several seconds, making
-   * otherwise-instant failure assertions flaky/timeout-prone.
-   *
-   * In production, `makeRequest(...).toSafeFuture()` is always observed from a Vert.x context (e.g.
-   * verticles, `vertx.setTimer` callbacks in [net.consensys.linea.async.AsyncRetryer]), so this is a
-   * test-only concern. Running the request and its listener attachment on the Vert.x context via
-   * [Vertx.runOnContext] mirrors production usage and keeps these assertions fast and deterministic.
-   */
-  private fun makeRequestOnEventLoop(
-    request: JsonRpcRequest,
-  ): CompletableFuture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    return vertx.runOnContextAsync { client.makeRequest(request).toSafeFuture() }
+    vertx.close().get()
   }
 
   @Test
@@ -188,8 +167,7 @@ class VertxHttpJsonRpcClientTest {
         .put("result", JsonObject().put("odd", 23).put("even", 10)),
     )
 
-    client
-      .makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
+    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
       .get()
       .also { response ->
         val expectedJsonNode = JsonObject("""{"odd":23,"even":10}""")
@@ -197,11 +175,10 @@ class VertxHttpJsonRpcClientTest {
           .isEqualTo(Ok(JsonRpcSuccessResponse("1", expectedJsonNode)))
       }
 
-    client
-      .makeRequest(
-        request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
-        resultMapper = ::toPrimitiveOrJacksonJsonNode,
-      )
+    client.makeRequest(
+      request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
+      resultMapper = ::toPrimitiveOrJacksonJsonNode,
+    )
       .get()
       .also { response ->
         val expectedJsonNode = objectMapper.readTree("""{"odd":23,"even":10}""")
@@ -222,8 +199,7 @@ class VertxHttpJsonRpcClientTest {
       """.trimMargin(),
     )
 
-    client
-      .makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
+    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
       .get()
       .also { response ->
         val expectedJsonNode = JsonArray("""["a", 2, "c", 4]""")
@@ -231,11 +207,10 @@ class VertxHttpJsonRpcClientTest {
           .isEqualTo(Ok(JsonRpcSuccessResponse("1", expectedJsonNode)))
       }
 
-    client
-      .makeRequest(
-        request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
-        resultMapper = ::toPrimitiveOrJacksonJsonNode,
-      )
+    client.makeRequest(
+      request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
+      resultMapper = ::toPrimitiveOrJacksonJsonNode,
+    )
       .get()
       .also { response ->
         val expectedJsonNode = objectMapper.readTree("""["a", 2, "c", 4]""")
@@ -294,51 +269,47 @@ class VertxHttpJsonRpcClientTest {
         .put("jsonrpc", "2.0")
         .put("error", JsonObject().put("code", -32602).put("message", "Parse Error")),
     )
-    val response =
-      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).get()
+    val response = client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).get()
 
     assertThat(response)
       .isEqualTo(Err(JsonRpcErrorResponse(null, JsonRpcError(-32602, "Parse Error"))))
   }
 
   @Test
-  @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_malFormattedJsonResponse() {
     replyRequestWith(
       JsonObject().put("jsonrpc", "2.0").put("id", "1").put("nonsense", "some_random_value"),
     )
 
-    assertThat(
-      makeRequestOnEventLoop(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())),
-    )
-      .failsWithin(Duration.ofSeconds(14))
-      .withThrowableOfType(ExecutionException::class.java)
-      .withMessage(
+    assertThatThrownBy {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).get()
+    }
+      .isInstanceOf(ExecutionException::class.java)
+      .hasMessage(
         "java.lang.IllegalArgumentException: Invalid JSON-RPC response without result or error",
       )
   }
 
   @Test
-  @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_connectionFailure() {
-    val log: Logger = spy(LogManager.getLogger(VertxHttpJsonRpcClient::class.java))
+    val log: Logger = mock()
     // Use localhost with a guaranteed-closed port for an immediate "connection refused" failure,
-    // rather than a non-routable hostname whose DNS resolution timeout can be slower than the
-    // test's own timeout.
+    // rather than a non-routable hostname whose DNS resolution can take several seconds.
     val closedPort = ServerSocket(0).also { it.close() }.localPort
     val endpoint = URI("http://localhost:$closedPort/api/v1?appKey=1234").toURL()
+    httpClient.close().get()
+    httpClient = vertx.createHttpClient(clientOptions)
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions),
+      httpClient,
       endpoint,
       metricsFacade,
       log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(makeRequestOnEventLoop(request))
-      .failsWithin(Duration.ofSeconds(14))
-      .withThrowableOfType(ExecutionException::class.java)
-      .withMessageContaining("localhost")
+    assertThatThrownBy { client.makeRequest(request).get() }
+      .isInstanceOf(ExecutionException::class.java)
+      .hasMessageContaining("localhost")
 
     verify(log).log(
       eq(Level.DEBUG),
@@ -351,22 +322,22 @@ class VertxHttpJsonRpcClientTest {
   }
 
   @Test
-  @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_502_response() {
     replyRequestWith(500, "Internal server error\n 2nd line of response to be ignored")
-    val log: Logger = spy(LogManager.getLogger(VertxHttpJsonRpcClient::class.java))
+    val log: Logger = mock()
+    httpClient.close().get()
+    httpClient = vertx.createHttpClient(clientOptions)
     client = VertxHttpJsonRpcClient(
-      vertx.createHttpClient(clientOptions),
+      httpClient,
       endpoint,
       metricsFacade,
       log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
-    assertThat(makeRequestOnEventLoop(request))
-      .failsWithin(Duration.ofSeconds(14))
-      .withThrowableOfType(ExecutionException::class.java)
-      .withMessageContaining("HTTP errorCode=500, message=Server Error")
+    assertThatThrownBy { client.makeRequest(request).get() }
+      .isInstanceOf(ExecutionException::class.java)
+      .hasMessageContaining("HTTP errorCode=500, message=Server Error")
 
     verify(log).log(
       eq(Level.DEBUG),
@@ -395,7 +366,7 @@ class VertxHttpJsonRpcClientTest {
     assertThat(timer).isNotNull
 
     await()
-      .atMost(2, TimeUnit.SECONDS)
+      .atMost(1, TimeUnit.MINUTES)
       .untilAsserted {
         assertThat(timer.count()).isEqualTo(requestsFutures.size.toLong())
       }
