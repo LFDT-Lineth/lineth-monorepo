@@ -68,8 +68,22 @@ func fsReplayCircuitTemplate() *fsReplayCircuit {
 	}
 }
 
+// fsReplayWitness builds the differential fixture: it runs the native
+// transcript over a fixed input and returns a circuit assignment carrying both
+// that input and every challenge the native transcript produced. The circuit
+// absorbs the same input and asserts it derives the same challenges, so a
+// solved circuit means the two transcripts agree step for step.
+//
+// The sequence of calls below must stay in lock-step with [fsReplayCircuit.Define].
+// A Fiat-Shamir transcript is order-dependent by construction: absorbing the
+// same values in a different order, or sampling a challenge the other side does
+// not sample, changes every subsequent digest. Reordering one side alone turns
+// this into a test that always fails; reordering both in the same way turns it
+// into a test that passes while the circuit diverges from the real verifier.
 func fsReplayWitness(t *testing.T) *fsReplayCircuit {
 	t.Helper()
+	// Fixed seed: the fixture must be reproducible, since a failure here is a
+	// mismatch between the two implementations, not a property to fuzz.
 	rng := rand.New(rand.NewPCG(7, 11))
 
 	base := make([]field.Element, fsTestNumBase)
@@ -85,12 +99,17 @@ func fsReplayWitness(t *testing.T) *fsReplayCircuit {
 		seed[i] = field.PseudoRand(rng)
 	}
 
+	// Drive the native transcript. Each sampled value becomes an expected
+	// output the circuit is constrained against.
 	native := fiatshamir.NewFiatShamir()
 	native.Update(base...)
 	native.UpdateExt(ext...)
 	digest := native.RandomDigest()
 	coin := native.RandomFext()
 	ints := native.RandomManyIntegers(fsTestNumIntegers, fsTestIntegerBound)
+	// Seeding replaces the accumulated state outright, so `seeded` must depend
+	// only on seed — covering the state round-trip the recursion relies on to
+	// resume a transcript mid-protocol.
 	native.SetState(seed)
 	seeded := native.RandomFext()
 
@@ -112,6 +131,9 @@ func fsReplayWitness(t *testing.T) *fsReplayCircuit {
 	for i := range ints {
 		witness.Integers[i] = ints[i]
 	}
+	// Guard against a vacuous fixture: an all-zero integer sample would be
+	// satisfied by a circuit whose RandomManyIntegers returns nothing useful,
+	// so assert the native side actually produced varied output.
 	require.NotZero(t, ints[0]+ints[1]+ints[2], "sampled integers should not all be zero")
 	return witness
 }
