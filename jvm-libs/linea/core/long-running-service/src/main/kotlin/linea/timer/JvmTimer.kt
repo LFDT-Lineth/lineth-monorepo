@@ -1,5 +1,6 @@
 package linea.timer
 
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Timer
 import kotlin.concurrent.timerTask
 import kotlin.time.Duration
@@ -13,6 +14,7 @@ class JvmTimer(
   override val task: Runnable,
 ) : linea.timer.Timer {
   private var timer: Timer? = null
+  private var inFlightExecution: SafeFuture<Unit>? = null
 
   internal fun timerReference(): Timer? = timer
 
@@ -21,8 +23,15 @@ class JvmTimer(
     if (timer != null) {
       return
     }
-    timer = Timer(name, true)
+    val newTimer = Timer(name, true)
+    timer = newTimer
     val timerTask = timerTask {
+      val execution = SafeFuture<Unit>()
+      synchronized(this@JvmTimer) {
+        // timer was stopped after this execution was dequeued: skip it
+        if (timer !== newTimer) return@timerTask
+        inFlightExecution = execution
+      }
       try {
         task.run()
       } catch (t: Throwable) {
@@ -32,24 +41,29 @@ class JvmTimer(
           System.err.println("JvmTimer[$name] errorHandler threw: ${handlerEx.message}")
         }
         if (t is VirtualMachineError || t is LinkageError) throw t
+      } finally {
+        synchronized(this@JvmTimer) {
+          if (inFlightExecution === execution) {
+            inFlightExecution = null
+          }
+        }
+        execution.complete(Unit)
       }
     }
     when (timerSchedule) {
       TimerSchedule.FIXED_DELAY ->
-        timer!!.schedule(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
+        newTimer.schedule(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
 
       TimerSchedule.FIXED_RATE ->
-        timer!!.scheduleAtFixedRate(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
+        newTimer.scheduleAtFixedRate(timerTask, initialDelay.inWholeMilliseconds, period.inWholeMilliseconds)
     }
   }
 
   @Synchronized
-  override fun stop() {
-    if (timer == null) {
-      return
-    }
+  override fun stop(): SafeFuture<Unit> {
     timer?.cancel()
     timer = null
+    return inFlightExecution ?: SafeFuture.completedFuture(Unit)
   }
 }
 

@@ -23,6 +23,9 @@
 *.cov.tmp
 *.iws
 *.ipr
+*.class
+*.hprof
+*.local.toml
 
 .classpath
 .DS_Store
@@ -53,6 +56,10 @@
 !.cursor/rules/
 # Ignore .codex config but commit shared team skills/rules etc.
 .codex/config.toml
+
+
+hs_err_pid*
+replay_pid*
 
 atlassian-ide-plugin.xml
 circuit.bin
@@ -217,7 +224,7 @@ docker/config/linea-besu-sequencer/deny-list.txt
 docker/config/linea-besu-sequencer/deny-list.txt.lock
 
 **/.venv
-
+ai-generated
 .claude/worktrees/
 # Local output of arithmetization/src/test/scripts/weekly_zkc_metrics.sh
 .claude/reports/

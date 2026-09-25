@@ -45,6 +45,14 @@ jacoco {
   *   multiple variant of that test are run. The variant is a simple number.
   * - 'root.log.level' and 'evm.log.level': allow to control the log level used during the tests.
   */
+// BESU-related paths, overridable through environment variables of the same name.
+def besuPluginsDir = file(providers.environmentVariable("besu.plugins.dir")
+    .orElse(layout.buildDirectory.dir("besu/plugins").map { it.asFile.path })
+    .get())
+def besuTracesDir = file(providers.environmentVariable("besu.traces.dir")
+    .orElse(layout.buildDirectory.dir("besu/traces").map { it.asFile.path })
+    .get())
+
 tasks.withType(Test).configureEach {
   minHeapSize = "256m"
   // Determine heap limit based on whether CI machine, or not.
@@ -88,24 +96,15 @@ tasks.withType(Test).configureEach {
     systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
                    System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "4").toInteger())
   }
-  // Configure BESU-related paths
-  delete("${project.getLayout().getBuildDirectory().get()}/besu/traces")
-  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces")
-  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces/prague")
-  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces/osaka")
-  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/plugins")
-  System.setProperty("besu.plugins.dir",
-          System.getenv().getOrDefault("besu.plugins.dir",
-                  "${project.getLayout().getBuildDirectory().get().toString()}/besu/plugins/"
-          )
-  )
-  System.setProperty("besu.traces.dir",
-          System.getenv().getOrDefault("besu.traces.dir",
-                  "${project.getLayout().getBuildDirectory().get().toString()}/besu/traces/"
-          )
-  )
-  systemProperty("besu.traces.dir", System.getProperty("besu.traces.dir"))
-  systemProperty("besu.plugins.dir", System.getProperty("besu.plugins.dir"))
+  // Configure BESU-related paths (prepared at execution time, not while configuring)
+  systemProperty("besu.traces.dir", "${besuTracesDir.path}/")
+  systemProperty("besu.plugins.dir", "${besuPluginsDir.path}/")
+  doFirst {
+    besuTracesDir.deleteDir()
+    new File(besuTracesDir, "prague").mkdirs()
+    new File(besuTracesDir, "osaka").mkdirs()
+    besuPluginsDir.mkdirs()
+  }
   //
   testlogger {
     // pick a theme - mocha, standard, plain, mocha-parallel, standard-parallel or plain-parallel
@@ -347,7 +346,7 @@ tasks.register("copyTracerPlugin", Copy) {
   from {
     zipTree(project(":tracer:plugins").tasks.named("distZip").get().outputs.files.singleFile)
   }
-  into "${System.getProperty("besu.plugins.dir")}"
+  into besuPluginsDir
   eachFile { fcp ->
     fcp.relativePath = new RelativePath(true, fcp.file.name)
   }
@@ -365,7 +364,7 @@ tasks.register("extractShomeiBesuPlugin", Copy) {
     dependsOn "downloadShomeiBesuPlugin"
     //
     from zipTree("${project.layout.buildDirectory.get()}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip")
-    into "${System.getProperty("besu.plugins.dir")}"
+    into besuPluginsDir
     eachFile { fcp ->
         fcp.relativePath = new RelativePath(true, fcp.file.name)
     }

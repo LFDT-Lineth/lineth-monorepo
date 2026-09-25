@@ -2,6 +2,8 @@ package linea.domain
 
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.byteArrayListToHexString
+import linea.kotlin.encodeHex
 import java.math.BigInteger
 
 data class Withdrawal(
@@ -30,6 +32,11 @@ data class Withdrawal(
     result = 31 * result + address.contentHashCode()
     result = 31 * result + amount.hashCode()
     return result
+  }
+
+  override fun toString(): String {
+    return "Withdrawal(index=$index, validatorIndex=$validatorIndex, " +
+      "address=${address.encodeHex()}, amount=$amount)"
   }
 }
 
@@ -107,5 +114,28 @@ data class ExecutionPayload(
     result = 31 * result + blockAccessList.contentHashCode()
     result = 31 * result + (slotNumber?.hashCode() ?: 0)
     return result
+  }
+
+  override fun toString(): String {
+    return "ExecutionPayload(" +
+      "parentHash=${parentHash.encodeHex()}, " +
+      "feeRecipient=${feeRecipient.encodeHex()}, " +
+      "stateRoot=${stateRoot.encodeHex()}, " +
+      "receiptsRoot=${receiptsRoot.encodeHex()}, " +
+      "logsBloom=${logsBloom.encodeHex()}, " +
+      "prevRandao=${prevRandao.encodeHex()}, " +
+      "blockNumber=$blockNumber, " +
+      "gasLimit=$gasLimit, " +
+      "gasUsed=$gasUsed, " +
+      "timestamp=$timestamp, " +
+      "extraData=${extraData.encodeHex()}, " +
+      "baseFeePerGas=$baseFeePerGas, " +
+      "blockHash=${blockHash.encodeHex()}, " +
+      "transactions=${transactions.byteArrayListToHexString()}, " +
+      "withdrawals=$withdrawals, " +
+      "blobGasUsed=$blobGasUsed, " +
+      "excessBlobGas=$excessBlobGas, " +
+      "blockAccessList=${blockAccessList.encodeHex()}, " +
+      "slotNumber=$slotNumber)"
   }
 }

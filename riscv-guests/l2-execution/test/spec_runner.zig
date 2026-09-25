@@ -89,7 +89,7 @@ pub fn run(suite: anytype, init: std.process.Init, operands: []const []const u8,
             .directory => try processDirectory(suite, init, operand, if (matcher) |*value| value else null, opts, &stats),
             .file => {
                 if (matches(std.fs.path.basename(operand), if (matcher) |*value| value else null)) {
-                    try processOne(suite, init, operand, opts, &stats);
+                    try processOne(suite, init, operand, std.fs.path.basename(operand), opts, &stats);
                 }
             },
             else => return error.UnsupportedPathType,
@@ -136,12 +136,19 @@ fn processDirectory(
     for (paths.items) |relative_path| {
         const full_path = try std.Io.Dir.path.join(init.gpa, &.{ root, relative_path });
         defer init.gpa.free(full_path);
-        try processOne(suite, init, full_path, opts, stats);
+        try processOne(suite, init, full_path, relative_path, opts, stats);
         if (shouldStop(stats.*, opts)) return;
     }
 }
 
-fn processOne(suite: anytype, init: std.process.Init, path: []const u8, opts: Options, stats: *Stats) !void {
+fn processOne(
+    suite: anytype,
+    init: std.process.Init,
+    path: []const u8,
+    display_path: []const u8,
+    opts: Options,
+    stats: *Stats,
+) !void {
     const remaining = if (opts.limit) |limit| limit -| stats.contribution.cases else null;
     if (remaining == 0) return;
     switch (try suite.processFile(init, path, remaining)) {
@@ -153,6 +160,14 @@ fn processOne(suite: anytype, init: std.process.Init, path: []const u8, opts: Op
             }
             stats.recognized_files += 1;
             stats.contribution.add(contribution);
+            std.debug.print("progress: {s} files={} cases={} passed={} failed={} skipped={}\n", .{
+                display_path,
+                stats.recognized_files,
+                stats.contribution.cases,
+                stats.contribution.passed,
+                stats.contribution.failed,
+                stats.contribution.skipped,
+            });
         },
     }
 }

@@ -5,29 +5,24 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zesu = .{
-            .url = "https://github.com/Consensys/zesu/archive/fc9a8e289811b0d37893df05d21931369adb9fde.tar.gz",
-            .hash = "zesu-0.1.0-UtqpAALaQwB7MkgNQS7de6P4OSrYYw1lJ4ScupPcohgM",
+            .url = "https://github.com/Consensys-Incorporated/zesu/archive/b5483dda21d72405c50a22cb6406a1231e51a579.tar.gz",
+            .hash = "zesu-0.1.0-UtqpAHB-RQAWyvh9rADjDAhbD1pa3B8IPQUFYNJ8QTSW",
         },
         .execution_spec_tests_zkevm = .{
-            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.6.2/fixtures_zkevm.tar.gz",
-            .hash = "N-V-__8AAP____94w9jBcI9yat7v2Mt9Lb-iJ5TOtfLo6-Ab",
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.8.4/fixtures_zkevm.tar.gz",
+            .hash = "N-V-__8AAP____-VD92T96PjIxzTvS5ahT2lM2ZiHXq3oaOf",
             .lazy = true,
         },
-        // Consensys/zesu-zkvm — the Linea zkVM runtime. We consume only its pure-Zig precompile
-        // backend (linea/src/runtime/stdlibs_accel.zig, std-only) and delegate the guest's in-guest
-        // crypto to it instead of maintaining our own. Pinned to a commit; repoint to a release tag
-        // once one exists.
-        .zesu_zkvm = .{
-            .url = "https://github.com/Consensys/zesu-zkvm/archive/781e8ab5b86e2e08b111c8bee778f6fd777f8172.tar.gz",
-            .hash = "N-V-__8AALcFYQDEKjFlPv80maZPDDtCeu9sPCIH_vmRza1W",
-        },
-        // Shared build helpers for all riscv-guests packages (sibling path dependency).
+        // Shared build helpers.
         .build_common = .{ .path = "../build_common" },
-        // Lineth zkVM accelerator wrappers (sibling path dependency).
+        // Constantine precompile backend.
+        .guest_crypto = .{ .path = "../guest-crypto-ctt" },
+        // Lineth zkVM accelerator wrappers.
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
         .zlob = .{
             .url = "https://github.com/dmtrKovalenko/zlob/archive/refs/tags/v1.6.5.tar.gz",
             .hash = "zlob-1.6.5-zzE2lWoNCQCFLMTpuNAhGEPVNsyTbftabd_2_A6fEHob",
+            .lazy = true,
         },
         // Generic riscv-guests utilities (sibling path dependency): the SSZ decode/encode
         // primitives l2_execution_ssz.zig's container codec builds on.
