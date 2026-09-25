@@ -12,4 +12,7 @@ type Config struct {
 	// Different proof types will eventually point to different ELFs; that
 	// dispatch is not yet implemented.
 	GuestELFPath string
+
+	// Mode selects how a Job is proved; empty defaults to [ProverModeFull].
+	Mode ProverMode
 }

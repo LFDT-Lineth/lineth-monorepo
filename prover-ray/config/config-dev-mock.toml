@@ -1,0 +1,8 @@
+# dev-mock: no guest, placeholder responses. The lightest runnable mode.
+# Mount this over /opt/linea/prover-ray/config/config.toml in the image.
+version = "0.0.0-riscv"
+log_level = 4
+
+[execution]
+prover_mode = "dev-mock"
+requests_root_dir = "/opt/linea/prover-ray/requests"
