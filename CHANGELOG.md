@@ -173,3 +173,4 @@
 - *(misc)* Use junit over kotlin test (#4045)
 - *(misc)* Fix gradle build correctness bugs (#4044)
 - *(misc)* Gradle improve tasks (#4046)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
