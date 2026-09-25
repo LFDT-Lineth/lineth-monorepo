@@ -30,12 +30,27 @@ class FakeJsonRpcHandler(
       >,
     > = ConcurrentHashMap()
 
+  private val responseGates: MutableMap<JsonRpcRequest, Future<*>> = ConcurrentHashMap()
+
   fun onRequest(
     request: JsonRpcRequest,
     delay: Duration = 0.milliseconds,
     responseSupplier: (JsonRpcRequest) -> JsonRpcResponse,
   ) {
     responseSuppliers[request] = delay to responseSupplier
+  }
+
+  /**
+   * Holds the response to [request] until [respondWhen] completes, so tests can control
+   * when a response arrives without relying on wall-clock delays.
+   */
+  fun onRequest(
+    request: JsonRpcRequest,
+    respondWhen: Future<*>,
+    responseSupplier: (JsonRpcRequest) -> JsonRpcResponse,
+  ) {
+    responseSuppliers[request] = 0.milliseconds to responseSupplier
+    responseGates[request] = respondWhen
   }
 
   private fun buildResponse(
@@ -68,6 +83,9 @@ class FakeJsonRpcHandler(
     this.requestHandled.add(request)
 
     val (delay, responseSupplier) = getResponseSupplier(request)
+    responseGates[request]?.let { gate ->
+      return gate.map { buildResponse(request, responseSupplier) }
+    }
     if (delay <= 0.milliseconds) {
       return Future.succeededFuture(buildResponse(request, responseSupplier))
     }

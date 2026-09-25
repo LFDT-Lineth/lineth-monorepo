@@ -1,3 +1,13 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features

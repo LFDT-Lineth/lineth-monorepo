@@ -37,6 +37,7 @@
 - *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
 - *(coordinator)* Improve ProverClientFactory (#4000)
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
 
 ### 🐛 Bug Fixes
 
@@ -163,3 +164,7 @@
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
 - *(coordinator)* Consolidate prover clients (#3944)
 - *(misc)* Upgrade teku libs to 26.9.0 (#3990)
+- *(misc)* Fix code licence header (#4009)
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Maru use root gradle configs (#4031)

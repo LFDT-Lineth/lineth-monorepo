@@ -75,6 +75,10 @@ data class MetaDataDto(
   val endBlockNumber: Long,
   val startBlockTimestamp: Long,
   @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val endBlockTimestamp: Long? = null,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val transactionsCount: Long? = null,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
   val totalGasUsed: Long? = null,
 )
 
