@@ -1,3 +1,11 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Use junit over kotlin test (#4045)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
 ## [1.4.0] - 2026-09-23
 
 ### 🚀 Features

@@ -10,10 +10,6 @@ dependencies {
   testImplementation "org.apache.logging.log4j:log4j-core-test:${libs.versions.log4j.get()}"
 }
 
-jar {
-  dependsOn configurations.runtimeClasspath
-}
-
 test {
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
   maxParallelForks = 1

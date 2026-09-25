@@ -3,7 +3,9 @@
   "metadata": {
     "startBlockNumber": 10,
     "endBlockNumber": 18,
-    "startBlockTimestamp": 1763000000
+    "startBlockTimestamp": 1763000000,
+    "endBlockTimestamp": 1763000557,
+    "transactionsCount": 9
   },
   "proofRequest": {
     "rollupProofs": [

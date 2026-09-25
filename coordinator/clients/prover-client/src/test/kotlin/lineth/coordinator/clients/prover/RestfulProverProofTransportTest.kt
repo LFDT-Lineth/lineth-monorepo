@@ -10,6 +10,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import linea.error.ErrorResponse
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.httprest.client.HttpRestClient
 import net.consensys.linea.httprest.client.RestErrorType
 import org.assertj.core.api.Assertions.assertThat
@@ -25,7 +26,7 @@ class RestfulProverProofTransportTest {
 
   @Test
   fun `submitRequest posts the request dto under proof_request`() {
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(vertxTestOptions)
     val wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     try {
@@ -52,7 +53,7 @@ class RestfulProverProofTransportTest {
 
   @Test
   fun `isRequestAlreadySubmitted returns true when the job is claimed`() {
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(vertxTestOptions)
     val wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     try {
@@ -86,7 +87,7 @@ class RestfulProverProofTransportTest {
 
   @Test
   fun `request and response lookup use the expected job status`() {
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(vertxTestOptions)
     val wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     try {
@@ -143,7 +144,7 @@ class RestfulProverProofTransportTest {
     val restClient = RecordingHttpRestClient()
     val transport = RestfulProverProofTransport<Any, Any, BlockIntervalProofIndex>(
       restClient = restClient,
-      vertx = Vertx.vertx(),
+      vertx = Vertx.vertx(vertxTestOptions),
       chainId = 1,
       proofType = "execution",
       startBlockProvider = { it.startBlockNumber },
@@ -167,7 +168,7 @@ class RestfulProverProofTransportTest {
     val restClient = RecordingHttpRestClient()
     val transport = RestfulProverProofTransport<Any, Any, BlockIntervalProofIndex>(
       restClient = restClient,
-      vertx = Vertx.vertx(),
+      vertx = Vertx.vertx(vertxTestOptions),
       chainId = 1,
       proofType = "execution",
       startBlockProvider = { it.startBlockNumber },

@@ -27,5 +27,5 @@ dependencies {
 }
 
 test {
-  maxParallelForks = Runtime.runtime.availableProcessors() / 2 ?: 1
+  maxParallelForks = Math.max(1, Runtime.runtime.availableProcessors().intdiv(2))
 }

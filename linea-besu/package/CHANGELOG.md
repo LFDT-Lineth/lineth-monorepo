@@ -3,6 +3,10 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Fix code licence header (#4009)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
 ## [2.3.0] - 2026-09-23
 
 ### 🚀 Features

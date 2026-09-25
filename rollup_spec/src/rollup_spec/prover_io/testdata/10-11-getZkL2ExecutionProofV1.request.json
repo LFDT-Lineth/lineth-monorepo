@@ -4,6 +4,8 @@
     "startBlockNumber": 10,
     "endBlockNumber": 11,
     "startBlockTimestamp": 1763000101,
+    "endBlockTimestamp": 1763000101,
+    "transactionsCount": 2,
     "totalGasUsed": 24000000
   },
   "proofRequest": {

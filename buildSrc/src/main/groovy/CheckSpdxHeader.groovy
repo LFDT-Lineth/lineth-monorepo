@@ -15,11 +15,18 @@
 
 import groovy.io.FileType
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.file.ProjectLayout
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.tooling.BuildException
 
-class CheckSpdxHeader extends DefaultTask {
+import javax.inject.Inject
+
+abstract class CheckSpdxHeader extends DefaultTask {
     private String rootPath
     private String spdxHeader
     private String filesRegex
@@ -61,23 +68,35 @@ class CheckSpdxHeader extends DefaultTask {
         this.excludeRegex = excludeRegex
     }
 
-    @TaskAction
-    void checkHeaders() {
-        def filesWithoutHeader = []
+    @Inject
+    abstract ProjectLayout getLayout()
 
+    /** Files to check, so the task is up-to-date while none of them changes. */
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    List<File> getCheckedFiles() {
+        def files = []
         new File(rootPath).traverse(
                 type: FileType.FILES,
                 nameFilter: ~/${filesRegex}/,
                 excludeFilter: ~/${excludeRegex}/
-        ) {
-            f ->
-                if (!f.getText().contains(spdxHeader)) {
-                    filesWithoutHeader.add(f)
-                }
-        }
+        ) { f -> files.add(f) }
+        return files.sort()
+    }
+
+    /** Marker written on success; a task without outputs is never up-to-date. */
+    @OutputFile
+    File getResultFile() {
+        layout.buildDirectory.file("tmp/${name}/result.txt").get().asFile
+    }
+
+    @TaskAction
+    void checkHeaders() {
+        def filesWithoutHeader = getCheckedFiles().findAll { !it.getText().contains(spdxHeader) }
 
         if (!filesWithoutHeader.isEmpty()) {
-            throw new BuildException("Files without headers: " + filesWithoutHeader.join('\n'), null)
+            throw new GradleException("Files without headers: " + filesWithoutHeader.join('\n'))
         }
+        getResultFile().text = "OK\n"
     }
 }

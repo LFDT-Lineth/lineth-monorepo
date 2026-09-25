@@ -7,7 +7,3 @@ description = "Basic Kotlin types extensions"
 
 dependencies {
 }
-
-jar {
-  dependsOn configurations.runtimeClasspath
-}

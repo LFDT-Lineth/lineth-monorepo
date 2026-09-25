@@ -15,7 +15,6 @@ import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.core.VertxOptions
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
@@ -23,6 +22,7 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import linea.kotlin.decodeHex
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
@@ -64,7 +64,7 @@ class VertxHttpJsonRpcClientTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
+    vertx = Vertx.vertx(vertxTestOptions)
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     endpoint = URI(wiremock.baseUrl() + path).toURL()

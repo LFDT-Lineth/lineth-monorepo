@@ -43,14 +43,17 @@ abstract class PeriodicPollingService(
     return SafeFuture.completedFuture(Unit)
   }
 
+  /**
+   * Stops polling. The returned future completes once the in-flight action (if any) has finished.
+   * Do not await it from within [action], as that would deadlock.
+   */
   @Synchronized
   override fun stop(): SafeFuture<Unit> {
-    if (timer != null) {
-      timer!!.stop()
-      timer = null
-    } else {
+    val stopFuture = timer?.stop()
+    if (stopFuture == null) {
       log.info("Service is not running to stop it!")
     }
-    return SafeFuture.completedFuture(Unit)
+    timer = null
+    return stopFuture ?: SafeFuture.completedFuture(Unit)
   }
 }

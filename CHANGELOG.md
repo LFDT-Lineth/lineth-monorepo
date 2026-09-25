@@ -37,6 +37,7 @@
 - *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
 - *(coordinator)* Improve ProverClientFactory (#4000)
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
 
 ### 🐛 Bug Fixes
 
@@ -88,6 +89,7 @@
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
 - *(prover)* Empty-codehash check (#3913)
 - *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
 
 ### 🚜 Refactor
 
@@ -165,3 +167,10 @@
 - *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 - *(misc)* Fix code licence header (#4009)
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Use junit over kotlin test (#4045)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)

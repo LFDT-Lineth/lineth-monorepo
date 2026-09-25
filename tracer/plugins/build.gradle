@@ -18,14 +18,12 @@ plugins {
   id 'lineth.kotlin-common-minimal-conventions'
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.lombok)
-  alias(libs.plugins.hierynomusLicense)
 }
 
 group = 'net.consensys.linea.besu.plugin'
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 apply from: lineaTracerProject.file("gradle/java.gradle")
-apply from: lineaTracerProject.file("gradle/check-licenses.gradle")
 apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 // Force a single version of kotlin-stdlib across all transitive dependencies.
