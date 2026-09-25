@@ -1,11 +1,5 @@
 package lineth.coordinator.clients.prover
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.github.tomakehurst.wiremock.WireMockServer
-import io.vertx.core.Vertx
-import io.vertx.core.http.HttpVersion
-import io.vertx.core.http.PoolOptions
-import io.vertx.ext.web.client.WebClientOptions
 import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
@@ -17,7 +11,6 @@ import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.linea.httprest.client.VertxHttpRestClient
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.milliseconds
@@ -25,8 +18,8 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
- * Shared test fixtures (constants, domain/DTO builders, fake transports and REST/WireMock helpers) reused across the
- * RISC-V prover-client test suites (`FileBased*ProverClientTest` / `Restful*ProverClientTest`).
+ * Shared test fixtures (constants, domain/DTO builders, fake transports) reused across the RISC-V prover-client
+ * test suites (`FileBased*ProverClientTest`).
  */
 object RiscvProverClientTestFixtures {
   const val PROVER_VERSION = "4.0.0-riscv"
@@ -51,35 +44,6 @@ object RiscvProverClientTestFixtures {
     pollingInterval = 100.milliseconds,
     pollingTimeout = 2.seconds,
   )
-
-  // --- RESTful transport / WireMock helpers ---
-
-  fun restClient(vertx: Vertx, wiremock: WireMockServer): VertxHttpRestClient {
-    val webClientOptions = WebClientOptions()
-      .setProtocolVersion(HttpVersion.HTTP_1_1)
-      .setDefaultHost("localhost")
-      .setDefaultPort(wiremock.port())
-    return VertxHttpRestClient(webClientOptions, PoolOptions(), vertx)
-  }
-
-  /** Builds a `GET /v1/jobs/...` response body wrapping [proofResponse] under `proof_response`. */
-  fun proverJobResponseBody(
-    proofType: String,
-    startBlock: Long,
-    endBlock: Long,
-    proofResponse: Any,
-    status: String = "proved",
-  ): String {
-    val job = jsonMapper.createObjectNode().apply {
-      put("proof_type", proofType)
-      put("start_block", startBlock)
-      put("end_block", endBlock)
-      put("status", status)
-      put("attempt", 1)
-      set<JsonNode>("proof_response", jsonMapper.valueToTree(proofResponse))
-    }
-    return jsonMapper.writeValueAsString(job)
-  }
 
   // --- domain request builders ---
 

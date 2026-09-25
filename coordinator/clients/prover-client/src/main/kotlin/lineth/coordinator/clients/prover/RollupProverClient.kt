@@ -67,41 +67,6 @@ internal class FileBasedRollupProofRequestDtoMapper(
 }
 
 /**
- * Maps a [RollupProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
- * `rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json` with proof index to reference
- * each l2-execution proof response.
- */
-internal class RestfulRollupProofRequestDtoMapper(
-  private val programId: String,
-  private val provingSystemVersion: String,
-  private val chainId: Long,
-) : (RollupProofRequestV1) -> SafeFuture<RestfulRollupProofRequestDto> {
-  override fun invoke(request: RollupProofRequestV1): SafeFuture<RestfulRollupProofRequestDto> {
-    val dto = RestfulRollupProofRequestDto(
-      programId = programId,
-      provingSystemVersion = provingSystemVersion,
-      proofRequest = RestfulRollupProofRequestParamsDto(
-        chainId = chainId,
-        conflations = request.conflations.map { it.fromDomainObject() },
-        l2ExecutionProofIndexes = request.l2Executions,
-        chunks = request.chunks.map { it.encodeHex() },
-        parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
-        startOffset = request.startOffset,
-        opaquePrefixBytes = request.opaquePrefixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
-        opaqueSuffixBytes = request.opaqueSuffixBytes.takeIf { it.isNotEmpty() }?.encodeHex(),
-        boundaryPrevDataRollingHash = request.boundaryPrevDataRollingHash?.encodeHex(),
-      ),
-      metadata = MetaDataDto(
-        startBlockNumber = request.startBlockNumber.toLong(),
-        endBlockNumber = request.endBlockNumber.toLong(),
-        startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
-      ),
-    )
-    return SafeFuture.completedFuture(dto)
-  }
-}
-
-/**
  * Maps the deserialized rollup proof response DTO onto the domain [RollupProofResponseV1] described by
  * `rollup_spec/prover_io/schemas/getZkRollupProofV1.response.schema.json`.
  * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
@@ -127,9 +92,6 @@ internal object RollupProofResponseDtoMapper : (
 
 typealias FileBasedRollupProofTransport =
   ProverProofTransport<FileBasedRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
-
-private typealias RestfulRollupProofTransport =
-  ProverProofTransport<RestfulRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
 
 /**
  * RISC-V file-based rollup prover client.
@@ -165,41 +127,5 @@ class FileBasedRollupProverClient(
 
   companion object {
     val LOG: Logger = LogManager.getLogger(FileBasedRollupProverClient::class.java)
-  }
-}
-
-/**
- * RISC-V Restful rollup prover client.
- * The request/response transport is injected via Restful transport.
- */
-class RestfulRollupProverClient(
-  transport: RestfulRollupProofTransport,
-  programId: String,
-  provingSystemVersion: String,
-  chainId: Long,
-  proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<RestfulRollupProofRequestDto> =
-    RestfulRollupProofRequestDtoMapper(programId, provingSystemVersion, chainId),
-  proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
-    RollupProofResponseDtoMapper,
-  hashFunction: HashFunction = Sha256HashFunction(),
-  log: Logger = LOG,
-) : GenericProverClient<
-  RollupProofRequestV1,
-  RollupProofResponseV1,
-  RestfulRollupProofRequestDto,
-  RollupProofResponseDto,
-  BlockIntervalProofIndex,
-  >(
-  transport = transport,
-  proofIndexProvider = BlockIntervalProofIndexProvider<RollupProofRequestV1>(hashFunction),
-  requestMapper = proofRequestDtoMapper,
-  responseMapper = proofResponseDtoMapper,
-  proofTypeLabel = "rollup",
-  log = log,
-),
-  RollupProverClientV1 {
-
-  companion object {
-    val LOG: Logger = LogManager.getLogger(RestfulRollupProverClient::class.java)
   }
 }

@@ -183,7 +183,7 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      buildL2ExecutionProverClient(proverConfig)
+      buildFileBasedL2ExecutionProverClient(proverConfig)
         .also { support.l2ExecutionWaitingResponses.addReporter(it) }
     }
   }
@@ -347,7 +347,7 @@ class DefaultProverClientFactory(
       responseDtoClass = RollupAggregationProofResponseDto::class.java,
     )
 
-  private fun buildL2ExecutionProverClient(proverConfig: FileBasedRiscvProverConfig): L2ExecutionProverClient {
+  private fun buildFileBasedL2ExecutionProverClient(proverConfig: FileBasedRiscvProverConfig): L2ExecutionProverClient {
     require(l2MessageServiceAddress.isNotEmpty()) {
       "l2MessageServiceAddress must be configured for the RISC-V execution prover"
     }

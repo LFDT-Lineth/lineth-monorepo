@@ -15,9 +15,8 @@ import java.util.function.Supplier
  * Generic prover client for the RISC-V provers.
  *
  * It mirrors the responsibilities of `GenericFileBasedProverClient` (it implements both [ProverProofResponseChecker]
- * and [ProverProofRequestCreator] and exposes [requestProof]) but is NOT tied to a file-based approach: the
- * submit/find/await mechanics are delegated to an injected [ProverProofTransport]. The transport decides whether the
- * request and response travel through JSON files on disk or through RESTful calls to a remote prover service.
+ * and [ProverProofRequestCreator] and exposes [requestProof]); the submit/find/await mechanics are delegated to an
+ * injected [ProverProofTransport], which writes the request and reads the response as JSON files on disk.
  *
  * The client itself only knows how to:
  *  - derive the [TProofIndex] from a domain request ([proofIndexProvider]);

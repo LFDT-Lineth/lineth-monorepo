@@ -7,7 +7,6 @@ import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponseV1
-import linea.domain.BlockIntervalProofIndex
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
@@ -226,29 +225,10 @@ data class FileBasedRollupProofRequestParamsDto(
   val boundaryPrevDataRollingHash: String? = null,
 )
 
-data class RestfulRollupProofRequestParamsDto(
-  val chainId: Long,
-  val conflations: List<ConflationWitnessDto>,
-  val l2ExecutionProofIndexes: List<BlockIntervalProofIndex>,
-  val chunks: List<String>,
-  val parentDataRollingHash: String,
-  val startOffset: Int,
-  val opaquePrefixBytes: String? = null,
-  val opaqueSuffixBytes: String? = null,
-  val boundaryPrevDataRollingHash: String? = null,
-)
-
 data class FileBasedRollupProofRequestDto(
   val programId: String,
   val provingSystemVersion: String,
   val proofRequest: FileBasedRollupProofRequestParamsDto,
-  val metadata: MetaDataDto,
-)
-
-data class RestfulRollupProofRequestDto(
-  val programId: String,
-  val provingSystemVersion: String,
-  val proofRequest: RestfulRollupProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
@@ -280,21 +260,10 @@ data class FileBasedRollupAggregationProofRequestParamsDto(
   val rollupProofs: List<RollupProofDto>,
 )
 
-data class RestfulRollupAggregationProofRequestParamsDto(
-  val rollupProofIndexes: List<BlockIntervalProofIndex>,
-)
-
 data class FileBasedRollupAggregationProofRequestDto(
   val programId: String,
   val provingSystemVersion: String,
   val proofRequest: FileBasedRollupAggregationProofRequestParamsDto,
-  val metadata: MetaDataDto,
-)
-
-data class RestfulRollupAggregationProofRequestDto(
-  val programId: String,
-  val provingSystemVersion: String,
-  val proofRequest: RestfulRollupAggregationProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
