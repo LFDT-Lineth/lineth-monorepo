@@ -71,11 +71,10 @@ fs-responses-directory = "/data/prover/v3/invalidity/responses"
 fs-requests-directory = "/data/prover/v3/aggregation/requests"
 fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
-# Switch to pre RISC-V provers
+## Switch to pre RISC-V provers
 #[prover.new]
 ## Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
-#switch-block-number-inclusive=1000
-## If switch from pre RISC-V to RISC-V, switch-block-timestamp needs to be same as riscv-starting-block-timestamp-inclusive
+##switch-block-number-inclusive=1000
 #switch-block-timestamp = 2000000000
 #[prover.new.execution]
 #fs-requests-directory = "/data/prover/v4/execution/requests"
@@ -87,12 +86,15 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-requests-directory = "/data/prover/v4/aggregation/requests"
 #fs-responses-directory = "/data/prover/v4/aggregation/responses"
 
-# Switch to RISC-V provers
-# RISC-V prover config
+## Switch to RISC-V provers
 #[prover.new]
 #type = "riscv"
 #proving-system-version = "0xabcdef1"
 #fork-name = "amsterdam"
+## Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+##switch-block-number-inclusive=1000
+## If switch from pre RISC-V to RISC-V, switch-block-timestamp needs to be same as riscv-starting-block-timestamp-inclusive
+#switch-block-timestamp = 2000000000
 #[prover.new.l2-execution]
 #programId = "0xfedcba1"
 #fs-requests-directory = "/data/riscv-prover/v1/execution/requests"
