@@ -7,7 +7,7 @@
   - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm >= 11.9.0 (https://pnpm.io/installation)
+- Pnpm >= 12.6.0 (https://pnpm.io/installation)
 
 ### Run stack locally
 
