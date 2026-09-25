@@ -1,0 +1,23 @@
+name: 'Setup zstd'
+description: 'Install zstd so @actions/cache archives with multi-threaded zstd instead of single-threaded gzip.'
+runs:
+  using: composite
+  steps:
+    # @actions/cache (actions/cache, setup-go, setup-node, setup-gradle, CodeQL)
+    # uses zstd whenever it is on PATH. The compression method is part of the
+    # cache version, so every job sharing a cache family must run this first
+    # or it misses entries written by jobs that did.
+    - name: Install zstd
+      shell: bash
+      run: |
+        if command -v zstd >/dev/null 2>&1; then
+          exit 0
+        fi
+        if [ "$RUNNER_OS" != Linux ]; then
+          echo "::warning::zstd not found on $RUNNER_OS; caches fall back to gzip"
+          exit 0
+        fi
+        install_zstd() { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends zstd; }
+        # Skip the index refresh when the image already ships apt lists.
+        install_zstd || { sudo apt-get update -qq && install_zstd; } \
+          || echo "::warning::zstd install failed; caches fall back to gzip"
