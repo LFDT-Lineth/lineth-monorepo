@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  run-linea-sequencer-plugins-unit-tests:
-    name: "Sequencer Plugin Unit Tests"
+  run-linea-sequencer-plugins-tests:
+    name: "Sequencer Plugin Unit + Acceptance Tests"
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -31,48 +31,30 @@ jobs:
       - name: Run unit tests
         run: ./gradlew linea-besu:plugins:linea-sequencer:sequencer:test
 
-      - name: Upload test report
+      - name: Upload unit test report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: unit-test-report
           path: linea-besu/plugins/linea-sequencer/sequencer/build/reports/tests/test/
-      - name: Upload Jacoco execution data
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: jacoco-linea-sequencer-unit-exec
-          path: |
-            **/build/jacoco/*.exec
-          if-no-files-found: ignore
-
-  run-linea-sequencer-plugins-acceptance-tests:
-    name: "Sequencer Plugin Acceptance Tests"
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Setup Tracer Environment
-        uses: ./.github/actions/setup-tracer-environment
 
       - name: Run acceptance tests
         run: ./gradlew linea-besu:plugins:linea-sequencer:acceptance-tests:acceptanceTests
         env:
           JAVA_OPTS: -Xmx10g -Xms2g
 
-      - name: Upload test report
+      - name: Upload acceptance test report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: acceptance-test-report
           path: linea-besu/plugins/linea-sequencer/acceptance-tests/build/reports/tests/
-      - name: Upload Jacoco execution data
+
+      - name: Upload Jacoco execution data (unit + acceptance tests)
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: jacoco-linea-sequencer-acceptance-exec
+          name: jacoco-linea-sequencer-exec
           path: |
             **/build/jacoco/*.exec
           if-no-files-found: ignore
-
