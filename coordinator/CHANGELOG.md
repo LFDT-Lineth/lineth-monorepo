@@ -2,6 +2,21 @@
 
 ### 🚀 Features
 
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+
+### 🐛 Bug Fixes
+
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+## [1.2.0] - 2026-09-23
+
+### 🚀 Features
+
 - *(coordinator)* Support custom transaction signers (#3597)
 - *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 - *(coordinator)* Implement L2ExecutionRequestBuilderImpl for RISC-V execution proofs (#3745)
@@ -14,6 +29,9 @@
 - *(coordinator)* Add programVk to L2 execution and rollup proof response chain (#3819)
 - *(coordinator)* Support finalization on validium chains (#3910)
 - *(coordinator)* Wire ConflationAppV2 RISC-V execution proof pipeline (#3811)
+- *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
+- *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
 
 ### 🐛 Bug Fixes
 
@@ -21,6 +39,7 @@
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(coordinator)* Make runtime invariants explicit (#3716)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
 
 ### 🚜 Refactor
 

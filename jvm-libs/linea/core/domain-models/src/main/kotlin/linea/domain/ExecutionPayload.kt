@@ -2,6 +2,8 @@ package linea.domain
 
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.byteArrayListToHexString
+import linea.kotlin.encodeHex
 import java.math.BigInteger
 
 data class Withdrawal(
@@ -31,11 +33,15 @@ data class Withdrawal(
     result = 31 * result + amount.hashCode()
     return result
   }
+
+  override fun toString(): String {
+    return "Withdrawal(index=$index, validatorIndex=$validatorIndex, " +
+      "address=${address.encodeHex()}, amount=$amount)"
+  }
 }
 
 /**
- * Execution PayLoad V4 (Payload V3 + blockAccessList) for the Engine API and Beacon Block
- * Should retrieve by using eth_getBlockByNumber/eth_getBlockByHash or debug_getRawBlock
+ * Execution payload including Amsterdam block access list and optional slot number.
  */
 data class ExecutionPayload(
   val parentHash: ByteArray,
@@ -56,6 +62,7 @@ data class ExecutionPayload(
   val blobGasUsed: ULong,
   val excessBlobGas: ULong,
   val blockAccessList: ByteArray,
+  val slotNumber: ULong? = null,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -81,6 +88,7 @@ data class ExecutionPayload(
     if (blobGasUsed != other.blobGasUsed) return false
     if (excessBlobGas != other.excessBlobGas) return false
     if (!blockAccessList.contentEquals(other.blockAccessList)) return false
+    if (slotNumber != other.slotNumber) return false
 
     return true
   }
@@ -104,6 +112,30 @@ data class ExecutionPayload(
     result = 31 * result + blobGasUsed.hashCode()
     result = 31 * result + excessBlobGas.hashCode()
     result = 31 * result + blockAccessList.contentHashCode()
+    result = 31 * result + (slotNumber?.hashCode() ?: 0)
     return result
+  }
+
+  override fun toString(): String {
+    return "ExecutionPayload(" +
+      "parentHash=${parentHash.encodeHex()}, " +
+      "feeRecipient=${feeRecipient.encodeHex()}, " +
+      "stateRoot=${stateRoot.encodeHex()}, " +
+      "receiptsRoot=${receiptsRoot.encodeHex()}, " +
+      "logsBloom=${logsBloom.encodeHex()}, " +
+      "prevRandao=${prevRandao.encodeHex()}, " +
+      "blockNumber=$blockNumber, " +
+      "gasLimit=$gasLimit, " +
+      "gasUsed=$gasUsed, " +
+      "timestamp=$timestamp, " +
+      "extraData=${extraData.encodeHex()}, " +
+      "baseFeePerGas=$baseFeePerGas, " +
+      "blockHash=${blockHash.encodeHex()}, " +
+      "transactions=${transactions.byteArrayListToHexString()}, " +
+      "withdrawals=$withdrawals, " +
+      "blobGasUsed=$blobGasUsed, " +
+      "excessBlobGas=$excessBlobGas, " +
+      "blockAccessList=${blockAccessList.encodeHex()}, " +
+      "slotNumber=$slotNumber)"
   }
 }

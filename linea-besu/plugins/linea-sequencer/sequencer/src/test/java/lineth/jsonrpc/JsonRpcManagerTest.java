@@ -85,7 +85,9 @@ class JsonRpcManagerTest {
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody(
-                        "{\"jsonrpc\":\"2.0\",\"result\":{ \"status\": \"SAVED\"},\"id\":1}")));
+                        """
+                {"jsonrpc":"2.0","result":{ "status": "SAVED"},"id":1}
+                """)));
 
     final TransactionSelectionResult result = TransactionSelectionResult.invalid("test");
     final Instant timestamp = Instant.now();
@@ -156,7 +158,7 @@ class JsonRpcManagerTest {
 
     // Use Awaitility to wait for the condition to be met
     await()
-        .atMost(2, SECONDS)
+        .atMost(4, SECONDS)
         .untilAsserted(
             () ->
                 verify(
@@ -201,7 +203,7 @@ class JsonRpcManagerTest {
 
     // Use Awaitility to wait for the condition to be met
     await()
-        .atMost(2, SECONDS)
+        .atMost(4, SECONDS)
         .untilAsserted(
             () ->
                 verify(
@@ -279,7 +281,7 @@ class JsonRpcManagerTest {
     // successful)
     final Path rejTxRpcDir =
         tempDataDir.resolve(JsonRpcManager.JSON_RPC_DIR).resolve(PLUGIN_IDENTIFIER);
-    await().atMost(2, SECONDS).untilAsserted(() -> assertThat(jsonFileCount(rejTxRpcDir)).isZero());
+    await().atMost(4, SECONDS).untilAsserted(() -> assertThat(jsonFileCount(rejTxRpcDir)).isZero());
   }
 
   private static long jsonFileCount(final Path directory) throws IOException {

@@ -48,13 +48,9 @@ type sharedRandomnessTemplateData struct {
 const sharedRandomnessZigTemplate = `{{if .Options.EmitImport}}const shared_randomness = {{.Options.SharedRandomnessImport}};
 
 {{end}}// shared-randomness system: "{{zig .System.SourceName}}"
-const system_{{.Index}}_shared_randomness_rounds = [_]shared_randomness.Round{
-{{range .System.Rounds}}    .{ .has_commitment = {{.HasCommitment}}, .round = {{.RoundIndex}} },
-{{end}}};
-
 const system_{{.Index}}_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{
 {{range .System.ContributionRefs}}    .{ .round = {{.Round}}, .index = {{.Index}} },
 {{end}}};
 
-const system_{{.Index}}_shared_randomness = shared_randomness.System{ .rounds = &system_{{.Index}}_shared_randomness_rounds, .contribution_refs = &system_{{.Index}}_shared_randomness_contribution_refs };
+const system_{{.Index}}_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = {{.System.CommitmentRound.RoundIndex}}, .has_commitment = {{.System.CommitmentRound.HasCommitment}} }, .contribution_refs = &system_{{.Index}}_shared_randomness_contribution_refs };
 `

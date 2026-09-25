@@ -28,7 +28,7 @@ internal class L2ExecutionProofRequestDtoMapper(
         newPayloadRequest = NewPayloadRequestDto(
           executionPayload = executionInfo.executionPayload.fromDomainObject(),
           versionedHashes = emptyList(),
-          parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+          parentBeaconBlockRoot = executionInfo.parentBeaconBlockRoot.encodeHex(),
           executionRequests = executionInfo.executionRequests.map { it.encodeHex() },
         ),
         executionWitness = executionInfo.executionWitness.fromDomainObject(),
@@ -57,6 +57,10 @@ internal class L2ExecutionProofRequestDtoMapper(
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
+        startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        endBlockTimestamp = request.endBlockTimestamp.epochSeconds,
+        transactionsCount = request.transactionsCount,
+        totalGasUsed = request.totalGasUsed,
       ),
     )
 

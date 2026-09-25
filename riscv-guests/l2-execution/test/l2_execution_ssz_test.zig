@@ -83,7 +83,7 @@ test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
         .end_l1_l2_bridge_rolling_hash_message_number = 5,
         .dynamic_chain_config_hash = repeat32(0xc0),
         .parent_ftx_rolling_hash = repeat32(0x04),
-        .parent_processed_ftx_number = 16,
+        .parent_ftx_number = 16,
         .end_ftx_rolling_hash = repeat32(0x05),
         .end_processed_ftx_number = 18,
         .filtered_addresses_hash = repeat32(0x06),
