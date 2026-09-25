@@ -58,6 +58,9 @@ riscv-check-compilation: zkc-compile
 
 riscv-check-lint: zkc-lint
 
+riscv-stats: 
+	$(ZKC) compile --stats $(ZKC_MAIN) &> riscv-stats.txt
+
 # Install Sail for ACT4 host builds. Other host tools are prerequisites.
 install-sail:
 	@mkdir -p "$(ACT4_RISCV_DIR)/bin" || exit $$?; \
