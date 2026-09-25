@@ -20,6 +20,7 @@ outputs:
 runs:
   using: composite
   steps:
+    - uses: ./.github/actions/setup-zstd
     # Use the upstream post-job save so the cache includes the completed build.
     - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       id: writable
