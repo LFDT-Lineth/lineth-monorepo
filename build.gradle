@@ -126,16 +126,8 @@ allprojects {
   }
 
   jacoco {
+    // The jacoco plugin already instruments every Test task (integrationTest, acceptanceTest, ...).
     toolVersion = libs.versions.jacoco.get()
-    if (project.tasks.findByName('integrationTest')) {
-      applyTo integrationTest
-    }
-    if (project.tasks.findByName('acceptanceTest')) {
-      applyTo acceptanceTest
-    }
-    if (project.tasks.findByName('acceptanceTests')) {
-      applyTo acceptanceTests
-    }
   }
 
   jacocoTestReport {
@@ -172,11 +164,6 @@ allprojects {
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
     systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
     maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
-  }
-
-  tasks.withType(Test).matching { it.name == 'integrationTest' }.configureEach {
-    outputs.cacheIf { false }
-    outputs.upToDateWhen { false }
   }
 
   afterEvaluate { subproject ->
@@ -224,7 +211,7 @@ allprojects {
   }
 }
 
-task jacocoRootReport(type: JacocoReport) {
+tasks.register("jacocoRootReport", JacocoReport) {
   // Define a project list will all subprojects excluding 'tracer' (TODO: fix to include tracer)
   def reportProjects = subprojects.findAll { subproject ->
     // Get the path of the subproject relative to the root dir (e.g., "tracer/lib-a")
@@ -241,7 +228,6 @@ task jacocoRootReport(type: JacocoReport) {
   executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'], excludes: ['tracer/**'])
   reports {
     xml.required = true
-    // xml.enabled = true FIXME: deprecated, breaking latest versions of gradle.
     csv.required = true
     html.outputLocation = file("build/reports/jacocoHtml")
   }

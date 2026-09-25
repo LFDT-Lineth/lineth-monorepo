@@ -9,7 +9,6 @@ lombok = { id = "io.freefair.lombok", version = "9.7.0" }
 gradleVersions = { id = "com.github.ben-manes.versions", version = "0.54.0" }
 besuPluginLibrary = { id = "net.consensys.besu-plugin-library", version = "0.2.1" }
 besuPluginDistribution = { id = "net.consensys.besu-plugin-distribution", version = "0.2.1" }
-hierynomusLicense = { id = "com.github.hierynomus.license", version = "0.16.1" }
 testLogger = { id = "com.adarshr.test-logger", version = "4.0.0" }
 sonarQube = { id = "org.sonarqube", version = "4.3.1.3277" }
 
