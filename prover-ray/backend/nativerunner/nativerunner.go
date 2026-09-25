@@ -58,6 +58,7 @@ func run(ctx context.Context, binPath string, extendedInput []byte, flag string)
 		return nil, fmt.Errorf("closing temp input: %w", err)
 	}
 
+	//nolint:gosec // G204: binPath is an operator-configured trusted path, not user input
 	out, err := exec.CommandContext(ctx, binPath, tmp.Name(), flag).Output()
 	if err != nil {
 		return nil, fmt.Errorf("running native runner %q: %w", binPath, err)

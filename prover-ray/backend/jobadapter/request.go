@@ -395,11 +395,13 @@ func decodeForcedTransaction(raw json.RawMessage, ctx string) (ssz.ForcedTransac
 	}
 	var acceptance string
 	if err := json.Unmarshal(acceptanceRaw, &acceptance); err != nil {
-		return ssz.ForcedTransaction{}, fmt.Errorf("DecodeL2ExecutionRequest: %s%s must be a string: %w", ctx, acceptanceKey, err)
+		return ssz.ForcedTransaction{}, fmt.Errorf(
+			"DecodeL2ExecutionRequest: %s%s must be a string: %w", ctx, acceptanceKey, err)
 	}
 	acceptanceValue, ok := forcedTxAcceptanceValues[acceptance]
 	if !ok {
-		return ssz.ForcedTransaction{}, fmt.Errorf("DecodeL2ExecutionRequest: %s%s has unsupported value %q", ctx, acceptanceKey, acceptance)
+		return ssz.ForcedTransaction{}, fmt.Errorf(
+			"DecodeL2ExecutionRequest: %s%s has unsupported value %q", ctx, acceptanceKey, acceptance)
 	}
 
 	return ssz.ForcedTransaction{

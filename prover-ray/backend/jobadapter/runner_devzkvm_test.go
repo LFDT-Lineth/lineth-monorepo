@@ -50,7 +50,7 @@ func fakeRunnerJSONSSZ(t *testing.T, jsonOut string, sszBytes []byte) string {
 		"  cat <<'JSON'\n" + jsonOut + "\nJSON\n" +
 		"fi\n"
 	bin := filepath.Join(t.TempDir(), "fake-runner")
-	require.NoError(t, os.WriteFile(bin, []byte(script), 0o700))
+	require.NoError(t, os.WriteFile(bin, []byte(script), 0o700)) //nolint:gosec // G306: test stub must be executable
 	return bin
 }
 

@@ -36,7 +36,7 @@ func TestIntegration_AdapterSpawnsWorker(t *testing.T) {
 	name := "10-11-getZkL2ExecutionProofV1.json"
 	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(queue, "requests", name), reqData, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(queue, "requests", name), reqData, 0o600)) //nolint:gosec // G703: test-controlled path
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -89,7 +89,7 @@ func TestRunProve_DevMock(t *testing.T) {
 	reqData, err := os.ReadFile(filepath.Join(fixtureDir, "request_single_block.json"))
 	require.NoError(t, err)
 	inPath := filepath.Join(dir, "request.json")
-	require.NoError(t, os.WriteFile(inPath, reqData, 0o600))
+	require.NoError(t, os.WriteFile(inPath, reqData, 0o600)) //nolint:gosec // G703: test-controlled path
 	outPath := filepath.Join(dir, "response.json")
 
 	require.NoError(t, run([]string{

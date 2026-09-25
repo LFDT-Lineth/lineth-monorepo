@@ -62,7 +62,7 @@ func TestRun_FakeBinary(t *testing.T) {
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "fake-runner")
 	script := "#!/bin/sh\ncat <<'JSON'\n" + realOutput + "\nJSON\n"
-	require.NoError(t, os.WriteFile(bin, []byte(script), 0o700))
+	require.NoError(t, os.WriteFile(bin, []byte(script), 0o700)) //nolint:gosec // G306: test stub must be executable
 
 	got, err := Run(context.Background(), bin, []byte{0x00, 0x02, 0xAA})
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestRun_RealBinary(t *testing.T) {
 	if bin == "" || input == "" {
 		t.Skip("set L2_EXECUTION_RUNNER_BIN and L2_EXECUTION_RUNNER_INPUT to run against the real runner")
 	}
-	data, err := os.ReadFile(input)
+	data, err := os.ReadFile(input) //nolint:gosec // G703: test-controlled path from env
 	require.NoError(t, err)
 	got, err := Run(context.Background(), bin, data)
 	require.NoError(t, err)

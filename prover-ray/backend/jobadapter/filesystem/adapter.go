@@ -85,7 +85,12 @@ func New(cfg Config, spawn RunProver) (*Adapter, error) {
 
 	a := &Adapter{cfg: cfg, spawn: spawn, claimSuffix: inProgressSuffix + "." + cfg.WorkerID}
 	for _, q := range cfg.Queues {
-		for _, dir := range []string{requestsDir(q.RequestsRootDir), responsesDir(q.RequestsRootDir), doneDir(q.RequestsRootDir)} {
+		dirs := []string{
+			requestsDir(q.RequestsRootDir),
+			responsesDir(q.RequestsRootDir),
+			doneDir(q.RequestsRootDir),
+		}
+		for _, dir := range dirs {
 			if err := os.MkdirAll(dir, dirPerm); err != nil {
 				return nil, fmt.Errorf("jobadapter/filesystem.New: creating %s: %w", dir, err)
 			}
@@ -236,7 +241,7 @@ func (a *Adapter) processRequest(ctx context.Context, root, name string) (bool, 
 		// The prover could not be run; leave the request for the next scan.
 		_ = os.Remove(respTmp)
 		_ = os.Rename(claimed, src)
-		return false, nil
+		return false, nil //nolint:nilerr // a prover we cannot spawn is retried next scan, not a fatal error
 	}
 
 	if err := publishResponse(respTmp, filepath.Join(responsesDir(root), name)); err != nil {

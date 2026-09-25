@@ -93,12 +93,20 @@ func pipelineFor(cfg *config.Config, t backend.ProofType) (p pipeline, ok bool) 
 		if !cfg.Rollup.Configured() {
 			return pipeline{}, false
 		}
-		return pipeline{mode: backend.ProverMode(cfg.Rollup.ProverMode), requestsRootDir: cfg.Rollup.RequestsRootDir, priority: 1}, true
+		return pipeline{
+			mode:            backend.ProverMode(cfg.Rollup.ProverMode),
+			requestsRootDir: cfg.Rollup.RequestsRootDir,
+			priority:        1,
+		}, true
 	case backend.ProofTypeRollupAggregation:
 		if !cfg.Aggregation.Configured() {
 			return pipeline{}, false
 		}
-		return pipeline{mode: backend.ProverMode(cfg.Aggregation.ProverMode), requestsRootDir: cfg.Aggregation.RequestsRootDir, priority: 2}, true
+		return pipeline{
+			mode:            backend.ProverMode(cfg.Aggregation.ProverMode),
+			requestsRootDir: cfg.Aggregation.RequestsRootDir,
+			priority:        2,
+		}, true
 	}
 	return pipeline{}, false
 }
