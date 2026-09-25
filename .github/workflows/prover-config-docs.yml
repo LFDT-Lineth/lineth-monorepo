@@ -63,8 +63,6 @@ jobs:
         uses: ./.github/actions/setup-node-with-cache
         with:
           node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: scripts/prover-options/pnpm-lock.yaml
 
       - name: Install generator dependencies
         working-directory: scripts/prover-options
