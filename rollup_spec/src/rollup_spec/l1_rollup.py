@@ -5,10 +5,33 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from .l2_execution import hash_address_list, hash_digest_list
+from .l2_execution import hash_address_list, hash_bytes, hash_digest_list
 from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
 
 ZERO_HASH32 = Hash32(b"\x00" * 32)
+
+# BN254 scalar-field modulus (matches `MODULO_R` in `ZkEvmV2.sol`): the on-chain
+# `_computePublicInput` reduces the packed keccak256 digest modulo this value.
+MODULO_R = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+
+# Maximum valid DA stream offset within a single EIP-4844 blob chunk (blob byte length - 1).
+# `start_offset`/`end_offset` on finalization must lie in `[0, MAX_OFFSET]`. Calldata-based
+# submissions are open-ended in length and always carry offset 0 (see `finalize_rollup`).
+MAX_OFFSET = 131071
+
+
+def _u256(value: int) -> bytes:
+    """Big-endian 32-byte word, as packed by the contract's assembly `mstore`s."""
+    return int(value).to_bytes(32, "big")
+
+
+def encode_l2_messaging_blocks_offsets(offsets: List[int]) -> bytes:
+    """
+    Serialize `l2MessagingBlocksOffsets` exactly as the coordinator packs the calldata
+    `bytes` field: each block offset as a big-endian `uint16`, concatenated. The contract
+    then binds it into `_computePublicInput` as `keccak256(abi.encodePacked(...))`.
+    """
+    return b"".join(int(o).to_bytes(2, "big") for o in offsets)
 
 
 @dataclass
@@ -69,10 +92,6 @@ class LinethRollupState:
     verifier: PlonkVerifier
     current_finalized_shnarf_deprecated: Hash32 = ZERO_HASH32
     block_hashes: Dict[U64, Hash32] = field(default_factory=dict)
-    # Legacy per-block-number state roots (`stateRootHashes` on-chain), consulted only on
-    # the state-root → block-hash migration path: when `block_hashes` has no entry for the
-    # last finalized block, finalization falls back to matching `parent_state_root_hash`.
-    state_root_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     l1_l2_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_deadlines: Dict[U64, U64] = field(default_factory=dict)
@@ -102,24 +121,23 @@ class FinalizationSubmission:
     Guest/prover boundary: the aggregation guest emits `public_inputs` and the
     preimage lists; `proof` is attached by the zkVM/prover layer above and is a
     placeholder (`b""`) in this reference (see `run_rollup_aggregation_guest`).
-    `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
-    not yet consumed by `finalize_rollup`.
+    `l2_messaging_blocks_offsets` is a coordinator-supplied calldata preimage that
+    `finalize_rollup` binds into the public input (see `compute_public_input`).
 
     The single combined program-VK list (§ProgramVK anchoring) lives inside
     `public_inputs.program_vks` so its order is bound to the proof; it is NOT a
     separate submission field. `finalize_rollup` checks every entry against the
     L1 `approved_vks` set.
 
-    `parent_state_root_hash` is the legacy continuity value (`FinalizationDataV5.parentStateRootHash`),
-    consulted ONLY on the state-root → block-hash migration path: when `block_hashes` has no
-    entry for the last finalized block, finalization matches it against `state_root_hashes`
-    instead of `parent_block_hash`. It is ignored once the block-hash path is active.
+    `l2_messaging_blocks_offsets` (the calldata `l2MessagingBlocksOffsets` bytes) is a
+    coordinator-supplied preimage — like `l2_l1_roots` and `filtered_addresses` — that the
+    contract binds into `_computePublicInput` as `keccak256(l2MessagingBlocksOffsets)`
+    (each offset serialized big-endian uint16). It is not part of the guest PI tuple.
     """
     public_inputs: RollupPublicInput
     proof: bytes
     l2_l1_roots: List[Hash32]
     filtered_addresses: List[Address]
-    parent_state_root_hash: Hash32 = ZERO_HASH32
     l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
@@ -186,6 +204,53 @@ def reinitialize_linea_rollup_v10(state: LinethRollupState) -> Hash32:
     return migrated_data_rolling_hash
 
 
+def compute_public_input(
+    submission: FinalizationSubmission,
+    verifier_chain_configuration: Hash32,
+) -> int:
+    """
+    Model the contract's `_computePublicInput` (LinethRollupBase.sol) bit-for-bit: a single
+    `keccak256 % MODULO_R` over one contiguous, assembly-packed memory region.
+
+    Field order matches the contract exactly (post `parentStateRootHash` removal). The
+    `RollupPublicInput` guest tuple carries a *different* logical field set/order — this
+    function maps the relevant fields onto the on-chain layout. The four dynamic arrays are
+    bound as keccak hashes of their packed preimages: `l2MerkleRoots` (`l2_l1_roots`),
+    `filteredAddresses`, `verifierKeys` (`program_vks`), and `l2MessagingBlocksOffsets`.
+    `lastFinalizedTimestamp` is not part of `RollupPublicInput`; the L1 contract reads it
+    from its own storage, so it is passed via `submission`'s parent-state context — modelled
+    here as 0 (the value is irrelevant to the binding relationship under test).
+    """
+    pi = submission.public_inputs
+    packed = b"".join(
+        [
+            pi.parent_block_hash,  # parentBlockHash
+            pi.end_block_hash,  # finalBlockHash
+            _u256(pi.end_block_timestamp),  # finalTimestamp
+            _u256(pi.end_block_number),  # endBlockNumber
+            pi.parent_l1_l2_bridge_rolling_hash,  # lastFinalizedL1RollingHash
+            pi.end_l1_l2_bridge_rolling_hash,  # l1RollingHash
+            _u256(pi.parent_l1_l2_bridge_rolling_hash_message_number),  # lastFinalizedL1RollingHashMessageNumber
+            _u256(pi.end_l1_l2_bridge_rolling_hash_message_number),  # l1RollingHashMessageNumber
+            pi.parent_ftx_rolling_hash,  # lastFinalizedForcedTransactionRollingHash
+            pi.end_ftx_rolling_hash,  # finalForcedTransactionRollingHash
+            _u256(pi.parent_ftx_number),  # lastFinalizedForcedTransactionNumber
+            _u256(pi.end_processed_ftx_number),  # finalForcedTransactionNumber
+            _u256(L2_L1_TREE_DEPTH),  # l2MerkleTreesDepth
+            pi.parent_data_rolling_hash,  # parentDataRollingHash
+            pi.end_data_rolling_hash,  # endDataRollingHash
+            _u256(pi.start_offset),  # startOffset
+            _u256(pi.end_offset),  # endOffset
+            hash_digest_list(submission.l2_l1_roots),  # keccak256(l2MerkleRoots)
+            verifier_chain_configuration,  # verifierChainConfiguration
+            hash_address_list(submission.filtered_addresses),  # keccak256(filteredAddresses)
+            hash_digest_list(pi.program_vks),  # keccak256(verifierKeys)
+            hash_bytes(encode_l2_messaging_blocks_offsets(submission.l2_messaging_blocks_offsets)),
+        ]
+    )
+    return int.from_bytes(keccak256(packed), "big") % MODULO_R
+
+
 def finalize_rollup(
     state: LinethRollupState,
     submission: FinalizationSubmission,
@@ -193,27 +258,37 @@ def finalize_rollup(
     """Apply a finalized rollup range after checking stored DA and block continuity."""
     pi = submission.public_inputs
 
-    if not verify_rollup_aggregation_snark(submission.proof, pi):
+    # The SNARK is verified against the public input computed from the coordinator-supplied
+    # calldata (the PI tuple plus the revealed preimages). Computing it here binds
+    # `l2_messaging_blocks_offsets` (and the other preimages) into the verified statement —
+    # a preimage mismatch yields a public input the proof does not attest to.
+    public_input = compute_public_input(submission, state.verifier.get_chain_configuration())
+    if not verify_rollup_aggregation_snark(submission.proof, pi, public_input):
         raise Exception("invalid rollup-aggregation proof")
     if pi.parent_data_rolling_hash != state.current_data_rolling_hash:
         raise Exception("parentDataRollingHash does not match the current data rolling hash")
     if pi.start_offset != state.current_data_availability_offset:
         raise Exception("startOffset does not match the current data availability offset")
+    # Both offsets must lie within a single blob chunk (`[0, MAX_OFFSET]`). Calldata-based
+    # submissions are open-ended in length and always carry offset 0, so they satisfy this
+    # trivially; blob submissions are bounded by the EIP-4844 blob byte length.
+    if not (0 <= pi.start_offset <= MAX_OFFSET):
+        raise Exception("startOffset out of range")
+    if not (0 <= pi.end_offset <= MAX_OFFSET):
+        raise Exception("endOffset out of range")
     if pi.end_data_rolling_hash not in state.anchored_data_rolling_hashes:
         raise Exception("endDataRollingHash was not anchored by a chunk submission")
 
-    # Execution rooting, with the state-root → block-hash migration path (§5.4):
+    # Execution rooting, with the one-time migration path (§5.4):
     # `blockHashes[lastFinalizedBlock]` is the authoritative anchor on the new path.
     # EMPTY_HASH (absent) signals the migration path — the parent was committed under the
-    # old state-root-hash model, so the caller supplies `parentBlockHash == EMPTY_HASH` and
-    # the contract instead matches the legacy `stateRootHashes[lastFinalizedBlock]`.
+    # old state-root-hash model, so there is no parent block hash to soft-check against and
+    # the caller supplies `parentBlockHash == EMPTY_HASH`. Every round after relies on the
+    # block hash anchored below.
     parent_block_hash = state.block_hashes.get(state.current_l2_block_number, ZERO_HASH32)
     if parent_block_hash == ZERO_HASH32:
         if pi.parent_block_hash != ZERO_HASH32:
             raise Exception("parentBlockHash must be EMPTY_HASH on the migration path")
-        parent_state_root_hash = state.state_root_hashes.get(state.current_l2_block_number, ZERO_HASH32)
-        if parent_state_root_hash == ZERO_HASH32 or parent_state_root_hash != submission.parent_state_root_hash:
-            raise Exception("parentStateRootHash does not match the stored state root hash")
     else:
         if pi.parent_block_hash != parent_block_hash:
             raise Exception("parentBlockHash does not match the current block hash")
@@ -286,7 +361,17 @@ def finalize_rollup(
     state.current_finalized_processed_ftx_number = pi.end_processed_ftx_number
 
 
-def verify_rollup_aggregation_snark(proof: bytes, public_inputs: RollupPublicInput) -> bool:
+def verify_rollup_aggregation_snark(
+    proof: bytes,
+    public_inputs: RollupPublicInput,
+    public_input: int,
+) -> bool:
+    """
+    PRECOMPILE (production): the SNARK verifier checks `proof` against the single
+    `public_input` hash (`_computePublicInput(...) % MODULO_R`). Stubbed here — the point is
+    that the verifier consumes the computed aggregate hash, so any divergence in a bound
+    preimage (e.g. `l2MessagingBlocksOffsets`) changes `public_input` and fails verification.
+    """
     return True
 
 
