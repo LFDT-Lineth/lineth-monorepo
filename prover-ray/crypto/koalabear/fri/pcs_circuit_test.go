@@ -45,6 +45,10 @@ type pcsVerifyCircuit struct {
 	shifts []BatchShifts
 }
 
+// Define wires the capped verifier into constraints: the exported fields come
+// in as witness variables, the unexported ones are native values baked in at
+// compile time. VerifyGnark asserts instead of returning a verdict, so a bad
+// proof surfaces as an unsatisfiable constraint when the solver runs.
 func (c *pcsVerifyCircuit) Define(api frontend.API) error {
 	c.pcs.VerifyGnark(api, GnarkVerifyInputs{
 		Roots:          c.Roots,
