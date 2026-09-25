@@ -97,7 +97,7 @@ fun loadConfigsOrError(
   strict: Boolean = false,
 ): Result<CoordinatorConfigToml, String> {
   val coordinatorBaseConfigs =
-    loadConfigsAndLogErrors<CoordinatorConfigFileToml>(coordinatorConfigFiles, logger, strict)
+    loadConfigsAndLogErrors<CoordinatorConfigFilesToml>(coordinatorConfigFiles, logger, strict)
   val tracesLimitsV4Configs =
     tracesLimitsFileV4?.let {
       loadConfigsAndLogErrors<TracesLimitsConfigFileV4Toml>(listOf(it), logger, strict)

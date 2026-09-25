@@ -3,12 +3,12 @@ package lineth.coordinator.config.v2.toml
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.GenericProverConfig
+import lineth.coordinator.clients.prover.FileBasedRiscvProverConfig
 import lineth.coordinator.clients.prover.PreRiscvProverConfig
-import lineth.coordinator.clients.prover.ProverClientConfig
 import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.clients.prover.ProverConfigSwitch
 import lineth.coordinator.clients.prover.ProversConfig
+import lineth.coordinator.clients.prover.RiscvProverConfig
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -127,21 +127,21 @@ data class ProverToml(
       proofAggregation = t.toFileBasedProverConfig(t.proofAggregation!!),
     )
 
-  private fun toProverConfig(t: ProverToml): ProverConfig =
-    ProverConfig(
-      l2Execution = ProverClientConfig(
+  private fun toProverConfig(t: ProverToml): RiscvProverConfig =
+    RiscvProverConfig(
+      l2Execution = FileBasedRiscvProverConfig(
         fileBased = t.toFileBasedProverConfig(t.l2Execution!!),
         programId = t.l2Execution.programId!!,
         provingSystemVersion = t.provingSystemVersion!!,
         forkName = t.forkName!!,
       ),
-      rollup = ProverClientConfig(
+      rollup = FileBasedRiscvProverConfig(
         fileBased = t.toFileBasedProverConfig(t.rollup!!),
         programId = t.rollup.programId!!,
         provingSystemVersion = t.provingSystemVersion,
         forkName = t.forkName,
       ),
-      rollupAggregation = ProverClientConfig(
+      rollupAggregation = FileBasedRiscvProverConfig(
         fileBased = t.toFileBasedProverConfig(t.rollupAggregation!!),
         programId = t.rollupAggregation.programId!!,
         provingSystemVersion = t.provingSystemVersion,
@@ -198,8 +198,8 @@ data class ProverToml(
     validateProverToml(this)
     this.new?.run(::validateProverToml)
 
-    fun buildGenericProverConfig(proverToml: ProverToml): GenericProverConfig {
-      return GenericProverConfig(
+    fun buildGenericProverConfig(proverToml: ProverToml): ProverConfig {
+      return ProverConfig(
         preRiscvConfig = if (proverToml.type == ProverType.PRE_RISCV) {
           toPreRiscvProverConfig(proverToml)
         } else {

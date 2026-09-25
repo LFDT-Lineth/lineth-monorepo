@@ -5,8 +5,8 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 data class ProverConfigSwitch(
-  val current: GenericProverConfig,
-  val next: GenericProverConfig? = null,
+  val current: ProverConfig,
+  val next: ProverConfig? = null,
 )
 
 data class ProversConfig(
@@ -16,9 +16,9 @@ data class ProversConfig(
   val enableRequestFilesCleanup: Boolean = false,
 )
 
-data class GenericProverConfig(
+data class ProverConfig(
   val preRiscvConfig: PreRiscvProverConfig? = null,
-  val riscvConfig: ProverConfig? = null,
+  val riscvConfig: RiscvProverConfig? = null,
 ) {
   init {
     require((preRiscvConfig != null) != (riscvConfig != null)) {
@@ -34,13 +34,13 @@ data class PreRiscvProverConfig(
   val invalidity: FileBasedProverConfig? = null,
 )
 
-data class ProverConfig(
-  val l2Execution: ProverClientConfig,
-  val rollup: ProverClientConfig,
-  val rollupAggregation: ProverClientConfig,
+data class RiscvProverConfig(
+  val l2Execution: FileBasedRiscvProverConfig,
+  val rollup: FileBasedRiscvProverConfig,
+  val rollupAggregation: FileBasedRiscvProverConfig,
 )
 
-data class ProverClientConfig(
+data class FileBasedRiscvProverConfig(
   val fileBased: FileBasedProverConfig,
   val programId: String,
   val provingSystemVersion: String,

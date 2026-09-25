@@ -299,7 +299,7 @@ class DefaultProverClientFactory(
   }
 
   private fun <RequestDto : Any, ResponseDto> fileBasedTransport(
-    proverConfig: ProverClientConfig,
+    proverConfig: FileBasedRiscvProverConfig,
     requestFileNameProvider: ProverFileNameProvider<BlockIntervalProofIndex>,
     responseFileNameProvider: ProverFileNameProvider<BlockIntervalProofIndex>,
     responseDtoClass: Class<ResponseDto>,
@@ -323,7 +323,7 @@ class DefaultProverClientFactory(
     )
   }
 
-  private fun buildL2ExecutionProofTransport(proverConfig: ProverClientConfig) =
+  private fun buildL2ExecutionProofTransport(proverConfig: FileBasedRiscvProverConfig) =
     fileBasedTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto>(
       proverConfig = proverConfig,
       requestFileNameProvider = L2ExecutionProofFileNameProvider,
@@ -331,7 +331,7 @@ class DefaultProverClientFactory(
       responseDtoClass = L2ExecutionProofResponseDto::class.java,
     )
 
-  private fun <RequestDto : Any> buildRollupProofTransport(proverConfig: ProverClientConfig) =
+  private fun <RequestDto : Any> buildRollupProofTransport(proverConfig: FileBasedRiscvProverConfig) =
     fileBasedTransport<RequestDto, RollupProofResponseDto>(
       proverConfig = proverConfig,
       requestFileNameProvider = RollupProofFileNameProvider,
@@ -339,7 +339,7 @@ class DefaultProverClientFactory(
       responseDtoClass = RollupProofResponseDto::class.java,
     )
 
-  private fun <RequestDto : Any> buildRollupAggregationProofTransport(proverConfig: ProverClientConfig) =
+  private fun <RequestDto : Any> buildRollupAggregationProofTransport(proverConfig: FileBasedRiscvProverConfig) =
     fileBasedTransport<RequestDto, RollupAggregationProofResponseDto>(
       proverConfig = proverConfig,
       requestFileNameProvider = RollupAggregationProofFileNameProvider,
@@ -347,7 +347,7 @@ class DefaultProverClientFactory(
       responseDtoClass = RollupAggregationProofResponseDto::class.java,
     )
 
-  private fun buildL2ExecutionProverClient(proverConfig: ProverClientConfig): L2ExecutionProverClient {
+  private fun buildL2ExecutionProverClient(proverConfig: FileBasedRiscvProverConfig): L2ExecutionProverClient {
     require(l2MessageServiceAddress.isNotEmpty()) {
       "l2MessageServiceAddress must be configured for the RISC-V execution prover"
     }
@@ -362,8 +362,8 @@ class DefaultProverClientFactory(
   }
 
   private fun buildFileBasedRollupProverClient(
-    proverConfig: ProverClientConfig,
-    l2ExecutionProverConfig: ProverClientConfig,
+    proverConfig: FileBasedRiscvProverConfig,
+    l2ExecutionProverConfig: FileBasedRiscvProverConfig,
   ): FileBasedRollupProverClient {
     return FileBasedRollupProverClient(
       transport = buildRollupProofTransport(proverConfig),
@@ -375,8 +375,8 @@ class DefaultProverClientFactory(
   }
 
   private fun buildFileBasedRollupAggregationProverClient(
-    proverConfig: ProverClientConfig,
-    rollupProverConfig: ProverClientConfig,
+    proverConfig: FileBasedRiscvProverConfig,
+    rollupProverConfig: FileBasedRiscvProverConfig,
   ): FileBasedRollupAggregationProverClient {
     return FileBasedRollupAggregationProverClient(
       transport = buildRollupAggregationProofTransport(proverConfig),

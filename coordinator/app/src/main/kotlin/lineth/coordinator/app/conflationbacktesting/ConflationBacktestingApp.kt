@@ -41,8 +41,8 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
 import lineth.coordinator.clients.prover.DefaultProverClientFactory
-import lineth.coordinator.clients.prover.GenericProverConfig
 import lineth.coordinator.clients.prover.PreRiscvProverConfig
+import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.clients.prover.ProverConfigSwitch
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -114,7 +114,7 @@ class ConflationBacktestingApp(
     ),
     proversConfig = mainCoordinatorConfig.proversConfig.copy(
       proverSwitch = ProverConfigSwitch(
-        current = GenericProverConfig(
+        current = ProverConfig(
           preRiscvConfig = getUpdatedProverConfig(
             proverConfig = mainCoordinatorConfig.proversConfig.proverSwitch.current.preRiscvConfig!!,
             backtestingDirectory = requireNotNull(mainCoordinatorConfig.conflation.backtestingDirectory) {
@@ -124,7 +124,7 @@ class ConflationBacktestingApp(
           ),
         ),
         next = mainCoordinatorConfig.proversConfig.proverSwitch.next?.preRiscvConfig?.let { proverB ->
-          GenericProverConfig(
+          ProverConfig(
             preRiscvConfig = getUpdatedProverConfig(
               proverConfig = proverB,
               backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory,

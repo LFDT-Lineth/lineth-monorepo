@@ -10,7 +10,7 @@ import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV4
 import net.consensys.linea.traces.TracingModuleV5
 
-data class CoordinatorConfigFileToml(
+data class CoordinatorConfigFilesToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")
   val defaults: DefaultsToml = DefaultsToml(),
   @param:ConfigSection("Lineth protocol contract addresses and genesis settings.")
@@ -43,7 +43,21 @@ data class CoordinatorConfigFileToml(
   val database: DatabaseToml,
   @param:ConfigSection("Coordinator JSON-RPC and observability API settings.")
   val api: ApiConfigToml = ApiConfigToml(),
-)
+) {
+  init {
+    if (prover.type == ProverToml.ProverType.PRE_RISCV &&
+      prover.new?.type == ProverToml.ProverType.RISCV
+    ) {
+      require(
+        conflation.riscvStartingBlockTimestampInclusive ==
+          (prover.switchBlockTimestamp ?: prover.new.switchBlockTimestamp),
+      ) {
+        "conflation.riscvStartingBlockTimestampInclusive must be equal to prover.switchBlockTimestamp for" +
+          " switching from pre RISC-V to RISC-V provers"
+      }
+    }
+  }
+}
 
 data class TracesLimitsConfigFileV4Toml(
   @param:ConfigDoc(
@@ -78,22 +92,12 @@ data class SmartContractErrorCodesConfigFileToml(
 )
 
 data class CoordinatorConfigToml(
-  val configs: CoordinatorConfigFileToml,
+  val configs: CoordinatorConfigFilesToml,
   val tracesLimitsV4: TracesLimitsConfigFileV4Toml?,
   val tracesLimitsV5: TracesLimitsConfigFileV5Toml?,
   val l1DynamicGasPriceCapTimeOfDayMultipliers: GasPriceCapTimeOfDayMultipliersConfigFileToml? = null,
   val smartContractErrors: SmartContractErrorCodesConfigFileToml? = null,
 ) {
-  init {
-    if (configs.prover.type == ProverToml.ProverType.PRE_RISCV &&
-      configs.prover.new?.type == ProverToml.ProverType.RISCV
-    ) {
-      require(configs.conflation.riscvStartingBlockTimestampInclusive == configs.prover.switchBlockTimestamp) {
-        "conflation.riscvStartingBlockTimestampInclusive must be equal to prover.switchBlockTimestamp for" + "" +
-          " switching from pre RISC-V to RISC-V provers"
-      }
-    }
-  }
   fun reified(): CoordinatorConfig {
     return CoordinatorConfig(
       protocol = configs.protocol.reified(),

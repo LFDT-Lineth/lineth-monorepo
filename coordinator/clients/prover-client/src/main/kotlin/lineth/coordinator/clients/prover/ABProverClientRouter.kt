@@ -51,7 +51,7 @@ class StartBlockTimestampBasedSwitchPredicate(
 
 class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex>(
   private val proverA: ProverClientV2<ProofRequest, ProofResponse, TProofIndex>?,
-  private val proverB: ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+  private val proverB: ProverClientV2<ProofRequest, ProofResponse, TProofIndex>?,
   private val switchToProverBPredicate: (Any) -> Boolean,
 ) : ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
 
@@ -74,33 +74,18 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
 
       return when {
         switchBlockNumberInclusive != null -> {
-          requireNotNull(proverBConfig) {
-            "proverBConfig must be provided when switchBlockNumberInclusive is set"
-          }
-          // if (proverAConfig != null && proverBConfig != null) {
           ABProverClientRouter(
             proverA = proverAConfig?.let { clientBuilder(it) },
-            proverB = clientBuilder(proverBConfig),
+            proverB = proverBConfig?.let { clientBuilder(it) },
             switchToProverBPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)::invoke,
           )
-          // } else {
-          //  clientBuilder(proverAConfig ?: proverBConfig!!)
-          // }
         }
         switchBlockTimestamp != null -> {
-          requireNotNull(proverBConfig) {
-            "proverBConfig must be provided when switchBlockTimestamp is set"
-          }
-          // if (proverAConfig != null && proverBConfig != null) {
           ABProverClientRouter(
-            proverA = proverAConfig?.let { clientBuilder(it) }, // clientBuilder(proverAConfig),
-            proverB = clientBuilder(proverBConfig),
+            proverA = proverAConfig?.let { clientBuilder(it) },
+            proverB = proverBConfig?.let { clientBuilder(it) },
             switchToProverBPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)::invoke,
           )
-          // }
-          // else {
-          //  clientBuilder(proverAConfig ?: proverBConfig!!)
-          // }
         }
         else -> clientBuilder(proverAConfig!!)
       }
@@ -109,6 +94,9 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
 
   private fun getProver(proofRequestOrIndex: Any): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
     return if (switchToProverBPredicate(proofRequestOrIndex)) {
+      requireNotNull(proverB) {
+        "proverB should not be null, the caller should not use it after the switch"
+      }
       proverB
     } else {
       requireNotNull(proverA) {
@@ -138,8 +126,9 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
   }
 
   override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
-    return (proverA?.removeRequests(startBlockNumberGte) ?: SafeFuture.completedFuture(Unit)).thenCompose {
-      proverB.removeRequests(startBlockNumberGte)
-    }
+    return (proverA?.removeRequests(startBlockNumberGte) ?: SafeFuture.completedFuture(Unit))
+      .thenCompose {
+        proverB?.removeRequests(startBlockNumberGte) ?: SafeFuture.completedFuture(Unit)
+      }
   }
 }
