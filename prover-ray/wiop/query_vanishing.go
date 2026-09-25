@@ -106,6 +106,24 @@ func (v *Vanishing) CheckGnark(_ frontend.API, _ GnarkRuntime) {
 //
 // The resulting position list is sorted and deduplicated before storage.
 //
+// WARNING: inference walks the *whole* expression tree and cannot distinguish a
+// shift that denotes a real domain-boundary exemption from one that is merely
+// incidental. It is safe only when the caller authored every shift in expr and
+// intends each to exempt rows. Do not use it on a compiler-synthesised
+// expression that splices in subexpressions supplied by a caller: a shift
+// buried in a spliced-in operand silently widens the cancellation set, and
+// every cancelled row is a row on which the constraint does not hold. If such a
+// row is also read by an opening or a downstream check, the value there is
+// unconstrained and the argument loses soundness -- this is exactly how
+// grandproduct and logderivativesum un-constrained their Z endpoints when a
+// factor column carried a +k shift. Use [Module.NewVanishingManual] with an
+// explicit set whenever the intended exemptions are known up front; see
+// buildZ in either compiler, or localvanishing.liftToGlobal, for the pattern.
+//
+// Note also that shifts on a cyclic domain wrap (tableElemAt reads mod n), so a
+// shifted read is well-defined on every row and does not by itself require any
+// exemption.
+//
 // Panics if ctx or expr is nil.
 func (m *Module) NewVanishing(ctx *ContextFrame, expr Expression) *Vanishing {
 	if ctx == nil {
@@ -125,6 +143,11 @@ func (m *Module) NewVanishing(ctx *ContextFrame, expr Expression) *Vanishing {
 //
 // Positive positions index from the start; negative positions index from the
 // end. The list is sorted and deduplicated before storage.
+//
+// Prefer this over [Module.NewVanishing] whenever the intended exemptions are
+// known at construction time -- in particular when expr embeds subexpressions
+// supplied by a caller, where shift-based inference would over-cancel. See the
+// warning on [Module.NewVanishing].
 //
 // Panics if ctx or expr is nil.
 func (m *Module) NewVanishingManual(ctx *ContextFrame, expr Expression, positions ...int) *Vanishing {
