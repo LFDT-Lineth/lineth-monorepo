@@ -52,6 +52,11 @@ abstract contract LinethRollupBase is
   /// @notice The empty hash value.
   bytes32 internal constant EMPTY_HASH = 0x0;
 
+  /// @notice Maximum valid DA stream offset within a single EIP-4844 blob chunk (blob byte length - 1).
+  /// @dev `startOffset`/`endOffset` on finalization must lie in `[0, MAX_OFFSET]`. Calldata-based
+  ///   submissions are open-ended in length and so always carry offset 0 (see `_finalizeBlocks`).
+  uint256 internal constant MAX_OFFSET = 131071;
+
   /// @notice This is the ABI version and not the reinitialize version.
   string private constant _CONTRACT_VERSION = "9.0";
 
@@ -133,6 +138,9 @@ abstract contract LinethRollupBase is
   /**
    * @notice The current live end offset (bytes consumed of the last-folded chunk) of the finalized
    *   DA stream position, paired with `currentDataRollingHash`.
+   * @dev Calldata-based submissions are open-ended in length (not bound to a fixed blob size), so
+   *   their stream position always carries offset 0; only EIP-4844 blob submissions advance a
+   *   non-zero offset within a chunk.
    */
   uint256 public currentDataAvailabilityOffset;
 
@@ -511,6 +519,12 @@ abstract contract LinethRollupBase is
       _finalizationData.startOffset == currentDataAvailabilityOffset,
       StartOffsetNotContinuous(currentDataAvailabilityOffset, _finalizationData.startOffset)
     );
+
+    // Both offsets must lie within a single blob chunk. Calldata-based submissions are open-ended
+    // in length and always carry offset 0, so they satisfy this trivially; blob submissions are
+    // bounded by the EIP-4844 blob byte length.
+    require(_finalizationData.startOffset <= MAX_OFFSET, OffsetOutOfRange(_finalizationData.startOffset));
+    require(_finalizationData.endOffset <= MAX_OFFSET, OffsetOutOfRange(_finalizationData.endOffset));
 
     // DA anchoring: the end dataRollingHash must have been anchored by a prior submission.
     require(

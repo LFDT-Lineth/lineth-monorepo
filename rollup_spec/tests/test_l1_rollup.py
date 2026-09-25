@@ -47,7 +47,6 @@ _END_BLOCK_HASH = Hash32(bytes([0x9A]) * 32)
 _L1L2_ROLLING_HASH = Hash32(bytes([0x22]) * 32)
 _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
-_PARENT_STATE_ROOT_HASH = Hash32(bytes([0x5E]) * 32)
 _LEGACY_SHNARF = Hash32(bytes([0x71]) * 32)
 
 
@@ -167,32 +166,18 @@ def test_finalize_rollup_rejects_nonmatching_start_offset() -> None:
         _finalize(state, _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK]))
 
 
-def test_finalize_rollup_uses_state_root_on_missing_parent_block_hash() -> None:
+def test_finalize_rollup_migration_path_accepts_empty_parent_block_hash() -> None:
     # State-root → block-hash migration path: `block_hashes` has no entry for the last
-    # finalized block, so finalization requires `parent_block_hash == EMPTY_HASH` and
-    # instead matches the legacy `state_root_hashes` value via `parent_state_root_hash`.
+    # finalized block (the parent was committed under the old state-root model), so
+    # finalization requires `parent_block_hash == EMPTY_HASH` and proceeds on that signal
+    # alone — there is no parent block hash to soft-check against.
     state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
     state.block_hashes.clear()
-    state.state_root_hashes[U64(1000500)] = _PARENT_STATE_ROOT_HASH
     submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
     submission.public_inputs.parent_block_hash = Hash32(b"\x00" * 32)
-    submission.parent_state_root_hash = _PARENT_STATE_ROOT_HASH
     _finalize(state, submission)
     # The migration anchors the new block hash, moving the next round onto the new path.
     assert state.block_hashes[U64(1000520)] == _END_BLOCK_HASH
-
-
-def test_finalize_rollup_migration_rejects_wrong_state_root() -> None:
-    # Migration path with a `parent_state_root_hash` that does not match the stored legacy
-    # state root must revert (`StartingRootHashDoesNotMatch` on-chain).
-    state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
-    state.block_hashes.clear()
-    state.state_root_hashes[U64(1000500)] = _PARENT_STATE_ROOT_HASH
-    submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
-    submission.public_inputs.parent_block_hash = Hash32(b"\x00" * 32)
-    submission.parent_state_root_hash = Hash32(bytes([0xFF]) * 32)
-    with pytest.raises(Exception, match="parentStateRootHash"):
-        _finalize(state, submission)
 
 
 def test_finalize_rollup_migration_rejects_nonempty_parent_block_hash() -> None:
@@ -200,10 +185,46 @@ def test_finalize_rollup_migration_rejects_nonempty_parent_block_hash() -> None:
     # (`StartingBlockHashDoesNotMatch` on-chain).
     state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
     state.block_hashes.clear()
-    state.state_root_hashes[U64(1000500)] = _PARENT_STATE_ROOT_HASH
     submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
-    submission.parent_state_root_hash = _PARENT_STATE_ROOT_HASH
     with pytest.raises(Exception, match="EMPTY_HASH on the migration path"):
+        _finalize(state, submission)
+
+
+def test_finalize_rollup_rejects_out_of_range_end_offset() -> None:
+    # `end_offset` beyond a single blob chunk (`MAX_OFFSET = 131071`) must revert
+    # (`OffsetOutOfRange` on-chain). `start_offset` stays continuous (= 0) so only the
+    # end-offset bound is the failing check.
+    from rollup_spec.l1_rollup import MAX_OFFSET
+
+    state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
+    submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
+    submission.public_inputs.end_offset = MAX_OFFSET + 1
+    with pytest.raises(Exception, match="endOffset out of range"):
+        _finalize(state, submission)
+
+
+def test_finalize_rollup_accepts_max_offset_boundary() -> None:
+    # The inclusive upper bound `end_offset == MAX_OFFSET` is accepted (a finalization that
+    # consumes exactly the last byte of its final blob chunk).
+    from rollup_spec.l1_rollup import MAX_OFFSET
+
+    state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
+    submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
+    submission.public_inputs.end_offset = MAX_OFFSET
+    _finalize(state, submission)  # must not raise
+    assert state.current_data_availability_offset == MAX_OFFSET
+
+
+def test_finalize_rollup_rejects_out_of_range_start_offset() -> None:
+    # `start_offset` beyond `MAX_OFFSET` must revert even if it happened to match
+    # `current_data_availability_offset` (here both are forced past the bound).
+    from rollup_spec.l1_rollup import MAX_OFFSET
+
+    state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
+    state.current_data_availability_offset = MAX_OFFSET + 1
+    submission = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
+    submission.public_inputs.start_offset = MAX_OFFSET + 1
+    with pytest.raises(Exception, match="startOffset out of range"):
         _finalize(state, submission)
 
 
@@ -234,3 +255,20 @@ def test_reinitialize_linea_rollup_v10_migrates_legacy_shnarf() -> None:
     assert state.current_data_rolling_hash == _LEGACY_SHNARF
     assert _LEGACY_SHNARF in state.anchored_data_rolling_hashes
     assert state.current_finalized_shnarf_deprecated == Hash32(b"\x00" * 32)
+
+
+def test_compute_public_input_binds_l2_messaging_blocks_offsets() -> None:
+    # `l2MessagingBlocksOffsets` is hashed into the on-chain public input like the other
+    # preimages: tampering with the coordinator-supplied offsets changes the computed
+    # `public_input`, so a proof attesting to the original would no longer verify.
+    from rollup_spec.l1_rollup import compute_public_input
+
+    state = _base_state(approved_vks={_EXEC_VK_A, _ROLLUP_VK})
+    config = state.verifier.get_chain_configuration()
+    original = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
+    tampered = _base_submission(program_vks=[_EXEC_VK_A, _ROLLUP_VK])
+    tampered.l2_messaging_blocks_offsets = [7, 9]
+    assert compute_public_input(original, config) != compute_public_input(tampered, config)
+    # Determinism / bound range: the public input is a BN254 scalar-field element.
+    assert compute_public_input(original, config) == compute_public_input(original, config)
+    assert 0 <= compute_public_input(original, config) < (1 << 254)

@@ -489,3 +489,8 @@ def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
 
 def hash_address_list(values: Sequence[Address]) -> Hash32:
     return keccak256(b"".join(bytes(value) for value in values))
+
+
+def hash_bytes(value: bytes) -> Hash32:
+    """keccak256 of a raw bytes field — mirrors Solidity `keccak256(abi.encodePacked(_bytes))`."""
+    return keccak256(value)

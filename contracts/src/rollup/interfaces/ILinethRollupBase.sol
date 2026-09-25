@@ -74,8 +74,9 @@ interface ILinethRollupBase {
    *   the on-chain `currentDataRollingHash`.
    * @param endDataRollingHash The end dataRollingHash this finalization range finishes at. Must have been anchored by a prior submission.
    * @param startOffset The starting stream offset of this finalization range. Must match the on-chain
-   *   `currentDataAvailabilityOffset`.
+   *   `currentDataAvailabilityOffset`, and must lie in `[0, MAX_OFFSET]`.
    * @param endOffset The ending stream offset of this finalization range (bytes consumed of the last chunk).
+   *   Must lie in `[0, MAX_OFFSET]`. Calldata-based submissions are open-ended in length and always use 0.
    * @param l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
    * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
    * @param verifierKeys is an array of guest-program verifier keys used in this finalization batch.
@@ -247,6 +248,11 @@ interface ILinethRollupBase {
    * @dev Thrown when the start offset does not equal `currentDataAvailabilityOffset`.
    */
   error StartOffsetNotContinuous(uint256 previousOffset, uint256 startOffset);
+
+  /**
+   * @dev Thrown when a start or end offset is outside the valid range `[0, MAX_OFFSET]`.
+   */
+  error OffsetOutOfRange(uint256 offset);
 
   /**
    * @dev Thrown when the rollup is missing a forced transaction in the finalization block range.

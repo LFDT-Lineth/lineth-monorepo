@@ -363,6 +363,8 @@ The rollup-aggregation proof's root exposes twenty values to the L1 contract:
 
 Note: `programVks` (field 20) is a variable-length set of `hash32` VK commitments — the guest VKs recursively verified beneath this proof — encoded canonically as a distinct, sorted-ascending array and folded into L1's aggregate public-input hash like every other field (§2.6).
 
+These twenty fields are the **guest PI tuple** — the logical values the rollup-aggregation proof attests to. They are *not* the on-chain public input byte-for-byte: the L1 contract repacks them (in a different order, with the variable arrays replaced by their keccak hashes and `l2MessagingBlocksOffsets` appended) into the single `keccak256(...) % MODULO_R` value the SNARK verifier consumes — see §5.3, mirrored by `l1_rollup.compute_public_input`.
+
 Note: `parentBlockHash` and `endBlockHash` (fields 16–17) carry execution continuity explicitly. This is a deliberate change from the legacy 5-input shnarf formula, which folded the execution anchor (then the state root) into the DA accumulator itself: under shared chunks (§3.1), "the last block completing in a given chunk" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute that value alone. The Data Rolling Hash (`parentDataRollingHash`/`endDataRollingHash`, fields 14–15) is therefore a pure DA accumulator — `Hash(prevDataRollingHash, chunkHash)` — and execution continuity travels as its own pair of fields, checked independently by the L1 contract (§5).
 
 Note: `startOffset`/`endOffset` (fields 18–19) are the byte positions that pair with `parentDataRollingHash`/`endDataRollingHash` to give this range's start and end stream positions (§3.1). They let a chunk be shared between adjacent rollup proofs, or between adjacent finalization ranges, without wasting any blob space on padding (§5).
@@ -440,7 +442,7 @@ dataRollingHash_i = Hash(dataRollingHash_{i-1}, chunkHash_i)
 
 where `chunkHash` is the blob's versioned hash, or `keccak256(compressedData)` for calldata. This is a 2-input fold, replacing the legacy 5-input shnarf `keccak256(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)`: under shared chunks, "the last block completing in chunk `i`" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute an execution-carrying chain unassisted. Execution continuity (§2.4's `parentBlockHash`/`endBlockHash`) is carried as its own explicit public-input field instead.
 
-A **stream position** is the pair `(R, c)`: `R` is the dataRollingHash after folding every chunk up to and including the one containing the position; `c ∈ (0, chunkSize]` is the number of bytes consumed of that last-folded chunk (`c = chunkSize` means "exactly at this chunk's end"). Excluding `c = 0` from this range gives every position a unique encoding; `c = 0` is reserved as the **fresh-start sentinel** used only at finalization boundaries (§5). Because the KZG polynomial evaluation is proven inside the zkVM, the evaluation point `X` and claim `Y` never appear on-chain — the L1 contract only checks `chunkHash` against the transaction's `VERSIONED_HASH` (or `keccak256(compressedData)` on the calldata path).
+A **stream position** is the pair `(R, c)`: `R` is the dataRollingHash after folding every chunk up to and including the one containing the position; `c ∈ (0, chunkSize]` is the number of bytes consumed of that last-folded chunk (`c = chunkSize` means "exactly at this chunk's end"). Excluding `c = 0` from this range gives every position a unique encoding; `c = 0` is reserved as the **fresh-start sentinel** used only at finalization boundaries (§5). On-chain, the offset carried in a finalization's `startOffset`/`endOffset` is bounded to `[0, MAX_OFFSET]` (`MAX_OFFSET = chunkSize − 1 = 131071`, §5); calldata-submitted chunks are open-ended in length and always use offset 0 (§5.2). Because the KZG polynomial evaluation is proven inside the zkVM, the evaluation point `X` and claim `Y` never appear on-chain — the L1 contract only checks `chunkHash` against the transaction's `VERSIONED_HASH` (or `keccak256(compressedData)` on the calldata path).
 
 ### 3.2 Blob Payload
 
@@ -517,7 +519,7 @@ The L2→L1 bridge state is tracked via `l2L1BridgeTransactionTree`, a commitmen
 
 **Leaf position derivability from message number.** Withdrawal messages are assigned monotonically increasing message numbers. Because the finalization anchors the message number range via `parentL1L2BridgeRollingHashMessageNumber` and `endL1L2BridgeRollingHashMessageNumber`, the tree index and leaf index of any message are deterministic: for a message at offset `k` from the start of the finalization range, `treeIndex = k / 2^D` and `leafIndex = k mod 2^D`. This means a user who knows their message number can always locate their leaf without any additional on-chain data.
 
-**`l2MessagingBlocksOffsets`.** The current system submits a compact array of uint16 block offsets alongside each finalization call. The L1 decodes these and emits `L2MessagingBlockAnchored` events, which allow off-chain indexers to map L2 blocks to their message slots. This data is **not part of the proof** — it is an unproven discoverability hint provided by the sequencer. Because leaf position is fully derivable from message number (see above), the offset list carries no security weight; a dishonest sequencer can only cause event mis-indexing, not loss of funds. The mechanism is kept unchanged in the new design.
+**`l2MessagingBlocksOffsets`.** The system submits a compact array of uint16 block offsets alongside each finalization call. The L1 decodes these and emits `L2MessagingBlockAnchored` events, which allow off-chain indexers to map L2 blocks to their message slots. The offsets are **bound into the L1 public input** (`keccak256(l2MessagingBlocksOffsets)` in `_computePublicInput`, §5.3) so the calldata preimage cannot be swapped after the fact without invalidating the proof — but the *values* are not proven correct against message content; they remain a sequencer-supplied discoverability hint. Because leaf position is fully derivable from message number (see above), the offset list carries no funds-at-risk weight; a dishonest sequencer can only cause event mis-indexing, not loss of funds.
 
 **Comparison with the current approach:** The structure is identical to today — fixed-depth, zero-padded trees, one depth for all, roots stored per finalization in `l2MerkleRootsDepths`. The difference is that tree construction and root commitment now happen inside the RISC-V guest rather than in the bespoke pi-interconnection circuit.
 
@@ -535,15 +537,16 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 2. **On finalization:** verify the STARK-to-SNARK proof against the twenty aggregated public inputs (§2.4), including `keccak256(verifierKeys)` (see §5.3), then:
    - Assert that every VK in `finalizationData.verifierKeys` is in the on-chain allowlist (§5.3)
    - Assert `parentDataRollingHash == currentDataRollingHash` (DA continuity) and `startOffset == currentDataAvailabilityOffset` (position continuity). The live DA stream position is tracked directly and readably on-chain as the plain `currentDataRollingHash` / `currentDataAvailabilityOffset` pair — there is no opaque position commitment to open, and the coordinator reads the live position off the contract to build the next submission/finalization.
+   - Assert both `startOffset` and `endOffset` lie within a single blob chunk: `0 ≤ offset ≤ MAX_OFFSET` (`MAX_OFFSET = 131071 = 131072 − 1`, the EIP-4844 blob byte length minus one). Calldata-based submissions are open-ended in length (not bound to a fixed blob size), so they always carry offset 0 and satisfy this trivially; only EIP-4844 blob submissions advance a non-zero offset within a chunk.
    - Assert `endDataRollingHash` was anchored by a prior chunk submission (DA anchoring — `l1_rollup.py` rejects an un-anchored `endDataRollingHash`)
-   - Assert `parentBlockHash == blockHashes[lastFinalizedBlockNumber]` (execution rooting — explicit now that block-hash continuity no longer folds into the DA accumulator; see §3.1). On the migration path (no block hash stored) this falls back to the legacy `stateRootHashes` check — see §5.4.
+   - Assert `parentBlockHash == blockHashes[lastFinalizedBlockNumber]` (execution rooting — explicit now that block-hash continuity no longer folds into the DA accumulator; see §3.1). On the one-time migration path (no block hash stored) the contract instead requires `parentBlockHash == EMPTY_HASH` — see §5.4.
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
    - Assert `endL1L2BridgeRollingHash == l1RollingHash[endL1L2BridgeRollingHashMessageNumber]` (deposit bridge authenticity — the proof's claimed end-of-range rolling hash must match L1's authoritative chain)
    - Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — these two values together describe the forced-transaction state at the start of this finalization range and must match what was stored at the end of the previous one; this is the FTX analogue of the `_computeLastFinalizedState` check that covers rolling hash, message number, and timestamp)
    - Assert the proof's `dynamicChainConfigHash` matches what the verifier was deployed with: `pi.dynamicChainConfigHash == IPlonkVerifier(verifier).getChainConfiguration()`. The verifier holds this digest as an immutable `bytes32` (`CHAIN_CONFIGURATION`); its preimage — the four named `ChainConfigurationParameter` entries `chainId`, `baseFee`, `coinbase`, `l2MessageServiceAddress` — is bound at verifier deploy time and emitted in the `ChainConfigurationSet` event, so the values are auditable on-chain via the deploy log + the verifier's verified constructor args. Changing any of the four values means deploying a new verifier and re-pointing the rollup at it via `setVerifierAddress`; there is no separate L1 storage slot for the chain-config preimage that could fall out of sync.
    - Assert every VK in the proof's combined `programVks` set is a member of `verifierKeys` (guest-program anchoring — an order-independent set-membership test that rejects any finalization built from an unapproved exec or rollup guest binary; the two are not distinguished on-chain); revert otherwise. See §2.6 *Guest Program Anchoring (ProgramVK)* for the mechanism and list-management policy.
    - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
-   - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
+   - Process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events; the preimage is bound into the public input (§5.3) so it cannot be swapped without invalidating the proof, though the offset values themselves remain unproven hints
    - Update storage: `blockHashes[endBlockNumber] = finalBlockHash`, `currentDataRollingHash = endDataRollingHash`, `currentDataAvailabilityOffset = endOffset`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber, l1RollingHash, finalForcedTransactionNumber, finalForcedTransactionRollingHash, finalTimestamp)`
    - Emit `DataFinalizedV4(startBlockNumber, endBlockNumber, endDataRollingHash, endOffset, parentBlockHash, finalBlockHash)` — see §5.4, carrying the end position so the Coordinator and state-recovery tooling can read it from logs rather than replaying finalization calldata
 
@@ -578,7 +581,7 @@ if K == 0: revert BlobSubmissionDataIsMissing()
 computedDataRollingHash = _parentDataRollingHash
 
 for i in [0, K):
-  computedDataRollingHash = _computeDataRollingHash(
+  computedDataRollingHash = EfficientLeftRightKeccak._efficientKeccak(
     computedDataRollingHash,      // prevDataRollingHash (dataRollingHash_{i-1}; dataRollingHash_0 = _parentDataRollingHash)
     blobhash(i)       // chunkHash of blob i (from the EIP-4844 opcode)
   )
@@ -610,7 +613,7 @@ function submitDataAsCalldata(
 if _compressedData.length == 0: revert EmptySubmissionData()
 
 currentChunkHash = keccak256(_compressedData)
-computedDataRollingHash = _computeDataRollingHash(
+computedDataRollingHash = EfficientLeftRightKeccak._efficientKeccak(
   _parentDataRollingHash,           // prevDataRollingHash
   currentChunkHash      // chunkHash (keccak256 of compressedData — plays the role of the blob's versioned hash on the calldata path)
 )
@@ -619,6 +622,8 @@ if computedDataRollingHash != _expectedDataRollingHash: revert FinalDataRollingH
 ```
 
 After the computation the contract anchors `(_parentDataRollingHash, _expectedDataRollingHash)` via `_acceptDataRollingHashData`, which emits `DataSubmittedV4(parentDataRollingHash, dataRollingHash)` and marks `_expectedDataRollingHash` in the anchor set. The contract never runs the Horner-method polynomial evaluation, never reduces modulo the BLS scalar field, and never reads a `dataEvaluationPoint` or `dataEvaluationClaim` — those obligations have moved into the compression proof.
+
+**Offsets on the calldata path.** A calldata submission is a single logical chunk of *open-ended* length (no fixed blob byte size), so the blob-chunk stream-offset model does not apply: finalizations over calldata-submitted data always carry `startOffset == 0` and `endOffset == 0`. The `[0, MAX_OFFSET]` bounds check at finalization (§5) therefore admits them trivially.
 
 **Removed from the submission struct.** The previous `CompressedCalldataSubmissionV2` struct carried `blockHash` and `compressedData`; `blockHash` is now deleted (execution continuity is a rollup-proof PI field, not tied to submission — §5.1), leaving `compressedData` as the sole parameter, passed directly rather than wrapped in a single-field struct.
 
@@ -654,17 +659,24 @@ Initial VKs are seeded from `BaseInitializationData.verifierKeys` at contract in
 
 ```
 publicInput = keccak256(
-  lastFinalizedDataRollingHash,
-  finalDataRollingHash,
+  parentBlockHash,
+  finalBlockHash,
   finalTimestamp,
   endBlockNumber,
-  ...                            // L1/L2 rolling hash fields, FTX fields, Merkle depth
+  ...                                   // L1/L2 rolling hash fields, FTX fields, Merkle depth
+  parentDataRollingHash,
+  endDataRollingHash,
+  startOffset,
+  endOffset,
   keccak256(l2MerkleRoots),
   verifierChainConfiguration,
   keccak256(filteredAddresses),
-  keccak256(verifierKeys)        // ← NEW: binds which guest programs produced this proof
-)
+  keccak256(verifierKeys),              // binds which guest programs produced this proof
+  keccak256(l2MessagingBlocksOffsets)   // binds the block→message-slot offsets preimage
+) % MODULO_R
 ```
+
+Each dynamic array is bound as the keccak hash of its packed preimage (the finalization call's `l2MerkleRoots` / `filteredAddresses` / `verifierKeys` / `l2MessagingBlocksOffsets` calldata), so a coordinator-supplied preimage that diverges from what the proof attested yields a different `publicInput` and fails SNARK verification.
 
 Before proof verification, the contract validates that every key in `finalizationData.verifierKeys` is in the allowlist:
 
@@ -682,19 +694,18 @@ This ensures the proof was produced using an operator-approved guest program ver
 
 The initial deployment of the new contract must transition existing execution-continuity state that was committed under the old state-root-hash model to the new block-hash model. This is independent of the DA-accumulator change (shnarf → dataRollingHash, §5.5) — the two transitions ship together but are governed separately.
 
-**`FinalizationDataV5` parent fields.** The struct places both parent continuity fields together at the top (offsets `0x000` and `0x020`) to make the path-selection intent visible at the calldata level:
+**`FinalizationDataV5` parent field.** Continuity is anchored by a single parent field; the migration is signalled by the value, not by a separate struct field:
 
 ```solidity
-bytes32 parentStateRootHash;  // migration path: expected starting state root hash
-bytes32 parentBlockHash;      // new path:       expected starting block hash
+bytes32 parentBlockHash;      // expected starting block hash (EMPTY_HASH on the migration path)
 ```
 
 **How it works.** The contract stores a `blockHashes` mapping keyed by L2 block number. At initialization, the genesis block hash is written. On each finalization, the contract checks whether `blockHashes[lastFinalizedBlockNumber]` is set:
 
-- **Migration path (empty — no block hash stored):** The parent was committed under the old state-root-hash model. The contract requires `finalizationData.parentBlockHash == EMPTY_HASH` (revert: `StartingBlockHashDoesNotMatch`) and asserts `stateRootHashes[lastFinalizedBlockNumber] == finalizationData.parentStateRootHash` (revert: `StartingRootHashDoesNotMatch`). After this path runs, it writes `blockHashes[endBlockNumber] = finalBlockHash`, which moves the *next* finalization round onto the new path.
+- **Migration path (empty — no block hash stored):** The parent was committed under the old state-root-hash model, so there is no parent block hash to soft-check against. The contract requires `finalizationData.parentBlockHash == EMPTY_HASH` (revert: `StartingBlockHashDoesNotMatch`) and proceeds on that signal alone. After this path runs, it writes `blockHashes[endBlockNumber] = finalBlockHash`, which moves the *next* finalization round onto the new path. This path runs exactly once.
 - **New path (non-empty):** The parent was committed under the block-hash model. The contract asserts `blockHashes[lastFinalizedBlockNumber] == finalizationData.parentBlockHash` (revert: `StartingBlockHashDoesNotMatch`) as a soft continuity check — the on-chain mapping is authoritative, but the caller must declare which parent they are building from.
 
-Note that no shnarf is computed on either path anymore: DA continuity is bound directly from the plain `parentDataRollingHash`/`endDataRollingHash`/`startOffset`/`endOffset` fields via the 2-argument `_computeDataRollingHash`, and execution continuity via the explicit `parentBlockHash`/`finalBlockHash` pair (§3.1, §5).
+Note that no shnarf is computed on either path anymore: DA continuity is bound directly from the plain `parentDataRollingHash`/`endDataRollingHash`/`startOffset`/`endOffset` fields via the 2-argument `EfficientLeftRightKeccak._efficientKeccak` fold, and execution continuity via the explicit `parentBlockHash`/`finalBlockHash` pair (§3.1, §5).
 
 On the very first post-upgrade finalization the new path is not yet active (migration path runs instead); the `parentBlockHash` in the emitted `DataFinalizedV4` event will be `EMPTY_HASH` — indexers should treat this as the transition marker.
 
@@ -819,9 +830,9 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Proof interconnection** | Bespoke pi-interconnection circuit in Go/Gnark; gate-level array mapping                                              | rollup proof: recursively verifies N l2-execution proofs across K ≥ 1 blobs and chains them with `assert_eq!` in the RISC-V guest. rollup-aggregation proof: flat recursion over M rollup proofs, same continuity assertions across rollup-proof boundaries |
 | **l2-execution public inputs** | ~14 Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | 16 fields — see §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
 | **L2→L1 tree construction** | l2-execution proof outputs flat hash of bounded message list; pi-interconnection organizes into fixed-depth Merkle trees | Same flat hash at l2-execution level; rollup proof partitions messages into fixed-depth zero-padded trees and outputs `keccak256(roots)`; rollup-aggregation proof concatenates the per-rollup-proof root arrays and rehashes |
-| **l2MessagingBlocksOffsets** | Unproven hint; L1 emits `L2MessagingBlockAnchored` events for off-chain indexing                                      | Unchanged — still an unproven hint; leaf position is fully derivable from message number, so no security impact |
+| **l2MessagingBlocksOffsets** | Unproven hint; L1 emits `L2MessagingBlockAnchored` events for off-chain indexing                                      | Values still unproven, but the preimage is now bound into `_computePublicInput` (`keccak256(l2MessagingBlocksOffsets)`) so calldata cannot be swapped post-hoc; leaf position is fully derivable from message number, so no funds-at-risk impact |
 | **DA payload — intermediate roots** | `blockHash`, `timestamp` and transaction RLP without signature + From                                                 | adding `prevRandao` |
-| **L1 contract** | Complex: precompile calls, dynamic Type-2 input formatting, SNARK-friendly hash routing                               | Lightweight: verify proof against 15 values + roots/addresses calldata, equality checks against stored state, update storage slots |
+| **L1 contract** | Complex: precompile calls, dynamic Type-2 input formatting, SNARK-friendly hash routing                               | Lightweight: verify proof against the single `_computePublicInput` hash (§5.3) + roots/addresses/offsets calldata, equality checks against stored state, update storage slots |
 | **Final aggregated public inputs** | 13 fields (shnarfs, timestamps, block numbers, rolling hashes ×2, Merkle roots…)                                      | 20 fields — see §2.4 |
 | **ProgramVK anchoring** | Hard-anchored: the aggregation circuit's own verifying key, deployed via `setVerifierAddress`, fixes the whole set of inner-circuit identities it can recursively verify; changing that set means deploying a new verifier | Flexibly anchored: exec and rollup guests each commit a `programVk`, bubbled up as a single combined PI set field `programVks` (§2.2–§2.4; a canonical distinct, sorted-ascending array; exec vs rollup not distinguished — internal guest bookkeeping); L1 runs an order-independent set-membership check of every entry against a mutable, council-managed `verifierKeys` set at finalization (§2.6, §5) and reverts otherwise — no verifier redeploy needed; aggregation-grained, so multiple approved exec VKs (i.e. different forks) can finalize together in one call |
 | **rollup-proof granularity** | n/a (no rollup proof existed; compression was a separate proof per blob)                                                | Configurable: one rollup proof can cover `K ≥ 1` blobs (analogous to today's M-block conflation inside an l2-execution proof). `K = 1` is the simplest case; `K > 1` amortizes recursion overhead |
