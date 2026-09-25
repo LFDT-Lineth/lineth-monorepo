@@ -46,6 +46,7 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
           metadata = MetaDataDto(
             startBlockNumber = request.startBlockNumber.toLong(),
             endBlockNumber = request.endBlockNumber.toLong(),
+            startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
           ),
         )
       }
@@ -69,6 +70,7 @@ internal class RestfulRollupAggregationProofRequestDtoMapper(
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
+        startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
       ),
     )
 

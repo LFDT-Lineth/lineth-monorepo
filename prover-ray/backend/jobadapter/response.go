@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/nativerunner"
 )
 
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
@@ -64,6 +65,41 @@ func newExecutionResponse(
 		FilteredAddresses: []string{},
 		ProgramVk:         hexBytes(programVk),
 	}
+}
+
+// newExecutionResponseFromNative builds a response from the native runner's
+// output (dev-zkvm): real public inputs and revealed preimage arrays, a
+// placeholder marker proof (dev-zkvm produces no real proof), and the echoed
+// programVk.
+func newExecutionResponseFromNative(
+	out nativerunner.Output, proverVersion string, programVk []byte,
+) executionResponse {
+	return executionResponse{
+		ProverVersion:     proverVersion,
+		ProofHex:          hexBytes(backend.DevMarkerProof(backend.ProverModeDevZkVM)),
+		StartBlockNumber:  out.StartBlockNumber,
+		PublicInputs:      publicInputs(out.PublicInputs),
+		L2L1Messages:      hexHashList(out.L2L1Messages),
+		TxFroms:           hexAddressList(out.TxFroms),
+		FilteredAddresses: hexAddressList(out.FilteredAddresses),
+		ProgramVk:         hexBytes(programVk),
+	}
+}
+
+func hexHashList(hs [][32]byte) []string {
+	out := make([]string, len(hs))
+	for i, h := range hs {
+		out[i] = hexHash(h)
+	}
+	return out
+}
+
+func hexAddressList(as [][20]byte) []string {
+	out := make([]string, len(as))
+	for i, a := range as {
+		out[i] = hexBytes(a[:])
+	}
+	return out
 }
 
 func publicInputs(pi backend.PublicInputs) executionPublicInputs {

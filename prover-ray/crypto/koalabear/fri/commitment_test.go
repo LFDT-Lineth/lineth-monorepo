@@ -189,14 +189,11 @@ func TestCommit(t *testing.T) {
 			}
 
 			root := cs.Tree.Root()
+			frontier := []field.Octuplet{root}
 			for idx := 0; idx < cs.Tree.NumLeaves(); idx++ {
 				branch := cs.Tree.OpenBranch(idx)
-				got, err := branch.RecoverRoot(idx)
-				if err != nil {
-					t.Fatalf("idx %d: RecoverRoot: %v", idx, err)
-				}
-				if got != root {
-					t.Fatalf("idx %d: recovered root != tree root", idx)
+				if err := branch.AuthenticateToCap(idx, frontier); err != nil {
+					t.Fatalf("idx %d: AuthenticateToCap: %v", idx, err)
 				}
 			}
 		})

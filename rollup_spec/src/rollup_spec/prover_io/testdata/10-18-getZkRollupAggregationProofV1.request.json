@@ -2,7 +2,10 @@
   "programVk": "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1",
   "metadata": {
     "startBlockNumber": 10,
-    "endBlockNumber": 18
+    "endBlockNumber": 18,
+    "startBlockTimestamp": 1763000000,
+    "endBlockTimestamp": 1763000557,
+    "transactionsCount": 9
   },
   "proofRequest": {
     "rollupProofs": [
@@ -28,7 +31,7 @@
           "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
           "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "startOffset": 0,
-          "endOffset": 131072,
+          "endOffset": 0,
           "programVks": [
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           ]
@@ -64,7 +67,7 @@
           "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
           "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "startOffset": 0,
-          "endOffset": 131072,
+          "endOffset": 0,
           "programVks": [
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           ]

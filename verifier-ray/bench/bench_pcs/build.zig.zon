@@ -1,0 +1,14 @@
+.{
+    .name = .bench_pcs,
+    .version = "0.0.0",
+    .fingerprint = 0xb07f0ad5b9bf0a47,
+    .dependencies = .{
+        .build_common = .{ .path = "../../../riscv-guests/build_common" },
+        .lineth_accelerators = .{ .path = "../../../riscv-guests/lineth-accelerators" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "main.zig",
+    },
+}

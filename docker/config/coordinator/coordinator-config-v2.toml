@@ -18,6 +18,8 @@ contract-address = "0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
 contract-deployment-block-number = 3
 
 [conflation]
+# Engine API endpoint required when RISC-V conflation is enabled.
+l2-engine-endpoint = "http://sequencer:8550"
 disabled = false
 blocks-limit = 2
 new-blocks-polling-interval="PT1S"

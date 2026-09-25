@@ -25,7 +25,7 @@ fun interface L2ExecutionRequestBuilder {
 }
 
 fun interface L2ExecutionProofHandler {
-  fun acceptNewL2ExecutionProof(proof: L2ExecutionProofResponseV1): SafeFuture<*>
+  fun acceptNewL2ExecutionProof(proof: L2ExecutionProofResponseV1, proofIndex: BlockIntervalProofIndex): SafeFuture<*>
 }
 
 class ExecutionProofGeneratingCoordinator(
@@ -66,7 +66,7 @@ class ExecutionProofGeneratingCoordinator(
     return l2ExecutionProverClient.findProofResponse(proofIndex).thenCompose { proofResponse ->
       if (proofResponse != null) {
         log.info("l2-execution proof generated: blocks={}", proofIndex.intervalString())
-        l2ExecutionProofHandler.acceptNewL2ExecutionProof(proofResponse).thenApply {
+        l2ExecutionProofHandler.acceptNewL2ExecutionProof(proofResponse, proofIndex).thenApply {
           proofRequestsInProgress.remove(proofIndex)
         }
       } else {
@@ -149,7 +149,7 @@ class ExecutionProofGeneratingCoordinator(
             "batch={} already proven, skipping l2-execution proof response polling",
             blockIntervalString,
           )
-          l2ExecutionProofHandler.acceptNewL2ExecutionProof(existingResponse).thenApply { }
+          l2ExecutionProofHandler.acceptNewL2ExecutionProof(existingResponse, proofIndex).thenApply { }
         } else {
           l2ExecutionProverClient.createProofRequest(proofRequest)
             .thenApply {

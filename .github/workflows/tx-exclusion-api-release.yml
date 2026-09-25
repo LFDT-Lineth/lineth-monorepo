@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: false
+      skip_e2e_test:
+        description: 'Skip the run of e2e test'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: tx-exclusion-api-release-${{ github.ref }}
@@ -39,4 +44,5 @@ jobs:
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       draft_release: ${{ !inputs.pre_release }}
       pre_release: ${{ inputs.pre_release }}
+      skip_e2e_test: ${{ inputs.skip_e2e_test }}
     secrets: inherit

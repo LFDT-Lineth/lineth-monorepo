@@ -30,6 +30,7 @@ class ConflationParsingTest {
       conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at least 2 * blockInterval
       l2-fetch-blocks-limit = 4_000
       l2-endpoint = "http://l2-node-1:8545"
+      l2-engine-endpoint = "http://l2-node-1:8550"
       l2-logs-endpoint = "http://l2-node-2:8545"
       consistent-number-of-blocks-on-l1-to-wait = 1
       force-stop-conflation-at-block-inclusive = 5000
@@ -64,6 +65,7 @@ class ConflationParsingTest {
         conflationDeadlineLastBlockConfirmationDelay = 2.seconds,
         l2FetchBlocksLimit = 4000u,
         l2Endpoint = "http://l2-node-1:8545".toURL(),
+        l2EngineEndpoint = "http://l2-node-1:8550".toURL(),
         l2LogsEndpoint = "http://l2-node-2:8545".toURL(),
         consistentNumberOfBlocksOnL1ToWait = 1u,
         forceStopConflationAtBlockInclusive = 5000u,
@@ -199,6 +201,7 @@ class ConflationParsingTest {
       tracesCountersLimitsV4 = null,
       tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
+    assertThat(domainConfig.l2EngineEndpoint).isEqualTo("http://l2-node-1:8550".toURL())
     assertThat(domainConfig.riscvStartingBlockTimestampInclusive)
       .isEqualTo(Instant.fromEpochSeconds(1758083131))
 
@@ -208,6 +211,7 @@ class ConflationParsingTest {
       tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
     )
     assertThat(domainConfigMinimal.riscvStartingBlockTimestampInclusive).isNull()
+    assertThat(domainConfigMinimal.l2EngineEndpoint).isNull()
   }
 
   @Test

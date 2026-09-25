@@ -7,6 +7,7 @@ import io.vertx.sqlclient.RowSet
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.Batch
+import linea.kotlin.decodeHex
 import net.consensys.linea.async.get
 
 object DbQueries {
@@ -35,6 +36,7 @@ object DbQueries {
       Batch(
         startBlockNumber = record.getLong("start_block_number").toULong(),
         endBlockNumber = record.getLong("end_block_number").toULong(),
+        proofIndexHash = record.getString("proof_index_hash")?.decodeHex(),
       )
     }
   }

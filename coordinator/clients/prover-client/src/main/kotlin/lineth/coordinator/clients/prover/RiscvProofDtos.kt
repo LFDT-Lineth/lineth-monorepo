@@ -1,5 +1,6 @@
 package lineth.coordinator.clients.prover
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import linea.clients.ConflationWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
@@ -72,6 +73,13 @@ data class RollupProofPublicInputsDto(
 data class MetaDataDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
+  val startBlockTimestamp: Long,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val endBlockTimestamp: Long? = null,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val transactionsCount: Long? = null,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val totalGasUsed: Long? = null,
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -102,7 +110,7 @@ data class WithdrawalDto(
   val amount: Long,
 )
 
-// ExecutionPayLoadV4 (ExecutionPayloadV3 plus blockAccessList)
+// Execution payload including Amsterdam blockAccessList and slotNumber.
 data class ExecutionPayloadDto(
   val parentHash: String,
   val feeRecipient: String,
@@ -122,6 +130,8 @@ data class ExecutionPayloadDto(
   val blobGasUsed: Long,
   val excessBlobGas: Long,
   val blockAccessList: String,
+  @get:JsonInclude(JsonInclude.Include.NON_NULL)
+  val slotNumber: Long? = null,
 )
 
 data class NewPayloadRequestDto(
@@ -367,6 +377,7 @@ internal fun ExecutionPayload.fromDomainObject(): ExecutionPayloadDto {
     blobGasUsed = blobGasUsed.toLong(),
     excessBlobGas = excessBlobGas.toLong(),
     blockAccessList = blockAccessList.encodeHex(),
+    slotNumber = slotNumber?.toLong(),
   )
 }
 

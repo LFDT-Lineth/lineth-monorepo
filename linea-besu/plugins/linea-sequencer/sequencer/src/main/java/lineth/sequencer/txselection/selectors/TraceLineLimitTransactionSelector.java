@@ -58,6 +58,8 @@ import org.slf4j.MarkerFactory;
 public class TraceLineLimitTransactionSelector
     extends AbstractStatefulPluginTransactionSelector<Map<String, Integer>> {
   private static final Marker BLOCK_LINE_COUNT_MARKER = MarkerFactory.getMarker("BLOCK_LINE_COUNT");
+  private static final Marker MODULE_LINE_COUNT_FULL_MARKER =
+      MarkerFactory.getMarker("MODULE_LINE_COUNT_FULL");
   private final LineaTracerConfiguration tracerConfiguration;
   private final LineCountingTracer lineCountingTracer;
   private final ModuleLineCountValidator moduleLineCountValidator;
@@ -181,6 +183,7 @@ public class TraceLineLimitTransactionSelector
         return txModuleLineCountOverflow(result.getModuleName());
       case BLOCK_MODULE_LINE_COUNT_FULL:
         log.atTrace()
+            .addMarker(MODULE_LINE_COUNT_FULL_MARKER)
             .setMessage(
                 "Cumulated line count for module {}={} is above the limit {}, stopping selection")
             .addArgument(result.getModuleName())

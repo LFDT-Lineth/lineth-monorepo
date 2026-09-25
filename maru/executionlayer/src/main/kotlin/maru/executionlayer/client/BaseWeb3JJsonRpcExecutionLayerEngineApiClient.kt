@@ -8,22 +8,21 @@
  */
 package maru.executionlayer.client
 
-import linea.teku.getEndpoint
+import linea.teku.Web3JClient
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.metrics.MaruMetricsCategory
 import net.consensys.linea.metrics.DynamicTagTimer
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Tag
+import tech.pegasys.teku.ethereum.executionclient.ExecutionEngineClient
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JExecutionEngineClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 abstract class BaseWeb3JJsonRpcExecutionLayerEngineApiClient(
   protected val web3jClient: Web3JClient,
   protected val metricsFacade: MetricsFacade,
 ) : ExecutionLayerEngineApiClient {
-  protected val web3jEngineClient: Web3JExecutionEngineClient = Web3JExecutionEngineClient(web3jClient)
+  protected val web3jEngineClient: ExecutionEngineClient = web3jClient
 
   protected fun <T> createRequestTimer(method: String): DynamicTagTimer<Response<T>> =
     metricsFacade.createDynamicTagTimer<Response<T>>(
@@ -32,7 +31,7 @@ abstract class BaseWeb3JJsonRpcExecutionLayerEngineApiClient(
       description = "Execution Engine API request latency",
       commonTags = listOf(
         Tag("fork", getFork().name),
-        Tag("endpoint", web3jClient.getEndpoint()),
+        Tag("endpoint", web3jClient.endpoint),
         Tag("method", method),
       ),
       tagValueExtractor = {

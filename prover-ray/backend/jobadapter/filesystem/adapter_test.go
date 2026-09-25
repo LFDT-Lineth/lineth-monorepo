@@ -2,475 +2,295 @@ package filesystem
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// singleReqName follows the coordinator's <start>-<end>-getZk...json convention;
-// the adapter treats the base name as the job id and response name.
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
-const testProverVersion = "4.0.0-riscv"
-
-// mockProver stands in for backend.Core. It records the jobs it receives, runs
-// an optional hook mid-Prove (to observe the claim), and returns a configurable
-// result (defaulting to success).
-type mockProver struct {
-	result  func(backend.Job) backend.Result
-	onProve func(backend.Job)
-	jobs    []backend.Job
+// fakeProver stands in for the real spawn: it records calls, runs an optional
+// hook (to observe the claim / order), writes a canned response, and returns a
+// configurable exit code or run error. Its run method is a RunProver.
+type fakeProver struct {
+	exitCode int
+	runErr   error
+	response []byte
+	onProve  func(reqPath string)
+	calls    int
 }
 
-func (m *mockProver) Prove(_ context.Context, job backend.Job) backend.Result {
-	m.jobs = append(m.jobs, job)
-	if m.onProve != nil {
-		m.onProve(job)
+func (f *fakeProver) run(_ context.Context, reqPath, respPath string) (int, error) {
+	f.calls++
+	if f.onProve != nil {
+		f.onProve(reqPath)
 	}
-	if m.result != nil {
-		return m.result(job)
+	if f.runErr != nil {
+		return -1, f.runErr
 	}
-	return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xde, 0xad}}
+	if f.response != nil {
+		if err := os.WriteFile(respPath, f.response, 0o600); err != nil {
+			return -1, err
+		}
+	}
+	return f.exitCode, nil
 }
 
-const referenceL2ExecutionResponse = "../../../../rollup_spec/src/rollup_spec/prover_io/testdata/10-11-getZkL2ExecutionProofV1.response.json"
-
-func newAdapter(t *testing.T, prover jobadapter.Prover) (*Adapter, string) {
+// newAdapter builds a one-queue adapter over a fresh temp root.
+func newAdapter(t *testing.T, prover *fakeProver) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
-	a, err := New(Config{
-		RequestsRootDir: root,
-		PollInterval:    5 * time.Millisecond,
-		ProverVersion:   testProverVersion,
-	}, prover)
+	a, err := New(Config{Queues: []Queue{{RequestsRootDir: root}}, WorkerID: "test", PollInterval: 5 * time.Millisecond}, prover.run)
 	require.NoError(t, err)
 	return a, root
 }
 
-func newAdapterWithConfig(t *testing.T, cfg Config, prover jobadapter.Prover) (*Adapter, string) {
+func placeRequest(t *testing.T, root, name string) {
 	t.Helper()
-	root := t.TempDir()
-	cfg.RequestsRootDir = root
-	if cfg.PollInterval == 0 {
-		cfg.PollInterval = 5 * time.Millisecond
-	}
-	if cfg.ProverVersion == "" {
-		cfg.ProverVersion = testProverVersion
-	}
-	a, err := New(cfg, prover)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), []byte("{}"), 0o600))
+}
+
+func TestEndBlock(t *testing.T) {
+	assert.Equal(t, 1000502, endBlock("1000501-1000502-getZkL2ExecutionProofV1.json"))
+	assert.Equal(t, 18, endBlock("10-18-getZkRollupAggregationProofV1.json"))
+	assert.Equal(t, 0, endBlock("bad.json"))
+}
+
+// TestAdapter_Success: the prover writes a response and exits 0; the response is
+// published and the request archived as .success.
+func TestAdapter_Success(t *testing.T) {
+	prover := &fakeProver{response: []byte(`{"ok":true}`)}
+	a, root := newAdapter(t, prover)
+	placeRequest(t, root, singleReqName)
+
+	processed, err := a.processNext(context.Background())
 	require.NoError(t, err)
-	return a, root
-}
+	assert.True(t, processed)
+	assert.Equal(t, 1, prover.calls)
 
-func placeRequest(t *testing.T, root, name, fixture string) {
-	t.Helper()
-	data := readFixture(t, fixture)
-	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), data, 0o600))
-}
-
-func readExecutionResponse(t *testing.T, root, name string) map[string]any {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join(root, "responses", name))
+	data, err := os.ReadFile(filepath.Join(root, "responses", singleReqName))
 	require.NoError(t, err)
-	var resp map[string]any
-	require.NoError(t, json.Unmarshal(data, &resp))
-	return resp
-}
-
-func readFailureResponse(t *testing.T, root, name string) failureResponseBody {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join(root, "responses", name))
-	require.NoError(t, err)
-	var resp failureResponseBody
-	require.NoError(t, json.Unmarshal(data, &resp))
-	return resp
-}
-
-func writeRequestObject(t *testing.T, root, name string, obj map[string]any) {
-	t.Helper()
-	raw, err := json.Marshal(obj)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), raw, 0o600))
-}
-
-func readFixture(t *testing.T, name string) []byte {
-	t.Helper()
-	b, err := os.ReadFile("../testdata/" + name)
-	require.NoError(t, err)
-	return b
-}
-
-func filledHash(b byte) [32]byte {
-	var out [32]byte
-	for i := range out {
-		out[i] = b
-	}
-	return out
-}
-
-func repeatHex(b byte) string {
-	return "0x" + strings.Repeat(fmt.Sprintf("%02x", b), 32)
-}
-
-func assertResponseShapeMatchesReference(t *testing.T, got map[string]any) {
-	t.Helper()
-	want := readReferenceResponse(t)
-	assertJSONShape(t, want, got, "response")
-}
-
-func readReferenceResponse(t *testing.T) map[string]any {
-	t.Helper()
-	data, err := os.ReadFile(referenceL2ExecutionResponse)
-	require.NoError(t, err)
-
-	var raw map[string]any
-	require.NoError(t, json.Unmarshal(data, &raw))
-	return raw
-}
-
-func assertJSONShape(t *testing.T, want, got map[string]any, path string) {
-	t.Helper()
-	require.Len(t, got, len(want), "%s field count", path)
-	for key, wantValue := range want {
-		gotValue, ok := got[key]
-		require.True(t, ok, "%s.%s missing", path, key)
-		assertJSONValueKind(t, wantValue, gotValue, path+"."+key)
-	}
-}
-
-func assertJSONValueKind(t *testing.T, want, got any, path string) {
-	t.Helper()
-	switch wantValue := want.(type) {
-	case map[string]any:
-		gotValue, ok := got.(map[string]any)
-		require.True(t, ok, "%s must be an object", path)
-		assertJSONShape(t, wantValue, gotValue, path)
-	case []any:
-		gotValue, ok := got.([]any)
-		require.True(t, ok, "%s must be an array", path)
-		if len(wantValue) == 0 {
-			assert.Empty(t, gotValue, "%s must be empty", path)
-		}
-	default:
-		assert.Equal(t, reflect.TypeOf(want), reflect.TypeOf(got), "%s type", path)
-	}
-}
-
-// TestAdapter_SingleBlock_Success is the happy path: a single-block request is
-// decoded, proved, its response written, and the request archived.
-func TestAdapter_SingleBlock_Success(t *testing.T) {
-	mock := &mockProver{result: func(job backend.Job) backend.Result {
-		return backend.Result{
-			JobID:  job.ID,
-			Status: backend.ResultStatusOK,
-			PublicInputs: backend.PublicInputs{
-				ParentBlockHash: filledHash(0x11),
-				EndBlockNumber:  1000501,
-			},
-			ProofBytes: []byte{0xde, 0xad},
-		}
-	}}
-	a, root := newAdapter(t, mock)
-	placeRequest(t, root, singleReqName, "request_single_block.json")
-
-	n, err := a.processOnce(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, 1, n)
-
-	require.Len(t, mock.jobs, 1)
-	job := mock.jobs[0]
-	assert.Equal(t, strings.TrimSuffix(singleReqName, ".json"), job.ID)
-	assert.Equal(t, backend.ProofTypeL2Execution, job.Type)
-	assert.Equal(t, uint64(1000501), job.StartBlock)
-	assert.Equal(t, uint64(1000501), job.EndBlock)
-	wantSSZ, err := os.ReadFile("../testdata/single_block_expected.ssz")
-	require.NoError(t, err)
-	assert.Equal(t, wantSSZ, job.Payload, "job payload must be the framed SSZ")
-
-	resp := readExecutionResponse(t, root, singleReqName)
-	assertResponseShapeMatchesReference(t, resp)
-	assert.Equal(t, testProverVersion, resp["proverVersion"])
-	assert.Equal(t, "0xdead", resp["proof"])
-	startBlockNumber, ok := resp["startBlockNumber"].(float64)
-	require.True(t, ok)
-	assert.Equal(t, 1000501, int(startBlockNumber))
-	assert.NotContains(t, resp, "status")
-	assert.NotContains(t, resp, "jobId")
-	assert.Empty(t, resp["l2L1Messages"])
-	assert.Empty(t, resp["txFroms"])
-	assert.Empty(t, resp["filteredAddresses"])
-	publicInputs, ok := resp["publicInputs"].(map[string]any)
-	require.True(t, ok)
-	assert.Len(t, publicInputs, 16)
-	assert.Equal(t, repeatHex(0x11), publicInputs["parentBlockHash"])
-	endBlockNumber, ok := publicInputs["endBlockNumber"].(float64)
-	require.True(t, ok)
-	assert.Equal(t, 1000501, int(endBlockNumber))
+	assert.JSONEq(t, `{"ok":true}`, string(data))
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
 	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".success"))
 }
 
-// TestAdapter_SingleBlock_UsesConfiguredProverVersion verifies the success
-// response carries the version configured for this adapter instance.
-func TestAdapter_SingleBlock_UsesConfiguredProverVersion(t *testing.T) {
-	a, root := newAdapterWithConfig(t, Config{ProverVersion: "test-prover-version"}, &mockProver{})
-	placeRequest(t, root, singleReqName, "request_single_block.json")
+// TestAdapter_Priority_EndBlock: the earliest end block is processed first.
+func TestAdapter_Priority_EndBlock(t *testing.T) {
+	var order []string
+	prover := &fakeProver{response: []byte("{}"), onProve: func(reqPath string) {
+		order = append(order, filepath.Base(reqPath))
+	}}
+	a, root := newAdapter(t, prover)
+	placeRequest(t, root, "10-20-getZkL2ExecutionProofV1.json")
+	placeRequest(t, root, "10-14-getZkL2ExecutionProofV1.json")
 
-	n, err := a.processOnce(context.Background())
+	// Two calls: each processNext handles the current best.
+	_, err := a.processNext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, 1, n)
+	_, err = a.processNext(context.Background())
+	require.NoError(t, err)
 
-	resp := readExecutionResponse(t, root, singleReqName)
-	assert.Equal(t, "test-prover-version", resp["proverVersion"])
+	require.Len(t, order, 2)
+	assert.Contains(t, order[0], "10-14", "earliest end block runs first")
+	assert.Contains(t, order[1], "10-20")
 }
 
-// TestAdapter_ClaimsBeforeProving verifies the request is renamed to
-// .inprogress before the jobadapter.Prover runs, so a second worker cannot pick
-// it up.
+// TestAdapter_Priority_QueueTiebreaker: at equal end block, the lower-priority
+// queue runs first.
+func TestAdapter_Priority_QueueTiebreaker(t *testing.T) {
+	var first string
+	prover := &fakeProver{response: []byte("{}"), onProve: func(reqPath string) {
+		if first == "" {
+			first = reqPath
+		}
+	}}
+	high := t.TempDir() // priority 0
+	low := t.TempDir()  // priority 2
+	a, err := New(Config{
+		Queues: []Queue{
+			{RequestsRootDir: low, Priority: 2},
+			{RequestsRootDir: high, Priority: 0},
+		},
+		PollInterval: 5 * time.Millisecond,
+	}, prover.run)
+	require.NoError(t, err)
+
+	name := "10-14-getZkL2ExecutionProofV1.json"
+	placeRequest(t, low, name)
+	placeRequest(t, high, name)
+
+	_, err = a.processNext(context.Background())
+	require.NoError(t, err)
+	assert.Contains(t, first, high, "the priority-0 queue runs first at equal end block")
+}
+
+// TestAdapter_ClaimsBeforeProving: the request is .inprogress by the time the
+// prover runs.
 func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	var claimed, originalGone bool
 	var root string
-	mock := &mockProver{onProve: func(_ backend.Job) {
-		_, errClaim := os.Stat(filepath.Join(root, "requests", singleReqName+".inprogress"))
+	prover := &fakeProver{onProve: func(_ string) {
+		_, errClaim := os.Stat(filepath.Join(root, "requests", singleReqName+".inprogress.test"))
 		claimed = errClaim == nil
 		_, errOrig := os.Stat(filepath.Join(root, "requests", singleReqName))
 		originalGone = errors.Is(errOrig, os.ErrNotExist)
 	}}
-	a, r := newAdapter(t, mock)
+	a, r := newAdapter(t, prover)
 	root = r
-	placeRequest(t, root, singleReqName, "request_single_block.json")
+	placeRequest(t, root, singleReqName)
 
-	_, err := a.processOnce(context.Background())
+	_, err := a.processNext(context.Background())
 	require.NoError(t, err)
-	assert.True(t, claimed, "request must be claimed as .inprogress before Prove")
-	assert.True(t, originalGone, "original request name must be gone once claimed")
+	assert.True(t, claimed, "request must be claimed as .inprogress before the prover runs")
+	assert.True(t, originalGone)
 }
 
-// TestAdapter_ProveFailure verifies a failed proof is recorded as a failure
-// response and archived, without crashing the loop.
+// TestAdapter_ProveFailure: a non-zero exit archives the request as
+// .failure.<code>, and the response the prover wrote is still published.
 func TestAdapter_ProveFailure(t *testing.T) {
-	mock := &mockProver{result: func(job backend.Job) backend.Result {
-		return backend.Result{JobID: job.ID, Status: backend.ResultStatusFailed, Err: errors.New("prove boom")}
-	}}
-	a, root := newAdapter(t, mock)
-	placeRequest(t, root, singleReqName, "request_single_block.json")
+	prover := &fakeProver{exitCode: 2, response: []byte(`{"status":"failed"}`)}
+	a, root := newAdapter(t, prover)
+	placeRequest(t, root, singleReqName)
 
-	n, err := a.processOnce(context.Background())
+	processed, err := a.processNext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, 1, n)
+	assert.True(t, processed)
 
-	resp := readFailureResponse(t, root, singleReqName)
-	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
-	assert.Equal(t, jobadapter.FailureCodeInternalError, resp.FailureCode)
-	assert.Contains(t, resp.Error, "prove boom")
-
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".failure"))
+	assert.FileExists(t, filepath.Join(root, "responses", singleReqName))
+	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".failure.2"))
 }
 
-// TestAdapter_MalformedRequest verifies undecodable JSON never reaches the
-// jobadapter.Prover, produces a failure response, and is archived so the loop continues.
-func TestAdapter_MalformedRequest(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", "bad.json"), []byte("not json"), 0o600))
+// TestAdapter_ProverCannotRun: when the prover cannot be run, the request is left
+// for the next scan (not archived, no response).
+func TestAdapter_ProverCannotRun(t *testing.T) {
+	prover := &fakeProver{runErr: errors.New("exec boom")}
+	a, root := newAdapter(t, prover)
+	placeRequest(t, root, singleReqName)
 
-	n, err := a.processOnce(context.Background())
+	claimed, err := a.processRequest(context.Background(), root, singleReqName)
 	require.NoError(t, err)
-	assert.Equal(t, 1, n)
-	assert.Empty(t, mock.jobs, "jobadapter.Prover must not be called for a malformed request")
+	assert.False(t, claimed)
 
-	resp := readFailureResponse(t, root, "bad.json")
-	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
-	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
-	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failure"))
-}
-
-// TestAdapter_ForcedTransactions_NotImplemented verifies that the adapter does
-// not silently drop rollupExtension.forcedTransactions while the backend has no
-// field for them yet.
-func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-
-	var obj map[string]any
-	require.NoError(t, json.Unmarshal(readFixture(t, "request_single_block.json"), &obj))
-	payload := obj["proofRequest"].(map[string]any)["payloads"].([]any)[0].(map[string]any)
-	payload["rollupExtension"].(map[string]any)["forcedTransactions"] = []any{
-		map[string]any{
-			"number":      16,
-			"deadline":    1000599,
-			"signedTxRlp": "0x02f86b",
-			"acceptance":  "INCLUDED",
-		},
-	}
-	writeRequestObject(t, root, singleReqName, obj)
-
-	n, err := a.processOnce(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, 1, n)
-	assert.Empty(t, mock.jobs, "forced transactions must not be dropped before proving")
-
-	resp := readFailureResponse(t, root, singleReqName)
-	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
-	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
-	assert.Contains(t, resp.Error, "forced transactions")
-	assert.Contains(t, resp.Error, backend.ErrNotImplemented.Error())
-}
-
-// TestAdapter_MultiBlock verifies a multi-block request is rejected (not yet
-// supported) without invoking the jobadapter.Prover.
-func TestAdapter_MultiBlock(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-	placeRequest(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json", "request_multi_block.json")
-
-	n, err := a.processOnce(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, 1, n)
-	assert.Empty(t, mock.jobs, "multi-block request must not reach the jobadapter.Prover")
-
-	resp := readFailureResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
-	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
-	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
-	assert.FileExists(t, filepath.Join(root, "requests-done", "1000501-1000502-getZkL2ExecutionProofV1.json.failure"))
-}
-
-// TestAdapter_SkipsInProgress verifies a file already claimed by another worker
-// (ending in .inprogress) is ignored.
-func TestAdapter_SkipsInProgress(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-	inProgress := filepath.Join(root, "requests", singleReqName+".inprogress")
-	require.NoError(t, os.WriteFile(inProgress, []byte("{}"), 0o600))
-
-	n, err := a.processOnce(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, 0, n)
-	assert.Empty(t, mock.jobs)
-	assert.FileExists(t, inProgress, "an .inprogress file must be left untouched")
-}
-
-// TestAdapter_LostClaim verifies processRequest treats a missing request as
-// another worker winning the claim race.
-func TestAdapter_LostClaim(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-
-	handled, err := a.processRequest(context.Background(), singleReqName)
-
-	require.NoError(t, err)
-	assert.False(t, handled)
-	assert.Empty(t, mock.jobs)
+	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
 	assert.NoFileExists(t, filepath.Join(root, "responses", singleReqName))
 }
 
-// TestNew_Validation covers New's argument
-// checks and the PollInterval default.
+func TestAdapter_SkipsInProgress(t *testing.T) {
+	prover := &fakeProver{}
+	a, root := newAdapter(t, prover)
+	inProgress := filepath.Join(root, "requests", singleReqName+".inprogress")
+	require.NoError(t, os.WriteFile(inProgress, []byte("{}"), 0o600))
+
+	processed, err := a.processNext(context.Background())
+	require.NoError(t, err)
+	assert.False(t, processed)
+	assert.Equal(t, 0, prover.calls)
+	assert.FileExists(t, inProgress)
+}
+
+func TestAdapter_LostClaim(t *testing.T) {
+	prover := &fakeProver{}
+	a, root := newAdapter(t, prover)
+
+	claimed, err := a.processRequest(context.Background(), root, singleReqName)
+	require.NoError(t, err)
+	assert.False(t, claimed)
+	assert.Equal(t, 0, prover.calls)
+}
+
+// TestAdapter_RecoverOrphans: on startup a worker requeues its own in-progress
+// files (and drops their partial response temps) but leaves a sibling's alone.
+func TestAdapter_RecoverOrphans(t *testing.T) {
+	root := t.TempDir()
+	reqDir := filepath.Join(root, "requests")
+	respDir := filepath.Join(root, "responses")
+	require.NoError(t, os.MkdirAll(reqDir, dirPerm))
+	require.NoError(t, os.MkdirAll(respDir, dirPerm))
+
+	require.NoError(t, os.WriteFile(filepath.Join(reqDir, singleReqName+".inprogress.myworker"), []byte("{}"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(respDir, singleReqName+".inprogress.myworker"), []byte("partial"), 0o600))
+	sibling := "10-20-getZkL2ExecutionProofV1.json.inprogress.other"
+	require.NoError(t, os.WriteFile(filepath.Join(reqDir, sibling), []byte("{}"), 0o600))
+
+	_, err := New(Config{Queues: []Queue{{RequestsRootDir: root}}, WorkerID: "myworker"}, (&fakeProver{}).run)
+	require.NoError(t, err)
+
+	assert.FileExists(t, filepath.Join(reqDir, singleReqName))
+	assert.NoFileExists(t, filepath.Join(reqDir, singleReqName+".inprogress.myworker"))
+	assert.NoFileExists(t, filepath.Join(respDir, singleReqName+".inprogress.myworker"))
+	assert.FileExists(t, filepath.Join(reqDir, sibling))
+}
+
 func TestNew_Validation(t *testing.T) {
-	t.Run("EmptyRequestsRootDir", func(t *testing.T) {
-		_, err := New(Config{}, &mockProver{})
+	t.Run("NoQueues", func(t *testing.T) {
+		_, err := New(Config{}, (&fakeProver{}).run)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "RequestsRootDir")
+		assert.Contains(t, err.Error(), "queue")
 	})
-	t.Run("NilProver", func(t *testing.T) {
-		_, err := New(Config{RequestsRootDir: t.TempDir(), ProverVersion: testProverVersion}, nil)
+	t.Run("NilSpawn", func(t *testing.T) {
+		_, err := New(Config{Queues: []Queue{{RequestsRootDir: t.TempDir()}}}, nil)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "prover")
-	})
-	t.Run("MissingProverVersion", func(t *testing.T) {
-		_, err := New(Config{RequestsRootDir: t.TempDir()}, &mockProver{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "ProverVersion")
+		assert.Contains(t, err.Error(), "spawn")
 	})
 	t.Run("DefaultsPollInterval", func(t *testing.T) {
-		a, err := New(Config{RequestsRootDir: t.TempDir(), ProverVersion: testProverVersion}, &mockProver{})
+		a, err := New(Config{Queues: []Queue{{RequestsRootDir: t.TempDir()}}}, (&fakeProver{}).run)
 		require.NoError(t, err)
 		assert.Equal(t, defaultPollInterval, a.cfg.PollInterval)
 	})
 }
 
-// TestNew_MkdirFailure verifies New reports
-// an error when its subdirectories cannot be created (here RequestsRootDir is a
-// regular file).
 func TestNew_MkdirFailure(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
 
-	_, err := New(Config{RequestsRootDir: file, ProverVersion: testProverVersion}, &mockProver{})
+	_, err := New(Config{Queues: []Queue{{RequestsRootDir: file}}}, (&fakeProver{}).run)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "creating")
 }
 
-// TestAdapter_ReadDirError verifies a missing requests/ directory surfaces as
-// an error from processOnce (and therefore aborts Run).
 func TestAdapter_ReadDirError(t *testing.T) {
-	a, root := newAdapter(t, &mockProver{})
+	a, root := newAdapter(t, &fakeProver{})
 	require.NoError(t, os.RemoveAll(filepath.Join(root, "requests")))
 
-	_, err := a.processOnce(context.Background())
+	_, err := a.processNext(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "requests")
 }
 
-// TestAdapter_WriteResponseError verifies a failure writing the response
-// aborts processing with an error rather than losing the claimed request.
-func TestAdapter_WriteResponseError(t *testing.T) {
-	a, root := newAdapter(t, &mockProver{})
-	placeRequest(t, root, singleReqName, "request_single_block.json")
-	require.NoError(t, os.RemoveAll(filepath.Join(root, "responses")))
-
-	_, err := a.processOnce(context.Background())
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "response")
-	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
-}
-
-// TestAdapter_ArchiveError verifies a failure moving the request to
-// requests-done/ surfaces as an error without leaving the request stranded as
-// .inprogress.
+// TestAdapter_ArchiveError: a failure moving the request to requests-done/
+// surfaces as an error without stranding the request as .inprogress.
 func TestAdapter_ArchiveError(t *testing.T) {
-	a, root := newAdapter(t, &mockProver{})
-	placeRequest(t, root, singleReqName, "request_single_block.json")
+	a, root := newAdapter(t, &fakeProver{response: []byte("{}")})
+	placeRequest(t, root, singleReqName)
 	require.NoError(t, os.RemoveAll(filepath.Join(root, "requests-done")))
 
-	_, err := a.processOnce(context.Background())
+	_, err := a.processNext(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "archiving")
 	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress.test"))
 }
 
-// TestAdapter_Run_ReturnsProcessError verifies Run surfaces an infrastructure
-// error from its scan instead of looping forever.
 func TestAdapter_Run_ReturnsProcessError(t *testing.T) {
-	a, root := newAdapter(t, &mockProver{})
+	a, root := newAdapter(t, &fakeProver{})
 	require.NoError(t, os.RemoveAll(filepath.Join(root, "requests")))
 
 	err := a.Run(context.Background())
 	require.Error(t, err)
 }
 
-// TestAdapter_Run_Shutdown verifies Run processes pending work and returns
-// cleanly when its context is cancelled.
+// TestAdapter_Run_Shutdown: Run processes pending work and returns cleanly when
+// its context is cancelled.
 func TestAdapter_Run_Shutdown(t *testing.T) {
-	mock := &mockProver{}
-	a, root := newAdapter(t, mock)
-	placeRequest(t, root, singleReqName, "request_single_block.json")
+	a, root := newAdapter(t, &fakeProver{response: []byte("{}")})
+	placeRequest(t, root, singleReqName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

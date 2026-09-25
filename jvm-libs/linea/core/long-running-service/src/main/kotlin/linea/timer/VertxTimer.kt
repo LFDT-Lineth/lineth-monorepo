@@ -1,6 +1,7 @@
 package linea.timer
 
 import io.vertx.core.Vertx
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.atomics.AtomicReference
@@ -28,6 +29,7 @@ class VertxTimer(
     require(initialDelay.inWholeMilliseconds >= 1L) { "Vertx Timer initial delay must be at least 1 ms" }
   }
   private var timerId: Long? = null
+  private var inFlightExecution: SafeFuture<Unit>? = null
   private val invocationCounter = AtomicInteger(0)
   private var firstInvocationTime: AtomicReference<Instant?> = AtomicReference(null)
 
@@ -40,8 +42,13 @@ class VertxTimer(
     }
   }
 
-  @Suppress("UNUSED_PARAMETER")
-  private fun taskHandler(_timerId: Long) {
+  private fun taskHandler(firedTimerId: Long) {
+    val execution = SafeFuture<Unit>()
+    synchronized(this) {
+      // timer was stopped (or stopped and restarted) after this one fired: skip execution
+      if (timerId != firedTimerId) return
+      inFlightExecution = execution
+    }
     invocationCounter.incrementAndGet()
     firstInvocationTime.compareAndSet(null, Clock.System.now())
 
@@ -49,13 +56,20 @@ class VertxTimer(
       task.run()
     }
     vertx.executeBlocking(callable, false).onComplete { result ->
-      if (result.cause() != null) {
-        errorHandler(result.cause())
-      }
-      synchronized(this) {
-        if (timerId != null) {
-          timerId = vertx.setTimer(nextInvocationDelay().inWholeMilliseconds, this::taskHandler)
+      try {
+        if (result.cause() != null) {
+          errorHandler(result.cause())
         }
+      } finally {
+        synchronized(this) {
+          if (timerId == firedTimerId) {
+            timerId = vertx.setTimer(nextInvocationDelay().inWholeMilliseconds, this::taskHandler)
+          }
+          if (inFlightExecution === execution) {
+            inFlightExecution = null
+          }
+        }
+        execution.complete(Unit)
       }
     }
   }
@@ -78,13 +92,14 @@ class VertxTimer(
   }
 
   @Synchronized
-  override fun stop() {
+  override fun stop(): SafeFuture<Unit> {
     if (timerId != null) {
       vertx.cancelTimer(timerId!!)
       invocationCounter.set(0)
       firstInvocationTime.store(null)
       timerId = null
     }
+    return inFlightExecution ?: SafeFuture.completedFuture(Unit)
   }
 }
 

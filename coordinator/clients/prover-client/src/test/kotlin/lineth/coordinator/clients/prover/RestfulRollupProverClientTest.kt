@@ -31,7 +31,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class RestfulRollupProverClientTest {
   private val proofType = "rollup"
-  private val jobsPathPattern = "/v1/jobs/$CHAIN_ID/$proofType/.*"
+  private val jobsPathPattern = "/api/v1/jobs/$CHAIN_ID/$proofType/.*"
 
   private lateinit var wiremock: WireMockServer
   private lateinit var client: RestfulRollupProverClient
@@ -99,7 +99,11 @@ class RestfulRollupProverClientTest {
     )
     val responseDto = rollupProofResponseDto(1000501L, 1000520L)
     wiremock.stubFor(
-      WireMock.get(WireMock.urlEqualTo("/v1/jobs/$CHAIN_ID/$proofType/1000501/1000520")).willReturn(
+      WireMock.get(
+        WireMock.urlEqualTo(
+          "/api/v1/jobs/$CHAIN_ID/$proofType/1000501/1000520?includeResponse=true",
+        ),
+      ).willReturn(
         WireMock.okJson(
           proverJobResponseBody(
             proofType = proofType,

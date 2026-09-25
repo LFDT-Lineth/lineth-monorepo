@@ -4,15 +4,12 @@ permissions:
   actions: write
   contents: read
 
-# The repo's Actions cache sits at the 10GB cap, mostly duplicated per-PR
-# zig, CodeQL and node entries, which evicts the shared Gradle cache within
-# hours of it being written. Frees PR cache entries so main's caches survive.
 on:
   pull_request_target:
     types:
       - closed
   schedule:
-    - cron: "43 2 * * *"
+    - cron: "43 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -38,7 +35,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     timeout-minutes: 10
     steps:
-      - name: Delete PR caches not accessed for 3 days
+      - name: Delete PR caches not accessed for 1 day
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -46,7 +43,28 @@ jobs:
           set -o pipefail
           # jq's fromdateiso8601 does not accept GitHub's fractional seconds.
           gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
-            --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | select((.last_accessed_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < (now - 259200)) | .id' \
+            --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | select((.last_accessed_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < (now - 86400)) | .id' \
             | while read -r id; do
                 gh api -X DELETE "repos/${REPO}/actions/caches/${id}" || true
               done
+
+      - name: Delete PR CodeQL dependency caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Collect every page before deleting; a failed inventory must not trigger cleanup.
+          # Remove PR copies to protect shared main caches; uploads can recur between sweeps.
+          cache_ids=$(gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
+            | jq -rs '
+                .[].actions_caches[]
+                | select(.ref | test("^refs/pull/[0-9]+/(head|merge)$"))
+                | select(.key | startswith("codeql-dependencies-"))
+                | .id
+              ')
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            echo "Deleting PR CodeQL dependency cache $id"
+            gh api -X DELETE "repos/${REPO}/actions/caches/${id}"
+          done <<< "$cache_ids"

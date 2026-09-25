@@ -1249,32 +1249,6 @@ func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 	}
 }
 
-// RecoverRoot folds a full-depth branch's rows up to the tree root. It is a
-// convenience for non-capped openings; capped openings contain nil holes above
-// the frontier and must use AuthenticateToCap instead.
-func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
-	numLevels := len(branch.Leaves)
-	if numLevels == 0 || branch.Leaves[numLevels-1] == nil {
-		return field.Octuplet{}, fmt.Errorf("malformed proof: missing bottom level")
-	}
-	if len(branch.Siblings) != numLevels-1 {
-		return field.Octuplet{}, fmt.Errorf("malformed proof")
-	}
-
-	bottom := branch.Leaves[numLevels-1]
-	ancestor := hashRowOpening(bottom[0])
-	sibling := hashRowOpening(bottom[1])
-	ancestor, currPos := foldOneLevel(ancestor, sibling, nil, idx)
-
-	for i := numLevels - 2; i >= 0; i-- {
-		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[i], branch.Leaves[i], currPos)
-	}
-	if currPos > 0 {
-		return field.Octuplet{}, fmt.Errorf("all bits of currPos should have been bitshifted beyond LSb")
-	}
-	return ancestor, nil
-}
-
 // AuthenticateToCap checks the bottom pair and the retained lower path
 // against an already authenticated input-tree frontier.
 func (branch InputTreeOpening) AuthenticateToCap(idx int, frontier []field.Octuplet) error {

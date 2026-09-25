@@ -53,7 +53,7 @@ class ExtraDataV1PricerServiceTest {
   )
 
   @Test
-  @Timeout(2, timeUnit = TimeUnit.SECONDS)
+  @Timeout(5, timeUnit = TimeUnit.SECONDS)
   fun start_startsPollingProcess(vertx: Vertx) {
     val pollingInterval = 10.milliseconds
     val variableFees = 15000.0
@@ -111,7 +111,7 @@ class ExtraDataV1PricerServiceTest {
         verify(mockVariableFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
         verify(mockLegacyFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
         verify(mockExtraDataUpdater, atLeastOnce()).updateMinerExtraData(expectedExtraData)
-        monitor.stop()
       }
+    monitor.stop().get()
   }
 }

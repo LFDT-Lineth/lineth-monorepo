@@ -25,6 +25,14 @@ class PreRiscvProverFileNameProvidersTest {
   }
 
   @Test
+  fun test_executionProof_fileNameStartBlockNumber() {
+    Assertions.assertEquals(
+      11L,
+      ExecutionProofFileNameProvider.getFileNameStartBlockNumber("11-17-getZkProof.json"),
+    )
+  }
+
+  @Test
   fun test_compressionProof_responseFileName() {
     val fileNameProvider = CompressionProofResponseFileNameProvider
     val hash = "0abcd123".decodeHex()
@@ -37,6 +45,16 @@ class PreRiscvProverFileNameProvidersTest {
           hash = hash,
           startBlockTimestamp = Instant.fromEpochSeconds(0),
         ),
+      ),
+    )
+  }
+
+  @Test
+  fun test_compressionProof_responseFileNameStartBlockNumber() {
+    Assertions.assertEquals(
+      11L,
+      CompressionProofResponseFileNameProvider.getFileNameStartBlockNumber(
+        "11-17-0abcd123-getZkBlobCompressionProof.json",
       ),
     )
   }
@@ -60,6 +78,16 @@ class PreRiscvProverFileNameProvidersTest {
   }
 
   @Test
+  fun test_compressionProof_requestFileNameStartBlockNumber() {
+    Assertions.assertEquals(
+      1L,
+      CompressionProofRequestFileNameProvider.getFileNameStartBlockNumber(
+        "1-11-bcv0.0-ccv0.0-0abcd123-getZkBlobCompressionProof.json",
+      ),
+    )
+  }
+
+  @Test
   fun test_agggregationProof_FileName() {
     val hash = "abcd".decodeHex()
     Assertions.assertEquals(
@@ -71,6 +99,16 @@ class PreRiscvProverFileNameProvidersTest {
           hash = hash,
           startBlockTimestamp = Instant.fromEpochSeconds(0),
         ),
+      ),
+    )
+  }
+
+  @Test
+  fun test_aggregationProof_fileNameStartBlockNumber() {
+    Assertions.assertEquals(
+      11L,
+      AggregationProofFileNameProvider.getFileNameStartBlockNumber(
+        "11-27-abcd-getZkAggregatedProof.json",
       ),
     )
   }

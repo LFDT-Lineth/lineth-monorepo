@@ -92,6 +92,14 @@ start-env-with-tracing-v2-extra:
 start-env-with-tracing-v2-ci:
 	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 
+## Start the tracing-v2 CI stack with a custom override compose file layered on top of the CI extension.
+## Pass the override via OVERRIDE_COMPOSE_FILE (absolute, or relative to this directory)
+start-env-with-tracing-v2-ci-override:
+ifndef OVERRIDE_COMPOSE_FILE
+	$(error OVERRIDE_COMPOSE_FILE is required. run: OVERRIDE_COMPOSE_FILE=<path-to-override.yml> make start-env-with-tracing-v2-ci-override)
+endif
+	$(MAKE) start-env COMPOSE_FILE="docker/compose-tracing-v2-ci-extension.yml -f $(OVERRIDE_COMPOSE_FILE)" LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
+
 start-env-with-validium-and-tracing-v2-ci:
 	$(MAKE) start-env-with-validium COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 

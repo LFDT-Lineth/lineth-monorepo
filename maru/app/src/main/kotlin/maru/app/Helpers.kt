@@ -9,6 +9,7 @@
 package maru.app
 
 import linea.teku.TekuWeb3JClientFactory
+import linea.teku.Web3JClient
 import maru.config.ApiEndpointConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -19,7 +20,6 @@ import maru.consensus.state.FinalizationProvider
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Logger
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 
 object Helpers {
   fun closeAll(vararg closeActions: () -> Unit) {

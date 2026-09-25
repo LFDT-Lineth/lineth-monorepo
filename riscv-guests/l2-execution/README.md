@@ -7,7 +7,7 @@ This package contains the RISC-V guest program for the Rollup's extended l2-exec
 - Decodes the extended `L2ExecutionProofPrivateInput` SSZ envelope (a contiguous run of payloads, each carrying an opaque vanilla `SszStatelessInput` plus forced-transaction witnesses), runs `l2_execution.runL2Execution`, and emits the SSZ output — `keccak256` of the public-input tuple plus the revealed hash preimages the rollup guest needs.
 - The native Zig tests replay a real execution-spec-tests `tests-zkevm` fixture and hand-built fixtures against Python-oracle-computed expected values (see `Readme.md` §6.3/§6.5/§2.1); `zig build extended-vanilla` reference-tests the EF zkevm corpus against fixture validity, while `zig build zkc-smoke` compares one extended SSZ input under ZkC with the host machine, including the exact accepted output.
 - Does not include blob compression or recursive proof aggregation — those are the rollup/rollup-aggregation guests' concern.
-- Keeps cryptographic precompile/signature acceleration behind Zesu's `accel_impl` boundary. The freestanding guest leaves the `zkvm_*` accelerator symbols **unresolved** for the proving system to supply/intercept — there is no in-guest software provider. The native host test instead links Zesu's `default.zig` backend against system crypto libraries (see [Native test dependencies](../README.md#native-test-dependencies)).
+- Keeps cryptographic precompile/signature acceleration behind Zesu's `accel_impl` boundary. Both the freestanding guest and native tests use Zesu's `extern` backend and define every `zkvm_*` accelerator symbol through `src/zkvm_provide.zig`: keccak from the Lineth wrapper (`-Dkeccak-accel`) or Zig `std.crypto`; SHA-256 and P-256 from Zig `std.crypto`; secp256k1 ecrecover/verify, EIP-2537 BLS12-381, BN254 (EIP-196/197), and EIP-4844 KZG point evaluation from the `guest_crypto` Constantine staticlib; and modexp/RIPEMD-160/BLAKE2f from Zesu's C-free backends.
 
 ## Development
 
@@ -19,7 +19,7 @@ Run from the parent directory:
 make -C l2-execution exec
 ```
 
-`make -C l2-execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make -C l2-execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
+`make -C l2-execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads the guest (via ELF→JSON); `make -C l2-execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig tests through the same Constantine-backed crypto providers as the guest (see [Crypto Backends](../README.md#crypto-backends)).
 
 ## Compilation
 

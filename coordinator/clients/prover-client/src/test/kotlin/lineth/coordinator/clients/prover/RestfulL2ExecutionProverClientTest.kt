@@ -32,7 +32,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class RestfulL2ExecutionProverClientTest {
   private val proofType = "l2-execution"
-  private val jobsPathPattern = "/v1/jobs/$CHAIN_ID/$proofType/.*"
+  private val jobsPathPattern = "/api/v1/jobs/$CHAIN_ID/$proofType/.*"
 
   private lateinit var wiremock: WireMockServer
   private lateinit var client: L2ExecutionProverClient
@@ -102,7 +102,7 @@ class RestfulL2ExecutionProverClientTest {
     val responseDto = l2ExecutionProofResponseDto(1000501L, 1000503L)
     wiremock.stubFor(
       WireMock.get(
-        WireMock.urlEqualTo("/v1/jobs/$CHAIN_ID/$proofType/1000501/1000503"),
+        WireMock.urlEqualTo("/api/v1/jobs/$CHAIN_ID/$proofType/1000501/1000503?includeResponse=true"),
       ).willReturn(
         WireMock.okJson(
           proverJobResponseBody(

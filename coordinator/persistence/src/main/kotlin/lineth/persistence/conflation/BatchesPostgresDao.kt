@@ -5,6 +5,7 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.Batch
 import linea.error.DuplicatedRecordException
+import linea.kotlin.encodeHex
 import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
@@ -40,8 +41,8 @@ class BatchesPostgresDao(
   private val insertSql =
     """
       insert into $batchesTableName
-      (created_epoch_milli, start_block_number, end_block_number, status)
-      VALUES ($1, $2, $3, $4)
+      (created_epoch_milli, start_block_number, end_block_number, status, proof_index_hash)
+      VALUES ($1, $2, $3, $4, $5)
     """
       .trimIndent()
 
@@ -99,6 +100,7 @@ class BatchesPostgresDao(
         startBlockNumber,
         endBlockNumber,
         batchStatusToDbValue(Batch.Status.Proven),
+        batch.proofIndexHash?.encodeHex(),
       )
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
