@@ -172,3 +172,4 @@
 - *(misc)* Update gradle to v9.8 (#4032)
 - *(misc)* Use junit over kotlin test (#4045)
 - *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
