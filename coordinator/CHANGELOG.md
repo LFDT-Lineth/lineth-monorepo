@@ -4,6 +4,10 @@
 
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
 
+### 🐛 Bug Fixes
+
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)

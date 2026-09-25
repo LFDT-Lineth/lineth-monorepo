@@ -89,6 +89,7 @@
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
 - *(prover)* Empty-codehash check (#3913)
 - *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
 
 ### 🚜 Refactor
 
