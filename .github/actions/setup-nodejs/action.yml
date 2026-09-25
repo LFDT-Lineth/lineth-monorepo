@@ -5,9 +5,7 @@ inputs:
   pnpm-install-options:
     description: 'The options to pass to pnpm install'
     required: true
-    # --trust-lockfile skips re-verifying minimumReleaseAge/trustPolicy against the
-    # already-reviewed, frozen lockfile on every run (saves ~45s in CI).
-    default: '--frozen-lockfile --prefer-offline --ignore-scripts --trust-lockfile'
+    default: '--frozen-lockfile --prefer-offline --ignore-scripts'
   commands:
     description: |
       Optional newline-separated list of commands to run after install.
@@ -51,6 +49,39 @@ runs:
       run: |
         echo "node=$(node -v | sed 's/^v//')" >> "$GITHUB_OUTPUT"
         echo "pnpm=$(pnpm -v)" >> "$GITHUB_OUTPUT"
+
+    # Caching node_modules (incl. the .pnpm virtual store) skips the hardlink
+    # phase, which dominates install time once the store cache is warm.
+    # Lockfile + layout-affecting config are hashed into the key; a stale
+    # fallback hit is safe because pnpm reconciles node_modules against the
+    # frozen lockfile (installs the diff, prunes extraneous packages).
+    - name: Resolve node_modules paths
+      id: node-modules-paths
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        PNPM_INSTALL_OPTIONS: ${{ inputs.pnpm-install-options }}
+      shell: bash
+      run: |
+        {
+          echo 'paths<<EOF'
+          pnpm ls -r --depth -1 --parseable | sed 's#$#/node_modules#'
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
+        # Filtered installs (e.g. --filter contracts) produce a partial
+        # node_modules; the options hash keeps each install scope in its own
+        # cache entry so a partial install never poisons the full one.
+        echo "options-hash=$(printf '%s' "$PNPM_INSTALL_OPTIONS" | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore node_modules
+      id: node-modules-cache
+      uses: ./.github/actions/cache
+      with:
+        # Exact workspace-package node_modules set from pnpm itself: any
+        # layout/depth, without globbing into the .pnpm virtual store.
+        path: ${{ steps.node-modules-paths.outputs.paths }}
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}-pnpm-${{ steps.versions.outputs.pnpm }}-${{ steps.node-modules-paths.outputs.options-hash }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/.npmrc', inputs.working-directory), format('{0}/pnpm-workspace.yaml', inputs.working-directory)) }}
+        restore-keys: |
+          node-modules-${{ runner.os }}-${{ runner.arch }}-pnpm-${{ steps.versions.outputs.pnpm }}-${{ steps.node-modules-paths.outputs.options-hash }}-
 
     - name: pnpm install
       working-directory: ${{ inputs.working-directory }}

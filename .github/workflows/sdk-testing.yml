@@ -37,7 +37,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts --trust-lockfile"
+          pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
 
       - name: Build sdk-core
         run: pnpm -F @lfdt-lineth/sdk-core run build

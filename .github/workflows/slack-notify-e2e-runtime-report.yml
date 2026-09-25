@@ -27,7 +27,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: '-F "e2e..." --frozen-lockfile --prefer-offline --trust-lockfile'
+          pnpm-install-options: '-F "e2e..." --frozen-lockfile --prefer-offline'
 
       - name: Generate E2E runtime report
         env:

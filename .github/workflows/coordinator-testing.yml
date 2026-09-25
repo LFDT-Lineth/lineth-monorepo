@@ -42,7 +42,7 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts --trust-lockfile'
+          pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
       - name: Build coordinator and Unit tests
         run: |
           ./gradlew -V coordinator:app:buildNeeded
