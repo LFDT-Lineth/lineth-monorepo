@@ -51,27 +51,22 @@ def resolveSonarReport = { String tests ->
   } else if (tests == "PrcWeekly") {
     return [
       message: "Executing Sonarqube scanner for Weekly Prc Call tests coverage report...",
-      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoPrcCallTestsReport.xml",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoPrcCallTestsReport/jacocoPrcCallTestsReport.xml",
     ]
   } else if (tests == "ReferenceBlockchain") {
     return [
       message: "Executing Sonarqube scanner for Reference Blockchain tests coverage report...",
-      xmlTestReport: "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceBlockchainTestsReport/jacocoReferenceBlockchainTestsReport.xml",
-    ]
-  } else if (tests == "ReferenceState") {
-    return [
-      message: "Executing Sonarqube scanner for Reference State tests coverage report...",
-      xmlTestReport: "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceGeneralStateTestsReport/jacocoReferenceGeneralStateTestsReport.xml",
+      xmlTestReport: "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceExecutionSpecBlockchainTestsReport/jacocoReferenceExecutionSpecBlockchainTestsReport.xml",
     ]
   } else if (tests == "All") {
     return [
-      message: "Executing Sonarqube scanner for Unit, FastReplay, Nightly, Weekly, Reference Blockchain and State tests coverage report...",
-      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacocoConcatenate/test/jacocoTestReport.xml",
+      message: "Executing Sonarqube scanner for Unit, FastReplay, Nightly, Weekly and Reference Blockchain tests coverage report...",
+      xmlTestReport: "${project.projectDir}/arithmetization/build/reports/jacocoConcatenate/jacocoUnitAndReferenceTestsReport.xml",
     ]
   }
 
   throw new GradleException(
-  "*** unknown tests property. Try '-Dtests=Unit', '-Dtests=FastReplay', '-Dtests=Nightly', '-Dtests=Weekly', '-Dtests=ReferenceBlockchain', '-Dtests=ReferenceState' or '-Dtests=All'"
+  "*** unknown tests property. Try '-Dtests=Unit', '-Dtests=FastReplay', '-Dtests=Nightly', '-Dtests=Weekly', '-Dtests=ReferenceBlockchain' or '-Dtests=All'"
   )
 }
 

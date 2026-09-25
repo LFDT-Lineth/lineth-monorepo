@@ -111,17 +111,24 @@ application {
 
 jar {
   archiveBaseName = 'coordinator'
-  // Move Class-Path computation back to execution time and don’t resolve runtimeClasspath at configuration time
-  doFirst {
-    manifest {
-      attributes(
-          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
-          'Main-Class': 'lineth.coordinator.app.CoordinatorAppMain',
-          'Multi-Release': 'true',
-          // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
-          'Enable-Native-Access': 'ALL-UNNAMED'
-          )
-    }
+  // Compute Class-Path lazily so runtimeClasspath is resolved only when the jar task runs, and so the
+  // value is part of the task inputs (a doFirst manifest change is invisible to up-to-date/cache checks).
+  // dependsOn(Configuration) wires the tasks producing runtimeClasspath's artifacts, see maru/app/build.gradle.
+  dependsOn(configurations.runtimeClasspath)
+  def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
+    locations
+        .collect { it.asFile.name }
+        .findAll { it.endsWith('.jar') }
+        .join(' ')
+  }
+  manifest {
+    attributes(
+        'Class-Path': classPathAttribute,
+        'Main-Class': 'lineth.coordinator.app.CoordinatorAppMain',
+        'Multi-Release': 'true',
+        // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
+        'Enable-Native-Access': 'ALL-UNNAMED'
+        )
   }
 }
 

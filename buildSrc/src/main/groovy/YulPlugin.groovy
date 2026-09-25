@@ -13,13 +13,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileTree
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.SourceTask
@@ -28,7 +42,6 @@ import org.web3j.sokt.SolcInstance
 import org.web3j.sokt.SolcRelease
 import org.web3j.sokt.VersionResolver
 
-import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 import static org.codehaus.groovy.runtime.StringGroovyMethods.capitalize
@@ -47,14 +60,43 @@ class YulExtension {
 
 @CacheableTask
 abstract class YulCompile extends SourceTask {
+    /** Explicit solc binary; fingerprinted by content so a different compiler invalidates the cache. */
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getExecutable()
+
+    /** solc version resolved through web3j-sokt when no explicit executable is configured. */
+    @Optional
     @Input
-    String outputDir
+    abstract Property<String> getSolcVersion()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getCompilerJsonTemplate()
+
+    /** Root of the generated resources; compiled contracts are written to its {@code yul/} subdirectory. */
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @Override
+    @InputFiles
+    @SkipWhenEmpty
+    @IgnoreEmptyDirectories
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileTree getSource() {
+        return super.getSource()
+    }
 
     @TaskAction
     void compileYul() {
-        YulExtension yulExtension = project.getExtensions().getByName(YulExtension.NAME) as YulExtension
-        String compilerExecutable = getCompilerExecutable(yulExtension)
-        String compilerJsonTemplate = project.file(yulExtension.compilerJsonTemplatePath).getText()
+        String compilerExecutable = resolveCompilerExecutable()
+        String compilerJsonTemplate = compilerJsonTemplate.get().asFile.getText()
+        File yulOutputDir = new File(outputDir.get().asFile, YulExtension.NAME)
+        // Start from a clean directory so outputs of removed contracts don't linger.
+        yulOutputDir.deleteDir()
+        yulOutputDir.mkdirs()
+
         def compilerProcessBuilder = new ProcessBuilder(
                 compilerExecutable, "--pretty-json", "--standard-json", "-")
         .redirectErrorStream(true)
@@ -74,9 +116,12 @@ abstract class YulCompile extends SourceTask {
             def output = compilerProcess.getText()
             boolean success = compilerProcess.waitFor(5, TimeUnit.SECONDS)
             if (!success) {
-                throw new Exception("Failed to compile ${contract}")
+                throw new GradleException("Failed to compile ${contract}")
             }
-            def outputFile = Path.of(outputDir).resolve(contract.name.replace(".yul", ".json")).toFile()
+            if (compilerProcess.exitValue() != 0) {
+                throw new GradleException("Failed to compile ${contract}, solc exited with ${compilerProcess.exitValue()}:\n${output}")
+            }
+            def outputFile = new File(yulOutputDir, contract.name.replace(".yul", ".json"))
             outputFile.newPrintWriter("UTF-8").withCloseable {
                 it.println(output)
                 it.flush()
@@ -84,24 +129,24 @@ abstract class YulCompile extends SourceTask {
         }
     }
 
-    private static String getCompilerExecutable (final YulExtension yulExtension) {
-        String compilerExecutable = yulExtension.executable
-        if (compilerExecutable == null) {
-            if (yulExtension.solcVersion == null) {
-                println(yulExtension.getProperties())
-                throw new Exception("Specify one of yul solcVersion or executable")
-            }
-            SolcRelease resolvedVersion = new VersionResolver().getSolcReleases().stream().filter {
-                it.getVersion() == yulExtension.solcVersion && it.isCompatibleWithOs()
-            }.findAny().orElseThrow {
-                return new Exception("Failed to resolve Solidity version ${yulExtension.solcVersion}")
-            }
-            def compilerInstance = new SolcInstance(resolvedVersion, ".web3j", false)
-            if (compilerInstance.installed() || !compilerInstance.installed() && compilerInstance.install()) {
-                compilerExecutable = compilerInstance.solcFile.getAbsolutePath()
-            }
+    private String resolveCompilerExecutable() {
+        if (executable.isPresent()) {
+            return executable.get().asFile.absolutePath
         }
-        return compilerExecutable
+        if (!solcVersion.isPresent()) {
+            throw new GradleException("Specify one of yul solcVersion or executable")
+        }
+        String version = solcVersion.get()
+        SolcRelease resolvedVersion = new VersionResolver().getSolcReleases().stream().filter {
+            it.getVersion() == version && it.isCompatibleWithOs()
+        }.findAny().orElseThrow {
+            return new GradleException("Failed to resolve Solidity version ${version}")
+        }
+        def compilerInstance = new SolcInstance(resolvedVersion, ".web3j", false)
+        if (compilerInstance.installed() || !compilerInstance.installed() && compilerInstance.install()) {
+            return compilerInstance.solcFile.getAbsolutePath()
+        }
+        throw new GradleException("Failed to install Solidity version ${version}")
     }
 }
 
@@ -147,24 +192,21 @@ class YulPlugin implements Plugin<Project> {
 
     private static void configureYulCompile(final Project project, final SourceSet sourceSet) {
         def srcSetName = sourceSet.name == 'main' ? '' : capitalize((CharSequence) sourceSet.name)
-        def compileTask = project.tasks.register("compile${srcSetName}Yul", YulCompile)
-        compileTask.configure {
-
+        YulExtension yulExtension = project.extensions.getByType(YulExtension)
+        def compileTask = project.tasks.register("compile${srcSetName}Yul", YulCompile) {
             it.source(getYulSourceSet(project, sourceSet))
-            def outDir = project
-                .getLayout()
-                .getBuildDirectory()
-                .dir("resources/${sourceSet.name}/${YulExtension.NAME}").get()
-            it.getOutputs().dir(outDir)
-            project.delete(outDir)
-            project.mkdir(outDir)
-            it.outputDir = outDir.asFile.absolutePath
+            // Read lazily: the executable may be wired by another plugin's afterEvaluate (linea.solc-toolchain).
+            it.executable.set(project.layout.file(project.provider {
+                yulExtension.executable ? new File(yulExtension.executable) : null
+            }))
+            it.solcVersion.set(project.provider { yulExtension.solcVersion })
+            it.compilerJsonTemplate.set(project.layout.projectDirectory.file(project.provider {
+                yulExtension.compilerJsonTemplatePath
+            }))
+            it.outputDir.set(project.layout.buildDirectory.dir("generated/resources/yul/${sourceSet.name}"))
         }
-        project.getTasks().named('build').configure {
-            it.dependsOn(compileTask)
-        }
-        project.getTasks().named('jar').configure {
-            it.dependsOn(compileTask)
-        }
+        // Compiled contracts end up on the classpath as yul/<name>.json via processResources,
+        // which also carries the task dependency (no manual build/jar wiring needed).
+        sourceSet.resources.srcDir(compileTask.flatMap { it.outputDir })
     }
 }

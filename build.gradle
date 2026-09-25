@@ -126,16 +126,8 @@ allprojects {
   }
 
   jacoco {
+    // The jacoco plugin already instruments every Test task (integrationTest, acceptanceTest, ...).
     toolVersion = libs.versions.jacoco.get()
-    if (project.tasks.findByName('integrationTest')) {
-      applyTo integrationTest
-    }
-    if (project.tasks.findByName('acceptanceTest')) {
-      applyTo acceptanceTest
-    }
-    if (project.tasks.findByName('acceptanceTests')) {
-      applyTo acceptanceTests
-    }
   }
 
   jacocoTestReport {
