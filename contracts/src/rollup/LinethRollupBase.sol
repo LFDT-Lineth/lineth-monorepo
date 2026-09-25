@@ -72,18 +72,15 @@ abstract contract LinethRollupBase is
   bytes32 private currentL2StoredL1RollingHash_DEPRECATED;
 
   /**
-   * @notice DEPRECATED as the live DA position tracker. Retained in its original storage slot to
-   *   hold the last legacy shnarf (same slot as `main`, `CONTRACT_VERSION() == "8.0"`) for the
+   * @notice DEPRECATED. Retained in its original storage slot to hold the last legacy shnarf for the
    *   one-time legacy-shnarf migration in `_finalizeBlocks`.
-   * @dev Wiped to EMPTY_HASH once migrated, and never written again.
-   * @dev DEPRECATED. Retained only for the one-time legacy-shnarf migration; do not use for new logic.
+   * @dev Wiped to EMPTY_HASH once migrated; never written again. Do not use for new logic.
    */
   bytes32 public currentFinalizedShnarf_DEPRECATED;
 
   /**
-   * @dev NB: THIS IS THE ONLY MAPPING BEING USED FOR DATA SUBMISSION TRACKING.
-   * @dev NB: Keys are anchored dataRollingHash values (previously shnarfs). Only the final
-   *   dataRollingHash of each submission is anchored; intermediate chunk folds are not persisted.
+   * @dev The only mapping used for data submission tracking. Keys are anchored dataRollingHash
+   *   values (previously shnarfs); only the final dataRollingHash of each submission is anchored.
    *   Membership-only — execution continuity no longer travels with the DA accumulator.
    */
   mapping(bytes32 dataRollingHash => uint256 exists) internal _dataRollingHashExists;
@@ -126,13 +123,10 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice The current live end dataRollingHash of the finalized DA stream position.
-   * @dev Directly readable on-chain (no opaque commitment to open) so the coordinator can always
-   *   determine where to build the next submission/finalization from. EMPTY_HASH combined with
-   *   `currentOffset == 0` marks either a genuinely fresh network or a network still awaiting its
-   *   one-time legacy-shnarf bridge (see `currentFinalizedShnarf_DEPRECATED`).
-   * @dev Storage-layout note: appended at the end of the existing layout (consuming two slots from
-   *   `__gap_LineaRollup`) rather than inserted among earlier declarations, to avoid shifting any
-   *   already-deployed storage slot.
+   * @dev Directly readable on-chain so the coordinator can determine where to build the next
+   *   submission/finalization from. EMPTY_HASH with `currentDataAvailabilityOffset == 0` marks a
+   *   fresh network or one awaiting the one-time legacy-shnarf bridge (see `currentFinalizedShnarf_DEPRECATED`).
+   * @dev Appended at the end of the layout (two slots from `__gap_LineaRollup`) to avoid shifting existing slots.
    */
   bytes32 public currentDataRollingHash;
 
@@ -142,8 +136,7 @@ abstract contract LinethRollupBase is
    */
   uint256 public currentDataAvailabilityOffset;
 
-  /// @dev Keep 46 free storage slots for inheriting contracts (reduced from 48 to account for the two
-  ///   new slots above: currentDataRollingHash and currentDataAvailabilityOffset).
+  /// @dev Keep 46 free storage slots for inheriting contracts (reduced from 48 for the two new slots above).
   uint256[46] private __gap_LineaRollup;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -153,10 +146,9 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Initializes LinethRollup and underlying service dependencies - used for new networks only.
-   * @dev `currentDataRollingHash` is deterministically seeded from `initialBlockHash`
-   *   (`keccak256(EMPTY_HASH || initialBlockHash)`) and anchored into `_dataRollingHashExists`.
-   *   `currentDataAvailabilityOffset`/`currentFinalizedShnarf_DEPRECATED` are left at their zero
-   *   defaults — fresh networks have no legacy shnarf to migrate from.
+   * @dev `currentDataRollingHash` is deterministically seeded from `initialBlockHash` and anchored into
+   *   `_dataRollingHashExists`. `currentDataAvailabilityOffset`/`currentFinalizedShnarf_DEPRECATED` are
+   *   left at zero — fresh networks have no legacy shnarf to migrate from.
    * @param _initializationData The initial data used for contract initialization.
    */
   function __LinethRollup_init(BaseInitializationData calldata _initializationData) internal virtual onlyInitializing {
@@ -392,27 +384,6 @@ abstract contract LinethRollupBase is
   }
 
   /**
-   * @notice Internal function to compute the 2-input dataRollingHash fold.
-   * @dev keccak256(parentDataRollingHash || chunkHash) — the pure DA accumulator from the
-   *   blob-spanning spec. Using assembly this way is cheaper gas wise.
-   * @param _parentDataRollingHash The dataRollingHash of the parent stream position.
-   * @param _chunkHash The chunk hash: blobhash(i) (EIP-4844 versioned hash) for blobs,
-   *   keccak256(compressedData) for calldata.
-   * @return dataRollingHash The computed dataRollingHash.
-   */
-  function _computeDataRollingHash(
-    bytes32 _parentDataRollingHash,
-    bytes32 _chunkHash
-  ) internal pure returns (bytes32 dataRollingHash) {
-    assembly {
-      let mPtr := mload(0x40)
-      mstore(mPtr, _parentDataRollingHash)
-      mstore(add(mPtr, 0x20), _chunkHash)
-      dataRollingHash := keccak256(mPtr, 0x40)
-    }
-  }
-
-  /**
    * @notice Finalize compressed blocks with proof.
    * @dev OPERATOR_ROLE is required to execute.
    * @param _aggregatedProof The aggregated proof.
@@ -516,16 +487,13 @@ abstract contract LinethRollupBase is
       );
     }
 
-    // EMPTY_HASH signals the migration path: parent was committed under the old state-root-hash model.
+    // EMPTY_HASH signals the one-time migration path: parent was committed under the old state-root-hash
+    // model, so there is no parent block hash to soft-check against. Every round after relies on the
+    // block hash anchored below.
     bytes32 parentBlockHash = blockHashes[_lastFinalizedBlock];
 
     if (parentBlockHash == EMPTY_HASH) {
       require(_finalizationData.parentBlockHash == EMPTY_HASH, StartingBlockHashDoesNotMatch());
-      bytes32 parentStateRootHash = stateRootHashes[_lastFinalizedBlock];
-      require(
-        parentStateRootHash != EMPTY_HASH && parentStateRootHash == _finalizationData.parentStateRootHash,
-        StartingRootHashDoesNotMatch()
-      );
     } else {
       require(parentBlockHash == _finalizationData.parentBlockHash, StartingBlockHashDoesNotMatch());
     }
@@ -636,12 +604,12 @@ abstract contract LinethRollupBase is
 
   /**
    * @notice Compute the public input.
-   * @dev Using assembly this way is cheaper gas wise.
-   * @dev NB: the dynamic sized fields are placed last in _finalizationData on purpose to optimise hashing ranges.
-   * @dev Binds the full blob-spanning public-input surface (see
+   * @dev Assembly is cheaper gas wise; the dynamic-sized fields are placed last in `_finalizationData`
+   *   to optimise hashing ranges.
+   * @dev Binds the blob-spanning public-input surface (see
    *   `docs/workflows/operations/blobSubmissionAndFinalization.md`) directly from the plain
    *   `parentDataRollingHash`/`endDataRollingHash`/`startOffset`/`endOffset` fields, rather than the
-   *   opaque shnarf commitments used previously. Execution-rooting continuity is instead bound via
+   *   opaque shnarf commitments used previously. Execution continuity is bound via
    *   `parentBlockHash`/`finalBlockHash`, occupying the position the shnarf pair previously held.
    * @dev IMPORTANT: this changes the public input byte layout vs. the prior version and MUST be
    *   mirrored bit-for-bit by the off-chain prover/circuit — a required, coordinated follow-up
@@ -671,32 +639,32 @@ abstract contract LinethRollupBase is
    *     ),
    *     _verifierChainConfiguration,
    *     keccak256(abi.encodePacked(_finalizationData.filteredAddresses)),
-   *     keccak256(abi.encodePacked(_finalizationData.verifierKeys))
+   *     keccak256(abi.encodePacked(_finalizationData.verifierKeys)),
+   *     keccak256(abi.encodePacked(_finalizationData.l2MessagingBlocksOffsets))
    *   )
    * )
    * Data is found at the following offsets:
-   * 0x00    parentStateRootHash
-   * 0x20    parentBlockHash
-   * 0x40    endBlockNumber
-   * 0x60    lastFinalizedTimestamp
-   * 0x80    finalTimestamp
-   * 0xa0    lastFinalizedL1RollingHash
-   * 0xc0    l1RollingHash
-   * 0xe0    lastFinalizedL1RollingHashMessageNumber
-   * 0x100   l1RollingHashMessageNumber
-   * 0x120   l2MerkleTreesDepth
-   * 0x140   lastFinalizedForcedTransactionNumber
-   * 0x160   finalForcedTransactionNumber
-   * 0x180   lastFinalizedForcedTransactionRollingHash
-   * 0x1a0   finalBlockHash
-   * 0x1c0   parentDataRollingHash
-   * 0x1e0   endDataRollingHash
-   * 0x200   startOffset
-   * 0x220   endOffset
-   * 0x240   l2MerkleRootsLengthLocation
-   * 0x260   filteredAddressesLengthLocation
-   * 0x280   verifierKeysLengthLocation
-   * 0x2a0   l2MessagingBlocksOffsetsLengthLocation
+   * 0x00    parentBlockHash
+   * 0x20    endBlockNumber
+   * 0x40    lastFinalizedTimestamp
+   * 0x60    finalTimestamp
+   * 0x80    lastFinalizedL1RollingHash
+   * 0xa0    l1RollingHash
+   * 0xc0    lastFinalizedL1RollingHashMessageNumber
+   * 0xe0    l1RollingHashMessageNumber
+   * 0x100   l2MerkleTreesDepth
+   * 0x120   lastFinalizedForcedTransactionNumber
+   * 0x140   finalForcedTransactionNumber
+   * 0x160   lastFinalizedForcedTransactionRollingHash
+   * 0x180   finalBlockHash
+   * 0x1a0   parentDataRollingHash
+   * 0x1c0   endDataRollingHash
+   * 0x1e0   startOffset
+   * 0x200   endOffset
+   * 0x220   l2MerkleRootsLengthLocation
+   * 0x240   filteredAddressesLengthLocation
+   * 0x260   verifierKeysLengthLocation
+   * 0x280   l2MessagingBlocksOffsetsLengthLocation
    * Dynamic l2MerkleRootsLength
    * Dynamic l2MerkleRoots
    * Dynamic filteredAddressesLength
@@ -718,6 +686,7 @@ abstract contract LinethRollupBase is
     bytes32 hashedL2MerkleRoots = keccak256(abi.encodePacked(_finalizationData.l2MerkleRoots));
     bytes32 hashedFilteredAddresses = keccak256(abi.encodePacked(_finalizationData.filteredAddresses));
     bytes32 hashedVerifierKeys = keccak256(abi.encodePacked(_finalizationData.verifierKeys));
+    bytes32 hashedL2MessagingBlocksOffsets = keccak256(abi.encodePacked(_finalizationData.l2MessagingBlocksOffsets));
 
     assembly {
       let mPtr := mload(0x40)
@@ -726,15 +695,15 @@ abstract contract LinethRollupBase is
        * _finalizationData.parentBlockHash
        * _finalizationData.finalBlockHash
        */
-      mstore(mPtr, calldataload(add(_finalizationData, 0x20)))
-      mstore(add(mPtr, 0x20), calldataload(add(_finalizationData, 0x1a0)))
+      mstore(mPtr, calldataload(_finalizationData))
+      mstore(add(mPtr, 0x20), calldataload(add(_finalizationData, 0x180)))
 
       /**
        * _finalizationData.finalTimestamp
        * _finalizationData.endBlockNumber
        */
-      mstore(add(mPtr, 0x40), calldataload(add(_finalizationData, 0x80)))
-      mstore(add(mPtr, 0x60), calldataload(add(_finalizationData, 0x40)))
+      mstore(add(mPtr, 0x40), calldataload(add(_finalizationData, 0x60)))
+      mstore(add(mPtr, 0x60), calldataload(add(_finalizationData, 0x20)))
 
       /**
        * _finalizationData.lastFinalizedL1RollingHash
@@ -742,10 +711,10 @@ abstract contract LinethRollupBase is
        * _finalizationData.lastFinalizedL1RollingHashMessageNumber
        * _finalizationData.l1RollingHashMessageNumber
        */
-      calldatacopy(add(mPtr, 0x80), add(_finalizationData, 0xa0), 0x80)
+      calldatacopy(add(mPtr, 0x80), add(_finalizationData, 0x80), 0x80)
 
       // lastFinalizedForcedTransactionRollingHash
-      mstore(add(mPtr, 0x100), calldataload(add(_finalizationData, 0x180)))
+      mstore(add(mPtr, 0x100), calldataload(add(_finalizationData, 0x160)))
 
       // finalForcedTransactionRollingHash
       mstore(add(mPtr, 0x120), _finalForcedTransactionRollingHash)
@@ -754,10 +723,10 @@ abstract contract LinethRollupBase is
        * _finalizationData.lastFinalizedForcedTransactionNumber
        * _finalizationData.finalForcedTransactionNumber
        */
-      calldatacopy(add(mPtr, 0x140), add(_finalizationData, 0x140), 0x40)
+      calldatacopy(add(mPtr, 0x140), add(_finalizationData, 0x120), 0x40)
 
       // _finalizationData.l2MerkleTreesDepth
-      mstore(add(mPtr, 0x180), calldataload(add(_finalizationData, 0x120)))
+      mstore(add(mPtr, 0x180), calldataload(add(_finalizationData, 0x100)))
 
       /**
        * _finalizationData.parentDataRollingHash
@@ -765,14 +734,15 @@ abstract contract LinethRollupBase is
        * _finalizationData.startOffset
        * _finalizationData.endOffset
        */
-      calldatacopy(add(mPtr, 0x1a0), add(_finalizationData, 0x1c0), 0x80)
+      calldatacopy(add(mPtr, 0x1a0), add(_finalizationData, 0x1a0), 0x80)
 
       mstore(add(mPtr, 0x220), hashedL2MerkleRoots)
       mstore(add(mPtr, 0x240), _verifierChainConfiguration)
       mstore(add(mPtr, 0x260), hashedFilteredAddresses)
       mstore(add(mPtr, 0x280), hashedVerifierKeys)
+      mstore(add(mPtr, 0x2a0), hashedL2MessagingBlocksOffsets)
 
-      publicInput := mod(keccak256(mPtr, 0x2a0), MODULO_R)
+      publicInput := mod(keccak256(mPtr, 0x2c0), MODULO_R)
     }
   }
 

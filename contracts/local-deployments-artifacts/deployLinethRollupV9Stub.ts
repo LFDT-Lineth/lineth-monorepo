@@ -154,7 +154,7 @@ async function main() {
       unpauseTypeRoles,
       verifierKeys,
       defaultAdmin: linethRollupSecurityCouncil,
-      shnarfProvider: ADDRESS_ZERO,
+      dataRollingHashProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     },
     // Liveness recovery operator

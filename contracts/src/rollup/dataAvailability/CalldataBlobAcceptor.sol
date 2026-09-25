@@ -2,6 +2,7 @@
 pragma solidity ^0.8.33;
 
 import { IAcceptCalldataBlobs } from "./interfaces/IAcceptCalldataBlobs.sol";
+import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKeccak.sol";
 import { LocalDataRollingHashProvider } from "./LocalDataRollingHashProvider.sol";
 import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
@@ -44,12 +45,13 @@ abstract contract CalldataBlobAcceptor is
     bytes32 _storedDataRollingHash
   ) internal virtual {
     require(_compressedData.length != 0, EmptySubmissionData());
-
-    bytes32 computedDataRollingHash = _computeDataRollingHash(_parentDataRollingHash, keccak256(_compressedData));
-
     require(
-      _storedDataRollingHash == computedDataRollingHash,
-      DataRollingHashMismatch(_storedDataRollingHash, computedDataRollingHash)
+      _storedDataRollingHash ==
+        EfficientLeftRightKeccak._efficientKeccak(_parentDataRollingHash, keccak256(_compressedData)),
+      DataRollingHashMismatch(
+        _storedDataRollingHash,
+        EfficientLeftRightKeccak._efficientKeccak(_parentDataRollingHash, keccak256(_compressedData))
+      )
     );
 
     _acceptDataRollingHash(_parentDataRollingHash, _storedDataRollingHash);

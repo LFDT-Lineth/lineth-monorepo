@@ -54,7 +54,7 @@ contract TestLinethRollup is LinethRollup, CalldataBlobAcceptor {
   }
 
   function computeDataRollingHash(bytes32 _parentDataRollingHash, bytes32 _chunkHash) external pure returns (bytes32) {
-    return _computeDataRollingHash(_parentDataRollingHash, _chunkHash);
+    return EfficientLeftRightKeccak._efficientKeccak(_parentDataRollingHash, _chunkHash);
   }
 
   function setLastFinalizedStateV6(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {

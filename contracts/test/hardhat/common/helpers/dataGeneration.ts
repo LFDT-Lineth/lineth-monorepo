@@ -74,7 +74,7 @@ export type ComputedBlobSubmission = BlobSubmission & {
 };
 
 /**
- * Mirrors the Solidity 2-input `_computeDataRollingHash`:
+ * Mirrors the Solidity 2-input dataRollingHash fold (`EfficientLeftRightKeccak._efficientKeccak`):
  * keccak256(abi.encodePacked(parentDataRollingHash, chunkHash)).
  */
 export function computeDataRollingHash(parentDataRollingHash: string, chunkHash: string): string {
@@ -317,7 +317,6 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
     l1RollingHashMessageNumber: BigInt(proofData.l1RollingHashMessageNumber),
     lastFinalizedTimestamp: BigInt(proofData.parentAggregationLastBlockTimestamp),
     endBlockNumber: BigInt(proofData.finalBlockNumber),
-    parentStateRootHash: proofData.parentStateRootHash,
     // Fresh deploy seeds blockHashes[initial]; soft continuity expects that parent on the new path.
     parentBlockHash: proofData.parentStateRootHash,
     finalTimestamp: BigInt(proofData.finalTimestamp),
@@ -345,7 +344,6 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
   return {
     aggregatedProof: generateRandomBytes(928),
     endBlockNumber: 99n,
-    parentStateRootHash: generateRandomBytes(32),
     parentBlockHash: HASH_ZERO,
     lastFinalizedTimestamp: BigInt((await networkTime.latest()) - 2),
     finalTimestamp: BigInt(await networkTime.latest()),

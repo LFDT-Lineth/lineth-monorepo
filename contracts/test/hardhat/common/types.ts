@@ -31,7 +31,6 @@ export type CalldataSubmissionData = {
 export type FinalizationData = {
   aggregatedProof: string;
   endBlockNumber: bigint;
-  parentStateRootHash: string;
   parentBlockHash: string;
   lastFinalizedTimestamp: bigint;
   finalTimestamp: bigint;

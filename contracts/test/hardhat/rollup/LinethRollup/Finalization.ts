@@ -879,7 +879,6 @@ describe("Lineth Rollup contract: Finalization", () => {
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
-        parentStateRootHash: HASH_ZERO,
         lastFinalizedL1RollingHash: HASH_ZERO,
         lastFinalizedL1RollingHashMessageNumber: 0n,
         finalForcedTransactionNumber: 1n,
@@ -917,7 +916,6 @@ describe("Lineth Rollup contract: Finalization", () => {
           blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
-        parentStateRootHash: HASH_ZERO, // Manipulate for bypass
         lastFinalizedL1RollingHash: HASH_ZERO,
         lastFinalizedL1RollingHashMessageNumber: 0n,
       });
@@ -1076,11 +1074,11 @@ describe("Lineth Rollup contract: Finalization", () => {
           isMultiple: false,
         },
         overrides: {
-          parentStateRootHash: HASH_ZERO,
-          parentBlockHash: HASH_ZERO,
+          // Non-zero parent against an unset block hash -> block-hash continuity soft-check fails.
+          parentBlockHash: generateRandomBytes(32),
         },
         expectedError: {
-          name: "StartingRootHashDoesNotMatch",
+          name: "StartingBlockHashDoesNotMatch",
         },
       });
     });

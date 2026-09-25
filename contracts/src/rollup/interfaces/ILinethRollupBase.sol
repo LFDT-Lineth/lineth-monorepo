@@ -44,9 +44,8 @@ interface ILinethRollupBase {
 
   /**
    * @notice Data-availability stream position supplied during finalization.
-   * @dev DEPRECATED: the previously-finalized position is tracked directly and readably on-chain via
-   *   `currentDataRollingHash`/`currentDataAvailabilityOffset` instead of an opaque commitment. This
-   *   struct is retained only for documentation of the stream-position concept.
+   * @dev DEPRECATED: the position is now tracked on-chain via `currentDataRollingHash`/
+   *   `currentDataAvailabilityOffset`; this struct is retained only for documentation.
    * @param prevDataRollingHash The previously-finalized end dataRollingHash (parent position accumulator).
    * @param prevOffset The previously-finalized end offset within its chunk (0 == fresh-start sentinel).
    */
@@ -57,8 +56,7 @@ interface ILinethRollupBase {
 
   /**
    * @notice Supporting data for finalization with proof.
-   * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
-   * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
+   * @dev Dynamic-sized fields are placed last for efficient keccaking on public input.
    * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Execution-rooting continuity check.
    * @param endBlockNumber is the end block finalizing until.
    * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
@@ -82,9 +80,9 @@ interface ILinethRollupBase {
    * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
    * @param verifierKeys is an array of guest-program verifier keys used in this finalization batch.
    * @param l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events.
+   *   Hashed (like l2MerkleRoots/verifierKeys) into the public input.
    */
   struct FinalizationDataV5 {
-    bytes32 parentStateRootHash;
     bytes32 parentBlockHash;
     uint256 endBlockNumber;
     uint256 lastFinalizedTimestamp;
@@ -192,7 +190,7 @@ interface ILinethRollupBase {
    * @param initialContractVersion The initial contract version.
    * @param initializationData The initialization data.
    * @param genesisShnarf DEPRECATED, always EMPTY_HASH. Retained for ABI stability; fresh networks
-   *   under the blob-spanning dataRollingHash model have no genesis shnarf/commitment concept.
+   *   have no genesis shnarf/commitment concept.
    */
   event LineaRollupBaseInitialized(
     bytes8 indexed initialContractVersion,

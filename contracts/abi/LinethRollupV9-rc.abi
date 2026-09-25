@@ -16,17 +16,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "emptyBlobIndex",
-          "type": "uint256"
-        }
-      ],
-      "name": "BlobSubmissionDataEmpty",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "BlobSubmissionDataIsMissing",
       "type": "error"
@@ -50,6 +39,54 @@
     {
       "inputs": [],
       "name": "CallerNotLSTWithdrawalRecipient",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "dataRollingHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "DataRollingHashAlreadyAnchored",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "expected",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "value",
+          "type": "bytes32"
+        }
+      ],
+      "name": "DataRollingHashMismatch",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "expected",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "value",
+          "type": "bytes32"
+        }
+      ],
+      "name": "DataRollingHashNotContinuous",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DataRollingHashSubmissionIsZeroHash",
       "type": "error"
     },
     {
@@ -80,35 +117,14 @@
       "type": "error"
     },
     {
-      "inputs": [],
-      "name": "FinalBlockHashIsZeroHash",
-      "type": "error"
-    },
-    {
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "shnarf",
+          "name": "dataRollingHash",
           "type": "bytes32"
         }
       ],
-      "name": "FinalShnarfNotSubmitted",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "expected",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "value",
-          "type": "bytes32"
-        }
-      ],
-      "name": "FinalShnarfWrong",
+      "name": "FinalDataRollingHashNotAnchored",
       "type": "error"
     },
     {
@@ -388,11 +404,11 @@
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "shnarf",
+          "name": "dataRollingHash",
           "type": "bytes32"
         }
       ],
-      "name": "ParentShnarfNotSubmitted",
+      "name": "ParentDataRollingHashNotAnchored",
       "type": "error"
     },
     {
@@ -482,17 +498,17 @@
     {
       "inputs": [
         {
-          "internalType": "bytes32",
-          "name": "shnarf",
-          "type": "bytes32"
+          "internalType": "uint256",
+          "name": "previousOffset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "startOffset",
+          "type": "uint256"
         }
       ],
-      "name": "ShnarfAlreadySubmitted",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ShnarfSubmissionIsZeroHash",
+      "name": "StartOffsetNotContinuous",
       "type": "error"
     },
     {
@@ -607,8 +623,14 @@
         {
           "indexed": true,
           "internalType": "bytes32",
-          "name": "shnarf",
+          "name": "endDataRollingHash",
           "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "endOffset",
+          "type": "uint256"
         },
         {
           "indexed": false,
@@ -632,19 +654,13 @@
         {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "parentShnarf",
+          "name": "parentDataRollingHash",
           "type": "bytes32"
         },
         {
           "indexed": true,
           "internalType": "bytes32",
-          "name": "shnarf",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "finalBlockHash",
+          "name": "dataRollingHash",
           "type": "bytes32"
         }
       ],
@@ -795,6 +811,19 @@
       "inputs": [
         {
           "indexed": true,
+          "internalType": "bytes32",
+          "name": "migratedDataRollingHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "LegacyShnarfMigrated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
           "internalType": "address",
           "name": "amountChangeBy",
           "type": "address"
@@ -925,7 +954,7 @@
             },
             {
               "internalType": "address",
-              "name": "shnarfProvider",
+              "name": "dataRollingHashProvider",
               "type": "address"
             },
             {
@@ -935,7 +964,7 @@
             }
           ],
           "indexed": false,
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "initializationData",
           "type": "tuple"
         },
@@ -1891,25 +1920,6 @@
     {
       "inputs": [
         {
-          "internalType": "bytes32",
-          "name": "_shnarf",
-          "type": "bytes32"
-        }
-      ],
-      "name": "blobShnarfExists",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "shnarfExists",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "uint256",
           "name": "blockNumber",
           "type": "uint256"
@@ -2106,7 +2116,33 @@
     },
     {
       "inputs": [],
-      "name": "currentFinalizedShnarf",
+      "name": "currentDataAvailabilityOffset",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentDataRollingHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentFinalizedShnarf_DEPRECATED",
       "outputs": [
         {
           "internalType": "bytes32",
@@ -2172,6 +2208,38 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "_dataRollingHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "dataRollingHashExists",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "hashExists",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "dataRollingHashProvider",
+      "outputs": [
+        {
+          "internalType": "contract IProvideDataRollingHash",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes",
           "name": "_aggregatedProof",
           "type": "bytes"
@@ -2185,11 +2253,6 @@
           "components": [
             {
               "internalType": "bytes32",
-              "name": "parentStateRootHash",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "bytes32",
               "name": "parentBlockHash",
               "type": "bytes32"
             },
@@ -2197,38 +2260,6 @@
               "internalType": "uint256",
               "name": "endBlockNumber",
               "type": "uint256"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "bytes32",
-                  "name": "parentShnarf",
-                  "type": "bytes32"
-                },
-                {
-                  "internalType": "bytes32",
-                  "name": "snarkHash",
-                  "type": "bytes32"
-                },
-                {
-                  "internalType": "bytes32",
-                  "name": "finalStateRootHash",
-                  "type": "bytes32"
-                },
-                {
-                  "internalType": "bytes32",
-                  "name": "dataEvaluationPoint",
-                  "type": "bytes32"
-                },
-                {
-                  "internalType": "bytes32",
-                  "name": "dataEvaluationClaim",
-                  "type": "bytes32"
-                }
-              ],
-              "internalType": "struct ILineaRollupBase.ShnarfData",
-              "name": "shnarfData",
-              "type": "tuple"
             },
             {
               "internalType": "uint256",
@@ -2287,8 +2318,23 @@
             },
             {
               "internalType": "bytes32",
-              "name": "finalBlobHash",
+              "name": "parentDataRollingHash",
               "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "endDataRollingHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "startOffset",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "endOffset",
+              "type": "uint256"
             },
             {
               "internalType": "bytes32[]",
@@ -2311,7 +2357,7 @@
               "type": "bytes"
             }
           ],
-          "internalType": "struct ILineaRollupBase.FinalizationDataV5",
+          "internalType": "struct ILinethRollupBase.FinalizationDataV5",
           "name": "_finalizationData",
           "type": "tuple"
         }
@@ -2589,7 +2635,7 @@
             },
             {
               "internalType": "address",
-              "name": "shnarfProvider",
+              "name": "dataRollingHashProvider",
               "type": "address"
             },
             {
@@ -2598,7 +2644,7 @@
               "type": "address"
             }
           ],
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "_initializationData",
           "type": "tuple"
         },
@@ -2820,24 +2866,6 @@
     {
       "inputs": [],
       "name": "reinitializeLineaRollupV10",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_forcedTransactionFeeInWei",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "_addressFilter",
-          "type": "address"
-        }
-      ],
-      "name": "reinitializeLineaRollupV9",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -3082,19 +3110,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "shnarfProvider",
-      "outputs": [
-        {
-          "internalType": "contract IProvideShnarf",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -3144,18 +3159,13 @@
     {
       "inputs": [
         {
-          "internalType": "bytes32[]",
-          "name": "_blobFinalBlockHashes",
-          "type": "bytes32[]"
-        },
-        {
           "internalType": "bytes32",
-          "name": "_parentShnarf",
+          "name": "_parentDataRollingHash",
           "type": "bytes32"
         },
         {
           "internalType": "bytes32",
-          "name": "_finalBlobShnarf",
+          "name": "_storedDataRollingHash",
           "type": "bytes32"
         }
       ],
