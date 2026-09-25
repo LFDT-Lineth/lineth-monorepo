@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time as networkTime } from "@nomicfoundation/hardhat-network-helpers";
 import { encodeData } from "contracts/common/helpers";
-import { LinethRollup, Mimc } from "contracts/typechain-types";
+import { LinethRollup } from "contracts/typechain-types";
 import { AccessListish, ethers, Transaction } from "ethers";
 
 import { THREE_DAYS_IN_SECONDS } from "../../common/constants";
@@ -80,20 +80,19 @@ export const decodeForcedTransactionAdded = async (tx: ethers.ContractTransactio
   });
 };
 
-const _computeForcedTransactionRollingHash = async (
-  mimcLibrary: Mimc,
+const _computeForcedTransactionRollingHash = (
   previousRollingHash: string,
   hashedPayload: string,
   expectedBlockNumber: bigint,
   from: string,
-): Promise<string> => {
+): string => {
   const { msb: hashedPayloadMsb, lsb: hashedPayloadLsb } = splitBytes32(hashedPayload);
 
-  const mimcPayload = encodeData(
+  const encodedPayload = encodeData(
     ["bytes32", "bytes32", "bytes32", "uint256", "address"],
     [previousRollingHash, hashedPayloadMsb, hashedPayloadLsb, expectedBlockNumber, from],
   );
-  return await mimcLibrary.hash(mimcPayload);
+  return ethers.keccak256(encodedPayload);
 };
 
 const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): string => {
@@ -114,7 +113,6 @@ const hashEip1559LikeSolidity = (tx: Eip1559Transaction, chainId: bigint): strin
 };
 
 export const getForcedTransactionRollingHash = async (
-  mimcLibrary: Mimc,
   linethRollup: LinethRollup,
   eip1559Tx: Eip1559Transaction,
   expectedBlockNumber: bigint,
@@ -125,8 +123,7 @@ export const getForcedTransactionRollingHash = async (
 
   const hashedPayload = hashEip1559LikeSolidity(eip1559Tx, chainId);
 
-  return await _computeForcedTransactionRollingHash(
-    mimcLibrary,
+  return _computeForcedTransactionRollingHash(
     previousForcedTransactionRollingHash,
     hashedPayload,
     expectedBlockNumber,

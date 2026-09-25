@@ -71,7 +71,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LinethRollup.ts", as
         pauseTypeRoles,
         unpauseTypeRoles,
         defaultAdmin: linethRollupSecurityCouncil,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter,
       },
       livenessRecoveryOperator,

@@ -6,17 +6,26 @@ import {
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
 } from "contracts/common/constants/pauseTypes";
+import { deployContractFromArtifacts } from "contracts/common/helpers/deployments";
 import {
   AddressFilter,
   CallForwardingProxy,
   ForcedTransactionGateway,
-  Mimc,
   TestLinethRollup,
   TestValidium,
 } from "contracts/typechain-types";
+import { toBeHex } from "ethers";
 import { ethers } from "hardhat";
 
 import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./before";
+import {
+  abi as MimcAbi,
+  bytecode as MimcBytecode,
+} from "../../../../local-deployments-artifacts/static-artifacts/Mimc.json";
+import {
+  abi as PlonkVerifierForDataAggregationAbi,
+  bytecode as PlonkVerifierForDataAggregationBytecode,
+} from "../../../../local-deployments-artifacts/static-artifacts/PlonkVerifierForDataAggregation.json";
 import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
 import {
   ADDRESS_ZERO,
@@ -33,7 +42,7 @@ import {
   THREE_DAYS_IN_SECONDS,
   VALIDIUM_INITIALIZE_SIGNATURE,
 } from "../../common/constants";
-import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment";
+import { deployUpgradableFromFactory } from "../../common/deployment";
 import { LinethRollupInitializationData, PauseTypeRole } from "../../common/types";
 
 export async function deployRevertingVerifier(scenario: bigint): Promise<string> {
@@ -55,7 +64,7 @@ export async function deployValidiumFixture() {
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
-  const verifier = await deployTrueVerifier();
+  const verifier = await deployTestPlonkVerifierForDataAggregation();
   const { parentStateRootHash } = firstCompressedDataContent;
 
   const initializationData = {
@@ -70,7 +79,7 @@ export async function deployValidiumFixture() {
     unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
     verifierKeys: [] as string[],
     defaultAdmin: securityCouncil.address,
-    shnarfProvider: ADDRESS_ZERO,
+    dataRollingHashProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
   };
 
@@ -95,7 +104,7 @@ export async function deployLinethRollupFixture() {
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
-  const verifier = await deployTrueVerifier();
+  const verifier = await deployTestPlonkVerifierForDataAggregation();
   const { parentStateRootHash } = firstCompressedDataContent;
 
   const yieldManager = await deployMockYieldManager();
@@ -112,7 +121,7 @@ export async function deployLinethRollupFixture() {
     unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
     verifierKeys: [],
     defaultAdmin: securityCouncil.address,
-    shnarfProvider: ADDRESS_ZERO,
+    dataRollingHashProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
   };
 
@@ -141,21 +150,12 @@ export async function deployAddressFilter(securityCouncil: string, nonAuthorized
   return { addressFilter };
 }
 
-export async function deployMimcFixture() {
-  const mimc = (await deployFromFactory("Mimc")) as unknown as Mimc;
-  await mimc.waitForDeployment();
-  return { mimc };
-}
-
 export async function deployForcedTransactionGatewayFixture() {
   const { securityCouncil } = await loadFixture(getAccountsFixture);
   const { linethRollup, addressFilter, verifier, yieldManager, linethRollupInitializationData } =
     await loadFixture(deployLinethRollupFixture);
-  const { mimc } = await loadFixture(deployMimcFixture);
 
-  const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
-    libraries: { Mimc: await mimc.getAddress() },
-  });
+  const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway");
 
   const forcedTransactionGateway = (await forcedTransactionGatewayFactory.deploy(
     await linethRollup.getAddress(),
@@ -175,7 +175,6 @@ export async function deployForcedTransactionGatewayFixture() {
     linethRollup,
     forcedTransactionGateway,
     addressFilter,
-    mimc,
     verifier,
     yieldManager,
     linethRollupInitializationData,
@@ -188,9 +187,51 @@ export async function deployAddressFilterFixture() {
   return { addressFilter };
 }
 
-async function deployTrueVerifier(): Promise<string> {
+export async function deployTrueVerifier(): Promise<string> {
   const verifierFactory = await ethers.getContractFactory("IntegrationTestTrueVerifier");
   const verifier = await verifierFactory.deploy();
+  await verifier.waitForDeployment();
+  return await verifier.getAddress();
+}
+
+// Deploys from the frozen, Mimc-linked static artifacts (rather than compiling live source) because
+// the fixed proof fixtures used in these tests were generated against a chain configuration hash
+// computed with Mimc.hash, not the current keccak256-based implementation.
+async function deployTestPlonkVerifierForDataAggregation(): Promise<string> {
+  const [deployer] = await ethers.getSigners();
+
+  const mimc = await deployContractFromArtifacts("Mimc", MimcAbi, MimcBytecode, deployer);
+  const mimcAddress = await mimc.getAddress();
+
+  const verifier = await deployContractFromArtifacts(
+    "PlonkVerifierForDataAggregation",
+    PlonkVerifierForDataAggregationAbi,
+    PlonkVerifierForDataAggregationBytecode,
+    deployer,
+    { libraries: { "src/libraries/Mimc.sol:Mimc": mimcAddress } },
+    [
+      {
+        value: toBeHex(59144, 32),
+        name: "chainId",
+      },
+      {
+        value: toBeHex(7n, 32),
+        name: "baseFee",
+      },
+      {
+        value: toBeHex("0x8f81e2e3f8b46467523463835f965ffe476e1c9e", 32),
+        name: "coinbase",
+      },
+      {
+        value: toBeHex("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec", 32),
+        name: "l2MessageServiceAddress",
+      },
+      {
+        value: toBeHex(0n, 32),
+        name: "isAllowedCircuitID",
+      },
+    ],
+  );
   await verifier.waitForDeployment();
   return await verifier.getAddress();
 }

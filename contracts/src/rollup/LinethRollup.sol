@@ -6,8 +6,6 @@ import { Eip4844BlobAcceptor } from "./dataAvailability/Eip4844BlobAcceptor.sol"
 import { ClaimMessageV1 } from "../messaging/l1/v1/ClaimMessageV1.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { LivenessRecovery } from "./LivenessRecovery.sol";
-import { IGenericErrors } from "../interfaces/IGenericErrors.sol";
-import { IAddressFilter } from "./forcedTransactions/interfaces/IAddressFilter.sol";
 import { LinethRollupYieldExtension } from "./LinethRollupYieldExtension.sol";
 import { InitializationVersionCheck } from "../common/InitializationVersionCheck.sol";
 
@@ -43,11 +41,7 @@ contract LinethRollup is
     address _livenessRecoveryOperator,
     address _yieldManager
   ) external onlyInitializedVersion(0) reinitializer(10) {
-    bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
-
-    _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-
-    __LinethRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData);
     __LivenessRecovery_init(_livenessRecoveryOperator);
     __LinethRollupYieldExtension_init(_yieldManager);
   }
@@ -66,37 +60,25 @@ contract LinethRollup is
   }
 
   /**
-   * @notice Sets forced transaction gateway and reinitializes the last finalized state including forced tx data.
-   * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
-   * @param _forcedTransactionFeeInWei The forced transaction fee in wei.
-   * @param _addressFilter The address of the address filter.
-   */
-  function reinitializeLineaRollupV9(
-    uint256 _forcedTransactionFeeInWei,
-    address _addressFilter
-  ) external reinitializer(9) nonReentrant {
-    require(_forcedTransactionFeeInWei > 0, IGenericErrors.ZeroValueNotAllowed());
-    require(_addressFilter != address(0), IGenericErrors.ZeroAddressNotAllowed());
-
-    forcedTransactionFeeInWei = _forcedTransactionFeeInWei;
-    addressFilter = IAddressFilter(_addressFilter);
-
-    emit ForcedTransactionFeeSet(_forcedTransactionFeeInWei);
-    emit AddressFilterChanged(address(0), _addressFilter);
-
-    nextForcedTransactionNumber = 1;
-
-    emit LineaRollupVersionChanged(bytes8("7.1"), bytes8("8.0"));
-  }
-
-  /**
-   * @notice Bumps the ABI version for the blockhash-centric (RISC-V) ABI cutover.
-   * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
-   * @dev Does not populate blockHashes for the last finalized block — the first post-upgrade finalization takes the migration path.
-   * @dev Verifier keys and SET_VERIFIER_KEY_ROLE / UNSET_VERIFIER_KEY_ROLE are configured separately via `grantRole` and
-   *   `setVerifierKeys` after upgrade (kept out of this reinitializer to minimize contract size).
+   * @notice Reinitializer for v10: migrates the legacy shnarf into the blob-spanning
+   *   dataRollingHash model and advances CONTRACT_VERSION().
+   * @dev Should be called using an upgradeAndCall transaction to the ProxyAdmin for live-chain
+   *   (in-place) upgrades. Unconditional: on any real in-place upgrade
+   *   `currentFinalizedShnarf_DEPRECATED` can never be EMPTY_HASH (it is the prior contract
+   *   version's live finalized shnarf), so no emptiness guard is needed. `reinitializer(10)`
+   *   itself guarantees this runs exactly once per proxy.
+   * @dev Trusts the on-chain `currentFinalizedShnarf_DEPRECATED` value directly (it was itself the
+   *   proven output of the prior contract version's `finalizeBlocks`) rather than requiring the
+   *   caller to re-supply and reconstruct it.
    */
   function reinitializeLineaRollupV10() external reinitializer(10) {
-    emit LineaRollupVersionChanged(bytes8("8.0"), bytes8("9.0"));
+    bytes32 migratedDataRollingHash = currentFinalizedShnarf_DEPRECATED;
+
+    currentDataRollingHash = migratedDataRollingHash;
+    _dataRollingHashExists[migratedDataRollingHash] = 1;
+    currentFinalizedShnarf_DEPRECATED = EMPTY_HASH;
+
+    emit LegacyShnarfMigrated(migratedDataRollingHash);
+    emit LineaRollupVersionChanged(bytes8("9.0"), bytes8("10.0"));
   }
 }

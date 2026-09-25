@@ -30,14 +30,12 @@ import { deployUpgradableFromFactory } from "../common/deployment";
 import {
   calculateRollingHash,
   generateRandomBytes,
-  generateCallDataSubmission,
   expectEvent,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
   expectRevertWhenPaused,
-  generateKeccak256,
-  computeGenesisShnarf,
+  computeDataRollingHash,
 } from "../common/helpers";
 
 describe("Validium contract", () => {
@@ -49,17 +47,18 @@ describe("Validium contract", () => {
   let securityCouncil: SignerWithAddress;
   let operator: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
-  let alternateShnarfProviderAddress: SignerWithAddress;
+  let alternateDataRollingHashProviderAddress: SignerWithAddress;
   let roleAddresses: { addressWithRole: string; role: string }[];
   let addressFilterAddress: string;
 
   const { parentStateRootHash } = firstCompressedDataContent;
-  const prevShnarf = () => computeGenesisShnarf(parentStateRootHash);
+  // Genesis accumulator is the deterministic anchor keccak256(EMPTY_HASH || initialBlockHash).
+  const prevShnarf = () => computeDataRollingHash(HASH_ZERO, parentStateRootHash);
   const expectedShnarf = generateRandomBytes(32);
   const secondExpectedShnarf = generateRandomBytes(32);
 
   before(async () => {
-    ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
+    ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateDataRollingHashProviderAddress } =
       await loadFixture(getAccountsFixture));
     roleAddresses = await loadFixture(getValidiumRoleAddressesFixture);
   });
@@ -97,7 +96,7 @@ describe("Validium contract", () => {
       unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
       verifierKeys: [] as string[],
       defaultAdmin: securityCouncil.address,
-      shnarfProvider: ADDRESS_ZERO,
+      dataRollingHashProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     });
 
@@ -171,7 +170,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
       };
 
@@ -196,7 +195,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
       };
 
@@ -209,7 +208,7 @@ describe("Validium contract", () => {
       expect(await validium.hasRole(VERIFIER_SETTER_ROLE, operator.address)).to.be.true;
     });
 
-    it("Should assign the passed in shnarfProvider address", async () => {
+    it("Should assign the passed in dataRollingHashProvider address", async () => {
       const initializationData = {
         initialBlockHash: parentStateRootHash,
         initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
@@ -222,7 +221,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: alternateShnarfProviderAddress.address,
+        dataRollingHashProvider: alternateDataRollingHashProviderAddress.address,
         addressFilter: addressFilterAddress,
       };
 
@@ -231,7 +230,7 @@ describe("Validium contract", () => {
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
-      expect(await validium.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
+      expect(await validium.dataRollingHashProvider()).to.equal(alternateDataRollingHashProviderAddress.address);
     });
 
     it("Should assign the passed in addressFilter address", async () => {
@@ -247,7 +246,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: alternateShnarfProviderAddress.address,
+        dataRollingHashProvider: alternateDataRollingHashProviderAddress.address,
         addressFilter: addressFilterAddress,
       };
 
@@ -259,16 +258,16 @@ describe("Validium contract", () => {
       expect(await validium.addressFilter()).to.equal(addressFilterAddress);
     });
 
-    it("Should have the validium address as the shnarfProvider", async () => {
+    it("Should have the validium address as the dataRollingHashProvider", async () => {
       ({ verifier, validium } = await loadFixture(deployValidiumFixture));
       const validiumAddress = await validium.getAddress();
 
-      expect(await validium.shnarfProvider()).to.equal(validiumAddress);
+      expect(await validium.dataRollingHashProvider()).to.equal(validiumAddress);
     });
 
     it("Should have the correct contract version", async () => {
       ({ verifier, validium } = await loadFixture(deployValidiumFixture));
-      expect(await validium.CONTRACT_VERSION()).to.equal("2.0");
+      expect(await validium.CONTRACT_VERSION()).to.equal("3.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
@@ -285,7 +284,7 @@ describe("Validium contract", () => {
         unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
       });
 
@@ -357,106 +356,64 @@ describe("Validium contract", () => {
       await validium.setLastFinalizedBlock(0);
     });
 
-    const [DATA_ONE] = generateCallDataSubmission(0, 1);
-
-    it("Should fail when the parent shnarf does not exist", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-      const nonExistingParentShnarf = generateRandomBytes(32);
-
-      const wrongExpectedShnarf = generateKeccak256(
-        ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-        [HASH_ZERO, HASH_ZERO, submissionData.blockHash, HASH_ZERO, HASH_ZERO],
-      );
+    it("Should fail when the parent dataRollingHash is not anchored", async () => {
+      const nonExistingParent = generateRandomBytes(32);
+      const dataRollingHash = generateRandomBytes(32);
 
       const asyncCall = validium
         .connect(operator)
-        .acceptShnarfData(nonExistingParentShnarf, wrongExpectedShnarf, submissionData.blockHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
+        .acceptDataRollingHash(nonExistingParent, dataRollingHash, { gasLimit: MAX_GAS_LIMIT });
 
-      await expectRevertWithCustomError(validium, asyncCall, "ParentShnarfNotSubmitted", [nonExistingParentShnarf]);
+      await expectRevertWithCustomError(validium, asyncCall, "ParentDataRollingHashNotAnchored", [nonExistingParent]);
     });
 
     it("Should succesfully submit 1 compressed data chunk setting values", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-
       await expect(
-        validium
-          .connect(operator)
-          .acceptShnarfData(prevShnarf(), expectedShnarf, submissionData.blockHash, { gasLimit: MAX_GAS_LIMIT }),
+        validium.connect(operator).acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
       ).to.not.be.reverted;
 
-      const blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
+      const dataRollingHashExists = await validium.dataRollingHashExists(expectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
     });
 
     it("Should successfully submit 2 compressed data chunks in two transactions", async () => {
-      const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
-
       await expect(
-        validium.connect(operator).acceptShnarfData(prevShnarf(), expectedShnarf, firstSubmissionData.blockHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        }),
+        validium.connect(operator).acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
       ).to.not.be.reverted;
 
       await expect(
         validium
           .connect(operator)
-          .acceptShnarfData(expectedShnarf, secondExpectedShnarf, secondSubmissionData.blockHash, {
-            gasLimit: MAX_GAS_LIMIT,
-          }),
+          .acceptDataRollingHash(expectedShnarf, secondExpectedShnarf, { gasLimit: MAX_GAS_LIMIT }),
       ).to.not.be.reverted;
 
-      let blobShnarfExists = await validium.blobShnarfExists(expectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
-      blobShnarfExists = await validium.blobShnarfExists(secondExpectedShnarf);
-      expect(blobShnarfExists).to.equal(1n);
+      let dataRollingHashExists = await validium.dataRollingHashExists(expectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
+      dataRollingHashExists = await validium.dataRollingHashExists(secondExpectedShnarf);
+      expect(dataRollingHashExists).to.equal(1n);
     });
 
     it("Should emit an event while submitting 1 compressed data chunk", async () => {
-      const [submissionData] = generateCallDataSubmission(0, 1);
-
       const submitDataCall = validium
         .connect(operator)
-        .acceptShnarfData(prevShnarf(), secondExpectedShnarf, submissionData.blockHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
-      const eventArgs = [prevShnarf(), secondExpectedShnarf, submissionData.blockHash];
+        .acceptDataRollingHash(prevShnarf(), secondExpectedShnarf, { gasLimit: MAX_GAS_LIMIT });
+      const eventArgs = [prevShnarf(), secondExpectedShnarf];
 
       await expectEvent(validium, submitDataCall, "DataSubmittedV4", eventArgs);
     });
 
-    it("Should fail if the final block hash is HASH_ZERO", async () => {
+    it("Should fail to submit where the submitted dataRollingHash is HASH_ZERO", async () => {
       const submitDataCall = validium
         .connect(operator)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, HASH_ZERO, { gasLimit: MAX_GAS_LIMIT });
+        .acceptDataRollingHash(prevShnarf(), HASH_ZERO, { gasLimit: MAX_GAS_LIMIT });
 
-      // TODO: Make the failure shnarf dynamic and computed
-      await expectRevertWithCustomError(validium, submitDataCall, "FinalBlockHashIsZeroHash", []);
-    });
-
-    it("Should fail to submit where submitted shnarf is HASH_ZERO", async () => {
-      const [firstSubmissionData, secondSubmissionData] = generateCallDataSubmission(0, 2);
-
-      await expect(
-        validium.connect(operator).acceptShnarfData(prevShnarf(), expectedShnarf, firstSubmissionData.blockHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        }),
-      ).to.not.be.reverted;
-
-      const submitDataCall = validium
-        .connect(operator)
-        .acceptShnarfData(expectedShnarf, HASH_ZERO, secondSubmissionData.blockHash, {
-          gasLimit: MAX_GAS_LIMIT,
-        });
-
-      await expectRevertWithCustomError(validium, submitDataCall, "ShnarfSubmissionIsZeroHash", []);
+      await expectRevertWithCustomError(validium, submitDataCall, "DataRollingHashSubmissionIsZeroHash", []);
     });
 
     it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
       const submitDataCall = validium
         .connect(nonAuthorizedAccount)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, DATA_ONE.blockHash, { gasLimit: MAX_GAS_LIMIT });
+        .acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
       await expectRevertWithReason(submitDataCall, buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE));
     });
@@ -473,36 +430,35 @@ describe("Validium contract", () => {
 
         const submitDataCall = validium
           .connect(operator)
-          .acceptShnarfData(prevShnarf(), expectedShnarf, DATA_ONE.blockHash, { gasLimit: MAX_GAS_LIMIT });
+          .acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
         await expectRevertWhenPaused(validium, submitDataCall, pauseType);
       });
     });
 
-    it("Should revert with ShnarfAlreadySubmitted when submitting same compressed data twice in 2 separate transactions", async () => {
-      await validium
-        .connect(operator)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, DATA_ONE.blockHash, { gasLimit: MAX_GAS_LIMIT });
+    it("Should revert with DataRollingHashAlreadyAnchored when submitting the same dataRollingHash twice", async () => {
+      await validium.connect(operator).acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
       const submitDataCall = validium
         .connect(operator)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, DATA_ONE.blockHash, { gasLimit: MAX_GAS_LIMIT });
+        .acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
-      await expectRevertWithCustomError(validium, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
+      await expectRevertWithCustomError(validium, submitDataCall, "DataRollingHashAlreadyAnchored", [expectedShnarf]);
     });
 
-    it("Should revert with ShnarfAlreadySubmitted when submitting same data, differing block numbers", async () => {
+    it("Should revert with DataRollingHashAlreadyAnchored when re-anchoring an existing dataRollingHash from a different parent", async () => {
+      // Anchor both the target dataRollingHash and a second parent, so the parent-anchored check passes
+      // and the already-anchored check is what fires.
+      await validium.connect(operator).acceptDataRollingHash(prevShnarf(), expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
       await validium
         .connect(operator)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, DATA_ONE.blockHash, { gasLimit: MAX_GAS_LIMIT });
-
-      const [dataOneCopy] = generateCallDataSubmission(0, 1);
+        .acceptDataRollingHash(expectedShnarf, secondExpectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
       const submitDataCall = validium
         .connect(operator)
-        .acceptShnarfData(prevShnarf(), expectedShnarf, dataOneCopy.blockHash, { gasLimit: MAX_GAS_LIMIT });
+        .acceptDataRollingHash(secondExpectedShnarf, expectedShnarf, { gasLimit: MAX_GAS_LIMIT });
 
-      await expectRevertWithCustomError(validium, submitDataCall, "ShnarfAlreadySubmitted", [expectedShnarf]);
+      await expectRevertWithCustomError(validium, submitDataCall, "DataRollingHashAlreadyAnchored", [expectedShnarf]);
     });
   });
 

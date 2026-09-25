@@ -40,7 +40,7 @@ export function loadArtifactFromDirectory(
  * Replaces the unvalidated `parseInt(process.env.L1_NONCE)` pattern across deploy scripts.
  */
 export async function getDeployNonceFromEnv(wallet: AbstractSigner, envVarName: string, offset = 0): Promise<number> {
-  const raw = process.env[envVarName];
+  const raw = process.env[envVarName]?.trim();
   if (raw === undefined || raw === "") {
     return await wallet.getNonce();
   }
@@ -123,7 +123,7 @@ function linkLibraries(bytecode: ethers.BytesLike, libraries: Record<string, str
  * @example
  * // With libraries
  * await deployContractFromArtifacts("MyContract", abi, bytecode, wallet,
- *   { libraries: { "contracts/libraries/Mimc.sol:Mimc": mimcAddress } },
+ *   { libraries: { "contracts/libraries/MyLibrary.sol:MyLibrary": myLibraryAddress } },
  *   arg1, arg2
  * );
  */

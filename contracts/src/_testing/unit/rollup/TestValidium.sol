@@ -24,20 +24,21 @@ contract TestValidium is Validium {
     _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
   }
 
-  function setupParentShnarf(bytes32 _shnarf) external {
-    _blobShnarfExists[_shnarf] = 1;
+  function setupParentDataRollingHash(bytes32 _dataRollingHash) external {
+    _dataRollingHashExists[_dataRollingHash] = 1;
   }
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
     currentL2BlockNumber = _blockNumber;
   }
 
-  function setLastFinalizedShnarf(bytes32 _lastFinalizedShnarf) external {
-    currentFinalizedShnarf = _lastFinalizedShnarf;
+  function setCurrentDataPosition(bytes32 _dataRollingHash, uint256 _offset) external {
+    currentDataRollingHash = _dataRollingHash;
+    currentDataAvailabilityOffset = _offset;
   }
 
-  function setShnarfFinalBlockNumber(bytes32 _shnarf, uint256 _finalBlockNumber) external {
-    _blobShnarfExists[_shnarf] = _finalBlockNumber;
+  function setDataRollingHashExistenceValue(bytes32 _dataRollingHash, uint256 _value) external {
+    _dataRollingHashExists[_dataRollingHash] = _value;
   }
 
   function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {

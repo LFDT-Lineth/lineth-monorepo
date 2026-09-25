@@ -8,7 +8,7 @@ import { LinethRollupBase } from "../LinethRollupBase.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract ExternalShnarfStorageRollup is LinethRollupBase {
+contract ExternalDataRollingHashProviderRollup is LinethRollupBase {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -22,20 +22,17 @@ contract ExternalShnarfStorageRollup is LinethRollupBase {
    * @param _initializationData The initial data used for proof verification.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    __LinethRollup_init(
-      _initializationData,
-      _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH)
-    );
+    __LinethRollup_init(_initializationData);
   }
 
   /**
-   * @notice Returns if the shnarf exists.
+   * @notice Returns if the dataRollingHash has been anchored.
    * @dev Value > 0 means that it exists. Default is 1.
-   * @param _shnarf The shnarf being checked for existence.
-   * @return shnarfExists The shnarf's existence value.
+   * @param _dataRollingHash The dataRollingHash being checked for existence.
+   * @return dataRollingHashExists The dataRollingHash's existence value.
    */
-  function blobShnarfExists(bytes32 _shnarf) public view returns (uint256 shnarfExists) {
-    shnarfExists = shnarfProvider.blobShnarfExists(_shnarf);
+  function dataRollingHashExists(bytes32 _dataRollingHash) public view returns (uint256 dataRollingHashExists) {
+    dataRollingHashExists = dataRollingHashProvider.dataRollingHashExists(_dataRollingHash);
   }
 
   /**

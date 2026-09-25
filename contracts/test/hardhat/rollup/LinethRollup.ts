@@ -35,7 +35,6 @@ import {
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
   SIX_MONTHS_IN_SECONDS,
   LINETH_ROLLUP_INITIALIZE_SIGNATURE,
-  FORCED_TRANSACTION_FEE,
   SET_ADDRESS_FILTER_ROLE,
   INITIALIZED_ALREADY_MESSAGE,
 } from "../common/constants";
@@ -47,11 +46,11 @@ import {
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
-  generateBlobParentShnarfData,
+  generateBlobParentDataRollingHash,
   calculateLastFinalizedState,
   expectNoEvent,
   expectEventDirectFromReceiptData,
-  computeGenesisShnarf,
+  computeDataRollingHash,
 } from "../common/helpers";
 import { LinethRollupInitializationData, PauseTypeRole } from "../common/types";
 
@@ -67,7 +66,7 @@ describe("Lineth Rollup contract", () => {
   let securityCouncil: SignerWithAddress;
   let operator: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
-  let alternateShnarfProviderAddress: SignerWithAddress;
+  let alternateDataRollingHashProviderAddress: SignerWithAddress;
   let roleAddresses: { addressWithRole: string; role: string }[];
   let addressFilterAddress: string;
   let addressFilter: AddressFilter;
@@ -75,7 +74,7 @@ describe("Lineth Rollup contract", () => {
   const { parentStateRootHash } = firstCompressedDataContent;
 
   before(async () => {
-    ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
+    ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateDataRollingHashProviderAddress } =
       await loadFixture(getAccountsFixture));
     roleAddresses = await loadFixture(getRoleAddressesFixture);
   });
@@ -115,7 +114,7 @@ describe("Lineth Rollup contract", () => {
       unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
       verifierKeys: [] as string[],
       defaultAdmin: securityCouncil.address,
-      shnarfProvider: ADDRESS_ZERO,
+      dataRollingHashProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     });
 
@@ -213,7 +212,7 @@ describe("Lineth Rollup contract", () => {
         unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
         verifierKeys: [],
         defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
+        dataRollingHashProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
       };
 
@@ -229,7 +228,7 @@ describe("Lineth Rollup contract", () => {
         initializationData.unpauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
         initializationData.verifierKeys,
         initializationData.defaultAdmin,
-        initializationData.shnarfProvider,
+        initializationData.dataRollingHashProvider,
         initializationData.addressFilter,
       ];
 
@@ -244,15 +243,26 @@ describe("Lineth Rollup contract", () => {
 
       const receipt = await linethRollup.deploymentTransaction()?.wait();
 
+      // Locate the init event by topic rather than a fixed log index; the number of preceding
+      // RoleGranted/initialization logs changes as init logic evolves.
+      const initTopic = linethRollup.interface.getEvent("LineaRollupBaseInitialized")!.topicHash;
+      const initLogIndex = receipt!.logs.findIndex((log) => log.topics[0] === initTopic);
+      expect(initLogIndex, "LineaRollupBaseInitialized log present").to.be.greaterThanOrEqual(0);
+
       await expectEventDirectFromReceiptData(
         linethRollup,
         receipt!,
         "LineaRollupBaseInitialized",
-        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
-        38,
+        // genesisShnarf is DEPRECATED and always EMPTY_HASH under the blob-spanning dataRollingHash model.
+        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, HASH_ZERO],
+        initLogIndex,
       );
 
       expect(await linethRollup.blockHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
+
+      const expectedGenesisDataRollingHash = computeDataRollingHash(HASH_ZERO, initializationData.initialBlockHash);
+      expect(await linethRollup.currentDataRollingHash()).to.equal(expectedGenesisDataRollingHash);
+      expect(await linethRollup.dataRollingHashExists(expectedGenesisDataRollingHash)).to.equal(1n);
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to both SecurityCouncil and Operator", async () => {
@@ -271,11 +281,11 @@ describe("Lineth Rollup contract", () => {
       expect(await linethRollup.hasRole(VERIFIER_SETTER_ROLE, operator.address)).to.be.true;
     });
 
-    it("Should assign the passed in shnarfProvider address", async () => {
+    it("Should assign the passed in dataRollingHashProvider address", async () => {
       const initData = {
         ...createDefaultInitData(),
         roleAddresses: [...roleAddresses, { addressWithRole: operator.address, role: VERIFIER_SETTER_ROLE }],
-        shnarfProvider: alternateShnarfProviderAddress.address,
+        dataRollingHashProvider: alternateDataRollingHashProviderAddress.address,
       };
 
       const linethRollup = await deployLinethRollupWithConfig(
@@ -284,7 +294,7 @@ describe("Lineth Rollup contract", () => {
         "src/rollup/LinethRollup.sol:LinethRollup",
       );
 
-      expect(await linethRollup.shnarfProvider()).to.equal(alternateShnarfProviderAddress.address);
+      expect(await linethRollup.dataRollingHashProvider()).to.equal(alternateDataRollingHashProviderAddress.address);
     });
 
     it("Should assign the passed in addressFilter address", async () => {
@@ -302,11 +312,11 @@ describe("Lineth Rollup contract", () => {
       expect(await linethRollup.addressFilter()).to.equal(addressFilterAddress);
     });
 
-    it("Should have the linethRollup address as the shnarfProvider", async () => {
+    it("Should have the linethRollup address as the dataRollingHashProvider", async () => {
       ({ verifier, linethRollup } = await loadFixture(deployLinethRollupFixture));
       const linethRollupAddress = await linethRollup.getAddress();
 
-      expect(await linethRollup.shnarfProvider()).to.equal(linethRollupAddress);
+      expect(await linethRollup.dataRollingHashProvider()).to.equal(linethRollupAddress);
     });
 
     it("Should have the correct contract version", async () => {
@@ -323,122 +333,14 @@ describe("Lineth Rollup contract", () => {
     });
   });
 
-  describe("Upgrading / reinitialisation", () => {
-    beforeEach(async () => {
-      // Simulate a pre-upgrade state by lowering the initialized version to allow reinitializer(9) to run
-      await linethRollup.setSlotValue(0, 8);
-    });
-
-    it("Should revert if the forced transaction fee is zero", async () => {
-      const upgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [0n, addressFilterAddress],
-      );
-
-      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroValueNotAllowed");
-    });
-
-    it("Should revert if the address filter address is zero address", async () => {
-      const upgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, ADDRESS_ZERO],
-      );
-
-      await expectRevertWithCustomError(linethRollup, upgradeCall, "ZeroAddressNotAllowed");
-    });
-
-    it("Should set the next forced transaction number to 1", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
-      ]);
-
-      expect(await linethRollup.nextForcedTransactionNumber()).to.equal(1n);
-    });
-
-    it("Should emit the AddressFilterChanged event when the address filter is set", async () => {
-      await expectEvent(
-        linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-          FORCED_TRANSACTION_FEE,
-          addressFilterAddress,
-        ]),
-        "AddressFilterChanged",
-        [ADDRESS_ZERO, addressFilterAddress],
-      );
-    });
-
-    it("Should emit the ForcedTransactionFeeSet event when the address filter is set", async () => {
-      await expectEvent(
-        linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-          FORCED_TRANSACTION_FEE,
-          addressFilterAddress,
-        ]),
-        "ForcedTransactionFeeSet",
-        [FORCED_TRANSACTION_FEE],
-      );
-    });
-
-    it("Should set the address filter", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
-      ]);
-
-      expect(await linethRollup.addressFilter()).to.equal(addressFilterAddress);
-    });
-
-    it("CONTRACT_VERSION reflects ABI 9.0 after bytecode upgrade", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
-      ]);
-
-      expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
-    });
-
-    it("Should emit LineaRollupVersionChanged 7.1 to 8.0 for V9 reinit", async () => {
-      const upgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, addressFilterAddress],
-      );
-
-      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("7.1"), 8);
-      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
-
-      await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
-    });
-
-    it("Fails to reinitialize twice", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
-        FORCED_TRANSACTION_FEE,
-        addressFilterAddress,
-      ]);
-
-      const secondUpgradeCall = reinitializeUpgradeableProxy(
-        linethRollup,
-        LinethRollup__factory.abi,
-        "reinitializeLineaRollupV9",
-        [FORCED_TRANSACTION_FEE, addressFilterAddress],
-      );
-
-      await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
-    });
-  });
-
   describe("Upgrading / reinitialisation V10", () => {
     beforeEach(async () => {
+      // Simulate a pre-upgrade state: lower the initialized version so reinitializer(10) can run.
+      // Migration now happens inside reinitializeLineaRollupV10 itself (unconditionally, once).
       await linethRollup.setSlotValue(0, 9);
     });
 
-    it("Should emit LineaRollupVersionChanged 8.0 to 9.0", async () => {
+    it("Should emit LineaRollupVersionChanged 9.0 to 10.0", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
@@ -446,14 +348,33 @@ describe("Lineth Rollup contract", () => {
         [],
       );
 
-      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
-      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("10.0"), 8);
 
       await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
       expect(await linethRollup.CONTRACT_VERSION()).to.equal("9.0");
     });
 
-    it("Fails to reinitialize V10 twice", async () => {
+    it("Migrates currentFinalizedShnarf_DEPRECATED into currentDataRollingHash and anchors it", async () => {
+      const legacyFinalizedShnarf = generateRandomBytes(32);
+      await linethRollup.setLegacyFinalizedShnarf(legacyFinalizedShnarf);
+
+      const upgradeCall = reinitializeUpgradeableProxy(
+        linethRollup,
+        LinethRollup__factory.abi,
+        "reinitializeLineaRollupV10",
+        [],
+      );
+
+      await expectEvent(linethRollup, upgradeCall, "LegacyShnarfMigrated", [legacyFinalizedShnarf]);
+
+      expect(await linethRollup.currentFinalizedShnarf_DEPRECATED()).to.equal(HASH_ZERO);
+      expect(await linethRollup.currentDataRollingHash()).to.equal(legacyFinalizedShnarf);
+      expect(await linethRollup.currentDataAvailabilityOffset()).to.equal(0n);
+      expect(await linethRollup.dataRollingHashExists(legacyFinalizedShnarf)).to.equal(1n);
+    });
+
+    it("Fails to reinitialize twice", async () => {
       await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV10", []);
 
       const secondUpgradeCall = reinitializeUpgradeableProxy(
@@ -854,7 +775,7 @@ describe("Lineth Rollup contract", () => {
         proofConfig: {
           proofData: blobAggregatedProof1To155,
           blobParentShnarfIndex: 4,
-          shnarfDataGenerator: generateBlobParentShnarfData,
+          shnarfDataGenerator: generateBlobParentDataRollingHash,
           isMultiple: false,
         },
       });

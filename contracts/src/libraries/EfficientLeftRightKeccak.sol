@@ -13,8 +13,7 @@ library EfficientLeftRightKeccak {
    * @param _right Right value.
    */
   function _efficientKeccak(bytes32 _left, bytes32 _right) internal pure returns (bytes32 value) {
-    /// @solidity memory-safe-assembly
-    assembly {
+    assembly ("memory-safe") {
       mstore(0x00, _left)
       mstore(0x20, _right)
       value := keccak256(0x00, 0x40)
@@ -27,8 +26,7 @@ library EfficientLeftRightKeccak {
    * @param _right Right value.
    */
   function _efficientKeccak(uint256 _left, address _right) internal pure returns (bytes32 value) {
-    /// @solidity memory-safe-assembly
-    assembly {
+    assembly ("memory-safe") {
       mstore(0x00, _left)
       mstore(0x20, _right)
       value := keccak256(0x00, 0x40)

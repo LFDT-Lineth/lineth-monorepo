@@ -19,7 +19,6 @@
 pragma solidity 0.8.33;
 
 import { IPlonkVerifier } from "./interfaces/IPlonkVerifier.sol";
-import { Mimc } from "../libraries/Mimc.sol";
 
 contract PlonkVerifierDev is IPlonkVerifier {
   uint256 private constant R_MOD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -1372,7 +1371,7 @@ contract PlonkVerifierDev is IPlonkVerifier {
   function _computeChainConfigurationHash(
     ChainConfigurationParameter[] memory _chainConfiguration
   ) internal pure returns (bytes32 chainConfigurationHash) {
-    bytes memory mimcPayload;
+    bytes memory hashPayload;
     bytes32 value;
     for (uint256 i; i < _chainConfiguration.length; i++) {
       value = _chainConfiguration[i].value;
@@ -1383,7 +1382,7 @@ contract PlonkVerifierDev is IPlonkVerifier {
       }
 
       if (firstBitIsZero) {
-        mimcPayload = bytes.concat(mimcPayload, value);
+        hashPayload = bytes.concat(hashPayload, value);
       } else {
         bytes32 most;
         bytes32 least;
@@ -1392,11 +1391,11 @@ contract PlonkVerifierDev is IPlonkVerifier {
           most := shr(128, value)
           least := and(value, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         }
-        mimcPayload = bytes.concat(mimcPayload, most, least);
+        hashPayload = bytes.concat(hashPayload, most, least);
       }
     }
 
-    chainConfigurationHash = Mimc.hash(mimcPayload);
+    chainConfigurationHash = keccak256(hashPayload);
   }
 
   /// @notice Get the chain configuration.

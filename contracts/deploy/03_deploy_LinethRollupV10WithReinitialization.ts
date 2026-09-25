@@ -3,21 +3,15 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, getRequiredEnvVar, requireAddressFromRegistryOrEnv } from "../common/helpers";
+import { tryVerifyContract, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 const func: DeployFunction = withSignerUiSession(
-  "03_deploy_LinethRollupV8WithReinitialization.ts",
+  "03_deploy_LinethRollupV10WithReinitialization.ts",
   async function (hre: HardhatRuntimeEnvironment) {
     const signer = await getUiSigner(hre);
 
     const proxyAddress = requireAddressFromRegistryOrEnv(hre.network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
-    const forcedTransactionFeeInWei = getRequiredEnvVar("LINETH_ROLLUP_FORCED_TRANSACTION_FEE_IN_WEI");
-    const addressFilter = requireAddressFromRegistryOrEnv(
-      hre.network.name,
-      "AddressFilter",
-      "LINETH_ROLLUP_ADDRESS_FILTER",
-    );
 
     const contractName = "LinethRollup";
 
@@ -41,17 +35,12 @@ const func: DeployFunction = withSignerUiSession(
         [
           proxyAddress,
           newImplementation,
-          // `reinitializeLineaRollupV9` matches the function name defined in LinethRollup.sol -
-          // not a mismatch, the function itself was not renamed as part of the rebrand.
-          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV9", [
-            forcedTransactionFeeInWei,
-            addressFilter,
-          ]),
+          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV10", []),
         ],
       ),
     ]);
 
-    console.log("Encoded upgradeAndCall calldata for reinitializeLineaRollupV9:");
+    console.log("Encoded upgradeAndCall calldata for reinitializeLineaRollupV10:");
     console.log("\n", upgradeCallWithReinitialization, "\n");
 
     await tryVerifyContract(implementationAddress);
@@ -59,4 +48,4 @@ const func: DeployFunction = withSignerUiSession(
 );
 
 export default func;
-func.tags = ["LinethRollupV8WithReinitialization"];
+func.tags = ["LinethRollupV10WithReinitialization"];
