@@ -1,5 +1,6 @@
 plugins {
   id 'lineth.kotlin-library-conventions'
+  id 'java-test-fixtures'
 }
 
 description = "Vertx utilities"

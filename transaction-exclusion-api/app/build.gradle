@@ -48,6 +48,7 @@ dependencies {
   testImplementation testFixtures(project(":jvm-libs:generic:extensions:kotlin"))
   testImplementation testFixtures(project(":jvm-libs:generic:persistence:db"))
   testImplementation testFixtures(project(":transaction-exclusion-api:core"))
+  testImplementation testFixtures(project(":jvm-libs:generic:vertx-helper"))
 }
 
 application {
