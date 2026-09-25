@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import { LinethRollup } from "src/rollup/LinethRollup.sol";
 import { ILinethRollupBase } from "src/rollup/interfaces/ILinethRollupBase.sol";
 import { CalldataBlobAcceptor } from "src/rollup/dataAvailability/CalldataBlobAcceptor.sol";
+import { EfficientLeftRightKeccak } from "src/libraries/EfficientLeftRightKeccak.sol";
 
 import { IPauseManager } from "src/security/pausing/interfaces/IPauseManager.sol";
 import { IPermissionsManager } from "src/security/access/interfaces/IPermissionsManager.sol";
@@ -16,7 +17,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 /// @dev Mirrors TestLinethRollup: production LinethRollup plus calldata DA for unit tests.
 contract LinethRollupTestHelper is LinethRollup, CalldataBlobAcceptor {
   function computeDataRollingHash(bytes32 _parentDataRollingHash, bytes32 _chunkHash) external pure returns (bytes32) {
-    return _computeDataRollingHash(_parentDataRollingHash, _chunkHash);
+    return EfficientLeftRightKeccak._efficientKeccak(_parentDataRollingHash, _chunkHash);
   }
 
   function setSlotValue(uint256 _slot, uint256 _value) external {
@@ -154,7 +155,6 @@ contract LinethRollupTest is Test {
     linethRollup.submitDataAsCalldata(compressedData, parentDataRollingHash, endDataRollingHash);
 
     ILinethRollupBase.FinalizationDataV5 memory finalizationData;
-    finalizationData.parentStateRootHash = bytes32(0);
     finalizationData.parentBlockHash = INITIAL_BLOCK_HASH;
     finalizationData.endBlockNumber = 10;
     finalizationData.lastFinalizedTimestamp = 1;

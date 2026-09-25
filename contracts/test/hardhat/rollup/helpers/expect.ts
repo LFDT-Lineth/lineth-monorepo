@@ -103,7 +103,6 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     proofData.aggregatedProof,
     0,
     [
-      finalizationData.parentStateRootHash,
       finalizationData.parentBlockHash,
       BigInt(finalizationData.endBlockNumber),
       finalizationData.lastFinalizedTimestamp,

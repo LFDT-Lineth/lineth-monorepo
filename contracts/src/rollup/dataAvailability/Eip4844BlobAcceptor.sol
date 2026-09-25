@@ -2,6 +2,7 @@
 pragma solidity ^0.8.33;
 
 import { IAcceptEip4844Blobs } from "./interfaces/IAcceptEip4844Blobs.sol";
+import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKeccak.sol";
 import { LocalDataRollingHashProvider } from "./LocalDataRollingHashProvider.sol";
 import { DataRollingHashAcceptorBase } from "./DataRollingHashAcceptorBase.sol";
 
@@ -53,7 +54,7 @@ abstract contract Eip4844BlobAcceptor is
           break;
         }
 
-        computedDataRollingHash = _computeDataRollingHash(computedDataRollingHash, currentBlobHash);
+        computedDataRollingHash = EfficientLeftRightKeccak._efficientKeccak(computedDataRollingHash, currentBlobHash);
       }
     }
 
