@@ -169,3 +169,4 @@
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
 - *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
 - *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Update gradle to v9.8 (#4032)

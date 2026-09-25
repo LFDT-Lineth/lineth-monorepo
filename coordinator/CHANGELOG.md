@@ -12,6 +12,7 @@
 
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
 - *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features
