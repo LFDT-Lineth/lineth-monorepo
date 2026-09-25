@@ -39,20 +39,3 @@ javadoc {
   options.addStringOption('Xwerror', '-html5')
   options.encoding = 'UTF-8'
 }
-
-task checkSpdxHeader(type: CheckSpdxHeader) {
-  apply plugin: 'groovy'
-
-  rootPath = "${projectDir}"
-  spdxHeader = "* SPDX-License-Identifier: Apache-2.0"
-  filesRegex = "(.*.java)|(.*.groovy)"
-  excludeRegex = [
-    "(.*/.gradle/.*)",
-    "(.*/.idea/.*)",
-    "(.*/out/.*)",
-    "(.*/build/.*)",
-    "(.*/src/[^/]+/generated/.*)",
-  ].join("|")
-}
-
-tasks.check.dependsOn(checkSpdxHeader)

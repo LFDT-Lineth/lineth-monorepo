@@ -29,7 +29,3 @@ dependencies {
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation "net.javacrumbs.json-unit:json-unit-assertj:${libs.versions.jsonUnit.get()}"
 }
-
-jar {
-  dependsOn configurations.runtimeClasspath
-}
