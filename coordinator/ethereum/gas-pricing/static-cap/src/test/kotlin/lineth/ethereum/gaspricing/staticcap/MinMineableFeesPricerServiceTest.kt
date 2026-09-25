@@ -93,7 +93,7 @@ class MinMineableFeesPricerServiceTest {
           verify(mockGasPriceUpdater, atLeastOnce()).updateMinerGasPrice(expectedGasPrice.toULong())
         }
     }.also {
-      monitor.stop()
+      monitor.stop().get()
     }.getOrThrow()
   }
 
