@@ -45,9 +45,12 @@ fn runMerkleCase(allocator: std.mem.Allocator, case: merkle_fixtures.MerkleCase)
         .leaf = toDigest(case.leaf),
         .siblings = try toDigests(allocator, case.siblings),
     };
-    const recovered = try branch.recoverRoot(case.index);
-    const matches = poseidon2.eql(recovered, toDigest(case.root));
-    try std.testing.expectEqual(case.expect_match, matches);
+    const frontier = [_]poseidon2.Digest{toDigest(case.root)};
+    if (case.expect_match) {
+        try branch.authenticateToCap(case.index, &frontier);
+    } else {
+        try std.testing.expectError(error.InvalidCap, branch.authenticateToCap(case.index, &frontier));
+    }
 }
 
 test "merkle branches from prover-ray vectors" {
@@ -68,7 +71,16 @@ test "merkle branch with no siblings is rejected before any hashing" {
     // A pure shape check: no tree needed, so hand-written rather than
     // generated (unlike the other merkle cases, which come from a real tree).
     const branch = merkle.Branch{ .leaf = poseidon2.zeroDigest(), .siblings = &.{} };
-    try std.testing.expectError(error.EmptyBranch, branch.recoverRoot(0));
+    const frontier = [_]poseidon2.Digest{poseidon2.zeroDigest()};
+    try std.testing.expectError(error.InvalidFrontier, branch.authenticateToCap(0, &frontier));
+}
+
+test "input merkle opening rejects frontier depth equal to tree height" {
+    // Frontier depth one leaves no branch level below a height-one tree. This
+    // must be rejected before sibling-count subtraction or bottom-row access.
+    const opening = merkle.InputTreeOpening{ .siblings = &.{}, .leaves = &.{null} };
+    const frontier = [_]poseidon2.Digest{ poseidon2.zeroDigest(), poseidon2.zeroDigest() };
+    try std.testing.expectError(error.InvalidFrontier, opening.authenticateToCap(0, &frontier));
 }
 
 // ─── query.fri: frozen vectors from a real multi-round, multi-level proof ──
@@ -140,8 +152,12 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
         final_poly[0] = wrongExt();
     }
 
+    var round_caps: [params.numRounds() - 1]merkle.MerkleCap = undefined;
+    for (&round_caps) |*cap| cap.* = .{ .nodes = &.{}, .aux = &.{} };
+
     const proof = fri.Proof{
         .round_roots = round_roots,
+        .round_caps = &round_caps,
         .final_poly = final_poly,
         .running_queries = &.{running_branches},
     };
@@ -152,7 +168,13 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
     // initialize it rather than leaving allocator garbage.
     const rounds = try allocator.alloc(fri.Pair, params.numRounds());
     @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });
-    const running_result = fri.resolveRunningLayers(params, round_roots, running_branches, case.position, rounds);
+    var frontiers: [params.numRounds()][]const poseidon2.Digest = undefined;
+    var root_frontiers: [params.numRounds()][1]poseidon2.Digest = undefined;
+    for (round_roots, 0..) |root, i| {
+        root_frontiers[i + 1][0] = root;
+        frontiers[i + 1] = root_frontiers[i + 1][0..];
+    }
+    const running_result = fri.resolveRunningLayers(params, &frontiers, running_branches, case.position, rounds);
 
     if (corrupt == .running_sibling) {
         try std.testing.expectError(error.MerkleProofInvalid, running_result);
@@ -219,10 +241,10 @@ test "resolveRunningLayers and checkFolds reject undersized buffers" {
     const params = fold_fixtures.fold_cases[0].params;
     var rounds: [1]fri.Pair = undefined;
     const branches: [0]merkle.Branch = .{};
-    const roots: [0]poseidon2.Digest = .{};
+    const frontiers: [0][]const poseidon2.Digest = .{};
     try std.testing.expectError(
         error.InvalidRunningLayerShape,
-        fri.resolveRunningLayers(params, &roots, &branches, 0, &rounds),
+        fri.resolveRunningLayers(params, &frontiers, &branches, 0, &rounds),
     );
 
     var aux: [1]?fri.Pair = .{null};

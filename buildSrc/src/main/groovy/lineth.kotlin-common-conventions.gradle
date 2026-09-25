@@ -22,6 +22,7 @@ dependencies {
   // artifact keeps one (e.g. jackson-annotations:2.22 vs jackson-databind:2.22.1), so individual
   // jackson-* dependencies must be declared WITHOUT a version and let this platform resolve it.
   api platform("com.fasterxml.jackson:jackson-bom:${libs.versions.jackson.get()}")
+  api platform("org.bouncycastle:bc-jdk18on-bom:${libs.versions.bouncycastle.get()}")
   //<utils>
   implementation "com.michael-bull.kotlin-result:kotlin-result:${libs.versions.kotlinResult.get()}"
   implementation ("tech.pegasys.teku.internal:async:${libs.versions.teku.get()}") {

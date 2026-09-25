@@ -1,23 +1,21 @@
-// Package filesystem provides a file queue around jobadapter.Runner.
-//
-// Adapter finds request files, claims them with an atomic rename, passes their
-// contents to the runner, writes response files, and archives completed
-// requests.
+// Package filesystem is the queue supervisor. It watches one request folder per
+// pipeline, picks the next request by end block (earliest first), claims it with
+// an atomic rename tagged by the worker id, runs a prover on it (which writes the
+// response), and archives the request tagged with the prover's exit code. On
+// startup it requeues any request left in progress under its own worker id by a
+// previous crashed run.
 package filesystem
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 )
 
 const (
@@ -27,88 +25,129 @@ const (
 
 	inProgressSuffix = ".inprogress"
 	successSuffix    = ".success"
-	failureSuffix    = ".failure"
 
 	defaultPollInterval = time.Second
 
-	dirPerm  = 0o750
-	filePerm = 0o600
+	dirPerm = 0o750
+
+	// scorePriorityBase keeps the per-queue priority a tiebreaker below the
+	// end-block term, so end block always dominates the order.
+	scorePriorityBase = 100
 )
 
-// Config holds the filesystem queue layout and poll cadence.
-type Config struct {
-	// RequestsRootDir contains the requests/, responses/, and requests-done/
-	// subdirectories; [New] creates them if missing.
+// RunProver runs a prover for one request file, writing the response file, and
+// returns its exit code (0 = success). A non-nil error means the prover could not
+// be run at all, which is different from running and failing (a non-zero code).
+type RunProver func(ctx context.Context, requestPath, responsePath string) (exitCode int, err error)
+
+// Queue is one pipeline's request folder plus its priority. Priority is only a
+// tiebreaker for requests with the same end block (lower runs first).
+type Queue struct {
 	RequestsRootDir string
-	// PollInterval is how often [Adapter.Run] rescans requests/ for new work.
+	Priority        int
+}
+
+// Config holds the queues to watch, the worker id, and the poll cadence.
+type Config struct {
+	// Queues is one entry per pipeline (execution, rollup, aggregation).
+	Queues []Queue
+	// WorkerID tags in-progress files so a restarted worker requeues its own
+	// crashed jobs without touching a live sibling's. Defaults to "unknown".
+	WorkerID string
+	// PollInterval is how often [Adapter.Run] rescans when the queues are empty.
 	// Defaults to one second when unset.
 	PollInterval time.Duration
-	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
-	// responses and must be set by runtime config.
-	ProverVersion string
 }
 
-// failureResponseBody is used only when the filesystem adapter cannot read a
-// claimed request, before jobadapter.Runner can build its own failure response.
-type failureResponseBody struct {
-	JobID       string                 `json:"jobId"`
-	Status      jobadapter.RunStatus   `json:"status"`
-	FailureCode jobadapter.FailureCode `json:"failureCode,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-}
-
-// Adapter polls a filesystem request queue and sends each request to
-// jobadapter.Runner.
+// Adapter polls the request queues and runs a prover for each request, earliest
+// end block first.
 type Adapter struct {
-	cfg    Config
-	runner *jobadapter.Runner
+	cfg         Config
+	spawn       RunProver
+	claimSuffix string // ".inprogress.<worker-id>"
 }
 
-// New creates the requests/, responses/, and requests-done/ subdirectories
-// under cfg.RequestsRootDir and returns an [Adapter] ready to run.
-func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
-	if cfg.RequestsRootDir == "" {
-		return nil, fmt.Errorf("jobadapter/filesystem.New: RequestsRootDir must be set")
+// New creates the requests/, responses/, and requests-done/ subdirectories under
+// each queue's root and returns an [Adapter] ready to run.
+func New(cfg Config, spawn RunProver) (*Adapter, error) {
+	if len(cfg.Queues) == 0 {
+		return nil, fmt.Errorf("jobadapter/filesystem.New: at least one queue must be set")
 	}
-	if prover == nil {
-		return nil, fmt.Errorf("jobadapter/filesystem.New: prover must not be nil")
-	}
-	if cfg.ProverVersion == "" {
-		return nil, fmt.Errorf("jobadapter/filesystem.New: ProverVersion must be set")
+	if spawn == nil {
+		return nil, fmt.Errorf("jobadapter/filesystem.New: spawn function must not be nil")
 	}
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
 	}
-	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion)
-	if err != nil {
-		return nil, err
+	if cfg.WorkerID == "" {
+		cfg.WorkerID = "unknown"
 	}
 
-	a := &Adapter{cfg: cfg, runner: runner}
-	for _, dir := range []string{a.requestsDir(), a.responsesDir(), a.doneDir()} {
-		if err := os.MkdirAll(dir, dirPerm); err != nil {
-			return nil, fmt.Errorf("jobadapter/filesystem.New: creating %s: %w", dir, err)
+	a := &Adapter{cfg: cfg, spawn: spawn, claimSuffix: inProgressSuffix + "." + cfg.WorkerID}
+	for _, q := range cfg.Queues {
+		dirs := []string{
+			requestsDir(q.RequestsRootDir),
+			responsesDir(q.RequestsRootDir),
+			doneDir(q.RequestsRootDir),
 		}
+		for _, dir := range dirs {
+			if err := os.MkdirAll(dir, dirPerm); err != nil {
+				return nil, fmt.Errorf("jobadapter/filesystem.New: creating %s: %w", dir, err)
+			}
+		}
+	}
+	if err := a.recoverOrphans(); err != nil {
+		return nil, err
 	}
 	return a, nil
 }
 
-func (a *Adapter) requestsDir() string {
-	return filepath.Join(a.cfg.RequestsRootDir, requestsSubDir)
+// recoverOrphans requeues any request this worker claimed but did not finish
+// before a crash: a file still tagged with this worker's claim suffix is renamed
+// back, and any partial response temp is removed. A live sibling's in-progress
+// file carries a different worker id, so it is left untouched.
+func (a *Adapter) recoverOrphans() error {
+	for _, q := range a.cfg.Queues {
+		rdir := requestsDir(q.RequestsRootDir)
+		entries, err := os.ReadDir(rdir)
+		if err != nil {
+			return fmt.Errorf("jobadapter: reading requests dir: %w", err)
+		}
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), a.claimSuffix) {
+				continue
+			}
+			name := strings.TrimSuffix(e.Name(), a.claimSuffix)
+			if err := os.Rename(filepath.Join(rdir, e.Name()), filepath.Join(rdir, name)); err != nil {
+				return fmt.Errorf("jobadapter: requeuing %s: %w", e.Name(), err)
+			}
+			_ = os.Remove(filepath.Join(responsesDir(q.RequestsRootDir), e.Name()))
+		}
+	}
+	return nil
 }
-func (a *Adapter) responsesDir() string {
-	return filepath.Join(a.cfg.RequestsRootDir, responsesSubDir)
-}
-func (a *Adapter) doneDir() string { return filepath.Join(a.cfg.RequestsRootDir, doneSubDir) }
 
-// Run polls requests/ every cfg.PollInterval until ctx is cancelled, draining
-// the request it is processing before returning nil.
+func requestsDir(root string) string  { return filepath.Join(root, requestsSubDir) }
+func responsesDir(root string) string { return filepath.Join(root, responsesSubDir) }
+func doneDir(root string) string      { return filepath.Join(root, doneSubDir) }
+
+// Run picks the highest-priority claimable request, runs it, and rescans; when the
+// queues are empty it waits PollInterval. It returns nil when ctx is cancelled.
 func (a *Adapter) Run(ctx context.Context) error {
 	ticker := time.NewTicker(a.cfg.PollInterval)
 	defer ticker.Stop()
 	for {
-		if _, err := a.processOnce(ctx); err != nil {
+		processed, err := a.processNext(ctx)
+		if err != nil {
 			return err
+		}
+		if processed {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+			continue
 		}
 		select {
 		case <-ctx.Done():
@@ -118,151 +157,128 @@ func (a *Adapter) Run(ctx context.Context) error {
 	}
 }
 
-// processOnce scans requests/ once, processes every pending request file
-// (those ending in .json), and returns how many it handled. Already-claimed
-// files such as req.json.inprogress are skipped because they no longer end in
-// .json. It stops early if ctx is cancelled, leaving the remaining files for
-// the next scan.
-func (a *Adapter) processOnce(ctx context.Context) (int, error) {
-	entries, err := os.ReadDir(a.requestsDir())
-	if err != nil {
-		return 0, fmt.Errorf("jobadapter: reading requests dir: %w", err)
-	}
-
-	processed := 0
-	for _, entry := range entries {
-		select {
-		case <-ctx.Done():
-			return processed, nil // cancellation is graceful, not an error
-		default:
-		}
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-		handled, err := a.processRequest(ctx, entry.Name())
-		if err != nil {
-			return processed, err
-		}
-		if handled {
-			processed++
-		}
-	}
-	return processed, nil
+// pending is one claimable request across the queues.
+type pending struct {
+	root  string
+	name  string
+	score int
 }
 
-// processRequest claims one request (atomic rename to .inprogress), runs it,
-// writes its response, and archives it. It returns false without error when the
-// claim is lost to another worker. A returned error is an infrastructure
-// failure (filesystem), not a proof failure; those are recorded in the
-// response.
-func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error) {
-	src := filepath.Join(a.requestsDir(), name)
-	claimed := src + inProgressSuffix
+// processNext scans every queue, orders the pending requests by score (end block
+// first, priority as tiebreaker), and processes the best claimable one. It reports
+// whether it processed a request.
+func (a *Adapter) processNext(ctx context.Context) (bool, error) {
+	var jobs []pending
+	for _, q := range a.cfg.Queues {
+		entries, err := os.ReadDir(requestsDir(q.RequestsRootDir))
+		if err != nil {
+			return false, fmt.Errorf("jobadapter: reading requests dir: %w", err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				continue
+			}
+			jobs = append(jobs, pending{
+				root:  q.RequestsRootDir,
+				name:  entry.Name(),
+				score: scorePriorityBase*endBlock(entry.Name()) + q.Priority,
+			})
+		}
+	}
+	if len(jobs) == 0 {
+		return false, nil
+	}
+	sort.SliceStable(jobs, func(i, j int) bool { return jobs[i].score < jobs[j].score })
+
+	for _, job := range jobs {
+		select {
+		case <-ctx.Done():
+			return false, nil
+		default:
+		}
+		claimed, err := a.processRequest(ctx, job.root, job.name)
+		if err != nil {
+			return false, err
+		}
+		if claimed {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// endBlock reads the end block from a "<start>-<end>-getZk...json" filename. An
+// unparseable name scores 0 (processed first, then fails and is archived).
+func endBlock(name string) int {
+	parts := strings.SplitN(name, "-", 3)
+	if len(parts) < 2 {
+		return 0
+	}
+	n, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// processRequest claims one request, runs the prover, publishes the response, and
+// archives the request tagged with the exit code. It returns false without error
+// when the claim is lost or the prover could not be run. A returned error is a
+// filesystem failure.
+func (a *Adapter) processRequest(ctx context.Context, root, name string) (bool, error) {
+	src := filepath.Join(requestsDir(root), name)
+	claimed := src + a.claimSuffix
 	if err := os.Rename(src, claimed); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return false, nil // another worker claimed it first
+			return false, nil // another supervisor claimed it first
 		}
 		return false, fmt.Errorf("jobadapter: claiming %s: %w", name, err)
 	}
 
-	runResult := a.run(ctx, name, claimed)
+	respTmp := filepath.Join(responsesDir(root), name+a.claimSuffix)
+	exitCode, err := a.spawn(ctx, claimed, respTmp)
+	if err != nil {
+		// The prover could not be run; leave the request for the next scan.
+		_ = os.Remove(respTmp)
+		_ = os.Rename(claimed, src)
+		return false, nil //nolint:nilerr // a prover we cannot spawn is retried next scan, not a fatal error
+	}
 
-	if err := a.writeResponse(name, runResult.ResponseBody); err != nil {
-		_ = os.Rename(claimed, src) // best-effort: avoid stranding the claimed request
+	if err := publishResponse(respTmp, filepath.Join(responsesDir(root), name)); err != nil {
+		_ = os.Rename(claimed, src)
 		return false, err
 	}
-	if err := a.archive(claimed, name, runResult.Status == jobadapter.RunStatusSuccess); err != nil {
-		_ = os.Rename(claimed, src) // best-effort: allow retry after archive infrastructure failures
+	if err := archive(claimed, filepath.Join(doneDir(root), name), exitCode); err != nil {
+		_ = os.Rename(claimed, src)
 		return false, err
 	}
 	return true, nil
 }
 
-// run reads the claimed request and hands it to Runner. Read failures map to
-// failure responses so the request can still be archived and the loop can
-// continue.
-func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunResult {
-	id := strings.TrimSuffix(name, ".json")
-
-	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RequestsRootDir/requests
-	if err != nil {
-		return jobadapter.RunResult{
-			ResponseBody: failureResponse(id, jobadapter.FailureCodeInternalError, err),
-			Status:       jobadapter.RunStatusFailed,
-			FailureCode:  jobadapter.FailureCodeInternalError,
-			Err:          err,
+// publishResponse moves the prover's response into place atomically. A prover that
+// crashed before writing leaves no temp file, which is not an error here.
+func publishResponse(respTmp, respFinal string) error {
+	if _, err := os.Stat(respTmp); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
 		}
+		return fmt.Errorf("jobadapter: response %s: %w", respFinal, err)
 	}
-	return a.runner.Run(ctx, jobadapter.RunRequest{
-		ID:   id,
-		Type: backend.ProofTypeL2Execution,
-		Body: data,
-	})
-}
-
-func failureResponse(id string, code jobadapter.FailureCode, err error) failureResponseBody {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return failureResponseBody{JobID: id, Status: jobadapter.RunStatusFailed, FailureCode: code, Error: msg}
-}
-
-func (a *Adapter) writeResponse(name string, resp any) error {
-	data, err := json.MarshalIndent(resp, "", "  ")
-	if err != nil {
-		return fmt.Errorf("jobadapter: encoding response for %s: %w", name, err)
-	}
-	if err := writeFileAtomic(filepath.Join(a.responsesDir(), name), data, filePerm); err != nil {
-		return fmt.Errorf("jobadapter: writing response for %s: %w", name, err)
+	if err := os.Rename(respTmp, respFinal); err != nil {
+		return fmt.Errorf("jobadapter: publishing response %s: %w", respFinal, err)
 	}
 	return nil
 }
 
-func writeFileAtomic(path string, data []byte, perm fs.FileMode) error {
-	dir := filepath.Dir(path)
-	base := filepath.Base(path)
-
-	tmp, err := os.CreateTemp(dir, "."+base+".tmp-*")
-	if err != nil {
-		return err
+// archive moves the claimed request into requests-done/, tagging the outcome with
+// the exit code (.success for 0, .failure.<code> otherwise) so it can be monitored.
+func archive(claimed, doneBase string, exitCode int) error {
+	dst := doneBase + successSuffix
+	if exitCode != 0 {
+		dst = fmt.Sprintf("%s.failure.%d", doneBase, exitCode)
 	}
-	tmpName := tmp.Name()
-	keepTemp := false
-	defer func() {
-		if !keepTemp {
-			_ = os.Remove(tmpName)
-		}
-	}()
-
-	if err := tmp.Chmod(perm); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return err
-	}
-	keepTemp = true
-	return nil
-}
-
-// archive moves the claimed request into requests-done/, tagging failures so a
-// human can tell them apart.
-func (a *Adapter) archive(claimed, name string, proofSucceeded bool) error {
-	suffix := failureSuffix
-	if proofSucceeded {
-		suffix = successSuffix
-	}
-	dst := filepath.Join(a.doneDir(), name+suffix)
 	if err := os.Rename(claimed, dst); err != nil {
-		return fmt.Errorf("jobadapter: archiving %s: %w", name, err)
+		return fmt.Errorf("jobadapter: archiving %s: %w", filepath.Base(claimed), err)
 	}
 	return nil
 }

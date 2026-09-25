@@ -13,6 +13,7 @@ import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexString
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,17 @@ import kotlin.time.Instant
  * mappers (which resolve inlined proofs through a transport) are exercised by the file-based client tests.
  */
 class RiscvProofRequestDtoMapperTest {
+
+  @Test
+  fun `serialized payload includes slot zero and omits absent slot`() {
+    val mapper = JsonSerialization.proofResponseMapperV1
+    val dto = executionPayload().copy(slotNumber = 0UL).fromDomainObject()
+    val json = mapper.readTree(mapper.writeValueAsString(dto))
+    assertThat(json.get("slotNumber").longValue()).isZero()
+
+    val oldPayload = executionPayload().copy(slotNumber = null).fromDomainObject()
+    assertThat(mapper.readTree(mapper.writeValueAsString(oldPayload)).has("slotNumber")).isFalse()
+  }
 
   private val programVk = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_VK
   private val chainId = 59144L
@@ -56,7 +68,7 @@ class RiscvProofRequestDtoMapperTest {
                 newPayloadRequest = NewPayloadRequestDto(
                   executionPayload = expectedExecutionPayloadDto(execution.executionPayload),
                   versionedHashes = emptyList(),
-                  parentBeaconBlockRoot = ByteArray(32).encodeHex(),
+                  parentBeaconBlockRoot = execution.parentBeaconBlockRoot.encodeHex(),
                   executionRequests = execution.executionRequests.map { it.encodeHex() },
                 ),
                 executionWitness = ExecutionWitnessDto(
@@ -84,7 +96,14 @@ class RiscvProofRequestDtoMapperTest {
             forkName = forkName,
           ),
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000501),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000501,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+          endBlockTimestamp = request.endBlockTimestamp.epochSeconds,
+          transactionsCount = execution.executionPayload.transactions.size.toLong(),
+          totalGasUsed = execution.executionPayload.gasUsed.toLong(),
+        ),
       ),
     )
   }
@@ -136,7 +155,11 @@ class RiscvProofRequestDtoMapperTest {
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
           startOffset = 0,
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000510),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000510,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -152,7 +175,11 @@ class RiscvProofRequestDtoMapperTest {
       RestfulRollupAggregationProofRequestDto(
         programVk = programVk,
         proofRequest = RestfulRollupAggregationProofRequestParamsDto(rollupProofIndexes = rollupProofs),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000520,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -205,7 +232,11 @@ class RiscvProofRequestDtoMapperTest {
           parentDataRollingHash = request.parentDataRollingHash.encodeHex(),
           startOffset = 0,
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000520),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000520,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -257,7 +288,11 @@ class RiscvProofRequestDtoMapperTest {
             )
           },
         ),
-        metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000567),
+        metadata = MetaDataDto(
+          startBlockNumber = 1000501,
+          endBlockNumber = 1000567,
+          startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
+        ),
       ),
     )
   }
@@ -281,6 +316,7 @@ class RiscvProofRequestDtoMapperTest {
     executions = listOf(
       ExecutionInfo(
         blockNumber = 1000501UL,
+        parentBeaconBlockRoot = ByteArray(32) { 0x42 },
         executionPayload = executionPayload(),
         executionWitness = ExecutionWitness(
           state = listOf(byteArrayOf(0x11)),
@@ -324,7 +360,8 @@ class RiscvProofRequestDtoMapperTest {
     ),
     blobGasUsed = 0UL,
     excessBlobGas = 0UL,
-    blockAccessList = byteArrayOf(),
+    blockAccessList = byteArrayOf(0xc0.toByte()),
+    slotNumber = 42UL,
   )
 
   private fun expectedExecutionPayloadDto(payload: ExecutionPayload): ExecutionPayloadDto = ExecutionPayloadDto(
@@ -353,6 +390,7 @@ class RiscvProofRequestDtoMapperTest {
     blobGasUsed = payload.blobGasUsed.toLong(),
     excessBlobGas = payload.excessBlobGas.toLong(),
     blockAccessList = payload.blockAccessList.encodeHex(),
+    slotNumber = payload.slotNumber?.toLong(),
   )
 
   private fun blockIntervalProofIndex(start: ULong, end: ULong): BlockIntervalProofIndex = BlockIntervalProofIndex(

@@ -136,7 +136,7 @@ class BlockCreationMonitorTest {
 
   @AfterEach
   fun afterEach(vertx: Vertx) {
-    monitor.stop()
+    monitor.stop().get()
     vertx.close().get()
   }
 

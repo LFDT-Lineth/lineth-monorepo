@@ -40,7 +40,7 @@ import lineth.coordinator.app.conflation.TracesClientFactory
 import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
-import lineth.coordinator.clients.prover.ProverClientFactory
+import lineth.coordinator.clients.prover.DefaultProverClientFactory
 import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
@@ -199,8 +199,10 @@ class ConflationBacktestingApp(
       log = log,
     )
 
-  private val preRiscvProverClientFactory = ProverClientFactory(
+  private val preRiscvProverClientFactory = DefaultProverClientFactory(
     vertx = vertx,
+    chainId = l2EthClient.ethChainId().get().toULong(),
+    l2MessageServiceAddress = mainCoordinatorConfig.protocol.l2.contractAddress,
     config = backtestingCoordinatorConfig.proversConfig,
     metricsFacade = metricsFacade,
   )

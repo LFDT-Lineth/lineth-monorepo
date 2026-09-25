@@ -35,7 +35,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
   init {
-    target = "4"
+    target = "5"
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-aggregations-dao")

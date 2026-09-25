@@ -24,6 +24,8 @@ dependencies {
 
   implementation(project(':jvm-libs:linea:teku-web3j'))
 
+  api "org.web3j:core:${libs.versions.web3j.get()}"
+
   api "tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}"
 
   api("tech.pegasys.teku.internal:time:${libs.versions.teku.get()}")
