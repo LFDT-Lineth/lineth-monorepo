@@ -34,3 +34,7 @@ runs:
       with:
         path: ${{ steps.cache.outputs.path }}
         key: ${{ steps.cache.outputs.prefix }}${{ hashFiles(inputs.cache-dependency-path) }}
+        # Prefix fallback: on a lockfile change, restore the previous store so
+        # pnpm downloads only the dependency diff instead of refetching all.
+        restore-keys: |
+          ${{ steps.cache.outputs.prefix }}

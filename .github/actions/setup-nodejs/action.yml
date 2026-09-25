@@ -36,14 +36,12 @@ runs:
       with:
         package_json_file: ${{ inputs.working-directory }}/package.json
 
-    # Node only: the pnpm store cache is handled below so it can be skipped
-    # when the node_modules cache hits exactly (pnpm 12 needs no store when
-    # there is nothing to link).
     - uses: ./.github/actions/setup-node-with-cache
       name: setup-nodejs
       with:
         node-version-file: ${{ inputs.working-directory }}/.nvmrc
-        cache: ''
+        cache: 'pnpm'
+        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
 
     - id: versions
       name: Capture versions
@@ -51,56 +49,6 @@ runs:
       run: |
         echo "node=$(node -v | sed 's/^v//')" >> "$GITHUB_OUTPUT"
         echo "pnpm=$(pnpm -v)" >> "$GITHUB_OUTPUT"
-
-    # Caching node_modules (incl. the .pnpm virtual store) skips the hardlink
-    # phase, which dominates install time once the store cache is warm.
-    # Lockfile + layout-affecting config are hashed into the key; a stale
-    # fallback hit is safe because pnpm reconciles node_modules against the
-    # frozen lockfile (installs the diff, prunes extraneous packages).
-    - name: Resolve node_modules paths
-      id: node-modules-paths
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        PNPM_INSTALL_OPTIONS: ${{ inputs.pnpm-install-options }}
-      shell: bash
-      run: |
-        {
-          echo 'paths<<EOF'
-          pnpm ls -r --depth -1 --parseable | sed 's#$#/node_modules#'
-          echo 'EOF'
-        } >> "$GITHUB_OUTPUT"
-        # Filtered installs (e.g. --filter contracts) produce a partial
-        # node_modules; the options hash keeps each install scope in its own
-        # cache entry so a partial install never poisons the full one.
-        echo "options-hash=$(printf '%s' "$PNPM_INSTALL_OPTIONS" | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
-        # Same key format actions/setup-node uses for its pnpm store cache, so
-        # entries stay shared with workflows caching through setup-node.
-        arch=$(printf '%s' "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')
-        echo "store-path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-        echo "store-key=node-cache-${RUNNER_OS}-${arch}-pnpm-$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-
-    - name: Restore node_modules
-      id: node-modules-cache
-      uses: ./.github/actions/cache
-      with:
-        # Exact workspace-package node_modules set from pnpm itself: any
-        # layout/depth, without globbing into the .pnpm virtual store.
-        path: ${{ steps.node-modules-paths.outputs.paths }}
-        # node is in the key because callers without --ignore-scripts build
-        # native modules (c-kzg), whose binaries are ABI-tied to the Node version.
-        key: node-modules-${{ runner.os }}-${{ runner.arch }}-pnpm-${{ steps.versions.outputs.pnpm }}-node-${{ steps.versions.outputs.node }}-${{ steps.node-modules-paths.outputs.options-hash }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/.npmrc', inputs.working-directory), format('{0}/pnpm-workspace.yaml', inputs.working-directory)) }}
-        restore-keys: |
-          node-modules-${{ runner.os }}-${{ runner.arch }}-pnpm-${{ steps.versions.outputs.pnpm }}-node-${{ steps.versions.outputs.node }}-${{ steps.node-modules-paths.outputs.options-hash }}-
-
-    # Same key actions/setup-node would use, so entries stay shared with the
-    # docs workflows. Skipped on an exact node_modules hit: with nothing to
-    # link, pnpm 12 never reads the store, so downloading it is wasted time.
-    - name: Restore pnpm store
-      if: steps.node-modules-cache.outputs.cache-hit != 'true'
-      uses: ./.github/actions/cache
-      with:
-        path: ${{ steps.node-modules-paths.outputs.store-path }}
-        key: ${{ steps.node-modules-paths.outputs.store-key }}
 
     - name: pnpm install
       working-directory: ${{ inputs.working-directory }}
