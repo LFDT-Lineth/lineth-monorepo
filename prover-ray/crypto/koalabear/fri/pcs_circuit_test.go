@@ -67,11 +67,16 @@ func (c *pcsVerifyCircuit) Define(api frontend.API) error {
 func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
+	// prepare the PCS setup
 	params, err := NewParams(4, 3, pcsCircuitNumQueries)
 	require.NoError(t, err)
 	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
 
+	// build the witness
+	// witness[3] has two rows at the top size so one can be opened at shift 1 below: at shift 0
+	// the rotation is omega^0 = 1 and a dropped or wrong rotation would go unseen.
+	// different sizes to showcase the multi-size batching
 	prng := rand.New(utils.NewRandSource(20260924))
 	witness := make(Batch, 4)
 	witness[1] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 2)}}
