@@ -25,6 +25,7 @@ dependencies {
   testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
+  testImplementation(testFixtures(project(":jvm-libs:generic:vertx-helper")))
   testImplementation("io.vertx:vertx-junit5")
   testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0")
 }

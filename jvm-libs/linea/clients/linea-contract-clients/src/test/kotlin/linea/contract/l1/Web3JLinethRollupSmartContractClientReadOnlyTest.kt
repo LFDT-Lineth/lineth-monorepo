@@ -6,6 +6,7 @@ import linea.domain.BlockParameter
 import linea.domain.toBlockParameter
 import linea.ethapi.EthLogsSearcherImpl
 import linea.ethapi.FakeEthApiClient
+import lineth.vertx.vertxTestOptions
 import net.consensys.FakeFixedClock
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -25,7 +26,7 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     l1Client = FakeEthApiClient()
     client = Web3JLinethRollupSmartContractClientReadOnly(
       web3j = mock<Web3j>(), // not used by findFinalizedStateEvent

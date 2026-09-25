@@ -28,4 +28,6 @@ dependencies {
   testImplementation "io.rest-assured:json-schema-validator:${libs.versions.restassured.get()}"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation "net.javacrumbs.json-unit:json-unit-assertj:${libs.versions.jsonUnit.get()}"
+
+  testFixturesApi testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }

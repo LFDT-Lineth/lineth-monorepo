@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.vertx.setDefaultsFrom
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -11,7 +12,7 @@ import java.net.URI
 
 class VertxRestLoggingFormatterTest {
   val request = WebClient.create(
-    Vertx.vertx(),
+    Vertx.vertx(vertxTestOptions),
     WebClientOptions()
       .setDefaultsFrom(URI("http://service:9876/")),
   )

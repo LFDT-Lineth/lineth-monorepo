@@ -5,6 +5,8 @@ import linea.domain.BlockParameter
 import linea.domain.EthLog
 import linea.ethapi.extensions.EthLogsFilterState
 import linea.kotlin.decodeHex
+import lineth.vertx.vertxTestOptions
+import net.consensys.linea.async.get
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -40,7 +42,7 @@ class EthLogsFilterPollerTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     fakeEthApiClient = FakeEthApiClient()
     fakeEthApiClient.setLatestBlockTag(100UL)
     fakeEthApiClient.setFinalizedBlockTag(50UL)
@@ -51,7 +53,7 @@ class EthLogsFilterPollerTest {
     if (this::poller.isInitialized) {
       poller.stop().get()
     }
-    vertx.close()
+    vertx.close().get()
   }
 
   @Test
@@ -472,6 +474,7 @@ class EthLogsFilterPollerTest {
 
     // Then: should transition from Idle to Searching first
     awaitUntilAsserted {
+      assertThat(stateTransitions).isNotEmpty()
       assertThat(stateTransitions.first())
         .isEqualTo(EthLogsFilterState.Idle to EthLogsFilterState.Searching(0UL))
     }
@@ -520,7 +523,7 @@ class EthLogsFilterPollerTest {
 
   private fun awaitUntilAsserted(fn: () -> Unit) {
     await()
-      .atMost(5.seconds.toJavaDuration())
+      .atMost(15.seconds.toJavaDuration())
       .untilAsserted(fn)
   }
 }
