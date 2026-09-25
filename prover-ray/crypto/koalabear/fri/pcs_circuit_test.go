@@ -88,13 +88,16 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 	witnesses := []Batch{witness}
 	committed := []CommitterState{pcs.Commit(witness)}
 
+	// prepare the shifts at what positions we open the rows
 	batchShifts := make(BatchShifts, 4)
 	batchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[3] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
 
+	// prepare a fixed zeta by writing down all coordinates
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	// prepare the FRI folding alphas
 	challenges := Challenges{
 		FoldAlphas: []field.Ext{
 			field.UintsToExt(29, 1, 0, 0, 0, 0),
