@@ -7,9 +7,8 @@ description = "Vertx utilities"
 dependencies {
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
-  implementation "io.vertx:vertx-core"
+  api "io.vertx:vertx-core"
   implementation "io.vertx:vertx-web"
-  implementation "io.vertx:vertx-lang-kotlin"
   implementation "io.vertx:vertx-config"
   implementation "io.vertx:vertx-micrometer-metrics"
   implementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"

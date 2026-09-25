@@ -13,6 +13,7 @@ import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import linea.kotlin.encodeHex
+import linea.teku.Web3JClient
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
@@ -41,7 +42,6 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.web3j.protocol.Web3j
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 
@@ -206,11 +206,11 @@ class MaruApp internal constructor(
 
   override fun close() {
     Helpers.closeAll(
-      { validatorELNodeEngineApiWeb3JClient?.eth1Web3j?.shutdown() },
+      { validatorELNodeEngineApiWeb3JClient?.close() },
       { l2EthWeb3j?.shutdown() },
       {
         followerELNodeEngineApiWeb3JClients.forEach { (_, web3jClient) ->
-          web3jClient.eth1Web3j.shutdown()
+          web3jClient.close()
         }
       },
       p2pNetwork::close,

@@ -28,7 +28,7 @@ import tech.pegasys.teku.networking.eth2.rpc.core.encodings.compression.snappy.S
 import java.util.Optional
 
 class MaruSnappyFramedCompressor : MaruCompressor {
-  private val compressor: Compressor = SnappyFramedCompressor()
+  private val compressor: Compressor = SnappyFramedCompressor.NETTY
 
   private fun readLengthPrefixHeader(input: ByteBuf): Long? {
     val length: Long = input.readUvarint()

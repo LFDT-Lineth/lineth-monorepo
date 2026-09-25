@@ -10,6 +10,7 @@ package maru.app
 
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
+import linea.teku.Web3JClient
 import maru.config.QbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
@@ -31,7 +32,6 @@ import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
 import net.consensys.linea.metrics.MetricsFacade
 import org.hyperledger.besu.plugin.services.MetricsSystem
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import java.time.Clock
 
 class QbftProtocolValidatorFactory(

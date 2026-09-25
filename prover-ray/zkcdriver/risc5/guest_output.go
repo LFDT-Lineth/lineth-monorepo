@@ -8,18 +8,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
 
-// RegisterGuestPublicOutputs registers the guest program's output as the
-// [GuestPublicOutputsPI] public inputs of sys, in address order: public input k
-// is the value the guest wrote to guest_output address k.
+// RegisterGuestPublicOutputs registers the guest output hash as the
+// [GuestPublicOutputsPI] public inputs of sys, in address order.
 //
-// The output length is [NumGuestPublicOutputs] rather than a runtime value
-// because [wiop.System.RegisterPublicInputs] fixes the public-input vector once,
-// during definition. The output module is dynamic and left-padded, so the value at
-// address k sits at row k-NumGuestPublicOutputs only once the memory is pinned to
-// exactly that many elements; that is what the length constraint below does, using
-// the last address as the element count (see [zkcdriver.PublicOutput]). Without
-// it a prover could grow the memory and pick which of its rows become public
-// inputs.
+// A hash word might be wider than one field element, so the schema splits it across
+// several limb columns and every limb has to be opened for the word to be
+// recoverable. The public inputs therefore hold [GuestPublicOutputCells] cells where
+// GuestPublicOutputCells = NumGuestOutputs * NumGuestOutputLimbs
 //
 // Panics if the arithmetization exposes no output memory this package can bind.
 func RegisterGuestPublicOutputs(sys *wiop.System) {
@@ -27,10 +22,10 @@ func RegisterGuestPublicOutputs(sys *wiop.System) {
 	numOutputs := NumGuestPublicOutputs
 
 	var (
-		dataCol, addressCol = guestOutputColumns(sys)
-		module              = dataCol.Module
-		ctx                 = sys.Context.Childf("guest-public-outputs")
-		lastAddress         field.Element
+		dataCols, addressCol = guestOutputColumns(sys)
+		module               = dataCols[0].Module
+		ctx                  = sys.Context.Childf("guest-public-outputs")
+		lastAddress          field.Element
 	)
 
 	// add a size constraint: since the module is dynamic (data and size) but here we need its size to be fixed.
@@ -41,30 +36,27 @@ func RegisterGuestPublicOutputs(sys *wiop.System) {
 	)
 
 	for k := range numOutputs {
-		cell := dataCol.At(k - numOutputs).Open(ctx.Childf("output-%d", k))
-		sys.RegisterPublicInputs(GuestPublicOutputsPI, cell, k)
+		for l, dataCol := range dataCols {
+			cell := dataCol.At(k - numOutputs).Open(ctx.Childf("output-%d-limb-%d", k, l))
+			sys.RegisterPublicInputs(GuestPublicOutputsPI, cell, k*len(dataCols)+l)
+		}
 	}
 }
 
-// GetGuestPublicOutputs returns the guest program's output in address order, one
-// field element per address, read through the public-input cells that
-// [RegisterGuestPublicOutputs] bound to the guest_output columns. The values
-// therefore come from the constrained trace rather than from the tracer's own
-// output map: they are the ones the length and opening constraints pin down and
-// the verifier checks, so they cannot drift from what the proof attests.
+// GetGuestPublicOutputs returns the guest output hash in address order, read
+// through the public-input cells that [RegisterGuestPublicOutputs] bound to the
+// guest_output_hash columns.
 //
 // Panics if the output length disagrees with [NumGuestPublicOutputs] or if a
 // public input is missing.
 func GetGuestPublicOutputs(rt *wiop.Runtime) []field.Element {
 
 	numOutputs := NumGuestPublicOutputs
-	_, addressCol := guestOutputColumns(rt.System)
+	dataCols, addressCol := guestOutputColumns(rt.System)
 
-	// Checking the length here reports a wrong-sized guest instead of letting it
-	// surface as an opaque constraint failure. The last address gives the count in
-	// a single read; the row count would not, as both the tracer and wiop pad the
-	// module up to a power of two.
+	// check that the hardcoded value for [NumGuestPublicOutputs] is consistent with the interpreter choice.
 	lastAddress := addressCol.At(-1).EvaluateSingle(rt).Value.AsBase()
+
 	if written := lastAddress.Uint64() + 1; written != uint64(numOutputs) {
 		panic(fmt.Sprintf(
 			"risc5: GetGuestPublicOutputs: the guest wrote %d outputs but the expected output size is %d",
@@ -72,11 +64,11 @@ func GetGuestPublicOutputs(rt *wiop.Runtime) []field.Element {
 		))
 	}
 
-	out := make([]field.Element, numOutputs)
-	for k := range numOutputs {
+	out := make([]field.Element, numOutputs*len(dataCols))
+	for k := range out {
 		cell, pos := rt.System.LookupPublicInputByTag(GuestPublicOutputsPI, k)
 		if pos < 0 {
-			panic(fmt.Sprintf("risc5: GetGuestPublicOutputs: no public input registered for output %d", k))
+			panic(fmt.Sprintf("risc5: GetGuestPublicOutputs: no public input registered for output cell %d", k))
 		}
 
 		out[k] = rt.GetCellValue(cell).AsBase()
@@ -85,14 +77,24 @@ func GetGuestPublicOutputs(rt *wiop.Runtime) []field.Element {
 	return out
 }
 
-// guestOutputColumns returns the data and address columns of the memory carrying
-// the guest program's output. The memory is found through the schema's
-// public-output flag rather than by name (see [zkcdriver.PublicOutputs]).
-//
-// It panics rather than returning an error: a system with no such memory was built
-// from an arithmetization that cannot express a guest output in the shape this
-// package binds, which no caller can recover from.
-func guestOutputColumns(sys *wiop.System) (data, address *wiop.Column) {
+// GuestPublicOutputLimbs returns the number of columns the schema splits one hash
+// word across.
+func GuestPublicOutputLimbs(sys *wiop.System) int {
+	data, _ := guestOutputColumns(sys)
+	return len(data)
+}
+
+// GuestPublicOutputCells returns how many public inputs
+// [RegisterGuestPublicOutputs] registers: one per limb of each of the
+// [NumGuestPublicOutputs] hash words.
+func GuestPublicOutputCells(sys *wiop.System) int {
+	return NumGuestPublicOutputs * GuestPublicOutputLimbs(sys)
+}
+
+// guestOutput returns the description of the memory carrying the guest output
+// hash together with its resolved columns (see [zkcdriver.PublicOutputs]).
+// It panics if no guest output hash is declared.
+func guestOutputColumns(sys *wiop.System) (data []*wiop.Column, address *wiop.Column) {
 
 	output := zkcdriver.PublicOutputs(sys)
 
@@ -100,5 +102,10 @@ func guestOutputColumns(sys *wiop.System) (data, address *wiop.Column) {
 		panic("risc5: guestOutputColumns: the arithmetization exposes no public output to bind the guest output from")
 	}
 
-	return sys.LookupColumn(output.Data), sys.LookupColumn(output.Address)
+	data = make([]*wiop.Column, len(output.Data))
+	for i, id := range output.Data {
+		data[i] = sys.LookupColumn(id)
+	}
+
+	return data, sys.LookupColumn(output.Address)
 }

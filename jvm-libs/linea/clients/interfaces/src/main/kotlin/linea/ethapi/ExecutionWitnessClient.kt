@@ -3,6 +3,7 @@ package linea.ethapi
 import linea.domain.BlockParameter
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.kotlin.byteArrayListToHexString
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface ExecutionWitnessClient {
@@ -35,5 +36,10 @@ data class ExecutionWitness(
     result = 31 * result + codes.byteArrayListHashCode()
     result = 31 * result + headers.byteArrayListHashCode()
     return result
+  }
+
+  override fun toString(): String {
+    return "ExecutionWitness(state=${state.byteArrayListToHexString()}, " +
+      "codes=${codes.byteArrayListToHexString()}, headers=${headers.byteArrayListToHexString()})"
   }
 }

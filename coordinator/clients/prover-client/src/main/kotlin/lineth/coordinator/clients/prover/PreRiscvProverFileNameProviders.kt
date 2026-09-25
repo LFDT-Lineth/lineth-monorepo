@@ -1,6 +1,7 @@
 package lineth.coordinator.clients.prover
 
 import linea.clients.ProverFileNameProvider
+import linea.clients.ProverFileNameStartBlockNumberProvider
 import linea.domain.AggregationProofIndex
 import linea.domain.CompressionProofIndex
 import linea.domain.ExecutionProofIndex
@@ -16,14 +17,16 @@ object PreRiscvFileNameSuffixes {
 
 private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
 
-object ExecutionProofFileNameProvider : ProverFileNameProvider<ExecutionProofIndex> {
+object ExecutionProofFileNameProvider :
+  ProverFileNameProvider<ExecutionProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: ExecutionProofIndex): String {
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-" +
       PreRiscvFileNameSuffixes.EXECUTION_PROOF_SUFFIX
   }
 }
 
-object CompressionProofRequestFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
+object CompressionProofRequestFileNameProvider :
+  ProverFileNameProvider<CompressionProofIndex>, ProverFileNameStartBlockNumberProvider {
   private const val HARD_CODED_VERSION = "0.0"
 
   override fun getFileName(proofIndex: CompressionProofIndex): String {
@@ -36,7 +39,8 @@ object CompressionProofRequestFileNameProvider : ProverFileNameProvider<Compress
   }
 }
 
-object CompressionProofResponseFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
+object CompressionProofResponseFileNameProvider :
+  ProverFileNameProvider<CompressionProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: CompressionProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-" +
@@ -45,7 +49,8 @@ object CompressionProofResponseFileNameProvider : ProverFileNameProvider<Compres
   }
 }
 
-object AggregationProofFileNameProvider : ProverFileNameProvider<AggregationProofIndex> {
+object AggregationProofFileNameProvider :
+  ProverFileNameProvider<AggregationProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: AggregationProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
 
@@ -54,7 +59,8 @@ object AggregationProofFileNameProvider : ProverFileNameProvider<AggregationProo
   }
 }
 
-object InvalidityProofFileNameProvider : ProverFileNameProvider<InvalidityProofIndex> {
+object InvalidityProofFileNameProvider :
+  ProverFileNameProvider<InvalidityProofIndex>, ProverFileNameStartBlockNumberProvider {
   override fun getFileName(proofIndex: InvalidityProofIndex): String {
     return "${proofIndex.simulatedExecutionBlockNumber}-${proofIndex.ftxNumber}" +
       "-${PreRiscvFileNameSuffixes.INVALIDITY_PROOF_SUFFIX}"

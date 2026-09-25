@@ -7,6 +7,7 @@ import io.vertx.sqlclient.RowSet
 import linea.domain.Batch
 import linea.domain.createBatch
 import linea.error.DuplicatedRecordException
+import linea.kotlin.encodeHex
 import linea.persistence.db.DbHelper
 import linea.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.persistence.test.DbQueries
@@ -26,7 +27,7 @@ import kotlin.time.Instant
 @ExtendWith(VertxExtension::class)
 class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   init {
-    target = "4"
+    target = "5"
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-batches")
@@ -90,7 +91,22 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow.getLong("end_block_number")).isEqualTo(batch.endBlockNumber.toLong())
     assertThat(newlyInsertedRow.getInteger("status"))
       .isEqualTo(BatchesPostgresDao.batchStatusToDbValue(Batch.Status.Proven))
+    assertThat(newlyInsertedRow.getString("proof_index_hash"))
+      .isEqualTo(batch.proofIndexHash?.encodeHex())
     return dbContent
+  }
+
+  @Test
+  fun `saveNewBatch with proof index hash persists hex-encoded hash to db`() {
+    val proofIndexHash = ByteArray(32) { it.toByte() }
+    val batch = Batch(
+      startBlockNumber = 100UL,
+      endBlockNumber = 199UL,
+      proofIndexHash = proofIndexHash,
+    )
+
+    val dbContent = performInsertTest(batch)
+    assertThat(dbContent).size().isEqualTo(1)
   }
 
   @Test

@@ -8,6 +8,7 @@ import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.domain.ProofIndex
 import linea.error.ErrorResponse
+import lineth.fileio.DirectoryCleaner
 import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
@@ -25,7 +26,7 @@ import kotlin.io.path.notExists
  */
 class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : ProofIndex>(
   private val config: FileBasedProverConfig,
-  vertx: Vertx,
+  private val vertx: Vertx,
   private val fileWriter: FileWriter,
   private val fileReader: FileReader<ResponseDto>,
   private val requestFileNameProvider: ProverFileNameProvider<TProofIndex>,
@@ -34,6 +35,7 @@ class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex :
     vertx,
     FileMonitor.Config(config.pollingInterval, config.pollingTimeout),
   ),
+  private val enableRequestFilesCleanup: Boolean = false,
   private val log: Logger = LogManager.getLogger(FileBasedProverProofTransport::class.java),
 ) : ProverProofTransport<RequestDto, ResponseDto, TProofIndex> {
 
@@ -77,6 +79,31 @@ class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex :
       .thenApply {
         log.trace("Created proof request file. file={}", requestFilePath)
       }
+  }
+
+  override fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit> {
+    return DirectoryCleaner(
+      vertx = vertx,
+      directories = listOfNotNull(config.requestsDirectory),
+      fileFilters = DirectoryCleaner.getSuffixFileFilters(
+        listOfNotNull(config.inprogressRequestWritingSuffix),
+      ) +
+        if (enableRequestFilesCleanup) {
+          if (startBlockNumberGte != null) {
+            listOf(
+              DirectoryCleaner.getStartBlockNumberFileFilter(
+                startBlockNumberGte = startBlockNumberGte,
+                fileNameStartBlockNumberProvider = requestFileNameProvider::getFileNameStartBlockNumber,
+              ),
+            )
+          } else {
+            // Will delete prover request .json files from all the directories
+            listOf(DirectoryCleaner.JSON_FILE_FILTER)
+          }
+        } else {
+          emptyList()
+        },
+    ).cleanup()
   }
 
   override fun findResponse(proofIndex: TProofIndex): SafeFuture<ResponseDto?> {

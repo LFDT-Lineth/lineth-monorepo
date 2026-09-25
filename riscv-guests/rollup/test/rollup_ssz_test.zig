@@ -29,8 +29,22 @@ test "encodeInput/decodeInput: round-trips every field of a readable sample inpu
     try std.testing.expectEqualSlices(u8, &support.CONFLATION_1_BLOCK_RLP_0, v.conflations[1].block_rlps[0]);
     try std.testing.expectEqualSlices(u8, &support.CONFLATION_1_BLOCK_RLP_1, v.conflations[1].block_rlps[1]);
 
-    try std.testing.expectEqual(@as(usize, 1), v.chunks.len);
-    try std.testing.expectEqualSlices(u8, &support.CHUNK_0, &v.chunks[0]);
+    try std.testing.expectEqual(@as(usize, 2), v.chunks.len);
+    try std.testing.expectEqualSlices(u8, &support.CHUNK_0, &v.chunks[0].chunk_hash);
+    try std.testing.expect(!v.chunks[0].is_calldata);
+    try std.testing.expectEqual(@as(u64, 0), v.chunks[0].calldata_length);
+    try std.testing.expectEqualSlices(u8, &support.CHUNK_1, &v.chunks[1].chunk_hash);
+    try std.testing.expect(v.chunks[1].is_calldata);
+    try std.testing.expectEqual(@as(u64, rollup_ssz.BLOB_BYTES_LENGTH + 7), v.chunks[1].calldata_length);
+
+    const chunks_offset = std.mem.readInt(u32, encoded[2 + 52 ..][0..4], .little);
+    const second_chunk = 2 + chunks_offset + 41;
+    try std.testing.expectEqualSlices(u8, &support.CHUNK_1, encoded[second_chunk..][0..32]);
+    try std.testing.expectEqual(@as(u8, 1), encoded[second_chunk + 32]);
+    try std.testing.expectEqual(
+        @as(u64, rollup_ssz.BLOB_BYTES_LENGTH + 7),
+        std.mem.readInt(u64, encoded[second_chunk + 33 ..][0..8], .little),
+    );
 
     try std.testing.expectEqualSlices(u8, &support.OPAQUE_PREFIX_BYTES, v.opaque_prefix_bytes);
     try std.testing.expectEqual(@as(usize, 0), v.opaque_suffix_bytes.len);
@@ -210,6 +224,17 @@ test "decodeInput: rejects an out-of-order offset pair (l2_execution_proofs regi
     // out-of-order pair the fixed-head monotonicity guard must reject.
     const off_proofs = std.mem.readInt(u32, corrupted[2 + 56 ..][0..4], .little);
     std.mem.writeInt(u32, corrupted[2 + 60 ..][0..4], off_proofs - 4, .little);
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeInput(alloc, corrupted));
+}
+
+test "decodeInput: rejects a non-canonical chunk boolean" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var corrupted = try rollup_ssz.encodeInput(alloc, try sampleInput(alloc));
+    const chunks_offset = std.mem.readInt(u32, corrupted[2 + 52 ..][0..4], .little);
+    corrupted[2 + chunks_offset + 32] = 2;
     try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeInput(alloc, corrupted));
 }
 

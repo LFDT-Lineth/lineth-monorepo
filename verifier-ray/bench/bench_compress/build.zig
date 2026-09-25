@@ -18,8 +18,25 @@ pub fn build(b: *std.Build) void {
     profiling_opts.addOption(bool, "is_r5_marks", true);
     verifier_mod.addOptions("profiling_config", profiling_opts);
 
+    // The verifier module requires `r5_config` (see src/crypto/poseidon2.zig).
+    // This is always an R5 guest build; `-Ddisable-accelerators=true` selects the
+    // software permutation so the benchmark can price the accelerator opcode.
+    const disable_accelerators = b.option(
+        bool,
+        "disable-accelerators",
+        "Use the software Poseidon2 permutation instead of the accelerator opcode",
+    ) orelse false;
+    const r5_options = b.addOptions();
+    r5_options.addOption(bool, "is_r5_zkvm", true);
+    r5_options.addOption(bool, "disable_accelerators", disable_accelerators);
+    verifier_mod.addOptions("r5_config", r5_options);
+
     const accel_dep = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize });
     const accel_mod = accel_dep.module("lineth_accelerators");
+
+    if (!disable_accelerators) {
+        verifier_mod.addImport("lineth_accelerators", accel_mod);
+    }
 
     const main_mod = b.createModule(.{
         .root_source_file = b.path("main.zig"),

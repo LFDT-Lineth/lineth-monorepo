@@ -39,6 +39,12 @@ interface ProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : Proo
   fun submitRequest(proofIndex: TProofIndex, requestDto: RequestDto): SafeFuture<Unit>
 
   /**
+   * Removes the submitted proof requests. For the file-based transport this removes the JSON request files; for the
+   * RESTful transport this issues the POST call of "jobs/dequeue". Implementations should be idempotent.
+   */
+  fun removeRequests(startBlockNumberGte: Long?): SafeFuture<Unit>
+
+  /**
    * Returns the response for [proofIndex] if it is already available, otherwise null. Does not block waiting for the
    * response to be produced.
    */

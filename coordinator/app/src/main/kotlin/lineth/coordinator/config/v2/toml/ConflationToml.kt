@@ -66,6 +66,12 @@ data class ConflationToml(
     example = "http://sequencer:8545",
   )
   val l2Endpoint: URL? = null,
+  @param:ConfigDoc(
+    description = "L2 Engine API endpoint for RISC-V payload bodies; required by ConflationAppV2. " +
+      "JWT-protected endpoints require an authenticating proxy; this client does not generate JWT tokens.",
+    example = "http://sequencer:8550",
+  )
+  val l2EngineEndpoint: URL? = null,
   @param:ConfigSection("Retry policy for L2 conflation requests; falls back to defaults.l2-request-retries.")
   val l2RequestRetries: RequestRetriesToml? = null,
   @param:ConfigDoc(
@@ -228,6 +234,7 @@ data class ConflationToml(
       l2Endpoint = this.l2Endpoint
         ?: defaults.l2Endpoint
         ?: throw AssertionError("l2Endpoint config missing"),
+      l2EngineEndpoint = this.l2EngineEndpoint,
       l2RequestRetries = this.l2RequestRetries?.asDomain
         ?: defaults.l2RequestRetries.asDomain,
       l2GetLogsEndpoint = this.l2LogsEndpoint

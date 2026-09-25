@@ -237,7 +237,7 @@ class DownloadNativeLibsPlugin implements Plugin<Project> {
     // previous run of the old script plugin; the generated output takes precedence.
     project.plugins.withType(JavaPlugin) {
       project.sourceSets.main.resources.srcDir(downloadTask.flatMap { it.resourcesDir })
-      project.tasks.named("processResources").configure {
+      project.tasks.withType(org.gradle.api.tasks.AbstractCopyTask).configureEach {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
       }
     }

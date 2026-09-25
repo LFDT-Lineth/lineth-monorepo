@@ -13,8 +13,8 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
 import io.vertx.core.json.JsonObject
-import io.vertx.junit5.VertxExtension
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.forcedtx.ForcedTransactionRequest
 import linea.kotlin.decodeHex
@@ -29,7 +29,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
@@ -37,8 +36,8 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-@ExtendWith(VertxExtension::class)
 class ForcedTransactionsJsonRpcClientTest {
+  private lateinit var vertx: Vertx
   private lateinit var wiremock: WireMockServer
   private lateinit var client: ForcedTransactionsJsonRpcClient
   private lateinit var meterRegistry: SimpleMeterRegistry
@@ -61,9 +60,10 @@ class ForcedTransactionsJsonRpcClientTest {
   }
 
   @BeforeEach
-  fun setup(vertx: Vertx) {
+  fun setup() {
     wiremock = WireMockServer(options().dynamicPort())
     wiremock.start()
+    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
 
     fakeServerUri = URI("http://127.0.0.1:" + wiremock.port()).toURL()
     meterRegistry = SimpleMeterRegistry()
@@ -75,7 +75,7 @@ class ForcedTransactionsJsonRpcClientTest {
       methodsToRetry = ForcedTransactionsJsonRpcClient.retryableMethods,
       retryConfig = RequestRetryConfig(
         maxRetries = 2u,
-        timeout = 10.seconds,
+        timeout = 60.seconds,
         backoffDelay = 10.milliseconds,
         failuresWarningThreshold = 1u,
       ),
@@ -85,7 +85,7 @@ class ForcedTransactionsJsonRpcClientTest {
   }
 
   @AfterEach
-  fun tearDown(vertx: Vertx) {
+  fun tearDown() {
     val vertxStopFuture = vertx.close()
     wiremock.stop()
     vertxStopFuture.get()

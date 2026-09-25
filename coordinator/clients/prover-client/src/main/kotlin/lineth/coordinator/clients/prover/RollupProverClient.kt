@@ -57,6 +57,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
           metadata = MetaDataDto(
             startBlockNumber = request.startBlockNumber.toLong(),
             endBlockNumber = request.endBlockNumber.toLong(),
+            startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
           ),
         )
       }
@@ -89,6 +90,7 @@ internal class RestfulRollupProofRequestDtoMapper(
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
         endBlockNumber = request.endBlockNumber.toLong(),
+        startBlockTimestamp = request.startBlockTimestamp.epochSeconds,
       ),
     )
     return SafeFuture.completedFuture(dto)

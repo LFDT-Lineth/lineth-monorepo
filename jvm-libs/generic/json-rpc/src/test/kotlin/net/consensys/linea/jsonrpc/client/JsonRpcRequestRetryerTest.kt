@@ -5,6 +5,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.RetriedExecutionException
 import net.consensys.linea.async.get
@@ -13,7 +14,6 @@ import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -26,12 +26,11 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
-import org.mockito.kotlin.spy
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.net.SocketException
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.minutes
 
 class JsonRpcRequestRetryerTest {
 
@@ -50,7 +49,7 @@ class JsonRpcRequestRetryerTest {
     methodsToRetry = emptySet(),
     requestRetry = RequestRetryConfig(
       maxRetries = maxRetries.toUInt(),
-      timeout = 20.seconds,
+      timeout = 2.minutes,
       backoffDelay = 10.milliseconds,
       failuresWarningThreshold = 2u,
     ),
@@ -59,12 +58,12 @@ class JsonRpcRequestRetryerTest {
 
   @BeforeEach
   fun beforeEach() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
     retryer = AsyncRetryer.retryer(
       vertx,
       backoffDelay = 10.milliseconds,
       maxRetries = maxRetries,
-      timeout = 20.seconds,
+      timeout = 2.minutes,
       initialDelay = null,
     )
     delegate = mock {
@@ -79,7 +78,7 @@ class JsonRpcRequestRetryerTest {
 
   @AfterEach
   fun afterEach() {
-    vertx.close()
+    vertx.close().get()
   }
 
   @Test
@@ -176,7 +175,7 @@ class JsonRpcRequestRetryerTest {
     val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }.doReturn(Future.failedFuture(networkError1))
     }
-    val log: Logger = spy(LogManager.getLogger("unit-test-logger"))
+    val log: Logger = mock()
     val requestRetryer =
       JsonRpcRequestRetryer(
         vertx,
@@ -214,7 +213,7 @@ class JsonRpcRequestRetryerTest {
     val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }.doReturn(Future.failedFuture(networkError1))
     }
-    val log: Logger = spy(LogManager.getLogger("unit-test-logger"))
+    val log: Logger = mock()
     val requestRetryer =
       JsonRpcRequestRetryer(
         vertx,

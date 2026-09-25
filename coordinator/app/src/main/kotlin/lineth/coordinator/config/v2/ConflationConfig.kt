@@ -23,6 +23,7 @@ data class ConflationConfig(
   val consistentNumberOfBlocksOnL1ToWait: UInt = 32u, // 1 epoch
   val l2FetchBlocksLimit: UInt = UInt.MAX_VALUE,
   val l2Endpoint: URL,
+  val l2EngineEndpoint: URL? = null,
   val l2RequestRetries: RetryConfig = RetryConfig.endlessRetry(
     backoffDelay = 1.seconds,
     failuresWarningThreshold = 3u,

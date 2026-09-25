@@ -37,6 +37,7 @@ Block conflation, blob compression, and proof aggregation settings.
 | `conflation.force-stop-conflation-at-block-inclusive` | Inclusive L2 block number at which to stop conflating. Omit to conflate indefinitely. Example: `100000000`. | `ULong?` | no | - | active |
 | `conflation.force-stop-conflation-at-block-timestamp-inclusive` | Inclusive block timestamp at which to stop conflating. Omit to conflate indefinitely. Example: `2024-01-01T00:00:00Z`. | `Instant?` | no | - | active |
 | `conflation.l2-endpoint` | L2 endpoint used for conflation. Falls back to defaults.l2-endpoint. Example: `http://sequencer:8545`. | `URL?` | no | - | active |
+| `conflation.l2-engine-endpoint` | L2 Engine API endpoint for RISC-V payload bodies; required by ConflationAppV2. JWT-protected endpoints require an authenticating proxy; this client does not generate JWT tokens. Example: `http://sequencer:8550`. | `URL?` | no | - | active |
 | `conflation.l2-fetch-blocks-limit` | Maximum number of L2 blocks to fetch that are unproven and held in memory. Omit for no limit. Example: `4000`. | `UInt?` | no | - | active |
 | `conflation.l2-logs-endpoint` | L2 endpoint used for eth_getLogs during conflation. Falls back to l2-endpoint/defaults. Example: `http://sequencer:8545`. | `URL?` | no | - | active |
 | `conflation.l2-request-retries.backoff-delay` | Delay between retry attempts. Example: `PT1S`. | `Duration` | no | `PT1S` | active |

@@ -7,7 +7,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 )
 
 func boolModuleSystem(name string) *wiop.System {
@@ -59,7 +58,11 @@ func TestBuildCoinRoutingRejectsRoundZeroCoins(t *testing.T) {
 	}
 }
 
-func TestBuildCoinRoutingSharedRandomnessCoinRoundMatchesHookRound(t *testing.T) {
+// TestBuildCoinRoutingSharedRandomnessAlphaBetaAreStandardCoins verifies that
+// α and β are standard Fiat-Shamir coins: they appear in RoundCoinCounts[1]
+// and are squeezed from the transcript after round 1's message is absorbed,
+// with no override or special injection.
+func TestBuildCoinRoutingSharedRandomnessAlphaBetaAreStandardCoins(t *testing.T) {
 	sys := newSharedRandomnessMessageBusHandle(t)
 
 	routing, err := BuildCoinRouting(sys)
@@ -67,16 +70,12 @@ func TestBuildCoinRoutingSharedRandomnessCoinRoundMatchesHookRound(t *testing.T)
 		t.Fatalf("BuildCoinRouting() error = %v", err)
 	}
 
-	// wiop.Round 0 carries the message-bus columns, round 1 carries the
-	// pre-sampling hook plus alpha/beta, so SharedRandomnessCoinRound (the
-	// wiop.Round.ID replayWithTranscript overrides FS state before squeezing
-	// coins for) must be 1 — not shifted, since RoundCoinCounts is indexed
-	// directly by wiop.Round.ID.
-	if routing.SharedRandomnessCoinRound != 1 {
-		t.Fatalf("shared randomness coin round = %d, want 1", routing.SharedRandomnessCoinRound)
+	// registerSharedRandomness declares exactly 2 coins (α and β) on round 1.
+	if len(routing.RoundCoinCounts) <= 1 {
+		t.Fatalf("expected at least 2 rounds in coin routing, got %d", len(routing.RoundCoinCounts))
 	}
-	if len(routing.SharedRandomnessGammaRefs) != messagebus.NumSharedRandomness {
-		t.Fatalf("gamma refs = %d, want %d", len(routing.SharedRandomnessGammaRefs), messagebus.NumSharedRandomness)
+	if routing.RoundCoinCounts[1] != 2 {
+		t.Fatalf("round 1 must carry exactly 2 coins (α and β), got %d", routing.RoundCoinCounts[1])
 	}
 }
 

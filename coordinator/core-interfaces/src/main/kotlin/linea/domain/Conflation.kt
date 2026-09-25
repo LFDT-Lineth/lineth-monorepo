@@ -21,6 +21,7 @@ data class BlocksConflation(
 data class Batch(
   val startBlockNumber: ULong,
   val endBlockNumber: ULong,
+  val proofIndexHash: ByteArray? = null,
 ) {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -37,6 +38,23 @@ data class Batch(
 
   fun toStringSummary(): String {
     return "Batch(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber)"
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+    other as Batch
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (!proofIndexHash.contentEquals(other.proofIndexHash)) return false
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + proofIndexHash.contentHashCode()
+    return result
   }
 }
 

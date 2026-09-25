@@ -17,7 +17,6 @@ Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import pytest
-
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
@@ -50,7 +49,7 @@ _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
 _LEGACY_SHNARF = Hash32(bytes([0x71]) * 32)
 
 
-def _base_state(approved_vks) -> LinethRollupState:
+def _base_state(approved_vks, previous_offset: int = 0) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all non-VK finalization checks pass. `approved_vks` is the
@@ -72,15 +71,14 @@ def _base_state(approved_vks) -> LinethRollupState:
     )
 
 
-def _base_submission(program_vks) -> FinalizationSubmission:
+def _base_submission(program_vks, start_offset: int = 0) -> FinalizationSubmission:
     """
     A finalization submission carrying the single combined `program_vks` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
     `filtered_addresses` keep the preimage-hash checks trivial (their keccak of
     empty input is the PI hash), and the FTX/rolling-hash boundary values are
     held constant across parent/end so continuity passes without any FTX deadline
-    machinery. `start_offset=0` is the fresh-start case, which `finalize_rollup`
-    accepts regardless of the previously-finalized offset.
+    machinery.
     """
     pi = RollupPublicInput(
         end_block_number=U64(1000520),
@@ -100,7 +98,7 @@ def _base_submission(program_vks) -> FinalizationSubmission:
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
-        start_offset=0,
+        start_offset=start_offset,
         end_offset=_END_OFFSET,
         program_vks=list(program_vks),
     )
