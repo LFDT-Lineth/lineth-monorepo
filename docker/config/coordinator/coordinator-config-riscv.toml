@@ -1,0 +1,21 @@
+[protocol.l1]
+contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+
+[conflation]
+riscv-starting-block-timestamp-inclusive = 0
+
+[riscv-prover.execution]
+# Execution program-vk is shared with the proof responder through Compose.
+fork-name = "Amsterdam"
+
+[l1-submission.blob]
+disabled = true
+
+[l1-submission.aggregation]
+disabled = true
+
+[message-anchoring]
+disabled = true
+
+[forced-transactions]
+disabled = true

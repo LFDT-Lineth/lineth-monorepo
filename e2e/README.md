@@ -33,9 +33,10 @@ make start-env-with-tracing-v2-ci-fleet
 `e2e/.env.template`:
 
 ```bash
-# Optional: override default genesis file paths (local only)
+# Optional: override local genesis paths and L2 RPC
 # LOCAL_L1_GENESIS=
 # LOCAL_L2_GENESIS=
+# LOCAL_L2_RPC_URL=
 
 # Optional: log level (defaults to "info")
 # LOG_LEVEL=
@@ -45,6 +46,7 @@ Variable meanings:
 
 - `LOCAL_L1_GENESIS`: optional absolute/relative path override for local L1 genesis file.
 - `LOCAL_L2_GENESIS`: optional absolute/relative path override for local L2 genesis file.
+- `LOCAL_L2_RPC_URL`: optional local L2 RPC override (defaults to the zkEVM follower; the RISC-V command selects the sequencer).
 - `LOG_LEVEL`: optional logger level (for example `debug`, `info`, `warn`, `error`).
 
 ## Run tests
@@ -74,4 +76,18 @@ pnpm -F e2e run test:local:run "opcodes.spec.ts"
 pnpm -F e2e run test:local:run "opcodes.spec.ts" -t "Should be able to execute all opcodes"
 ```
 
+### RISC-V local and CI
 
+```bash
+make start-env-with-riscv
+pnpm -F e2e run test:riscv:local
+```
+
+The focused suite reuses the local clients, funding and transaction helpers. It checks ETH transfers,
+contract execution with `linea_estimateGas`, sender/recipient denylist rejection and restoration, and the
+execution-proof handoff: a new transaction's payload and witness reach the prover request, the dummy
+responder replies, and the coordinator persists the batch as proven. It does not validate a real ZK proof
+or L1 submission/finalization against the V9 stub.
+
+CI runs zkEVM and RISC-V as a matrix through the same E2E action; both must pass the existing required
+check. Failed runs upload separate logs, with RISC-V proof requests/responses included.
