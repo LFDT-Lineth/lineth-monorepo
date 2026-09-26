@@ -23,7 +23,6 @@ import pytest
 
 import rollup_spec
 from ethereum.crypto.hash import Hash32
-from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec.rollup import ChunkWitness, RollupProof
@@ -67,8 +66,6 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
     return RollupProof(
         public_inputs=pi,
         start_block_number=U64(resp["startBlockNumber"]),
-        l2_l1_roots=[Hash32(_hexbytes(h)) for h in resp["l2L1Roots"]],
-        filtered_addresses=[Address(_hexbytes(a)) for a in resp["filteredAddresses"]],
     )
 
 
@@ -133,7 +130,7 @@ def _rollup_output_bytes() -> bytes:
 
 _DECODE_CASES = [
     pytest.param(decode_rollup_input_ssz, _rollup_input_bytes, 0x1001, id="rollup_input"),
-    pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x1801, id="rollup_output"),
+    pytest.param(decode_rollup_output_ssz, _rollup_output_bytes, 0x1803, id="rollup_output"),
 ]
 
 

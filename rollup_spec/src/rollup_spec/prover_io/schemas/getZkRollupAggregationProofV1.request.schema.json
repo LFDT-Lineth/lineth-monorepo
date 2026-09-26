@@ -50,7 +50,6 @@
       "required": [
         "endBlockNumber",
         "endBlockTimestamp",
-        "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash",
@@ -60,19 +59,19 @@
         "parentFtxNumber",
         "endFtxRollingHash",
         "endProcessedFtxNumber",
-        "filteredAddressesHash",
         "parentDataRollingHash",
         "endDataRollingHash",
         "parentBlockHash",
         "endBlockHash",
         "startOffset",
         "endOffset",
+        "l2L1Roots",
+        "filteredAddresses",
         "programVks"
       ],
       "properties": {
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockTimestamp": { "$ref": "#/$defs/uint" },
-        "l2L1BridgeTransactionTree": { "$ref": "#/$defs/hash32" },
         "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
         "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
         "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
@@ -82,7 +81,6 @@
         "parentFtxNumber": { "$ref": "#/$defs/uint" },
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
-        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
         "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
@@ -95,6 +93,8 @@
           "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
+        "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
+        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
           "type": "array",
@@ -110,16 +110,12 @@
         "proof",
         "startBlockNumber",
         "publicInputs",
-        "l2L1Roots",
-        "filteredAddresses",
         "programVk"
       ],
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "publicInputs": { "$ref": "#/$defs/rollupPublicInputs" },
-        "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVk": { "$ref": "#/$defs/hash32" }
       }
     }

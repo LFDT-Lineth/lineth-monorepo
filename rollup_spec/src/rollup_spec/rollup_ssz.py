@@ -11,7 +11,7 @@ Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
   - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
-  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
+   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1803) — rollup guest output V2
 
 The guest output container omits the `proof` field the logical `RollupProof`
 dataclass carries: a guest cannot attest its own proof, so `proof` is attached
@@ -61,7 +61,7 @@ from .rollup import (
 
 # ── Framing ──────────────────────────────────────────────────────────────────
 ROLLUP_INPUT_SCHEMA_ID = 0x1001
-ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
+ROLLUP_OUTPUT_SCHEMA_ID = 0x1803
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_CONFLATIONS_PER_ROLLUP = 2**10             # conflations one rollup proof recursively verifies
@@ -90,11 +90,10 @@ class SszChunkWitness(Container):
 
 
 class SszRollupPublicInput(Container):
-    # 20-field rollup public input tuple (Readme.md §2.4), field order matches
+    # Rollup public input tuple (Readme.md §2.4), field order matches
     # `rollup.py::RollupPublicInput`.
     end_block_number: uint64
     end_block_timestamp: uint64
-    l2_l1_bridge_transaction_tree: SszBytes32
     parent_l1_l2_bridge_rolling_hash: SszBytes32
     parent_l1_l2_bridge_rolling_hash_message_number: uint64
     end_l1_l2_bridge_rolling_hash: SszBytes32
@@ -104,13 +103,14 @@ class SszRollupPublicInput(Container):
     parent_ftx_number: uint64
     end_ftx_rolling_hash: SszBytes32
     end_processed_ftx_number: uint64
-    filtered_addresses_hash: SszBytes32
     parent_data_rolling_hash: SszBytes32
     end_data_rolling_hash: SszBytes32
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
     start_offset: uint64
     end_offset: uint64
+    l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
+    filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
     program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
 
 
@@ -135,8 +135,6 @@ class SszRollupOutput(Container):
     # `rollup.py::RollupProof`.
     public_inputs: SszRollupPublicInput
     start_block_number: uint64
-    l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
-    filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
 
 
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
@@ -150,7 +148,6 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
     return SszRollupPublicInput(
         end_block_number=int(pi.end_block_number),
         end_block_timestamp=int(pi.end_block_timestamp),
-        l2_l1_bridge_transaction_tree=bytes(pi.l2_l1_bridge_transaction_tree),
         parent_l1_l2_bridge_rolling_hash=bytes(pi.parent_l1_l2_bridge_rolling_hash),
         parent_l1_l2_bridge_rolling_hash_message_number=int(
             pi.parent_l1_l2_bridge_rolling_hash_message_number
@@ -164,13 +161,14 @@ def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
         parent_ftx_number=int(pi.parent_ftx_number),
         end_ftx_rolling_hash=bytes(pi.end_ftx_rolling_hash),
         end_processed_ftx_number=int(pi.end_processed_ftx_number),
-        filtered_addresses_hash=bytes(pi.filtered_addresses_hash),
         parent_data_rolling_hash=bytes(pi.parent_data_rolling_hash),
         end_data_rolling_hash=bytes(pi.end_data_rolling_hash),
         parent_block_hash=bytes(pi.parent_block_hash),
         end_block_hash=bytes(pi.end_block_hash),
         start_offset=int(pi.start_offset),
         end_offset=int(pi.end_offset),
+        l2_l1_roots=[bytes(r) for r in pi.l2_l1_roots],
+        filtered_addresses=[bytes(a) for a in pi.filtered_addresses],
         program_vks=[bytes(v) for v in pi.program_vks],
     )
 
@@ -210,7 +208,6 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=U64(int(view.end_block_number)),
         end_block_timestamp=U64(int(view.end_block_timestamp)),
-        l2_l1_bridge_transaction_tree=Hash32(bytes(view.l2_l1_bridge_transaction_tree)),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes(view.parent_l1_l2_bridge_rolling_hash)),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(
             int(view.parent_l1_l2_bridge_rolling_hash_message_number)
@@ -224,13 +221,14 @@ def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
         parent_ftx_number=U64(int(view.parent_ftx_number)),
         end_ftx_rolling_hash=Hash32(bytes(view.end_ftx_rolling_hash)),
         end_processed_ftx_number=U64(int(view.end_processed_ftx_number)),
-        filtered_addresses_hash=Hash32(bytes(view.filtered_addresses_hash)),
         parent_data_rolling_hash=Hash32(bytes(view.parent_data_rolling_hash)),
         end_data_rolling_hash=Hash32(bytes(view.end_data_rolling_hash)),
         parent_block_hash=Hash32(bytes(view.parent_block_hash)),
         end_block_hash=Hash32(bytes(view.end_block_hash)),
         start_offset=int(view.start_offset),
         end_offset=int(view.end_offset),
+        l2_l1_roots=[Hash32(bytes(r)) for r in view.l2_l1_roots],
+        filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
         program_vks=[Hash32(bytes(v)) for v in view.program_vks],
     )
 
@@ -284,15 +282,13 @@ def decode_rollup_input_ssz(data: bytes) -> RollupProofPrivateInput:
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
+    Encode the rollup guest's own output into framed SSZ bytes (0x1803 schema
     id). `proof.proof` is deliberately dropped — it is a prover-attached
     placeholder in `RollupProof`, never part of the guest-emitted bytes.
     """
     ssz_output = SszRollupOutput(
         public_inputs=_ssz_rollup_public_input(proof.public_inputs),
         start_block_number=int(proof.start_block_number),
-        l2_l1_roots=[bytes(r) for r in proof.l2_l1_roots],
-        filtered_addresses=[bytes(a) for a in proof.filtered_addresses],
     )
     return _frame(ROLLUP_OUTPUT_SCHEMA_ID, ssz_output.encode_bytes())
 
@@ -309,6 +305,4 @@ def decode_rollup_output_ssz(data: bytes) -> RollupProof:
     return RollupProof(
         public_inputs=_rollup_public_input_from_view(view.public_inputs),
         start_block_number=U64(int(view.start_block_number)),
-        l2_l1_roots=[Hash32(bytes(r)) for r in view.l2_l1_roots],
-        filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
     )
