@@ -18,7 +18,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * `rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.request.schema.json`.
  */
 internal class L2ExecutionProofRequestDtoMapper(
-  private val programVk: String,
+  private val programId: String,
+  private val provingSystemVersion: String,
   private val l2MessageServiceAddress: String,
   private val forkName: String,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
@@ -42,7 +43,8 @@ internal class L2ExecutionProofRequestDtoMapper(
     }
 
     val dto = L2ExecutionProofRequestDto(
-      programVk = programVk,
+      programId = programId,
+      provingSystemVersion = provingSystemVersion,
       proofRequest = L2ExecutionProofRequestParamsDto(
         parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
         parentFtxNumber = request.parentFtxNumber.toLong(),
@@ -102,11 +104,12 @@ typealias L2ExecutionProofTransport =
  */
 class L2ExecutionProverClient(
   transport: L2ExecutionProofTransport,
-  programVk: String,
+  programId: String,
+  provingSystemVersion: String,
   l2MessageServiceAddress: String,
   forkName: String,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
-    L2ExecutionProofRequestDtoMapper(programVk, l2MessageServiceAddress, forkName),
+    L2ExecutionProofRequestDtoMapper(programId, provingSystemVersion, l2MessageServiceAddress, forkName),
   proofResponseDtoMapper: (L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
     L2ExecutionProofResponseDtoMapper,
   hashFunction: HashFunction = Sha256HashFunction(),

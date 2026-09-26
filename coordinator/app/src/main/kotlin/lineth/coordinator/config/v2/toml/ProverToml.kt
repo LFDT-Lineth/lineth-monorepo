@@ -3,14 +3,37 @@ package lineth.coordinator.config.v2.toml
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 import lineth.coordinator.clients.prover.FileBasedProverConfig
+import lineth.coordinator.clients.prover.FileBasedRiscvProverConfig
+import lineth.coordinator.clients.prover.PreRiscvProverConfig
 import lineth.coordinator.clients.prover.ProverConfig
+import lineth.coordinator.clients.prover.ProverConfigSwitch
 import lineth.coordinator.clients.prover.ProversConfig
+import lineth.coordinator.clients.prover.RiscvProverConfig
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 data class ProverToml(
+  @param:ConfigDoc(
+    description = "Prover type: pre_riscv or riscv.",
+    default = "pre_riscv",
+  )
+  val type: ProverType = ProverType.PRE_RISCV,
+  @param:ConfigSection("Execution (block) prover request/response directories.")
+  val execution: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("Blob compression prover request/response directories.")
+  val blobCompression: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("Invalidity prover request/response directories; omit to disable.")
+  val invalidity: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("Proof aggregation prover request/response directories.")
+  val proofAggregation: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("L2 execution RISC-V prover config.")
+  val l2Execution: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("Rollup RISC-V prover config.")
+  val rollup: FileBasedProverConfigToml? = null,
+  @param:ConfigSection("Rollup aggregation RISC-V prover config.")
+  val rollupAggregation: FileBasedProverConfigToml? = null,
   @param:ConfigDoc(
     description = "Filename suffix appended while the coordinator is still writing a request file, " +
       "so provers ignore partially-written requests.",
@@ -33,16 +56,21 @@ data class ProverToml(
     default = "infinite",
   )
   val fsPollingTimeout: Duration = Duration.INFINITE,
-  @param:ConfigSection("Execution (block) prover request/response directories.")
-  val execution: ProverConfigToml,
-  @param:ConfigSection("Blob compression prover request/response directories.")
-  val blobCompression: ProverConfigToml? = null,
-  @param:ConfigSection("Rollup prover config.")
-  val rollup: ProverConfigToml? = null,
-  @param:ConfigSection("Invalidity prover request/response directories; omit to disable.")
-  val invalidity: ProverConfigToml? = null,
-  @param:ConfigSection("Proof aggregation prover request/response directories.")
-  val proofAggregation: ProverConfigToml,
+  @param:ConfigDoc(
+    description = "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+    example = "amsterdam",
+  )
+  val forkName: String? = null,
+  @param:ConfigDoc(
+    description = "Version for the RISC-V proving system.",
+    example = "0xabcdef1234567890",
+  )
+  val provingSystemVersion: String? = null,
+  @param:ConfigDoc(
+    description = "Whether to delete request files after their responses are processed.",
+    default = "false",
+  )
+  val enableRequestFilesCleanup: Boolean = false,
   @param:ConfigDoc(
     description = "Inclusive L2 block number at which to switch from this prover to the `new` prover. " +
       "Mutually exclusive with switchBlockTimestamp.",
@@ -57,22 +85,13 @@ data class ProverToml(
   val switchBlockTimestamp: Instant? = null,
   @param:ConfigSection("Next prover version to switch over to at the configured switch block/timestamp.")
   val new: ProverToml? = null,
-  @param:ConfigDoc(
-    description = "Whether to delete request files after their responses are processed.",
-    default = "false",
-  )
-  val enableRequestFilesCleanup: Boolean = false,
 ) {
-  init {
-    require(blobCompression != null || rollup != null) {
-      "Either blobCompression or rollup must be defined in prover config."
-    }
-    require(blobCompression == null || rollup == null) {
-      "Only one of blobCompression or rollup may be defined in prover config."
-    }
+  enum class ProverType(val displayName: String) {
+    PRE_RISCV("pre_riscv"),
+    RISCV("riscv"),
   }
 
-  data class ProverConfigToml(
+  data class FileBasedProverConfigToml(
     @param:ConfigDoc(
       description = "Directory the coordinator writes prover request files to.",
       example = "/data/prover/v3/execution/requests",
@@ -84,20 +103,13 @@ data class ProverToml(
     )
     val fsResponsesDirectory: String,
     @param:ConfigDoc(
-      description = "Guest program verifying key for the RISC-V prover. Required when this config is used " +
-        "as the riscvProver; omit for the standard (EVM) prover.",
+      description = "Guest program identifier for the RISC-V prover.",
       example = "0xabcdef1234567890",
     )
-    val programVk: String? = null,
-    @param:ConfigDoc(
-      description = "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). " +
-        "Required for the RISC-V execution prover; omit for other prover types.",
-      example = "cancun",
-    )
-    val forkName: String? = null,
+    val programId: String? = null,
   )
 
-  private fun toFileBasedProverConfig(proverConfigToml: ProverConfigToml): FileBasedProverConfig =
+  private fun toFileBasedProverConfig(proverConfigToml: FileBasedProverConfigToml): FileBasedProverConfig =
     FileBasedProverConfig(
       requestsDirectory = Path.of(proverConfigToml.fsRequestsDirectory),
       responsesDirectory = Path.of(proverConfigToml.fsResponsesDirectory),
@@ -105,18 +117,67 @@ data class ProverToml(
       inprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix,
       pollingInterval = fsPollingInterval,
       pollingTimeout = fsPollingTimeout,
-      programVk = proverConfigToml.programVk,
-      forkName = proverConfigToml.forkName,
     )
 
-  private fun toProverConfig(t: ProverToml): ProverConfig =
-    ProverConfig(
-      execution = t.toFileBasedProverConfig(t.execution),
-      blobCompression = t.blobCompression?.let { t.toFileBasedProverConfig(it) },
-      rollup = t.rollup?.let { t.toFileBasedProverConfig(it) },
+  private fun toPreRiscvProverConfig(t: ProverToml): PreRiscvProverConfig =
+    PreRiscvProverConfig(
+      execution = t.toFileBasedProverConfig(t.execution!!),
+      blobCompression = t.toFileBasedProverConfig(t.blobCompression!!),
       invalidity = t.invalidity?.let { t.toFileBasedProverConfig(it) },
-      proofAggregation = t.toFileBasedProverConfig(t.proofAggregation),
+      proofAggregation = t.toFileBasedProverConfig(t.proofAggregation!!),
     )
+
+  private fun toProverConfig(t: ProverToml): RiscvProverConfig =
+    RiscvProverConfig(
+      l2Execution = FileBasedRiscvProverConfig(
+        fileBased = t.toFileBasedProverConfig(t.l2Execution!!),
+        programId = t.l2Execution.programId!!,
+        provingSystemVersion = t.provingSystemVersion!!,
+        forkName = t.forkName!!,
+      ),
+      rollup = FileBasedRiscvProverConfig(
+        fileBased = t.toFileBasedProverConfig(t.rollup!!),
+        programId = t.rollup.programId!!,
+        provingSystemVersion = t.provingSystemVersion,
+        forkName = t.forkName,
+      ),
+      rollupAggregation = FileBasedRiscvProverConfig(
+        fileBased = t.toFileBasedProverConfig(t.rollupAggregation!!),
+        programId = t.rollupAggregation.programId!!,
+        provingSystemVersion = t.provingSystemVersion,
+        forkName = t.forkName,
+      ),
+    )
+
+  fun validateProverToml(proverToml: ProverToml) {
+    when (proverToml.type) {
+      ProverType.PRE_RISCV -> {
+        require(
+          proverToml.execution != null &&
+            proverToml.blobCompression != null && proverToml.proofAggregation != null,
+        ) {
+          "Prover type of PRE-RISCV must configure execution, blobCompression, and proofAggregation"
+        }
+      }
+      ProverType.RISCV -> {
+        require(
+          proverToml.l2Execution != null &&
+            proverToml.rollup != null && proverToml.rollupAggregation != null,
+        ) {
+          "Prover type of RISCV must configure l2Execution, rollup, and rollupAggregation"
+        }
+        require(
+          proverToml.l2Execution.programId != null &&
+            proverToml.rollup.programId != null && proverToml.rollupAggregation.programId != null,
+        ) {
+          "Prover type of RISCV must configure programId for l2Execution, rollup, and rollupAggregation"
+        }
+        require(proverToml.forkName != null && proverToml.provingSystemVersion != null) {
+          "Prover type of RISCV must configure forkName and provingSystemVersion"
+        }
+      }
+    }
+  }
 
   fun reified(): ProversConfig {
     val mergedSwitchBlockNumberInclusive = switchBlockNumberInclusive ?: new?.switchBlockNumberInclusive
@@ -124,11 +185,41 @@ data class ProverToml(
     require(!(mergedSwitchBlockNumberInclusive != null && mergedSwitchBlockTimestamp != null)) {
       "Only one of switchBlockNumberInclusive and switchBlockTimestamp may be set in [prover] config"
     }
+    if (mergedSwitchBlockTimestamp != null || mergedSwitchBlockNumberInclusive != null) {
+      requireNotNull(this.new) {
+        "prover.new must be configured if either switchBlockNumberInclusive or switchBlockTimestamp is set"
+      }
+    }
+    if (this.type == ProverType.RISCV) {
+      require(this.new?.type == ProverType.RISCV) {
+        "Prover type of new must be RISCV if the current prover type is RISCV"
+      }
+    }
+    validateProverToml(this)
+    this.new?.run(::validateProverToml)
+
+    fun buildGenericProverConfig(proverToml: ProverToml): ProverConfig {
+      return ProverConfig(
+        preRiscvConfig = if (proverToml.type == ProverType.PRE_RISCV) {
+          toPreRiscvProverConfig(proverToml)
+        } else {
+          null
+        },
+        riscvConfig = if (proverToml.type == ProverType.RISCV) {
+          toProverConfig(proverToml)
+        } else {
+          null
+        },
+      )
+    }
+
     return ProversConfig(
-      proverA = toProverConfig(this),
+      proverSwitch = ProverConfigSwitch(
+        current = buildGenericProverConfig(this),
+        next = this.new?.let { buildGenericProverConfig(it) },
+      ),
       switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
       switchBlockTimestamp = mergedSwitchBlockTimestamp,
-      proverB = this.new?.let { toProverConfig(it) },
       enableRequestFilesCleanup = this.enableRequestFilesCleanup,
     )
   }

@@ -10,7 +10,7 @@ import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV4
 import net.consensys.linea.traces.TracingModuleV5
 
-data class CoordinatorConfigFileToml(
+data class CoordinatorConfigFilesToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")
   val defaults: DefaultsToml = DefaultsToml(),
   @param:ConfigSection("Lineth protocol contract addresses and genesis settings.")
@@ -19,8 +19,6 @@ data class CoordinatorConfigFileToml(
   val conflation: ConflationToml = ConflationToml(),
   @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
   val prover: ProverToml,
-  @param:ConfigSection("RISC-V prover request/response directories for execution, rollup, and aggregation proofs.")
-  val riscvProver: ProverToml? = null,
   @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
   @param:ConfigSection("Shomei state manager client settings.")
@@ -45,7 +43,21 @@ data class CoordinatorConfigFileToml(
   val database: DatabaseToml,
   @param:ConfigSection("Coordinator JSON-RPC and observability API settings.")
   val api: ApiConfigToml = ApiConfigToml(),
-)
+) {
+  init {
+    if (prover.type == ProverToml.ProverType.PRE_RISCV &&
+      prover.new?.type == ProverToml.ProverType.RISCV
+    ) {
+      require(
+        conflation.riscvStartingBlockTimestampInclusive ==
+          (prover.switchBlockTimestamp ?: prover.new.switchBlockTimestamp),
+      ) {
+        "conflation.riscvStartingBlockTimestampInclusive must be equal to prover.switchBlockTimestamp for" +
+          " switching from pre RISC-V to RISC-V provers"
+      }
+    }
+  }
+}
 
 data class TracesLimitsConfigFileV4Toml(
   @param:ConfigDoc(
@@ -80,7 +92,7 @@ data class SmartContractErrorCodesConfigFileToml(
 )
 
 data class CoordinatorConfigToml(
-  val configs: CoordinatorConfigFileToml,
+  val configs: CoordinatorConfigFilesToml,
   val tracesLimitsV4: TracesLimitsConfigFileV4Toml?,
   val tracesLimitsV5: TracesLimitsConfigFileV5Toml?,
   val l1DynamicGasPriceCapTimeOfDayMultipliers: GasPriceCapTimeOfDayMultipliersConfigFileToml? = null,
@@ -96,7 +108,6 @@ data class CoordinatorConfigToml(
         tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
       proversConfig = this.configs.prover.reified(),
-      riscvProversConfig = this.configs.riscvProver?.reified(),
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),

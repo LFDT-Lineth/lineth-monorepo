@@ -73,7 +73,7 @@ class ConflationAppOrchestrator(
 
   private val chainId: ULong = l2EthClient.ethChainId().get()
 
-  private val preRiscvProverClientFactory = proverClientFactoryBuilder.build(
+  private val proverClientFactory = proverClientFactoryBuilder.build(
     vertx = vertx,
     config = configs.proversConfig,
     l2MessageServiceAddress = configs.protocol.l2.contractAddress,
@@ -148,14 +148,14 @@ class ConflationAppOrchestrator(
         )
         DisabledService("forced-transactions-invalidity-proof")
       } else {
-        check(configs.proversConfig.proverA.invalidity != null) {
+        check(configs.proversConfig.proverSwitch.current.preRiscvConfig?.invalidity != null) {
           "prover.invalidity config is required for forced transactions feature to work"
         }
         val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)
         ForcedTransactionsInvalidityProofService(
           ftxDao = forcedTransactionsDao,
           invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = preRiscvProverClientFactory.preRiscvInvalidityProverClient(),
+            invalidityProofClient = proverClientFactory.preRiscvInvalidityProverClient(),
             stateManagerClient = zkStateClient,
             accountProofClient = zkStateClient,
             ethApiLogsSearcher = l1EthLogsSearcherForFtx,
@@ -254,7 +254,7 @@ class ConflationAppOrchestrator(
       forcedTransactionsDao = forcedTransactionsDao,
       configs = configs,
       metricsFacade = metricsFacade,
-      proverClientFactory = preRiscvProverClientFactory,
+      proverClientFactory = proverClientFactory,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
       l2EthClient = l2EthClient,
       zkStateClient = zkStateClient,
@@ -269,14 +269,6 @@ class ConflationAppOrchestrator(
 
   private val conflationAppV2: LongRunningService =
     if (configs.conflation.riscvStartingBlockTimestampInclusive != null) {
-      val riscvProverClientFactory = proverClientFactoryBuilder.build(
-        vertx = vertx,
-        config = configs.riscvProversConfig!!,
-        l2MessageServiceAddress = configs.protocol.l2.contractAddress,
-        // Read from the node rather than config, as ConflationAppV2 does for the same value.
-        chainId = chainId,
-        metricsFacade = metricsFacade,
-      )
       ConflationAppV2(
         vertx = vertx,
         chainId = chainId,
@@ -285,7 +277,7 @@ class ConflationAppOrchestrator(
         forcedTransactionsApp = forcedTransactionsApp,
         forcedTransactionsDao = forcedTransactionsDao,
         metricsFacade = metricsFacade,
-        proverClientFactory = riscvProverClientFactory,
+        proverClientFactory = proverClientFactory,
         lastProvenBlockNumberProvider = lastProvenBlockNumberProvider,
         targetCheckpointPauseController = targetCheckpointPauseControllerV2,
         lastProcessedBlocks = lastProcessedBlocks,
