@@ -154,7 +154,7 @@ func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 //
 // Precondition: all polynomials and the EvaluationPoint must be publicly
 // visible; panics otherwise.
-func (le *LagrangeEval) CheckGnark(_ frontend.API, _ GnarkRuntime) {
+func (le *LagrangeEval) CheckGnark(_ frontend.API, _ *GnarkRuntime) {
 	panic("wiop: LagrangeEval.CheckGnark not yet implemented")
 }
 

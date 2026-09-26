@@ -19,30 +19,30 @@ const (
 	Emulated
 )
 
-// API provides arithmetic operations for KoalaBear circuit variables.
+// KoalaBearAPI provides arithmetic operations for KoalaBear circuit variables.
 // It automatically detects whether to use native or emulated arithmetic
 // based on the circuit's field.
-type API struct {
+type KoalaBearAPI struct {
 	nativeAPI   frontend.API
 	emulatedAPI *emulated.Field[emulated.KoalaBear]
 }
 
-// NewAPI creates an API for the given gnark frontend.
+// NewAPI creates a [KoalaBearAPI] for the given gnark frontend.
 // It automatically detects whether to use native or emulated arithmetic.
-func NewAPI(api frontend.API) *API {
+func NewAPI(api frontend.API) *KoalaBearAPI {
 	ff := api.Compiler().Field()
 	if ff.Cmp(koalabearModulus) == 0 {
-		return &API{nativeAPI: api}
+		return &KoalaBearAPI{nativeAPI: api}
 	}
 	f, err := emulated.NewField[emulated.KoalaBear](api)
 	if err != nil {
 		panic(err)
 	}
-	return &API{nativeAPI: api, emulatedAPI: f}
+	return &KoalaBearAPI{nativeAPI: api, emulatedAPI: f}
 }
 
 // Type returns whether the API is operating in native or emulated mode.
-func (a *API) Type() VType {
+func (a *KoalaBearAPI) Type() VType {
 	if a.emulatedAPI == nil {
 		return Native
 	}
@@ -50,22 +50,22 @@ func (a *API) Type() VType {
 }
 
 // IsNative returns true if the API is operating in native mode.
-func (a *API) IsNative() bool {
+func (a *KoalaBearAPI) IsNative() bool {
 	return a.emulatedAPI == nil
 }
 
 // Frontend returns the underlying gnark frontend API.
-func (a *API) Frontend() frontend.API {
+func (a *KoalaBearAPI) Frontend() frontend.API {
 	return a.nativeAPI
 }
 
 // EmulatedField returns the emulated field API, or nil if in native mode.
-func (a *API) EmulatedField() *emulated.Field[emulated.KoalaBear] {
+func (a *KoalaBearAPI) EmulatedField() *emulated.Field[emulated.KoalaBear] {
 	return a.emulatedAPI
 }
 
 // GetFrontendVariable extracts a frontend.Variable from a Var.
-func (a *API) GetFrontendVariable(v Element) frontend.Variable {
+func (a *KoalaBearAPI) GetFrontendVariable(v Element) frontend.Variable {
 	if a.emulatedAPI == nil {
 		return v.V
 	}
@@ -77,7 +77,7 @@ func (a *API) GetFrontendVariable(v Element) frontend.Variable {
 // Const creates a circuit constant from an int64.
 // Use this for compile-time known values. More efficient than using NewVar
 // for constants as gnark can optimize constant operations.
-func (a *API) Const(c int64) Element {
+func (a *KoalaBearAPI) Const(c int64) Element {
 	if a.IsNative() {
 		return Element{V: c}
 	}
@@ -85,7 +85,7 @@ func (a *API) Const(c int64) Element {
 }
 
 // ConstBig creates a circuit constant from a big.Int.
-func (a *API) ConstBig(c *big.Int) Element {
+func (a *KoalaBearAPI) ConstBig(c *big.Int) Element {
 	if a.IsNative() {
 		return Element{V: c}
 	}
@@ -93,17 +93,17 @@ func (a *API) ConstBig(c *big.Int) Element {
 }
 
 // Zero returns the additive identity (0).
-func (a *API) Zero() Element {
+func (a *KoalaBearAPI) Zero() Element {
 	return a.Const(0)
 }
 
 // One returns the multiplicative identity (1).
-func (a *API) One() Element {
+func (a *KoalaBearAPI) One() Element {
 	return a.Const(1)
 }
 
 // FromFrontendVar wraps an existing frontend.Variable as a Var.
-func (a *API) FromFrontendVar(v frontend.Variable) Element {
+func (a *KoalaBearAPI) FromFrontendVar(v frontend.Variable) Element {
 	if a.IsNative() {
 		return Element{V: v}
 	}
@@ -113,7 +113,7 @@ func (a *API) FromFrontendVar(v frontend.Variable) Element {
 // --- Arithmetic Operations ---
 
 // Add returns a + b.
-func (a *API) Add(x, y Element) Element {
+func (a *KoalaBearAPI) Add(x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Add(x.Native(), y.Native())}
 	}
@@ -121,7 +121,7 @@ func (a *API) Add(x, y Element) Element {
 }
 
 // Sum returns a + b + c + d + ...
-func (a *API) Sum(xs ...Element) Element {
+func (a *KoalaBearAPI) Sum(xs ...Element) Element {
 	if a.IsNative() {
 		res := frontend.Variable(0)
 		for _, x := range xs {
@@ -140,7 +140,7 @@ func (a *API) Sum(xs ...Element) Element {
 }
 
 // Sub returns x - y.
-func (a *API) Sub(x, y Element) Element {
+func (a *KoalaBearAPI) Sub(x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Sub(x.Native(), y.Native())}
 	}
@@ -148,7 +148,7 @@ func (a *API) Sub(x, y Element) Element {
 }
 
 // Neg returns -x.
-func (a *API) Neg(x Element) Element {
+func (a *KoalaBearAPI) Neg(x Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Neg(x.Native())}
 	}
@@ -156,7 +156,7 @@ func (a *API) Neg(x Element) Element {
 }
 
 // Mul returns x * y.
-func (a *API) Mul(x, y Element) Element {
+func (a *KoalaBearAPI) Mul(x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Mul(x.Native(), y.Native())}
 	}
@@ -164,7 +164,7 @@ func (a *API) Mul(x, y Element) Element {
 }
 
 // ModReduce reduces x modulo the KoalaBear field modulus.
-func (a *API) ModReduce(x Element) Element {
+func (a *KoalaBearAPI) ModReduce(x Element) Element {
 	if a.IsNative() {
 		// in native mode, no reduction is necessary
 		return x
@@ -175,7 +175,7 @@ func (a *API) ModReduce(x Element) Element {
 
 // MulConst returns x * c where c is a compile-time constant.
 // More efficient than Mul(x, Const(c)) as it avoids range checks in emulated mode.
-func (a *API) MulConst(x Element, c *big.Int) Element {
+func (a *KoalaBearAPI) MulConst(x Element, c *big.Int) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Mul(x.Native(), c)}
 	}
@@ -183,12 +183,12 @@ func (a *API) MulConst(x Element, c *big.Int) Element {
 }
 
 // MulConstInt returns x * c where c is an int64 constant.
-func (a *API) MulConstInt(x Element, c int64) Element {
+func (a *KoalaBearAPI) MulConstInt(x Element, c int64) Element {
 	return a.MulConst(x, big.NewInt(c))
 }
 
 // Inverse returns 1/x.
-func (a *API) Inverse(x Element) Element {
+func (a *KoalaBearAPI) Inverse(x Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Inverse(x.Native())}
 	}
@@ -196,7 +196,7 @@ func (a *API) Inverse(x Element) Element {
 }
 
 // Div returns x / y.
-func (a *API) Div(x, y Element) Element {
+func (a *KoalaBearAPI) Div(x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Div(x.Native(), y.Native())}
 	}
@@ -206,7 +206,7 @@ func (a *API) Div(x, y Element) Element {
 // --- Comparison and Selection ---
 
 // IsZero returns 1 if x == 0, 0 otherwise.
-func (a *API) IsZero(x Element) frontend.Variable {
+func (a *KoalaBearAPI) IsZero(x Element) frontend.Variable {
 	if a.IsNative() {
 		return a.nativeAPI.IsZero(x.Native())
 	}
@@ -214,7 +214,7 @@ func (a *API) IsZero(x Element) frontend.Variable {
 }
 
 // Select returns x if sel=1, y otherwise.
-func (a *API) Select(sel frontend.Variable, x, y Element) Element {
+func (a *KoalaBearAPI) Select(sel frontend.Variable, x, y Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Select(sel, x.Native(), y.Native())}
 	}
@@ -222,7 +222,7 @@ func (a *API) Select(sel frontend.Variable, x, y Element) Element {
 }
 
 // Lookup2 returns i0 if (b0,b1)=(0,0), i1 if (0,1), i2 if (1,0), i3 if (1,1).
-func (a *API) Lookup2(b0, b1 frontend.Variable, i0, i1, i2, i3 Element) Element {
+func (a *KoalaBearAPI) Lookup2(b0, b1 frontend.Variable, i0, i1, i2, i3 Element) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.Lookup2(
 			b0, b1,
@@ -234,7 +234,7 @@ func (a *API) Lookup2(b0, b1 frontend.Variable, i0, i1, i2, i3 Element) Element 
 }
 
 // Mux returns inputs[sel].
-func (a *API) Mux(sel frontend.Variable, inputs ...Element) Element {
+func (a *KoalaBearAPI) Mux(sel frontend.Variable, inputs ...Element) Element {
 	if a.IsNative() {
 		nativeInputs := make([]frontend.Variable, len(inputs))
 		for i := range nativeInputs {
@@ -254,7 +254,7 @@ func (a *API) Mux(sel frontend.Variable, inputs ...Element) Element {
 // --- Assertions ---
 
 // AssertIsEqual constrains x == y.
-func (a *API) AssertIsEqual(x, y Element) {
+func (a *KoalaBearAPI) AssertIsEqual(x, y Element) {
 	if a.IsNative() {
 		a.nativeAPI.AssertIsEqual(x.Native(), y.Native())
 	} else {
@@ -263,7 +263,7 @@ func (a *API) AssertIsEqual(x, y Element) {
 }
 
 // AssertIsDifferent constrains x != y.
-func (a *API) AssertIsDifferent(x, y Element) {
+func (a *KoalaBearAPI) AssertIsDifferent(x, y Element) {
 	if a.IsNative() {
 		a.nativeAPI.AssertIsDifferent(x.Native(), y.Native())
 	} else {
@@ -272,7 +272,7 @@ func (a *API) AssertIsDifferent(x, y Element) {
 }
 
 // AssertIsLessOrEqual constrains x <= y.
-func (a *API) AssertIsLessOrEqual(x, y Element) {
+func (a *KoalaBearAPI) AssertIsLessOrEqual(x, y Element) {
 	if a.IsNative() {
 		a.nativeAPI.AssertIsLessOrEqual(x.Native(), y.Native())
 	} else {
@@ -281,7 +281,7 @@ func (a *API) AssertIsLessOrEqual(x, y Element) {
 }
 
 // AssertIsBoolean constrains x == 0 or x == 1.
-func (a *API) AssertIsBoolean(x Element) {
+func (a *KoalaBearAPI) AssertIsBoolean(x Element) {
 	if a.IsNative() {
 		a.nativeAPI.AssertIsBoolean(x.Native())
 	} else {
@@ -292,15 +292,27 @@ func (a *API) AssertIsBoolean(x Element) {
 // --- Binary Operations ---
 
 // ToBinary returns the binary decomposition of x.
-func (a *API) ToBinary(x Element, n ...int) []frontend.Variable {
+func (a *KoalaBearAPI) ToBinary(x Element, n ...int) []frontend.Variable {
 	if a.IsNative() {
 		return a.nativeAPI.ToBinary(x.Native(), n...)
 	}
 	return a.emulatedAPI.ToBits(x.Emulated())
 }
 
+// ToBinaryCanonical returns the little-endian bits of the canonical (fully
+// reduced, < modulus) value of x. Unlike [KoalaBearAPI.ToBinary], which in emulated mode
+// decomposes the possibly unreduced internal representation, the result is
+// unique for a given field element, so it is safe to derive indices or
+// challenges from it.
+func (a *KoalaBearAPI) ToBinaryCanonical(x Element) []frontend.Variable {
+	if a.IsNative() {
+		return a.nativeAPI.ToBinary(x.Native(), koalabearModulus.BitLen())
+	}
+	return a.emulatedAPI.ToBitsCanonical(x.Emulated())
+}
+
 // FromBinary constructs a Var from binary bits.
-func (a *API) FromBinary(bits ...frontend.Variable) Element {
+func (a *KoalaBearAPI) FromBinary(bits ...frontend.Variable) Element {
 	if a.IsNative() {
 		return Element{V: a.nativeAPI.FromBinary(bits...)}
 	}
@@ -308,24 +320,24 @@ func (a *API) FromBinary(bits ...frontend.Variable) Element {
 }
 
 // And returns a AND b (bitwise).
-func (a *API) And(x, y frontend.Variable) frontend.Variable {
+func (a *KoalaBearAPI) And(x, y frontend.Variable) frontend.Variable {
 	return a.nativeAPI.And(x, y)
 }
 
 // Or returns a OR b (bitwise).
-func (a *API) Or(x, y frontend.Variable) frontend.Variable {
+func (a *KoalaBearAPI) Or(x, y frontend.Variable) frontend.Variable {
 	return a.nativeAPI.Or(x, y)
 }
 
 // Xor returns a XOR b (bitwise).
-func (a *API) Xor(x, y frontend.Variable) frontend.Variable {
+func (a *KoalaBearAPI) Xor(x, y frontend.Variable) frontend.Variable {
 	return a.nativeAPI.Xor(x, y)
 }
 
 // --- Hints ---
 
 // NewHint calls a hint function with Var inputs and outputs.
-func (a *API) NewHint(f solver.Hint, nbOutputs int, inputs ...Element) ([]Element, error) {
+func (a *KoalaBearAPI) NewHint(f solver.Hint, nbOutputs int, inputs ...Element) ([]Element, error) {
 	if a.IsNative() {
 		nativeInputs := make([]frontend.Variable, len(inputs))
 		for i, r := range inputs {
@@ -360,7 +372,7 @@ func (a *API) NewHint(f solver.Hint, nbOutputs int, inputs ...Element) ([]Elemen
 // --- Debug ---
 
 // Println prints variables for debugging.
-func (a *API) Println(vars ...Element) {
+func (a *KoalaBearAPI) Println(vars ...Element) {
 	if a.IsNative() {
 		for i := range vars {
 			a.nativeAPI.Println(vars[i].Native())
