@@ -6,7 +6,7 @@
 //! `buildSignedEip1559Tx`, `buildSignedBlobTx`, and `buildSignedEip7702Tx` build on top of it (and
 //! their own typed-tx payload encoders) to produce a genuinely secp256k1-signed, sender-recoverable
 //! transaction from named fields plus a deterministic per-label private key (`fixturePrivateKey`)
-//! — the same label always reproduces the same key, and Zig signs with RFC-6979
+//! — the same label always reproduces the same key, and libsecp256k1 signs with RFC-6979
 //! deterministic nonces, so the same (label, fields) pair always reproduces the same signature
 //! bytes, run to run.
 //!
@@ -22,7 +22,7 @@
 const std = @import("std");
 const executor = @import("zesu_executor");
 const mpt = @import("zesu_mpt");
-const guest_crypto = @import("guest_crypto");
+const secp256k1 = @import("zesu_secp256k1");
 
 const rlp = executor.executor_rlp_encode;
 
@@ -60,7 +60,7 @@ pub fn buildLegacyTxRlp(
 }
 
 /// Deterministic per-label private key: the same label always signs with the same key, and — via
-/// RFC-6979 deterministic nonces — always produces the same signature bytes for the
+/// libsecp256k1's RFC-6979 deterministic nonces — always produces the same signature bytes for the
 /// same message, run to run.
 pub fn fixturePrivateKey(comptime label: []const u8) [32]u8 {
     return mpt.keccak256("l2exec-range-fixture/" ++ label);
@@ -71,27 +71,15 @@ pub fn fixturePrivateKey(comptime label: []const u8) [32]u8 {
 /// `buildSignedLegacyTx` itself.
 const DerivedSignature = struct { y_parity: u64, r: u256, s: u256 };
 
-/// Signs `msg_hash` with `private_key` and derives the matching recovery ID.
+/// Signs `msg_hash` with `private_key` via zesu's real secp256k1 backend, propagating context/sign
+/// failures as errors rather than a bare `null`.
 fn signHash(msg_hash: [32]u8, private_key: [32]u8) !DerivedSignature {
-    const Ecdsa = std.crypto.sign.ecdsa.EcdsaSecp256k1Sha256;
-    const key = try Ecdsa.SecretKey.fromBytes(private_key);
-    const key_pair = try Ecdsa.KeyPair.fromSecretKey(key);
-    const signature = try key_pair.signPrehashed(msg_hash, null);
-    const signature_bytes = signature.toBytes();
-    const public_key = key_pair.public_key.toUncompressedSec1();
-    var recovered: [64]u8 = undefined;
-    const recid: u64 = if (guest_crypto.ecrecover(&msg_hash, &signature_bytes, 0, &recovered) and
-        std.mem.eql(u8, &recovered, public_key[1..]))
-        0
-    else if (guest_crypto.ecrecover(&msg_hash, &signature_bytes, 1, &recovered) and
-        std.mem.eql(u8, &recovered, public_key[1..]))
-        1
-    else
-        return error.FixtureTxSigningFailed;
+    const ctx = secp256k1.getContext() orelse return error.Secp256k1ContextUnavailable;
+    const signature = ctx.sign(msg_hash, private_key) orelse return error.FixtureTxSigningFailed;
     return .{
-        .r = std.mem.readInt(u256, signature_bytes[0..32], .big),
-        .s = std.mem.readInt(u256, signature_bytes[32..64], .big),
-        .y_parity = recid,
+        .r = std.mem.readInt(u256, signature.sig[0..32], .big),
+        .s = std.mem.readInt(u256, signature.sig[32..64], .big),
+        .y_parity = @as(u64, signature.recid),
     };
 }
 
