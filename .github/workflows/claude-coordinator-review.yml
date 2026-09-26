@@ -33,7 +33,10 @@ jobs:
             --repo "${{ github.repository }}" \
             --label "coordinator" \
             --label "claude-review" \
-            --state all \
+            # closed only: an open issue means the finding was never
+            # resolved, and suppressing on it would blind every future
+            # review to a live, unaddressed finding
+            --state closed \
             --limit 100 \
             --json body \
             --jq '.[].body' \
@@ -52,8 +55,9 @@ jobs:
           prompt: |
             Before starting your analysis, read the file `previous-findings.txt` in the
             repository root. It contains file:line references (e.g. `coordinator/src/.../Foo.kt:42`)
-            already reported in previous reviews. Skip any finding whose primary file:line location
-            appears in that file — do not re-report it even if the issue is still present.
+            from previous review issues that were CLOSED (i.e. resolved or explicitly declined).
+            Skip any finding whose primary file:line location appears in that file. Findings in
+            still-open issues are NOT in the list: re-report them while they remain unaddressed.
 
             You are reviewing the full Kotlin/JVM codebase in the `coordinator/` and
             `jvm-libs/` modules of the Lineth monorepo.
