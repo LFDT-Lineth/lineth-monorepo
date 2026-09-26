@@ -309,6 +309,42 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
+  fun `findBatchesByBlockRange returns empty list when no batches exist`() {
+    assertThat(batchesDao.findBatchesByBlockRange(1L, 10L).get()).isEmpty()
+  }
+
+  @Test
+  fun `findBatchesByBlockRange returns only batches within range ordered by start block`() {
+    val batches = listOf(
+      createBatch(1, 3),
+      createBatch(4, 7),
+      createBatch(8, 10),
+      createBatch(11, 15),
+    )
+    SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
+
+    val result = batchesDao.findBatchesByBlockRange(4L, 10L).get()
+
+    assertThat(result).hasSize(2)
+    assertThat(result[0].startBlockNumber).isEqualTo(4UL)
+    assertThat(result[0].endBlockNumber).isEqualTo(7UL)
+    assertThat(result[1].startBlockNumber).isEqualTo(8UL)
+    assertThat(result[1].endBlockNumber).isEqualTo(10UL)
+  }
+
+  @Test
+  fun `findBatchesByBlockRange returns proofIndexHash when present`() {
+    val proofHash = ByteArray(32) { it.toByte() }
+    val batch = Batch(startBlockNumber = 1UL, endBlockNumber = 5UL, proofIndexHash = proofHash)
+    batchesDao.saveNewBatch(batch).get()
+
+    val result = batchesDao.findBatchesByBlockRange(1L, 5L).get()
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].proofIndexHash).isEqualTo(proofHash)
+  }
+
+  @Test
   fun `deleteBatchesAfterBlockNumber deletes none of the records`() {
     val batches =
       listOf(
