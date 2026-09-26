@@ -1854,6 +1854,32 @@ check_quickstart_lib_consolidation() {
   fi
 }
 
+check_deterministic_proxy_factory_address_consistency() {
+  arachnid_helper="$ROOT/contracts/common/helpers/deterministicDeploymentProxy.ts"
+  deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
+  env_example="$STACK/.env.example"
+
+  # The well-known factory address is a fixed protocol constant duplicated in
+  # three places for readability (TS source of truth, the bash step that logs
+  # it, and the .env.example doc comment). Guard against any of them drifting.
+  # Extractions are guarded with `|| true` (and quoted with `-- -oE`-safe
+  # patterns) so a missing/renamed literal reports a normal `fail` below
+  # instead of aborting the whole script under `set -e`.
+  canonical_factory="$( { grep -oE 'ARACHNID_FACTORY = ethers\.getAddress\("0x[0-9a-fA-F]{40}"\)' "$arachnid_helper" \
+    || true; } | grep -oE '0x[0-9a-fA-F]{40}' || true)"
+  script_factory="$( { grep -oE 'DETERMINISTIC_PROXY_FACTORY="0x[0-9a-fA-F]{40}"' "$deploy_contracts" \
+    || true; } | grep -oE '0x[0-9a-fA-F]{40}' || true)"
+  doc_factory="$(grep -oE 'factory address: 0x[0-9a-fA-F]{40}' "$env_example" | grep -oE '0x[0-9a-fA-F]{40}' || true)"
+
+  if [ -n "$canonical_factory" ] \
+    && [ "$canonical_factory" = "$script_factory" ] \
+    && [ "$canonical_factory" = "$doc_factory" ]; then
+    pass "deterministic deployment proxy factory address is consistent across TS source, deploy script, and .env.example"
+  else
+    fail "deterministic deployment proxy factory address drifted: helper=${canonical_factory:-missing} script=${script_factory:-missing} env.example=${doc_factory:-missing}"
+  fi
+}
+
 check_no_tracked_generated_genesis
 check_restructured_layout_paths
 check_runtime_helper_usage
@@ -1874,6 +1900,7 @@ check_pinned_utility_images_and_docs
 check_wizard_cli
 check_quickstart_review_fixes
 check_quickstart_lib_consolidation
+check_deterministic_proxy_factory_address_consistency
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '[quickstart-static] %s failure(s)\n' "$FAILURES" >&2

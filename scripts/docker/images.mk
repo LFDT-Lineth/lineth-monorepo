@@ -48,6 +48,7 @@ endef
 DOCKER_IMAGE_TARGETS := \
 	docker-build-linea-besu-package \
 	docker-build-coordinator \
+	docker-build-contract-deployer \
 	docker-build-transaction-exclusion-api \
 	docker-build-maru \
 	docker-build-postman \
@@ -99,6 +100,14 @@ docker-build-postman:
 		--dockerfile ./postman/Dockerfile \
 		--context . \
 		--build-arg NATIVE_LIBS_RELEASE_TAG=$(POSTMAN_NATIVE_LIBS_RELEASE_TAG) \
+		--build-arg NODE_VERSION=$(NODE_VERSION)
+
+# .github/workflows/contracts-forge-deployer-build-and-publish.yml
+docker-build-contract-deployer:
+	$(DOCKER_BUILD) \
+		--image-name consensys/lineth-contract-deployer \
+		--dockerfile ./contracts/forge-deployer/Dockerfile \
+		--context . \
 		--build-arg NODE_VERSION=$(NODE_VERSION)
 
 # .github/workflows/prover-build-and-publish.yml
