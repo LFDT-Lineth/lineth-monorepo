@@ -165,18 +165,43 @@ const system_{{$case.Index}} = vanishing.System{
 {{end}}};
 {{end}}`
 
+// indexMax is the largest value vanishing.Index (u16) holds. Every index the
+// generated System stores — expression positions, claim offsets, coin indices —
+// must fit, or the verifier would silently read a truncated value.
+const indexMax = 1<<16 - 1
+
+// checkIndex panics with the offending value rather than emitting a literal the
+// verifier cannot represent.
+func checkIndex(v int, what string) int {
+	if v < 0 || v > indexMax {
+		panic(fmt.Sprintf("%s is %d; vanishing.Index (u16) holds 0..%d", what, v, indexMax))
+	}
+	return v
+}
+
 func exprNodeLiteral(expr ExprNode) string {
 	switch expr.Kind {
 	case ExprColumnClaim:
-		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", expr.ColumnClaim, ZigString(expr.ColumnSourceName))
+		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", checkIndex(expr.ColumnClaim, "column claim"), ZigString(expr.ColumnSourceName))
 	case ExprCellValue:
-		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", expr.Cell.Round, expr.Cell.Index, ZigString(expr.Cell.SourceName))
+		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", checkIndex(expr.Cell.Round, "cell round"), checkIndex(expr.Cell.Index, "cell index"), ZigString(expr.Cell.SourceName))
 	case ExprCoinValue:
-		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, ZigString(expr.Coin.SourceName))
+		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", checkIndex(expr.Coin.FlatIndex, "coin index"), ZigString(expr.Coin.SourceName))
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = .{ .value = %d } },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, IntSlice(expr.Operands))
+		// Unary operators carry only lhs; rhs is a don't-care the verifier
+		// never reads (see vanishing.zig's ExprOp). Reject anything wider
+		// rather than silently dropping operands into a verifier that cannot
+		// represent them.
+		if len(expr.Operands) == 0 || len(expr.Operands) > 2 {
+			panic(fmt.Sprintf("expression operator %q has %d operands; only 1 or 2 are supported", expr.Operator, len(expr.Operands)))
+		}
+		rhs := 0
+		if len(expr.Operands) == 2 {
+			rhs = expr.Operands[1]
+		}
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .lhs = %d, .rhs = %d } },", expr.Operator, checkIndex(expr.Operands[0], "operand lhs"), checkIndex(rhs, "operand rhs"))
 	case ExprLagrangeSelector:
 		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:

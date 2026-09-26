@@ -121,11 +121,32 @@ pub const VerifyInput = struct {
 /// public-input transcript layout plus one compiled system per sub-verifier.
 /// This is the only place in the codebase that knows the full verifier
 /// metadata bundle.
+/// Scratch for the bound-round-message workspace, which must live across
+/// transcript replay and PCS verification. It holds every round cell, so the R5
+/// entry point owns one in `.bss` rather than letting it sit in `verify`'s
+/// stack frame — the guest's linker stack is a fixed 8 MiB.
+pub fn Workspace(comptime spec: public_input_mod.Spec) type {
+    return struct {
+        bound_rounds: public_input_mod.BoundRoundMessages(spec) = undefined,
+    };
+}
+
 pub fn verify(
     comptime spec: protocol.Spec,
     comptime systems: Systems,
     proof: Proof,
     public_inputs: PublicInput,
+) !void {
+    var workspace: Workspace(systems.public_input) = undefined;
+    return verifyWithWorkspace(spec, systems, proof, public_inputs, &workspace);
+}
+
+pub fn verifyWithWorkspace(
+    comptime spec: protocol.Spec,
+    comptime systems: Systems,
+    proof: Proof,
+    public_inputs: PublicInput,
+    workspace: *Workspace(systems.public_input),
 ) !void {
     comptime if (systems.public_input.round_cell_counts.len != spec.round_coin_counts.len - 1)
         @compileError("verifier: public_input.round_cell_counts must have one entry per replayed round");
@@ -133,8 +154,8 @@ pub fn verify(
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
-    var bound_rounds = try public_input_mod.bindRoundMessages(systems.public_input, proof.rounds, public_inputs);
-    const rounds = bound_rounds.rounds();
+    try public_input_mod.bindRoundMessagesInto(systems.public_input, &workspace.bound_rounds, proof.rounds, public_inputs);
+    const rounds = workspace.bound_rounds.rounds();
 
     // Step 1 — replay transcript, derive all coins. The transcript is owned here
     // and threaded by pointer: `protocol` absorbs the round messages + squeezes
