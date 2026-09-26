@@ -12,11 +12,6 @@ dependencies {
   testImplementation project(":jvm-libs:generic:extensions:kotlin")
 }
 
-jar {
-  dependsOn configurations.runtimeClasspath
-}
-
-
 test {
   // we cannot have more 1 compressor per JVM, hence we disable parallel execution
   // because multiple threads would cause issues with the native library

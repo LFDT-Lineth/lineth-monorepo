@@ -131,12 +131,12 @@ task integrationTest(type: Test) {
 
   jvmArgs '-XX:+UseZGC'
   maxHeapSize = "2048m"
-  // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
+  // Limit concurrency to max(2, nCpu/2) and run one test class per JVM (forkEvery = 1) so each class is
   // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
   // build.gradle default. The concurrency cap lives at the process
   // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
-  // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
-  // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
+  // nCpu/2 is empirical headroom for cold JVM+Besu startup bursts: each class spins up several Besu+Maru
+  // nodes with real P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
   maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"

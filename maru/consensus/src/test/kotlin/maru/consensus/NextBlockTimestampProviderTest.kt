@@ -9,10 +9,10 @@
 package maru.consensus
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
-import kotlin.test.Test
 
 class NextBlockTimestampProviderTest {
   private val chainId = 1337u

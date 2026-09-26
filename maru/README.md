@@ -16,26 +16,26 @@ docker-run-stack
 
 Use **JDK 25** (same major version as CI). Check with `java -version`.
 
-To build Maru from source code:
+Maru is built as part of the monorepo Gradle build. From the repository root:
 
 ```sh
 # Create a distribution ready to run
-./gradlew :app:installDist
+./gradlew :maru:app:installDist
 ```
 
 ### Validating a full build
 
-- Run unit and integration tests and checks: `./gradlew build` (several minutes).
-- If Spotless reports drift: `./gradlew spotlessApply`, then `./gradlew spotlessCheck`.
+- Run unit and integration tests and checks: `./gradlew -p maru build` (several minutes).
+- If Spotless reports drift: `./gradlew -p maru spotlessApply`, then `./gradlew -p maru spotlessCheck`.
 - After changing `app/Dockerfile` or the Java baseline, confirm the image still builds (see **Build Docker Image Locally** below).
 
 After building, you can run Maru using:
 
 ```sh
-./app/build/install/app/bin/app [options]
+./maru/app/build/install/app/bin/app [options]
 ```
 
-The distribution will be created in `app/build/install/app/` with all necessary dependencies included.
+The distribution will be created in `maru/app/build/install/app/` with all necessary dependencies included.
 
 ## Validator signing
 

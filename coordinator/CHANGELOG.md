@@ -4,9 +4,17 @@
 
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
 
+### 🐛 Bug Fixes
+
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features

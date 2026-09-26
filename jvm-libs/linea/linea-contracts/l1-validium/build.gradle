@@ -18,7 +18,7 @@ dependencies {
 }
 
 web3jContractWrappers {
-  def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
+  def contractsDir = layout.settingsDirectory.dir("contracts/abi")
   def validiumV1Abi = contractsDir.file("ValidiumV1.0.abi").asFile.absolutePath
   def validiumV2Abi = contractsDir.file("ValidiumV2.0.abi").asFile.absolutePath
 

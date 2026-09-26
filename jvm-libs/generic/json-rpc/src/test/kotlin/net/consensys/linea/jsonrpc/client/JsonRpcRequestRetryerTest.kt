@@ -5,7 +5,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.core.VertxOptions
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.RetriedExecutionException
 import net.consensys.linea.async.get
@@ -58,7 +58,7 @@ class JsonRpcRequestRetryerTest {
 
   @BeforeEach
   fun beforeEach() {
-    vertx = Vertx.vertx(VertxOptions().setEventLoopPoolSize(1).setWorkerPoolSize(1))
+    vertx = Vertx.vertx(vertxTestOptions)
     retryer = AsyncRetryer.retryer(
       vertx,
       backoffDelay = 10.milliseconds,

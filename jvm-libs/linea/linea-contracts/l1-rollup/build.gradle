@@ -18,7 +18,7 @@ dependencies {
 }
 
 web3jContractWrappers {
-  def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
+  def contractsDir = layout.settingsDirectory.dir("contracts/abi")
   def contractV6Abi = contractsDir.file("LinethRollupV6.0.abi").asFile.absolutePath
   def contractV8Abi = contractsDir.file("LinethRollupV8.0.abi").asFile.absolutePath
   def contractV9Abi = contractsDir.file("LinethRollupV9-rc.abi").asFile.absolutePath

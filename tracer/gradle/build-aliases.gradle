@@ -14,13 +14,12 @@
  */
 
 // Default tasks and build aliases
-defaultTasks 'build', 'checkLicenses', 'javadoc'
+defaultTasks 'build', 'javadoc'
 
 def buildAliases = [
   ':tracer:dev': [
     'spotlessApply',
-    'build',
-    'checkLicenses'
+    'build'
   ],
   ':tracer:clean' : [
     'clean'
