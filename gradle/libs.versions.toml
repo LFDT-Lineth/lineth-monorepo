@@ -31,7 +31,7 @@ mockitoKotlin = "6.4.0"
 restassured = "5.3.0"
 wiremock = "3.13.2"
 logcaptor = "2.12.7"
-besuShomeiPluginVersion = "v1.0.8"
+besuShomeiPluginVersion = "v1.1.0"
 undercouchDownload = "5.7.0"
 
 # Runtime
