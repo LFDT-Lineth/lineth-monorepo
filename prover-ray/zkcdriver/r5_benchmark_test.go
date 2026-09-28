@@ -11,7 +11,12 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
@@ -112,7 +117,7 @@ func (f *r5BenchmarkFixture) ensureSystem(b *testing.B) {
 	}
 }
 
-func compileR5BenchmarkSystem(b *testing.B, serialized []byte) (*wiop.System, *zkcdriver.ZkCDriver) {
+func compileR5BenchmarkSystem(b *testing.B, serialized []byte, opts ...compilers.Option) (*wiop.System, *zkcdriver.ZkCDriver) {
 	b.Helper()
 
 	system := wiop.NewSystemf("zkc-r5-benchmark")
@@ -122,8 +127,47 @@ func compileR5BenchmarkSystem(b *testing.B, serialized []byte) (*wiop.System, *z
 		zkcdriver.Settings{},
 		bytes.NewReader(serialized),
 	)
-	proverCompilePipeline(system)
+	proverCompilePipeline(system, opts...)
 	return system, driver
+}
+
+// runR5BlowupBenchmarks runs body once per [wioptest.RSBlowupBenchConfigs]
+// entry as a sub-benchmark, on a System compiled at that blowup and query
+// count. prove proves the first shard. Configurations whose row limit is below
+// the first shard's tallest module are skipped.
+func runR5BlowupBenchmarks(b *testing.B, body func(b *testing.B, system *wiop.System, prove func() (wiop.Proof, wiop.PublicInput))) {
+	b.Helper()
+	fixture := loadR5BenchmarkFixture(b)
+	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
+	for _, cfg := range wioptest.RSBlowupBenchConfigs() {
+		b.Run(cfg.Name(), func(b *testing.B) {
+			system, driver := compileR5BenchmarkSystem(b, fixture.serialized, cfg.CompileOptions()...)
+			traces := driver.TraceZkcInputs(inputs)
+			if tallest, limit := maxModuleHeightLog2(traces[0]), int(pcs.FRIMaxCommittableSizeLog2(system)); tallest > limit {
+				b.Skipf("first shard has a 2^%d-row module, above the 2^%d row limit at RS blowup %d",
+					tallest, limit, cfg.Blowup)
+			}
+			body(b, system, func() (wiop.Proof, wiop.PublicInput) {
+				return system.Prove(func(rt *wiop.Runtime) {
+					driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
+				})
+			})
+			reportR5Work(b, fixture)
+		})
+	}
+}
+
+func maxModuleHeightLog2(shard trace.Shard[koalabear.Element]) int {
+	tallest := 1
+	for moduleID := range shard.Width() {
+		tallest = max(tallest, int(shard.Module(moduleID).Height()))
+	}
+	return utils.Log2Ceil(tallest)
+}
+
+func reportR5ProofBytes(b *testing.B, system *wiop.System, proof wiop.Proof, pub wiop.PublicInput) {
+	b.Helper()
+	b.ReportMetric(float64(proofserialization.Measure(system, proof, pub).Total), "proof-bytes")
 }
 
 func reportR5Work(b *testing.B, fixture *r5BenchmarkFixture) {
@@ -253,53 +297,47 @@ func BenchmarkR5ZKCCompile(b *testing.B) {
 	}
 }
 
-// BenchmarkR5Prove measures one warm proof on a precompiled immutable system.
-// It includes trace generation and column assignment, as production Prove does,
-// but excludes ZKC and WIOP compilation and excludes verification.
+// BenchmarkR5Prove measures one warm proof on a precompiled immutable system,
+// per RS blowup and paired query count. It includes column assignment, as
+// production Prove does, but excludes tracing, ZKC and WIOP compilation and
+// verification.
 //
 // The scope of the benchmark is a single (the first) shard
 func BenchmarkR5Prove(b *testing.B) {
-	fixture := loadR5BenchmarkFixture(b)
-	fixture.ensureSystem(b)
-	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-	traces := fixture.driver.TraceZkcInputs(inputs)
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for b.Loop() {
-		proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-			fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
-		})
+	runR5BlowupBenchmarks(b, func(b *testing.B, system *wiop.System, prove func() (wiop.Proof, wiop.PublicInput)) {
+		b.Helper()
+		// The first proof at a blowup builds the process-wide FRI envelope;
+		// keep that one-time cost out of the timed loop.
+		proof, pub := prove()
+		b.ReportAllocs()
+		for b.Loop() {
+			proof, pub = prove()
+		}
 		r5ProofSink, r5PubSink = []wiop.Proof{proof}, []wiop.PublicInput{pub}
-	}
-	reportR5Work(b, fixture)
+		reportR5ProofBytes(b, system, proof, pub)
+	})
 }
 
 // BenchmarkR5Verify measures verification of one proof produced before the
-// timer starts. The immutable proof and public input are reused
+// timer starts, per RS blowup and paired query count. The immutable proof and
+// public input are reused
 //
 // The scope of the benchmark is a single (the first) shard
 func BenchmarkR5Verify(b *testing.B) {
-	fixture := loadR5BenchmarkFixture(b)
-	fixture.ensureSystem(b)
-	inputs := &zkcdriver.PreReadInputs{Inputs: fixture.inputs}
-	traces := fixture.driver.TraceZkcInputs(inputs)
-
-	proof, pub := fixture.system.Prove(func(rt *wiop.Runtime) {
-		fixture.driver.AssignTraceShard(rt, traces[0], placeholderSharedRandomness)
-	})
-	if err := fixture.system.Verify(proof, pub); err != nil {
-		b.Fatalf("verifying setup proof: %v", err)
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for b.Loop() {
-		if err := fixture.system.Verify(proof, pub); err != nil {
-			b.Fatalf("verifying R5 proof: %v", err)
+	runR5BlowupBenchmarks(b, func(b *testing.B, system *wiop.System, prove func() (wiop.Proof, wiop.PublicInput)) {
+		b.Helper()
+		proof, pub := prove()
+		if err := system.Verify(proof, pub); err != nil {
+			b.Fatalf("verifying setup proof: %v", err)
 		}
-	}
-	reportR5Work(b, fixture)
+		b.ReportAllocs()
+		for b.Loop() {
+			if err := system.Verify(proof, pub); err != nil {
+				b.Fatalf("verifying R5 proof: %v", err)
+			}
+		}
+		reportR5ProofBytes(b, system, proof, pub)
+	})
 }
 
 // BenchmarkR5ColdEndToEnd measures ZKC source compilation, serialization,

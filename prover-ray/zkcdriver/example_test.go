@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate
@@ -11,7 +12,7 @@ import (
 type zkcTestCase struct {
 	ZkcFilePath string
 	InputStr    string
-	compileFn   func(*wiop.System)
+	compileFn   func(*wiop.System, ...compilers.Option)
 }
 
 func TestRunZKCExamples(t *testing.T) {
