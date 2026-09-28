@@ -59,7 +59,7 @@ func TestCompileIsSingleInvocation(t *testing.T) {
 
 	// A repeat call with nothing new stays a harmless no-op: no panic, and no
 	// second registration of the same accumulators.
-	require.NotPanics(t, func() { messagebus.Compile(sysOK, messagebus.WithoutSharedRandomness()) },
+	require.NotPanics(t, func() { messagebus.Compile(sysOK) },
 		"a repeat call with no new entries must be a no-op")
 	require.Len(t, sysOK.PublicInputs, 2, "a no-op call must not register anything")
 	require.Len(t, sysOK.GrandProducts, 2, "a no-op call must not emit new GrandProducts")

@@ -47,7 +47,7 @@ func TestCompile_Permutation_MixedOriginShardPanics(t *testing.T) {
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-shardB"), "shardB", "h", wiop.NewTable(colB.View()))
 
-	assert.Panics(t, func() { messagebus.Compile(sys, messagebus.WithoutSharedRandomness()) },
+	assert.Panics(t, func() { messagebus.Compile(sys) },
 		"Compile must panic when MessageBus entries straddle different OriginShard values")
 }
 

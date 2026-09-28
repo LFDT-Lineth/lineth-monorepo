@@ -6,7 +6,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	ps "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -31,8 +30,7 @@ func TestProjectEncodeDecode_EndToEnd(t *testing.T) {
 	for idx, build := range wioptest.VanishingScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			require.NoError(t, compilers.CompileFull(sc.Sys,
-				compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+			require.NoError(t, compilers.CompileFull(sc.Sys))
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "the projected proof must be a valid one")
 
@@ -62,8 +60,7 @@ func TestProjectEncodeDecode_EndToEnd(t *testing.T) {
 // wiop.Proof it came from, rather than only against itself via the round trip.
 func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 	sc := wioptest.VanishingScenarios()[0]()
-	require.NoError(t, compilers.CompileFull(sc.Sys,
-		compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+	require.NoError(t, compilers.CompileFull(sc.Sys))
 	proof, pub := sc.Sys.Prove(sc.AssignHonest)
 	require.NoError(t, sc.Sys.Verify(proof, pub))
 
@@ -121,8 +118,7 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 // guest, with nothing pointing back at the projection.
 func TestProject_RejectsIncompleteInput(t *testing.T) {
 	sc := wioptest.VanishingScenarios()[0]()
-	require.NoError(t, compilers.CompileFull(sc.Sys,
-		compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+	require.NoError(t, compilers.CompileFull(sc.Sys))
 	proof, pub := sc.Sys.Prove(sc.AssignHonest)
 
 	t.Run("nil system", func(t *testing.T) {
@@ -193,8 +189,7 @@ func TestMeasureAgreesWithEncode(t *testing.T) {
 	for _, build := range wioptest.VanishingScenarios()[:5] {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			require.NoError(t, compilers.CompileFull(sc.Sys,
-				compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+			require.NoError(t, compilers.CompileFull(sc.Sys))
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 
 			stats := ps.Measure(sc.Sys, proof, pub)
@@ -235,8 +230,7 @@ func TestImageShapeIsCircuitDependent(t *testing.T) {
 
 	for _, build := range wioptest.VanishingScenarios() {
 		sc := build()
-		require.NoError(t, compilers.CompileFull(sc.Sys,
-			compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+		require.NoError(t, compilers.CompileFull(sc.Sys))
 		proof, pub := sc.Sys.Prove(sc.AssignHonest)
 		s := ps.Measure(sc.Sys, proof, pub)
 		if !s.HasPCS || s.Queries == 0 {

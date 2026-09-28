@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -18,8 +17,7 @@ func TestMeasure(t *testing.T) {
 	for _, build := range wioptest.VanishingScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
-			require.NoError(t, compilers.CompileFull(sc.Sys,
-				compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+			require.NoError(t, compilers.CompileFull(sc.Sys))
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "measured proof must verify")
 
@@ -47,7 +45,7 @@ func TestMeasure_NoPCS(t *testing.T) {
 	sc := wioptest.VanishingScenarios()[0]()
 	require.NoError(t, compilers.CompileFull(sc.Sys,
 		compilers.WithoutPCS(),
-		compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())))
+	))
 
 	proof, pub := sc.Sys.Prove(sc.AssignHonest)
 	s := proofserialization.Measure(sc.Sys, proof, pub)
