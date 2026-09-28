@@ -55,7 +55,7 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)

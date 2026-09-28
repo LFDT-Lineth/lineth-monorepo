@@ -35,7 +35,8 @@ var (
 )
 
 var (
-	// XXX(ivokub): use non-zero shared randomness until we start running preflight to get the shared randomness across shards
+	// The unsharded test pipeline has no γ cell; assignment ignores this placeholder.
+	// Keep it for test paths that still pass a seed into AssignTraceShard.
 	placeholderSharedRandomness = koalafield.NewOctupletFromStrings([8]string{"1", "0", "0", "0", "0", "0", "0", "0"})
 )
 
@@ -140,15 +141,9 @@ func proverCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	// Shared randomness is requested even though the zkc driver declares no
-	// message-bus entry yet, so today this registers nothing. It is left on
-	// deliberately: once the arithmetization emits bus entries, the seeded path
-	// engages here on its own and any gap in the γ wiring surfaces as a failing
-	// test rather than staying hidden behind a flag nobody remembers to flip.
-	//
-	// See the variable placeholderSharedRandomness above: it is a non-zero octuplet to ensure that the
-	// shared randomness is not all zero, which would be a degenerate case.
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	// The driver places bus columns on round 0; it cannot use seeded mode's
+	// coin-round placement without a preflight layout change.
+	messagebus.Compile(sys, messagebus.WithoutSharedRandomness())
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
