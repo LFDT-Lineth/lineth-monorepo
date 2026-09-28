@@ -8,15 +8,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
@@ -31,13 +24,12 @@ type HonestRiscvArtifacts struct {
 
 // honestSharedRandomness is the γ seed handed to the shard being proved.
 //
-// runCompilePipeline enables messagebus.CompileOptions.SharedRandomness, which
-// declares γ as a round-0 public input. γ is absorbed on the way out of round 0 like any other cell,
-// which is what makes the coins drawn afterwards depend on it.
-//
-// The value itself is arbitrary; it only has to be a fixed non-zero constant so
-// the artifacts stay byte-reproducible. Real shards get their γ from the
-// aggregation layer, which is what makes the sampled coins agree across shards.
+// sys is compiled with the message-bus pass's shared-randomness mode disabled
+// (the ZKC driver builds every bus participant column on round 0, while the
+// seeded mode requires them all on the coin round), so this value never
+// reaches a γ cell; AssignTraceShard only uses it when
+// messagebus.HasSharedRandomness(sys) holds. It stays a fixed non-zero
+// constant so the artifacts remain byte-reproducible.
 var honestSharedRandomness = koalafield.Octuplet{
 	koalafield.NewElement(11), koalafield.NewElement(22),
 	koalafield.NewElement(33), koalafield.NewElement(44),
@@ -65,7 +57,12 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	sys := wiop.NewSystemf("zkc-riscv-system")
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiledConstraints))
-	runCompilePipeline(sys)
+	// The driver puts bus participant columns on round 0, so seeded mode's
+	// coin-round placement is not applicable to this unsharded protocol.
+	if err := compilers.CompileFull(sys,
+		compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())); err != nil {
+		return HonestRiscvArtifacts{}, fmt.Errorf("compiling pipeline: %w", err)
+	}
 
 	compiledSystem, err := BuildCompiledSystem(sys)
 	if err != nil {
@@ -108,16 +105,4 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 		CompiledSystem: compiledSystem,
 		VerifyInput:    verifyInput,
 	}, nil
-}
-
-func runCompilePipeline(sys *wiop.System) {
-	nonnative.Compile(sys)
-	rangecheck.Compile(sys)
-	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
-	grandproduct.Compile(sys)
-	logderivativesum.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcs.Compile(sys)
 }

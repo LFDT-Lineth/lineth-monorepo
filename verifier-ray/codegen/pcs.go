@@ -380,7 +380,7 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		LogCodewordSize:  int(envelope.LogCodewordSize),
 		LogPlaintextSize: int(envelope.LogPlainTextSize),
 		LogFinalPolySize: 0,
-		NumQueries:       pcscompiler.FRINumQueries(),
+		NumQueries:       pcscompiler.FRINumQueries(sys),
 		NumBatches:       len(batches),
 		Columns:          columns,
 		MaxEntries:       len(columns),

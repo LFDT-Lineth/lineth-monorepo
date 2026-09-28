@@ -12,9 +12,9 @@ const field = verifier_ray.field.koalabear;
 
 // Tests for `verifier.verify`, the top-level entry point. Two layers:
 //   1. The end-to-end sweep below drives every generated fixture case through
-//      the full compileFullPipeline (Go, gen-time) → real proof → serialized
-//      verify.zig → verifier.verify chain. Honest proofs must verify; tampered
-//      ones must be rejected.
+//      the compilers.CompileFull pipeline (Go, gen-time) → real proof →
+//      serialized verify.zig → verifier.verify chain. Honest proofs must
+//      verify; tampered ones must be rejected.
 //   2. The round-count guard needs no fixture: `verify` must reject a proof
 //      whose round count disagrees with the compiled spec, during transcript
 //      replay (before PCS runs).
