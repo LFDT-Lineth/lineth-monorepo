@@ -22,14 +22,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
@@ -37,13 +33,6 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
-	// Shrink the FRI query count to 4 for fixtures: the production default (229)
-	// would emit ~229 Merkle branches per opening, ballooning verify.zig to
-	// hundreds of MB and making Zig compilation intractable.
-	//
-	// Four queries is sufficient to test the Merkle capping without ballooning the fixture sizes.
-	pcscompiler.SetFRINumQueriesForTest(4)
-
 	var out bytes.Buffer
 	writeHeader(&out)
 	writeFieldCases(&out)
@@ -585,15 +574,16 @@ func buildProofFixture(sys *wiop.System, assign assignFn, source, name, label st
 	}, nil
 }
 
-func compileFullPipeline(sys *wiop.System) {
-	rangecheck.Compile(sys)
-	lookuptologderivsum.Compile(sys)
-	logderivativesum.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	// PCS runs last, after the earlier passes have registered their columns and
-	// LagrangeEval openings.
-	pcscompiler.Compile(sys)
+// compileFullPipeline compiles sys through the canonical
+// compilers.CompileFull pipeline, shrinking the FRI query count to 4 for
+// fixtures: the production default (229) would emit ~229 Merkle branches per
+// opening, ballooning verify.zig to hundreds of MB and making Zig compilation
+// intractable. Four queries is sufficient to test the Merkle capping without
+// ballooning the fixture sizes.
+func compileFullPipeline(sys *wiop.System) error {
+	return compilers.CompileFull(sys,
+		compilers.WithPCSOption(pcscompiler.WithFRINumQueries(4)),
+	)
 }
 
 func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
@@ -601,7 +591,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	var systems []codegen.CompiledSystem
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
-		compileFullPipeline(sys)
+		if err := compileFullPipeline(sys); err != nil {
+			return fmt.Errorf("compile %s/%s: %w", source, name, err)
+		}
 		// Fail closed on any verifier action the codegen does not know how to emit.
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
@@ -635,7 +627,9 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	// addMultiSize emits one baked PcsSystem plus two honest proofs at different
 	// runtime sizes.
 	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
-		compileFullPipeline(sys)
+		if err := compileFullPipeline(sys); err != nil {
+			return fmt.Errorf("compile %s/%s: %w", source, name, err)
+		}
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
@@ -660,12 +654,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}
 
-	// addPrecompiled is like add, but for a sys the caller has already run its
-	// own compiler pipeline on (mirroring buildMessageBusFixtureCase): it skips
-	// compileFullPipeline, which would be wrong here since the caller's
-	// pipeline order (e.g. grandproduct.Compile before localvanishing.Compile)
-	// does not match compileFullPipeline's rangecheck/lookup/logderivativesum
-	// ordering.
+	// addPrecompiled is like add, but for a sys the caller has already
+	// compiled through compilers.CompileFull itself (mirroring
+	// buildMessageBusFixtureCase): it skips compileFullPipeline, which would
+	// wrongly compile the already-compiled system a second time.
 	addPrecompiled := func(source, name string, sys *wiop.System, honest, invalid assignFn) error {
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
@@ -842,7 +834,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	//    This is the fixture that actually exercises the .grandproduct system
 	//    end-to-end, closing the coverage gap the shared .invalid path leaves.
 	{
-		sys, colA, colB := buildPermutationSystem()
+		sys, colA, colB, err := buildPermutationSystem()
+		if err != nil {
+			return nil, nil, fmt.Errorf("build permutation system: %w", err)
+		}
 		honest := func(rt *wiop.Runtime) {
 			rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
 			rt.AssignColumn(colB, concreteBase(elems(4, 3, 2, 1)))
@@ -894,11 +889,12 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	}
 
 	// Message-bus + SharedRandomness end-to-end coverage: a real
-	// messagebus.Compile(..., SharedRandomness: true) -> grandproduct.Compile ->
-	// global.Compile -> pcscompiler.Compile pipeline, run through
-	// BuildCompiledSystem and verifier.verify. The invalid fixture flips exactly
-	// one of the 328 shared-randomness contribution limbs in the public-input
-	// statement, which shared_randomness.zig's verify() must now reject.
+	// messagebus.Compile (seeded shared randomness by default) ->
+	// grandproduct.Compile -> global.Compile -> pcscompiler.Compile pipeline,
+	// run through BuildCompiledSystem and verifier.verify. The invalid fixture
+	// flips exactly one of the 328 shared-randomness contribution limbs in the
+	// public-input statement, which shared_randomness.zig's verify() must now
+	// reject.
 	if err := addMessageBusSharedRandomness(func(name string, sys *wiop.System, honest assignFn) error {
 		compiled, err := buildMessageBusFixtureCase(name, sys, honest)
 		if err != nil {
@@ -915,13 +911,16 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 }
 
 // buildPermutationSystem builds a size-4 single-column permutation A ~ B,
-// reduced by grandproduct.Compile directly. Compile order: grandproduct's
-// Z-final endpoint is a scalar (ColumnPosition-based) local opening, so
-// localvanishing.Compile must run BEFORE global.Compile to lift it to a
-// multi-valued vanishing that global.Compile can discharge; pcscompiler.Compile
-// runs last so it sees every committed column and LagrangeEval opening the
-// earlier passes registered.
-func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+// reduced by grandproduct.Compile via the canonical compilers.CompileFull
+// pipeline. Compile order: grandproduct's Z-final endpoint is a scalar
+// (ColumnPosition-based) local opening, so localvanishing.Compile must run
+// BEFORE global.Compile to lift it to a multi-valued vanishing that
+// global.Compile can discharge; pcscompiler.Compile runs last so it sees
+// every committed column and LagrangeEval opening the earlier passes
+// registered — the same ordering compilers.CompileFull uses. This system has
+// no message-bus entries, so the messagebus pass is a no-op and the default
+// seeded shared-randomness mode is vacuous for it.
+func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column, error) {
 	sys := wiop.NewSystemf("permutation")
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
@@ -934,11 +933,15 @@ func buildPermutationSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 		[]wiop.Table{wiop.NewTable(colB.View())},
 	)
 
-	grandproduct.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcscompiler.Compile(sys)
-	return sys, colA, colB
+	// Shrink the FRI query count to 4 for fixtures: the production default
+	// (229) would balloon the generated vectors with ~229 Merkle branches per
+	// opening. Four queries still exercises the Merkle capping.
+	if err := compilers.CompileFull(sys,
+		compilers.WithPCSOption(pcscompiler.WithFRINumQueries(4)),
+	); err != nil {
+		return nil, nil, nil, err
+	}
+	return sys, colA, colB, nil
 }
 
 // messageBusFixtureCase bundles a built fixtureCase with the CompiledSystem it
@@ -950,35 +953,57 @@ type messageBusFixtureCase struct {
 }
 
 // buildMessageBusSharedRandomnessSystem builds a size-4 Send/Receive
-// message-bus handle compiled with messagebus.CompileOptions.SharedRandomness,
-// mirroring codegen's newSharedRandomnessMessageBusHandle test helper but
-// local to the fixture generator. Compile order matters: messagebus.Compile
-// must run before grandproduct.Compile (which needs the message-bus
-// permutation checks registered), and pcscompiler.Compile must run last so it
-// sees every committed column and LagrangeEval opening the earlier passes
-// registered — the same ordering compileFullPipeline uses for the
-// rangecheck/lookup/vanishing pipeline.
-func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
+// message-bus handle compiled with messagebus's default seeded shared
+// randomness, mirroring codegen's newSharedRandomnessMessageBusHandle test
+// helper but local to the fixture generator. The bus columns sit on round 1
+// — the coin round messagebus.Compile places α and β on — and are written by
+// a round-1 prover action registered before compilation, so it runs ahead of
+// the PCS commit action on that round and the round-1 commitment covers the
+// rows it wrote (the same busColumnAssigner pattern as prover-ray's
+// messagebus_with_preflight_test.go). The whole pipeline — messagebus,
+// grandproduct, localvanishing, global, pcscompiler — runs through the single
+// compilers.CompileFull call below.
+func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column, error) {
 	sys := wiop.NewSystemf("mb-shared-randomness")
-	r0 := sys.NewRound()
+	sys.NewRound() // round 0: γ only, written by AssignSharedRandomnessSeed
+	r1 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r1)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r1)
 
 	sys.NewMessageBusSend(sys.Context.Childf("send"), "shard", "route", wiop.NewTable(colA.View()))
 	sys.NewMessageBusReceive(sys.Context.Childf("recv"), "shard", "route", wiop.NewTable(colB.View()))
 
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
-	grandproduct.Compile(sys)
-	// grandproduct registers a scalar (ColumnPosition-based) local opening for
-	// its z-final endpoint check; localvanishing must lift it to a multi-valued
-	// vanishing BEFORE global.Compile, which is the only pass that can discharge
-	// it (and the only one codegen's vanishing-expression translator supports).
-	localvanishing.Compile(sys)
-	global.Compile(sys)
-	pcscompiler.Compile(sys)
-	return sys, colA, colB
+	// Assign the bus columns from the prover action on their own round: the
+	// honest-assign hook still runs while the runtime is on round 0, where
+	// rt.AssignColumn would reject these round-1 columns.
+	r1.RegisterAction(&busColumnAssigner{cols: []*wiop.Column{colA, colB}})
+
+	// Shrink the FRI query count to 4 for fixtures: the production default
+	// (229) would balloon the generated vectors with ~229 Merkle branches per
+	// opening. Four queries still exercises the Merkle capping.
+	if err := compilers.CompileFull(sys,
+		compilers.WithPCSOption(pcscompiler.WithFRINumQueries(4)),
+	); err != nil {
+		return nil, nil, nil, err
+	}
+	return sys, colA, colB, nil
+}
+
+// busColumnAssigner is a prover action that assigns the message-bus columns
+// from their own round, mirroring the busColumnAssigner pattern of
+// prover-ray's messagebus_with_preflight_test.go. Registered before
+// pcscompiler.Compile — which CompileFull does — it runs ahead of that
+// round's commit action, so the commitment covers the rows it wrote.
+type busColumnAssigner struct {
+	cols []*wiop.Column
+}
+
+func (a *busColumnAssigner) Run(rt *wiop.Runtime) {
+	for _, col := range a.cols {
+		rt.AssignColumn(col, concreteBase(elems(1, 2, 3, 4)))
+	}
 }
 
 // flippedExtTraceCell returns an extension-field trace cell with a value
@@ -1001,12 +1026,16 @@ func flippedExtTraceCell(cell runtimeTraceCell) runtimeTraceCell {
 // addMessageBusSharedRandomness registers the message-bus + SharedRandomness
 // scenario with reg, which is responsible for turning (name, sys, honest) into
 // a fixtureCase/CompiledSystem pair and appending it to the caller's slices.
+// The bus columns are written by the round-1 prover action
+// buildMessageBusSharedRandomnessSystem registers, so honest only seeds γ on
+// round 0.
 func addMessageBusSharedRandomness(reg func(name string, sys *wiop.System, honest assignFn) error) error {
-	sys, colA, colB := buildMessageBusSharedRandomnessSystem()
+	sys, _, _, err := buildMessageBusSharedRandomnessSystem()
+	if err != nil {
+		return fmt.Errorf("build message-bus shared-randomness system: %w", err)
+	}
 	honest := func(rt *wiop.Runtime) {
 		messagebus.AssignSharedRandomnessSeed(rt, octuplet(11, 22, 33, 44, 55, 66, 77, 88))
-		rt.AssignColumn(colA, concreteBase(elems(1, 2, 3, 4)))
-		rt.AssignColumn(colB, concreteBase(elems(1, 2, 3, 4)))
 	}
 	return reg("SharedRandomnessContribution", sys, honest)
 }

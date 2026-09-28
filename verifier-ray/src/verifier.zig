@@ -31,9 +31,8 @@ pub const Systems = struct {
     /// contribution digest must equal the Poseidon2 sponge hash over every
     /// committed round preceding the message-bus coin round. Verifier-side
     /// counterpart to prover-ray's messagebus.SharedRandomnessContributionChecker.
-    /// Empty (`.{}`) for a protocol compiled without
-    /// messagebus.CompileOptions.SharedRandomness, in which case the check is a
-    /// no-op.
+    /// Empty (`.{}`) for a protocol compiled with the messagebus
+    /// WithoutSharedRandomness opt-out, in which case the check is a no-op.
     shared_randomness: shared_randomness.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold

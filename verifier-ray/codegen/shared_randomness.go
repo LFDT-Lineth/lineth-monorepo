@@ -19,8 +19,8 @@ import (
 // identity against the adversary's transcript the same way every other
 // sub-verifier does; no baked-in honest-prover value is trusted.
 //
-// Absent (no ContributionRefs) when sys was not compiled with
-// [messagebus.CompileOptions.SharedRandomness] — see
+// Absent (no ContributionRefs) when sys was compiled with the
+// [messagebus.WithoutSharedRandomness] opt-out — see
 // [BuildSharedRandomnessSystem].
 type SharedRandomnessSystem struct {
 	SourceName string
@@ -51,14 +51,13 @@ type CommitmentRoundCtx struct {
 // on sys, if any, and records the round whose commitment it hashes plus the
 // contribution public-input cell refs it needs. Returns a zero-value
 // SharedRandomnessSystem (no error) when sys carries no such action — a system
-// compiled without [messagebus.CompileOptions.SharedRandomness] has nothing for
-// this sub-verifier to check.
+// compiled with the [messagebus.WithoutSharedRandomness] opt-out has nothing
+// for this sub-verifier to check.
 //
-// sys must have been compiled with messagebus.Compile(sys,
-// messagebus.CompileOptions{SharedRandomness: true}); the coin round the
-// checker was registered on is read directly off the action via
-// [wiop.Round.ID], so it can never drift from the round whose PCS commitment
-// the prover hashes into its contribution.
+// sys must have been compiled with messagebus.Compile in its default seeded
+// mode; the coin round the checker was registered on is read directly off the
+// action via [wiop.Round.ID], so it can never drift from the round whose PCS
+// commitment the prover hashes into its contribution.
 func BuildSharedRandomnessSystem(sys *wiop.System) (SharedRandomnessSystem, error) {
 	out := SharedRandomnessSystem{SourceName: sys.Context.Path()}
 
