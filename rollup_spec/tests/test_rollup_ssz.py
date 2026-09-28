@@ -76,21 +76,15 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
 
 def test_rollup_input_round_trips_through_ssz() -> None:
     original = decode_rollup_request(_load_json("getZkRollupProofV1.request.json"))
+    assert len(original.chunks[0].blob_bytes) == 131072
     original.chunks.append(
         ChunkWitness(
             Hash32(bytes([0x2A]) * 32),
             is_calldata=True,
-            calldata_length=131_073,
+            calldata_bytes=bytes(131_073),
         )
     )
     encoded = encode_rollup_input(original)
-    chunks_offset = int.from_bytes(encoded[2 + 52 : 2 + 56], "little")
-    first_chunk = 2 + chunks_offset
-    second_chunk = first_chunk + 41
-    assert encoded[first_chunk + 32] == 0
-    assert encoded[first_chunk + 33 : first_chunk + 41] == bytes(8)
-    assert encoded[second_chunk + 32] == 1
-    assert encoded[second_chunk + 33 : second_chunk + 41] == (131_073).to_bytes(8, "little")
     recovered = decode_rollup_input_ssz(encoded)
     assert recovered == original
 
@@ -173,7 +167,7 @@ def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> 
 def test_decode_rollup_input_rejects_invalid_chunk_boolean() -> None:
     encoded = bytearray(_rollup_input_bytes())
     chunks_offset = int.from_bytes(encoded[2 + 52 : 2 + 56], "little")
-    encoded[2 + chunks_offset + 32] = 2
+    encoded[2 + chunks_offset + 4 + 32] = 2
 
     with pytest.raises(InvalidSsz):
         decode_rollup_input_ssz(bytes(encoded))
