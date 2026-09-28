@@ -190,8 +190,8 @@ data class ProverToml(
         "prover.new must be configured if either switchBlockNumberInclusive or switchBlockTimestamp is set"
       }
     }
-    if (this.type == ProverType.RISCV) {
-      require(this.new?.type == ProverType.RISCV) {
+    if (this.type == ProverType.RISCV && this.new != null) {
+      require(this.new.type == ProverType.RISCV) {
         "Prover type of new must be RISCV if the current prover type is RISCV"
       }
     }
