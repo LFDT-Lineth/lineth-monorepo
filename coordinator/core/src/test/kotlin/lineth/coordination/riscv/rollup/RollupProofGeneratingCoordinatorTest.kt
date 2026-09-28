@@ -12,6 +12,8 @@ import linea.domain.Constants
 import linea.domain.DataRollingHashCalculator
 import linea.domain.StreamPosition
 import linea.domain.createBlock
+import lineth.conflation.calculators.GlobalRollupCalculator
+import lineth.conflation.calculators.RollupTriggerCalculatorByConflationCount
 import lineth.coordination.riscv.conflation.ConflationSegmentBuilder
 import lineth.encoding.BlockEncoder
 import lineth.persistence.BatchesRepository
@@ -63,7 +65,9 @@ class RollupProofGeneratingCoordinatorTest {
 
     coordinator = RollupProofGeneratingCoordinator(
       chainId = chainId,
-      conflationsPerRollupProof = conflationsPerRollupProof,
+      rollupCalculator = GlobalRollupCalculator(
+        listOf(RollupTriggerCalculatorByConflationCount(conflationsPerRollupProof)),
+      ),
       rollupProverClient = rollupProverClient,
       batchesRepository = batchesRepository,
       streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
@@ -110,9 +114,11 @@ class RollupProofGeneratingCoordinatorTest {
   fun `action does not submit proof when fewer than conflationsPerRollupProof conflations accumulated`() {
     coordinator.handleConflatedBatch(makeConflation(1UL, 3UL)).get()
 
+    whenever(batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(1L))
+      .thenReturn(SafeFuture.completedFuture(3L))
+
     coordinator.action().get()
 
-    verify(batchesRepository, never()).findHighestConsecutiveEndBlockNumberFromBlockNumber(any())
     verify(rollupProverClient, never()).createProofRequest(any())
   }
 
@@ -307,7 +313,9 @@ class RollupProofGeneratingCoordinatorTest {
     val exactSegment = ByteArray(halfBlobSize) { it.toByte() }
     val exactCoordinator = RollupProofGeneratingCoordinator(
       chainId = chainId,
-      conflationsPerRollupProof = conflationsPerRollupProof,
+      rollupCalculator = GlobalRollupCalculator(
+        listOf(RollupTriggerCalculatorByConflationCount(conflationsPerRollupProof)),
+      ),
       rollupProverClient = rollupProverClient,
       batchesRepository = batchesRepository,
       streamPositionProvider = { SafeFuture.completedFuture(StreamPosition(0UL, genesisDataRollingHash)) },
