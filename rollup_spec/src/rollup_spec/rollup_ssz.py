@@ -11,7 +11,7 @@ Framing: every message is `schema_id (2 bytes, big-endian) || SSZ bytes`.
 Two schema ids are defined, one per guest-facing message:
 
   - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
-   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1803) — rollup guest output V2
+  - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
 
 The guest output container omits the `proof` field the logical `RollupProof`
 dataclass carries: a guest cannot attest its own proof, so `proof` is attached
@@ -61,7 +61,7 @@ from .rollup import (
 
 # ── Framing ──────────────────────────────────────────────────────────────────
 ROLLUP_INPUT_SCHEMA_ID = 0x1001
-ROLLUP_OUTPUT_SCHEMA_ID = 0x1803
+ROLLUP_OUTPUT_SCHEMA_ID = 0x1801
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_CONFLATIONS_PER_ROLLUP = 2**10             # conflations one rollup proof recursively verifies
@@ -282,7 +282,7 @@ def decode_rollup_input_ssz(data: bytes) -> RollupProofPrivateInput:
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode the rollup guest's own output into framed SSZ bytes (0x1803 schema
+    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
     id). `proof.proof` is deliberately dropped — it is a prover-attached
     placeholder in `RollupProof`, never part of the guest-emitted bytes.
     """

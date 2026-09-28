@@ -17,13 +17,12 @@ It lives strictly on the prover *host* side. The guest dataclasses in
 never learn about JSON; the dependency arrow points one way only
 (codec -> guest types).
 
-Guest output vs prover output: a guest emits its public-input tuple plus the
-    revealed l2-execution hash preimages (`l2L1Messages`, `txFroms`, and
-    `filteredAddresses`). Rollup roots and filtered addresses are public-input
-    lists. The `proof` bytes are NOT produced by the guest — the
-zkVM/prover layer attaches them — so they are placeholders (`b""`) in this
-reference. A response therefore equals the guest output plus `proof`; the next
-proving step (or L1) consumes exactly that.
+Guest output vs prover output: the l2-execution guest emits public inputs and
+revealed hash preimages (`l2L1Messages`, `txFroms`, and `filteredAddresses`).
+Rollup and aggregation guests emit root and filtered-address lists in their
+public inputs. The zkVM/prover layer attaches `proof`, which is a placeholder
+(`b""`) in this reference; it hashes each list for the public-input commitment.
+The Coordinator receives the lists in the response for L1 finalization.
 
 Design notes:
   - The JSON field names are NOT a clean camel->snake mapping of the dataclass

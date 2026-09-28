@@ -135,8 +135,8 @@ def _aggregation_output_bytes() -> bytes:
 
 
 _DECODE_CASES = [
-    pytest.param(decode_aggregation_input_ssz, _aggregation_input_bytes, 0x1003, id="aggregation_input"),
-    pytest.param(decode_aggregation_output_ssz, _aggregation_output_bytes, 0x1804, id="aggregation_output"),
+    pytest.param(decode_aggregation_input_ssz, _aggregation_input_bytes, 0x1002, id="aggregation_input"),
+    pytest.param(decode_aggregation_output_ssz, _aggregation_output_bytes, 0x1802, id="aggregation_output"),
 ]
 
 
@@ -152,10 +152,17 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> None:
+def test_decode_rejects_malformed_truncation(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
+    if schema_id == 0x1002:
+        # The final input field is a variable-length proof, so removing its
+        # final byte produces another valid proof payload. Truncate the
+        # container header instead to exercise malformed framing.
+        encoded = encoded[:3]
+    else:
+        encoded = encoded[:-1]
     with pytest.raises(InvalidSsz):
-        decode_fn(encoded[: len(encoded) - 1])
+        decode_fn(encoded)
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
@@ -165,12 +172,14 @@ def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) ->
         decode_fn(encoded[:1])
 
 
-@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> None:
-    # A trailing byte either breaks the outer container's own offset/length
-    # bookkeeping (remerkleable raises directly) or decodes as if absorbed and
-    # is then caught by the canonical-encoding re-check — either way it must
-    # surface as InvalidSsz, not succeed silently.
-    encoded = encode_bytes()
+def test_decode_rejects_trailing_garbage_in_output() -> None:
+    encoded = _aggregation_output_bytes()
     with pytest.raises(InvalidSsz):
-        decode_fn(encoded + b"\x00")
+        decode_aggregation_output_ssz(encoded + b"\x00")
+
+
+def test_aggregation_input_proof_bytes_can_extend() -> None:
+    encoded = _aggregation_input_bytes()
+    original = decode_aggregation_input_ssz(encoded)
+    extended = decode_aggregation_input_ssz(encoded + b"\x00")
+    assert extended.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof + b"\x00"

@@ -392,18 +392,9 @@ class RollupPublicInput:
     positions; `end_offset` is a derived output (computed from the guest's own
     recompression), not trusted witness input.
 
-    `program_vks` is the set of ALL guest program VKs verified beneath this proof
-    (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
-    set. It is semantically a SET, encoded as a CANONICAL sorted, distinct list
-    (ascending by byte value): order carries no meaning, and sorting makes the
-    commitment a pure function of the set's contents, so the guest and L1 agree
-    by both canonicalizing rather than relying on incidental order. It is a plain
-    public-input list field — no hash field — folded into L1's aggregate
-    public-input hash like every other finalization field. L1 does not
-    distinguish exec vs rollup VKs (a VK is a 32-byte commitment and the
-    guarantee comes from recursive verification against `program_vk`, not from
-    which output list it lands in), so the PI carries ONE list; the
-    exec-vs-rollup distinction is internal guest bookkeeping only.
+    `program_vks` is the set of guest program VKs verified beneath this proof,
+    encoded as a distinct list sorted ascending by byte value. The root and
+    filtered-address lists retain their original order.
     """
     end_block_number: U64
     end_block_timestamp: U64
@@ -516,7 +507,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     against the L1-anchored `chunkHash` — folding the dataRollingHash chain
     across the touched chunks as it goes (§3.4). Recursively verifies the N
     l2-execution proofs, checks continuity, builds the L2->L1 Merkle-root
-    commitment, collects FTX outputs, and emits the rollup PI tuple
+    list, collects FTX outputs, and emits the rollup PI tuple
     (§2.4).
     """
     if len(rollup_input.conflations) == 0:
@@ -749,8 +740,7 @@ def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32
     - Merkle-hash each chunk as a complete depth-5 binary tree with keccak.
     - Flat-hash the ordered roots with keccak256(root_1 || ... || root_n).
 
-    The returned root list is carried directly in the rollup public input. The
-    legacy hash return is retained only for callers that need the list digest.
+    Returns the ordered roots and their flat keccak256 digest.
     """
     roots = build_l2_message_roots(msgs)
     return roots, hash_digest_list(roots)
