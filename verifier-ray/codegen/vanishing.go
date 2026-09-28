@@ -3,6 +3,7 @@ package codegen
 import (
 	"errors"
 	"fmt"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -135,7 +136,24 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 				}
 				module.Size = ModuleSize{Dynamic: true, DynamicIndex: idx}
 			} else {
-				module.Size = ModuleSize{StaticSize: moduleRef.Size()}
+				// The verifier needs a domain of this size, so it must be a power
+				// of two within the field's 2-adicity. Rejecting here keeps a
+				// malformed System from being emitted at all: `system` is runtime
+				// data in the verifier, so this cannot be a Zig comptime assertion
+				// any more, and the verifier's own check would only fire at
+				// verification time.
+				n := moduleRef.Size()
+				if n <= 0 || n&(n-1) != 0 {
+					return VanishingSystem{}, fmt.Errorf(
+						"codegen: static vanishing module %q has size %d, which is not a non-zero power of two",
+						moduleRef.Context.Path(), n)
+				}
+				if log2 := bits.TrailingZeros(uint(n)); uint64(log2) > field.MaxOrderRoot {
+					return VanishingSystem{}, fmt.Errorf(
+						"codegen: static vanishing module %q has size 2^%d, exceeding the KoalaBear 2-adicity 2^%d",
+						moduleRef.Context.Path(), log2, field.MaxOrderRoot)
+				}
+				module.Size = ModuleSize{StaticSize: n}
 			}
 
 			views := make(map[viewKey]int, len(verifier.WitnessViews))

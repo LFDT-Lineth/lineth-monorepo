@@ -1,3 +1,4 @@
+const std = @import("std");
 const protocol = @import("../protocol/root.zig");
 const field = @import("../field/koalabear.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
@@ -7,7 +8,6 @@ pub const Error = error{
     MissingRoundCommitment,
     ContributionMismatch,
     ContributionNotBaseField,
-    ContributionCountMismatch,
 } || protocol.CellError;
 
 /// ScalarRef locates a cell in ctx.rounds by its (round, index) coordinates.
@@ -56,10 +56,12 @@ pub const System = struct {
 /// registers no checker and has nothing for this sub-verifier to enforce.
 pub fn verify(system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
-    // `system` is runtime now, so this shape check is a returned error rather
-    // than a compile-time assertion. Codegen only ever emits a full Octuplet.
-    if (system.contribution_refs.len != multiset_hashing.size)
-        return error.ContributionCountMismatch;
+    // Codegen rejects any other length before emitting the System (see
+    // BuildSharedRandomnessSystem), so this is an invariant, not a proof-
+    // dependent condition. It stays as an assert because the loop below indexes
+    // `contribution` by the same counter: a longer slice would read past the
+    // Octuplet.
+    std.debug.assert(system.contribution_refs.len == multiset_hashing.size);
 
     // A round that committed no column has no Octuplet to hash; prover-ray's
     // `rt.Commitments[...]` map lookup yields the zero value there, so hash

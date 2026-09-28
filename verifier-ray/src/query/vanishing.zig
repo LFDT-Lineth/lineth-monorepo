@@ -161,12 +161,17 @@ fn verifyModule(
 ) Error!void {
     // Static module sizes come from the generated System; dynamic modules use
     // static_n == 0 as a sentinel, and the caller in verify() looks up n from
-    // module_sizes and passes it here as dynamic_n. Both are runtime values, so
-    // what used to be a comptime assertion on the static size is a runtime
-    // check — the error is returned rather than raised at compile time.
-    const n = if (static_n != 0) static_n else dynamic_n;
-    if (!validModuleSize(n)) return error.InvalidModuleSize;
-    _ = field.rootOfUnityBy(n) catch return error.InvalidModuleSize;
+    // module_sizes and passes it here as dynamic_n.
+    //
+    // Only the dynamic size is checked here. A static size is fixed by codegen,
+    // which rejects a non-power-of-two or over-2-adicity module before emitting
+    // the System (see BuildVanishingSystem), so it cannot be malformed by the
+    // time the verifier runs. A dynamic size is proof-supplied and can only be
+    // validated here.
+    if (static_n == 0) {
+        if (!validModuleSize(dynamic_n)) return error.InvalidModuleSize;
+        _ = field.rootOfUnityBy(dynamic_n) catch return error.InvalidModuleSize;
+    }
 
     // Let r be the evaluation coin and H the module domain of size n (= static_n
     // for static modules, else dynamic_n). The prover computes the domain
