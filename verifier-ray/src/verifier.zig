@@ -211,10 +211,10 @@ pub fn verifyWithWorkspace(
     // and passed straight into `pcs.verify` below, so its lifetime is fine:
     // nothing here escapes past `verify` returning.
     var entry_claims_buf: pcs.EntryClaims(pcs_system) = .{};
-    try pcs.buildEntryClaims(pcs_system, recon, ctx, &entry_claims_buf);
+    try pcs.buildEntryClaims(pcs_system, &recon, ctx, &entry_claims_buf);
     const entry_claims = entry_claims_buf.slice();
 
-    const pcs_challenges = try pcs.deriveChallenges(pcs_system, recon, &transcript, opening.proof.fri_proof);
+    const pcs_challenges = try pcs.deriveChallenges(pcs_system, &recon, &transcript, opening.proof.fri_proof);
     try pcs.verify(pcs_system, .{
         .roots = &bound_roots,
         .entry_claims = entry_claims,

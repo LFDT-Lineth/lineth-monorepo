@@ -312,7 +312,7 @@ test "routeInputRoots ignores an unused batch root" {
         for (root) |*element| element.* = field.Element.zero();
     }
     roots[1][0] = field.Element.init(1);
-    const routing = try pcs.routeInputRoots(system, recon, &roots);
+    const routing = try pcs.routeInputRoots(system, &recon, &roots);
     try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
     try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
 }
@@ -383,7 +383,7 @@ fn d1ChallengeFriProof() fri.Proof {
 test "deriveChallenges produces the comptime-sized shape" {
     const recon = try pcs.reconstruct(challenge_system, &.{});
     var transcript = fiat_shamir.Transcript.init();
-    const challenges = try pcs.deriveChallenges(challenge_system, recon, &transcript, challengeFriProof(1));
+    const challenges = try pcs.deriveChallenges(challenge_system, &recon, &transcript, challengeFriProof(1));
     try std.testing.expectEqual(@as(usize, 2), challenges.foldAlphas().len);
     try std.testing.expectEqual(@as(usize, 3), challenges.query_positions.len);
     // Query positions are reduced into the codeword domain (2^4 = 16).
@@ -394,8 +394,8 @@ test "deriveChallenges is deterministic for the same transcript and proof" {
     const recon = try pcs.reconstruct(challenge_system, &.{});
     var t1 = fiat_shamir.Transcript.init();
     var t2 = fiat_shamir.Transcript.init();
-    const a = try pcs.deriveChallenges(challenge_system, recon, &t1, challengeFriProof(7));
-    const b = try pcs.deriveChallenges(challenge_system, recon, &t2, challengeFriProof(7));
+    const a = try pcs.deriveChallenges(challenge_system, &recon, &t1, challengeFriProof(7));
+    const b = try pcs.deriveChallenges(challenge_system, &recon, &t2, challengeFriProof(7));
     for (a.foldAlphas(), b.foldAlphas()) |x, y| try std.testing.expect(x.eql(y));
     try std.testing.expectEqualSlices(usize, &a.query_positions, &b.query_positions);
 }
@@ -409,8 +409,8 @@ test "deriveChallenges depends on the absorbed transcript state" {
     var t2 = fiat_shamir.Transcript.init();
     t1.updateExt(&.{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })});
     t2.updateExt(&.{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })});
-    const a = try pcs.deriveChallenges(challenge_system, recon, &t1, challengeFriProof(9));
-    const b = try pcs.deriveChallenges(challenge_system, recon, &t2, challengeFriProof(9));
+    const a = try pcs.deriveChallenges(challenge_system, &recon, &t1, challengeFriProof(9));
+    const b = try pcs.deriveChallenges(challenge_system, &recon, &t2, challengeFriProof(9));
     var any_alpha_differs = false;
     for (a.foldAlphas(), b.foldAlphas()) |x, y| {
         if (!x.eql(y)) any_alpha_differs = true;
@@ -424,7 +424,7 @@ test "deriveChallenges retains deep alpha when there are no fold rounds" {
     var expected_transcript = fiat_shamir.Transcript.init();
 
     const expected = expected_transcript.randomExt();
-    const challenges = try pcs.deriveChallenges(d1_challenge_system, recon, &transcript, d1ChallengeFriProof());
+    const challenges = try pcs.deriveChallenges(d1_challenge_system, &recon, &transcript, d1ChallengeFriProof());
 
     try std.testing.expectEqual(@as(usize, 0), challenges.foldAlphas().len);
     try std.testing.expect(challenges.deep_alpha.eql(expected));
@@ -615,7 +615,7 @@ test "routeInputRoots follows input-opening order as dynamic sizes change" {
     };
 
     const smaller = try pcs.reconstruct(recon_system, &[_]usize{4});
-    const smaller_routing = try pcs.routeInputRoots(recon_system, smaller, &roots);
+    const smaller_routing = try pcs.routeInputRoots(recon_system, &smaller, &roots);
     try std.testing.expectEqual(@as(usize, 2), smaller_routing.distinct_count);
     try std.testing.expectEqualDeep(roots[1], smaller_routing.distinctRoots()[0]);
     try std.testing.expectEqualDeep(roots[0], smaller_routing.distinctRoots()[1]);
@@ -623,7 +623,7 @@ test "routeInputRoots follows input-opening order as dynamic sizes change" {
     try std.testing.expectEqual(@as(usize, 0), smaller_routing.index_by_batch[1]);
 
     const larger = try pcs.reconstruct(recon_system, &[_]usize{16});
-    const larger_routing = try pcs.routeInputRoots(recon_system, larger, &roots);
+    const larger_routing = try pcs.routeInputRoots(recon_system, &larger, &roots);
     try std.testing.expectEqual(@as(usize, 2), larger_routing.distinct_count);
     try std.testing.expectEqualDeep(roots[0], larger_routing.distinctRoots()[0]);
     try std.testing.expectEqualDeep(roots[1], larger_routing.distinctRoots()[1]);
@@ -634,7 +634,7 @@ test "routeInputRoots follows input-opening order as dynamic sizes change" {
 test "routeInputRoots deduplicates equal batch roots" {
     const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
     const shared = challengeDigest(300);
-    const routing = try pcs.routeInputRoots(recon_system, recon, &[_]poseidon2.Digest{ shared, shared });
+    const routing = try pcs.routeInputRoots(recon_system, &recon, &[_]poseidon2.Digest{ shared, shared });
 
     try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
     try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
