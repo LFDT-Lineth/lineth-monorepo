@@ -131,7 +131,7 @@ func BenchmarkR5Fibonacci(b *testing.B) {
 	}
 	system, driver := compileR5BenchmarkSystem(b, serialized)
 
-	if limit := int(pcs.FRIMaxCommittableSizeLog2()); rowLimit > limit {
+	if limit := int(pcs.FRIMaxCommittableSizeLog2(system)); rowLimit > limit {
 		b.Fatalf("tallest shard module is 2^%d rows, above the 2^%d PCS limit; trace is not provable",
 			rowLimit, limit)
 	}
