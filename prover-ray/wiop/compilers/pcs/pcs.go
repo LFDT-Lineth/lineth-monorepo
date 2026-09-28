@@ -27,6 +27,11 @@
 // time; the interactive rounds are witness-dependent, so their commitments are
 // computed at prove time and transported in the [wiop.Proof].
 //
+// The FRI query count and Reed-Solomon blowup are per-System options
+// ([WithFRINumQueries], [WithRSBlowup]). The blowup also bounds the largest
+// committable column: blowup times column size must fit the field's 2-adic
+// subgroup (see [FRIMaxCommittableSizeLog2]).
+//
 // Batches are enumerated canonically as: every interactive round that owns
 // columns, in round order, followed by the precomputed round if it owns columns.
 // The prover's opening and the verifier's inputs share this exact ordering so
@@ -43,22 +48,32 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-const (
-	// FRILogInverseRate is the log2 of the FRI blow-up factor (codeword size /
-	// plaintext size).
-	FRILogInverseRate = 1
-)
+// defaultRSBlowup is the Reed-Solomon blowup (codeword size / plaintext size)
+// used when [WithRSBlowup] is absent.
+const defaultRSBlowup = 2
+
+// maxRSBlowup is the largest blowup the field supports: a codeword must fit in
+// the field's 2-adic subgroup of order 2^MaxOrderRoot. Blowups for which
+// blowup·[wiop.ColumnSizeMaxSupported] exceeds that order lower the System's
+// committable row limit instead; see [FRIMaxCommittableSizeLog2].
+const maxRSBlowup = 1 << field.MaxOrderRoot
 
 // defaultFRINumQueries is the production number of FRI query openings, obtained
-// from https://github.com/ethereum/soundcalc to match 128 bits of security.
+// from https://github.com/ethereum/soundcalc to match 128 bits of security at
+// [defaultRSBlowup].
 const defaultFRINumQueries = 229
 
-// friNumQueriesAnnotationKey is the [wiop.System.Annotations] key under which
-// [Compile] records the System's effective FRI query count.
-const friNumQueriesAnnotationKey = "compiler.pcs.fri_num_queries"
+// friNumQueriesAnnotationKey and rsBlowupAnnotationKey are the
+// [wiop.System.Annotations] keys under which [Compile] records the System's
+// effective FRI query count and RS blowup.
+const (
+	friNumQueriesAnnotationKey = "compiler.pcs.fri_num_queries"
+	rsBlowupAnnotationKey      = "compiler.pcs.rs_blowup"
+)
 
 type compileOptions struct {
 	friNumQueries int
+	rsBlowup      int
 }
 
 // Option configures a single [Compile] invocation.
@@ -81,62 +96,115 @@ func WithFRINumQueries(n int) Option {
 	}
 }
 
-var (
-	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
-	// the largest committed column size the PCS supports, 2^22 — matching the
-	// wiop column-size ceiling. Every proof folds only as many rounds as its own
-	// witness needs (see [fri.Params] restriction); this is just the ceiling.
-	maxCommittableSizeLog2 = uint8(utils.Log2Ceil(wiop.ColumnSizeMaxSupported))
-)
+// WithRSBlowup sets the Reed-Solomon blowup (codeword size / plaintext size) of
+// the compiled System's FRI commitments. blowup must be a power of two in
+// [2, maxRSBlowup]. Blowups above 2^MaxOrderRoot / [wiop.ColumnSizeMaxSupported]
+// shrink the largest committable column (see [FRIMaxCommittableSizeLog2]).
+//
+// The query count is not re-derived: the default query count is calibrated
+// for [defaultRSBlowup], so pair a different blowup with [WithFRINumQueries]
+// to target a given security level.
+//
+// Panics when trying to overwrite already given option.
+func WithRSBlowup(blowup int) Option {
+	if blowup < 2 || blowup > maxRSBlowup || !utils.IsPowerOfTwo(blowup) {
+		utils.Panic("RS blowup %d must be a power of two in [2, %d]", blowup, maxRSBlowup)
+	}
+	return func(o *compileOptions) {
+		if o.rsBlowup != 0 {
+			utils.Panic("RS blowup requested %d but already set to %d", blowup, o.rsBlowup)
+		}
+		o.rsBlowup = blowup
+	}
+}
 
-// The FRI parameters and encoder schedule are a pure function of the fixed
-// capacity, so they are built once per process and shared across every compiled
-// System. Each proof wraps them in a fresh [fri.PCS] (cheap) and folds only as
-// many rounds as its witness requires.
-var (
-	staticFRIOnce     sync.Once
-	staticFRIParams   fri.Params
-	staticFRIEncoders []*fri.RSEncoder
-)
+// columnSizeMaxLog2 is log2 of the wiop column-size ceiling, 2^22.
+var columnSizeMaxLog2 = uint8(utils.Log2Ceil(wiop.ColumnSizeMaxSupported))
 
-// staticFRI returns the process-wide FRI parameters and encoders sized to the
-// fixed maximum capacity.
-func staticFRI() (fri.Params, []*fri.RSEncoder) {
-	staticFRIOnce.Do(func() {
-		params, err := fri.NewParams(FRILogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, defaultFRINumQueries)
+// maxCommittableSizeLog2 is the largest committable column size (log2) at the
+// given blowup: the wiop column-size ceiling, lowered when the codeword would
+// otherwise exceed the field's 2-adic subgroup.
+func maxCommittableSizeLog2(logBlowup uint8) uint8 {
+	return min(columnSizeMaxLog2, uint8(field.MaxOrderRoot)-logBlowup)
+}
+
+// friEnvelope is the FRI parameters and encoder schedule for one blowup, sized
+// to that blowup's maximum committable column. It is a pure function of the
+// blowup, so it is built once per process on first use and shared across every
+// compiled System at that blowup. Each proof wraps it in a fresh [fri.PCS]
+// (cheap) and folds only as many rounds as its witness requires.
+type friEnvelope struct {
+	once     sync.Once
+	params   fri.Params
+	encoders []*fri.RSEncoder
+}
+
+// friEnvelopes is indexed by log2 of the blowup.
+var friEnvelopes [field.MaxOrderRoot + 1]friEnvelope
+
+// staticFRI returns the process-wide FRI envelope for the given blowup.
+func staticFRI(logBlowup uint8) (fri.Params, []*fri.RSEncoder) {
+	env := &friEnvelopes[logBlowup]
+	env.once.Do(func() {
+		capacity := maxCommittableSizeLog2(logBlowup)
+		params, err := fri.NewParams(logBlowup+capacity, capacity, defaultFRINumQueries)
 		if err != nil {
 			utils.Panic("pcs: staticFRI: %v", err)
 		}
-		staticFRIParams = params
-		staticFRIEncoders = buildEncoders(1<<FRILogInverseRate, maxCommittableSizeLog2)
+		env.params = params
+		env.encoders = buildEncoders(logBlowup, capacity)
 	})
-	return staticFRIParams, staticFRIEncoders
+	return env.params, env.encoders
 }
 
 // FRINumQueries returns the number of FRI query openings [Compile] configured
 // for sys, or 0 when sys has no PCS opening (PCS pass not run, or no committed
 // columns).
 func FRINumQueries(sys *wiop.System) int {
-	v, exists := sys.Annotations[friNumQueriesAnnotationKey]
+	return intAnnotation(sys, friNumQueriesAnnotationKey)
+}
+
+// RSBlowup returns the Reed-Solomon blowup [Compile] configured for sys, or 0
+// when sys has no PCS opening (PCS pass not run, or no committed columns).
+func RSBlowup(sys *wiop.System) int {
+	return intAnnotation(sys, rsBlowupAnnotationKey)
+}
+
+func intAnnotation(sys *wiop.System, key string) int {
+	v, exists := sys.Annotations[key]
 	if !exists {
 		return 0
 	}
 	n, ok := v.(int)
 	if !ok {
-		utils.Panic("malformed FRI number queries annotation")
+		utils.Panic("malformed %q annotation", key)
 	}
 	return n
 }
 
-// FRIMaxCommittableSizeLog2 is the log2 of the largest committed column size the
-// PCS supports — the fixed capacity of the static FRI envelope (2^22).
-func FRIMaxCommittableSizeLog2() uint8 { return maxCommittableSizeLog2 }
+// compiledLogRSBlowup returns log2 of sys's compiled blowup. It panics when sys
+// has no PCS opening.
+func compiledLogRSBlowup(sys *wiop.System) uint8 {
+	blowup := RSBlowup(sys)
+	if blowup == 0 {
+		utils.Panic("pcs: System %q has no PCS opening", sys.Context.Path())
+	}
+	return uint8(utils.Log2Floor(blowup))
+}
 
-// FRIStaticParams returns the process-wide FRI envelope parameters (sized to
-// FRIMaxCommittableSizeLog2, at the production query count). A compiled System
-// may open fewer queries; see [FRINumQueries].
-func FRIStaticParams() fri.Params {
-	params, _ := staticFRI()
+// FRIMaxCommittableSizeLog2 is log2 of the largest committed column size the
+// PCS of sys supports: 2^22 unless sys's blowup lowers it to fit the field's
+// 2-adicity. It panics when sys has no PCS opening.
+func FRIMaxCommittableSizeLog2(sys *wiop.System) uint8 {
+	return maxCommittableSizeLog2(compiledLogRSBlowup(sys))
+}
+
+// FRIStaticParams returns the FRI envelope parameters of sys (sized to
+// [FRIMaxCommittableSizeLog2] at sys's blowup, at the production query count).
+// sys may open fewer queries; see [FRINumQueries]. It panics when sys has no
+// PCS opening.
+func FRIStaticParams(sys *wiop.System) fri.Params {
+	params, _ := staticFRI(compiledLogRSBlowup(sys))
 	return params
 }
 
@@ -147,7 +215,7 @@ func FRIStaticParams() fri.Params {
 // only the copy's NumQueries is set; the shared domain slices are never
 // mutated, so concurrently compiled Systems stay independent.
 func (c *compiled) newPCS() *fri.PCS {
-	params, encoders := staticFRI()
+	params, encoders := staticFRI(c.logRSBlowup)
 	params.NumQueries = uint(c.friNumQueries)
 	pcs, err := fri.NewPCS(params, encoders)
 	if err != nil {
@@ -156,18 +224,22 @@ func (c *compiled) newPCS() *fri.PCS {
 	return pcs
 }
 
+// maxSizeIndex returns log2 of the largest padded committed column size for
+// this proof's witness.
+func maxSizeIndex(rt *wiop.Runtime, batches []BatchRef) int {
+	res := 0
+	for _, b := range batches {
+		res = max(res, roundMaxSizeIndex(b.Round, rt))
+	}
+	return res
+}
+
 // effectiveN is the FRI top-domain size for this proof's witness: the codeword
 // size of the largest committed column. Query positions are drawn from [0, N),
 // so this must match the size the PCS restricts its schedule to (both derive it
 // from the same committed columns).
-func effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
-	maxSizeIndex := 0
-	for _, b := range batches {
-		if idx := roundMaxSizeIndex(b.Round, rt); idx > maxSizeIndex {
-			maxSizeIndex = idx
-		}
-	}
-	return 1 << (maxSizeIndex + FRILogInverseRate)
+func (c *compiled) effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
+	return 1 << (maxSizeIndex(rt, batches) + int(c.logRSBlowup))
 }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
@@ -191,6 +263,10 @@ type compiled struct {
 	precomputed     *fri.CommitterState
 	precomputedRoot field.Octuplet
 	friNumQueries   int
+	logRSBlowup     uint8
+	// maxSizeLog2 is the largest committable padded column size (log2) at
+	// logRSBlowup; see [maxCommittableSizeLog2].
+	maxSizeLog2 uint8
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
@@ -202,16 +278,20 @@ type BatchRef struct {
 
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
-// queries. It is a no-op when no columns are committed. A non-positive query
-// count or a repeated query-count option panics before touching sys.
+// queries. It is a no-op when no columns are committed. Invalid or repeated
+// options, and static committed columns larger than the blowup's committable
+// size, panic before touching sys.
 func Compile(sys *wiop.System, opts ...Option) {
 	cfg := new(compileOptions)
 	for _, opt := range opts {
 		opt(cfg)
 	}
+	// options not set, use defaults
 	if cfg.friNumQueries == 0 {
-		// no option was set, use default
 		cfg.friNumQueries = defaultFRINumQueries
+	}
+	if cfg.rsBlowup == 0 {
+		cfg.rsBlowup = defaultRSBlowup
 	}
 
 	batches := CommittedBatches(sys)
@@ -219,13 +299,19 @@ func Compile(sys *wiop.System, opts ...Option) {
 		return
 	}
 
-	c := &compiled{friNumQueries: cfg.friNumQueries}
+	logBlowup := uint8(utils.Log2Floor(cfg.rsBlowup))
+	c := &compiled{
+		friNumQueries: cfg.friNumQueries,
+		logRSBlowup:   logBlowup,
+		maxSizeLog2:   maxCommittableSizeLog2(logBlowup),
+	}
+	c.checkStaticSizes(batches)
 
 	// Commit the static precomputed round once, if it owns columns. A throwaway
 	// runtime exposes the (static) precomputed assignments; its encoders are a
 	// prefix of the static schedule so the root is stable across proof runs.
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		st := commitToRound(1<<FRILogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
+		st := c.commitToRound(&sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
@@ -249,6 +335,23 @@ func Compile(sys *wiop.System, opts ...Option) {
 	openingRound.RegisterAction(&openingProverAction{c: c})
 	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
 	sys.Annotations[friNumQueriesAnnotationKey] = cfg.friNumQueries
+	sys.Annotations[rsBlowupAnnotationKey] = cfg.rsBlowup
+}
+
+// checkStaticSizes panics when a statically sized committed column exceeds the
+// committable size at c's blowup. Dynamic columns are checked at commit time.
+func (c *compiled) checkStaticSizes(batches []BatchRef) {
+	for _, b := range batches {
+		for _, col := range b.Round.Columns {
+			if col.Module.IsDynamic() || !col.Module.IsSized() {
+				continue
+			}
+			if size := utils.NextPowerOfTwo(col.Module.Size()); size > 1<<c.maxSizeLog2 {
+				utils.Panic("pcs: column %q has size %d, above the 2^%d committable at RS blowup %d",
+					col.Context.Path(), size, c.maxSizeLog2, 1<<c.logRSBlowup)
+			}
+		}
+	}
 }
 
 // CommittedBatches returns the canonical batch ordering: every interactive round
@@ -280,7 +383,7 @@ type commitRoundAction struct {
 }
 
 func (a *commitRoundAction) Run(rt *wiop.Runtime) {
-	st := commitToRound(1<<FRILogInverseRate, a.round, rt)
+	st := a.c.commitToRound(a.round, rt)
 	rt.Commitments[a.round.ID] = st.Tree.Root()
 	rt.SetState(committedStateKey(a.round.ID), st)
 }
@@ -343,7 +446,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 
 	fs.UpdateExt(state.FinalPoly...)
-	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
+	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), c.effectiveN(rt, batches))
 	return pcs.Open(state, positions)
 }
 
@@ -351,6 +454,12 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 // checks the opening proof against the transported commitments.
 func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	batches := CommittedBatches(rt.System)
+	// Dynamic sizes come from the proof; a size the prover could not have
+	// committed must be rejected before any FRI domain is derived from it.
+	if idx := maxSizeIndex(rt, batches); idx > int(c.maxSizeLog2) {
+		return fmt.Errorf("pcs: committed column size 2^%d exceeds the 2^%d committable at RS blowup %d",
+			idx, c.maxSizeLog2, 1<<c.logRSBlowup)
+	}
 	batchShifts, batchClaims, shapes, evalPoint := RecoverBatchClaims(rt, batches)
 
 	pcs := c.newPCS()
@@ -369,7 +478,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), c.effectiveN(rt, batches))
 
 	return pcs.Verify(fri.VerifyInputs{
 		Roots:         c.collectRoots(rt, batches),
@@ -430,12 +539,12 @@ func committedStateKey(roundID int) string {
 // =============================================================================
 
 // buildEncoders builds the encoder schedule for sizes 2^0 .. 2^maxSizeIndex at
-// the given inverse rate. The schedule is a deterministic function of (rate,
+// blowup 2^logBlowup. The schedule is a deterministic function of (blowup,
 // index), so a per-round schedule is always a prefix of the global one.
-func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
+func buildEncoders(logBlowup, maxSizeIndex uint8) []*fri.RSEncoder {
 	encoders := make([]*fri.RSEncoder, int(maxSizeIndex)+1)
 	for i := range encoders {
-		enc := fri.NewEncoder(uint64(inverseRate)*(1<<i), 1<<i)
+		enc := fri.NewEncoder(uint64(1)<<(int(logBlowup)+i), 1<<i)
 		encoders[i] = &enc
 	}
 	return encoders
@@ -457,8 +566,14 @@ func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime) int {
 // commitToRound sorts a round's columns into a [fri.MultiSizeTable] by padded
 // size (base then extension within each size, in column-declaration order) and
 // FRI-commits it with a freshly-built per-round encoder schedule (a prefix of
-// the global schedule). The column ordering matches [GetLayout] exactly.
-func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
+// the global schedule). The column ordering matches [GetLayout] exactly. It
+// panics when a column exceeds the committable size at c's blowup.
+func (c *compiled) commitToRound(round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
+
+	if idx := roundMaxSizeIndex(round, rt); idx > int(c.maxSizeLog2) {
+		utils.Panic("pcs: round %d commits a column of size 2^%d, above the 2^%d committable at RS blowup %d",
+			round.ID, idx, c.maxSizeLog2, 1<<c.logRSBlowup)
+	}
 
 	var (
 		cols          = round.Columns
@@ -490,10 +605,7 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 			)
 		}
 	}
-	if maxSizeIndex > 255 {
-		utils.Panic("pcs: maxSizeIndex too big")
-	}
-	committerState := fri.Commit(buildEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
+	committerState := fri.Commit(buildEncoders(c.logRSBlowup, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 
