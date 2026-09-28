@@ -25,6 +25,7 @@ dependencies {
   testImplementation "org.slf4j:slf4j-api:${libs.versions.slf4j.get()}"
   testImplementation project(":jvm-libs:generic:logging")
   testImplementation "io.github.hakky54:logcaptor:${libs.versions.logcaptor.get()}"
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }
 
 sourceSets {

@@ -2,6 +2,7 @@ package linea.timer
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
@@ -44,7 +45,7 @@ class TimerTest {
     }
   }
 
-  private val vertx = Vertx.vertx()
+  private val vertx = Vertx.vertx(vertxTestOptions)
 
   fun createTimer(
     timerType: KClass<out Timer>,

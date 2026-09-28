@@ -12,4 +12,7 @@ dependencies {
   implementation(project(':maru:core'))
 
   testImplementation "org.awaitility:awaitility-kotlin:${libs.versions.awaitility.get()}"
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
+
+  testFixturesImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }

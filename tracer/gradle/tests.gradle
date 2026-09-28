@@ -53,6 +53,17 @@ def besuTracesDir = file(providers.environmentVariable("besu.traces.dir")
     .orElse(layout.buildDirectory.dir("besu/traces").map { it.asFile.path })
     .get())
 
+// Reset the traces dir once per build (not per Test task, so traces written by one test task survive
+// later ones in the same build, e.g. for CI artifact upload), and make sure the plugins dir exists.
+def prepareBesuDirs = tasks.register('prepareBesuDirs') {
+  doLast {
+    besuTracesDir.deleteDir()
+    new File(besuTracesDir, "prague").mkdirs()
+    new File(besuTracesDir, "osaka").mkdirs()
+    besuPluginsDir.mkdirs()
+  }
+}
+
 tasks.withType(Test).configureEach {
   minHeapSize = "256m"
   // Determine heap limit based on whether CI machine, or not.
@@ -99,12 +110,7 @@ tasks.withType(Test).configureEach {
   // Configure BESU-related paths (prepared at execution time, not while configuring)
   systemProperty("besu.traces.dir", "${besuTracesDir.path}/")
   systemProperty("besu.plugins.dir", "${besuPluginsDir.path}/")
-  doFirst {
-    besuTracesDir.deleteDir()
-    new File(besuTracesDir, "prague").mkdirs()
-    new File(besuTracesDir, "osaka").mkdirs()
-    besuPluginsDir.mkdirs()
-  }
+  dependsOn(prepareBesuDirs)
   //
   testlogger {
     // pick a theme - mocha, standard, plain, mocha-parallel, standard-parallel or plain-parallel
@@ -259,7 +265,6 @@ tasks.register("besuNodeTests", Test) {
     excludeTags("weekly")
     excludeTags("prc-calltests")
   }
-  finalizedBy(jacocoTestReport)
 }
 
 tasks.register("besuNodeFastReplayTests", Test) {
@@ -276,7 +281,6 @@ tasks.register("besuNodeFastReplayTests", Test) {
     excludeTags("nightly")
     excludeTags("weekly")
   }
-  finalizedBy(jacocoTestReport)
 }
 
 // =============================================================================
@@ -307,7 +311,7 @@ tasks.register("jacocoWeeklyTestsReport", JacocoReport) {
   }
 
   sourceSets project(":tracer:arithmetization").sourceSets.main
-  executionData(weeklyTests)
+  executionData(weeklyTests, weeklyReplayTests)
 }
 
 tasks.register("jacocoPrcCallTestsReport", JacocoReport) {
@@ -334,7 +338,11 @@ tasks.register("jacocoUnitFastReplayWeeklyNightlyReferenceBlockchainAndStateTest
   }
 
   sourceSets project(":tracer:arithmetization").sourceSets.main
-  executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+  // Exec files of the tracer projects only, instead of scanning the whole monorepo tree.
+  def tracerProjects = project(lineaTracerProjectPath).allprojects
+  executionData(tracerProjects.collect { fileTree(it.layout.buildDirectory.dir('jacoco')).include('*.exec') })
+  // Order after the test tasks writing those files, without pulling them into the task graph.
+  mustRunAfter { tracerProjects.collect { it.tasks.withType(Test) }.flatten() }
 }
 
 // =============================================================================

@@ -97,6 +97,7 @@ dependencies {
   testImplementation testFixtures(project(':jvm-libs:generic:json-rpc'))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation testFixtures(project(':coordinator:persistence'))
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
 
   testImplementation project(':coordinator:ethereum:test-utils')
   testImplementation "io.vertx:vertx-junit5"

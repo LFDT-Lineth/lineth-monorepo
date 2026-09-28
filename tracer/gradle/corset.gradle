@@ -15,6 +15,10 @@
 tasks.register('corsetExists') {
   dependsOn('installGoCorset')
   def capturedGoCorsetPath = project.ext.goCorsetPath
+  // Up-to-date while the go-corset binary is unchanged (marker file as output).
+  inputs.file(capturedGoCorsetPath).withPropertyName('goCorset').withPathSensitivity(PathSensitivity.NONE)
+  def marker = layout.buildDirectory.file("tmp/corsetExists/verified")
+  outputs.file(marker)
   doLast {
     def process = [capturedGoCorsetPath, "--version"].execute()
     process.consumeProcessOutput()
@@ -22,6 +26,7 @@ tasks.register('corsetExists') {
     if (exitCode != 0) {
       throw new GradleException("go-corset not found at $capturedGoCorsetPath!")
     }
+    marker.get().asFile.text = capturedGoCorsetPath
   }
 }
 
@@ -51,6 +56,12 @@ tasks.register('installGoCorset') {
   // For configuration cache
   def capturedCorsetVersion = project.ext.corsetVersion
   def capturedGoCorsetPath = project.ext.goCorsetPath
+
+  // Up-to-date while the requested version and the installed binary are unchanged. The binary lives
+  // outside the build directory (GOBIN), so this task must never be cached.
+  inputs.property('corsetVersion', capturedCorsetVersion)
+  outputs.file(capturedGoCorsetPath).withPropertyName('goCorset')
+  outputs.cacheIf { false }
 
   doLast {
     def corsetVersion = capturedCorsetVersion
@@ -117,7 +128,10 @@ tasks.register('buildZkevmBins', Exec) {
   dependsOn('corsetExists')
   workingDir "${project.rootDir}/tracer-constraints/"
   // Specify input files so gradle knows when to rebuild.
-  inputs.files(fileTree(workingDir).include('**/*.lisp'))
+  inputs.files(fileTree(workingDir).include('**/*.lisp', '**/*.lispX', '**/*.zkasm', '**/template', 'Makefile'))
+      .withPropertyName('constraints')
+      .withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.property('corsetVersion', corsetVersion)
   // Specify output file so gradle knows when out-of-date.
   outputs.files(fileTree(workingDir).include(ZKEVM_OSAKA_BIN))
   // Sanity check executing this makes sense.
@@ -142,7 +156,8 @@ tasks.register('buildAllTracers', Exec) {
   dependsOn 'buildZkevmBins'
   def capturedGoCorsetPath = project.ext.goCorsetPath
   // Specify where the trace files should be generated.
-  def GENERATED_SRC_DIR = "${project.buildDir}/generated/gocorset/main/java/net/consensys/linea/zktracer"
+  def GENERATED_SRC_ROOT = layout.buildDirectory.dir("generated/gocorset/main/java")
+  def GENERATED_SRC_DIR = "${GENERATED_SRC_ROOT.get().asFile}/net/consensys/linea/zktracer"
   def TRACE_FILE = "$GENERATED_SRC_DIR/Trace.java"
   def OSAKA_TRACE_FILE = "$GENERATED_SRC_DIR/TraceOsaka.java"
 
@@ -151,8 +166,14 @@ tasks.register('buildAllTracers', Exec) {
   def traceOsakaJava = lineaTracerProject.file(OSAKA_TRACE_FILE)
   // Configure full paths for zkevm.bin files
   def zkevmOsakaBin = lineaTracerProject.file("${project.rootDir}/tracer-constraints/" + ZKEVM_OSAKA_BIN)
+  // Declare inputs/outputs so the trace classes are only regenerated when the constraints change.
+  inputs.file(zkevmOsakaBin).withPropertyName('zkevmBin').withPathSensitivity(PathSensitivity.NONE)
+  inputs.property('corsetVersion', corsetVersion)
+  inputs.property('tracePackage', TRACE_PKG)
+  outputs.dir(GENERATED_SRC_ROOT).withPropertyName('generatedSources')
   // Generate trace interface and implementing classes
   doFirst {
+    traceJava.parentFile.deleteDir()
     traceJava.parentFile.mkdirs()
   }
   commandLine capturedGoCorsetPath, 'generate', '-p', TRACE_PKG, '-i', traceJava,

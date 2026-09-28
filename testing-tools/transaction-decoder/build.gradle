@@ -16,4 +16,6 @@ dependencies {
   implementation project(':jvm-libs:linea:blob-decompressor')
   implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   implementation project(':jvm-libs:linea:besu-rlp-and-mappers')
+
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }
