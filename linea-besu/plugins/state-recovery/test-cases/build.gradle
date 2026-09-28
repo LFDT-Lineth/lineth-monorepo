@@ -26,6 +26,7 @@ dependencies {
   implementation(testFixtures(project(':jvm-libs:linea:web3j-extensions')))
   testImplementation("io.vertx:vertx-junit5")
   testImplementation(project(":jvm-libs:linea:metrics:micrometer"))
+  testImplementation(testFixtures(project(':jvm-libs:generic:vertx-helper')))
 }
 
 sourceSets {
