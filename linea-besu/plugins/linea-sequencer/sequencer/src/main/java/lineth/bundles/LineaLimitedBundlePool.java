@@ -55,6 +55,7 @@ import org.hyperledger.besu.util.Subscribers;
  */
 @AutoService(BesuService.class)
 @Slf4j
+@SuppressWarnings("deprecation")
 public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.BlockAddedListener {
   public static final String BUNDLE_SAVE_FILENAME = "bundles.ndjson";
   private final BlockchainService blockchainService;

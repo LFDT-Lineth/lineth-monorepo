@@ -47,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@SuppressWarnings("deprecation")
 class LineaLimitedBundlePoolTest extends AbstractBundleTest {
   @TempDir Path dataDir;
   private LineaLimitedBundlePool pool;

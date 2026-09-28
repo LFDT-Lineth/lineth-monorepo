@@ -60,6 +60,7 @@ import org.slf4j.event.Level;
  * selection is restarted before the block is sealed.
  */
 @Slf4j
+@SuppressWarnings("deprecation")
 public class LineaForcedTransactionPool
     implements ForcedTransactionPoolService, BesuEvents.BlockAddedListener {
 
@@ -384,7 +385,7 @@ public class LineaForcedTransactionPool
 
   private final Set<String> balanceErrors =
       buildReasonsStringSet(
-          TransactionInvalidReason.UPFRONT_COST_EXCEEDS_BALANCE,
+          TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE,
           TransactionInvalidReason.UPFRONT_COST_EXCEEDS_UINT256);
 
   /**
