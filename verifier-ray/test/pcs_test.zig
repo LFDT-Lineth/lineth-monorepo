@@ -334,8 +334,9 @@ test "routeInputRoots ignores an unused batch root" {
 const challenge_system = pcs.System{
     .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
+    .all_shifts = &[_]i32{0},
     .num_batches = 1,
     .max_entries = 1,
     .max_size_log2 = 2,
@@ -364,8 +365,9 @@ fn challengeFriProof(root_seed: u32) fri.Proof {
 const d1_challenge_system = pcs.System{
     .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
     },
+    .all_shifts = &[_]i32{0},
     .num_batches = 1,
     .max_entries = 1,
     .max_size_log2 = 0,
@@ -441,10 +443,11 @@ test "deriveChallenges retains deep alpha when there are no fold rounds" {
 const recon_system = pcs.System{
     .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{0} },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 1 } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 0 },
     },
+    .all_shifts = &[_]i32{ 0, 0, 1, 0 },
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 5,
@@ -551,7 +554,7 @@ test "entryDeepTerm: rejects inconsistent aliased claims" {
     // size_log2 = 1 (n = 2): raw shifts 1 and -1 both normalize to row 1, so
     // both open zeta * omega. An honest prover writes the same value into both
     // claim cells; this adversarial pair differs in the second cell.
-    const shifts = [_]isize{ 1, -1 };
+    const shifts = [_]i32{ 1, -1 };
     const claims = [_]ext.Ext{
         ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
         ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }), // tampered duplicate
@@ -567,7 +570,7 @@ test "entryDeepTerm: rejects inconsistent aliased claims" {
 test "entryDeepTerm: equal aliased claims contribute exactly one term" {
     // Same aliasing pair, honest (equal) claims: the contribution must be the
     // single term (entry_value - claim) / (x - zeta * omega), not twice it.
-    const shifts = [_]isize{ 1, -1 };
+    const shifts = [_]i32{ 1, -1 };
     const claim = ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 });
     const claims = [_]ext.Ext{ claim, claim };
     const entry_value = ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 });
@@ -586,7 +589,7 @@ test "entryDeepTerm: non-aliasing shifts still sum one term per point" {
     // Control at a non-aliasing size (n = 4): shifts 1 and -1 open different
     // points and both terms must be counted — pinning that the dedup only
     // fires on genuine aliasing.
-    const shifts = [_]isize{ 1, -1 };
+    const shifts = [_]i32{ 1, -1 };
     const claims = [_]ext.Ext{
         ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }),
         ext.Ext.fromUints(.{ 6, 0, 0, 0, 0, 0 }),

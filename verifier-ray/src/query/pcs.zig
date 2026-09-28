@@ -55,7 +55,7 @@ const InputWidths = struct { base: usize, ext: usize };
 pub const SizeSource = union(enum) {
     static: u8,
     dynamic: struct {
-        index: usize,
+        index: u16,
         min_size_log2: u8,
     },
 };
@@ -66,7 +66,7 @@ pub const SizeSource = union(enum) {
 /// (which batch, base/ext, shift schedule) are fixed; only `size` (hence the
 /// column's bundle and position) varies per proof.
 pub const ColumnDesc = struct {
-    batch_idx: usize,
+    batch_idx: u8,
     is_ext: bool,
     size: SizeSource,
     /// Raw opening offsets. Offset o means this column is claimed at
@@ -74,14 +74,21 @@ pub const ColumnDesc = struct {
     /// RAW (size-independent) — the verifier normalizes o mod N at the runtime
     /// size, so one baked System's shifts work at every dynamic size. May be
     /// negative (a back-shift).
-    shifts: []const isize,
+    /// [shifts_start, shifts_start + shifts_len) into `System.all_shifts`.
+    /// Offsets rather than a slice so the comptime column table carries no
+    /// 16-byte fat pointers: 10,622 columns x 2 slices is ~340 KB of pure
+    /// pointer overhead in .rodata, all re-read by the FRI query loop.
+    shifts_start: u32,
+    shifts_len: u8,
     /// Where to read this column's claimed evaluation for the matching entry of
     /// `shifts` — same length and order as `shifts`, so `claim_cells[k]` is the
     /// `(round, index)` transcript cell carrying the claim for `shifts[k]`.
     /// These cells are ordinary `rounds[*].cells` entries (the prover's
     /// `LagrangeEval.EvaluationClaims`), absorbed into the Fiat-Shamir
     /// transcript before the opening challenges are derived. Emitted by codegen.
-    claim_cells: []const CellRef = &.{},
+    /// [claim_start, claim_start + shifts_len) into `System.all_claim_cells`;
+    /// same length as the shift schedule by construction.
+    claim_start: u32,
 };
 
 /// Locates one claimed-evaluation cell in `rounds[*].cells` by its
@@ -90,8 +97,8 @@ pub const ColumnDesc = struct {
 /// `query/vanishing.zig`'s `ScalarRef`, `query/logderivativesum.zig`'s
 /// `ScalarRef`). Consumed via `protocol.Context.cell(round, index)`.
 pub const CellRef = struct {
-    round: usize,
-    index: usize,
+    round: u8,
+    index: u16,
 };
 
 /// Routes one vanishing witness/quotient claim to its authenticated value.
@@ -100,8 +107,8 @@ pub const CellRef = struct {
 /// `shift` is the slot within that column's shift schedule. Emitted by codegen
 /// from the LagrangeEval ↔ committed-column binding.
 pub const ClaimRef = struct {
-    col_decl_idx: usize,
-    shift: usize,
+    col_decl_idx: u16,
+    shift: u8,
 };
 
 /// Where a committed batch's Merkle root is bound. A batch root MUST be tied to
@@ -110,7 +117,7 @@ pub const ClaimRef = struct {
 pub const BatchRoot = union(enum) {
     /// Index into `proof.rounds`; the batch root is that round's sole oracle
     /// commitment.
-    round: usize,
+    round: u8,
     /// Compile-time precomputed-batch root, emitted by codegen.
     precomputed: poseidon2.Digest,
 };
@@ -126,6 +133,11 @@ pub const System = struct {
 
     /// Every committed column, in prover declaration order.
     columns: []const ColumnDesc,
+
+    /// Flat backing storage for every column's shift schedule and claim cells,
+    /// indexed by ColumnDesc.shifts_start / .claim_start.
+    all_shifts: []const i32 = &.{},
+    all_claim_cells: []const CellRef = &.{},
 
     /// Number of distinct committed batches.
     num_batches: usize,
@@ -218,13 +230,13 @@ pub fn Reconstructed(comptime system: System) type {
 
         // Per-entry arrays, canonical order, filled [0, num_entries).
         entry_size_log2: [cap]u8 = undefined,
-        entry_batch: [cap]usize = undefined,
+        entry_batch: [cap]u8 = undefined,
         entry_is_ext: [cap]bool = undefined,
-        entry_row_idx: [cap]usize = undefined,
-        entry_col_decl_idx: [cap]usize = undefined,
+        entry_row_idx: [cap]u16 = undefined,
+        entry_col_decl_idx: [cap]u16 = undefined,
 
         /// col_to_entry[c] = the canonical entry index of column c (decl order).
-        col_to_entry: [cap]usize = undefined,
+        col_to_entry: [cap]u16 = undefined,
     };
 }
 
@@ -348,11 +360,11 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
 
                     if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
                     r.entry_size_log2[entry_idx] = size_u8;
-                    r.entry_batch[entry_idx] = batch;
+                    r.entry_batch[entry_idx] = @intCast(batch);
                     r.entry_is_ext[entry_idx] = want_ext;
-                    r.entry_row_idx[entry_idx] = col_position[c];
-                    r.entry_col_decl_idx[entry_idx] = c;
-                    r.col_to_entry[c] = entry_idx;
+                    r.entry_row_idx[entry_idx] = @intCast(col_position[c]);
+                    r.entry_col_decl_idx[entry_idx] = @intCast(c);
+                    r.col_to_entry[c] = @intCast(entry_idx);
                     entry_idx += 1;
                 }
             }
@@ -372,7 +384,7 @@ fn totalClaimSlots(comptime system: System) usize {
     comptime {
         @setEvalBranchQuota(20_000_000);
         var total: usize = 0;
-        for (system.columns) |col| total += col.shifts.len;
+        for (system.columns) |col| total += col.shifts_len;
         return total;
     }
 }
@@ -426,9 +438,9 @@ pub fn buildEntryClaims(
     if (comptime system.columns.len > 0) {
         for (0..recon.num_entries) |e| {
             const col = system.columns[recon.entry_col_decl_idx[e]];
-            if (col.claim_cells.len != col.shifts.len) return error.ClaimCellsShiftsLengthMismatch;
+            // claim_cells and shifts share shifts_len by construction (flat arrays).
             const start = next_slot;
-            for (col.claim_cells) |ref| {
+            for (system.all_claim_cells[col.claim_start..][0..col.shifts_len]) |ref| {
                 out.backing[next_slot] = (try ctx.cell(ref.round, ref.index)).toExt();
                 next_slot += 1;
             }
@@ -720,7 +732,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     // Zig to analyze indexing into an empty slice.
     if (comptime system.columns.len > 0) {
         for (0..num_entries) |e| {
-            const shifts = system.columns[recon.entry_col_decl_idx[e]].shifts;
+            const c = system.columns[recon.entry_col_decl_idx[e]];
+            const shifts = system.all_shifts[c.shifts_start..][0..c.shifts_len];
             if (input.entry_claims[e].len != shifts.len) return Error.ClaimedValueCountMismatch;
         }
     }
@@ -914,7 +927,7 @@ fn seedPair(rounds: []const fri.Pair, round: u8, num_rounds: u8) fri.Pair {
 fn systemHasMultiShiftEntry(comptime system: System) bool {
     comptime {
         for (system.columns) |col| {
-            if (col.shifts.len > 1) return true;
+            if (col.shifts_len > 1) return true;
         }
         return false;
     }
@@ -993,7 +1006,8 @@ fn reconstructQueryValueAt(
         const row_idx = recon.entry_row_idx[i];
         const entry_value: ext.Ext = if (recon.entry_is_ext[i]) row.ext[row_idx] else ext.Ext.lift(row.base[row_idx]);
 
-        const shifts = system.columns[recon.entry_col_decl_idx[i]].shifts;
+        const c = system.columns[recon.entry_col_decl_idx[i]];
+        const shifts = system.all_shifts[c.shifts_start..][0..c.shifts_len];
         const term = try entryDeepTerm(shifts, entry_claims[i], entry_value, size_log2, zeta, x);
         value = value.mul(alpha_deep).add(term);
     }
@@ -1030,7 +1044,7 @@ fn reconstructQueryValueAt(
 /// aliasing size, which no golden vector currently does, so the adversarial
 /// regression in test/pcs_test.zig drives this function directly.
 pub fn entryDeepTerm(
-    shifts: []const isize,
+    shifts: []const i32,
     claims: []const ext.Ext,
     entry_value: ext.Ext,
     size_log2: u8,
@@ -1064,7 +1078,7 @@ pub fn entryDeepTerm(
 /// so the reconstructed point equals the prover's regardless of normalization —
 /// but the exponent must be reduced with the runtime N, which is exactly why the
 /// raw offset (not a size-frozen normalization) is stored.
-fn shiftedPoint(size_log2: u8, offset: isize, zeta: ext.Ext) ext.Ext {
+fn shiftedPoint(size_log2: u8, offset: i32, zeta: ext.Ext) ext.Ext {
     const order = @as(usize, 1) << @intCast(size_log2);
     const n: isize = @intCast(order);
     const shift: usize = @intCast(@mod(offset, n)); // @mod is always in [0, n)

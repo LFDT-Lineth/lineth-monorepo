@@ -106,16 +106,24 @@ const verify_case_0_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_0_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_0_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_0_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_0_pcs_all_shifts,
+    .all_claim_cells = &verify_case_0_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -263,18 +271,28 @@ const verify_case_1_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_1_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    6,
+    0,
+};
+
+const verify_case_1_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_1_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7, 6 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_1_pcs_all_shifts,
+    .all_claim_cells = &verify_case_1_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -425,17 +443,26 @@ const verify_case_2_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_2_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+};
+
+const verify_case_2_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_2_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_2_pcs_all_shifts,
+    .all_claim_cells = &verify_case_2_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -585,20 +612,29 @@ const verify_case_3_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_3_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+};
+
+const verify_case_3_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_3_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_3_pcs_all_shifts,
+    .all_claim_cells = &verify_case_3_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -753,22 +789,30 @@ const verify_case_4_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_4_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_4_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_4_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_4_pcs_all_shifts,
+    .all_claim_cells = &verify_case_4_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -920,18 +964,28 @@ const verify_case_5_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_5_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+};
+
+const verify_case_5_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_5_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_5_pcs_all_shifts,
+    .all_claim_cells = &verify_case_5_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1079,16 +1133,24 @@ const verify_case_6_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_6_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_6_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_6_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_6_pcs_all_shifts,
+    .all_claim_cells = &verify_case_6_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1233,17 +1295,26 @@ const verify_case_7_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_7_pcs_all_shifts = [_]i32{
+    0,
+    1,
+    0,
+};
+
+const verify_case_7_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_7_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_7_pcs_all_shifts,
+    .all_claim_cells = &verify_case_7_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1394,19 +1465,27 @@ const verify_case_8_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_8_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_8_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_8_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_8_pcs_all_shifts,
+    .all_claim_cells = &verify_case_8_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -1560,22 +1639,30 @@ const verify_case_9_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_9_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_9_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_9_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_9_pcs_all_shifts,
+    .all_claim_cells = &verify_case_9_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -1727,18 +1814,28 @@ const verify_case_10_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_10_pcs_all_shifts = [_]i32{
+    0,
+    15,
+    14,
+    0,
+};
+
+const verify_case_10_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_10_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 4 }, .shifts = &[_]isize{ 0, 15, 14 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 4 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 4 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 4 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_10_pcs_all_shifts,
+    .all_claim_cells = &verify_case_10_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1891,19 +1988,27 @@ const verify_case_11_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_11_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_11_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_11_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_11_pcs_all_shifts,
+    .all_claim_cells = &verify_case_11_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -2056,17 +2161,26 @@ const verify_case_12_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_12_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_12_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_12_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_12_pcs_all_shifts,
+    .all_claim_cells = &verify_case_12_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2234,22 +2348,30 @@ const verify_case_13_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_13_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_13_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_13_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_13_pcs_all_shifts,
+    .all_claim_cells = &verify_case_13_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -2400,17 +2522,26 @@ const verify_case_14_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_14_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_14_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_14_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_14_pcs_all_shifts,
+    .all_claim_cells = &verify_case_14_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2560,19 +2691,27 @@ const verify_case_15_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 99929030 }, .{ .value = 1429397361 }, .{ .value = 1076237802 }, .{ .value = 1989756093 }, .{ .value = 318192499 }, .{ .value = 1663055389 }, .{ .value = 1410501545 }, .{ .value = 1751042557 } } },
 };
 
+const verify_case_15_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_15_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 0 },
+};
+
 pub const verify_case_15_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_15_pcs_all_shifts,
+    .all_claim_cells = &verify_case_15_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -2718,16 +2857,24 @@ const verify_case_16_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_16_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_16_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_16_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_16_pcs_all_shifts,
+    .all_claim_cells = &verify_case_16_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2878,17 +3025,26 @@ const verify_case_17_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_17_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_17_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+};
+
 pub const verify_case_17_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_17_pcs_all_shifts,
+    .all_claim_cells = &verify_case_17_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3044,18 +3200,28 @@ const verify_case_18_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_18_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    5,
+    0,
+};
+
+const verify_case_18_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_18_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7, 5 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_18_pcs_all_shifts,
+    .all_claim_cells = &verify_case_18_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3212,25 +3378,33 @@ const verify_case_19_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_19_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_19_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+};
+
 pub const verify_case_19_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
     },
+    .all_shifts = &verify_case_19_pcs_all_shifts,
+    .all_claim_cells = &verify_case_19_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -3381,17 +3555,26 @@ const verify_case_20_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_20_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    0,
+};
+
+const verify_case_20_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_20_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 1 } }, .shifts = &[_]isize{ 0, -1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 1 } }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_20_pcs_all_shifts,
+    .all_claim_cells = &verify_case_20_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3543,20 +3726,29 @@ const verify_case_21_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_21_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+};
+
+const verify_case_21_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_21_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_21_pcs_all_shifts,
+    .all_claim_cells = &verify_case_21_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -3727,31 +3919,39 @@ const verify_case_22_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_22_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_22_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+    .{ .round = 2, .index = 6 },
+};
+
 pub const verify_case_22_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_22_pcs_all_shifts,
+    .all_claim_cells = &verify_case_22_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 7,
     .max_size_log2 = 22,
@@ -3935,28 +4135,36 @@ const verify_case_23_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_23_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_23_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+};
+
 pub const verify_case_23_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
     },
+    .all_shifts = &verify_case_23_pcs_all_shifts,
+    .all_claim_cells = &verify_case_23_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -4113,19 +4321,27 @@ const verify_case_24_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_24_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_24_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_24_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 5 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_24_pcs_all_shifts,
+    .all_claim_cells = &verify_case_24_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -4272,17 +4488,26 @@ const verify_case_25_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_25_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_25_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_25_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_25_pcs_all_shifts,
+    .all_claim_cells = &verify_case_25_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4434,18 +4659,28 @@ const verify_case_26_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_26_pcs_all_shifts = [_]i32{
+    1,
+    7,
+    0,
+    0,
+};
+
+const verify_case_26_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_26_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 1, 7, 0 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_26_pcs_all_shifts,
+    .all_claim_cells = &verify_case_26_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4595,16 +4830,24 @@ const verify_case_27_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_27_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_27_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_27_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_27_pcs_all_shifts,
+    .all_claim_cells = &verify_case_27_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4760,26 +5003,35 @@ const verify_case_28_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_28_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_28_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+};
+
 pub const verify_case_28_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
     },
+    .all_shifts = &verify_case_28_pcs_all_shifts,
+    .all_claim_cells = &verify_case_28_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -4935,18 +5187,28 @@ const verify_case_29_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_29_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+};
+
+const verify_case_29_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_29_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_29_pcs_all_shifts,
+    .all_claim_cells = &verify_case_29_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -5122,26 +5384,38 @@ const verify_case_30_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_30_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+    -1,
+    -2,
+    0,
+    0,
+};
+
+const verify_case_30_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+    .{ .round = 2, .index = 6 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 7 },
+};
+
 pub const verify_case_30_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-            .{ .round = 2, .index = 5 },
-            .{ .round = 2, .index = 6 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 7 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 2 } }, .shifts_start = 3, .shifts_len = 3, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 0 } }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
     },
+    .all_shifts = &verify_case_30_pcs_all_shifts,
+    .all_claim_cells = &verify_case_30_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -5325,20 +5599,29 @@ const verify_case_31_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_31_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    3,
+    0,
+};
+
+const verify_case_31_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+};
+
 pub const verify_case_31_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_31_pcs_all_shifts,
+    .all_claim_cells = &verify_case_31_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -5497,29 +5780,38 @@ const verify_case_32_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_32_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_32_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_32_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_32_pcs_all_shifts,
+    .all_claim_cells = &verify_case_32_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -5681,29 +5973,38 @@ const verify_case_33_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_33_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_33_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_33_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_33_pcs_all_shifts,
+    .all_claim_cells = &verify_case_33_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -5866,32 +6167,41 @@ const verify_case_34_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_34_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_34_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+};
+
 pub const verify_case_34_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
     },
+    .all_shifts = &verify_case_34_pcs_all_shifts,
+    .all_claim_cells = &verify_case_34_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 7,
     .max_size_log2 = 22,
@@ -6122,45 +6432,55 @@ const verify_case_35_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_35_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_35_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+};
+
 pub const verify_case_35_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_35_pcs_all_shifts,
+    .all_claim_cells = &verify_case_35_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -6371,39 +6691,49 @@ const verify_case_36_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_36_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_36_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+};
+
 pub const verify_case_36_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
     },
+    .all_shifts = &verify_case_36_pcs_all_shifts,
+    .all_claim_cells = &verify_case_36_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 9,
     .max_size_log2 = 22,
@@ -6549,19 +6879,27 @@ const verify_case_37_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_37_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_37_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+};
+
 pub const verify_case_37_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_37_pcs_all_shifts,
+    .all_claim_cells = &verify_case_37_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -6778,48 +7116,58 @@ const verify_case_38_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_38_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_38_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+    .{ .round = 3, .index = 13 },
+};
+
 pub const verify_case_38_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_38_pcs_all_shifts,
+    .all_claim_cells = &verify_case_38_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -7128,58 +7476,69 @@ const verify_case_39_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_39_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_39_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+    .{ .round = 3, .index = 13 },
+    .{ .round = 3, .index = 14 },
+    .{ .round = 3, .index = 15 },
+    .{ .round = 3, .index = 16 },
+    .{ .round = 3, .index = 17 },
+};
+
 pub const verify_case_39_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-            .{ .round = 3, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 17 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 2, .claim_start = 9 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 2, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
     },
+    .all_shifts = &verify_case_39_pcs_all_shifts,
+    .all_claim_cells = &verify_case_39_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 15,
     .max_size_log2 = 22,
@@ -7343,20 +7702,29 @@ const verify_case_40_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_40_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    1,
+    0,
+};
+
+const verify_case_40_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+};
+
 pub const verify_case_40_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_40_pcs_all_shifts,
+    .all_claim_cells = &verify_case_40_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -7537,27 +7905,37 @@ const verify_case_41_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_41_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+};
+
+const verify_case_41_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_41_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_41_pcs_all_shifts,
+    .all_claim_cells = &verify_case_41_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -7717,29 +8095,38 @@ const verify_case_42_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_42_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_42_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_42_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_42_pcs_all_shifts,
+    .all_claim_cells = &verify_case_42_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -7959,47 +8346,56 @@ const verify_case_43_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_43_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_43_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+};
+
 pub const verify_case_43_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_43_pcs_all_shifts,
+    .all_claim_cells = &verify_case_43_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -8231,45 +8627,55 @@ const verify_case_44_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_44_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_44_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_44_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_44_pcs_all_shifts,
+    .all_claim_cells = &verify_case_44_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -8510,48 +8916,58 @@ const verify_case_45_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_45_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_45_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_45_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_45_pcs_all_shifts,
+    .all_claim_cells = &verify_case_45_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -8805,48 +9221,58 @@ const verify_case_46_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_46_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_46_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_46_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_46_pcs_all_shifts,
+    .all_claim_cells = &verify_case_46_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -9105,51 +9531,61 @@ const verify_case_47_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_47_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_47_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+};
+
 pub const verify_case_47_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
     },
+    .all_shifts = &verify_case_47_pcs_all_shifts,
+    .all_claim_cells = &verify_case_47_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 13,
     .max_size_log2 = 22,
@@ -9405,51 +9841,61 @@ const verify_case_48_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_48_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_48_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+};
+
 pub const verify_case_48_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
     },
+    .all_shifts = &verify_case_48_pcs_all_shifts,
+    .all_claim_cells = &verify_case_48_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 13,
     .max_size_log2 = 22,
@@ -9740,61 +10186,72 @@ const verify_case_49_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_49_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_49_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+};
+
 pub const verify_case_49_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
     },
+    .all_shifts = &verify_case_49_pcs_all_shifts,
+    .all_claim_cells = &verify_case_49_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 16,
     .max_size_log2 = 22,
@@ -10153,80 +10610,92 @@ const verify_case_50_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_50_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_50_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 22 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 20 },
+    .{ .round = 4, .index = 21 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 23 },
+    .{ .round = 4, .index = 24 },
+    .{ .round = 4, .index = 25 },
+};
+
 pub const verify_case_50_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 22 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 20 },
-            .{ .round = 4, .index = 21 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 23 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 24 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 25 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 10, .shifts_len = 2, .claim_start = 10 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 12, .shifts_len = 2, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 21, .shifts_len = 1, .claim_start = 21 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 22, .shifts_len = 1, .claim_start = 22 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 23, .shifts_len = 1, .claim_start = 23 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 24, .shifts_len = 1, .claim_start = 24 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 25, .shifts_len = 1, .claim_start = 25 },
     },
+    .all_shifts = &verify_case_50_pcs_all_shifts,
+    .all_claim_cells = &verify_case_50_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 22,
     .max_size_log2 = 22,
@@ -10512,54 +10981,64 @@ const verify_case_51_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_51_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_51_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+};
+
 pub const verify_case_51_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
     },
+    .all_shifts = &verify_case_51_pcs_all_shifts,
+    .all_claim_cells = &verify_case_51_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 14,
     .max_size_log2 = 22,
@@ -10798,45 +11277,55 @@ const verify_case_52_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_52_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_52_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_52_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_52_pcs_all_shifts,
+    .all_claim_cells = &verify_case_52_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11072,45 +11561,55 @@ const verify_case_53_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_53_pcs_all_shifts = [_]i32{
+    0,
+    1,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_53_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_53_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{1}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_53_pcs_all_shifts,
+    .all_claim_cells = &verify_case_53_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11347,45 +11846,55 @@ const verify_case_54_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_54_pcs_all_shifts = [_]i32{
+    3,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_54_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_54_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{3}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_54_pcs_all_shifts,
+    .all_claim_cells = &verify_case_54_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11675,61 +12184,72 @@ const verify_case_55_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_55_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_55_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+};
+
 pub const verify_case_55_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
     },
+    .all_shifts = &verify_case_55_pcs_all_shifts,
+    .all_claim_cells = &verify_case_55_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 16,
     .max_size_log2 = 22,
@@ -12008,57 +12528,67 @@ const verify_case_56_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_56_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_56_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 16 },
+};
+
 pub const verify_case_56_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 9, .shifts_len = 2, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
     },
+    .all_shifts = &verify_case_56_pcs_all_shifts,
+    .all_claim_cells = &verify_case_56_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 15,
     .max_size_log2 = 22,
@@ -12273,43 +12803,51 @@ const verify_case_57_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_57_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_57_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+};
+
 pub const verify_case_57_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
     },
+    .all_shifts = &verify_case_57_pcs_all_shifts,
+    .all_claim_cells = &verify_case_57_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -12544,45 +13082,55 @@ const verify_case_58_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 1284087301 }, .{ .value = 2104130085 }, .{ .value = 1597477735 }, .{ .value = 797176699 }, .{ .value = 452943547 }, .{ .value = 844011610 }, .{ .value = 336115017 }, .{ .value = 934293072 } } },
 };
 
+const verify_case_58_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_58_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 3 },
+};
+
 pub const verify_case_58_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_58_pcs_all_shifts,
+    .all_claim_cells = &verify_case_58_pcs_all_claim_cells,
     .num_batches = 4,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -12818,45 +13366,55 @@ const verify_case_59_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_59_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_59_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_59_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_59_pcs_all_shifts,
+    .all_claim_cells = &verify_case_59_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -13097,48 +13655,58 @@ const verify_case_60_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_60_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_60_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_60_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_60_pcs_all_shifts,
+    .all_claim_cells = &verify_case_60_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -13477,79 +14045,90 @@ const verify_case_61_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 835158699 }, .{ .value = 548244366 }, .{ .value = 353160657 }, .{ .value = 100756588 }, .{ .value = 1467126676 }, .{ .value = 14288135 }, .{ .value = 1355061657 }, .{ .value = 1123976454 } } },
 };
 
+const verify_case_61_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    7,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_61_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 20 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 22 },
+    .{ .round = 4, .index = 23 },
+    .{ .round = 4, .index = 24 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 21 },
+};
+
 pub const verify_case_61_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-            .{ .round = 4, .index = 20 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 22 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 23 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 24 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 21 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 21, .shifts_len = 1, .claim_start = 21 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 22, .shifts_len = 1, .claim_start = 22 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 23, .shifts_len = 1, .claim_start = 23 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 24, .shifts_len = 1, .claim_start = 24 },
     },
+    .all_shifts = &verify_case_61_pcs_all_shifts,
+    .all_claim_cells = &verify_case_61_pcs_all_claim_cells,
     .num_batches = 4,
     .max_entries = 22,
     .max_size_log2 = 22,
@@ -13697,16 +14276,24 @@ const verify_case_62_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_62_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_62_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_62_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_62_pcs_all_shifts,
+    .all_claim_cells = &verify_case_62_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -13856,16 +14443,24 @@ const verify_case_63_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_63_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_63_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_63_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_63_pcs_all_shifts,
+    .all_claim_cells = &verify_case_63_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14015,16 +14610,24 @@ const verify_case_64_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_64_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_64_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_64_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_64_pcs_all_shifts,
+    .all_claim_cells = &verify_case_64_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14170,16 +14773,24 @@ const verify_case_65_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_65_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_65_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_65_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_65_pcs_all_shifts,
+    .all_claim_cells = &verify_case_65_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14498,69 +15109,79 @@ const verify_case_66_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_66_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1023,
+    0,
+    1023,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_66_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 20 },
+};
+
 pub const verify_case_66_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{ 0, 1023 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{ 0, 1023 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 20 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 11, .shifts_len = 2, .claim_start = 11 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 13, .shifts_len = 2, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
     },
+    .all_shifts = &verify_case_66_pcs_all_shifts,
+    .all_claim_cells = &verify_case_66_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 19,
     .max_size_log2 = 22,
@@ -14795,36 +15416,46 @@ const verify_case_67_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_67_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_67_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+};
+
 pub const verify_case_67_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
     },
+    .all_shifts = &verify_case_67_pcs_all_shifts,
+    .all_claim_cells = &verify_case_67_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 8,
     .max_size_log2 = 22,
@@ -15475,36 +16106,46 @@ const verify_case_68_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_68_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_68_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+};
+
 pub const verify_case_68_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
     },
+    .all_shifts = &verify_case_68_pcs_all_shifts,
+    .all_claim_cells = &verify_case_68_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 8,
     .max_size_log2 = 22,

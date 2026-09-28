@@ -66,6 +66,20 @@ type pcsTemplateData struct {
 	WitnessName  string
 	QuotientName string
 	RootsName    string
+	// Flattened column payloads: every column's shifts / claim cells laid end
+	// to end, with per-column offsets, so ColumnDesc carries u32/u8 offsets
+	// instead of two 16-byte fat pointers.
+	ShiftsName     string
+	ClaimCellsName string
+	FlatShifts     []int
+	FlatClaimCells []PcsCellRef
+	ColOffsets     []pcsColOffset
+}
+
+type pcsColOffset struct {
+	ShiftsStart int
+	ShiftsLen   int
+	ClaimStart  int
 }
 
 func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemplateData {
@@ -82,15 +96,32 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 	if opts.ConstName == "" {
 		opts.ConstName = fmt.Sprintf("pcs_system_%d", index)
 	}
+	flatShifts := []int{}
+	flatClaims := []PcsCellRef{}
+	offsets := make([]pcsColOffset, 0, len(system.Columns))
+	for _, col := range system.Columns {
+		offsets = append(offsets, pcsColOffset{
+			ShiftsStart: len(flatShifts),
+			ShiftsLen:   len(col.Shifts),
+			ClaimStart:  len(flatClaims),
+		})
+		flatShifts = append(flatShifts, col.Shifts...)
+		flatClaims = append(flatClaims, col.ClaimCells...)
+	}
 	return pcsTemplateData{
-		Options:      opts,
-		Index:        index,
-		System:       system,
-		ConstName:    opts.ConstPrefix + opts.ConstName,
-		Prefix:       opts.ConstPrefix,
-		WitnessName:  opts.ConstPrefix + "witness_map",
-		QuotientName: opts.ConstPrefix + "quotient_map",
-		RootsName:    opts.ConstPrefix + "batch_roots",
+		Options:        opts,
+		Index:          index,
+		System:         system,
+		ConstName:      opts.ConstPrefix + opts.ConstName,
+		Prefix:         opts.ConstPrefix,
+		WitnessName:    opts.ConstPrefix + "witness_map",
+		QuotientName:   opts.ConstPrefix + "quotient_map",
+		RootsName:      opts.ConstPrefix + "batch_roots",
+		ShiftsName:     opts.ConstPrefix + "all_shifts",
+		ClaimCellsName: opts.ConstPrefix + "all_claim_cells",
+		FlatShifts:     flatShifts,
+		FlatClaimCells: flatClaims,
+		ColOffsets:     offsets,
 	}
 }
 
@@ -110,11 +141,17 @@ const {{.RootsName}} = [_]pcs.BatchRoot{
 {{else}}    .{ .round = {{.RoundIndex}} },
 {{end}}{{end}}};
 
+const {{.ShiftsName}} = [_]i32{ {{range .FlatShifts}}{{.}}, {{end}}};
+
+const {{.ClaimCellsName}} = [_]pcs.CellRef{ {{range .FlatClaimCells}}.{ .round = {{.Round}}, .index = {{.Index}} }, {{end}}};
+
 pub const {{.ConstName}} = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = {{.System.LogCodewordSize}}, .log_plaintext_size = {{.System.LogPlaintextSize}}, .log_final_poly_size = {{.System.LogFinalPolySize}}, .num_queries = {{.System.NumQueries}} },
     .columns = &.{
-{{range .System.Columns}}        .{ .batch_idx = {{.BatchIdx}}, .is_ext = {{.IsExt}}, .size = {{if .IsDynamic}}.{ .dynamic = .{ .index = {{.DynamicIndex}}, .min_size_log2 = {{.DynamicMinSizeLog2}} } }{{else}}.{ .static = {{.SizeLog2}} }{{end}}, .shifts = &[_]isize{{shifts .Shifts}}, .claim_cells = &[_]pcs.CellRef{ {{range .ClaimCells}}.{ .round = {{.Round}}, .index = {{.Index}} }, {{end}}} },
+{{range $i, $c := .System.Columns}}        .{ .batch_idx = {{$c.BatchIdx}}, .is_ext = {{$c.IsExt}}, .size = {{if $c.IsDynamic}}.{ .dynamic = .{ .index = {{$c.DynamicIndex}}, .min_size_log2 = {{$c.DynamicMinSizeLog2}} } }{{else}}.{ .static = {{$c.SizeLog2}} }{{end}}, .shifts_start = {{(index $.ColOffsets $i).ShiftsStart}}, .shifts_len = {{(index $.ColOffsets $i).ShiftsLen}}, .claim_start = {{(index $.ColOffsets $i).ClaimStart}} },
 {{end}}    },
+    .all_shifts = &{{.ShiftsName}},
+    .all_claim_cells = &{{.ClaimCellsName}},
     .num_batches = {{.System.NumBatches}},
     .max_entries = {{.System.MaxEntries}},
     .max_size_log2 = {{.System.MaxSizeLog2}},

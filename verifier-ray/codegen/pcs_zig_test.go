@@ -46,8 +46,10 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`const quotient_map = [_]pcs.ClaimRef{`,
 		`const batch_roots = [_]pcs.BatchRoot{`,
 		`pub const pcs_system_7 = pcs.System{`,
-		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, } },`,
-		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 2, .index = 0 }, } },`,
+		`const all_shifts = [_]i32{ 0, 7, 1, }`,
+		`const all_claim_cells = [_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, .{ .round = 2, .index = 0 }, }`,
+		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },`,
+		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },`,
 		`.zeta_coin_index = 5,`,
 	} {
 		if !strings.Contains(out, want) {
