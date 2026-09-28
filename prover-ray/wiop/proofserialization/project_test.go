@@ -103,8 +103,8 @@ func TestProject_CarriesTheProofFaithfully(t *testing.T) {
 
 	// The FRI opening must survive with its shape intact.
 	require.NotNil(t, proof.PCSOpeningProof, "the full pipeline ends with the PCS pass")
-	require.Len(t, projected.Proof.PcsOpening.InputQueries, pcs.FRINumQueries())
-	require.Len(t, projected.Proof.PcsOpening.FriProof.RunningQueries, pcs.FRINumQueries())
+	require.Len(t, projected.Proof.PcsOpening.InputQueries, pcs.FRINumQueries(sc.Sys))
+	require.Len(t, projected.Proof.PcsOpening.FriProof.RunningQueries, pcs.FRINumQueries(sc.Sys))
 	require.Len(t, projected.Proof.PcsOpening.FriProof.RoundRoots,
 		len(proof.PCSOpeningProof.FRIProof.RoundRoots))
 }

@@ -52,7 +52,7 @@ func TestMeasure(t *testing.T) {
 			require.Equal(t, len(proof.Cells), s.BaseCells+s.ExtCells,
 				"every cell must be classified as base or ext")
 			require.True(t, s.HasPCS, "the full pipeline ends with the PCS pass")
-			require.Equal(t, pcs.FRINumQueries(), s.Queries,
+			require.Equal(t, pcs.FRINumQueries(sc.Sys), s.Queries,
 				"one input query per FRI query")
 			require.Positive(t, s.Total, "a PCS-compiled proof cannot have an empty image")
 			require.GreaterOrEqual(t, s.Total, s.Payload,

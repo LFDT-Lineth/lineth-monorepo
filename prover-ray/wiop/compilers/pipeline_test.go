@@ -19,12 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	// Full-pipeline tests exercise the PCS end-to-end; keep the query count
-	// tiny so the suite stays fast. Production callers never touch this
-	// variable (see pcs.SetFRINumQueriesForTest).
-	pcs.SetFRINumQueriesForTest(2)
-}
+// testFriQueryCount is a small number of queries for testing purposes. It is set
+// per-compilation, so it doesn't affect tests not using the option.
+const testFriQueryCount = 2
 
 // compileFullPipeline runs every wiop compilation pass in the canonical
 // order so that each pass can consume the previous one's output:
@@ -65,9 +62,10 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-// compilePCS runs the PCS pass.
+// compilePCS runs the PCS pass with a tiny FRI query count so the full-pipeline
+// suite stays fast.
 func compilePCS(sys *wiop.System) {
-	pcs.Compile(sys)
+	pcs.Compile(sys, pcs.WithFRINumQueries(testFriQueryCount))
 }
 
 // These tests drive every scenario through the full

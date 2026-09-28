@@ -49,14 +49,37 @@ const (
 	FRILogInverseRate = 1
 )
 
-// friNumQueries is the number of FRI query openings. This is obtained from
-// https://github.com/ethereum/soundcalc
+// defaultFRINumQueries is the production number of FRI query openings, obtained
+// from https://github.com/ethereum/soundcalc to match 128 bits of security.
+const defaultFRINumQueries = 229
+
+// friNumQueriesAnnotationKey is the [wiop.System.Annotations] key under which
+// [Compile] records the System's effective FRI query count.
+const friNumQueriesAnnotationKey = "compiler.pcs.fri_num_queries"
+
+type compileOptions struct {
+	friNumQueries int
+}
+
+// Option configures a single [Compile] invocation.
+type Option func(*compileOptions)
+
+// WithFRINumQueries sets the number of FRI query openings for the compiled
+// System, overriding the 128-bit-secure production default. Lower counts weaken
+// soundness and are intended for tests. n must be positive.
 //
-// To match 128 bits of security, we determined that the following number of
-// queries is required. It is a variable (rather than a constant) so tests
-// exercising the full compilation pipeline can lower it via
-// [SetFRINumQueriesForTest]; production callers must never mutate it.
-var friNumQueries = 229
+// Panics when trying to overwrite already given option.
+func WithFRINumQueries(n int) Option {
+	if n <= 0 {
+		utils.Panic("FRI query count %d < 1", n)
+	}
+	return func(o *compileOptions) {
+		if o.friNumQueries != 0 {
+			utils.Panic("FRI number queries requested %d but already set to %d", n, o.friNumQueries)
+		}
+		o.friNumQueries = n
+	}
+}
 
 var (
 	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
@@ -80,9 +103,9 @@ var (
 // fixed maximum capacity.
 func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	staticFRIOnce.Do(func() {
-		params, err := fri.NewParams(FRILogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, uint(friNumQueries))
+		params, err := fri.NewParams(FRILogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, defaultFRINumQueries)
 		if err != nil {
-			panic(fmt.Errorf("pcs: staticFRI: %w", err))
+			utils.Panic("pcs: staticFRI: %v", err)
 		}
 		staticFRIParams = params
 		staticFRIEncoders = buildEncoders(1<<FRILogInverseRate, maxCommittableSizeLog2)
@@ -90,30 +113,45 @@ func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	return staticFRIParams, staticFRIEncoders
 }
 
-// FRINumQueries returns the number of FRI query openings currently configured.
-// It tracks [SetFRINumQueriesForTest]; production callers must never use it to
-// mutate query behaviour.
-func FRINumQueries() int { return friNumQueries }
+// FRINumQueries returns the number of FRI query openings [Compile] configured
+// for sys, or 0 when sys has no PCS opening (PCS pass not run, or no committed
+// columns).
+func FRINumQueries(sys *wiop.System) int {
+	v, exists := sys.Annotations[friNumQueriesAnnotationKey]
+	if !exists {
+		return 0
+	}
+	n, ok := v.(int)
+	if !ok {
+		utils.Panic("malformed FRI number queries annotation")
+	}
+	return n
+}
 
 // FRIMaxCommittableSizeLog2 is the log2 of the largest committed column size the
 // PCS supports — the fixed capacity of the static FRI envelope (2^22).
 func FRIMaxCommittableSizeLog2() uint8 { return maxCommittableSizeLog2 }
 
 // FRIStaticParams returns the process-wide FRI envelope parameters (sized to
-// FRIMaxCommittableSizeLog2).
+// FRIMaxCommittableSizeLog2, at the production query count). A compiled System
+// may open fewer queries; see [FRINumQueries].
 func FRIStaticParams() fri.Params {
 	params, _ := staticFRI()
 	return params
 }
 
-// newStaticPCS wraps the shared static parameters in a fresh, per-proof [fri.PCS]
-// (which carries the mutable opening state). Wrapping is cheap — no domains are
-// rebuilt — and each proof restricts the fold schedule to its own witness size.
-func newStaticPCS() *fri.PCS {
+// newPCS wraps the shared static parameters in a fresh, per-proof [fri.PCS]
+// (which carries the mutable opening state) at this compilation's query count.
+// Wrapping is cheap — no domains are rebuilt — and each proof restricts the fold
+// schedule to its own witness size. The cached params are copied by value and
+// only the copy's NumQueries is set; the shared domain slices are never
+// mutated, so concurrently compiled Systems stay independent.
+func (c *compiled) newPCS() *fri.PCS {
 	params, encoders := staticFRI()
+	params.NumQueries = uint(c.friNumQueries)
 	pcs, err := fri.NewPCS(params, encoders)
 	if err != nil {
-		panic(fmt.Errorf("pcs: newStaticPCS: %w", err))
+		utils.Panic("pcs: newPCS: %v", err)
 	}
 	return pcs
 }
@@ -152,6 +190,7 @@ type compiled struct {
 	// schedule, so the root is stable across proof runs.
 	precomputed     *fri.CommitterState
 	precomputedRoot field.Octuplet
+	friNumQueries   int
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
@@ -163,14 +202,24 @@ type BatchRef struct {
 
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
-// queries. It is a no-op when no columns are committed.
-func Compile(sys *wiop.System) {
+// queries. It is a no-op when no columns are committed. A non-positive query
+// count or a repeated query-count option panics before touching sys.
+func Compile(sys *wiop.System, opts ...Option) {
+	cfg := new(compileOptions)
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	if cfg.friNumQueries == 0 {
+		// no option was set, use default
+		cfg.friNumQueries = defaultFRINumQueries
+	}
+
 	batches := CommittedBatches(sys)
 	if len(batches) == 0 {
 		return
 	}
 
-	c := &compiled{}
+	c := &compiled{friNumQueries: cfg.friNumQueries}
 
 	// Commit the static precomputed round once, if it owns columns. A throwaway
 	// runtime exposes the (static) precomputed assignments; its encoders are a
@@ -199,6 +248,7 @@ func Compile(sys *wiop.System) {
 	openingRound := sys.NewRound()
 	openingRound.RegisterAction(&openingProverAction{c: c})
 	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
+	sys.Annotations[friNumQueriesAnnotationKey] = cfg.friNumQueries
 }
 
 // CommittedBatches returns the canonical batch ordering: every interactive round
@@ -261,11 +311,11 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	batches := CommittedBatches(rt.System)
 	batchShifts, batchClaims, _, evalPoint := RecoverBatchClaims(rt, batches)
 
-	pcs := newStaticPCS()
+	pcs := c.newPCS()
 	states := c.collectCommittedStates(rt, batches)
 	for i := range states {
 		if err := pcs.AddOpening(*states[i], evalPoint, batchShifts[i], batchClaims[i]); err != nil {
-			panic(fmt.Errorf("pcs: open: AddOpening batch %d: %w", i, err))
+			utils.Panic("pcs: open: AddOpening batch %d: %v", i, err)
 		}
 	}
 
@@ -278,7 +328,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	// challenge (see fri.Level.EvalsAt).
 	state, err := pcs.NewProverState()
 	if err != nil {
-		panic(fmt.Errorf("pcs: open: %w", err))
+		utils.Panic("pcs: open: %v", err)
 	}
 
 	for state.HasNext() {
@@ -303,7 +353,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	batches := CommittedBatches(rt.System)
 	batchShifts, batchClaims, shapes, evalPoint := RecoverBatchClaims(rt, batches)
 
-	pcs := newStaticPCS()
+	pcs := c.newPCS()
 
 	fs := rt.GetFS()
 
@@ -346,7 +396,7 @@ func (c *compiled) collectCommittedStates(rt *wiop.Runtime, batches []BatchRef) 
 		}
 		v, ok := rt.GetState(committedStateKey(b.Round.ID))
 		if !ok {
-			panic(fmt.Sprintf("pcs: missing committed state for round %d", b.Round.ID))
+			utils.Panic("pcs: missing committed state for round %d", b.Round.ID)
 		}
 		states[i] = v.(*fri.CommitterState)
 	}
@@ -364,7 +414,7 @@ func (c *compiled) collectRoots(rt *wiop.Runtime, batches []BatchRef) []field.Oc
 		}
 		root, ok := rt.Commitments[b.Round.ID]
 		if !ok {
-			panic(fmt.Sprintf("pcs: missing commitment for round %d", b.Round.ID))
+			utils.Panic("pcs: missing commitment for round %d", b.Round.ID)
 		}
 		roots[i] = root
 	}
@@ -423,7 +473,7 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 		assignment := rt.GetColumnAssignment(col)
 
 		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
+			utils.Panic("wiop: only powers of 2 are supported, given %d", size)
 		}
 
 		maxSizeIndex = max(maxSizeIndex, sizeIndex)
@@ -441,7 +491,7 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 		}
 	}
 	if maxSizeIndex > 255 {
-		panic("pcs: maxSizeIndex too big")
+		utils.Panic("pcs: maxSizeIndex too big")
 	}
 	committerState := fri.Commit(buildEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
@@ -465,7 +515,7 @@ func GetLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLoc
 		sizeIndex := utils.Log2Ceil(size)
 
 		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
+			utils.Panic("wiop: only powers of 2 are supported, given %d", size)
 		}
 
 		for len(shape) <= sizeIndex {
@@ -538,7 +588,7 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 			evalPoint = &xExt
 		}
 		if !evalPoint.Equal(&xExt) {
-			panic("pcs: every LagrangeEval must share the same evaluation point")
+			utils.Panic("pcs: every LagrangeEval must share the same evaluation point")
 		}
 
 		for k, colView := range eval.Polynomials {
@@ -546,8 +596,8 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 			round := colView.Column.Round()
 			batchIdx, ok := batchOf[round]
 			if !ok {
-				panic(fmt.Sprintf("pcs: column %q is in a round that owns no committed batch",
-					colView.Column.Context.Path()))
+				utils.Panic("pcs: column %q is in a round that owns no committed batch",
+					colView.Column.Context.Path())
 			}
 
 			loc := layouts[batchIdx][colView.Column.Context.ID]
@@ -558,7 +608,7 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 			key := claimKey{batchIdx, loc.SizeID, loc.IsExt, loc.Position, shift}
 			if prev, dup := seen[key]; dup {
 				if !prev.Equal(&value) {
-					panic("pcs: inconsistent claimed values for the same column and shift")
+					utils.Panic("pcs: inconsistent claimed values for the same column and shift")
 				}
 				continue
 			}
@@ -577,7 +627,7 @@ func RecoverBatchClaims(rt *wiop.Runtime, batches []BatchRef) (
 	}
 
 	if evalPoint == nil {
-		panic("pcs: no LagrangeEval queries to open")
+		utils.Panic("pcs: no LagrangeEval queries to open")
 	}
 
 	return shifts, claims, shapes, *evalPoint
@@ -611,7 +661,7 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
-		panic("is not base")
+		utils.Panic("is not base")
 	}
 
 	plainBase := concrete.Plain.AsBase()
