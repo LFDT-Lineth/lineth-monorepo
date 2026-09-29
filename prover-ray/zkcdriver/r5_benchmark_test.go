@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"testing"
 
@@ -18,14 +17,11 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/trace"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
-)
-
-const (
-	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
 )
 
 var (
@@ -69,11 +65,8 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	)
 	b.Helper()
 
-	verifierELF, err := os.ReadFile(r5VerifierPath)
-	if err != nil {
-		b.Skipf("R5 verifier ELF unavailable at %s; run `make -C ../verifier-ray build-r5`: %v", r5VerifierPath, err)
-	}
-	inputs, err := predecoding.PrepareInputs(verifierELF, []byte("foobar"))
+	guestElf := minimalelf.AllInOneElfProgram
+	inputs, err := predecoding.PrepareInputs(guestElf, []byte{})
 	if err != nil {
 		b.Fatalf("preparing R5 input: %v", err)
 	}

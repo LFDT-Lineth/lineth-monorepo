@@ -1,25 +1,22 @@
 package zkcdriver_test
 
 import (
-	"os"
+	"bytes"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
+	minimalelf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
 
 // This is a benchmark for the RISC-V arithmetization and not a test so that we
 // don't crash the CI on every PR.
 func BenchmarkRisc5Arithmetization(b *testing.B) {
-	verifPath := "../../verifier-ray/zig-out/bin/verifier-ray"
-	verifElf, err := os.ReadFile(verifPath)
-	if err != nil {
-		b.Skipf("skipping integration test: verifier ELF not found at %s (%v)", verifPath, err)
-	}
-	payload := []byte("foobar")
-	inputsMap, err := predecoding.PrepareInputs(verifElf, payload)
+	guestElf := minimalelf.AllInOneElfProgram
+	payload := []byte{}
+	inputsMap, err := predecoding.PrepareInputs(guestElf, payload)
 	if err != nil {
 		b.Fatalf("failed to prepare inputs: %v", err)
 	}
@@ -32,10 +29,8 @@ func BenchmarkRisc5Arithmetization(b *testing.B) {
 	if err != nil {
 		b.Fatalf("failed to parse test case: %v", err)
 	}
-	for name, output := range outputs {
-		if len(output) != 0 {
-			b.Fatalf("expected empty %s output, got: %x", name, output)
-		}
+	if got, ok := outputs["guest_output"]; !ok || !bytes.Equal(got, []byte("ABC")) {
+		b.Fatalf("unexpected output")
 	}
 	driverInputs := &zkcdriver.PreReadInputs{
 		Inputs: inputsMap,
