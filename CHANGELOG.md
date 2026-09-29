@@ -175,3 +175,5 @@
 - *(misc)* Gradle improve tasks (#4046)
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
 - *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
+- *(misc)* Maru break down integration tests into smaller chunks (#4049)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)

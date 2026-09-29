@@ -53,10 +53,6 @@ outputs:
     description: shomei plugin version
     value: ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}
 
-  besu_fleet_version:
-    description: besu fleet plugin version
-    value: ${{ steps.dotenv.outputs.BESU_FLEET_PLUGIN_VERSION }}
-
 runs:
   using: "composite"
   steps:

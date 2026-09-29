@@ -6,6 +6,7 @@
 - *(misc)* Use junit over kotlin test (#4045)
 - *(misc)* Fix gradle build correctness bugs (#4044)
 - *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(misc)* Maru break down integration tests into smaller chunks (#4049)
 ## [1.4.0] - 2026-09-23
 
 ### 🚀 Features

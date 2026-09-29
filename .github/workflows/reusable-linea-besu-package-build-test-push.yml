@@ -36,9 +36,6 @@ on:
       run_e2e_test:
         required: true
         type: boolean
-      with_besu_fleet_plugin:
-        required: true
-        type: boolean
       skip_docker_image_build_and_push:
         description: "Skip to build and push the docker image into dockerhub (e.g. for dry run release)"
         required: false
@@ -56,10 +53,6 @@ on:
         required: false
       DOCKERHUB_TOKEN:
         required: false
-      FLEET_GITHUB_APP_ID:
-        required: false
-      FLEET_GITHUB_APP_PRIVATE_KEY:
-        required: false
 
 jobs:
   build-and-upload-artifact:
@@ -67,7 +60,6 @@ jobs:
     if: ${{ inputs.run_test || inputs.run_e2e_test }}
     with:
       release_version: ${{ inputs.release_version }}
-      with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
     secrets: inherit
 
   run-test:
@@ -90,7 +82,6 @@ jobs:
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
       e2e-tests-logs-dump: true
-      e2e-tests-with-besu-fleet: ${{ inputs.with_besu_fleet_plugin }}
     secrets: inherit
 
   build-and-push-dockerhub:
@@ -117,9 +108,6 @@ jobs:
         with:
           release_version: ${{ inputs.release_version }}
           image_tag_suffix: ${{ inputs.image_tag_suffix }}
-          with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
-          fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
-          fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
       # QEMU and buildx are set up by the shared docker-build-publish action.
       - name: Login to Docker Hub
@@ -132,40 +120,9 @@ jobs:
       - name: set docker build args
         if: ${{ !inputs.skip_docker_image_build_and_push }}
         run: |
-          echo "Building docker image (without fleet): consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
-          if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-            echo "Building docker image (with fleet): consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
-          fi
+          echo "Building docker image: consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag }}"
 
-      # VERSION, VCS_REF and BUILD_DATE build args are injected by the shared
-      # action (see scripts/docker/README.md), so they are not repeated here.
-      - name: build and push the combined manifest (if Besu fleet plugin is included)
-        if: ${{ !inputs.skip_docker_image_build_and_push && inputs.with_besu_fleet_plugin }}
-        uses: ./.github/actions/docker-build-publish
-        with:
-          image_name: consensys/linea-besu-package-with-fleet
-          image_tags: ${{ inputs.image_tag_suffix != '' && format('{0},{1}', steps.build-plugins-and-assemble.outputs.dockertag, steps.build-plugins-and-assemble.outputs.dockertag_with_suffix) || steps.build-plugins-and-assemble.outputs.dockertag }}
-          develop_tag: develop
-          push_image: 'true'
-          dockerfile_path: linea-besu/package/linea-besu/Dockerfile
-          docker_context: linea-besu/package/linea-besu
-          push_platforms: linux/arm64,linux/amd64
-          provenance: 'false'
-          requires_qemu: 'true'
-
-      - name: Calculate the checksum of Besu fleet plugin
-        id: besu-fleet-plugin-checksum
-        if: ${{ inputs.with_besu_fleet_plugin }}
-        shell: bash
-        run: |
-          echo "sha256sum=$(sha256sum linea-besu/package/linea-besu/besu/plugins/besu-fleet-plugin-${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }}.jar | awk '{ print $1 }' )" >> $GITHUB_OUTPUT
-
-      - name: Remove the Besu fleet plugin after image build (if existed)
-        shell: bash
-        run: |
-          rm -fr linea-besu/package/linea-besu/besu/plugins/besu-fleet-plugin* || true
-
-      - name: build and push the combined manifest (without Besu fleet plugin)
+      - name: build and push the combined manifest
         if: ${{ !inputs.skip_docker_image_build_and_push }}
         uses: ./.github/actions/docker-build-publish
         with:
@@ -205,9 +162,6 @@ jobs:
             echo "| linea-staterecovery-plugin | ${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.build-plugins-and-assemble.outputs.staterecovery_version }}.jar | awk '{ print $1 }' ) |" >> output.md
           fi
           echo "| shomei-plugin | ${{ steps.build-plugins-and-assemble.outputs.shomei_version }} | $(sha256sum ../linea-besu/package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.build-plugins-and-assemble.outputs.shomei_version }}.jar | awk '{ print $1 }' ) |" >> output.md
-          if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-            echo "| besu-fleet-plugin | ${{ steps.build-plugins-and-assemble.outputs.besu_fleet_version }} | ${{ steps.besu-fleet-plugin-checksum.outputs.sha256sum }} |" >> output.md
-          fi
           echo "" >> output.md
 
           if [ "$SKIP_DOCKER_IMAGE_INFO" != "true" ]; then
@@ -223,17 +177,6 @@ jobs:
                 echo "\`\`\`" >> output.md
                 echo "docker pull consensys/linea-besu-package:${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}" >> output.md
                 echo "\`\`\`" >> output.md
-              fi
-              if [[ "${{ inputs.with_besu_fleet_plugin }}" == "true" ]]; then
-                echo "To pull the image with Besu fleet plugin, use any of the following commands:" >> output.md
-                echo "\`\`\`" >> output.md
-                echo "docker pull consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag }}" >> output.md
-                echo "\`\`\`" >> output.md
-                if [[ -n "${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}" ]] && [[ "${{ steps.build-plugins-and-assemble.outputs.dockertag }}" != "${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}" ]]; then
-                  echo "\`\`\`" >> output.md
-                  echo "docker pull consensys/linea-besu-package-with-fleet:${{ steps.build-plugins-and-assemble.outputs.dockertag_with_suffix }}" >> output.md
-                  echo "\`\`\`" >> output.md
-                fi
               fi
               echo "" >> output.md
               echo "| Digest | OS | Architecture |" >> output.md

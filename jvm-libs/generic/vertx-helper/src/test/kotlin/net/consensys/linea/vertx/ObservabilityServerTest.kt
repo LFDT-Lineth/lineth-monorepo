@@ -24,7 +24,13 @@ class ObservabilityServerTest {
 
   @BeforeEach
   fun beforeEach() {
-    vertx = VertxFactory.createVertx()
+    vertx = VertxFactory.createVertx(
+      eventLoopPoolSize = 2,
+      workerThreadPoolSize = 2,
+      internalBlockingPoolSize = 2,
+      jvmMetricsEnabled = true,
+      prometheusMetricsEnabled = true,
+    )
     val port = runServerOnARandomPort(vertx)
     monitorRequestSpecification =
       RequestSpecBuilder()
