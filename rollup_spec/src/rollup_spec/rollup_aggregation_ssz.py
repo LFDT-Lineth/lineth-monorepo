@@ -110,13 +110,6 @@ class SszFinalizationPublicInput(Container):
     l2_messaging_blocks_offsets: List[uint16, MAX_L2_MESSAGING_BLOCKS_OFFSETS]
 
 
-class SszRollupAggregationOutput(Container):
-    # The rollup-aggregation guest's own output: `FinalizationSubmission` with
-    # `proof` omitted. Field order matches the remaining fields of
-    # `l1_rollup.py::FinalizationSubmission`.
-    public_inputs: SszFinalizationPublicInput
-
-
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
 
 
@@ -188,8 +181,7 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     """
     rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
     fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
-    ssz_output = SszRollupAggregationOutput(public_inputs=SszFinalizationPublicInput(**fields))
-    return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, ssz_output.encode_bytes())
+    return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
 
 
 def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
@@ -200,8 +192,8 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     bytes, or non-canonical SSZ.
     """
     payload = _strip_frame(data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
-    view = _strict_decode(payload, SszRollupAggregationOutput)
+    view = _strict_decode(payload, SszFinalizationPublicInput)
     return FinalizationSubmission(
-        public_inputs=_rollup_public_input_from_view(view.public_inputs),
+        public_inputs=_rollup_public_input_from_view(view),
         proof=b"",
     )

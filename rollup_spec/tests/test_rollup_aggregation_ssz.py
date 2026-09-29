@@ -32,11 +32,14 @@ from rollup_spec.proof_io_v1 import (
     encode_aggregation_response,
 )
 from rollup_spec.rollup_aggregation_ssz import (
+    ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
+    SszFinalizationPublicInput,
     decode_aggregation_input_ssz,
     decode_aggregation_output_ssz,
     encode_aggregation_input,
     encode_aggregation_output,
 )
+from rollup_spec.rollup_ssz import _ssz_rollup_public_input
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
@@ -95,6 +98,16 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
         start_block_number=response["startBlockNumber"],
     )
     assert rebuilt_response == {**response, "proof": "0x"}
+
+
+def test_aggregation_output_frames_public_inputs_directly() -> None:
+    submission = _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
+    rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
+    fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
+    expected_body = SszFinalizationPublicInput(**fields).encode_bytes()
+
+    assert encode_aggregation_output(submission) == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big") + expected_body
+    assert expected_body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
 
 
 def test_aggregation_output_preserves_messaging_block_offsets() -> None:
