@@ -89,14 +89,17 @@
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "startOffset": {
-          "description": "Canonical start position: 0 at a fully consumed chunk boundary, positive only inside a shared blob's unpacked payload (§3.1).",
+          "description": "Canonical start position in unpacked blob payload bytes: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "endOffset": {
-          "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared blob's unpacked payload (§3.1).",
+          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk (including a short terminal blob), positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
-        "l2L1TreeDepth": { "type": "integer", "const": 5 },
+        "l2L1TreeDepth": {
+          "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
+          "type": "integer", "minimum": 1, "maximum": 18446744073709551615
+        },
         "l2L1Roots": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
         "programVks": {

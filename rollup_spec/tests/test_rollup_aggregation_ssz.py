@@ -32,11 +32,14 @@ from rollup_spec.proof_io_v1 import (
     encode_aggregation_response,
 )
 from rollup_spec.rollup_aggregation_ssz import (
+    ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
+    SszFinalizationPublicInput,
     decode_aggregation_input_ssz,
     decode_aggregation_output_ssz,
     encode_aggregation_input,
     encode_aggregation_output,
 )
+from rollup_spec.rollup_ssz import _ssz_rollup_public_input
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
@@ -97,6 +100,16 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
     assert rebuilt_response == {**response, "proof": "0x"}
 
 
+def test_aggregation_output_frames_public_inputs_directly() -> None:
+    submission = _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
+    rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
+    fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
+    expected_body = SszFinalizationPublicInput(**fields).encode_bytes()
+
+    assert encode_aggregation_output(submission) == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big") + expected_body
+    assert expected_body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
+
+
 def test_aggregation_output_preserves_messaging_block_offsets() -> None:
     submission = _aggregation_output_from_response(
         _load_json("getZkRollupAggregationProofV1.response.json")
@@ -134,8 +147,8 @@ def _aggregation_output_bytes() -> bytes:
 
 
 _DECODE_CASES = [
-    pytest.param(decode_aggregation_input_ssz, _aggregation_input_bytes, 0x1003, id="aggregation_input"),
-    pytest.param(decode_aggregation_output_ssz, _aggregation_output_bytes, 0x1804, id="aggregation_output"),
+    pytest.param(decode_aggregation_input_ssz, _aggregation_input_bytes, 0x1002, id="aggregation_input"),
+    pytest.param(decode_aggregation_output_ssz, _aggregation_output_bytes, 0x1802, id="aggregation_output"),
 ]
 
 
@@ -151,15 +164,15 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> None:
+def test_decode_rejects_malformed_truncation(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
-    if schema_id == 0x1003:
-        # A final proof byte is variable-length; the framing offset is fixed-size.
-        with pytest.raises(InvalidSsz):
-            decode_fn(encoded[:5])
+    if schema_id == 0x1002:
+        # The final proof is variable-length, so truncate the frame header.
+        encoded = encoded[:3]
     else:
-        with pytest.raises(InvalidSsz):
-            decode_fn(encoded[:-1])
+        encoded = encoded[:-1]
+    with pytest.raises(InvalidSsz):
+        decode_fn(encoded)
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
@@ -169,17 +182,16 @@ def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) ->
         decode_fn(encoded[:1])
 
 
-@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_extra_byte_in_noncanonical_frame(decode_fn, encode_bytes, schema_id) -> None:
-    encoded = encode_bytes()
-    if schema_id == 0x1003:
-        # A list offset of five skips a byte of its variable section.
-        encoded = encoded[:2] + (5).to_bytes(4, "little") + encoded[6:]
+def test_decode_rejects_trailing_garbage_in_output() -> None:
+    encoded = _aggregation_output_bytes()
     with pytest.raises(InvalidSsz):
-        decode_fn(encoded + b"\x00")
+        decode_aggregation_output_ssz(encoded + b"\x00")
 
 
 def test_aggregation_input_accepts_variable_length_proof_bytes() -> None:
     encoded = _aggregation_input_bytes()
-    assert decode_aggregation_input_ssz(encoded[:-1]).rollup_proofs[0].proof.proof == b"\xab\xcd\xef"
-    assert decode_aggregation_input_ssz(encoded + b"\x00").rollup_proofs[-1].proof.proof.endswith(b"\x00")
+    original = decode_aggregation_input_ssz(encoded)
+    shortened = decode_aggregation_input_ssz(encoded[:-1])
+    extended = decode_aggregation_input_ssz(encoded + b"\x00")
+    assert shortened.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof[:-1]
+    assert extended.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof + b"\x00"

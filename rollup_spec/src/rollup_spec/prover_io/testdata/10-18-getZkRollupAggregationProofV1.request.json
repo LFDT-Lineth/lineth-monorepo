@@ -47,22 +47,22 @@
       },
       {
         "proof": "0xabcdff",
-        "startBlockNumber": 15,
+        "startBlockNumber": 12,
         "publicInputs": {
           "endBlockNumber": 18,
           "endBlockTimestamp": 1763000557,
-          "parentL1L2BridgeRollingHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-          "parentL1L2BridgeRollingHashMessageNumber": 0,
+          "parentL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+          "parentL1L2BridgeRollingHashMessageNumber": 7,
           "endL1L2BridgeRollingHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
           "endL1L2BridgeRollingHashMessageNumber": 7,
           "dynamicChainConfigHash": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
-          "parentFtxRollingHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+          "parentFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
           "parentFtxNumber": 18,
           "endFtxRollingHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
           "endProcessedFtxNumber": 18,
-          "parentDataRollingHash": "0x4747474747474747474747474747474747474747474747474747474747474747",
+          "parentDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
           "endDataRollingHash": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
-          "parentBlockHash": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+          "parentBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "endBlockHash": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "startOffset": 0,
           "endOffset": 0,
@@ -77,7 +77,7 @@
           "programVks": [
             "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           ],
-          "blockCount": 4,
+          "blockCount": 7,
           "l2MessagingBlocksOffsets": []
         },
         "programVk": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

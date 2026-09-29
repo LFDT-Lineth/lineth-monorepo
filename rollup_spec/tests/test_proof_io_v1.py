@@ -41,6 +41,7 @@ from rollup_spec.proof_io_v1 import (
     encode_response,
     encode_rollup_response,
 )
+from rollup_spec.rollup_aggregation import run_rollup_aggregation_guest
 from rollup_spec.stateless_input import decode_stateless_input_ssz
 
 # Locate the golden-vector fixtures via the installed package, so the test does
@@ -352,22 +353,12 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert len(req.conflations) == 2
     assert req.conflations[0].block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
-    assert req.conflations[0].compressed_segment == bytes.fromhex(
-        "28b52ffd201189000063616e6f6e6963616c207061796c6f6164"
-    )
-    assert req.conflations[1].compressed_segment == bytes.fromhex(
-        "28b52ffd000089000063616e6f6e6963616c207061796c6f6164"
-    )
-    assert req.conflations[1].compressed_segment != req.conflations[0].compressed_segment
-    frame = req.conflations[0].compressed_segment
-    assert len(frame).to_bytes(4, "big") + frame == bytes.fromhex("0000001a") + frame
 
     assert len(req.chunks) == 1
     assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
     assert req.chunks[0].is_calldata is False
-    assert req.chunks[0].calldata_length == 0
-    assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
-    assert req.opaque_suffix_bytes == b""
+    assert req.chunks[0].calldata_bytes == b""
+    assert len(req.chunks[0].blob_bytes) == 131072
 
     assert len(req.l2_execution_proofs) == 2
     verifiable = req.l2_execution_proofs[0]
@@ -440,13 +431,33 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
 def test_decode_rollup_request_is_calldata_true_decodes() -> None:
     req = _valid_rollup_request()
     req["proofRequest"]["chunks"][0]["isCalldata"] = True
-    req["proofRequest"]["chunks"][0]["calldataLength"] = 131073
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x" + "01" * 131073
+    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
     out = decode_rollup_request(req)
     assert out.chunks[0].is_calldata is True
-    assert out.chunks[0].calldata_length == 131073
+    assert out.chunks[0].calldata_bytes == bytes([1]) * 131073
+    assert out.chunks[0].blob_bytes == b""
 
 
-@pytest.mark.parametrize("field", ["isCalldata", "calldataLength"])
+@pytest.mark.parametrize("blob_hex", [None, "0x", "0x00"])
+def test_blob_chunk_requires_full_physical_blob(blob_hex) -> None:
+    req = _valid_rollup_request()
+    if blob_hex is None:
+        del req["proofRequest"]["chunks"][0]["blobBytes"]
+    else:
+        req["proofRequest"]["chunks"][0]["blobBytes"] = blob_hex
+    with pytest.raises(ProofIoError, match="blobBytes"):
+        decode_rollup_request(req)
+
+
+def test_calldata_chunk_requires_empty_physical_blob() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0].update(isCalldata=True, calldataBytes="0x01")
+    with pytest.raises(ProofIoError, match="blobBytes"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes"])
 def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
     req = _valid_rollup_request()
     del req["proofRequest"]["chunks"][0][field]
@@ -455,24 +466,25 @@ def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
 
 
 @pytest.mark.parametrize("bad", [-1, True, "one", 2**64])
-def test_decode_rollup_request_invalid_calldata_length_is_rejected(bad) -> None:
+def test_decode_rollup_request_invalid_calldata_bytes_is_rejected(bad) -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["chunks"][0]["calldataLength"] = bad
-    with pytest.raises(ProofIoError, match="calldataLength"):
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = bad
+    with pytest.raises(ProofIoError, match="calldataBytes"):
         decode_rollup_request(req)
 
 
-def test_decode_rollup_request_rejects_nonzero_blob_calldata_length() -> None:
+def test_decode_rollup_request_rejects_nonempty_blob_calldata_bytes() -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["chunks"][0]["calldataLength"] = 1
-    with pytest.raises(ProofIoError, match="must be 0 for a blob"):
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x01"
+    with pytest.raises(ProofIoError, match="empty for a blob"):
         decode_rollup_request(req)
 
 
-def test_decode_rollup_request_rejects_zero_calldata_length() -> None:
+def test_decode_rollup_request_rejects_empty_calldata_bytes() -> None:
     req = _valid_rollup_request()
     req["proofRequest"]["chunks"][0]["isCalldata"] = True
-    with pytest.raises(ProofIoError, match="must be positive for calldata"):
+    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
+    with pytest.raises(ProofIoError, match="nonempty for calldata"):
         decode_rollup_request(req)
 
 
@@ -605,7 +617,7 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     verifiable2 = req.rollup_proofs[1]
     proof2 = verifiable2.proof
     assert bytes(proof2.proof) == bytes.fromhex("abcdff")
-    assert int(proof2.start_block_number) == 15
+    assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 18
     assert int(proof2.public_inputs.parent_ftx_number) == 18
 
@@ -641,6 +653,14 @@ def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
 def test_decode_aggregation_request_json_round_trips() -> None:
     decoded = decode_aggregation_request_json(json.dumps(_valid_aggregation_request()))
     assert len(decoded.rollup_proofs) == 2
+
+
+def test_aggregation_request_fixture_tiles_finalization_range() -> None:
+    request = _valid_aggregation_request()
+    result = run_rollup_aggregation_guest(decode_aggregation_request(request))
+
+    assert request["proofRequest"]["rollupProofs"][0]["startBlockNumber"] == request["metadata"]["startBlockNumber"]
+    assert int(result.public_inputs.end_block_number) == request["metadata"]["endBlockNumber"]
 
 
 # ── aggregation response encode ─────────────────────────────────────────────────
