@@ -174,7 +174,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 ### 2.2 rollup Proof
 
-The rollup proof covers `N ≥ 1` consecutive whole conflations and recursively verifies their l2-execution proofs. It binds physical blob or exact calldata bytes to the L1-anchored chunks, then checks that each zstd frame parsed from the verified DA stream decompresses to the canonical truncated-block RLP (§3.1–§3.2). Its public-input tuple has the same shape as the rollup-aggregation proof's (§2.4).
+The rollup proof covers `N ≥ 1` consecutive whole conflations and recursively verifies their l2-execution proofs. It binds physical blob or exact calldata bytes to the L1-anchored chunks, then checks that each zstd frame parsed from the verified DA stream decompresses to the canonical truncated-block RLP (§3.1–§3.2). Its public inputs include the proven `blockCount` for aggregation range checks; the final aggregation PI carries rebased messaging offsets without that count (§2.4).
 
 
 Chunk boundaries carry no conflation semantics: this proof's own byte range may begin or end mid-blob, sharing that blob with a neighbouring rollup proof or finalization range. `N = 1` is the simplest case (one conflation per rollup proof). `N > 1` lets the coordinator amortize recursion overhead by folding several conflations into a single proof — directly analogous to the existing M-block conflation inside an l2-execution proof.
@@ -183,7 +183,7 @@ Chunk boundaries carry no conflation semantics: this proof's own byte range may 
 
 **Public Inputs**
 
-The same public-input tuple as the rollup-aggregation proof (§2.4). `(parentDataRollingHash, startOffset)` is this proof's start stream position; `(endDataRollingHash, endOffset)` is its end stream position (§3.1) — `startOffset` is a request input, `endOffset` is derived (the stream is self-describing, so it follows from parsed frame boundaries).
+The rollup public-input tuple carries `blockCount` alongside the values forwarded to the final rollup-aggregation PI (§2.4). `(parentDataRollingHash, startOffset)` is this proof's start stream position; `(endDataRollingHash, endOffset)` is its end stream position (§3.1) — `startOffset` is a request input, `endOffset` is derived (the stream is self-describing, so it follows from parsed frame boundaries).
 
 
 The **l2-execution proof's PI** (§2.1) is *input* to this guest (private witness, step 4 recursive verification), not output. Each rollup PI field and its source:
