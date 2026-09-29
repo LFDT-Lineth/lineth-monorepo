@@ -87,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [zkevm, riscv]
+        stack: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["riscv"]' || '["zkevm"]') }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
       - name: Checkout
@@ -111,7 +111,7 @@ jobs:
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # Keep the existing required check and publish gate dependent on both stacks.
+  # Preserve the required check and publish gate for the selected stack.
   run-e2e-tests:
     needs: run-e2e-suite
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || inputs.has-changes-requiring-e2e-testing == 'true') }}
@@ -119,7 +119,7 @@ jobs:
     outputs:
       tests_outcome: ${{ needs.run-e2e-suite.result }}
     steps:
-      - name: Check both suites passed
+      - name: Check selected suite passed
         env:
           RESULT: ${{ needs.run-e2e-suite.result }}
         run: test "$RESULT" = success

@@ -89,5 +89,6 @@ execution-proof handoff: a new transaction's payload and witness reach the prove
 responder replies, and the coordinator persists the batch as proven. It does not validate a real ZK proof
 or L1 submission/finalization against the V9 stub.
 
-CI runs zkEVM and RISC-V as a matrix through the same E2E action; both must pass the existing required
-check. Failed runs upload separate logs, with RISC-V proof requests/responses included.
+Manual workflow dispatch runs only RISC-V; automatic runs select only zkEVM. Both use the same E2E
+action and preserve the existing required check. Failed runs upload logs, with RISC-V proof
+requests/responses included.
