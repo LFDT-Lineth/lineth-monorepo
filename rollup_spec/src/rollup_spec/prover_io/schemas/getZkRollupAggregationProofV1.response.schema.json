@@ -39,7 +39,7 @@
         "l2L1Roots",
         "l2L1TreeDepth",
         "filteredAddresses",
-        "programVks",
+        "programIds",
         "l2MessagingBlocksOffsets"
       ],
       "properties": {
@@ -78,8 +78,8 @@
           "type": "array",
           "items": { "$ref": "#/$defs/address" }
         },
-        "programVks": {
-          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
+        "programIds": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program IDs approved by L1 (order carries no meaning).",
           "type": "array",
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/hash32" }

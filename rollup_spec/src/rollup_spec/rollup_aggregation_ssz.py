@@ -32,12 +32,13 @@ limits. Each constant below carries a one-line rationale.
 from typing import Any
 
 from ethereum.crypto.hash import Hash32
+from ethereum.state import Address
 from ethereum_types.numeric import U64
 from remerkleable.basic import uint16, uint64
 from remerkleable.byte_arrays import ByteList, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
-from .l1_rollup import FinalizationSubmission
+from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
 from .rollup import RollupProof, VerifiableRollupProof
 from .rollup_aggregation import RollupAggregationProofPrivateInput
 from .l2_execution_ssz import (
@@ -106,7 +107,7 @@ class SszFinalizationPublicInput(Container):
     l2_l1_tree_depth: uint64
     l2_l1_roots: List[SszBytes32, MAX_L2_L1_ROOTS]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES]
-    program_vks: List[SszBytes32, MAX_PROGRAM_VKS]
+    program_ids: List[SszBytes32, MAX_PROGRAM_VKS]
     l2_messaging_blocks_offsets: List[uint16, MAX_L2_MESSAGING_BLOCKS_OFFSETS]
 
 
@@ -179,8 +180,22 @@ def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     prover-attached placeholder in `FinalizationSubmission`, never part of the
     guest-emitted bytes.
     """
-    rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
-    fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
+    pi = submission.public_inputs
+    fields = {name: getattr(pi, name) for name in SszFinalizationPublicInput.fields()}
+    for name in (
+        "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",
+        "end_l1_l2_bridge_rolling_hash_message_number", "parent_ftx_number", "end_processed_ftx_number",
+    ):
+        fields[name] = int(fields[name])
+    for name in (
+        "parent_l1_l2_bridge_rolling_hash", "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash",
+        "parent_ftx_rolling_hash", "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash",
+        "parent_block_hash", "end_block_hash",
+    ):
+        fields[name] = bytes(fields[name])
+    fields["l2_l1_roots"] = [bytes(root) for root in pi.l2_l1_roots]
+    fields["filtered_addresses"] = [bytes(address) for address in pi.filtered_addresses]
+    fields["program_ids"] = [bytes(program_id) for program_id in pi.program_ids]
     return _frame(ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, SszFinalizationPublicInput(**fields).encode_bytes())
 
 
@@ -193,7 +208,25 @@ def decode_aggregation_output_ssz(data: bytes) -> FinalizationSubmission:
     """
     payload = _strip_frame(data, ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID, "rollup-aggregation output")
     view = _strict_decode(payload, SszFinalizationPublicInput)
+    fields = {name: getattr(view, name) for name in SszFinalizationPublicInput.fields()}
+    for name in (
+        "end_block_number", "end_block_timestamp", "parent_l1_l2_bridge_rolling_hash_message_number",
+        "end_l1_l2_bridge_rolling_hash_message_number", "parent_ftx_number", "end_processed_ftx_number",
+    ):
+        fields[name] = U64(int(fields[name]))
+    for name in (
+        "parent_l1_l2_bridge_rolling_hash", "end_l1_l2_bridge_rolling_hash", "dynamic_chain_config_hash",
+        "parent_ftx_rolling_hash", "end_ftx_rolling_hash", "parent_data_rolling_hash", "end_data_rolling_hash",
+        "parent_block_hash", "end_block_hash",
+    ):
+        fields[name] = Hash32(bytes(fields[name]))
+    for name in ("start_offset", "end_offset", "l2_l1_tree_depth"):
+        fields[name] = int(fields[name])
+    fields["l2_l1_roots"] = [Hash32(bytes(root)) for root in view.l2_l1_roots]
+    fields["filtered_addresses"] = [Address(bytes(address)) for address in view.filtered_addresses]
+    fields["program_ids"] = [Hash32(bytes(program_id)) for program_id in view.program_ids]
+    fields["l2_messaging_blocks_offsets"] = [int(offset) for offset in view.l2_messaging_blocks_offsets]
     return FinalizationSubmission(
-        public_inputs=_rollup_public_input_from_view(view),
+        public_inputs=FinalizationPublicInput(**fields),
         proof=b"",
     )

@@ -532,8 +532,8 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 # ── rollup response: guest dataclass -> JSON dict ─────────────────────────────
 
 
-def _encode_rollup_public_inputs(pi: RollupPublicInput, *, aggregation: bool = False) -> dict:
-    """Encode the rollup PI fields shared with finalization; finalization omits blockCount."""
+def _encode_finalization_shared_inputs(pi) -> dict:
+    """Encode public-input fields common to rollup and finalization."""
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
@@ -559,12 +559,15 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput, *, aggregation: bool = F
         "l2L1Roots": [_hx(r) for r in pi.l2_l1_roots],
         "l2L1TreeDepth": pi.l2_l1_tree_depth,
         "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
-        # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
-        # program VKs verified beneath this proof, checked against L1's single
-        # combined approved-VK set (exec vs rollup not distinguished).
-        "programVks": [_hx(v) for v in pi.program_vks],
-        **({} if aggregation else {"blockCount": pi.block_count}),
         "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
+    }
+
+
+def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
+    return {
+        **_encode_finalization_shared_inputs(pi),
+        "programVks": [_hx(v) for v in pi.program_vks],
+        "blockCount": pi.block_count,
     }
 
 
@@ -733,7 +736,10 @@ def encode_aggregation_response(
         "proverVersion": prover_version,
         "proof": _hx(submission.proof),
         "startBlockNumber": int(start_block_number),
-        "publicInputs": _encode_rollup_public_inputs(submission.public_inputs, aggregation=True),
+        "publicInputs": {
+            **_encode_finalization_shared_inputs(submission.public_inputs),
+            "programIds": [_hx(program_id) for program_id in submission.public_inputs.program_ids],
+        },
     }
 
 

@@ -25,7 +25,8 @@ import pytest
 
 import rollup_spec
 
-from rollup_spec.l1_rollup import FinalizationSubmission
+from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from ethereum.crypto.hash import Hash32
 from rollup_spec.proof_io_v1 import (
     _decode_rollup_public_input,
     decode_aggregation_request,
@@ -39,7 +40,6 @@ from rollup_spec.rollup_aggregation_ssz import (
     encode_aggregation_input,
     encode_aggregation_output,
 )
-from rollup_spec.rollup_ssz import _ssz_rollup_public_input
 from rollup_spec.stateless_input import InvalidSsz
 
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
@@ -65,7 +65,13 @@ def _hexbytes(value: str) -> bytes:
 def _aggregation_output_from_response(resp: dict) -> FinalizationSubmission:
     """The rollup-aggregation guest's own output implied by a response fixture:
     the same guest-emitted fields, with `proverVersion`/`proof` dropped."""
-    pi = _decode_rollup_public_input(resp["publicInputs"], "publicInputs.")
+    inputs = resp["publicInputs"]
+    rollup_pi = _decode_rollup_public_input({**inputs, "programVks": []}, "publicInputs.")
+    pi = FinalizationPublicInput(
+        **{name: getattr(rollup_pi, name) for name in FinalizationPublicInput.__dataclass_fields__
+           if name != "program_ids"},
+        program_ids=[Hash32(_hexbytes(value)) for value in inputs["programIds"]],
+    )
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
@@ -102,12 +108,13 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
 
 def test_aggregation_output_frames_public_inputs_directly() -> None:
     submission = _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
-    rollup_pi = _ssz_rollup_public_input(submission.public_inputs)
-    fields = {name: getattr(rollup_pi, name) for name in SszFinalizationPublicInput.fields()}
-    expected_body = SszFinalizationPublicInput(**fields).encode_bytes()
-
-    assert encode_aggregation_output(submission) == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big") + expected_body
-    assert expected_body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
+    encoded = encode_aggregation_output(submission)
+    body = encoded[2:]
+    view = SszFinalizationPublicInput.decode_bytes(body)
+    assert encoded[:2] == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big")
+    assert body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
+    assert [bytes(program_id) for program_id in view.program_ids] == submission.public_inputs.program_ids
+    assert [bytes(program_id) for program_id in view.program_ids] != [bytes([0xaa]) * 32, bytes([0xbb]) * 32]
 
 
 def test_aggregation_output_preserves_messaging_block_offsets() -> None:
