@@ -80,18 +80,16 @@ class ProverClientFactoryTest {
     withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
   ): ProversConfig {
     return ProversConfig(
-      proverSwitch = ProverConfigSwitch(
-        current = ProverConfig(
-          riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v1")),
-        ),
-        next = if (withProverB) {
-          ProverConfig(
-            riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v2")),
-          )
-        } else {
-          null
-        },
+      current = ProverConfig(
+        riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v1")),
       ),
+      next = if (withProverB) {
+        ProverConfig(
+          riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v2")),
+        )
+      } else {
+        null
+      },
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
       switchBlockTimestamp = switchBlockTimestamp,
       enableRequestFilesCleanup = false,
@@ -108,18 +106,16 @@ class ProverClientFactoryTest {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
     }
     return ProversConfig(
-      proverSwitch = ProverConfigSwitch(
-        current = ProverConfig(
-          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
-        ),
-        next = if (withProverB) {
-          ProverConfig(
-            preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
-          )
-        } else {
-          null
-        },
+      current = ProverConfig(
+        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
       ),
+      next = if (withProverB) {
+        ProverConfig(
+          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
+        )
+      } else {
+        null
+      },
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
       switchBlockTimestamp = switchBlockTimestamp,
       enableRequestFilesCleanup = false,
@@ -132,13 +128,11 @@ class ProverClientFactoryTest {
     switchBlockNumberInclusive: ULong,
   ): ProversConfig {
     return ProversConfig(
-      proverSwitch = ProverConfigSwitch(
-        current = ProverConfig(
-          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover-switch/pre-riscv")),
-        ),
-        next = ProverConfig(
-          riscvConfig = buildRiscvProverConfig(tmpDir.resolve("prover-switch/riscv")),
-        ),
+      current = ProverConfig(
+        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover-switch/pre-riscv")),
+      ),
+      next = ProverConfig(
+        riscvConfig = buildRiscvProverConfig(tmpDir.resolve("prover-switch/riscv")),
       ),
       switchBlockNumberInclusive = switchBlockNumberInclusive,
       switchBlockTimestamp = null,
@@ -306,13 +300,11 @@ class ProverClientFactoryTest {
       ).copy(programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID),
     )
     return ProversConfig(
-      proverSwitch = ProverConfigSwitch(
-        current = ProverConfig(
-          riscvConfig = proverConfig("v1", currentL2Execution),
-        ),
-        next = ProverConfig(
-          riscvConfig = proverConfig("v2", nextL2Execution),
-        ),
+      current = ProverConfig(
+        riscvConfig = proverConfig("v1", currentL2Execution),
+      ),
+      next = ProverConfig(
+        riscvConfig = proverConfig("v2", nextL2Execution),
       ),
       switchBlockNumberInclusive = switchBlockNumberInclusive,
       switchBlockTimestamp = null,

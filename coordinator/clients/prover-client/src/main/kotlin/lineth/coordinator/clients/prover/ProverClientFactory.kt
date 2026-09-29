@@ -160,8 +160,8 @@ class DefaultProverClientFactory(
 ) : ProverClientFactory {
   private fun requireRiscvConfig(): ProversConfig {
     require(
-      config.proverSwitch.current.riscvConfig != null ||
-        config.proverSwitch.next?.riscvConfig != null,
+      config.current.riscvConfig != null ||
+        config.next?.riscvConfig != null,
     ) {
       "RISC-V prover config must be configured in either current or next"
     }
@@ -169,7 +169,7 @@ class DefaultProverClientFactory(
   }
 
   private fun requirePreRiscvConfig(): ProversConfig {
-    require(config.proverSwitch.current.preRiscvConfig != null) {
+    require(config.current.preRiscvConfig != null) {
       "Pre RISC-V prover config must be configured in current"
     }
     return config
@@ -178,8 +178,8 @@ class DefaultProverClientFactory(
   override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current.riscvConfig?.l2Execution,
-      proverBConfig = config.proverSwitch.next?.riscvConfig?.l2Execution,
+      proverAConfig = config.current.riscvConfig?.l2Execution,
+      proverBConfig = config.next?.riscvConfig?.l2Execution,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
@@ -191,8 +191,8 @@ class DefaultProverClientFactory(
   override fun rollupProverClient(): RollupProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current.riscvConfig,
-      proverBConfig = config.proverSwitch.next?.riscvConfig,
+      proverAConfig = config.current.riscvConfig,
+      proverBConfig = config.next?.riscvConfig,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
@@ -207,8 +207,8 @@ class DefaultProverClientFactory(
   override fun rollupAggregationProverClient(): RollupAggregationProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.proverSwitch.current.riscvConfig,
-      proverBConfig = config.proverSwitch.next?.riscvConfig,
+      proverAConfig = config.current.riscvConfig,
+      proverBConfig = config.next?.riscvConfig,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
@@ -223,8 +223,8 @@ class DefaultProverClientFactory(
   override fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig?.execution,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.execution,
+      proverAConfig = preRiscvConfig.current.preRiscvConfig?.execution,
+      proverBConfig = preRiscvConfig.next?.preRiscvConfig?.execution,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -241,8 +241,8 @@ class DefaultProverClientFactory(
   ): BlobCompressionProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig!!.blobCompression,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.blobCompression,
+      proverAConfig = preRiscvConfig.current.preRiscvConfig!!.blobCompression,
+      proverBConfig = preRiscvConfig.next?.preRiscvConfig?.blobCompression,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -261,8 +261,8 @@ class DefaultProverClientFactory(
   ): ProofAggregationProverClientV2 {
     val preRiscvConfig = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig!!,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig,
+      proverAConfig = preRiscvConfig.current.preRiscvConfig!!,
+      proverBConfig = preRiscvConfig.next?.preRiscvConfig,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
@@ -279,13 +279,13 @@ class DefaultProverClientFactory(
 
   override fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
     val preRiscvConfig = requirePreRiscvConfig()
-    if (preRiscvConfig.proverSwitch.current.preRiscvConfig!!.invalidity == null) {
+    if (preRiscvConfig.current.preRiscvConfig!!.invalidity == null) {
       throw IllegalStateException("Invalidity prover config is not configured")
     }
 
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.proverSwitch.current.preRiscvConfig.invalidity,
-      proverBConfig = preRiscvConfig.proverSwitch.next?.preRiscvConfig?.invalidity,
+      proverAConfig = preRiscvConfig.current.preRiscvConfig.invalidity,
+      proverBConfig = preRiscvConfig.next?.preRiscvConfig?.invalidity,
       switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
       switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
     ) { proverConfig ->
