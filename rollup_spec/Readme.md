@@ -172,7 +172,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 ### 2.2 rollup Proof
 
-The rollup proof covers `N ≥ 1` consecutive whole conflations — each conflation being one l2-execution proof's block range — and validates each zstd frame parsed from the verified DA chunks by decompressing it and comparing against canonical truncated-block RLP (§3.1–§3.2). The independent length-prefixed frames form this proof's contribution to the continuous DA byte stream. The guest verifies each physical blob or exact calldata chunk that range touches — including shared boundary blobs containing neighbouring proof bytes — against its kind-specific binding hash, and folds the dataRollingHash chain across the touched chunks. Neither a KZG commitment nor the dataRollingHash is a witness field. The rollup proof is also the leaf aggregator: it recursively verifies the `N` l2-execution proofs whose ranges tile the combined block range of the conflations and chains them with software `assert_eq!` continuity checks. Its public-input tuple is identical in shape to the rollup-aggregation proof's (§2.4), so the upstream rollup-aggregation step can consume rollup proofs directly.
+The rollup proof covers `N ≥ 1` consecutive whole conflations and recursively verifies their l2-execution proofs. It binds physical blob or exact calldata bytes to the L1-anchored chunks, then checks that each zstd frame parsed from the verified DA stream decompresses to the canonical truncated-block RLP (§3.1–§3.2). Its public-input tuple has the same shape as the rollup-aggregation proof's (§2.4).
 
 
 Chunk boundaries carry no conflation semantics: this proof's own byte range may begin or end mid-blob, sharing that blob with a neighbouring rollup proof or finalization range. `N = 1` is the simplest case (one conflation per rollup proof). `N > 1` lets the coordinator amortize recursion overhead by folding several conflations into a single proof — directly analogous to the existing M-block conflation inside an l2-execution proof.
@@ -215,7 +215,7 @@ The **l2-execution proof's 16-field PI** (§2.1) is *input* to this guest (priva
 
 | Field | Description |
 |---|---|
-| `blockRlps_c` | The ordered list of canonical full block RLPs published through the DA path for conflation `c` (`blockCount_c` entries: header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). The l2-execution proof receives `NewPayloadRequest` inputs instead; the rollup proof cross-checks these DA blocks against l2-execution public block hashes and `txFromsHash`. Truncation per §3.2 happens *inside* the guest; there is no separately witnessed truncated form. |
+| `blockRlps_c` | The ordered list of canonical full block RLPs published through the DA path for conflation `c` (`blockCount_c` entries: header + tx list [+ withdrawals], EIP-2718 typed transactions in full signed form). The l2-execution proof receives `NewPayloadRequest` inputs; the rollup proof cross-checks these DA blocks against l2-execution public block hashes and `txFromsHash`. The guest derives their truncated form using §3.2 and checks it against each zstd frame decompressed from the verified DA stream. |
 | `chunks` | One `{chunkHash, isCalldata, blobBytes, calldataBytes}` entry per touched chunk. Blob chunks carry exactly 131072 physical bytes (including any foreign boundary payload bytes) and empty calldata bytes. Calldata chunks carry exact submitted bytes and empty blob bytes. The guest verifies KZG or keccak256 against `chunkHash`, respectively. |
 | `boundaryPrevDataRollingHash` | Required only when `startOffset > 0` (§3.1): the dataRollingHash value before the first touched chunk, used to open its preimage |
 | `E₁ … Eₙ` | The l2-execution proofs, ordered by block range, one per conflation, tiling the combined range. Each `Eₑ` is the structure below. |
@@ -465,7 +465,7 @@ The DA payload must contain the exact inputs required to re-execute the L2 block
 - Intermediate state roots and receipt roots — these are deterministic outputs of execution, not inputs to it. No state root ever appears on-chain; execution continuity is carried by explicit `parentBlockHash`/`endBlockHash` public-input fields (§2.4) rather than by any DA accumulator input.
 - ChainID
 
-**Encoding and compression:** Each conflation is published as a 4-byte big-endian compressed-length prefix followed by one independently compressed zstd frame. The guest checks the frame read from the verified DA stream by full decompression against canonical truncated-block RLP. Compression choices need no byte-for-byte reproduction. Length-prefixed frames concatenate into the DA stream, then blob or calldata chunks transport that stream (§3.1).
+**Encoding and compression:** Each conflation is published as a 4-byte big-endian compressed-length prefix followed by one independently compressed zstd frame. The length-prefixed frames concatenate into the DA stream, which blob or calldata chunks transport (§3.1).
 
 
 ### 3.3 Prover I/O — On-Wire Format
