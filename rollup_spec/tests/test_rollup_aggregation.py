@@ -106,7 +106,7 @@ def test_aggregation_rejects_mismatched_tree_depth() -> None:
         run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=proofs))
 
 
-def test_aggregation_rebases_only_proven_messaging_blocks() -> None:
+def test_aggregation_rebases_messaging_block_offsets() -> None:
     left = RollupProof(_left_pi(l2_messaging_blocks_offsets=[1, 10]), U64(1000501))
     right = RollupProof(_right_pi(end_block_number=U64(1000520), l2_messaging_blocks_offsets=[2]), U64(1000511))
     result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[
@@ -116,7 +116,7 @@ def test_aggregation_rebases_only_proven_messaging_blocks() -> None:
     assert result.public_inputs.l2_messaging_blocks_offsets == [1, 10, 12]
 
 
-def test_aggregation_rejects_unproven_messaging_offset() -> None:
+def test_aggregation_rejects_offset_past_proven_block_range() -> None:
     proof = RollupProof(_left_pi(l2_messaging_blocks_offsets=[11]), U64(1000501))
     with pytest.raises(Exception, match="messaging block offset"):
         run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(rollup_proofs=[

@@ -106,17 +106,13 @@ checks modeled separately in `l1_rollup.py`:
 `l1_rollup.py` models the contract-facing DA chunk anchoring and finalization checks
 against L1 storage. It is intentionally not one of the RISC-V guest programs.
 
-**Guest output vs prover output.** The l2-execution guest emits its public inputs
-and the revealed hash preimages (`l2L1Messages`, `txFroms`,
-`filteredAddresses`) consumed by the rollup guest. The rollup and
-rollup-aggregation guests emit `l2L1Roots` and `filteredAddresses` as ordered
-public-input lists, rather than separate hash preimages. The zkVM/prover layer
-attaches `proof` and hashes each list field internally when constructing the
-recursive or on-chain public-input commitment. A prover response retains the
-lists for the next proving step or the Coordinator to submit to L1; L1 hashes
-the submitted lists in `_computePublicInput` (§5), rather than requiring a guest
-to emit their hashes. The reference leaves `proof` as a placeholder (`b""`);
-see §2.4 and §3.3.
+**Guest output vs prover output.** Each guest emits its public inputs and any
+other output needed by the next proving step. The zkVM/prover layer attaches
+`proof` and hashes list fields internally when constructing the recursive or
+on-chain public-input commitment. A prover response retains the guest output
+for the next proving step or for the Coordinator to submit to L1. L1 hashes
+submitted lists in `_computePublicInput` (§5). The reference leaves `proof` as
+a placeholder (`b""`); see §2.4 and §3.3.
 
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`
@@ -174,7 +170,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 
 * **Inspect the forced transactions**: See the corresponding section.
 
-* **Output**: the public-input tuple computed above, together with the revealed preimages the rollup proof consumes (`l2L1Messages`, `txFroms`, `filteredAddresses`). The `proof` bytes are attached by the prover, not this guest (see §2, *Guest output vs prover output*).
+* **Output**: the public-input tuple above, as part of the guest output consumed by the rollup guest.
 
 ### 2.2 rollup Proof
 

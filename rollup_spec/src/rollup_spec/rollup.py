@@ -35,6 +35,7 @@ from .l2_execution import (
     hash_address_list,
     hash_digest_list,
 )
+from .messaging_offsets import rebase_messaging_offsets
 
 L2_L1_TREE_DEPTH = 5
 ZERO_HASH32 = Hash32(b"\x00" * 32)
@@ -550,18 +551,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 
     messaging_offsets: List[int] = []
     for proof in l2_execution_proofs:
-        count = int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
-        if count <= 0 or proof.public_inputs.block_count != count:
-            raise Exception("l2-execution blockCount does not match proven range")
-        previous = 0
-        for offset in proof.public_inputs.l2_messaging_blocks_offsets:
-            if type(offset) is not int or not previous < offset <= count or offset > 0xFFFF:
-                raise Exception("invalid l2-execution messaging block offset")
-            rebased = int(proof.start_block_number) - rollup_start_block_number + offset
-            if rebased > 0xFFFF:
-                raise Exception("rollup messaging block offset exceeds uint16")
-            messaging_offsets.append(rebased)
-            previous = offset
+        messaging_offsets.extend(rebase_messaging_offsets(
+            int(proof.start_block_number), int(proof.public_inputs.end_block_number),
+            proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
+            rollup_start_block_number, "l2-execution", "rollup",
+        ))
 
     # The exec program VKs verified beneath this rollup proof, emitted as a
     # CANONICAL sorted, distinct list (§ProgramVK anchoring): semantically a set,

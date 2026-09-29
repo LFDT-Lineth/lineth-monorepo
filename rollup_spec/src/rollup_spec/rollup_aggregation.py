@@ -5,6 +5,7 @@ from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 
 from .l1_rollup import FinalizationSubmission
+from .messaging_offsets import rebase_messaging_offsets
 from .rollup import (
     RollupProof,
     RollupPublicInput,
@@ -70,18 +71,11 @@ def run_rollup_aggregation_guest(
 
     for vp in aggregation_input.rollup_proofs:
         proof = vp.proof
-        count = int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
-        if count <= 0 or proof.public_inputs.block_count != count:
-            raise Exception("rollup blockCount does not match proven range")
-        previous = 0
-        for offset in proof.public_inputs.l2_messaging_blocks_offsets:
-            if type(offset) is not int or not previous < offset <= count or offset > 0xFFFF:
-                raise Exception("invalid rollup messaging block offset")
-            rebased = int(proof.start_block_number) - int(first_proof.start_block_number) + offset
-            if rebased > 0xFFFF:
-                raise Exception("aggregation messaging block offset exceeds uint16")
-            messaging_offsets.append(rebased)
-            previous = offset
+        messaging_offsets.extend(rebase_messaging_offsets(
+            int(proof.start_block_number), int(proof.public_inputs.end_block_number),
+            proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
+            int(first_proof.start_block_number), "rollup", "aggregation",
+        ))
         merged_l2_l1_roots.extend(vp.proof.public_inputs.l2_l1_roots)
         merged_filtered_addresses.extend(vp.proof.public_inputs.filtered_addresses)
         if vp.program_vk not in seen_rollup_vks:
