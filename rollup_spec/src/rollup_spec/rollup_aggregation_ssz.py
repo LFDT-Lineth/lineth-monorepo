@@ -14,8 +14,8 @@ Framing: exactly like `stateless_input.py::STATELESS_INPUT_SCHEMA_ID`, every
 message is `schema_id (2 bytes, big-endian) || SSZ bytes`. Two schema ids are
 defined, one per guest-facing message:
 
-   - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1003) — rollup-aggregation guest input V2
-   - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1804) — rollup-aggregation guest output V2
+  - `ROLLUP_AGGREGATION_INPUT_SCHEMA_ID`  (0x1002) — rollup-aggregation guest input
+  - `ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID` (0x1802) — rollup-aggregation guest output
 
 The guest output container omits the `proof` field the logical
 `FinalizationSubmission` dataclass carries: a guest cannot attest its own
@@ -57,8 +57,8 @@ from .rollup_ssz import (
 )
 
 # ── Framing ──────────────────────────────────────────────────────────────────
-ROLLUP_AGGREGATION_INPUT_SCHEMA_ID = 0x1003
-ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID = 0x1804
+ROLLUP_AGGREGATION_INPUT_SCHEMA_ID = 0x1002
+ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID = 0x1802
 
 # ── SSZ list/vector bounds ───────────────────────────────────────────────────
 MAX_L2_MESSAGING_BLOCKS_OFFSETS = 2**16        # L1 calldata offsets carried by the aggregation output
@@ -157,7 +157,7 @@ def _verifiable_rollup_proof_from_view(view: Any) -> VerifiableRollupProof:
 
 
 def encode_aggregation_input(agg_input: RollupAggregationProofPrivateInput) -> bytes:
-    """Encode a `RollupAggregationProofPrivateInput` into framed SSZ bytes (0x1003 schema id)."""
+    """Encode a `RollupAggregationProofPrivateInput` into framed SSZ bytes (0x1002 schema id)."""
     ssz_input = SszRollupAggregationProofPrivateInput(
         rollup_proofs=[_ssz_verifiable_rollup_proof(p) for p in agg_input.rollup_proofs],
     )
@@ -182,7 +182,7 @@ def decode_aggregation_input_ssz(data: bytes) -> RollupAggregationProofPrivateIn
 def encode_aggregation_output(submission: FinalizationSubmission) -> bytes:
     """
     Encode the rollup-aggregation guest's own output into framed SSZ bytes
-    (0x1804 schema id). `submission.proof` is deliberately dropped — it is a
+    (0x1802 schema id). `submission.proof` is deliberately dropped — it is a
     prover-attached placeholder in `FinalizationSubmission`, never part of the
     guest-emitted bytes.
     """

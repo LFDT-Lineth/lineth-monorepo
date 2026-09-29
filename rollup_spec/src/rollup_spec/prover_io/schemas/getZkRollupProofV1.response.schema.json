@@ -69,7 +69,10 @@
           "description": "Guest-derived canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
-        "l2L1TreeDepth": { "type": "integer", "const": 5 },
+        "l2L1TreeDepth": {
+          "description": "Guest-proven depth of each L2-to-L1 message tree; the guest implementation chooses the depth.",
+          "type": "integer", "minimum": 1, "maximum": 18446744073709551615
+        },
         "l2L1Roots": {
           "type": "array",
           "items": { "$ref": "#/$defs/hash32" }
