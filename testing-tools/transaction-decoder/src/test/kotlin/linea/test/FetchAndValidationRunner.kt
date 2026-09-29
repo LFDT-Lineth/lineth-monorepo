@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import linea.domain.CommonDomainFunctions
 import linea.ethapi.EthApiClient
 import linea.web3j.ethapi.createEthApiClient
+import lineth.vertx.vertxTestOptions
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -11,7 +12,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference
 
 class FetchAndValidationRunner(
-  val vertx: Vertx = Vertx.vertx(),
+  val vertx: Vertx = Vertx.vertx(vertxTestOptions),
   val rpcUrl: String,
   val log: Logger = LogManager.getLogger(FetchAndValidationRunner::class.java),
 ) {

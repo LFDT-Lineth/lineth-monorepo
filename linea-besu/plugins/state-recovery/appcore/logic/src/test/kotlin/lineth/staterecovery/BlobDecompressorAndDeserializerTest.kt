@@ -6,6 +6,7 @@ import linea.blob.BlobCompressorFactory
 import linea.blob.BlobCompressorVersion
 import linea.kotlin.encodeHex
 import linea.rlp.RLP
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory
 import net.consensys.linea.nativecompressor.CompressorTestData
@@ -36,7 +37,7 @@ class BlobDecompressorAndDeserializerTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     compressor = BlobCompressorFactory.getInstance(
       compressorVersion = BlobCompressorVersion.V2,
       dataLimit = 124 * 1024,

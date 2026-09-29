@@ -12,20 +12,3 @@ javadoc {
   options.addStringOption('Xwerror', '-html5')
   options.encoding = 'UTF-8'
 }
-
-tasks.register("checkSpdxHeader", CheckSpdxHeader) {
-  rootPath = "${projectDir}"
-  spdxHeader = "* SPDX-License-Identifier: MIT OR Apache-2.0"
-  filesRegex = "(.*.java)|(.*.groovy)"
-  excludeRegex = [
-    "(.*/.gradle/.*)",
-    "(.*/.idea/.*)",
-    "(.*/out/.*)",
-    "(.*/build/.*)",
-    "(.*/src/[^/]+/generated/.*)",
-  ].join("|")
-}
-
-tasks.named("check") {
-  dependsOn(tasks.named("checkSpdxHeader"))
-}

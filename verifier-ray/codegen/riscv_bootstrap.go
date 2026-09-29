@@ -31,15 +31,9 @@ type HonestRiscvArtifacts struct {
 
 // honestSharedRandomness is the γ seed handed to the shard being proved.
 //
-// It must not be the zero octuplet. runCompilePipeline enables
-// messagebus.CompileOptions.SharedRandomness, which registers a pre-sampling
-// hook that overwrites the Fiat-Shamir state with this seed before any coin of
-// the message-bus coin round is drawn. Every coin sampled from that FS state —
-// including the γ that lookuptologderivsum adds to each lookup denominator —
-// is therefore a pure function of this value. Seeding it with zeros makes the
-// FS output, and hence that γ, zero, which collapses the denominator
-// γ + RLC(T) to zero on every left-padded (all-zero) row and trips the
-// zero-denominator panic in logderivativesum's prover.
+// runCompilePipeline enables messagebus.CompileOptions.SharedRandomness, which
+// declares γ as a round-0 public input. γ is absorbed on the way out of round 0 like any other cell,
+// which is what makes the coins drawn afterwards depend on it.
 //
 // The value itself is arbitrary; it only has to be a fixed non-zero constant so
 // the artifacts stay byte-reproducible. Real shards get their γ from the

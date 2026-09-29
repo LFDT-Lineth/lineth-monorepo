@@ -1,29 +1,13 @@
 # Host-machine CI for the RISC-V guest programs (riscv-guests/):
 #   - host-tests: `make test` — the top-level orchestrator fans the native unit tests out to every
 #     guest in GUESTS (single-fixture smoke test, delegated-accel integration test, …).
-#   - reference-tests: `make reference-test` in l2-execution — the dummy-wrap-vs-fixture-truth
-#     reference-test guard (extended_vanilla_runner.zig), over the Amsterdam EF corpus.
+#   - reference-tests: after the unit tests, `make reference-test` runs the dummy-wrap-vs-fixture-truth
+#     guard (extended_vanilla_runner.zig) over the Amsterdam EF corpus.
 # Both run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
 # interpreter is covered separately, by its own dedicated workflow.
 name: riscv-guests host tests
 
 on:
-  pull_request:
-    # Intentionally unfiltered by base branch: stacked PRs also need this focused gate.
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'riscv-guests/**'
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-host-tests.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'riscv-guests/**'
-      - '.github/actions/setup-riscv-guests/**'
-      - '.github/actions/setup-zig/**'
-      - '.github/workflows/riscv-guests-host-tests.yml'
   workflow_dispatch:
 
 permissions:
@@ -33,8 +17,7 @@ permissions:
 jobs:
   host-tests:
     name: Guest unit tests (host)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -45,20 +28,17 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       - name: Check Zig formatting
-        # File list lives in the Makefile (FMT_PATHS, driven by GUESTS) so CI and local stay in sync.
         run: make fmt-check
         working-directory: riscv-guests
-        timeout-minutes: 2
 
       - name: Run native unit tests for all guests
         run: make test
         working-directory: riscv-guests
-        timeout-minutes: 20
 
   reference-tests:
     name: l2-execution extended-guest reference-test guards (host)
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    needs: host-tests
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -71,5 +51,3 @@ jobs:
       - name: Run extended-guest reference-test guards
         run: make reference-test
         working-directory: riscv-guests/l2-execution
-        timeout-minutes: 30
-

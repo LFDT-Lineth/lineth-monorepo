@@ -2,6 +2,7 @@ package linea.timer
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
@@ -21,7 +22,6 @@ import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlin.time.toJavaDuration
 
@@ -45,7 +45,7 @@ class TimerTest {
     }
   }
 
-  private val vertx = Vertx.vertx()
+  private val vertx = Vertx.vertx(vertxTestOptions)
 
   fun createTimer(
     timerType: KClass<out Timer>,
@@ -121,7 +121,42 @@ class TimerTest {
     timer.stop()
   }
 
-  @OptIn(ExperimentalTime::class)
+  @ParameterizedTest
+  @MethodSource("timerTypes")
+  @Timeout(5, timeUnit = TimeUnit.SECONDS)
+  fun `stop returns future that completes only after in-flight task finishes`(
+    timerType: KClass<out Timer>,
+    timerSchedule: TimerSchedule,
+  ) {
+    val taskStarted = CountDownLatch(1)
+    val releaseTask = CountDownLatch(1)
+    val invocations = AtomicInteger(0)
+    val timer = createTimer(
+      timerType = timerType,
+      timerSchedule = timerSchedule,
+      task = Runnable {
+        invocations.incrementAndGet()
+        taskStarted.countDown()
+        releaseTask.await()
+      },
+      errorHandler = { },
+    )
+    timer.start()
+    assertThat(taskStarted.await(2, TimeUnit.SECONDS)).isTrue()
+
+    val stopFuture = timer.stop()
+    Thread.sleep(100)
+    assertThat(stopFuture).isNotDone()
+
+    releaseTask.countDown()
+    stopFuture.get(2, TimeUnit.SECONDS)
+
+    // no further executions after stop
+    Thread.sleep(200)
+    assertThat(invocations.get()).isEqualTo(1)
+    assertThat(timer.stop()).isDone()
+  }
+
   @ParameterizedTest
   @MethodSource("timerTypes")
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
@@ -176,11 +211,10 @@ class TimerTest {
     }
     val firstReference = timerReferences.first()
     timerReferences.forEach {
-      Assertions.assertThat(it).isEqualTo(firstReference)
+      assertThat(it).isEqualTo(firstReference)
     }
   }
 
-  @OptIn(ExperimentalTime::class)
   @Test
   fun `Fixed rate timer executes tasks quickly if one is delayed more than polling interval`() {
     val invocationTimestamps = CopyOnWriteArrayList<Instant>()

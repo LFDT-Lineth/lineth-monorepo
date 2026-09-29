@@ -56,8 +56,6 @@ test {
 }
 
 task integrationTest(type: Test) { test ->
-  outputs.cacheIf { false }
-  outputs.upToDateWhen { false }
   systemProperty "vertx.parameter.filename", project.projectDir.toPath()
       .resolve("src/test/resources/vertx-options.json")
       .toAbsolutePath().toString()
@@ -89,9 +87,6 @@ task integrationTest(type: Test) { test ->
 }
 
 task e2eTest(type: Test) { test ->
-  outputs.cacheIf { false }
-  outputs.upToDateWhen { false }
-
   systemProperty "vertx.parameter.filename", project.projectDir.toPath()
       .resolve("src/test/resources/vertx-options.json")
       .toAbsolutePath().toString()
@@ -105,7 +100,7 @@ task e2eTest(type: Test) { test ->
 
   systemProperties["junit.jupiter.execution.timeout.default"] = "10 m" // 10 minutes
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
-  maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 9)
+  maxParallelForks = Math.min(Runtime.runtime.availableProcessors(), 9)
 
   testLogging {
     events TestLogEvent.FAILED,

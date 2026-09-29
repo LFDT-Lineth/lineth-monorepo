@@ -64,7 +64,7 @@ fn appendPublicInputs(alloc: std.mem.Allocator, out: *std.ArrayListUnmanaged(u8)
     try appendKeyInt(alloc, out, "endL1L2BridgeRollingHashMessageNumber", pi.end_l1_l2_bridge_rolling_hash_message_number, false);
     try appendKeyHex(alloc, out, "dynamicChainConfigHash", &pi.dynamic_chain_config_hash, false);
     try appendKeyHex(alloc, out, "parentFtxRollingHash", &pi.parent_ftx_rolling_hash, false);
-    try appendKeyInt(alloc, out, "parentProcessedFtxNumber", pi.parent_processed_ftx_number, false);
+    try appendKeyInt(alloc, out, "parentFtxNumber", pi.parent_ftx_number, false);
     try appendKeyHex(alloc, out, "endFtxRollingHash", &pi.end_ftx_rolling_hash, false);
     try appendKeyInt(alloc, out, "endProcessedFtxNumber", pi.end_processed_ftx_number, false);
     try appendKeyHex(alloc, out, "filteredAddressesHash", &pi.filtered_addresses_hash, false);

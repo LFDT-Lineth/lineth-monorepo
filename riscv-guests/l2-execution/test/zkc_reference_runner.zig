@@ -15,6 +15,7 @@ const usage =
     \\directories run lexically. Patterns containing `/` match paths relative to the operand root;
     \\patterns without `/` match basenames at any depth.
     \\  --install-prefix DIR  Zig install prefix containing the guest ELF
+    \\  --elf PATH            Guest ELF to run directly
     \\  --makefile PATH       arithmetization Makefile
     \\  --zkc-target NAME     elf-exec (default) or elf-trace
     \\  --zkc-flags TEXT      flags forwarded to ZkC
@@ -45,6 +46,7 @@ pub fn main(init: std.process.Init) !void {
     defer operands.deinit(init.gpa);
     var opts = spec_runner.Options{};
     var prefix: ?[]const u8 = null;
+    var elf_path: ?[]const u8 = null;
     var makefile: ?[]const u8 = null;
     var target: []const u8 = "elf-exec";
     var flags: ?[]const u8 = null;
@@ -59,6 +61,8 @@ pub fn main(init: std.process.Init) !void {
             options_enabled = false;
         } else if (options_enabled and std.mem.eql(u8, arg, "--install-prefix")) {
             prefix = takeValue(args, &i, arg);
+        } else if (options_enabled and std.mem.eql(u8, arg, "--elf")) {
+            elf_path = takeValue(args, &i, arg);
         } else if (options_enabled and std.mem.eql(u8, arg, "--makefile")) {
             makefile = takeValue(args, &i, arg);
         } else if (options_enabled and std.mem.eql(u8, arg, "--zkc-target")) {
@@ -87,9 +91,14 @@ pub fn main(init: std.process.Init) !void {
         fatal("--zkc-target must be elf-exec or elf-trace");
     }
 
-    const install_prefix = prefix orelse fatal("missing --install-prefix");
-    const elf = try std.fs.path.join(init.gpa, &.{ install_prefix, "bin", "evm_execution_guest" });
-    defer init.gpa.free(elf);
+    if (prefix != null and elf_path != null) fatal("--install-prefix and --elf are mutually exclusive");
+    const elf = if (elf_path) |path|
+        path
+    else blk: {
+        const install_prefix = prefix orelse fatal("missing --install-prefix or --elf");
+        break :blk try std.fs.path.join(init.gpa, &.{ install_prefix, "bin", "evm_execution_guest" });
+    };
+    defer if (elf_path == null) init.gpa.free(elf);
     const temp_dir = try makeTempDir(init);
     defer cleanupTempDir(init, temp_dir);
 

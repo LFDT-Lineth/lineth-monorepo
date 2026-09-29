@@ -5,6 +5,7 @@ import linea.contract.l2.FakeL2MessageService
 import linea.domain.BlockParameter
 import linea.log4j.configureLoggers
 import linea.web3j.ethapi.createEthApiClient
+import lineth.vertx.vertxTestOptions
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import java.lang.IllegalStateException
@@ -18,7 +19,7 @@ class ManualMessageAnchoringTest {
 
   // @Test
   fun `should anchor messages`() {
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(vertxTestOptions)
     val fakeL2MessageService = FakeL2MessageService(contractAddress = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     val l1Client = createEthApiClient(
       System.getenv("URL_SEPOLIA") ?: throw IllegalStateException("URL_SEPOLIA not set"),

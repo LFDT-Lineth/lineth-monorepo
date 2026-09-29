@@ -66,9 +66,9 @@ the columns themselves.
 A consequence worth keeping in mind: a protocol that has *not* been through the
 `pcs` pass has no witness binding at all. Its coins do not depend on the
 columns, and the verifier — which holds no column data — cannot detect a
-tampered witness. Any soundness test must therefore run the `pcs` pass (or seed
-the transcript through a `PreSamplingHook`); otherwise the challenges are
-constants, and the very first coin drawn from an untouched transcript is zero.
+tampered witness. Any soundness test must therefore run the `pcs` pass;
+otherwise the challenges are constants, and the very first coin drawn from an
+untouched transcript is zero.
 
 ### Query compilation model
 

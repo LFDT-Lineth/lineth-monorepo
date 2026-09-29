@@ -12,6 +12,7 @@ import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.HttpRequestHandler
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
@@ -36,7 +37,7 @@ open class TestingJsonRpcServer(
   val recordRequestsResponses: Boolean = false,
   val serverName: String = "TestingJsonRpcServer",
   loggerName: String = serverName,
-  val vertx: Vertx = Vertx.vertx(),
+  val vertx: Vertx = Vertx.vertx(vertxTestOptions),
   val responseObjectMapper: ObjectMapper = jacksonObjectMapper(),
   responsesArtificialDelay: Duration? = null,
 ) {

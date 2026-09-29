@@ -63,6 +63,7 @@ pub const linea_errors = error{
     InvalidGenesisParentHash,
 
     ExecutionRequestsNotSupported,
+    BlobTransactionsNotSupported,
     WithdrawalsNotSupported,
     UnsupportedFork,
 
@@ -105,6 +106,7 @@ pub fn exitCode(err: anyerror) ExitCode {
         => .conflation_invariant,
 
         error.ExecutionRequestsNotSupported,
+        error.BlobTransactionsNotSupported,
         error.WithdrawalsNotSupported,
         error.UnsupportedFork,
         => .policy_reject,
