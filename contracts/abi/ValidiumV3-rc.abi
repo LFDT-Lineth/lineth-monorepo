@@ -16,11 +16,6 @@
       "type": "error"
     },
     {
-      "inputs": [],
-      "name": "BlobSubmissionDataIsMissing",
-      "type": "error"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -29,16 +24,6 @@
         }
       ],
       "name": "BytesLengthNotMultipleOfTwo",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CallerIsNotYieldManager",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "CallerNotLSTWithdrawalRecipient",
       "type": "error"
     },
     {
@@ -87,17 +72,6 @@
     {
       "inputs": [],
       "name": "DataRollingHashSubmissionIsZeroHash",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        }
-      ],
-      "name": "EmptyBlobDataAtIndex",
       "type": "error"
     },
     {
@@ -283,16 +257,6 @@
       "type": "error"
     },
     {
-      "inputs": [],
-      "name": "LSTWithdrawalRequiresDeficit",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "LastFinalizationTimeNotLapsed",
-      "type": "error"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint32",
@@ -393,11 +357,6 @@
         }
       ],
       "name": "OffsetOutOfRange",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "OnlyNonLivenessRecoveryOperator",
       "type": "error"
     },
     {
@@ -764,19 +723,6 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "FundingReceived",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
           "internalType": "uint8",
           "name": "version",
           "type": "uint8"
@@ -1006,44 +952,6 @@
         }
       ],
       "name": "LineaRollupVersionChanged",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "caller",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "livenessRecoveryOperator",
-          "type": "address"
-        }
-      ],
-      "name": "LivenessRecoveryOperatorAddressSet",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "caller",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "livenessRecoveryOperator",
-          "type": "address"
-        }
-      ],
-      "name": "LivenessRecoveryOperatorRoleGranted",
       "type": "event"
     },
     {
@@ -1455,25 +1363,6 @@
       "type": "event"
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "oldYieldManagerAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "newYieldManagerAddress",
-          "type": "address"
-        }
-      ],
-      "name": "YieldManagerChanged",
-      "type": "event"
-    },
-    {
       "inputs": [],
       "name": "CONTRACT_VERSION",
       "outputs": [
@@ -1761,19 +1650,6 @@
     },
     {
       "inputs": [],
-      "name": "SET_YIELD_MANAGER_ROLE",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "UNPAUSE_ALL_ROLE",
       "outputs": [
         {
@@ -1903,16 +1779,21 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "YIELD_PROVIDER_STAKING_ROLE",
-      "outputs": [
+      "inputs": [
         {
           "internalType": "bytes32",
-          "name": "",
+          "name": "_parentDataRollingHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_storedDataRollingHash",
           "type": "bytes32"
         }
       ],
-      "stateMutability": "view",
+      "name": "acceptDataRollingHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1945,49 +1826,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_fee",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_value",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address payable",
-          "name": "_feeRecipient",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes",
-          "name": "_calldata",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_nonce",
-          "type": "uint256"
-        }
-      ],
-      "name": "claimMessage",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -2051,76 +1889,6 @@
         }
       ],
       "name": "claimMessageWithProof",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "components": [
-            {
-              "internalType": "bytes32[]",
-              "name": "proof",
-              "type": "bytes32[]"
-            },
-            {
-              "internalType": "uint256",
-              "name": "messageNumber",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint32",
-              "name": "leafIndex",
-              "type": "uint32"
-            },
-            {
-              "internalType": "address",
-              "name": "from",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "to",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "value",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address payable",
-              "name": "feeRecipient",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes32",
-              "name": "merkleRoot",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "internalType": "struct IL1MessageService.ClaimMessageWithProofParams",
-          "name": "_params",
-          "type": "tuple"
-        },
-        {
-          "internalType": "address",
-          "name": "_yieldProvider",
-          "type": "address"
-        }
-      ],
-      "name": "claimMessageWithProofAndWithdrawLST",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2431,13 +2199,6 @@
     },
     {
       "inputs": [],
-      "name": "fund",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "getRequiredForcedTransactionFields",
       "outputs": [
         {
@@ -2658,16 +2419,6 @@
           "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "_initializationData",
           "type": "tuple"
-        },
-        {
-          "internalType": "address",
-          "name": "_livenessRecoveryOperator",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_yieldManager",
-          "type": "address"
         }
       ],
       "name": "initialize",
@@ -2707,19 +2458,6 @@
         {
           "internalType": "bool",
           "name": "pauseTypeIsPaused",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "isWithdrawLSTAllowed",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
           "type": "bool"
         }
       ],
@@ -2875,44 +2613,19 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "reinitializeLineaRollupV10",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "_role",
+          "name": "role",
           "type": "bytes32"
         },
         {
           "internalType": "address",
-          "name": "_account",
+          "name": "account",
           "type": "address"
         }
       ],
       "name": "renounceRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "_l2YieldRecipient",
-          "type": "address"
-        }
-      ],
-      "name": "reportNativeYield",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -3046,39 +2759,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "_messageNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "_rollingHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_lastFinalizedForcedTransactionNumber",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "_lastFinalizedForcedTransactionRollingHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_lastFinalizedTimestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "setLivenessRecoveryOperator",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "_newVerifierAddress",
           "type": "address"
@@ -3103,19 +2783,6 @@
         }
       ],
       "name": "setVerifierKeys",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_newYieldManager",
-          "type": "address"
-        }
-      ],
-      "name": "setYieldManager",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -3170,24 +2837,6 @@
     {
       "inputs": [
         {
-          "internalType": "bytes32",
-          "name": "_parentDataRollingHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "_storedDataRollingHash",
-          "type": "bytes32"
-        }
-      ],
-      "name": "submitBlobs",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "bytes4",
           "name": "interfaceId",
           "type": "bytes4"
@@ -3215,19 +2864,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFundsForNativeYield",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -3350,19 +2986,6 @@
         {
           "internalType": "address",
           "name": "verifierAddress",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "yieldManager",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
           "type": "address"
         }
       ],
