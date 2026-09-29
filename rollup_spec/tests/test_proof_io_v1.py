@@ -41,6 +41,7 @@ from rollup_spec.proof_io_v1 import (
     encode_response,
     encode_rollup_response,
 )
+from rollup_spec.rollup_aggregation import run_rollup_aggregation_guest
 from rollup_spec.stateless_input import decode_stateless_input_ssz
 
 # Locate the golden-vector fixtures via the installed package, so the test does
@@ -597,7 +598,7 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     verifiable2 = req.rollup_proofs[1]
     proof2 = verifiable2.proof
     assert bytes(proof2.proof) == bytes.fromhex("abcdff")
-    assert int(proof2.start_block_number) == 15
+    assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 18
     assert int(proof2.public_inputs.parent_ftx_number) == 18
 
@@ -633,6 +634,14 @@ def test_decode_aggregation_request_malformed_nested_hash_is_rejected() -> None:
 def test_decode_aggregation_request_json_round_trips() -> None:
     decoded = decode_aggregation_request_json(json.dumps(_valid_aggregation_request()))
     assert len(decoded.rollup_proofs) == 2
+
+
+def test_aggregation_request_fixture_tiles_finalization_range() -> None:
+    request = _valid_aggregation_request()
+    result = run_rollup_aggregation_guest(decode_aggregation_request(request))
+
+    assert request["proofRequest"]["rollupProofs"][0]["startBlockNumber"] == request["metadata"]["startBlockNumber"]
+    assert int(result.public_inputs.end_block_number) == request["metadata"]["endBlockNumber"]
 
 
 # ── aggregation response encode ─────────────────────────────────────────────────
