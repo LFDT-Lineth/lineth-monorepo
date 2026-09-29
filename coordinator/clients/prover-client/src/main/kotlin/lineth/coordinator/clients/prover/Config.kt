@@ -5,8 +5,8 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 data class ProversConfig(
-  val current: ProverConfig,
-  val next: ProverConfig? = null,
+  val currentProver: ProverConfig,
+  val nextProver: ProverConfig? = null,
   val switchBlockNumberInclusive: ULong?,
   val switchBlockTimestamp: Instant?,
   val enableRequestFilesCleanup: Boolean = false,

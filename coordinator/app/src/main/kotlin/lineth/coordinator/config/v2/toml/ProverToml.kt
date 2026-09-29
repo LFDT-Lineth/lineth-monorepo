@@ -213,8 +213,8 @@ data class ProverToml(
     }
 
     return ProversConfig(
-      current = buildGenericProverConfig(this),
-      next = this.new?.let { buildGenericProverConfig(it) },
+      currentProver = buildGenericProverConfig(this),
+      nextProver = this.new?.let { buildGenericProverConfig(it) },
       switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
       switchBlockTimestamp = mergedSwitchBlockTimestamp,
       enableRequestFilesCleanup = this.enableRequestFilesCleanup,

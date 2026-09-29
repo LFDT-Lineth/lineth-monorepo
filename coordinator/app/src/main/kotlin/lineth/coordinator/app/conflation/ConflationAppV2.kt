@@ -140,7 +140,7 @@ class ConflationAppV2(
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
         executionProofPollingInterval =
-        riscvProversConfig.current.riscvConfig!!.l2Execution.fileBased.pollingInterval,
+        riscvProversConfig.currentProver.riscvConfig!!.l2Execution.fileBased.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )

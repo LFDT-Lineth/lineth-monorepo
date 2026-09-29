@@ -112,16 +112,16 @@ class ConflationBacktestingApp(
       ),
     ),
     proversConfig = mainCoordinatorConfig.proversConfig.copy(
-      current = ProverConfig(
+      currentProver = ProverConfig(
         preRiscvConfig = getUpdatedProverConfig(
-          proverConfig = mainCoordinatorConfig.proversConfig.current.preRiscvConfig!!,
+          proverConfig = mainCoordinatorConfig.proversConfig.currentProver.preRiscvConfig!!,
           backtestingDirectory = requireNotNull(mainCoordinatorConfig.conflation.backtestingDirectory) {
             "conflation.backtestingDirectory must be set when running in backtesting mode"
           },
           conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
         ),
       ),
-      next = mainCoordinatorConfig.proversConfig.next?.preRiscvConfig?.let { proverB ->
+      nextProver = mainCoordinatorConfig.proversConfig.nextProver?.preRiscvConfig?.let { proverB ->
         ProverConfig(
           preRiscvConfig = getUpdatedProverConfig(
             proverConfig = proverB,

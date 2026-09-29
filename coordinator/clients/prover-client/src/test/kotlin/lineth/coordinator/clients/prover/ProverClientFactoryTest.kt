@@ -80,10 +80,10 @@ class ProverClientFactoryTest {
     withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
   ): ProversConfig {
     return ProversConfig(
-      current = ProverConfig(
+      currentProver = ProverConfig(
         riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v1")),
       ),
-      next = if (withProverB) {
+      nextProver = if (withProverB) {
         ProverConfig(
           riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v2")),
         )
@@ -106,10 +106,10 @@ class ProverClientFactoryTest {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
     }
     return ProversConfig(
-      current = ProverConfig(
+      currentProver = ProverConfig(
         preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
       ),
-      next = if (withProverB) {
+      nextProver = if (withProverB) {
         ProverConfig(
           preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
         )
@@ -128,10 +128,10 @@ class ProverClientFactoryTest {
     switchBlockNumberInclusive: ULong,
   ): ProversConfig {
     return ProversConfig(
-      current = ProverConfig(
+      currentProver = ProverConfig(
         preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover-switch/pre-riscv")),
       ),
-      next = ProverConfig(
+      nextProver = ProverConfig(
         riscvConfig = buildRiscvProverConfig(tmpDir.resolve("prover-switch/riscv")),
       ),
       switchBlockNumberInclusive = switchBlockNumberInclusive,
@@ -300,10 +300,10 @@ class ProverClientFactoryTest {
       ).copy(programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID),
     )
     return ProversConfig(
-      current = ProverConfig(
+      currentProver = ProverConfig(
         riscvConfig = proverConfig("v1", currentL2Execution),
       ),
-      next = ProverConfig(
+      nextProver = ProverConfig(
         riscvConfig = proverConfig("v2", nextL2Execution),
       ),
       switchBlockNumberInclusive = switchBlockNumberInclusive,
