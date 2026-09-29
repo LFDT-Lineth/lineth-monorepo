@@ -16,7 +16,7 @@ import type { Logger } from "winston";
 
 type FundingClient = Client & Pick<PublicActions, "estimateFeesPerGas">;
 
-type FeeData = Eip1559Fees;
+type FeeData = Eip1559Fees & { gas?: bigint };
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
 
@@ -187,10 +187,8 @@ export class AccountFundingService {
         to: toAddress,
         value,
       });
-      return {
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-        maxFeePerGas: feeData.maxFeePerGas,
-      };
+      // Preserve the estimated gas limit: funding a new account can exceed 21,000 under Amsterdam.
+      return feeData;
     }
 
     const feeData = await this.client.estimateFeesPerGas();
