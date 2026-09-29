@@ -298,7 +298,9 @@ The rollup-aggregation prover request recursively verifies the `M` rollup proofs
 
 **Public Inputs**
 
-The final rollup-aggregation PI (§2.4) carries the rollup proof's boundary values and merged lists, including proven messaging offsets and the common `l2L1TreeDepth`. The rollup PI also carries `blockCount` for range validation; the final PI omits that field. The final `programVks` union the VK sets of the recursively-verified rollup proofs (§2.6).
+The final rollup-aggregation PI (§2.4) carries the rollup proof's boundary values and merged lists, including proven messaging offsets and the common `l2L1TreeDepth`. The rollup PI also carries `blockCount` for range validation; the final PI omits that field.
+
+The final PI's `programVks` union the VK sets of the recursively verified rollup proofs (§2.6).
 
 **Private Inputs (Witness)**
 
