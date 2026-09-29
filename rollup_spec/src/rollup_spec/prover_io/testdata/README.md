@@ -39,9 +39,10 @@ l2-execution response includes the revealed hash preimages (`l2L1Messages`,
 lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures; a response
 equals the guest output plus `proof`. The aggregation response is a
-`FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` alongside the
-public inputs. The Coordinator submits the root, filtered-address, and VK lists
-to L1, which hashes each list in its public-input calculation.
+`FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the
+public inputs, which L1 consumes directly for finalization. The Coordinator
+submits the root, filtered-address, and VK lists to L1, which hashes each list
+in its public-input calculation.
 
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A
