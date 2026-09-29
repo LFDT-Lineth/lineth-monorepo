@@ -69,7 +69,9 @@ MAX_L2_EXECUTION_PROOFS_PER_ROLLUP = 2**10     # paired 1:1 with conflations (ro
 MAX_CHUNKS_PER_ROLLUP = 2**12                  # chunks touched by one rollup proof's dataRollingHash fold
 MAX_BLOCK_RLPS_PER_CONFLATION = 2**12          # full block RLPs (one per block) in a single conflation
 MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block RLP including all tx bodies
-# A witnessed frame fits in the complete owned stream range, less its 4-byte prefix.
+# SSZ ByteList requires a fixed maximum. This conservative wire ceiling allows
+# one frame to span the full configured blob-chunk range, reserving four bytes
+# for its length prefix; the guest checks the actual frame and chunk lengths.
 MAX_BYTES_PER_COMPRESSED_SEGMENT = MAX_CHUNKS_PER_ROLLUP * BLOB_BYTES_LENGTH - 4
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
 MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
