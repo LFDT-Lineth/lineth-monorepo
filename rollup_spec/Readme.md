@@ -275,7 +275,7 @@ For each conflation `c ∈ [1, N]`, derive its canonical truncated-block RLP (st
 
     Adjacent l2-execution proofs already chain `endBlockHash → parentBlockHash` via step 7 below, so the head-anchor in (b) only needs to look at `PI_E₁.parentBlockHash`.
 
-6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive groups of `2^D` leaves (where D is the fixed protocol-level tree depth, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` directly in the public inputs. The tree depth D is a protocol constant and is not included in the public output.
+ 6. **Build the L2→L1 Merkle trees.** For each `e ∈ [1, N]`, receive the message hash list as a private witness and assert `keccak256(l2L1Messages_e) == PI_E_e.l2L1MessagesHash`. Concatenate all N lists in order. Partition the combined list into consecutive groups of `2^D` leaves (where D is chosen by the guest program, currently 5), one group per tree. Pad the final group with zero-value (0x00…00) leaves to fill it. Each leaf is a 32-byte message hash; internal nodes are `keccak256(left ‖ right)`. Compute the root of each full tree and emit the ordered array `[root_1, …, root_T]` and `l2L1TreeDepth = D` in the public inputs.
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
