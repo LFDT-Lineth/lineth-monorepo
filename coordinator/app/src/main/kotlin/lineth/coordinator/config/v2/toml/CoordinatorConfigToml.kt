@@ -49,7 +49,8 @@ data class CoordinatorConfigFilesToml(
       prover.new?.type == ProverToml.ProverType.RISCV
     ) {
       require(
-        conflation.riscvStartingBlockTimestampInclusive ==
+        conflation.riscvStartingBlockTimestampInclusive != null &&
+          conflation.riscvStartingBlockTimestampInclusive ==
           (prover.switchBlockTimestamp ?: prover.new.switchBlockTimestamp),
       ) {
         "conflation.riscvStartingBlockTimestampInclusive must be equal to prover.switchBlockTimestamp for" +
