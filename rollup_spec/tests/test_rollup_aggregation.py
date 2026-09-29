@@ -91,10 +91,11 @@ def test_fully_continuous_proofs_pass() -> None:
 
 
 def test_aggregation_carries_proven_tree_depth() -> None:
+    depth = 4
     result = run_rollup_aggregation_guest(RollupAggregationProofPrivateInput(
-        rollup_proofs=[VerifiableRollupProof(_proof(_left_pi()), Hash32(bytes(32)))],
+        rollup_proofs=[VerifiableRollupProof(_proof(_left_pi(l2_l1_tree_depth=depth)), Hash32(bytes(32)))],
     ))
-    assert result.public_inputs.l2_l1_tree_depth == 5
+    assert result.public_inputs.l2_l1_tree_depth == depth
 
 
 def test_aggregation_rejects_mismatched_tree_depth() -> None:

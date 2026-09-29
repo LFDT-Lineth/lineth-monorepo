@@ -59,11 +59,11 @@
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "startOffset": {
-          "description": "Canonical start position: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
+          "description": "Canonical start position in unpacked blob payload bytes: 0 at a fully consumed chunk boundary, positive only inside a shared blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "endOffset": {
-          "description": "Canonical end position: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
+          "description": "Canonical end position in unpacked blob payload bytes: 0 after fully consuming a calldata or blob chunk, positive only inside a shared terminal blob (§3.1).",
           "$ref": "#/$defs/offset"
         },
         "l2L1TreeDepth": {
@@ -90,7 +90,7 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
-    "offset": { "type": "integer", "minimum": 0, "maximum": 131071 },
+    "offset": { "type": "integer", "minimum": 0, "maximum": 130046 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
