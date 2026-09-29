@@ -33,6 +33,21 @@ def test_blob_rejects_missing_terminal() -> None:
         unpack_blob_payload(bytes(BLOB_BYTES_LENGTH))
 
 
+@pytest.mark.parametrize("payload", [b"", b"\x01", bytes(range(32)), bytes(range(64)), bytes(BLOB_PAYLOAD_CAPACITY)])
+def test_blob_matches_go_packalign_254_bit_order(payload: bytes) -> None:
+    # PackAlign reads big-endian bits, writes each 254-bit word in a 32-byte
+    # big-endian slot (two leading zero bits), then pads the physical blob.
+    stream = payload + b"\xff"
+    expected = bytearray(BLOB_BYTES_LENGTH)
+    for i in range((len(stream) * 8 + 253) // 254):
+        word = 0
+        for bit in range(i * 254, min((i + 1) * 254, len(stream) * 8)):
+            word = (word << 1) | ((stream[bit // 8] >> (7 - bit % 8)) & 1)
+        word <<= max(0, (i + 1) * 254 - len(stream) * 8)
+        expected[i * 32:(i + 1) * 32] = word.to_bytes(32, "big")
+    assert pack_blob_payload(payload) == bytes(expected)
+
+
 @pytest.mark.parametrize("length, expected_sha256", [
     (0, "700a187d18ec30a349376803b8bd345a7b1cdc38c8559073abe0bb0965e7529e"),
     (1, "dfa0b02e8ee96f7641ea6fce3f608695c72be3053d5a7fda65dc7e53af4068ee"),
