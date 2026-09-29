@@ -346,30 +346,31 @@ The rollup-aggregation proof's root exposes the following values to the L1 contr
 | 1 | `endBlockNumber` |
 | 2 | `endBlockTimestamp` |
 | 3 | `l2L1Roots` |
-| 4 | `parentL1L2BridgeRollingHash` |
-| 5 | `parentL1L2BridgeRollingHashMessageNumber` |
-| 6 | `endL1L2BridgeRollingHash` |
-| 7 | `endL1L2BridgeRollingHashMessageNumber` |
-| 8 | `dynamicChainConfigHash` |
-| 9 | `parentFtxRollingHash` |
-| 10 | `parentFtxNumber` |
-| 11 | `endFtxRollingHash` |
-| 12 | `endProcessedFtxNumber` |
-| 13 | `filteredAddresses` |
-| 14 | `parentDataRollingHash` |
-| 15 | `endDataRollingHash` |
-| 16 | `parentBlockHash` |
-| 17 | `endBlockHash` |
-| 18 | `startOffset` |
-| 19 | `endOffset` |
-| 20 | `programIds` |
-| 21 | `l2MessagingBlocksOffsets` |
+| 4 | `l2L1TreeDepth` |
+| 5 | `parentL1L2BridgeRollingHash` |
+| 6 | `parentL1L2BridgeRollingHashMessageNumber` |
+| 7 | `endL1L2BridgeRollingHash` |
+| 8 | `endL1L2BridgeRollingHashMessageNumber` |
+| 9 | `dynamicChainConfigHash` |
+| 10 | `parentFtxRollingHash` |
+| 11 | `parentFtxNumber` |
+| 12 | `endFtxRollingHash` |
+| 13 | `endProcessedFtxNumber` |
+| 14 | `filteredAddresses` |
+| 15 | `parentDataRollingHash` |
+| 16 | `endDataRollingHash` |
+| 17 | `parentBlockHash` |
+| 18 | `endBlockHash` |
+| 19 | `startOffset` |
+| 20 | `endOffset` |
+| 21 | `programIds` |
+| 22 | `l2MessagingBlocksOffsets` |
 
 Note: The variable-length public-input lists include `l2L1Roots`, `filteredAddresses`, `programIds`, and `l2MessagingBlocksOffsets`. `programIds` is encoded canonically as a distinct, sorted-ascending array; the other lists preserve their order. The prover hashes **each list field internally** when constructing its recursive and on-chain public-input commitment. The Coordinator receives and supplies the lists as contract-facing data; L1's `_computePublicInput` independently hashes the submitted root, filtered-address, and Program ID lists (§5, §5.3). The guest outputs lists, not those hashes.
 
-Note: `parentBlockHash` and `endBlockHash` (fields 16–17) carry execution continuity explicitly. This is a deliberate change from the earlier 3-input shnarf formula, which folded the last block hash into the DA accumulator itself: under shared chunks (§3.1), "the last block completing in a given chunk" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute that value alone. The Data Rolling Hash (`parentDataRollingHash`/`endDataRollingHash`, fields 14–15) is therefore a pure DA accumulator — `Hash(prevDataRollingHash, chunkHash)` — and execution continuity travels as its own pair of fields, checked independently by the L1 contract (§5).
+Note: `parentBlockHash` and `endBlockHash` (fields 17–18) carry execution continuity explicitly. This is a deliberate change from the earlier 3-input shnarf formula, which folded the last block hash into the DA accumulator itself: under shared chunks (§3.1), "the last block completing in a given chunk" can depend on two adjacent proofs' witnesses, so a single proof can no longer always compute that value alone. The Data Rolling Hash (`parentDataRollingHash`/`endDataRollingHash`, fields 15–16) is therefore a pure DA accumulator — `Hash(prevDataRollingHash, chunkHash)` — and execution continuity travels as its own pair of fields, checked independently by the L1 contract (§5).
 
-Note: `startOffset`/`endOffset` (fields 18–19) are the canonical byte positions that pair with `parentDataRollingHash`/`endDataRollingHash` to give this range's start and end stream positions (§3.1). Offset `0` encodes every fully consumed chunk boundary, regardless of whether the chunk is calldata or blob; a positive offset encodes only a position inside a shared blob. They let a blob be shared between adjacent rollup proofs or finalization ranges without wasting space on padding (§5).
+Note: `startOffset`/`endOffset` (fields 19–20) are the canonical byte positions that pair with `parentDataRollingHash`/`endDataRollingHash` to give this range's start and end stream positions (§3.1). Offset `0` encodes every fully consumed chunk boundary, regardless of whether the chunk is calldata or blob; a positive offset encodes only a position inside a shared blob. They let a blob be shared between adjacent rollup proofs or finalization ranges without wasting space on padding (§5).
 
 ---
 
