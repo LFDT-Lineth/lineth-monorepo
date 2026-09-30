@@ -22,7 +22,7 @@ import { MessageStatus } from "../../core/enums";
 import { MessageSent } from "../../core/types";
 
 import type { Address, Hash } from "../../core/types/primitives";
-export const TEST_CONST = "test";
+
 export const TEST_L1_SIGNER_PRIVATE_KEY: Hash = "0x0000000000000000000000000000000000000000000000000000000000000001";
 export const TEST_L2_SIGNER_PRIVATE_KEY: Hash = "0x0000000000000000000000000000000000000000000000000000000000000002";
 
