@@ -146,8 +146,6 @@ docker-build-alltools:
 # inside tmp/, which `make -C linea-besu/package clean` already removes rather than
 # leaving an untracked besu/ inside the git-tracked linea-besu/ directory.
 #
-# The `-with-fleet` variant is not reproduced: it needs a token for the private
-# Consensys/besu-fleet-plugin repository.
 docker-build-linea-besu-package:
 	$(call prebuild,$(MAKE) -C linea-besu/package build-besu build-tracer-and-sequencer clean assemble)
 	$(DOCKER_BUILD) \

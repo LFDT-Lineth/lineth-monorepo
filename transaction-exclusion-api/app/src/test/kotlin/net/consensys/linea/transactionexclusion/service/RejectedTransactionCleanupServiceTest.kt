@@ -4,6 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import lineth.vertx.vertxTestOptions
 import net.consensys.FakeFixedClock
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.awaitility.Awaitility
@@ -46,7 +47,7 @@ class RejectedTransactionCleanupServiceTest {
           storagePeriod = 24.hours,
         ),
         clock = fakeClock,
-        vertx = Vertx.vertx(),
+        vertx = Vertx.vertx(vertxTestOptions),
         repository = rejectedTransactionsRepositoryMock,
       )
   }

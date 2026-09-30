@@ -35,16 +35,16 @@ pub const System = struct {
     queries: []const Query = &.{},
 };
 
-pub fn verify(comptime system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
-    comptime {
-        @setEvalBranchQuota(20_000_000);
-    }
-    inline for (system.queries) |query| {
+pub fn verify(system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
+    // Runtime loops over runtime data. When `system` was comptime these were
+    // `inline for`s, so every query and every z_final_ref became straight-line
+    // code — pure .text for what is a short data traversal.
+    for (system.queries) |query| {
         // Σ_i Z_i[n-1], reading each Z endpoint from the transcript. `cell` is
-        // bounds-checked: the refs are trusted (comptime System) but the proof's
+        // bounds-checked: the refs are trusted (generated System) but the proof's
         // round/cells slices are not.
         var sum = ext.Ext.zero();
-        inline for (query.z_final_refs) |ref| {
+        for (query.z_final_refs) |ref| {
             sum = sum.add((try ctx.cell(ref.round, ref.index)).toExt());
         }
 

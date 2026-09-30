@@ -14,16 +14,28 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+import javax.inject.Inject
+
+// Not cacheable: generation is cheap, only re-running it needlessly was costly.
 abstract class RefTestGenerationTask extends DefaultTask {
 
-  @Input
+  /** Directory holding the reference test JSON files, relative to the project directory. */
+  @Internal
   abstract Property<String> getRefTests();
 
-  @Input
+  @Internal
   abstract Property<String> getGeneratedRefTestsOutput();
 
   @Input
@@ -32,7 +44,7 @@ abstract class RefTestGenerationTask extends DefaultTask {
   @Input
   abstract Property<String> getRefTestNamePrefix();
 
-  @Input
+  @Internal
   abstract Property<String> getRefTestTemplateFilePath();
 
   @Input
@@ -50,13 +62,45 @@ abstract class RefTestGenerationTask extends DefaultTask {
   @Input
   abstract Property<String> getFailedTestsFilePath();
 
+  @Inject
+  abstract ProjectLayout getLayout()
+
+  @Inject
+  abstract ObjectFactory getObjects()
+
+  @Inject
+  abstract FileSystemOperations getFs()
+
+  /**
+   * The generated tests only embed the paths of the reference test files, not their content, so
+   * the sorted relative paths are the input (avoids hashing the whole fixtures tree).
+   */
+  @Input
+  List<String> getRefTestRelativePaths() {
+    def dir = layout.projectDirectory.dir(refTests.get()).asFile
+    refTestFiles().collect { dir.toPath().relativize(it.toPath()).toString().replace('\\', '/') }
+  }
+
+  @InputFile
+  @PathSensitive(PathSensitivity.NONE)
+  File getRefTestTemplateFile() {
+    layout.projectDirectory.file(refTestTemplateFilePath.get()).asFile
+  }
+
+  @OutputDirectory
+  File getGeneratedRefTestsOutputDir() {
+    layout.projectDirectory.dir(generatedRefTestsOutput.get()).asFile
+  }
+
+  private List<File> refTestFiles() {
+    objects.fileTree().from(layout.projectDirectory.dir(refTests.get())).files.sort()
+  }
+
   @TaskAction
   def generateTests() {
-    def refTests = project.fileTree(getRefTests().get())
-    def refTestTemplateFile = project.file(getRefTestTemplateFilePath().get())
     def refTestJsonParamsDirectory = getRefTestJsonParamsDirectory().get()
     def refTestsSrcPath = getRefTestsSrcPath().get()
-    def generatedTestsFilePath = getGeneratedRefTestsOutput().get()
+    def generatedTestsDir = getGeneratedRefTestsOutputDir()
     def refTestNamePrefix = getRefTestNamePrefix().get()
     def excludedPath = getRefTestJsonParamsExcludedPath().get() // exclude test for test filling tool
     def failedTestsFilePath = getFailedTestsFilePath().get()
@@ -64,15 +108,15 @@ abstract class RefTestGenerationTask extends DefaultTask {
     def failedConstraint = getFailedConstraint().get()
 
     // Delete directory with generated tests from previous run.
-    project.delete(generatedTestsFilePath)
+    fs.delete { it.delete(generatedTestsDir) }
 
     // Create directory to generate the tests before executing them.
-    project.mkdir(generatedTestsFilePath)
+    generatedTestsDir.mkdirs()
 
-    def referenceTestTemplate = refTestTemplateFile.text
+    def referenceTestTemplate = getRefTestTemplateFile().text
 
     // This is how many json files to include in each test file
-    def fileSets = refTests.getFiles().sort().collate(5)
+    def fileSets = refTestFiles().collate(5)
 
     fileSets.eachWithIndex { fileSet, idx ->
       def paths = []
@@ -85,7 +129,7 @@ abstract class RefTestGenerationTask extends DefaultTask {
         }
       }
 
-      def testFile = project.file(generatedTestsFilePath + "/" + refTestNamePrefix + "_" + idx + ".java")
+      def testFile = new File(generatedTestsDir, refTestNamePrefix + "_" + idx + ".java")
       def allPaths = '"' + paths.join('", "') + '"'
 
       def testFileContents = referenceTestTemplate

@@ -13,6 +13,9 @@
 - *(misc)* Improv JVM flakiness test and gradle configs (#4021)
 - *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
 - *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features

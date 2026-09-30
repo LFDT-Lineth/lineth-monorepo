@@ -7,6 +7,7 @@ import linea.ethapi.FakeEthApiClient
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.persistence.ForcedTransactionRecord
 import lineth.persistence.ftx.FakeForcedTransactionsDao
+import lineth.vertx.vertxTestOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -25,7 +26,7 @@ class InvalidityProofAssemblerTest {
 
   @BeforeEach
   fun setUp() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     l1Client = FakeEthApiClient()
     ftxDao = FakeForcedTransactionsDao()
     assembler = InvalidityProofAssembler(

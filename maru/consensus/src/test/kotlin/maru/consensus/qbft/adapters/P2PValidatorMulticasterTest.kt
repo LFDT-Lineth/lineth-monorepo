@@ -18,11 +18,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.test.Test
 
 class P2PValidatorMulticasterTest {
   private val message = mock<MessageData>()

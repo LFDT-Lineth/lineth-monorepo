@@ -417,6 +417,7 @@ class CoordinatorApp(
       target = dbConfig.schemaVersion.toString(),
       username = dbConfig.username,
       password = dbConfig.password.value,
+      migrationLocations = "classpath:db/coordinator",
     )
     return Db.vertxSqlClient(
       vertx = vertx,

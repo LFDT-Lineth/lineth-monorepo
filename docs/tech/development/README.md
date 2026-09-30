@@ -58,9 +58,6 @@ make start-l2-blockchain-only
 # With CI configuration (web3signer enabled)
 make start-env-with-tracing-v2-ci
 
-# With fleet (leader + follower nodes)
-make start-env-with-tracing-v2-ci-fleet
-
 # With state recovery services
 make start-env-with-staterecovery
 
@@ -421,9 +418,6 @@ cd e2e && pnpm run test:e2e:local
 
 # Specific test
 cd e2e && pnpm run test:e2e:local -- messaging.spec.ts
-
-# Fleet tests
-cd e2e && pnpm run test:e2e:fleet:local
 
 # Liveness tests
 cd e2e && pnpm run test:e2e:liveness:local
