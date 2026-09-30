@@ -22,6 +22,11 @@ jobs:
       - name: Setup Tracer Environment # configures Go, Java, and Gradle
         uses: ./.github/actions/setup-tracer-environment
 
+      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (testing.yml) and
+      # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
+      - name: Setup Besu in maven local
+        uses: ./.github/actions/setup-besu-maven-local
+
       - name: spotless
         run: ./gradlew --parallel linea-besu:plugins:linea-sequencer:spotlessCheck
 
