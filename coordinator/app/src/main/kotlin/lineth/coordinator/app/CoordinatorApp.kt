@@ -50,7 +50,6 @@ import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.client.LoadBalancingJsonRpcClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.vertx.loadVertxConfig
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -61,6 +60,7 @@ import kotlin.time.Duration.Companion.seconds
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
+  val vertx: Vertx,
   // Single seam for downstream distributions: contributes extra services and JSON-RPC
   // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the app
   // behaves identically when no extension is supplied.
@@ -69,30 +69,26 @@ class CoordinatorApp(
   proverClientFactoryBuilder: ProverClientFactoryBuilder = ProverClientFactoryBuilder.FILE_BASED,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
-  private val vertx: Vertx =
-    run {
-      log.trace("System properties: {}", System.getProperties())
-      val vertxConfig = loadVertxConfig()
-      log.debug("Vertx full configs: {}", vertxConfig)
-      // Raw single-line dump kept for existing tooling that parses this line.
-      log.info("App configs: {}", configs)
-      // Human-readable form: one fully-qualified `path: value` per INFO event so each config is a
-      // separate line in log aggregators (Grafana/Loki) instead of a collapsed multi-line blob.
-      configs.logPretty(log)
-      log.trace(
-        "Full smartContractErrors ({} entries): {}",
-        configs.smartContractErrors.size,
-        configs.smartContractErrors,
-      )
-      val dgc = configs.l1Submission.dynamicGasPriceCap
-      log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
-      log.trace(
-        "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
-        dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
-      )
 
-      Vertx.vertx(vertxConfig)
-    }
+  init {
+    // Raw single-line dump kept for existing tooling that parses this line.
+    log.info("App configs: {}", configs)
+    // Human-readable form: one fully-qualified `path: value` per INFO event so each config is a
+    // separate line in log aggregators (Grafana/Loki) instead of a collapsed multi-line blob.
+    configs.logPretty(log)
+    log.trace(
+      "Full smartContractErrors ({} entries): {}",
+      configs.smartContractErrors.size,
+      configs.smartContractErrors,
+    )
+    val dgc = configs.l1Submission.dynamicGasPriceCap
+    log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
+    log.trace(
+      "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
+      dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
+    )
+  }
+
   private val meterRegistry: MeterRegistry = BackendRegistries.getDefaultNow()
   private val micrometerMetricsFacade = MicrometerMetricsFacade(meterRegistry, "linea")
   private val httpJsonRpcClientFactory =
@@ -397,8 +393,6 @@ class CoordinatorApp(
           )
         }.thenApply {
           LoadBalancingJsonRpcClient.stop()
-        }.thenCompose {
-          vertx.close().toSafeFuture().thenApply { log.info("vertx Stopped") }
         }.thenApply {
           log.info("CoordinatorApp Stopped")
         }.get()
