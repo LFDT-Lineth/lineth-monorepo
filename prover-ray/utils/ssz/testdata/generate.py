@@ -1,8 +1,6 @@
-"""Generate prover-ray vectors for the pinned zesu Amsterdam SSZ decoder.
+"""Generate SSZ golden vectors using reference field converters.
 
-Uses rollup_spec's existing field converters and remerkleable serializer,
-with the three container layouts updated to zesu b5483dda's schema 0x1501.
-The legacy Python reference itself deliberately remains unchanged.
+Container layouts mirror the guest decoder; remerkleable handles serialization.
 Run with the dependencies from rollup_spec/requirements.txt installed.
 """
 

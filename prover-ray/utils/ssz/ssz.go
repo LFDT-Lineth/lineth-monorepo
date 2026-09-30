@@ -1,6 +1,4 @@
-// Package ssz encodes the Amsterdam SszStatelessInput payload consumed by
-// prover-ray's pinned guest. It is schema-specific and checked against Python
-// reference vectors and the guest's fixture, not a general-purpose SSZ library.
+// Package ssz encodes stateless execution inputs for the guest.
 package ssz
 
 import (
@@ -19,16 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// SSZ encoder for the Amsterdam stateless block input consumed by zesu at
-// b5483dda21d72405c50a22cb6406a1231e51a579 (the l2-execution guest's pin).
-// The wire format uses schema 0x1501 and an inline uint64 chain ID. The
-// rollup_spec reference still uses the older nested chain-config format;
-// testdata/generate.py adapts its field converters to the guest's schema.
-//
-// Input is the coordinator's statelessInput with chainConfig injected and
-// executionRequests reduced to {} after rejecting nonempty requests.
-
-// Amsterdam's ProtocolFork index (0x15) followed by schema revision 1.
+// Schema prefix: ProtocolFork index followed by schema revision.
 var statelessInputSchemaID = []byte{0x15, 0x01}
 
 const activeFork = "Amsterdam"
@@ -615,7 +604,7 @@ func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
 			return nil, fmt.Errorf("executionRequests.%s must be empty", key)
 		}
 	}
-	// Amsterdam request lists: deposits, withdrawals, consolidations,
+	// Wire order: deposits, withdrawals, consolidations,
 	// builder_deposits, builder_exits. This rollup requires all five empty.
 	return sszContainer(
 		variable(nil),
@@ -722,7 +711,7 @@ func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
 }
 
 // sszChainConfigFromObj validates the JSON fork and encodes only the chain ID.
-// Fork identity is carried by the schema prefix, not a nested SSZ container.
+// Fork identity is carried by the schema prefix.
 func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
 	chainID, err := requireUint64(obj, "chainId")
 	if err != nil {
@@ -898,14 +887,9 @@ func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
 	)
 }
 
-// EncodeStatelessInput SSZ-encodes the coordinator's per-block payload into the
-// byte slice the guest reads at _in_start: the two-byte 0x1501 schema id
-// followed by the SSZ SszStatelessInput. The [u64 LE len] frame is added later
-// by [buildZkcInputs]; this returns the framed SSZ only.
-//
-// The input is the readable encoder_obj form produced by
-// proof_io_v1.py::_decode_payload. Golden vectors use the guest-compatible
-// Python schema in testdata/generate.py.
+// EncodeStatelessInput encodes a per-block JSON payload as schema-prefixed SSZ.
+// The input includes chainConfig and an empty executionRequests object.
+// The backend adds the transport length prefix when constructing guest inputs.
 func EncodeStatelessInput(payload []byte) ([]byte, error) {
 	obj, err := parseJSONObject(payload, "statelessInput")
 	if err != nil {
@@ -917,7 +901,6 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
-	// Frame the SSZ body with Amsterdam's fork index and schema revision.
 	framed := append([]byte(nil), statelessInputSchemaID...)
 	framed = append(framed, raw...)
 	return framed, nil

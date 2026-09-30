@@ -51,9 +51,7 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 		"framed SSZ must equal the reference encoder output")
 }
 
-// This fixture contains real witness data from the guest's executable fixture.
-// Comparing the entire envelope catches drift between JSON conversion and the
-// guest input, including the inner schema, chain ID and execution-request lists.
+// Compare against a guest-owned fixture to detect encoder/decoder drift.
 func TestDecodeL2ExecutionRequest_Regression_GuestFixture(t *testing.T) {
 	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_guest_fixture.json"))
 	require.NoError(t, err, "decode the guest fixture's JSON request")
