@@ -100,7 +100,9 @@ class LineaGetForcedTransactionInclusionStatusTest {
   void execute_returnsBadBalanceStatus() {
     final ForcedTransaction ftx =
         addAndProcessTransaction(
-            TransactionSelectionResult.invalidTransient(TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()), 100L);
+            TransactionSelectionResult.invalidTransient(
+                TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()),
+            100L);
 
     final var result = method.execute(request(ftx.forcedTransactionNumber()));
 
