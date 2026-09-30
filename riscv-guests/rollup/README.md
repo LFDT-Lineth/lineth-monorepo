@@ -7,9 +7,6 @@ every output field is either copied from a defined place in the input, or set to
 precomputed sentinel constant. No proof verification, no chunk/conflation folding — that logic
 lands with the real rollup guest, which will replace this package's contents.
 
-The wire output includes only `public_inputs` and their hash; `start_block_number`, `l2_l1_roots`,
-and `filtered_addresses` remain in the business-logic result for native tooling.
-
 ## Field provenance (`RollupOutput`)
 
 "first"/"last" are the first/last elements of the input's `l2_execution_proofs` list (the guest
