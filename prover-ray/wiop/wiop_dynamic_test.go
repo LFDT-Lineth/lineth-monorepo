@@ -171,3 +171,85 @@ func TestDynamicModule_VanishingCheckFailure(t *testing.T) {
 		require.Error(t, v.Check(rt))
 	}
 }
+
+// TestDeclareDynamicSize_SizesColumnsOnALaterRound covers the layout that
+// messagebus.CompileOptions.SharedRandomness forces: the trace columns live on
+// round 1 rather than round 0, so their assignment cannot be what teaches the
+// module its size — AdvanceRound feeds the sizes into Fiat-Shamir on the way
+// out of round 0, before any column exists. Declaring the size up front is what
+// makes that layout assignable at all.
+func TestDeclareDynamicSize_SizesColumnsOnALaterRound(t *testing.T) {
+	sys, _, r1, mod := newDynamicTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("c"), r1)
+
+	rt := wiop.NewRuntime(sys)
+	rt.DeclareDynamicSize(mod, 4)
+
+	// The size is visible before a single column has been assigned, which is
+	// precisely what round 0's transition needs.
+	require.Equal(t, 4, mod.RuntimeSize(rt))
+
+	rt.AdvanceRound()
+	rt.AssignColumn(col, makeVec(4, 7))
+	require.Equal(t, 4, mod.RuntimeSize(rt))
+}
+
+// TestDeclareDynamicSize_RoundsUpToPowerOfTwo mirrors the rounding that
+// AssignColumn applies when it grows a module on round 0, so a declared size
+// and a learned one agree for the same trace.
+func TestDeclareDynamicSize_RoundsUpToPowerOfTwo(t *testing.T) {
+	sys, _, _, mod := newDynamicTestSystem(t)
+	rt := wiop.NewRuntime(sys)
+	rt.DeclareDynamicSize(mod, 5)
+	require.Equal(t, 8, mod.RuntimeSize(rt))
+}
+
+// TestDeclareDynamicSize_RejectsOverflowingColumn checks that a declared size is
+// a bound rather than a hint: once declared it is already in the transcript, so
+// a longer column must panic instead of silently growing the module and
+// desynchronizing the verifier.
+func TestDeclareDynamicSize_RejectsOverflowingColumn(t *testing.T) {
+	sys, _, r1, mod := newDynamicTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("c"), r1)
+
+	rt := wiop.NewRuntime(sys)
+	rt.DeclareDynamicSize(mod, 4)
+	rt.AdvanceRound()
+
+	require.Panics(t, func() { rt.AssignColumn(col, makeVec(8, 7)) })
+}
+
+// TestDeclareDynamicSize_RejectsDoubleDeclaration guards the same invariant from
+// the other side: a second declaration would move a size that may already have
+// been absorbed into the transcript.
+func TestDeclareDynamicSize_RejectsDoubleDeclaration(t *testing.T) {
+	sys, _, _, mod := newDynamicTestSystem(t)
+	rt := wiop.NewRuntime(sys)
+	rt.DeclareDynamicSize(mod, 4)
+
+	require.Panics(t, func() { rt.DeclareDynamicSize(mod, 8) })
+}
+
+// TestDeclareDynamicSize_RejectsNonDynamicModule keeps the API honest: a static
+// module's size comes from its declaration, and accepting one here would give
+// two disagreeing sources of truth.
+func TestDeclareDynamicSize_RejectsNonDynamicModule(t *testing.T) {
+	sys := wiop.NewSystemf("dyn-test")
+	sys.NewRound()
+	static := sys.NewModule(sys.Context.Childf("static"), wiop.PaddingDirectionNone)
+
+	rt := wiop.NewRuntime(sys)
+	require.Panics(t, func() { rt.DeclareDynamicSize(static, 4) })
+}
+
+// TestAssignColumn_StillLearnsSizesOnRoundZero pins the pre-existing behaviour
+// that every non-sharded prover relies on: without a declaration, a round-0
+// assignment still grows the module as before.
+func TestAssignColumn_StillLearnsSizesOnRoundZero(t *testing.T) {
+	sys, r0, _, mod := newDynamicTestSystem(t)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, makeVec(4, 7))
+	require.Equal(t, 4, mod.RuntimeSize(rt))
+}

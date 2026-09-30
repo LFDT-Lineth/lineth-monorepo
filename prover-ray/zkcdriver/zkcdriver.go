@@ -28,6 +28,17 @@ type BinaryFile = constraints.BinaryFile[koalabear.Element]
 // Settings specifies the parameters for the arithmetization (a.k.a. the
 // "constraints").
 type Settings struct {
+	// ColumnRound is the round the trace columns are declared on. Nil means
+	// round 0, which is what an unsharded protocol wants.
+	//
+	// A caller that compiles the system with
+	// messagebus.CompileOptions.SharedRandomness must set this to the message-bus
+	// coin round (round 0's successor): that option requires every bus column to
+	// live there so the round's commitment — hashed into this shard's
+	// contribution to γ — binds the columns the bus coins evaluate. The caller is
+	// then responsible for advancing the runtime onto that round before assigning
+	// columns; see [AssignFromTraceShard].
+	ColumnRound *wiop.Round
 }
 
 // ZkCDriver exposes all the methods relevant for the user to interact with the
@@ -61,7 +72,7 @@ func NewZkCDriver(sys *wiop.System, settings Settings, bin io.Reader) *ZkCDriver
 	// Extract the AIR constraints from the binary file
 	schema := binf.AirConstraints()
 	// Translate air.Schema into prover's internal representation
-	Define(sys, &schema)
+	Define(sys, &schema, settings.ColumnRound)
 	// Construct the driver
 	return &ZkCDriver{
 		BinaryFile:    binf,

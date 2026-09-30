@@ -19,6 +19,50 @@ import (
 var _ [1]uint32 = koalabear.Element{}
 var _ [1]uint32 = field.Element{}
 
+// declareDynamicSizes fixes every dynamic module's domain size from the trace
+// shard, before any column is assigned.
+//
+// It mirrors the traversal in [AssignFromTraceShard] exactly — same module
+// skipping, same unknown-column skipping, same per-column length — so the sizes
+// declared here are the ones round-0 assignment would otherwise have grown the
+// modules to. A module whose columns are all unknown to the system contributes
+// no size and is left undeclared, which [wiop.Runtime.AdvanceRound] then
+// reports rather than silently sizing to zero.
+func declareDynamicSizes(
+	run *wiop.Runtime,
+	shard trace.Shard[koalabear.Element],
+	schema air.Schema[koalabear.Element],
+) {
+	var (
+		sys         = run.System
+		columnIDMap = sys.Annotations[corsetColumnMapAnnotationKey].(map[string]wiop.ObjectID)
+		sizes       = map[*wiop.Module]int{}
+	)
+
+	for modID := range shard.Width() {
+		trMod := shard.Module(modID)
+		if schema.Module(modID).IsStatic() {
+			continue
+		}
+		for id := range int(trMod.Width()) {
+			name := qualifiedCorsetName(trMod.Name(), trMod.Descriptor().Columns[id].Name)
+			objID, ok := columnIDMap[name]
+			if !ok {
+				continue
+			}
+			wCol := sys.LookupColumn(objID)
+			if !wCol.Module.IsDynamic() {
+				continue
+			}
+			sizes[wCol.Module] = max(sizes[wCol.Module], int(trMod.Column(uint(id)).Len()))
+		}
+	}
+
+	for mod, size := range sizes {
+		run.DeclareDynamicSize(mod, size)
+	}
+}
+
 // AssignFromTraceShard expands and assigns the trace to the given runtime.
 func AssignFromTraceShard(
 	run *wiop.Runtime,
@@ -32,7 +76,18 @@ func AssignFromTraceShard(
 	// randomness — an unsharded protocol, or one whose compilation was skipped
 	// entirely, declares no γ cell to write to.
 	if messagebus.HasSharedRandomness(run.System) {
+		// γ lives on round 0 and must be written while the runtime is still there.
 		messagebus.AssignSharedRandomnessSeed(run, sharedRandomness)
+		// The trace columns live on the coin round rather than round 0, so their
+		// assignment can no longer be what teaches each dynamic module its size:
+		// AdvanceRound feeds those sizes into Fiat-Shamir on the way out of round
+		// 0, before a single column has been assigned. Declare them from the trace
+		// first, then step onto the coin round — AssignColumn requires the
+		// runtime's current round to match the column's. Advancing is also what
+		// absorbs γ into the transcript α and β are drawn from, which is the whole
+		// point of putting γ on round 0.
+		declareDynamicSizes(run, shard, schema)
+		run.AdvanceRound()
 	}
 
 	eg := &errgroup.Group{}

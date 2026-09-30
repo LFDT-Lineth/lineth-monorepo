@@ -62,11 +62,27 @@ type schemaScanner struct {
 	// ColumnIds maps the concatenation of the module name and the column name to the ObjectID of the corresponding
 	// wizard column name.
 	ColumnIDs map[string]wiop.ObjectID
+	// ColumnRound is the round every trace column is declared on. See
+	// [Define] for why a caller would move it off round 0.
+	ColumnRound *wiop.Round
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
 // from config.
-func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
+//
+// columnRound is the round the trace columns are declared on; nil means round 0,
+// which is what an unsharded protocol wants. A caller compiling with
+// messagebus.CompileOptions.SharedRandomness passes the message-bus coin round
+// instead — that option requires every bus column to sit there, so that the
+// round's commitment, hashed into this shard's contribution to γ, binds the
+// columns the bus coins are used to evaluate. Since the bus tables are built
+// from these same trace columns, moving the bus columns means moving all of
+// them.
+func Define(sys *wiop.System, schema *air.Schema[koalabear.Element], columnRound *wiop.Round) {
+
+	if columnRound == nil {
+		columnRound = sys.Rounds[0]
+	}
 
 	// Collect modules and sort them by name to ensure deterministic processing order
 	modules := schema.Modules().Collect()
@@ -80,6 +96,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 		Modules:        modules,
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
+		ColumnRound:    columnRound,
 	}
 
 	scanner.scanColumns()
@@ -255,7 +272,7 @@ func (s *schemaScanner) scanColumns() {
 
 			col := moduleWIOP.NewColumn(
 				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
-				s.Sys.Rounds[0],
+				s.ColumnRound,
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID

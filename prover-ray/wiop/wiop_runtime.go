@@ -42,9 +42,17 @@ type Runtime struct {
 	// instance a prover state.
 	state map[string]any
 	// dynamicSizes maps the index of each dynamic module to its domain size for
-	// this Runtime. Populated lazily by [Runtime.AssignColumn] on the first
-	// column assignment to each dynamic module.
+	// this Runtime. Populated either lazily by [Runtime.AssignColumn] on the
+	// first column assignment to each dynamic module while the runtime is on
+	// round 0, or up front by [Runtime.DeclareDynamicSize] — which is what a
+	// prover whose columns do not live on round 0 must use, since the sizes have
+	// to be known before the transition off round 0 feeds them into Fiat-Shamir.
 	dynamicSizes map[int]int
+	// declaredDynamicSizes records the modules whose size came from
+	// [Runtime.DeclareDynamicSize] rather than from a round-0 assignment. For
+	// those, [Runtime.AssignColumn] validates the data length against the
+	// declared size instead of growing it, on whatever round the column lives.
+	declaredDynamicSizes map[int]bool
 	// lock is a concurrency lock to prevent concurrent access to the maps in
 	// the runtime.
 	lock *sync.Mutex
@@ -76,8 +84,10 @@ func NewRuntime(sys *System) *Runtime {
 		coins:        make(map[ObjectID]field.Gen),
 		state:        make(map[string]any),
 		dynamicSizes: make(map[int]int),
-		lock:         &sync.Mutex{},
-		Commitments:  make(map[int]field.Octuplet),
+
+		declaredDynamicSizes: make(map[int]bool),
+		lock:                 &sync.Mutex{},
+		Commitments:          make(map[int]field.Octuplet),
 	}
 	if len(sys.Rounds) == 0 {
 		panic("wiop: NewRuntime: system has no interactive rounds")
@@ -88,6 +98,52 @@ func NewRuntime(sys *System) *Runtime {
 		run.columns[col.Context.ID] = pr.PrecomputedValues[i]
 	}
 	return run
+}
+
+// DeclareDynamicSize fixes m's domain size for this Runtime ahead of any column
+// assignment, rounding size up to the next power of two.
+//
+// A prover whose trace columns live on round 0 does not need this:
+// [Runtime.AssignColumn] grows each dynamic module as its columns arrive, and
+// every size is therefore known by the time [Runtime.AdvanceRound] feeds them
+// into the Fiat-Shamir transcript. A prover whose columns live on a later round
+// — one compiling with messagebus.CompileOptions.SharedRandomness, whose bus
+// columns must sit on the coin round — has no such opportunity: leaving round 0
+// happens before the first assignment, so it must declare every dynamic
+// module's size here first, from the trace it is about to assign.
+//
+// Once declared, AssignColumn checks each column's data length against the
+// declared size rather than growing the module, on whatever round the column
+// lives. A column longer than the declared size is a panic: the size is already
+// in the transcript by then, so growing it would desynchronize prover and
+// verifier.
+//
+// Panics if m is not dynamic, if size is not positive, or if m's size was
+// already declared or already learned from an assignment.
+func (run *Runtime) DeclareDynamicSize(m *Module, size int) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+
+	if !m.IsDynamic() {
+		panic(fmt.Sprintf(
+			"wiop: DeclareDynamicSize: module %q is not dynamic", m.Context.Path(),
+		))
+	}
+	if size <= 0 {
+		panic(fmt.Sprintf(
+			"wiop: DeclareDynamicSize: module %q: size must be positive, got %d",
+			m.Context.Path(), size,
+		))
+	}
+	if _, ok := run.dynamicSizes[m.index]; ok {
+		panic(fmt.Sprintf(
+			"wiop: DeclareDynamicSize: module %q already has a size in this runtime",
+			m.Context.Path(),
+		))
+	}
+
+	run.dynamicSizes[m.index] = utils.NextPowerOfTwo(size)
+	run.declaredDynamicSizes[m.index] = true
 }
 
 // dynamicModuleSize returns the domain size registered for m in this Runtime.
@@ -207,7 +263,18 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, ColumnSizeMaxSupported)
 	}
 
-	if m.IsDynamic() && run.currentRound.ID == 0 {
+	if m.IsDynamic() && run.declaredDynamicSizes[m.index] {
+		// Size fixed up front by [Runtime.DeclareDynamicSize] and already in the
+		// Fiat-Shamir transcript, so validate rather than grow — on whatever round
+		// this column lives.
+		if dataLen > run.dynamicSizes[m.index] {
+			panic(fmt.Sprintf(
+				"wiop: AssignColumn: column %q has data length %d which overflows the declared size %d "+
+					"of dynamic module %q",
+				col.Context.Path(), dataLen, run.dynamicSizes[m.index], m.Context.Path(),
+			))
+		}
+	} else if m.IsDynamic() && run.currentRound.ID == 0 {
 		currSize := run.dynamicSizes[m.index]
 		run.dynamicSizes[m.index] = utils.NextPowerOfTwo(max(currSize, dataLen))
 	} else if m.IsDynamic() && dataLen > run.dynamicSizes[m.index] {
