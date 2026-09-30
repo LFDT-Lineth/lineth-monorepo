@@ -93,12 +93,9 @@ fun interface ProverClientFactoryBuilder {
  */
 class ProverClientFactorySupport(metricsFacade: MetricsFacade) {
   val executionWaitingResponses = GaugeAggregator()
-  val blobWaitingResponses = GaugeAggregator()
+  val blobRollupWaitingResponses = GaugeAggregator()
   val aggregationWaitingResponses = GaugeAggregator()
   val invalidityWaitingResponses = GaugeAggregator()
-  val l2ExecutionWaitingResponses = GaugeAggregator()
-  val rollupWaitingResponses = GaugeAggregator()
-  val rollupAggregationWaitingResponses = GaugeAggregator()
 
   init {
     registerWaitingGauges(metricsFacade)
@@ -115,7 +112,14 @@ class ProverClientFactorySupport(metricsFacade: MetricsFacade) {
       category = LineaMetricsCategory.BLOB,
       name = "prover.waiting",
       description = "Number of blob compression proof waiting responses",
-      measurementSupplier = blobWaitingResponses,
+      measurementSupplier = blobRollupWaitingResponses,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.ROLLUP,
+      name = "prover.waiting",
+      // would be the number of blob compression proof waiting responses during Pre-Riscv
+      description = "Number of RISC-V rollup proof waiting responses",
+      measurementSupplier = blobRollupWaitingResponses,
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
@@ -128,24 +132,6 @@ class ProverClientFactorySupport(metricsFacade: MetricsFacade) {
       name = "prover.waiting",
       description = "Number of invalidity proof waiting responses",
       measurementSupplier = invalidityWaitingResponses,
-    )
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.RISCV_L2_EXECUTION,
-      name = "prover.waiting",
-      description = "Number of RISC-V l2-execution proof waiting responses",
-      measurementSupplier = l2ExecutionWaitingResponses,
-    )
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.RISCV_ROLLUP,
-      name = "prover.waiting",
-      description = "Number of RISC-V rollup proof waiting responses",
-      measurementSupplier = rollupWaitingResponses,
-    )
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.RISCV_ROLLUP_AGGREGATION,
-      name = "prover.waiting",
-      description = "Number of RISC-V rollup-aggregation proof waiting responses",
-      measurementSupplier = rollupAggregationWaitingResponses,
     )
   }
 }
@@ -184,7 +170,7 @@ class DefaultProverClientFactory(
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
       buildFileBasedL2ExecutionProverClient(proverConfig)
-        .also { support.l2ExecutionWaitingResponses.addReporter(it) }
+        .also { support.executionWaitingResponses.addReporter(it) }
     }
   }
 
@@ -200,7 +186,7 @@ class DefaultProverClientFactory(
         proverConfig = proverConfig.rollup,
         l2ExecutionProverConfig = proverConfig.l2Execution,
       )
-        .also { support.rollupWaitingResponses.addReporter(it) }
+        .also { support.blobRollupWaitingResponses.addReporter(it) }
     }
   }
 
@@ -216,7 +202,7 @@ class DefaultProverClientFactory(
         proverConfig = proverConfig.rollupAggregation,
         rollupProverConfig = proverConfig.rollup,
       )
-        .also { support.rollupAggregationWaitingResponses.addReporter(it) }
+        .also { support.aggregationWaitingResponses.addReporter(it) }
     }
   }
 
@@ -252,7 +238,7 @@ class DefaultProverClientFactory(
         enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
         log = log,
       )
-        .also { support.blobWaitingResponses.addReporter(it) }
+        .also { support.blobRollupWaitingResponses.addReporter(it) }
     }
   }
 
