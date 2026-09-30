@@ -32,8 +32,9 @@ type HonestRiscvArtifacts struct {
 // honestSharedRandomness is the γ seed handed to the shard being proved.
 //
 // runCompilePipeline enables messagebus.CompileOptions.SharedRandomness, which
-// declares γ as a round-0 public input. γ is absorbed on the way out of round 0 like any other cell,
-// which is what makes the coins drawn afterwards depend on it.
+// declares γ as a round-0 public input. γ is absorbed on the way out of round 0
+// like any other cell, which is what makes the coins drawn afterwards depend on
+// it.
 //
 // The value itself is arbitrary; it only has to be a fixed non-zero constant so
 // the artifacts stay byte-reproducible. Real shards get their γ from the
@@ -63,8 +64,15 @@ func BuildAllInOneHonestRiscvArtifacts() (HonestRiscvArtifacts, error) {
 	}
 
 	sys := wiop.NewSystemf("zkc-riscv-system")
-	sys.NewRound()
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(compiledConstraints))
+	r0 := sys.NewRound()
+	// Round 0 carries γ; the trace columns go on its successor, which is the
+	// round messagebus.Compile then draws α and β on. SharedRandomness requires
+	// the bus columns to live there so that the round's commitment — hashed into
+	// this shard's contribution to γ — binds the columns those coins evaluate.
+	// Declaring the round here rather than letting messagebus.Compile append it
+	// is what lets the driver put the columns on it in the first place.
+	coinRound := r0.EnsureNext()
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{ColumnRound: coinRound}, bytes.NewReader(compiledConstraints))
 	runCompilePipeline(sys)
 
 	compiledSystem, err := BuildCompiledSystem(sys)
@@ -114,6 +122,10 @@ func runCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
+	// The bus columns sit on the coin round, which BuildAllInOneHonestRiscvArtifacts
+	// declares up front and hands to the driver via Settings.ColumnRound, so the
+	// layout this option requires holds and the shard's contribution to γ binds
+	// the columns the bus coins evaluate.
 	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
