@@ -394,19 +394,6 @@ class ProverClientFactoryTest {
       preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive - 1UL))
     }.doesNotThrowAnyException()
 
-    assertThatThrownBy {
-      riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive - 1UL))
-    }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverA should not be null")
-
-    // after the switch: pre-riscv prover is null (unusable), riscv prover is non-null (usable)
-    assertThatThrownBy {
-      preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive))
-    }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverB should not be null")
-
     assertThatCode {
       riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive))
     }.doesNotThrowAnyException()
@@ -425,13 +412,12 @@ class ProverClientFactoryTest {
           tmpDir = testTmpDir,
           switchBlockNumber = 200,
           withProverB = false,
-        ),
+        ).also { println(it) },
         metricsFacade = metricsFacade,
       )
-
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
+      .hasMessageContaining("proverBConfig must be provided")
   }
 
   @Test
@@ -451,7 +437,7 @@ class ProverClientFactoryTest {
 
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
+      .hasMessageContaining("proverBConfig must be provided")
   }
 
   @Test

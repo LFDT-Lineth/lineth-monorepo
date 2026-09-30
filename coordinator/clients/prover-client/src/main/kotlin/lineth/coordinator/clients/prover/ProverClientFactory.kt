@@ -6,11 +6,13 @@ import linea.clients.ExecutionProverClientV2
 import linea.clients.InvalidityProverClientV1
 import linea.clients.L2ExecutionProverClientV1
 import linea.clients.ProofAggregationProverClientV2
+import linea.clients.ProverClientV2
 import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.clients.RollupAggregationProverClientV1
 import linea.clients.RollupProverClientV1
 import linea.domain.BlockIntervalProofIndex
+import linea.domain.ProofIndex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
@@ -161,19 +163,43 @@ class DefaultProverClientFactory(
     return config
   }
 
-  override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
-    val config = requireRiscvConfig()
-    return ABProverClientRouter.create(
-      proverAConfig = config.currentProver,
-      proverBConfig = config.nextProver,
-      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
-      switchBlockTimestamp = config.switchBlockTimestamp,
-    ) { proverConfig ->
-      require(proverConfig.riscvConfig != null) {
-        "riscv prover config is null. Prover config: $proverConfig"
+  /**
+   * Handles the creation of ABProverRouter
+   */
+  private fun <Config, ProverType, ProofRequest, ProofResponse, TProofIndex> buildClient(
+    currentConfig: Config?,
+    nextConfig: Config?,
+    clientBuilder: (Config) -> ProverType,
+  ): ProverType
+    where ProverType : ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+          ProofRequest : Any,
+          TProofIndex : ProofIndex {
+    val hasSwitchEnabled = config.switchBlockTimestamp != null || config.switchBlockNumberInclusive != null
+    val hasBoothProversOfSameTypeToSwitch = currentConfig != null && nextConfig != null
+
+    val client: ProverType =
+      if (hasSwitchEnabled && hasBoothProversOfSameTypeToSwitch) {
+        ABProverClientRouter.create(
+          proverAConfig = currentConfig,
+          proverBConfig = nextConfig,
+          switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+          switchBlockTimestamp = config.switchBlockTimestamp,
+          clientBuilder = clientBuilder,
+        ) as ProverType
+      } else {
+        clientBuilder((currentConfig ?: nextConfig)!! as Config)
       }
 
-      buildFileBasedL2ExecutionProverClient(proverConfig.riscvConfig.l2Execution)
+    return client
+  }
+
+  override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
+    val config = requireRiscvConfig()
+    return buildClient(
+      config.currentProver.riscvConfig?.l2Execution,
+      config.nextProver?.riscvConfig?.l2Execution,
+    ) { l2Execution ->
+      buildFileBasedL2ExecutionProverClient(l2Execution)
         .also { support.executionWaitingResponses.addReporter(it) }
     }
   }
@@ -220,18 +246,12 @@ class DefaultProverClientFactory(
 
   override fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
     val config = requirePreRiscvConfig()
-    return ABProverClientRouter.create(
-      proverAConfig = config.currentProver,
-      proverBConfig = config.nextProver,
-      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
-      switchBlockTimestamp = config.switchBlockTimestamp,
-    ) { proverConfig ->
-      require(proverConfig.preRiscvConfig != null) {
-        "pre-riscv prover config is null. Prover config: $proverConfig"
-      }
-
+    return buildClient(
+      config.currentProver.preRiscvConfig?.execution,
+      config.nextProver?.preRiscvConfig?.execution,
+    ) { executionConfig ->
       PreRiscvExecutionProverClient(
-        config = proverConfig.preRiscvConfig.execution,
+        config = executionConfig,
         vertx = vertx,
         enableRequestFilesCleanup = config.enableRequestFilesCleanup,
       ).also { support.executionWaitingResponses.addReporter(it) }
