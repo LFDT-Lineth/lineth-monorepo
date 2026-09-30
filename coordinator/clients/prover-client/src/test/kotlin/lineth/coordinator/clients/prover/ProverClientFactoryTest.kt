@@ -389,24 +389,14 @@ class ProverClientFactoryTest {
     fun blockIntervalProofIndexAt(blockNumber: ULong) =
       RiscvProverClientTestFixtures.blockIntervalProofIndex(blockNumber, blockNumber)
 
-    // before the switch: pre-riscv prover is non-null (usable), riscv prover is null (unusable)
+    // each family only uses the prover config of its own type, so no routing is involved:
+    // the pipelines are responsible for switching between pre-riscv and riscv
+    assertThat(preRiscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
+    assertThat(riscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
+
     assertThatCode {
       preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive - 1UL))
     }.doesNotThrowAnyException()
-
-    assertThatThrownBy {
-      riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive - 1UL))
-    }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverA should not be null")
-
-    // after the switch: pre-riscv prover is null (unusable), riscv prover is non-null (usable)
-    assertThatThrownBy {
-      preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive))
-    }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverB should not be null")
-
     assertThatCode {
       riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive))
     }.doesNotThrowAnyException()
@@ -431,7 +421,7 @@ class ProverClientFactoryTest {
 
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
+      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive or switchBlockTimestamp is set")
   }
 
   @Test
@@ -451,7 +441,7 @@ class ProverClientFactoryTest {
 
     assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
+      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive or switchBlockTimestamp is set")
   }
 
   @Test
