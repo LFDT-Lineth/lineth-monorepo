@@ -169,10 +169,12 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.riscvConfig?.let { riscvConfig ->
-        buildFileBasedL2ExecutionProverClient(riscvConfig.l2Execution)
-          .also { support.executionWaitingResponses.addReporter(it) }
+      require(proverConfig.riscvConfig != null) {
+        "riscv prover config is null. Prover config: $proverConfig"
       }
+
+      buildFileBasedL2ExecutionProverClient(proverConfig.riscvConfig.l2Execution)
+        .also { support.executionWaitingResponses.addReporter(it) }
     }
   }
 
@@ -184,13 +186,15 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.riscvConfig?.let { riscvConfig ->
-        buildFileBasedRollupProverClient(
-          proverConfig = riscvConfig.rollup,
-          l2ExecutionProverConfig = riscvConfig.l2Execution,
-        )
-          .also { support.blobRollupWaitingResponses.addReporter(it) }
+      require(proverConfig.riscvConfig != null) {
+        "riscv prover config is null. Prover config: $proverConfig"
       }
+
+      buildFileBasedRollupProverClient(
+        proverConfig = proverConfig.riscvConfig.rollup,
+        l2ExecutionProverConfig = proverConfig.riscvConfig.l2Execution,
+      )
+        .also { support.blobRollupWaitingResponses.addReporter(it) }
     }
   }
 
@@ -202,13 +206,15 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.riscvConfig?.let { riscvConfig ->
-        buildFileBasedRollupAggregationProverClient(
-          proverConfig = riscvConfig.rollupAggregation,
-          rollupProverConfig = riscvConfig.rollup,
-        )
-          .also { support.aggregationWaitingResponses.addReporter(it) }
+      require(proverConfig.riscvConfig != null) {
+        "riscv prover config is null. Prover config: $proverConfig"
       }
+
+      buildFileBasedRollupAggregationProverClient(
+        proverConfig = proverConfig.riscvConfig.rollupAggregation,
+        rollupProverConfig = proverConfig.riscvConfig.rollup,
+      )
+        .also { support.aggregationWaitingResponses.addReporter(it) }
     }
   }
 
@@ -220,13 +226,15 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
-        PreRiscvExecutionProverClient(
-          config = preRiscvConfig.execution,
-          vertx = vertx,
-          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
-        ).also { support.executionWaitingResponses.addReporter(it) }
+      require(proverConfig.preRiscvConfig != null) {
+        "pre-riscv prover config is null. Prover config: $proverConfig"
       }
+
+      PreRiscvExecutionProverClient(
+        config = proverConfig.preRiscvConfig.execution,
+        vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+      ).also { support.executionWaitingResponses.addReporter(it) }
     }
   }
 
@@ -240,15 +248,16 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
-        PreRiscvBlobCompressionProverClient(
-          config = preRiscvConfig.blobCompression,
-          vertx = vertx,
-          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
-          log = log,
-        )
-          .also { support.blobRollupWaitingResponses.addReporter(it) }
+      require(proverConfig.preRiscvConfig != null) {
+        "pre-riscv prover config is null. Prover config: $proverConfig"
       }
+      PreRiscvBlobCompressionProverClient(
+        config = proverConfig.preRiscvConfig.blobCompression,
+        vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+        log = log,
+      )
+        .also { support.blobRollupWaitingResponses.addReporter(it) }
     }
   }
 
@@ -262,16 +271,18 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
-        PreRiscvProofAggregationClient(
-          config = preRiscvConfig.proofAggregation,
-          invalidityProverConfig = preRiscvConfig.invalidity,
-          vertx = vertx,
-          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
-          log = log,
-        )
-          .also { support.aggregationWaitingResponses.addReporter(it) }
+      require(proverConfig.preRiscvConfig != null) {
+        "pre-riscv prover config is null. Prover config: $proverConfig"
       }
+
+      PreRiscvProofAggregationClient(
+        config = proverConfig.preRiscvConfig.proofAggregation,
+        invalidityProverConfig = proverConfig.preRiscvConfig.invalidity,
+        vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+        log = log,
+      )
+        .also { support.aggregationWaitingResponses.addReporter(it) }
     }
   }
 
@@ -287,14 +298,16 @@ class DefaultProverClientFactory(
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
-        PreRiscvInvalidityProverClient(
-          config = preRiscvConfig.invalidity!!,
-          vertx = vertx,
-          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
-        )
-          .also { support.invalidityWaitingResponses.addReporter(it) }
+      require(proverConfig.preRiscvConfig != null) {
+        "pre-riscv prover config is null. Prover config: $proverConfig"
       }
+
+      PreRiscvInvalidityProverClient(
+        config = proverConfig.preRiscvConfig.invalidity!!,
+        vertx = vertx,
+        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+      )
+        .also { support.invalidityWaitingResponses.addReporter(it) }
     }
   }
 
