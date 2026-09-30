@@ -228,7 +228,7 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     val reqLinea = LineaEstimateGasRequest(callParams, stateOverrides)
     val respLinea = reqLinea.execute(minerNode.nodeRequests())
     assertThat(respLinea.hasError()).isTrue()
-    assertThat(respLinea.error.code).isEqualTo(-32000)
+    assertThat(respLinea.error.code).isEqualTo(-32004)
     // 0x5d539a1 ~= (0x1234 * 21_000 gas) + 1 value (since the tx is a simple transfer)
     assertThat(respLinea.error.message)
       .isEqualTo(
