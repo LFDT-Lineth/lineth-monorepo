@@ -281,6 +281,25 @@ fn InputCapInfo(comptime system: System) type {
 /// (size_log2, is_ext) in declaration order) + `canonicalLayout` (size DESC /
 /// batch ASC / base-then-ext / position ASC). Stack-only.
 pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!Reconstructed(system) {
+    // The `@intCast`es below narrow comptime-bounded quantities into the u16
+    // fields of `Reconstructed`. `LayoutOverflow` cannot cover them: it guards
+    // `entry_idx` against `max_entries`, which is itself the value that has to
+    // fit. And a runtime check would not fire on the target that matters — the
+    // R5 build is ReleaseSmall, where `@intCast` safety checks are compiled
+    // out, so an oversized system would be silent UB rather than a loud
+    // failure. Neither bound is reachable by a malicious proof (dynamic module
+    // sizes change how columns group, never how many there are), so the risk
+    // is arithmetization growth, and the right place to catch it is the build.
+    comptime {
+        const u16_max = (1 << 16) - 1;
+        if (system.columns.len > u16_max)
+            @compileError("pcs: system.columns.len exceeds the u16 range of entry_col_decl_idx/col_to_entry");
+        // entry_idx < max_entries, so max_entries itself may equal u16_max + 1.
+        if (system.max_entries > u16_max + 1)
+            @compileError("pcs: system.max_entries exceeds the u16 range of col_to_entry");
+        // entry_row_idx holds a per-bucket position, bounded by columns.len.
+    }
+
     const R = Reconstructed(system);
     var r: R = undefined;
     const num_cols = system.columns.len;

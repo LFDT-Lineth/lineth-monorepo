@@ -82,6 +82,20 @@ type pcsColOffset struct {
 	ClaimStart  int
 }
 
+const (
+	u8Max  = 1<<8 - 1
+	u16Max = 1<<16 - 1
+)
+
+// checkPcsIndex panics with the offending value rather than emitting a literal
+// the verifier cannot represent, mirroring vanishing_zig.go's checkIndex.
+func checkPcsIndex(v, max int, what string) int {
+	if v < 0 || v > max {
+		panic(fmt.Sprintf("pcs codegen: %s is %d; the verifier field holds 0..%d", what, v, max))
+	}
+	return v
+}
+
 func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemplateData {
 	def := defaultPcsZigOptions()
 	if opts.PcsImport == "" {
@@ -96,10 +110,32 @@ func newPcsTemplateData(index int, system PcsSystem, opts PcsZigOptions) pcsTemp
 	if opts.ConstName == "" {
 		opts.ConstName = fmt.Sprintf("pcs_system_%d", index)
 	}
+	// The verifier narrows these into u8/u16 fields, and the R5 build is
+	// ReleaseSmall, where `@intCast` safety checks are compiled out. Panic with
+	// the offending value here rather than emitting a literal the verifier
+	// cannot represent. `pcs.reconstruct` carries the matching comptime guards
+	// for the counts this emitter does not own (columns.len, max_entries).
+	for i, r := range system.WitnessMap {
+		checkPcsIndex(r.ColDeclIdx, u16Max, fmt.Sprintf("witness_map[%d].col_decl_idx", i))
+	}
+	for i, r := range system.QuotientMap {
+		checkPcsIndex(r.ColDeclIdx, u16Max, fmt.Sprintf("quotient_map[%d].col_decl_idx", i))
+	}
+	for i, b := range system.BatchRoots {
+		if !b.Precomputed {
+			checkPcsIndex(b.RoundIndex, u8Max, fmt.Sprintf("batch_roots[%d].round", i))
+		}
+	}
+
 	flatShifts := []int{}
 	flatClaims := []PcsCellRef{}
 	offsets := make([]pcsColOffset, 0, len(system.Columns))
-	for _, col := range system.Columns {
+	for i, col := range system.Columns {
+		checkPcsIndex(col.BatchIdx, u8Max, fmt.Sprintf("columns[%d].batch_idx", i))
+		checkPcsIndex(len(col.Shifts), u8Max, fmt.Sprintf("columns[%d].shifts_len", i))
+		for j, ref := range col.ClaimCells {
+			checkPcsIndex(ref.Round, u8Max, fmt.Sprintf("columns[%d].claim_cells[%d].round", i, j))
+		}
 		offsets = append(offsets, pcsColOffset{
 			ShiftsStart: len(flatShifts),
 			ShiftsLen:   len(col.Shifts),
