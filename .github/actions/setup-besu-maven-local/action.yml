@@ -1,22 +1,22 @@
 name: 'Setup Besu in Maven Local (artifact fast path)'
 
 description: >
-  Restores the Besu source distribution tarball (besu-<version>.tar.gz) uploaded by the
-  prepare-linea-besu-maven job into tmp/besu-eth/build/distributions/, then publishes the
-  Besu jars/BOM into ~/.m2/repository via publishToMavenLocal. This is the fast path used by
-  testing.yml jobs when the Besu version pinned by besuCommit (gradle/libs.versions.toml) is
-  not yet available in any remote maven repo, so each test job can skip the multi-minute
-  on-demand Besu source build. When the Besu BOM is already available in a remote maven repo
-  the whole action is a no-op (except the cheap version resolution) and the existing Gradle
-  logic in linea-besu/besu/build.gradle consumes the remote artifacts as before.
+  Restores the Besu artifacts (maven-local tree + source distribution tarball) uploaded by the
+  prepare-linea-besu-maven job in testing.yml, so the Gradle availability checks in
+  linea-besu/besu/build.gradle (isBesuAvailableInMavenLocal + isBesuLocalDistributionAvailable)
+  hit and the test build skips the multi-minute on-demand Besu source build. This action is a
+  no-op when the Besu BOM for besuCommit (gradle/libs.versions.toml) is already available in a
+  remote maven repo — in that case the existing Gradle logic consumes the remote artifacts as
+  before. If the artifact is missing (e.g. stale run, prepare job raced), it warns and falls
+  back to the existing on-demand build, so this is always safe to run.
 
 outputs:
   besu_version:
-    description: 'Resolved Besu version (e.g. 26.9.0-ee9c64c), empty when resolution failed'
+    description: 'Resolved Besu version (e.g. 26.9.0-ee9c64c)'
     value: ${{ steps.resolve_besu_version.outputs.besu_version }}
   distribution_restored:
-    description: 'true when the prebuilt Besu distribution was restored from the workflow artifact'
-    value: ${{ steps.restore_distribution.outputs.distribution_restored }}
+    description: 'true when the prebuilt Besu artifacts were restored from the workflow artifact'
+    value: ${{ steps.verify_restore.outputs.distribution_restored }}
 
 runs:
   using: 'composite'
@@ -44,10 +44,10 @@ runs:
           CACHED_VERSION=$(grep -E '^besuVersion=' linea-besu/besu/.besu-resolved | cut -d= -f2 | tr -d '[:space:]')
         fi
         if [ -n "${CACHED_COMMIT:-}" ] && [ "$CACHED_COMMIT" = "$BESU_COMMIT" ] && [ -n "${CACHED_VERSION:-}" ]; then
-          BESU_VERSION="$CACHED_VERSION"
+          RESOLVED_BESU_VERSION="$CACHED_VERSION"
         else
           # Partial-clone the besu repo (commit graph + tags only) and resolve the version.
-          BESU_VERSION=$(
+          RESOLVED_BESU_VERSION=$(
             BESU_DIR="$GITHUB_WORKSPACE/tmp/besu-eth" \
             BESU_COMMIT="$BESU_COMMIT" \
             VERSION_LABEL="" \
@@ -55,76 +55,65 @@ runs:
               bash linea-besu/besu/scripts/checkout-and-resolve-version.sh | tail -n 1 | tr -d '[:space:]'
           )
         fi
-        if [ -z "$BESU_VERSION" ]; then
+        if [ -z "$RESOLVED_BESU_VERSION" ]; then
           echo "Failed to resolve Besu version for besuCommit $BESU_COMMIT" >&2
           exit 1
         fi
-        echo "besu_version=$BESU_VERSION" >> "$GITHUB_OUTPUT"
-        echo "Resolved Besu version: $BESU_VERSION"
+        echo "besu_version=$RESOLVED_BESU_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved Besu version: $RESOLVED_BESU_VERSION"
 
     - name: Check Besu BOM availability in remote maven
       id: check_bom
       shell: bash
       env:
-        BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
+        RESOLVED_BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
       run: |
-        BOM_PATH="org/hyperledger/besu/bom/${BESU_VERSION}/bom-${BESU_VERSION}.pom"
+        BOM_PATH="org/hyperledger/besu/bom/${RESOLVED_BESU_VERSION}/bom-${RESOLVED_BESU_VERSION}.pom"
         for BASE in \
           "https://artifacts.consensys.net/public/linea-besu/maven" \
           "https://repo.maven.apache.org/maven2" \
           "https://hyperledger.jfrog.io/hyperledger/besu-maven"; do
           if curl -sfI --connect-timeout 5 --max-time 10 "${BASE}/${BOM_PATH}" > /dev/null 2>&1; then
-            echo "Besu BOM ${BESU_VERSION} found at ${BASE}"
+            echo "Besu BOM ${RESOLVED_BESU_VERSION} found at ${BASE}; skipping artifact restore"
             echo "bom_available=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
         done
-        echo "Besu BOM ${BESU_VERSION} not found in any remote maven repo"
+        echo "Besu BOM ${RESOLVED_BESU_VERSION} not found in any remote maven repo"
         echo "bom_available=false" >> "$GITHUB_OUTPUT"
 
-    - name: Restore Besu distribution artifact
-      id: restore_distribution
+    - name: Download Besu artifacts
+      id: download_artifacts
       if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: linea-besu-dist-${{ steps.resolve_besu_version.outputs.besu_version }}
-        path: tmp/besu-eth/build/distributions
+        path: /tmp/linea-besu-dist
 
-    - name: Record restore outcome
-      id: restore_outcome
+    - name: Restore maven local and Besu distribution
+      id: verify_restore
       if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
       shell: bash
       env:
-        BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
-      run: |
-        DIST="tmp/besu-eth/build/distributions/besu-${BESU_VERSION}.tar.gz"
-        if [ -f "$DIST" ]; then
-          echo "Restored $DIST from workflow artifact"
-          echo "distribution_restored=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "::warning::Artifact linea-besu-dist-${BESU_VERSION} was not found; falling back to the on-demand Besu source build"
-          echo "distribution_restored=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Publish restored Besu distribution to maven local
-      if: ${{ steps.restore_outcome.outputs.distribution_restored == 'true' }}
-      shell: bash
-      env:
-        BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
-        BESU_COMMIT: ${{ steps.read_besu_commit.outputs.besu_commit }}
+        RESOLVED_BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
       run: |
         set -e
-        # The restored tarball is extracted under tmp/besu-eth/, so the checkout script's
-        # git-checkout path cleans it up via `git reset --hard`. Check out at besuCommit in a
-        # scratch clone, publishToMavenLocal from there, then move the restored tarball back.
-        SCRATCH_DIR="$GITHUB_WORKSPACE/tmp/besu-publish-scratch"
-        mkdir -p tmp
-        git clone --shared --no-checkout "$GITHUB_WORKSPACE/tmp/besu-eth" "$SCRATCH_DIR"
-        (cd "$SCRATCH_DIR" && git checkout "$BESU_COMMIT")
-        (cd "$SCRATCH_DIR" && ./gradlew -Prelease.releaseVersion="$BESU_VERSION" -Pversion="$BESU_VERSION" publishToMavenLocal)
-        rm -rf tmp/besu-eth
+        STAGE="/tmp/linea-besu-dist"
+        DIST_TGZ="$STAGE/besu-${RESOLVED_BESU_VERSION}.tar.gz"
+        M2_BESU="$STAGE/m2-repo/org/hyperledger/besu"
+        if [ ! -f "$DIST_TGZ" ] || [ ! -d "$M2_BESU" ]; then
+          echo "::warning::Artifact linea-besu-dist-${RESOLVED_BESU_VERSION} is missing or incomplete; falling back to the on-demand Besu source build"
+          echo "distribution_restored=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # 1. Restore the maven-local tree published by the prepare job.
+        mkdir -p ~/.m2/repository/org/hyperledger
+        cp -r "$M2_BESU" ~/.m2/repository/org/hyperledger/
+        if [ -d "$STAGE/m2-repo/besu" ]; then
+          cp -r "$STAGE/m2-repo/besu" ~/.m2/repository/
+        fi
+        # 2. Restore the distribution tarball where the Gradle check expects it.
         mkdir -p tmp/besu-eth/build/distributions
-        # Recover the distribution tarball from the scratch clone (it was extracted there too).
-        mv "$SCRATCH_DIR/build/distributions/besu-${BESU_VERSION}.tar.gz" tmp/besu-eth/build/distributions/
-        rm -rf "$SCRATCH_DIR"
-        echo "Published Besu ${BESU_VERSION} to maven local from the cached distribution"
+        cp "$DIST_TGZ" tmp/besu-eth/build/distributions/
+        echo "Restored Besu ${RESOLVED_BESU_VERSION} (maven local + distribution) from workflow artifact"
+        echo "distribution_restored=true" >> "$GITHUB_OUTPUT"
