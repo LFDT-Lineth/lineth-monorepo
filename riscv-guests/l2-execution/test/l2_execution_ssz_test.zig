@@ -68,9 +68,7 @@ test "input: encode then decode round-trips every field" {
     }
 }
 
-// `encodeOutput` commits ONLY `keccak256(public_inputs)` — 32 bytes, nothing else — so this asserts
-// internal self-consistency against `hashPublicInputs` directly rather than a byte-exact fixture.
-test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
+test "output: SSZ public inputs and independently hashed bytes round-trip" {
     const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
         .parent_block_hash = repeat32(0x0a),
         .end_block_hash = repeat32(0x0b),
@@ -93,12 +91,29 @@ test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
     const out = l2_execution_ssz.encodeOutput(public_inputs);
     const encoded = &out;
 
-    // 2(schema) + 32(hash) = 34 bytes total — ONLY the hash, nothing else.
-    try std.testing.expectEqual(@as(usize, 34), encoded.len);
+    try std.testing.expectEqual(@as(usize, 402), encoded.len);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
+    const pi_bytes = l2_execution_ssz.encodePublicInputsBytes(public_inputs);
+    try std.testing.expectEqualSlices(u8, &pi_bytes, encoded[2..370]);
+    var pi_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(encoded[2..370], &pi_hash, .{});
+    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[370..402]);
+    const decoded = try l2_execution_ssz.decodeOutput(encoded);
+    try std.testing.expectEqualDeep(public_inputs, decoded);
 
-    const pi_hash = l2_execution_ssz.hashPublicInputs(public_inputs);
-    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[2..34]);
+    var bad = out;
+    bad[2] ^= 1;
+    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
+    bad = out;
+    bad[370] ^= 1;
+    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
+    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(encoded[0..401]));
+    bad = out;
+    bad[1] = 2;
+    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
+    var extended: [403]u8 = undefined;
+    @memcpy(extended[0..402], encoded);
+    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&extended));
 }
 
 test "input: rejects a body shorter than the fixed head" {

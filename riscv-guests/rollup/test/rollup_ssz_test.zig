@@ -140,7 +140,7 @@ fn sampleOutput(alloc: std.mem.Allocator) !rollup_ssz.RollupOutput {
     };
 }
 
-test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 schema id" {
+test "encodeOutput/decodeOutput: canonical PI bytes and hash round-trip" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -149,12 +149,15 @@ test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 
     const encoded = try rollup_ssz.encodeOutput(alloc, value);
 
     try std.testing.expectEqualSlices(u8, &[_]u8{ 0x18, 0x01 }, encoded[0..2]);
+    try std.testing.expectEqual(@as(u32, 420), std.mem.readInt(u32, encoded[2 + 416 ..][0..4], .little));
+    try std.testing.expectEqual(@as(usize, 2 + 420 + 64 + 32), encoded.len);
+    const pi_bytes = encoded[2 .. encoded.len - 32];
+    var expected_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(pi_bytes, &expected_hash, .{});
+    try std.testing.expectEqualSlices(u8, &expected_hash, encoded[encoded.len - 32 ..]);
 
     const decoded = try rollup_ssz.decodeOutput(alloc, encoded);
-    try std.testing.expectEqual(value.start_block_number, decoded.start_block_number);
-    try std.testing.expectEqualSlices(u8, value.filtered_addresses[0][0..], decoded.filtered_addresses[0][0..]);
-    try std.testing.expectEqual(value.l2_l1_roots.len, decoded.l2_l1_roots.len);
-    try std.testing.expectEqualSlices(u8, &value.l2_l1_roots[0], &decoded.l2_l1_roots[0]);
+    try std.testing.expectEqualSlices(u8, &expected_hash, &decoded.public_inputs_hash);
     try std.testing.expectEqual(value.public_inputs.end_block_number, decoded.public_inputs.end_block_number);
     try std.testing.expectEqual(value.public_inputs.start_offset, decoded.public_inputs.start_offset);
     try std.testing.expectEqual(value.public_inputs.end_offset, decoded.public_inputs.end_offset);
@@ -165,6 +168,57 @@ test "encodeOutput/decodeOutput: round-trips every field and carries the 0x1801 
     try std.testing.expectEqualSlices(u8, &value.public_inputs.l2_l1_bridge_transaction_tree, &decoded.public_inputs.l2_l1_bridge_transaction_tree);
     try std.testing.expectEqualSlices(u8, &value.public_inputs.parent_block_hash, &decoded.public_inputs.parent_block_hash);
     try std.testing.expectEqualSlices(u8, &value.public_inputs.end_block_hash, &decoded.public_inputs.end_block_hash);
+}
+
+test "output rejects malformed offsets, hashes, length and oversized frames" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const encoded = try rollup_ssz.encodeOutput(alloc, try sampleOutput(alloc));
+
+    try std.testing.expectError(error.MalformedFrame, rollup_ssz.decodeOutput(alloc, encoded[0..1]));
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, encoded[0..37]));
+    const huge = try alloc.alloc(u8, rollup_ssz.MAX_OUTPUT_SIZE + 1);
+    @memcpy(huge[0..encoded.len], encoded);
+    try std.testing.expectError(error.BoundsViolation, rollup_ssz.decodeOutput(alloc, huge));
+
+    var bad = try alloc.dupe(u8, encoded);
+    bad[0] = 0;
+    try std.testing.expectError(error.MalformedFrame, rollup_ssz.decodeOutput(alloc, bad));
+    bad[0] = encoded[0];
+    bad[bad.len - 1] ^= 1;
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, bad));
+    bad[bad.len - 1] ^= 1;
+    bad[2] ^= 1;
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, bad));
+
+    for ([_]u32{ 0, 419, 421, 0xffffffff }) |offset| {
+        bad = try alloc.dupe(u8, encoded);
+        std.mem.writeInt(u32, bad[2 + 416 ..][0..4], offset, .little);
+        var rehashed: [32]u8 = undefined;
+        std.crypto.hash.sha3.Keccak256.hash(bad[2 .. bad.len - 32], &rehashed, .{});
+        @memcpy(bad[bad.len - 32 ..], &rehashed);
+        try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, bad));
+    }
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, encoded[0 .. encoded.len - 1]));
+    const appended = try alloc.alloc(u8, encoded.len + 1);
+    @memcpy(appended[0..encoded.len], encoded);
+    appended[encoded.len] = 0;
+    var appended_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(appended[2 .. appended.len - 32], &appended_hash, .{});
+    @memcpy(appended[appended.len - 32 ..], &appended_hash);
+    try std.testing.expectError(error.InvalidSsz, rollup_ssz.decodeOutput(alloc, appended));
+
+    var empty_vks = try sampleOutput(alloc);
+    empty_vks.public_inputs.program_vks = &.{};
+    const empty_encoded = try rollup_ssz.encodeOutput(alloc, empty_vks);
+    try std.testing.expectEqual(@as(usize, 2 + 420 + 32), empty_encoded.len);
+    const empty_decoded = try rollup_ssz.decodeOutput(alloc, empty_encoded);
+    try std.testing.expectEqual(@as(usize, 0), empty_decoded.public_inputs.program_vks.len);
+
+    var oversized = try sampleOutput(alloc);
+    oversized.public_inputs.program_vks = try alloc.alloc([32]u8, rollup_ssz.MAX_PROGRAM_VKS + 1);
+    try std.testing.expectError(error.BoundsViolation, rollup_ssz.encodeOutput(alloc, oversized));
 }
 
 // ── Malformed input ───────────────────────────────────────────────────────────────────────────
