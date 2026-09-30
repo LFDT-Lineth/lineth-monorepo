@@ -1,0 +1,130 @@
+name: Prepare Linea Besu Maven Package
+
+permissions:
+  contents: read
+  actions: read
+
+# Runs once, before the testing jobs (see testing.yml). Resolves the Besu version pinned by
+# besuCommit in gradle/libs.versions.toml and, when that version is not yet published to any
+# remote maven repo, builds the Besu source distribution exactly once and shares it with the
+# downstream testing jobs as a workflow artifact (actions/setup-besu-maven-local restores it
+# and publishes it to maven local). Without this job, every JVM testing job would build Besu
+# from source on-demand in parallel, wasting CI compute.
+
+on:
+  workflow_call:
+    outputs:
+      besu_version:
+        description: 'Resolved Besu version (e.g. 26.9.0-ee9c64c)'
+        value: ${{ jobs.prepare.outputs.besu_version }}
+      published_remotely:
+        description: 'true when the Besu BOM is already available in a remote maven repo (nothing to do)'
+        value: ${{ jobs.prepare.outputs.published_remotely }}
+
+jobs:
+  prepare:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    outputs:
+      besu_version: ${{ steps.resolve_besu_version.outputs.besu_version }}
+      published_remotely: ${{ steps.check_bom.outputs.bom_available }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Read besuCommit from gradle/libs.versions.toml
+        id: read_besu_commit
+        run: |
+          BESU_COMMIT=$(grep -E '^besuCommit\s*=' gradle/libs.versions.toml | sed -E 's/^[^"]*"([^"]+)".*/\1/')
+          if [ -z "$BESU_COMMIT" ]; then
+            echo "Failed to parse besuCommit from gradle/libs.versions.toml" >&2
+            exit 1
+          fi
+          echo "besu_commit=$BESU_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Besu version
+        id: resolve_besu_version
+        env:
+          BESU_COMMIT: ${{ steps.read_besu_commit.outputs.besu_commit }}
+        run: |
+          # Fast path: reuse the cache file when it already matches besuCommit.
+          if [ -f linea-besu/besu/.besu-resolved ]; then
+            CACHED_COMMIT=$(grep -E '^besuCommit=' linea-besu/besu/.besu-resolved | cut -d= -f2 | tr -d '[:space:]')
+            CACHED_VERSION=$(grep -E '^besuVersion=' linea-besu/besu/.besu-resolved | cut -d= -f2 | tr -d '[:space:]')
+          fi
+          if [ -n "${CACHED_COMMIT:-}" ] && [ "$CACHED_COMMIT" = "$BESU_COMMIT" ] && [ -n "${CACHED_VERSION:-}" ]; then
+            BESU_VERSION="$CACHED_VERSION"
+          else
+            # Partial-clone the besu repo (commit graph + tags only) and resolve the version.
+            BESU_VERSION=$(
+              BESU_DIR="$GITHUB_WORKSPACE/tmp/besu-eth" \
+              BESU_COMMIT="$BESU_COMMIT" \
+              VERSION_LABEL="" \
+              SKIP_CHECKOUT_AFTER_CLONE="true" \
+                bash linea-besu/besu/scripts/checkout-and-resolve-version.sh | tail -n 1 | tr -d '[:space:]'
+            )
+          fi
+          if [ -z "$BESU_VERSION" ]; then
+            echo "Failed to resolve Besu version for besuCommit $BESU_COMMIT" >&2
+            exit 1
+          fi
+          echo "besu_version=$BESU_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved Besu version: $BESU_VERSION"
+
+      - name: Check Besu BOM availability in remote maven
+        id: check_bom
+        env:
+          BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
+        run: |
+          BOM_PATH="org/hyperledger/besu/bom/${BESU_VERSION}/bom-${BESU_VERSION}.pom"
+          for BASE in \
+            "https://artifacts.consensys.net/public/linea-besu/maven" \
+            "https://repo.maven.apache.org/maven2" \
+            "https://hyperledger.jfrog.io/hyperledger/besu-maven"; do
+            if curl -sfI --connect-timeout 5 --max-time 10 "${BASE}/${BOM_PATH}" > /dev/null 2>&1; then
+              echo "Besu BOM ${BESU_VERSION} found at ${BASE}; nothing to do"
+              echo "bom_available=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "Besu BOM ${BESU_VERSION} not found in any remote maven repo; will build the distribution once"
+          echo "bom_available=false" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Java and Gradle
+        if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Build Besu distribution from source
+        if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+          BESU_COMMIT: ${{ steps.read_besu_commit.outputs.besu_commit }}
+          BESU_VERSION: ${{ steps.resolve_besu_version.outputs.besu_version }}
+        run: |
+          # Ensure tmp/besu-eth is checked out at besuCommit (full source, not just tags).
+          BESU_DIR="$GITHUB_WORKSPACE/tmp/besu-eth" \
+          BESU_COMMIT="$BESU_COMMIT" \
+          VERSION_LABEL="" \
+          SKIP_CHECKOUT_AFTER_CLONE="false" \
+            bash linea-besu/besu/scripts/checkout-and-resolve-version.sh
+          # Build distTar only -- publishing happens in the downstream testing jobs via the
+          # cached distribution (actions/setup-besu-maven-local -> publishToMavenLocal).
+          RESOLVED_BESU_VERSION="$BESU_VERSION" \
+          BESU_DIR="$GITHUB_WORKSPACE/tmp/besu-eth" \
+            bash linea-besu/besu/scripts/build-dist-and-publish.sh none
+          DIST="tmp/besu-eth/build/distributions/besu-${BESU_VERSION}.tar.gz"
+          if [ ! -f "$DIST" ]; then
+            echo "Expected Besu distribution not found: $DIST" >&2
+            exit 1
+          fi
+
+      - name: Upload Besu distribution artifact
+        if: ${{ steps.check_bom.outputs.bom_available == 'false' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linea-besu-dist-${{ steps.resolve_besu_version.outputs.besu_version }}
+          path: tmp/besu-eth/build/distributions/besu-${{ steps.resolve_besu_version.outputs.besu_version }}.tar.gz
+          if-no-files-found: error
+          # Shared only within this workflow run; no need to retain it afterwards.
+          retention-days: 1
