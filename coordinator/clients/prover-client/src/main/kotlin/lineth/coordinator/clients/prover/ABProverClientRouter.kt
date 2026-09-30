@@ -57,37 +57,34 @@ class ABProverClientRouter<ProofRequest : Any, ProofResponse, TProofIndex : Proo
 
   companion object {
     fun <TProverConfig, ProofRequest : Any, ProofResponse, TProofIndex : ProofIndex> create(
-      proverAConfig: TProverConfig?,
+      proverAConfig: TProverConfig,
       proverBConfig: TProverConfig?,
       switchBlockNumberInclusive: ULong?,
       switchBlockTimestamp: Instant?,
-      clientBuilder: (TProverConfig) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>,
+      clientBuilder: (TProverConfig) -> ProverClientV2<ProofRequest, ProofResponse, TProofIndex>?,
     ): ProverClientV2<ProofRequest, ProofResponse, TProofIndex> {
-      require(proverAConfig != null || proverBConfig != null) {
-        "Either proverAConfig or proverBConfig must be provided"
-      }
-      if (switchBlockNumberInclusive == null && switchBlockTimestamp == null) {
-        requireNotNull(proverAConfig) {
-          "proverAConfig must be provided if switchBlockNumberInclusive and switchBlockTimestamp are both null"
-        }
-      }
-
       return when {
         switchBlockNumberInclusive != null -> {
+          require(proverBConfig != null) {
+            "proverBConfig must be provided when switchBlockNumberInclusive is set"
+          }
           ABProverClientRouter(
-            proverA = proverAConfig?.let { clientBuilder(it) },
-            proverB = proverBConfig?.let { clientBuilder(it) },
+            proverA = clientBuilder(proverAConfig),
+            proverB = clientBuilder(proverBConfig),
             switchToProverBPredicate = StartBlockNumberBasedSwitchPredicate(switchBlockNumberInclusive)::invoke,
           )
         }
         switchBlockTimestamp != null -> {
+          require(proverBConfig != null) {
+            "proverBConfig must be provided when switchBlockTimestamp is set"
+          }
           ABProverClientRouter(
-            proverA = proverAConfig?.let { clientBuilder(it) },
-            proverB = proverBConfig?.let { clientBuilder(it) },
+            proverA = clientBuilder(proverAConfig),
+            proverB = clientBuilder(proverBConfig),
             switchToProverBPredicate = StartBlockTimestampBasedSwitchPredicate(switchBlockTimestamp)::invoke,
           )
         }
-        else -> clientBuilder(proverAConfig!!)
+        else -> clientBuilder(proverAConfig)!!
       }
     }
   }

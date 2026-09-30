@@ -164,123 +164,137 @@ class DefaultProverClientFactory(
   override fun l2ExecutionProverClient(): L2ExecutionProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.currentProver.riscvConfig?.l2Execution,
-      proverBConfig = config.nextProver?.riscvConfig?.l2Execution,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      buildFileBasedL2ExecutionProverClient(proverConfig)
-        .also { support.executionWaitingResponses.addReporter(it) }
+      proverConfig.riscvConfig?.let { riscvConfig ->
+        buildFileBasedL2ExecutionProverClient(riscvConfig.l2Execution)
+          .also { support.executionWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun rollupProverClient(): RollupProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.currentProver.riscvConfig,
-      proverBConfig = config.nextProver?.riscvConfig,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      buildFileBasedRollupProverClient(
-        proverConfig = proverConfig.rollup,
-        l2ExecutionProverConfig = proverConfig.l2Execution,
-      )
-        .also { support.blobRollupWaitingResponses.addReporter(it) }
+      proverConfig.riscvConfig?.let { riscvConfig ->
+        buildFileBasedRollupProverClient(
+          proverConfig = riscvConfig.rollup,
+          l2ExecutionProverConfig = riscvConfig.l2Execution,
+        )
+          .also { support.blobRollupWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun rollupAggregationProverClient(): RollupAggregationProverClientV1 {
     val config = requireRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = config.currentProver.riscvConfig,
-      proverBConfig = config.nextProver?.riscvConfig,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
       switchBlockNumberInclusive = config.switchBlockNumberInclusive,
       switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      buildFileBasedRollupAggregationProverClient(
-        proverConfig = proverConfig.rollupAggregation,
-        rollupProverConfig = proverConfig.rollup,
-      )
-        .also { support.aggregationWaitingResponses.addReporter(it) }
+      proverConfig.riscvConfig?.let { riscvConfig ->
+        buildFileBasedRollupAggregationProverClient(
+          proverConfig = riscvConfig.rollupAggregation,
+          rollupProverConfig = riscvConfig.rollup,
+        )
+          .also { support.aggregationWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun preRiscvExecutionProverClient(): ExecutionProverClientV2 {
-    val preRiscvConfig = requirePreRiscvConfig()
+    val config = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.currentProver.preRiscvConfig?.execution,
-      proverBConfig = preRiscvConfig.nextProver?.preRiscvConfig?.execution,
-      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
-      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      PreRiscvExecutionProverClient(
-        config = proverConfig,
-        vertx = vertx,
-        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
-      ).also { support.executionWaitingResponses.addReporter(it) }
+      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
+        PreRiscvExecutionProverClient(
+          config = preRiscvConfig.execution,
+          vertx = vertx,
+          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+        ).also { support.executionWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun preRiscvBlobCompressionProverClient(
     log: Logger,
   ): BlobCompressionProverClientV2 {
-    val preRiscvConfig = requirePreRiscvConfig()
+    val config = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.currentProver.preRiscvConfig!!.blobCompression,
-      proverBConfig = preRiscvConfig.nextProver?.preRiscvConfig?.blobCompression,
-      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
-      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      PreRiscvBlobCompressionProverClient(
-        config = proverConfig,
-        vertx = vertx,
-        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
-        log = log,
-      )
-        .also { support.blobRollupWaitingResponses.addReporter(it) }
+      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
+        PreRiscvBlobCompressionProverClient(
+          config = preRiscvConfig.blobCompression,
+          vertx = vertx,
+          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+          log = log,
+        )
+          .also { support.blobRollupWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun preRiscvProofAggregationProverClient(
     log: Logger,
   ): ProofAggregationProverClientV2 {
-    val preRiscvConfig = requirePreRiscvConfig()
+    val config = requirePreRiscvConfig()
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.currentProver.preRiscvConfig!!,
-      proverBConfig = preRiscvConfig.nextProver?.preRiscvConfig,
-      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
-      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      PreRiscvProofAggregationClient(
-        config = proverConfig.proofAggregation,
-        invalidityProverConfig = proverConfig.invalidity,
-        vertx = vertx,
-        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
-        log = log,
-      )
-        .also { support.aggregationWaitingResponses.addReporter(it) }
+      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
+        PreRiscvProofAggregationClient(
+          config = preRiscvConfig.proofAggregation,
+          invalidityProverConfig = preRiscvConfig.invalidity,
+          vertx = vertx,
+          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+          log = log,
+        )
+          .also { support.aggregationWaitingResponses.addReporter(it) }
+      }
     }
   }
 
   override fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
-    val preRiscvConfig = requirePreRiscvConfig()
-    if (preRiscvConfig.currentProver.preRiscvConfig!!.invalidity == null) {
+    val config = requirePreRiscvConfig()
+    if (config.currentProver.preRiscvConfig!!.invalidity == null) {
       throw IllegalStateException("Invalidity prover config is not configured")
     }
 
     return ABProverClientRouter.create(
-      proverAConfig = preRiscvConfig.currentProver.preRiscvConfig.invalidity,
-      proverBConfig = preRiscvConfig.nextProver?.preRiscvConfig?.invalidity,
-      switchBlockNumberInclusive = preRiscvConfig.switchBlockNumberInclusive,
-      switchBlockTimestamp = preRiscvConfig.switchBlockTimestamp,
+      proverAConfig = config.currentProver,
+      proverBConfig = config.nextProver,
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
+      switchBlockTimestamp = config.switchBlockTimestamp,
     ) { proverConfig ->
-      PreRiscvInvalidityProverClient(
-        config = proverConfig,
-        vertx = vertx,
-        enableRequestFilesCleanup = preRiscvConfig.enableRequestFilesCleanup,
-      )
-        .also { support.invalidityWaitingResponses.addReporter(it) }
+      proverConfig.preRiscvConfig?.let { preRiscvConfig ->
+        PreRiscvInvalidityProverClient(
+          config = preRiscvConfig.invalidity!!,
+          vertx = vertx,
+          enableRequestFilesCleanup = config.enableRequestFilesCleanup,
+        )
+          .also { support.invalidityWaitingResponses.addReporter(it) }
+      }
     }
   }
 

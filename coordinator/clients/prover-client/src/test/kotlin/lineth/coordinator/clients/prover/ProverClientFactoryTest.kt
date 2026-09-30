@@ -415,6 +415,46 @@ class ProverClientFactoryTest {
   // --- pre-RISC-V prover client ---
 
   @Test
+  fun `should fail with clear error when block number switch has no prover B`() {
+    val factory =
+      DefaultProverClientFactory(
+        vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
+        config = buildPreRiscvProversConfig(
+          tmpDir = testTmpDir,
+          switchBlockNumber = 200,
+          withProverB = false,
+        ),
+        metricsFacade = metricsFacade,
+      )
+
+    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
+  }
+
+  @Test
+  fun `should fail with clear error when timestamp switch has no prover B`() {
+    val factory =
+      DefaultProverClientFactory(
+        vertx = vertx,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
+        config = buildPreRiscvProversConfig(
+          tmpDir = testTmpDir,
+          switchBlockTimestamp = Instant.fromEpochSeconds(50),
+          withProverB = false,
+        ),
+        metricsFacade = metricsFacade,
+      )
+
+    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
+  }
+
+  @Test
   fun `should create a prover with routing when switch is defined`() {
     val proverClient = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
     assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
