@@ -18,7 +18,7 @@ never learn about JSON; the dependency arrow points one way only
 (codec -> guest types).
 
 Guest output vs prover output: the l2-execution guest emits public inputs and
-revealed hash preimages (`l2L1Messages`, `txFroms`, and `filteredAddresses`).
+revealed hash preimages (`l2L1Messages` and `filteredAddresses`).
 Rollup and aggregation guests emit root and filtered-address lists in their
 public inputs. The zkVM/prover layer attaches `proof`, which is a placeholder
 (`b""`) in this reference; it hashes each list for the public-input commitment.
@@ -320,7 +320,6 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
         },
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
-        "txFroms": [_hx(a) for a in proof.tx_froms],
         "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
         "programVk": _hx(program_vk),
     }
@@ -393,7 +392,6 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
 
 def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProof:
     l2_l1_messages = _require_list(obj, "l2L1Messages", ctx)
-    tx_froms = _require_list(obj, "txFroms", ctx)
     filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
     proof = L2ExecutionProof(
         public_inputs=_decode_l2_execution_public_input(
@@ -404,9 +402,6 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProo
         l2_l1_messages=[
             Hash32(_bytes_from_hex(h, f"{ctx}l2L1Messages[{i}]"))
             for i, h in enumerate(l2_l1_messages)
-        ],
-        tx_froms=[
-            Address(_bytes_from_hex(a, f"{ctx}txFroms[{i}]")) for i, a in enumerate(tx_froms)
         ],
         filtered_addresses=[
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))

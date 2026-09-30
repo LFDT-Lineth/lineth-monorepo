@@ -115,12 +115,12 @@ submitted lists in `_computePublicInput` (§5). The reference leaves `proof` as
 a placeholder (`b""`); see §2.4 and §3.3.
 
 The l2-execution guest emits `txFromsHash` in its public inputs, rather than
-emitting the potentially large `txFroms` sender list. Keeping that list out of
-the SSZ-encoded guest output avoids consuming the arithmetization's 2^16-byte
-output limit with transaction senders. The rollup guest reconstructs the list
-from its private block inputs and checks the hash (§2.2). The Python reference,
-JSON schemas, and fixtures still carry `txFroms` until the guest and wire
-implementations adopt this change.
+emitting the potentially large `txFroms` sender list. The arithmetization's
+SSZ-encoded guest-output limit is 2^16 bytes; excluding sender preimages keeps
+them from consuming this budget. The rollup guest reconstructs the list from
+its private block inputs and checks the hash (§2.2). The Python reference's
+hash-only guest-output frame remains 34 bytes including its schema ID; the
+embedded execution proof and JSON prover response likewise omit `txFroms`.
 
 **Reference environment.** The Python reference targets **Python 3.11+** (it uses
 `enum.StrEnum`) and pins its dependencies in `rollup_spec/requirements.txt`

@@ -128,7 +128,6 @@ def _sample_proof() -> L2ExecutionProof:
         start_block_number=U64(1000501),
         proof=b"\xde\xad\xbe\xef",
         l2_l1_messages=[Hash32(bytes([0x08]) * 32)],
-        tx_froms=[Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)],
         filtered_addresses=[Address(bytes([0x09]) * 20)],
     )
 
@@ -280,14 +279,13 @@ def test_encode_response_shape_and_values() -> None:
     }
 
     assert out["l2L1Messages"] == ["0x" + ("08" * 32)]
-    assert out["txFroms"] == ["0x" + ("01" * 20), "0x" + ("02" * 20)]
     assert out["filteredAddresses"] == ["0x" + ("09" * 20)]
     # §ProgramVK anchoring: the exec guest's own VK, carried on the proof
     # (host-attached, not part of publicInputs — a guest cannot attest its own VK).
     assert out["programVk"] == "0x" + ("aa" * 32)
     assert set(out.keys()) == {
         "proverVersion", "proof", "startBlockNumber", "publicInputs",
-        "l2L1Messages", "txFroms", "filteredAddresses", "programVk",
+        "l2L1Messages", "filteredAddresses", "programVk",
     }
 
 
@@ -380,7 +378,6 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof.public_inputs.parent_ftx_number) == 15
     assert int(proof.public_inputs.end_processed_ftx_number) == 18
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
-    assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
     assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
     # §ProgramVK anchoring: the exec proof's VK is read from the request, onto
     # the coordinator-populated wrapper, not the guest-emitted proof itself.
