@@ -1,3 +1,4 @@
+const std = @import("std");
 const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
@@ -6,7 +7,7 @@ const riscv_system = @import("riscv_system");
 const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
-const image_relocation = verifier_ray.image_relocation;
+const proof_guest = verifier_ray.proof_guest;
 
 const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
@@ -14,9 +15,15 @@ const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.
 const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = "testdata/riscv_proof_image.bin";
-const input_guest_base: usize = 0x08800000;
 
 extern const _in_start: u8;
+extern const _in_end: u8;
+
+// Expanded proof. The packed image is smaller; decode materializes the zero
+// limbs and the slice headers the Merkle hasher reads. Sized for the RISC-V
+// opening, which lands well under this.
+var guest_arena_buf: [proof_guest.decode_buffer_len]u8 align(16) = undefined;
+var decoded_guest_input: verifier.VerifyInput = undefined;
 
 // When the input is embedded at build time, the fixture proof is materialized
 // into static (.rodata) memory here so the loaders can hand out a runtime
@@ -97,13 +104,12 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
     return 0; // success
 }
 
-// Native smoke tests use the same binary input image as the R5 linked-memory path.
-// The file is mapped privately at an address chosen by the OS, then its absolute
-// guest pointers are rebased in the copy-on-write mapping. Avoiding std
-// file/argument handling keeps ReleaseSmall native binaries compact.
+// Native smoke tests read the same guest image the R5 path receives at
+// `_in_start`. The image is pointer-free; decode expands it into
+// `guest_arena_buf`. Avoiding std file/argument handling keeps ReleaseSmall
+// native binaries compact.
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
-const prot_write: c_int = 2;
 const map_private: c_int = 2;
 const seek_end: c_int = 2;
 const map_failed = ~@as(usize, 0);
@@ -130,15 +136,11 @@ fn loadNativeInput() *const verifier.VerifyInput {
     if (image_len <= 0) exitNative(1);
     const img_len: usize = @intCast(image_len);
 
-    // MAP_PRIVATE makes pointer rewrites copy-on-write: the mapped bytes change,
-    // but the stored proof image does not. A read-only file descriptor is enough
-    // because no write is ever propagated back to the file.
-    const buf_addr = mmap(null, img_len, prot_read | prot_write, map_private, fd, 0);
+    const buf_addr = mmap(null, img_len, prot_read, map_private, fd, 0);
     if (@intFromPtr(buf_addr) == map_failed) exitNative(1);
 
-    const buf: [*]u8 = @ptrCast(buf_addr);
-    image_relocation.rebase(buf, img_len, input_guest_base, @intFromPtr(buf_addr));
-    return @ptrCast(@alignCast(buf_addr));
+    const buf: [*]const u8 = @ptrCast(buf_addr);
+    return decodeGuestImage(buf[0..img_len]);
 }
 
 fn loadR5Input() *const verifier.VerifyInput {
@@ -149,9 +151,22 @@ fn loadR5Input() *const verifier.VerifyInput {
         return &embedded_input;
     }
 
-    // The zkc JSON input writer places the proof image bytes directly at
-    // `_in_start`, already relocated for GuestBase.
-    return @ptrCast(@alignCast(&_in_start));
+    // The zkc JSON input writer places the guest image at `_in_start`. The
+    // region runs to `_in_end`; the image's own length prefix says where the
+    // proof stops.
+    const start = @intFromPtr(&_in_start);
+    const end = @intFromPtr(&_in_end);
+    if (end < start) exitR5(1);
+    const bytes: [*]const u8 = @ptrCast(&_in_start);
+    return decodeGuestImage(bytes[0 .. end - start]);
+}
+
+fn decodeGuestImage(bytes: []const u8) *const verifier.VerifyInput {
+    var fba = std.heap.FixedBufferAllocator.init(&guest_arena_buf);
+    decoded_guest_input = proof_guest.decode(fba.allocator(), bytes) catch {
+        if (comptime is_r5_zkvm) exitR5(1) else exitNative(1);
+    };
+    return &decoded_guest_input;
 }
 
 fn exitNative(code: u8) noreturn {

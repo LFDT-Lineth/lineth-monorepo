@@ -18,15 +18,23 @@
 // not this real end-to-end proof. The two must not share a path — each
 // writer would silently clobber the other's fixture with content the
 // other's reader can't decode.
+//
+// For local experiments (e.g. running the R5 guest under `zkc exec -f`),
+// -fri-queries lowers the FRI query count and -out redirects both artifacts
+// to another directory so the committed fixtures stay untouched:
+//
+//	go run . -fri-queries=1 -out=/tmp/riscv-q1
 package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
 	verifierraycodegen "github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
@@ -39,6 +47,33 @@ func main() {
 }
 
 func run() error {
+	friQueries := flag.Int("fri-queries", 0,
+		"FRI query count for a test-only build; 0 keeps the production value (the committed fixtures)")
+	outDir := flag.String("out", "",
+		"directory receiving riscv_system.zig and riscv_proof_image.bin; empty writes the committed testdata paths")
+	flag.Parse()
+
+	if *friQueries < 0 {
+		return fmt.Errorf("-fri-queries must be >= 0, got %d", *friQueries)
+	}
+	if *friQueries > 0 {
+		if *outDir == "" {
+			return fmt.Errorf("-fri-queries=%d is test-only; pass -out so the committed fixtures are not overwritten",
+				*friQueries)
+		}
+		pcscompiler.SetFRINumQueriesForTest(*friQueries)
+	}
+
+	generatedDir := "../../testdata/generated"
+	imagePath := "../../testdata/riscv_proof_image.bin"
+	if *outDir != "" {
+		if err := os.MkdirAll(*outDir, 0o755); err != nil {
+			return fmt.Errorf("creating %s: %w", *outDir, err)
+		}
+		generatedDir = *outDir
+		imagePath = filepath.Join(*outDir, "riscv_proof_image.bin")
+	}
+
 	artifacts, err := verifierraycodegen.BuildAllInOneHonestRiscvArtifacts()
 	if err != nil {
 		return err
@@ -70,7 +105,6 @@ func run() error {
 		"\nconst verifier = @import(\"verifier_ray\").verifier;\npub const system_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .grandproduct = system_0_grandproduct, .rowlimit = system_0_rowlimit, .shared_randomness = system_0_shared_randomness, .pcs = pcs_system_0 };\n",
 	)
 
-	generatedDir := "../../testdata/generated"
 	systemPath := filepath.Join(generatedDir, "riscv_system.zig")
 	formatted, err := runZigFmt(systemBuf.Bytes())
 	if err != nil {
@@ -81,13 +115,14 @@ func run() error {
 	}
 	fmt.Println("wrote", systemPath)
 
-	// Step 3: serialize the very same honest proof as the executable/test proof
-	// image that verifier-ray mmaps or receives at _in_start.
-	image, err := proofserialization.Encode(artifacts.VerifyInput, proofserialization.GuestBase)
+	// Step 3: serialize the very same honest proof as the guest image that
+	// verifier-ray decodes from the mmap or from _in_start. This is the
+	// pointer-free encoding, not the cast layout Encode writes for the ABI
+	// fixture testdata/proof_image.bin.
+	image, err := proofserialization.EncodeGuest(artifacts.VerifyInput)
 	if err != nil {
-		return fmt.Errorf("proofserialization.Encode: %w", err)
+		return fmt.Errorf("proofserialization.EncodeGuest: %w", err)
 	}
-	imagePath := "../../testdata/riscv_proof_image.bin"
 	if err := os.WriteFile(imagePath, image, 0o644); err != nil {
 		return fmt.Errorf("writing %s: %w", imagePath, err)
 	}

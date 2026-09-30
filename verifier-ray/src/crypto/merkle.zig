@@ -1,3 +1,4 @@
+const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("poseidon2.zig");
@@ -169,6 +170,133 @@ pub fn hashRowPair(pair: RowPair, self_is_even: bool) poseidon2.Digest {
     return hasher.sumDigest();
 }
 
+/// Memoizes `hashRowOpening` / `hashRowPair` across the input-tree openings of
+/// one verification.
+///
+/// FRI queries land on the same small-level rows again and again: on the real
+/// RISC-V proof about 7% of the opened pairs are repeats. Each repeat costs a
+/// full Poseidon pass over hundreds of field elements, so caching the digest
+/// removes that work.
+///
+/// The key is the row's memory (slice pointers and lengths), never its
+/// content. Two rows with the same key are the same bytes, so a hit is always
+/// the correct digest whatever produced the proof; a decoder that interns
+/// repeated rows (proof_guest.zig) is what makes hits happen. A pair key is
+/// normalized to even-row-first so the two conjugate orderings share an entry.
+///
+/// Fixed capacity, linear probing. When the table is full a miss is computed
+/// and left out, so the cache never changes what is hashed, only how often.
+pub const RowHashCache = struct {
+    pub const capacity: usize = 16384;
+    const max_probe: usize = 16;
+
+    const Key = struct {
+        ptrs: [4]usize,
+        lens: [4]u32,
+
+        fn eql(a: Key, b: Key) bool {
+            return std.mem.eql(usize, &a.ptrs, &b.ptrs) and std.mem.eql(u32, &a.lens, &b.lens);
+        }
+
+        fn slot(k: Key) usize {
+            var h: u64 = 0x9E37_79B9_7F4A_7C15;
+            for (k.ptrs) |p| {
+                h = (h ^ p) *% 0xFF51_AFD7_ED55_8CCD;
+                h ^= h >> 29;
+            }
+            for (k.lens) |l| {
+                h = (h ^ l) *% 0xC4CE_B9FE_1A85_EC53;
+                h ^= h >> 32;
+            }
+            return @intCast(h & (capacity - 1));
+        }
+    };
+
+    keys: [capacity]Key = undefined,
+    digests: [capacity]poseidon2.Digest = undefined,
+    used: [capacity]bool = undefined,
+
+    pub fn reset(self: *RowHashCache) void {
+        @memset(&self.used, false);
+    }
+
+    fn rowKey(row: RowOpening) Key {
+        return .{
+            .ptrs = .{ @intFromPtr(row.base.ptr), @intFromPtr(row.ext.ptr), 0, 0 },
+            .lens = .{ @truncate(row.base.len), @truncate(row.ext.len), 0, 0 },
+        };
+    }
+
+    fn pairKey(even: RowOpening, odd: RowOpening) Key {
+        return .{
+            .ptrs = .{
+                @intFromPtr(even.base.ptr), @intFromPtr(even.ext.ptr),
+                @intFromPtr(odd.base.ptr),  @intFromPtr(odd.ext.ptr),
+            },
+            .lens = .{
+                @truncate(even.base.len), @truncate(even.ext.len),
+                @truncate(odd.base.len),  @truncate(odd.ext.len),
+            },
+        };
+    }
+
+    fn lookup(self: *RowHashCache, key: Key) union(enum) { hit: poseidon2.Digest, free: usize, full } {
+        var i = key.slot();
+        var probes: usize = 0;
+        while (probes < max_probe) : (probes += 1) {
+            if (!self.used[i]) return .{ .free = i };
+            if (self.keys[i].eql(key)) return .{ .hit = self.digests[i] };
+            i = (i + 1) & (capacity - 1);
+        }
+        return .full;
+    }
+
+    fn store(self: *RowHashCache, i: usize, key: Key, digest: poseidon2.Digest) void {
+        self.keys[i] = key;
+        self.digests[i] = digest;
+        self.used[i] = true;
+    }
+
+    pub fn rowDigest(self: *RowHashCache, row: RowOpening) poseidon2.Digest {
+        const key = rowKey(row);
+        switch (self.lookup(key)) {
+            .hit => |d| return d,
+            .free => |i| {
+                const d = hashRowOpening(row);
+                self.store(i, key, d);
+                return d;
+            },
+            .full => return hashRowOpening(row),
+        }
+    }
+
+    pub fn pairDigest(self: *RowHashCache, pair: RowPair, self_is_even: bool) poseidon2.Digest {
+        const even = if (self_is_even) pair[0] else pair[1];
+        const odd = if (self_is_even) pair[1] else pair[0];
+        const key = pairKey(even, odd);
+        switch (self.lookup(key)) {
+            .hit => |d| return d,
+            .free => |i| {
+                const d = hashRowPair(pair, self_is_even);
+                self.store(i, key, d);
+                return d;
+            },
+            .full => return hashRowPair(pair, self_is_even),
+        }
+    }
+};
+
+/// Stand-in for `RowHashCache` that always hashes. `authenticateToCap` without
+/// a cache uses it, so both paths share one implementation.
+const NoRowHashCache = struct {
+    fn rowDigest(_: NoRowHashCache, row: RowOpening) poseidon2.Digest {
+        return hashRowOpening(row);
+    }
+    fn pairDigest(_: NoRowHashCache, pair: RowPair, self_is_even: bool) poseidon2.Digest {
+        return hashRowPair(pair, self_is_even);
+    }
+};
+
 /// A Merkle branch whose path leaves are opened as row preimages: prover-ray's
 /// `InputTreeOpening`. `leaves[i]` (when present) holds the conjugate row
 /// pair introduced at depth `i` -- one tree depth shallower than its own
@@ -184,6 +312,12 @@ pub const InputTreeOpening = struct {
     /// Authenticates the portion of a sparse row-opening branch below an
     /// already-authenticated input-tree frontier.
     pub fn authenticateToCap(self: InputTreeOpening, idx: usize, frontier: []const poseidon2.Digest) Error!void {
+        return self.authenticateToCapCached(idx, frontier, NoRowHashCache{});
+    }
+
+    /// `authenticateToCap` with row digests memoized in `cache`, either a
+    /// `*RowHashCache` shared across queries or `NoRowHashCache{}`.
+    pub fn authenticateToCapCached(self: InputTreeOpening, idx: usize, frontier: []const poseidon2.Digest, cache: anytype) Error!void {
         const depth = try frontierDepth(frontier);
         const height = self.leaves.len;
         if (height == 0 or depth >= height) return Error.InvalidFrontier;
@@ -192,11 +326,11 @@ pub const InputTreeOpening = struct {
         for (self.leaves[0..depth]) |pair| {
             if (pair != null) return Error.InvalidCap;
         }
-        var step = foldOneLevel(hashRowOpening(bottom[0]), hashRowOpening(bottom[1]), null, idx);
+        var step = foldOneLevel(cache.rowDigest(bottom[0]), cache.rowDigest(bottom[1]), null, idx, cache);
         var i = height - 1;
         while (i > depth) {
             i -= 1;
-            step = foldOneLevel(step.ancestor, self.siblings[i - depth], self.leaves[i], step.curr_pos);
+            step = foldOneLevel(step.ancestor, self.siblings[i - depth], self.leaves[i], step.curr_pos, cache);
         }
         if (step.curr_pos >= frontier.len or !poseidon2.eql(step.ancestor, frontier[step.curr_pos])) {
             return Error.InvalidCap;
@@ -236,11 +370,11 @@ const FoldStep = struct { ancestor: poseidon2.Digest, curr_pos: usize };
 /// One step of input-branch authentication: hashes `aux` (if present) into an
 /// aux digest via `hashRowPair` before combining with `hashNode`. Mirrors
 /// prover-ray's `foldOneLevel`.
-fn foldOneLevel(ancestor: poseidon2.Digest, sibling: poseidon2.Digest, aux: ?RowPair, curr_pos: usize) FoldStep {
+fn foldOneLevel(ancestor: poseidon2.Digest, sibling: poseidon2.Digest, aux: ?RowPair, curr_pos: usize, cache: anytype) FoldStep {
     const self_is_even = curr_pos & 1 == 0;
     const left = if (self_is_even) ancestor else sibling;
     const right = if (self_is_even) sibling else ancestor;
-    const aux_digest: ?poseidon2.Digest = if (aux) |pair| hashRowPair(pair, self_is_even) else null;
+    const aux_digest: ?poseidon2.Digest = if (aux) |pair| cache.pairDigest(pair, self_is_even) else null;
     return .{ .ancestor = hashNode(left, right, aux_digest), .curr_pos = curr_pos >> 1 };
 }
 

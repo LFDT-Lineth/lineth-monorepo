@@ -8,6 +8,7 @@ const shared_randomness = @import("query/shared_randomness.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
+const merkle = @import("crypto/merkle.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
 
@@ -128,6 +129,9 @@ pub const VerifyInput = struct {
 pub fn Workspace(comptime spec: public_input_mod.Spec) type {
     return struct {
         bound_rounds: public_input_mod.BoundRoundMessages(spec) = undefined,
+        /// Opened-row digest memo for the PCS input-tree openings. About 1.3
+        /// MiB, which is why it lives here and not in `pcs.verify`'s frame.
+        row_hash_cache: merkle.RowHashCache = undefined,
     };
 }
 
@@ -215,6 +219,7 @@ pub fn verifyWithWorkspace(
     const entry_claims = entry_claims_buf.slice();
 
     const pcs_challenges = try pcs.deriveChallenges(pcs_system, &recon, &transcript, opening.proof.fri_proof);
+    workspace.row_hash_cache.reset();
     try pcs.verify(pcs_system, .{
         .roots = &bound_roots,
         .entry_claims = entry_claims,
@@ -224,6 +229,7 @@ pub fn verifyWithWorkspace(
         .query_positions = pcs_challenges.query_positions[0..recon.params.num_queries],
         .proof = opening.proof,
         .module_sizes = proof.module_sizes,
+        .row_hash_cache = &workspace.row_hash_cache,
     });
 
     // Route each PCS-authenticated entry_claim to the vanishing claim slot that

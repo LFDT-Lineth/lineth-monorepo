@@ -174,8 +174,7 @@ pub fn build(b: *std.Build) void {
                 .root_source_file = b.path("test/all.zig"),
                 .target = target,
                 .optimize = optimize,
-                // riscv_proof_image_test.zig privately maps and rebases a
-                // Go-produced image, which needs mmap from libc.
+                // riscv_proof_image_test.zig reads a Go-produced guest image.
                 .link_libc = true,
                 .imports = &.{
                     .{ .name = "verifier_ray", .module = verifier_mod },

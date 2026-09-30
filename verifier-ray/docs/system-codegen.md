@@ -53,7 +53,7 @@ verifier-ray/testdata/generated/riscv_system.zig
 
 That file is produced by `verifier-ray/codegen/generate-riscv-system`, which compiles the honest RISC-V arithmetization entrypoint `arithmetization/src/main/riscv/main.zkc`, proves the one guest in `codegen`'s `HonestRiscvGuests` (`AllInOneGuestELF`, which exercises the full RV64I + M-extension + custom-precompile surface — memory round-trip, branches, load/store widths, the Poseidon2/Keccak/write-output precompiles, immediate ALU ops, and RV64 word-width ops — in a single witness), and renders the resulting verifier metadata as a `verifier.Systems` value. Unlike the broad scenario fixtures above, this path exists specifically to prove that verifier-ray can bootstrap a dedicated RISC-V verifier system from the real prover-side interpreter circuit rather than from a synthetic pub-input-only test program.
 
-The matching real proof image is committed as `verifier-ray/testdata/riscv_proof_image.bin` and verified against this same system by `test/riscv_proof_image_test.zig`, the cross-language (Go writes, Zig mmaps and verifies) end-to-end check.
+The matching real proof image is committed as `verifier-ray/testdata/riscv_proof_image.bin` (the pointer-free guest encoding from `EncodeGuest`) and verified against this same system by `test/riscv_proof_image_test.zig`, the cross-language (Go writes, Zig decodes and verifies) end-to-end check.
 
 ## Static And Dynamic Module Sizes
 

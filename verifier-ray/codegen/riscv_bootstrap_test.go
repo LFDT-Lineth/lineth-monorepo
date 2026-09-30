@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/proofserialization"
@@ -32,19 +33,25 @@ func TestBuildAllInOneHonestRiscvArtifacts(t *testing.T) {
 
 	// proofserialization.Project already ran (and sys.Verify + the prover's
 	// own AssertAllVerifierActionsHandled check already passed) inside
-	// BuildAllInOneHonestRiscvArtifacts; this additionally pins the
-	// Go<->native-layout Encode/Decode round trip that
-	// test/riscv_proof_image_test.zig relies on for the committed fixture,
-	// so a codec regression is caught here too.
-	encoded, err := proofserialization.Encode(artifacts.VerifyInput, proofserialization.GuestBase)
+	// BuildAllInOneHonestRiscvArtifacts; this additionally pins the guest
+	// image round trip that test/riscv_proof_image_test.zig relies on for
+	// the committed fixture, so a codec regression is caught here too.
+	encoded, err := proofserialization.EncodeGuest(artifacts.VerifyInput)
 	if err != nil {
-		t.Fatalf("proofserialization.Encode: %v", err)
+		t.Fatalf("proofserialization.EncodeGuest: %v", err)
 	}
-	decoded, err := proofserialization.Decode(encoded, proofserialization.GuestBase)
+	decoded, err := proofserialization.DecodeGuest(encoded)
 	if err != nil {
-		t.Fatalf("proofserialization.Decode: %v", err)
+		t.Fatalf("proofserialization.DecodeGuest: %v", err)
 	}
 	if len(decoded.Proof.Rounds) != len(artifacts.VerifyInput.Proof.Rounds) {
 		t.Fatalf("round-tripped proof has %d rounds, want %d", len(decoded.Proof.Rounds), len(artifacts.VerifyInput.Proof.Rounds))
+	}
+	again, err := proofserialization.EncodeGuest(decoded)
+	if err != nil {
+		t.Fatalf("proofserialization.EncodeGuest again: %v", err)
+	}
+	if !bytes.Equal(encoded, again) {
+		t.Fatalf("guest image is not idempotent: %d bytes then %d", len(encoded), len(again))
 	}
 }

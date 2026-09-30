@@ -205,6 +205,10 @@ pub const VerifyInput = struct {
     /// each one must satisfy the emitted `min_size_log2` bound for every column
     /// that references it.
     module_sizes: []const usize = &.{},
+    /// Memoizes opened-row digests across queries. Optional: without it every
+    /// query hashes its rows, which is the same result at more Poseidon work.
+    /// The caller resets it; `verify` only fills it.
+    row_hash_cache: ?*merkle.RowHashCache = null,
 };
 
 // =============================================================================
@@ -683,6 +687,7 @@ fn InputQuerySource(comptime system: System) type {
         routing: InputRootRouting(system),
         params: fri.Params,
         query_position: usize,
+        row_hash_cache: ?*merkle.RowHashCache,
 
         const Self = @This();
 
@@ -704,7 +709,11 @@ fn InputQuerySource(comptime system: System) type {
                 const num_leaves = @as(usize, 1) << @intCast(info.height);
                 if (num_leaves > codeword_size or codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
                 const leaf_index = self.query_position / (codeword_size / num_leaves);
-                branch.authenticateToCap(leaf_index, frontier) catch return Error.MerkleProofInvalid;
+                if (self.row_hash_cache) |cache| {
+                    branch.authenticateToCapCached(leaf_index, frontier, cache) catch return Error.MerkleProofInvalid;
+                } else {
+                    branch.authenticateToCap(leaf_index, frontier) catch return Error.MerkleProofInvalid;
+                }
             }
         }
 
@@ -840,6 +849,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             .routing = routing,
             .params = params,
             .query_position = query_position,
+            .row_hash_cache = input.row_hash_cache,
         };
         try source.authenticate();
 

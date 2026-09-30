@@ -155,8 +155,9 @@ const (
 
 // GuestBase is where the ZkC guest's input region starts
 // (`_in_start = ORIGIN(IN)` in riscv-guests/build_common/linker_script.ld).
-// Pointers in the image are absolute guest addresses, so an image is only valid
-// at the base it was relocated for.
+// Pointers in the cast image from Encode are absolute guest addresses, so that
+// image is only valid at the base it was relocated for. The image the guest
+// actually loads is EncodeGuest, which does not use this base.
 const GuestBase = 0x08800000
 
 // MaxImageSize is the guest input region's length (`LENGTH(IN)`). An image

@@ -67,9 +67,9 @@ const abi = struct {
 /// The walk is structural, never scanning for pointer-shaped bytes, so lengths
 /// and field values are never touched.
 ///
-/// Call this after loading an image at an address other than the one it was
-/// encoded for: the native loader in main.zig and the fixture loader in
-/// riscv_proof_image_test.zig both do.
+/// Call this after loading a cast-layout image (proofserialization.Encode) at
+/// an address other than the one it was encoded for. The RISC-V guest image
+/// is the pointer-free encoding and does not go through this pass.
 pub fn rebase(img: [*]u8, img_len: usize, encoded_base: usize, mapped_base: usize) void {
     const delta: i64 = @as(i64, @intCast(mapped_base)) - @as(i64, @intCast(encoded_base));
 
