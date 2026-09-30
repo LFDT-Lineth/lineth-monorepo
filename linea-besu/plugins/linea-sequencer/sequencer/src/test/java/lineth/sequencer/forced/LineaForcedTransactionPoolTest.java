@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import lineth.utils.TestTransactionFactory;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
@@ -177,7 +178,7 @@ class LineaForcedTransactionPoolTest {
     pool.addForcedTransactions(ftxs);
 
     // Block 1: first tx succeeds, second tx fails - third tx should NOT be evaluated
-    pool.processForBlock(100L, selectThenReject("UPFRONT_COST_EXCEEDS_BALANCE"));
+    pool.processForBlock(100L, selectThenReject(TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()));
 
     assertThat(pool.pendingCount()).isEqualTo(3); // All still in queue until block added
     assertThat(pool.getInclusionStatus(ftxs.get(0).forcedTransactionNumber())).isEmpty();
@@ -236,7 +237,7 @@ class LineaForcedTransactionPoolTest {
     assertThat(pool.getInclusionStatus(ftxs.get(1).forcedTransactionNumber())).isEmpty();
 
     // Block 2: second tx fails at index 0 - tentative rejection
-    pool.processForBlock(101L, alwaysRejectInvalidTransient("UPFRONT_COST_EXCEEDS_BALANCE"));
+    pool.processForBlock(101L, alwaysRejectInvalidTransient(TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()));
     pool.onBlockAdded(createBlockContext(101L, TEST_TIMESTAMP, List.of()));
 
     assertThat(pool.pendingCount()).isZero();
@@ -278,7 +279,7 @@ class LineaForcedTransactionPoolTest {
     assertThat(pool.getInclusionStatus(ftxs.get(2).forcedTransactionNumber())).isEmpty();
 
     // Now move to block 101 - second tx should be processed
-    pool.processForBlock(101L, alwaysRejectInvalidTransient("UPFRONT_COST_EXCEEDS_BALANCE"));
+    pool.processForBlock(101L, alwaysRejectInvalidTransient(TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()));
     pool.onBlockAdded(createBlockContext(101L, TEST_TIMESTAMP, List.of()));
 
     assertThat(pool.pendingCount()).isEqualTo(1);
@@ -315,7 +316,7 @@ class LineaForcedTransactionPoolTest {
     final ForcedTransaction ftx = createForcedTransaction();
     pool.addForcedTransactions(List.of(ftx));
 
-    pool.processForBlock(100L, alwaysRejectInvalidTransient("UPFRONT_COST_EXCEEDS_BALANCE"));
+    pool.processForBlock(100L, alwaysRejectInvalidTransient(TransactionInvalidReason.UPFRONT_GAS_COST_EXCEEDS_BALANCE.name()));
     pool.onBlockAdded(createBlockContext(100L, TEST_TIMESTAMP, List.of()));
 
     assertInclusionStatus(
