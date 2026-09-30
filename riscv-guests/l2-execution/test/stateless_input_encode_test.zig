@@ -81,7 +81,8 @@ const BLOCK_ACCESS_LIST_BYTES = repeat(16, 0x99);
 
 /// A hand-built `StatelessInput` touching every variable-length branch the wire format has: multiple
 /// transactions, a zero-length witness entry alongside non-empty ones, present public keys, non-empty
-/// withdrawals/versioned-hashes/execution-requests, and an explicit Amsterdam schema ID.
+/// withdrawals/versioned-hashes/execution-requests, and the fork-activation optionals in opposite
+/// states from each other (`activation_block` set, `activation_timestamp` unset).
 fn sampleInput(raw_transactions: []const []const u8) input.StatelessInput {
     return .{
         .new_payload_request = .{
@@ -126,7 +127,9 @@ fn sampleInput(raw_transactions: []const []const u8) input.StatelessInput {
         },
         .chain_config = .{
             .chain_id = 59144,
-            .schema_id = 0x1501, // Amsterdam
+            .active_fork_idx = 0x15, // Amsterdam
+            .activation_block = 12_345,
+            .activation_timestamp = null,
         },
         .public_keys = &PUBKEYS,
     };
@@ -226,7 +229,9 @@ test "encode then decode round-trips every field, covering every variable-length
 
     try std.testing.expectEqual(value.chain_config.chain_id, decoded.chain_config.chain_id);
     try std.testing.expectEqualStrings("Amsterdam", decoded.chain_config.fork_name.?);
-    try std.testing.expectEqual(value.chain_config.schema_id, decoded.chain_config.schema_id);
+    try std.testing.expectEqual(value.chain_config.active_fork_idx, decoded.chain_config.active_fork_idx);
+    try std.testing.expectEqual(value.chain_config.activation_block, decoded.chain_config.activation_block);
+    try std.testing.expectEqual(value.chain_config.activation_timestamp, decoded.chain_config.activation_timestamp);
 
     try expectByteListListEqual(&PUBKEYS, decoded.public_keys);
 }

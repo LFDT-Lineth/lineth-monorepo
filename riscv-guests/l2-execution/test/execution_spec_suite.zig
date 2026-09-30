@@ -138,17 +138,12 @@ fn hasUnsupportedPolicyInput(alloc: std.mem.Allocator, input: []const u8) !bool 
         if (err == error.OutOfMemory) return err;
         return false;
     };
-    const has_blob_transaction = vanilla_wrap.vanillaHasBlobTransaction(alloc, input) catch |err| {
-        if (err == error.OutOfMemory) return err;
-        return false;
-    };
-    return has_requests or has_withdrawals or has_blob_transaction;
+    return has_requests or has_withdrawals;
 }
 
 fn isAllowedRejection(reason: ?anyerror) bool {
     const err = reason orelse return false;
-    return err == error.ExecutionRequestsNotSupported or err == error.BlobTransactionsNotSupported or
-        err == error.WithdrawalsNotSupported;
+    return err == error.ExecutionRequestsNotSupported or err == error.WithdrawalsNotSupported;
 }
 
 test "out of memory while wrapping an invalid fixture aborts the suite" {
