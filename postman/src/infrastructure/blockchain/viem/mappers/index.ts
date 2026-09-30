@@ -8,16 +8,14 @@ export function mapViemReceiptToCoreReceipt(receipt: GetTransactionReceiptReturn
     status: receipt.status === "success" ? "success" : "reverted",
     gasUsed: receipt.gasUsed,
     gasPrice: receipt.effectiveGasPrice,
-    logs: receipt.logs.map(
-      (log): Log => ({
-        address: log.address,
-        topics: [...log.topics],
-        data: log.data,
-        blockNumber: Number(log.blockNumber),
-        transactionHash: log.transactionHash ?? "0x",
-        logIndex: log.logIndex ?? 0,
-      }),
-    ),
+    logs: receipt.logs.map((log): Log => ({
+      address: log.address,
+      topics: [...log.topics],
+      data: log.data,
+      blockNumber: Number(log.blockNumber),
+      transactionHash: log.transactionHash ?? "0x",
+      logIndex: log.logIndex ?? 0,
+    })),
   };
 }
 
