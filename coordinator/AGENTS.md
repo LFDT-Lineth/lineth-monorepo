@@ -58,6 +58,7 @@ make start-env-with-tracing-v2 LINEA_COORDINATOR_TAG=local
 ```
 coordinator/
 ├── app/          Main application entry point
+├── config/       TOML config parsing (lineth.coordinator.config.v2)
 ├── core/         Core business logic
 ├── clients/      Client implementations (prover, smart-contract, web3signer, traces-generator)
 ├── ethereum/     Ethereum modules (gas-pricing, blob-submitter, finalization-monitor, message-anchoring)

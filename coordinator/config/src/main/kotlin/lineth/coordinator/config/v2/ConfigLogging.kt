@@ -27,18 +27,18 @@ private val noisyMapFields: Set<String> = setOf(
  * `config.protocol.l1.contractAddress=0x...`. Secrets render as `****`; maps in [noisyMapFields]
  * collapse to an entry-count summary when [summarizeNoisyFields] is true.
  */
-internal fun CoordinatorConfig.toPrettyLogLines(summarizeNoisyFields: Boolean = true): List<String> {
+fun CoordinatorConfig.toPrettyLogLines(summarizeNoisyFields: Boolean = true): List<String> {
   val lines = mutableListOf<String>()
   renderObject(this, prefix = ROOT_KEY, lines, summarize = summarizeNoisyFields)
   return lines
 }
 
 /** Joins [toPrettyLogLines] into a single multi-line string (one leaf per line). */
-internal fun CoordinatorConfig.toPrettyLog(summarizeNoisyFields: Boolean = true): String =
+fun CoordinatorConfig.toPrettyLog(summarizeNoisyFields: Boolean = true): String =
   toPrettyLogLines(summarizeNoisyFields).joinToString("\n")
 
 /** Logs the config one leaf per INFO event so each `key=value` is an independent log line. */
-internal fun CoordinatorConfig.logPretty(
+fun CoordinatorConfig.logPretty(
   log: Logger,
   summarizeNoisyFields: Boolean = true,
 ) {

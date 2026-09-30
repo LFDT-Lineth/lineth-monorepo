@@ -12,7 +12,7 @@ import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV5Toml
 /**
  * Coordinator-specific configuration for the generic `config-docs` tooling. Lives in the
  * `configDocs` source set (compiled against the config classes but kept out of the production
- * jar) and is named from `coordinator/app/build.gradle` via `configDocs { spec = "…" }`.
+ * jar) and is named from `coordinator/config/build.gradle` via `configDocs { spec = "…" }`.
  */
 object CoordinatorConfigDocsSpec : ConfigDocsSpec {
   /** Config data classes live in this package; used to distinguish nested sections from leaves. */
@@ -50,14 +50,14 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
   override val jsonSchemaPath = "docs/tech/components/coordinator-config-schema.json"
   override val markdownPath = "docs/tech/components/coordinator-config-reference.md"
   override val markdownTitle = "Coordinator Configuration Reference"
-  override val regenerateCommand = "./gradlew :coordinator:app:generateConfigDocs"
+  override val regenerateCommand = "./gradlew :coordinator:config:generateConfigDocs"
 
   /**
    * Ephemeral MDX partial output path, relative to the repository root. Lives under the
-   * `coordinator/app/build/` directory (gitignored) so it is never committed; the
+   * `coordinator/config/build/` directory (gitignored) so it is never committed; the
    * `coordinator-config-docs` workflow uploads it as an immutable artifact and publishes only
    * `docs/stack/reference/_generated/coordinator/` to Consensys/doc.linea.
    */
   override val mdxPartialPath =
-    "coordinator/app/build/config-docs-mdx/_generated/coordinator/reference.mdx"
+    "coordinator/config/build/config-docs-mdx/_generated/coordinator/reference.mdx"
 }

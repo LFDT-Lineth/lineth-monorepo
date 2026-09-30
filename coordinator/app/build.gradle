@@ -3,14 +3,8 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
   id 'lineth.kotlin-application-conventions'
-  id 'linea.config-docs'
 }
 
-// Config documentation tooling: creates the `configDocs` source set and the
-// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
-configDocs {
-  spec = 'lineth.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
-}
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
   exclude group: "org.hyperledger.besu", module: "bls12-381"
@@ -38,15 +32,10 @@ sourceSets {
 }
 
 dependencies {
-  // @ConfigDoc/@ConfigSection annotations applied to the TOML config classes. Compile-time only
-  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
-  compileOnly project(':jvm-libs:linea:config-docs')
-
   implementation project(':jvm-libs:generic:json-rpc')
   implementation project(':jvm-libs:generic:http-rest')
   implementation project(':jvm-libs:generic:vertx-helper')
   implementation project(':jvm-libs:generic:extensions:futures')
-  implementation project(':jvm-libs:generic:extensions:hoplite')
   implementation project(':jvm-libs:generic:persistence:db')
   implementation project(':jvm-libs:linea:web3j-extensions')
   implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
@@ -56,6 +45,7 @@ dependencies {
   implementation project(':jvm-libs:linea:clients:linea-state-manager')
   implementation project(':coordinator:utilities')
   implementation project(':coordinator:core')
+  implementation project(':coordinator:config')
   implementation project(':coordinator:extensions-api')
   implementation project(':coordinator:clients:shomei-client')
   implementation project(':coordinator:clients:traces-generator-api-client')
@@ -77,7 +67,6 @@ dependencies {
   implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
   implementation "io.vertx:vertx-web-client"
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
-  implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
   api("io.netty:netty-transport-native-epoll:${libs.versions.netty.get()}:linux-x86_64") {
     because "It enables native transport for Linux."
     // Note that its version should match netty version used in Vertx
