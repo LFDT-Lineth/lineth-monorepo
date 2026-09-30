@@ -2,8 +2,7 @@
 
 Decodes the canonical `RollupProofPrivateInput` SSZ envelope (schema id `0x1001`) and emits a
 output (schema id `0x1801`: variable-length SSZ public inputs followed by their
-32-byte `keccak256` hash),
-bounded to 65536 framed bytes. Its business-logic `RollupOutput` is built entirely by **echo or sentinel**:
+32-byte `keccak256` hash). Its business-logic `RollupOutput` is built entirely by **echo or sentinel**:
 every output field is either copied from a defined place in the input, or set to a fixed,
 precomputed sentinel constant. No proof verification, no chunk/conflation folding — that logic
 lands with the real rollup guest, which will replace this package's contents.

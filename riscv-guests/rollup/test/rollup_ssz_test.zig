@@ -169,13 +169,12 @@ test "output exposes the public inputs followed by their hash" {
     try std.testing.expectEqual(value.public_inputs.end_block_number, std.mem.readInt(u64, pi_bytes[0..@sizeOf(u64)], .little));
 }
 
-test "output omits auxiliary fields and remains within the guest output limit" {
+test "output omits auxiliary fields and respects the program VK bound" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
     const value = try sampleOutput(alloc);
     const encoded = try rollup_ssz.encodeOutput(alloc, value);
-    try std.testing.expect(encoded.len <= rollup_ssz.MAX_OUTPUT_SIZE);
 
     var with_different_auxiliary_fields = value;
     with_different_auxiliary_fields.start_block_number += 1;

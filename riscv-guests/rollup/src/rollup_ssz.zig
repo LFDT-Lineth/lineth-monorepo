@@ -610,16 +610,13 @@ fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8
 
 // Framed output: SSZ(public_inputs) followed by its 32-byte keccak256 hash.
 const OUTPUT_HASH_SIZE: usize = 32;
-pub const MAX_OUTPUT_SIZE: usize = 1 << 16;
 
 /// Encode the 0x1801 frame containing plain SSZ public inputs followed by their keccak256 hash.
 /// Auxiliary business-logic fields stay off wire.
 pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
-    if (v.public_inputs.program_vks.len > (MAX_OUTPUT_SIZE - SCHEMA_ID_SIZE - OUTPUT_HASH_SIZE - ROLLUP_PI_FIXED_SIZE) / 32) return error.BoundsViolation;
     const pi_bytes = try encodeRollupPublicInput(alloc, v.public_inputs);
     const body_len = try checkedAdd(OUTPUT_HASH_SIZE, pi_bytes.len);
     const frame_len = try checkedAdd(SCHEMA_ID_SIZE, body_len);
-    if (frame_len > MAX_OUTPUT_SIZE) return error.BoundsViolation;
     const out = try alloc.alloc(u8, frame_len);
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
     @memcpy(out[SCHEMA_ID_SIZE..][0..pi_bytes.len], pi_bytes);

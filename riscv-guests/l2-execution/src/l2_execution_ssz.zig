@@ -260,9 +260,8 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
 const PI_FIXED_SIZE: usize = 368;
 // The SSZ output container inlines the fixed-size public inputs, followed by their hash.
 const OUTPUT_BODY_SIZE: usize = PI_FIXED_SIZE + 32;
-/// Total framed output size, bounded by 2^16 bytes.
+/// Total framed output size.
 pub const OUTPUT_SIZE: usize = SCHEMA_ID_SIZE + OUTPUT_BODY_SIZE;
-pub const MAX_OUTPUT_SIZE: usize = 1 << 16;
 
 /// Write a 32-byte hash at the cursor and advance it.
 inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
@@ -315,7 +314,6 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
 /// Encode the 0x0003 frame containing SSZ(public_inputs) followed by keccak256 of those exact bytes.
 /// Auxiliary preimages on L2ExecutionProofOutput remain available to native tooling.
 pub fn encodeOutput(pi: L2ExecutionProofPublicInput) [OUTPUT_SIZE]u8 {
-    comptime std.debug.assert(OUTPUT_SIZE <= MAX_OUTPUT_SIZE);
     var out: [OUTPUT_SIZE]u8 = undefined;
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
     const pi_bytes = encodePublicInputsBytes(pi);
