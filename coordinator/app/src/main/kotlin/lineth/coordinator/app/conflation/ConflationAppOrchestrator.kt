@@ -148,7 +148,7 @@ class ConflationAppOrchestrator(
         )
         DisabledService("forced-transactions-invalidity-proof")
       } else {
-        check(configs.proversConfig.proverSwitch.current.preRiscvConfig?.invalidity != null) {
+        check(configs.proversConfig.currentProver.preRiscvConfig?.invalidity != null) {
           "prover.invalidity config is required for forced transactions feature to work"
         }
         val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)

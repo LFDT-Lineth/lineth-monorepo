@@ -396,11 +396,11 @@ class ProverParsingTest {
     assertThat(proversConfig.switchBlockTimestamp).isEqualTo(Instant.fromEpochSeconds(1000))
     assertThat(proversConfig.switchBlockNumberInclusive).isNull()
 
-    val current = proversConfig.proverSwitch.current
+    val current = proversConfig.currentProver
     assertThat(current.preRiscvConfig).isNotNull()
     assertThat(current.riscvConfig).isNull()
 
-    val next = proversConfig.proverSwitch.next
+    val next = proversConfig.nextProver
     assertThat(next).isNotNull()
     assertThat(next!!.preRiscvConfig).isNull()
     assertThat(next.riscvConfig).isNotNull()

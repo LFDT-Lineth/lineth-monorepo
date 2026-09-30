@@ -6,7 +6,6 @@ import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.FileBasedRiscvProverConfig
 import lineth.coordinator.clients.prover.PreRiscvProverConfig
 import lineth.coordinator.clients.prover.ProverConfig
-import lineth.coordinator.clients.prover.ProverConfigSwitch
 import lineth.coordinator.clients.prover.ProversConfig
 import lineth.coordinator.clients.prover.RiscvProverConfig
 import java.nio.file.Path
@@ -214,10 +213,8 @@ data class ProverToml(
     }
 
     return ProversConfig(
-      proverSwitch = ProverConfigSwitch(
-        current = buildGenericProverConfig(this),
-        next = this.new?.let { buildGenericProverConfig(it) },
-      ),
+      currentProver = buildGenericProverConfig(this),
+      nextProver = this.new?.let { buildGenericProverConfig(it) },
       switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
       switchBlockTimestamp = mergedSwitchBlockTimestamp,
       enableRequestFilesCleanup = this.enableRequestFilesCleanup,

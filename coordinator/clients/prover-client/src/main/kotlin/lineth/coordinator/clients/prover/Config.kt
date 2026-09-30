@@ -4,13 +4,9 @@ import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-data class ProverConfigSwitch(
-  val current: ProverConfig,
-  val next: ProverConfig? = null,
-)
-
 data class ProversConfig(
-  val proverSwitch: ProverConfigSwitch,
+  val currentProver: ProverConfig,
+  val nextProver: ProverConfig? = null,
   val switchBlockNumberInclusive: ULong?,
   val switchBlockTimestamp: Instant?,
   val enableRequestFilesCleanup: Boolean = false,
