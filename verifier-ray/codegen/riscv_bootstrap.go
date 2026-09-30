@@ -29,13 +29,18 @@ type HonestRiscvArtifacts struct {
 	VerifyInput    proofserialization.VerifyInput
 }
 
-// honestSharedRandomness is the γ seed handed to the shard being proved.
+// honestSharedRandomness is the γ seed passed to AssignTraceShard, whose
+// signature requires one.
 //
-// runCompilePipeline enables messagebus.CompileOptions.SharedRandomness, which
-// declares γ as a round-0 public input. γ is absorbed on the way out of round 0 like any other cell,
-// which is what makes the coins drawn afterwards depend on it.
+// It is currently inert: runCompilePipeline compiles with
+// messagebus.CompileOptions.SharedRandomness off (see the comment there), so no
+// γ cell is declared and zkcdriver.AssignFromTraceShard — which writes the seed
+// only when messagebus.HasSharedRandomness reports one — skips it. The shard
+// derives α and β from its own Fiat-Shamir transcript instead, which is correct
+// for the single shard this fixture proves.
 //
-// The value itself is arbitrary; it only has to be a fixed non-zero constant so
+// The value is kept rather than zeroed so that re-enabling the option needs no
+// new constant. It is arbitrary; it only has to be a fixed non-zero constant so
 // the artifacts stay byte-reproducible. Real shards get their γ from the
 // aggregation layer, which is what makes the sampled coins agree across shards.
 var honestSharedRandomness = koalafield.Octuplet{
@@ -114,7 +119,24 @@ func runCompilePipeline(sys *wiop.System) {
 	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
-	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
+	// SharedRandomness is deliberately off. It obliges every bus column to sit on
+	// the message-bus coin round, so that the round's commitment — hashed into
+	// this shard's contribution to γ — binds the columns the coins are then used
+	// to evaluate. zkcdriver declares every trace column on round 0
+	// (zkcdriver/definition.go, zkcdriver/native_modules.go), while the coin round
+	// is round 0's successor, so the layouts are incompatible and the option
+	// panics here.
+	//
+	// Turning it on would be vacuous anyway: BuildAllInOneHonestRiscvArtifacts
+	// asserts a single trace shard, and shared randomness exists to make several
+	// shards agree on α and β. With one shard there is no one to agree with, and
+	// the coins are correctly drawn from this shard's own transcript.
+	//
+	// Re-enabling it requires moving the driver's bus columns onto the coin round,
+	// which is blocked on dynamic-module sizing: wiop.Runtime.AssignColumn fixes a
+	// dynamic module's size from its round-0 assignment and panics if a later round
+	// grows it, because the sizes go into round 0's Fiat-Shamir transcript.
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: false})
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
