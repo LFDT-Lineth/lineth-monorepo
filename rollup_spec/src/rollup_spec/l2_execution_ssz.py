@@ -17,7 +17,7 @@ Two schema ids are defined here:
 The guest output wire is hash-only: the 0x0003 body is exactly
 `keccak256(ssz(public_inputs))` — 32 bytes, nothing else (34 bytes framed).
 The remaining `L2ExecutionProof` fields (`start_block_number` and the
-`l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages) are off-chain
+`l2_l1_messages`/`filtered_addresses` preimages) are off-chain
 data, never part of this wire format, and `proof` is attached by the prover
 layer above the guest. The hash is irreversible, so the output decoder
 returns the public-inputs hash rather than reconstructing a dataclass;
@@ -75,7 +75,6 @@ MAX_STATELESS_INPUT_BYTES = 2**30              # 1 GiB: one opaque, already-fram
 MAX_TX_BYTES = 2**30                           # matches the consensus-layer Transaction ByteList limit
 MAX_PROOF_BYTES = 2**24                        # 16 MiB: generous ceiling on a recursively-verified proof blob
 MAX_L2_L1_MESSAGES_PER_EXEC_PROOF = 2**16      # L2->L1 message hashes emitted by one l2-execution proof
-MAX_TX_FROMS_PER_EXEC_PROOF = 2**16            # recovered tx senders emitted by one l2-execution proof
 MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF = 2**16  # sanction-list addresses emitted by one l2-execution proof
 
 SszAddress: TypeAlias = ByteVector[20]
@@ -181,7 +180,6 @@ class SszL2ExecutionProof(Container):
     start_block_number: uint64
     proof: ByteList[MAX_PROOF_BYTES]
     l2_l1_messages: List[SszBytes32, MAX_L2_L1_MESSAGES_PER_EXEC_PROOF]
-    tx_froms: List[SszAddress, MAX_TX_FROMS_PER_EXEC_PROOF]
     filtered_addresses: List[SszAddress, MAX_FILTERED_ADDRESSES_PER_EXEC_PROOF]
 
 
@@ -262,7 +260,6 @@ def _ssz_l2_execution_proof(proof: L2ExecutionProof) -> SszL2ExecutionProof:
         start_block_number=int(proof.start_block_number),
         proof=bytes(proof.proof),
         l2_l1_messages=[bytes(h) for h in proof.l2_l1_messages],
-        tx_froms=[bytes(a) for a in proof.tx_froms],
         filtered_addresses=[bytes(a) for a in proof.filtered_addresses],
     )
 
@@ -355,7 +352,6 @@ def _l2_execution_proof_from_view(view: Any) -> L2ExecutionProof:
         start_block_number=U64(int(view.start_block_number)),
         proof=bytes(view.proof),
         l2_l1_messages=[Hash32(bytes(h)) for h in view.l2_l1_messages],
-        tx_froms=[Address(bytes(a)) for a in view.tx_froms],
         filtered_addresses=[Address(bytes(a)) for a in view.filtered_addresses],
     )
 

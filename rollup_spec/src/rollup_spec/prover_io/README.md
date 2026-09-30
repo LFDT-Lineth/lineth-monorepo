@@ -1,6 +1,6 @@
 # Prover I/O Drafts — Type-1 RISC-V Rollup
 
-This directory documents the prover request/response I/O for the new RISC-V proving stack and holds example fixtures under `testdata/`. Schemas define the JSON contract; the rollup PI carries `programVks`, while the final aggregation PI carries `programIds`.
+This directory documents the prover request/response I/O for the new RISC-V proving stack and holds example fixtures under `testdata/`. Schemas define the JSON contract; the execution PI carries `txFromsHash` without a sender list, the rollup PI carries `programVks`, and the final aggregation PI carries `programIds`.
 
 The JSON Schemas under `schemas/` are the versioned wire contract; `../proof_io_v1.py` is the codec that converts schema-valid JSON to/from the guest dataclasses (the logical model), and the `testdata/` fixtures are the language-neutral golden vectors that validate against those schemas (see `schemas/README.md`). **Guest output vs prover output:** a guest emits its public-input tuple; the `proof` bytes are attached by the zkVM/prover layer, not the guest, and are placeholders (`0x`) in the fixtures. The next proving step (or L1) consumes the prover output (guest output + `proof`).
 

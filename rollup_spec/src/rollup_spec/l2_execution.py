@@ -315,7 +315,6 @@ class L2ExecutionProof:
     start_block_number: U64
     proof: bytes = b""
     l2_l1_messages: List[Hash32] = field(default_factory=list)
-    tx_froms: List[Address] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
 
 
@@ -491,7 +490,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         public_inputs=public_inputs,
         start_block_number=start_block_number,
         l2_l1_messages=l2_l1_message_hashes,
-        tx_froms=tx_froms,
         filtered_addresses=filtered_addresses,
     )
 
