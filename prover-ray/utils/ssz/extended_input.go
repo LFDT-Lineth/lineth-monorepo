@@ -4,7 +4,7 @@ import "encoding/binary"
 
 // This file encodes the extended l2-execution guest input (schema 0x0002),
 // mirroring rollup_spec/l2_execution_ssz.py::encode_l2_execution_input. It wraps
-// the per-payload 0x0001 vanilla stateless input (see EncodeStatelessInput) with
+// the per-payload 0x1501 vanilla stateless input (see EncodeStatelessInput) with
 // the chain config, parent-FTX fields, and forced transactions. Golden-vector
 // pinned against the Python reference in extended_input_test.go.
 
@@ -37,7 +37,7 @@ type ForcedTransaction struct {
 	Deadline    uint64
 }
 
-// PayloadInput is one block's payload: the opaque 0x0001-framed vanilla
+// PayloadInput is one block's payload: the opaque 0x1501-framed vanilla
 // stateless input plus its forced transactions.
 type PayloadInput struct {
 	StatelessInputSSZ  []byte

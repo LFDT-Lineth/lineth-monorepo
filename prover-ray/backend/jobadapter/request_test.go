@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,6 +49,18 @@ func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
 	wantSSZ := readFixture(t, "single_block_expected.ssz")
 	assert.Equal(t, wantSSZ, req.Payloads[0].FramedSSZ,
 		"framed SSZ must equal the reference encoder output")
+}
+
+// This fixture contains real witness data from the guest's executable fixture.
+// Comparing the entire envelope catches drift between JSON conversion and the
+// guest input, including the inner schema, chain ID and execution-request lists.
+func TestDecodeL2ExecutionRequest_Regression_GuestFixture(t *testing.T) {
+	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_guest_fixture.json"))
+	require.NoError(t, err, "decode the guest fixture's JSON request")
+	want, err := os.ReadFile("../../../riscv-guests/l2-execution/test/testdata/stateless_input.ssz")
+	require.NoError(t, err, "read the guest's executable SSZ fixture")
+	assert.Equal(t, want, ssz.EncodeExtendedInput(buildExtendedInput(req)),
+		"JSON requests must encode exactly the input accepted by the pinned guest")
 }
 
 // TestDecodeL2ExecutionRequest_MultiBlock verifies that a request with M > 1 payloads
