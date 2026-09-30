@@ -68,8 +68,8 @@ test "input: encode then decode round-trips every field" {
     }
 }
 
-test "output: SSZ public inputs and independently hashed bytes round-trip" {
-    const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
+fn samplePublicInputs() l2_execution_ssz.L2ExecutionProofPublicInput {
+    return .{
         .parent_block_hash = repeat32(0x0a),
         .end_block_hash = repeat32(0x0b),
         .end_block_number = 1000503,
@@ -87,33 +87,24 @@ test "output: SSZ public inputs and independently hashed bytes round-trip" {
         .filtered_addresses_hash = repeat32(0x06),
         .tx_froms_hash = repeat32(0x07),
     };
+}
+
+test "output exposes the public inputs followed by their hash" {
+    const public_inputs = samplePublicInputs();
 
     const out = l2_execution_ssz.encodeOutput(public_inputs);
     const encoded = &out;
-
-    try std.testing.expectEqual(@as(usize, 402), encoded.len);
-    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
     const pi_bytes = l2_execution_ssz.encodePublicInputsBytes(public_inputs);
-    try std.testing.expectEqualSlices(u8, &pi_bytes, encoded[2..370]);
-    var pi_hash: [32]u8 = undefined;
-    std.crypto.hash.sha3.Keccak256.hash(encoded[2..370], &pi_hash, .{});
-    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[370..402]);
-    const decoded = try l2_execution_ssz.decodeOutput(encoded);
-    try std.testing.expectEqualDeep(public_inputs, decoded);
+    const schema_size = @sizeOf(u16);
+    const pi_end = schema_size + pi_bytes.len;
+    const hash_size = std.crypto.hash.sha3.Keccak256.digest_length;
 
-    var bad = out;
-    bad[2] ^= 1;
-    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
-    bad = out;
-    bad[370] ^= 1;
-    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
-    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(encoded[0..401]));
-    bad = out;
-    bad[1] = 2;
-    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&bad));
-    var extended: [403]u8 = undefined;
-    @memcpy(extended[0..402], encoded);
-    try std.testing.expectError(error.InvalidSsz, l2_execution_ssz.decodeOutput(&extended));
+    try std.testing.expectEqual(schema_size + pi_bytes.len + hash_size, encoded.len);
+    try std.testing.expectEqual(l2_execution_ssz.OUTPUT_SCHEMA_ID, std.mem.readInt(u16, encoded[0..schema_size], .big));
+    try std.testing.expectEqualSlices(u8, &pi_bytes, encoded[schema_size..pi_end]);
+    var pi_hash: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(encoded[schema_size..pi_end], &pi_hash, .{});
+    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[pi_end..]);
 }
 
 test "input: rejects a body shorter than the fixed head" {

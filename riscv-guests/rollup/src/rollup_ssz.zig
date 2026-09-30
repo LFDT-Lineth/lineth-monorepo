@@ -2,8 +2,8 @@
 //! schema ids 0x1001/0x1801.
 //!
 //! Frame: 2-byte big-endian schema id || SSZ container bytes (SSZ itself little-endian). This
-//! guest's own tests round-trip both the input and output containers byte-for-byte using this
-//! module's own `encodeInput`/`decodeInput` and `encodeOutput`/`decodeOutput` — there is no
+//! guest's own tests round-trip the input container byte-for-byte using this
+//! module's `encodeInput`/`decodeInput` and check the emitted output bytes — there is no
 //! external fixture to match; `rollup_spec/src/rollup_spec/rollup_ssz.py` is an illustrative
 //! reference implementation of the same schema, not an authority this codec is checked against.
 //!
@@ -574,37 +574,6 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: RollupProofPrivateInput) ![]u8 {
 // Fixed head: 19 fixed fields (11 hashes * 32 + 8 u64s * 8 = 416) + program_vks offset(4) = 420.
 const ROLLUP_PI_FIXED_SIZE: usize = 420;
 
-fn decodeRollupPublicInput(alloc: std.mem.Allocator, bytes: []const u8) !RollupPublicInput {
-    if (bytes.len < ROLLUP_PI_FIXED_SIZE) return error.InvalidSsz;
-    var pos: usize = 0;
-    var v: RollupPublicInput = undefined;
-    v.end_block_number = getU64(bytes, &pos);
-    v.end_block_timestamp = getU64(bytes, &pos);
-    v.l2_l1_bridge_transaction_tree = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.parent_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash = getHash(bytes, &pos);
-    v.end_l1_l2_bridge_rolling_hash_message_number = getU64(bytes, &pos);
-    v.dynamic_chain_config_hash = getHash(bytes, &pos);
-    v.parent_ftx_rolling_hash = getHash(bytes, &pos);
-    v.parent_ftx_number = getU64(bytes, &pos);
-    v.end_ftx_rolling_hash = getHash(bytes, &pos);
-    v.end_processed_ftx_number = getU64(bytes, &pos);
-    v.filtered_addresses_hash = getHash(bytes, &pos);
-    v.parent_data_rolling_hash = getHash(bytes, &pos);
-    v.end_data_rolling_hash = getHash(bytes, &pos);
-    v.parent_block_hash = getHash(bytes, &pos);
-    v.end_block_hash = getHash(bytes, &pos);
-    v.start_offset = getU64(bytes, &pos);
-    v.end_offset = getU64(bytes, &pos);
-    std.debug.assert(pos == ROLLUP_PI_FIXED_SIZE - 4);
-
-    const off_vks = readU32(bytes, pos);
-    if (off_vks != ROLLUP_PI_FIXED_SIZE or off_vks > bytes.len) return error.InvalidSsz;
-    v.program_vks = try decodeBytes32List(alloc, bytes[off_vks..], MAX_PROGRAM_VKS);
-    return v;
-}
-
 fn encodeRollupPublicInput(alloc: std.mem.Allocator, v: RollupPublicInput) ![]u8 {
     if (v.program_vks.len > MAX_PROGRAM_VKS) return error.BoundsViolation;
     const vks_bytes = try encodeBytes32List(alloc, v.program_vks);
@@ -656,28 +625,4 @@ pub fn encodeOutput(alloc: std.mem.Allocator, v: RollupOutput) ![]u8 {
     @memcpy(out[SCHEMA_ID_SIZE..][0..pi_bytes.len], pi_bytes);
     std.crypto.hash.sha3.Keccak256.hash(pi_bytes, out[SCHEMA_ID_SIZE + pi_bytes.len ..][0..OUTPUT_HASH_SIZE], .{});
     return out;
-}
-
-pub const DecodedOutput = struct {
-    public_inputs: RollupPublicInput,
-    public_inputs_hash: [32]u8,
-};
-
-/// Decode and authenticate the exact output frame, including the PI's SSZ list offset.
-pub fn decodeOutput(alloc: std.mem.Allocator, data: []const u8) !DecodedOutput {
-    if (data.len < SCHEMA_ID_SIZE) return error.MalformedFrame;
-    if (std.mem.readInt(u16, data[0..2], .big) != OUTPUT_SCHEMA_ID) return error.MalformedFrame;
-    if (data.len > MAX_OUTPUT_SIZE) return error.BoundsViolation;
-    const body = data[SCHEMA_ID_SIZE..];
-    if (body.len < ROLLUP_PI_FIXED_SIZE + OUTPUT_HASH_SIZE) return error.InvalidSsz;
-    const pi_bytes = body[0 .. body.len - OUTPUT_HASH_SIZE];
-    var expected: [32]u8 = undefined;
-    std.crypto.hash.sha3.Keccak256.hash(pi_bytes, &expected, .{});
-    if (!std.mem.eql(u8, &expected, body[pi_bytes.len..])) return error.InvalidSsz;
-    const public_inputs = try decodeRollupPublicInput(alloc, pi_bytes);
-
-    return .{
-        .public_inputs = public_inputs,
-        .public_inputs_hash = expected,
-    };
 }
