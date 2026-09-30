@@ -397,7 +397,6 @@ public class LineaForcedTransactionPool
    */
   private ForcedTransactionInclusionResult mapToInclusionResult(
       final TransactionSelectionResult result) {
-    System.out.println("SELECTION_RESULT: " + result.toString());
     if (result.equals(TX_FILTERED_ADDRESS_FROM)) {
       return FilteredAddressFrom;
     }
