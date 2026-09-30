@@ -73,8 +73,11 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.l2EngineEndpoint) {
       "conflation.l2-engine-endpoint must be set to use ConflationAppV2"
     }
-    requireNotNull(configs.proversConfig) {
-      "proversConfig must be set to use ConflationAppV2"
+    require(
+      configs.proversConfig.currentProver.riscvConfig != null ||
+        configs.proversConfig.nextProver?.riscvConfig != null,
+    ) {
+      "riscv proversConfig must be set ether in currentProver or nextProver to use ConflationAppV2"
     }
   }
 
@@ -140,7 +143,8 @@ class ConflationAppV2(
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
         executionProofPollingInterval =
-        riscvProversConfig.currentProver.riscvConfig!!.l2Execution.fileBased.pollingInterval,
+        (riscvProversConfig.currentProver.riscvConfig ?: riscvProversConfig.nextProver?.riscvConfig!!)
+          .l2Execution.fileBased.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )
