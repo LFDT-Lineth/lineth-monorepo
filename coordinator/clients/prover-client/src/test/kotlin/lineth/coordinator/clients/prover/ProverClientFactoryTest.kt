@@ -427,7 +427,7 @@ class ProverClientFactoryTest {
           tmpDir = testTmpDir,
           switchBlockNumber = 200,
           withProverB = false,
-        ).also { println(it) },
+        ),
         metricsFacade = metricsFacade,
       )
     }
