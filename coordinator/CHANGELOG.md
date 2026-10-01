@@ -20,6 +20,7 @@
 - *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
 - *(coordinator)* Carve out config module (#4093)
 - *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)
 ## [1.2.0] - 2026-09-23
 
 ### 🚀 Features
