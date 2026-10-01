@@ -390,8 +390,17 @@ pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator,
 
         // ── Lineth policy: this rollup does not support EIP-7685 requests ──
         const requests = si.new_payload_request.execution_requests;
-        if (requests.deposits.len != 0 or requests.withdrawals.len != 0 or requests.consolidations.len != 0) {
+        if (requests.deposits.len != 0 or requests.withdrawals.len != 0 or requests.consolidations.len != 0 or
+            requests.builder_deposits.len != 0 or requests.builder_exits.len != 0)
+        {
             return error.ExecutionRequestsNotSupported;
+        }
+
+        // Blob transactions and their Engine API versioned-hash payload are outside the Linea guest
+        // input domain, so reject either representation before delegated execution.
+        if (si.new_payload_request.versioned_hashes.len != 0) return error.BlobTransactionsNotSupported;
+        for (payload.transactions) |tx| {
+            if (tx.tx_type == 3) return error.BlobTransactionsNotSupported;
         }
 
         // ── Lineth policy: no beacon-chain withdrawals — this is an L2 rollup, not L1. Rejected here
