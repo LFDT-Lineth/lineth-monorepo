@@ -233,21 +233,6 @@ class ProverClientFactoryTest {
     assertThat(client).isNotNull
   }
 
-  @Test
-  fun `l2ExecutionProverClient should fail when l2MessageServiceAddress is empty`() {
-    val factory = DefaultProverClientFactory(
-      vertx = vertx,
-      config = buildRiscvProversConfig(testTmpDir),
-      l2MessageServiceAddress = "",
-      chainId = 59144UL,
-      metricsFacade = metricsFacade,
-    )
-
-    assertThatThrownBy { factory.l2ExecutionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
-  }
-
   // --- current/next prover switching (ABProverClientRouter) ---
 
   private val switchBlockNumberInclusive = 2_000_000UL
@@ -366,57 +351,74 @@ class ProverClientFactoryTest {
 
   // --- current (pre-RISC-V) to next (RISC-V) prover-type switching ---
 
+  private fun preRiscvToRiscvFactory() = DefaultProverClientFactory(
+    vertx = vertx,
+    config = buildPreRiscvToRiscvSwitchProversConfig(testTmpDir, switchBlockNumberInclusive),
+    l2MessageServiceAddress = RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS,
+    chainId = 59144UL,
+    metricsFacade = metricsFacade,
+  )
+
   @Test
-  fun `should switch from pre-riscv to riscv prover at switchBlockNumberInclusive`() {
-    val switchBlockNumberInclusive = 500UL
-    val factory = DefaultProverClientFactory(
-      vertx = vertx,
-      config = buildPreRiscvToRiscvSwitchProversConfig(testTmpDir, switchBlockNumberInclusive),
-      l2MessageServiceAddress = RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS,
-      chainId = 59144UL,
-      metricsFacade = metricsFacade,
+  fun `should build all riscv clients when only next prover is riscv and current is pre-riscv`() {
+    val factory = preRiscvToRiscvFactory()
+
+    // regression: the riscv clients must not try to build from the pre-riscv current prover config
+    assertThatCode {
+      factory.l2ExecutionProverClient()
+      factory.rollupProverClient()
+      factory.rollupAggregationProverClient()
+    }.doesNotThrowAnyException()
+  }
+
+  @Test
+  fun `should build pre-riscv clients when only current prover is pre-riscv and next is riscv`() {
+    val factory = preRiscvToRiscvFactory()
+
+    // regression: the pre-riscv clients must not try to build from the riscv next prover config
+    assertThatCode {
+      factory.preRiscvExecutionProverClient()
+      factory.preRiscvBlobCompressionProverClient()
+      factory.preRiscvProofAggregationProverClient()
+    }.doesNotThrowAnyException()
+  }
+
+  @Test
+  fun `should not route cross-type clients, each family uses its own prover config on both sides of the switch`() {
+    val factory = preRiscvToRiscvFactory()
+    val riscvFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
+      testTmpDir.resolve("prover-switch/riscv/execution"),
     )
 
     val preRiscvClient = factory.preRiscvExecutionProverClient()
     val riscvClient = factory.l2ExecutionProverClient()
 
-    fun executionProofIndexAt(blockNumber: ULong) = ExecutionProofIndex(
-      startBlockNumber = blockNumber,
-      endBlockNumber = blockNumber,
-      startBlockTimestamp = Instant.fromEpochSeconds(blockNumber.toLong()),
-    )
+    // the switch between pre-riscv and riscv is owned by the pipelines, not by the clients
+    assertThat(preRiscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
+    assertThat(riscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
 
-    fun blockIntervalProofIndexAt(blockNumber: ULong) =
-      RiscvProverClientTestFixtures.blockIntervalProofIndex(blockNumber, blockNumber)
-
-    // before the switch: pre-riscv prover is non-null (usable), riscv prover is null (unusable)
-    assertThatCode {
-      preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive - 1UL))
-    }.doesNotThrowAnyException()
-
-    assertThatThrownBy {
-      riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive - 1UL))
+    // the riscv client is used as-is on both sides of the switch block number, always from the next prover config
+    listOf(switchBlockNumberInclusive - 1UL, switchBlockNumberInclusive).forEach { blockNumber ->
+      val proofIndex = riscvClient.createProofRequest(l2ExecutionRequestAt(blockNumber)).get()
+      assertThat(requestFilePath(riscvFileConfig, proofIndex)).exists()
     }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverA should not be null")
 
-    // after the switch: pre-riscv prover is null (unusable), riscv prover is non-null (usable)
-    assertThatThrownBy {
-      preRiscvClient.isProofAlreadyDone(executionProofIndexAt(switchBlockNumberInclusive))
+    // the pre-riscv client is likewise used as-is on both sides, without ever touching the riscv config
+    listOf(switchBlockNumberInclusive - 1UL, switchBlockNumberInclusive).forEach { blockNumber ->
+      val proofIndex = ExecutionProofIndex(
+        startBlockNumber = blockNumber,
+        endBlockNumber = blockNumber,
+        startBlockTimestamp = Instant.fromEpochSeconds(blockNumber.toLong()),
+      )
+      assertThat(preRiscvClient.isProofAlreadyDone(proofIndex).get()).isFalse()
     }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessageContaining("proverB should not be null")
-
-    assertThatCode {
-      riscvClient.isProofAlreadyDone(blockIntervalProofIndexAt(switchBlockNumberInclusive))
-    }.doesNotThrowAnyException()
   }
 
   // --- pre-RISC-V prover client ---
 
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
-    val factory =
+    assertThatThrownBy {
       DefaultProverClientFactory(
         vertx = vertx,
         chainId = 123UL,
@@ -428,15 +430,14 @@ class ProverClientFactoryTest {
         ),
         metricsFacade = metricsFacade,
       )
-
-    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+    }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
+      .hasMessageContaining("nextProver must be provided")
   }
 
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
-    val factory =
+    assertThatThrownBy {
       DefaultProverClientFactory(
         vertx = vertx,
         chainId = 123UL,
@@ -448,10 +449,9 @@ class ProverClientFactoryTest {
         ),
         metricsFacade = metricsFacade,
       )
-
-    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+    }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
+      .hasMessageContaining("nextProver must be provided")
   }
 
   @Test
