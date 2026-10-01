@@ -7,7 +7,6 @@ data class CoordinatorConfig(
   val protocol: ProtocolConfig,
   val conflation: ConflationConfig,
   val proversConfig: ProversConfig,
-  val riscvProversConfig: ProversConfig? = null,
   val traces: TracesConfig,
   val stateManager: StateManagerConfig,
   val type2StateProofProvider: Type2StateProofManagerConfig,

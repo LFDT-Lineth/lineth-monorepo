@@ -3283,22 +3283,12 @@
         "replacement": null
       },
       "prover.blob-compression": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.blob-compression.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3322,12 +3312,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.blob-compression.program-vk": {
+      "prover.blob-compression.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3343,22 +3333,12 @@
         "replacement": null
       },
       "prover.execution": {
-        "type": "ProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.execution.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3382,13 +3362,23 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.execution.program-vk": {
+      "prover.execution.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3433,22 +3423,12 @@
         "replacement": null
       },
       "prover.invalidity": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
         "description": "Invalidity prover request/response directories; omit to disable.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.invalidity.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3472,12 +3452,52 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.invalidity.program-vk": {
+      "prover.invalidity.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L2 execution RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3493,22 +3513,12 @@
         "replacement": null
       },
       "prover.new.blob-compression": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.blob-compression.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3532,12 +3542,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.blob-compression.program-vk": {
+      "prover.new.blob-compression.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3553,22 +3563,12 @@
         "replacement": null
       },
       "prover.new.execution": {
-        "type": "ProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Execution (block) prover request/response directories.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.execution.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3592,13 +3592,23 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.execution.program-vk": {
+      "prover.new.execution.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fork-name": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"amsterdam\").",
+        "example": "amsterdam",
         "deprecated": false,
         "replacement": null
       },
@@ -3643,22 +3653,12 @@
         "replacement": null
       },
       "prover.new.invalidity": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
         "description": "Invalidity prover request/response directories; omit to disable.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.invalidity.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3682,12 +3682,52 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.invalidity.program-vk": {
+      "prover.new.invalidity.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L2 execution RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.l2-execution.program-id": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3703,22 +3743,12 @@
         "replacement": null
       },
       "prover.new.proof-aggregation": {
-        "type": "ProverConfigToml",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
         "description": "Proof aggregation prover request/response directories.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "prover.new.proof-aggregation.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
         "deprecated": false,
         "replacement": null
       },
@@ -3742,33 +3772,73 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.proof-aggregation.program-vk": {
+      "prover.new.proof-aggregation.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
       "prover.new.rollup": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
-        "description": "Rollup prover config.",
+        "description": "Rollup RISC-V prover config.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup.fork-name": {
+      "prover.new.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.rollup-aggregation.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
@@ -3792,12 +3862,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.new.rollup.program-vk": {
+      "prover.new.rollup.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3822,23 +3892,23 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.proof-aggregation": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Proof aggregation prover request/response directories.",
+      "prover.new.type": {
+        "type": "ProverType",
+        "section": false,
+        "required": false,
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "prover.proof-aggregation.fork-name": {
-        "type": "String?",
-        "section": false,
+      "prover.proof-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
         "required": false,
         "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
+        "description": "Proof aggregation prover request/response directories.",
+        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -3862,33 +3932,73 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.proof-aggregation.program-vk": {
+      "prover.proof-aggregation.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proving-system-version": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Version for the RISC-V proving system.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
       "prover.rollup": {
-        "type": "ProverConfigToml?",
+        "type": "FileBasedProverConfigToml?",
         "section": true,
         "required": false,
         "default": null,
-        "description": "Rollup prover config.",
+        "description": "Rollup RISC-V prover config.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup.fork-name": {
+      "prover.rollup-aggregation": {
+        "type": "FileBasedProverConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Rollup aggregation RISC-V prover config.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.rollup-aggregation.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
+        "description": "Guest program identifier for the RISC-V prover.",
+        "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
       },
@@ -3912,12 +4022,12 @@
         "deprecated": false,
         "replacement": null
       },
-      "prover.rollup.program-vk": {
+      "prover.rollup.program-id": {
         "type": "String?",
         "section": false,
         "required": false,
         "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
+        "description": "Guest program identifier for the RISC-V prover.",
         "example": "0xabcdef1234567890",
         "deprecated": false,
         "replacement": null
@@ -3942,673 +4052,13 @@
         "deprecated": false,
         "replacement": null
       },
-      "riscv-prover": {
-        "type": "ProverToml?",
-        "section": true,
+      "prover.type": {
+        "type": "ProverType",
+        "section": false,
         "required": false,
-        "default": null,
-        "description": "RISC-V prover request/response directories for execution, rollup, and aggregation proofs.",
+        "default": "pre_riscv",
+        "description": "Prover type: pre_riscv or riscv.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.blob-compression": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Blob compression prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.blob-compression.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.blob-compression.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.blob-compression.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.blob-compression.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.enable-request-files-cleanup": {
-        "type": "Boolean",
-        "section": false,
-        "required": false,
-        "default": "false",
-        "description": "Whether to delete request files after their responses are processed.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.execution": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Execution (block) prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.execution.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.execution.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.execution.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.execution.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-inprogress-proving-suffix-pattern": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "\\.inprogress\\.prover.*",
-        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-inprogress-request-writing-suffix": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": ".inprogress_coordinator_writing",
-        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-polling-interval": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "PT15S",
-        "description": "Interval between scans of the prover response directories for new responses.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.fs-polling-timeout": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "infinite",
-        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.invalidity": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Invalidity prover request/response directories; omit to disable.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.invalidity.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.invalidity.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.invalidity.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.invalidity.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new": {
-        "type": "ProverToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.blob-compression": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Blob compression prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.blob-compression.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.blob-compression.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.blob-compression.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.blob-compression.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.enable-request-files-cleanup": {
-        "type": "Boolean",
-        "section": false,
-        "required": false,
-        "default": "false",
-        "description": "Whether to delete request files after their responses are processed.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.execution": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Execution (block) prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.execution.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.execution.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.execution.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.execution.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-inprogress-proving-suffix-pattern": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": "\\.inprogress\\.prover.*",
-        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-inprogress-request-writing-suffix": {
-        "type": "String",
-        "section": false,
-        "required": false,
-        "default": ".inprogress_coordinator_writing",
-        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-polling-interval": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "PT15S",
-        "description": "Interval between scans of the prover response directories for new responses.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.fs-polling-timeout": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "infinite",
-        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.invalidity": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Invalidity prover request/response directories; omit to disable.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.invalidity.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.invalidity.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.invalidity.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.invalidity.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.new": {
-        "type": "ProverToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proof-aggregation": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Proof aggregation prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proof-aggregation.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proof-aggregation.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proof-aggregation.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.proof-aggregation.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Rollup prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.rollup.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.switch-block-number-inclusive": {
-        "type": "ULong?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
-        "example": "1000000",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.new.switch-block-timestamp": {
-        "type": "Instant?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
-        "example": "2024-01-01T00:00:00Z",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proof-aggregation": {
-        "type": "ProverConfigToml",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Proof aggregation prover request/response directories.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proof-aggregation.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proof-aggregation.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proof-aggregation.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.proof-aggregation.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup": {
-        "type": "ProverConfigToml?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Rollup prover config.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.fork-name": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "L2 EVM fork name included in RISC-V execution proof requests (e.g. \"cancun\"). Required for the RISC-V execution prover; omit for other prover types.",
-        "example": "cancun",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.fs-requests-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator writes prover request files to.",
-        "example": "/data/prover/v3/execution/requests",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.fs-responses-directory": {
-        "type": "String",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Directory the coordinator reads prover response files from.",
-        "example": "/data/prover/v3/execution/responses",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.rollup.program-vk": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Guest program verifying key for the RISC-V prover. Required when this config is used as the riscvProver; omit for the standard (EVM) prover.",
-        "example": "0xabcdef1234567890",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.switch-block-number-inclusive": {
-        "type": "ULong?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
-        "example": "1000000",
-        "deprecated": false,
-        "replacement": null
-      },
-      "riscv-prover.switch-block-timestamp": {
-        "type": "Instant?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
-        "example": "2024-01-01T00:00:00Z",
         "deprecated": false,
         "replacement": null
       },

@@ -71,36 +71,42 @@ fs-responses-directory = "/data/prover/v3/invalidity/responses"
 fs-requests-directory = "/data/prover/v3/aggregation/requests"
 fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
+## Switch to pre RISC-V provers
 #[prover.new]
-#switch-block-number-inclusive=1000
-# Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
-#switch-block-timestamp = 1700000000
+## Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+##switch-block-number-inclusive=1000
+#switch-block-timestamp = 2000000000
 #[prover.new.execution]
-#fs-requests-directory = "/data/prover/v3/execution/requests"
-#fs-responses-directory = "/data/prover/v3/execution/responses"
+#fs-requests-directory = "/data/prover/v4/execution/requests"
+#fs-responses-directory = "/data/prover/v4/execution/responses"
 #[prover.new.blob-compression]
-#fs-requests-directory = "/data/prover/v3/compression/requests"
-#fs-responses-directory = "/data/prover/v3/compression/responses"
+#fs-requests-directory = "/data/prover/v4/compression/requests"
+#fs-responses-directory = "/data/prover/v4/compression/responses"
 #[prover.new.proof-aggregation]
-#fs-requests-directory = "/data/prover/v3/aggregation/requests"
-#fs-responses-directory = "/data/prover/v3/aggregation/responses"
+#fs-requests-directory = "/data/prover/v4/aggregation/requests"
+#fs-responses-directory = "/data/prover/v4/aggregation/responses"
 
-# RISC-V prover config
-
-[riscv-prover]
-[riscv-prover.execution]
-fs-requests-directory = "/data/prover/riscv/execution/requests"
-fs-responses-directory = "/data/prover/riscv/execution/responses"
-program-vk = "0x..."
-fork-name = "cancun"
-[riscv-prover.rollup]
-fs-requests-directory = "/data/prover/riscv/rollup/requests"
-fs-responses-directory = "/data/prover/riscv/rollup/responses"
-program-vk = "0x..."
-[riscv-prover.proof-aggregation]
-fs-requests-directory = "/data/prover/riscv/aggregation/requests"
-fs-responses-directory = "/data/prover/riscv/aggregation/responses"
-program-vk = "0x..."
+## Switch to RISC-V provers
+#[prover.new]
+#type = "riscv"
+#proving-system-version = "0xabcdef1"
+#fork-name = "amsterdam"
+## Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+##switch-block-number-inclusive=1000
+## If switch from pre RISC-V to RISC-V, switch-block-timestamp needs to be same as riscv-starting-block-timestamp-inclusive
+#switch-block-timestamp = 2000000000
+#[prover.new.l2-execution]
+#programId = "0xfedcba1"
+#fs-requests-directory = "/data/riscv-prover/v1/execution/requests"
+#fs-responses-directory = "/data/riscv-prover/v1/execution/responses"
+#[prover.new.rollup]
+#programId = "0xfedcba2"
+#fs-requests-directory = "/data/riscv-prover/v1/rollup/requests"
+#fs-responses-directory = "/data/riscv-prover/v1/rollup/responses"
+#[prover.new.rollup-aggregation]
+#programId = "0xfedcba3"
+#fs-requests-directory = "/data/riscv-prover/v1/aggregation/requests"
+#fs-responses-directory = "/data/riscv-prover/v1/aggregation/responses"
 
 [traces]
 [traces.counters]

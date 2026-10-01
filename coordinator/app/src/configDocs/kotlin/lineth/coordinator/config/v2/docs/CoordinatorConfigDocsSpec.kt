@@ -3,7 +3,7 @@ package lineth.coordinator.config.v2.docs
 import linea.config.docs.ConfigDocsSpec
 import linea.config.docs.ConfigFileRoot
 import linea.config.docs.sectionByPackagePrefix
-import lineth.coordinator.config.v2.toml.CoordinatorConfigFileToml
+import lineth.coordinator.config.v2.toml.CoordinatorConfigFilesToml
 import lineth.coordinator.config.v2.toml.GasPriceCapTimeOfDayMultipliersConfigFileToml
 import lineth.coordinator.config.v2.toml.SmartContractErrorCodesConfigFileToml
 import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV4Toml
@@ -23,7 +23,7 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
     ConfigFileRoot(
       label = "coordinator",
       description = "Main Coordinator configuration.",
-      rootClass = CoordinatorConfigFileToml::class,
+      rootClass = CoordinatorConfigFilesToml::class,
     ),
     ConfigFileRoot(
       label = "traces-limits-v4",
