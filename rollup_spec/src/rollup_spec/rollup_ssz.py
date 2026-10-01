@@ -69,6 +69,10 @@ MAX_L2_EXECUTION_PROOFS_PER_ROLLUP = 2**10     # paired 1:1 with conflations (ro
 MAX_CHUNKS_PER_ROLLUP = 2**12                  # chunks touched by one rollup proof's dataRollingHash fold
 MAX_BLOCK_RLPS_PER_CONFLATION = 2**12          # full block RLPs (one per block) in a single conflation
 MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block RLP including all tx bodies
+# SSZ ByteList requires a fixed maximum. This conservative wire ceiling allows
+# one frame to span the full configured blob-chunk range, reserving four bytes
+# for its length prefix; the guest checks the actual frame and chunk lengths.
+MAX_BYTES_PER_COMPRESSED_SEGMENT = MAX_CHUNKS_PER_ROLLUP * BLOB_BYTES_LENGTH - 4
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
 MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
 MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged at the rollup layer
@@ -81,6 +85,8 @@ MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged 
 
 class SszConflationWitness(Container):
     block_rlps: List[ByteList[MAX_BYTES_PER_BLOCK_RLP], MAX_BLOCK_RLPS_PER_CONFLATION]
+    # The four-byte big-endian frame length is derived when building the DA stream.
+    compressed_segment: ByteList[MAX_BYTES_PER_COMPRESSED_SEGMENT]
 
 
 class SszChunkWitness(Container):
@@ -141,7 +147,10 @@ class SszRollupOutput(Container):
 
 
 def _ssz_conflation_witness(witness: ConflationWitness) -> SszConflationWitness:
-    return SszConflationWitness(block_rlps=[bytes(r) for r in witness.block_rlps])
+    return SszConflationWitness(
+        block_rlps=[bytes(r) for r in witness.block_rlps],
+        compressed_segment=bytes(witness.compressed_segment),
+    )
 
 
 def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
@@ -201,7 +210,10 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
 
 
 def _conflation_witness_from_view(view: Any) -> ConflationWitness:
-    return ConflationWitness(block_rlps=[bytes(r) for r in view.block_rlps])
+    return ConflationWitness(
+        block_rlps=[bytes(r) for r in view.block_rlps],
+        compressed_segment=bytes(view.compressed_segment),
+    )
 
 
 def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:

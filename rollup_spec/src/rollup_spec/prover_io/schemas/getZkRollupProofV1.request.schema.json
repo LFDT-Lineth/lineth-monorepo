@@ -111,12 +111,18 @@
     "conflation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["blockRlps"],
+      "required": ["blockRlps", "compressedSegment"],
       "properties": {
         "blockRlps": {
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/hex" }
+        },
+        "compressedSegment": {
+          "description": "Exact witnessed zstd frame (without the stream prefix). The guest requires full-frame decompression to equal canonical truncated-block RLP and prepends its 4-byte big-endian compressed length in the DA stream.",
+          "type": "string",
+          "minLength": 4,
+          "pattern": "^0x([0-9a-fA-F]{2})*$"
         }
       }
     },
