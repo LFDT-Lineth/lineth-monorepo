@@ -4,17 +4,14 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import {
-  getOptionalEnvVar,
   getRequiredEnvVar,
   requireAddressFromRegistryOrEnv,
   setHandoffAddress,
   LogContractDeployment,
-  tryVerifyContract,
   tryVerifyContractWithConstructorArgs,
 } from "../common/helpers";
-import { formatEnvVarValueForMessage } from "../common/helpers/envVarLogging";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
-import { deployFromFactory, deployFromFactoryWithOpts } from "../scripts/hardhat/utils";
+import { deployFromFactoryWithOpts } from "../scripts/hardhat/utils";
 
 const func: DeployFunction = withSignerUiSession(
   "01_deploy_PlonkVerifier.ts",
@@ -31,28 +28,6 @@ const func: DeployFunction = withSignerUiSession(
       "L2_MESSAGE_SERVICE_ADDRESS",
     );
     const isAllowedCircuitId = getRequiredEnvVar("VERIFIER_IS_ALLOWED_CIRCUIT_ID");
-
-    const optionalMimcAddress = getOptionalEnvVar("VERIFIER_MIMC_ADDRESS")?.trim();
-    let mimcAddress: string;
-
-    if (optionalMimcAddress) {
-      if (!ethers.isAddress(optionalMimcAddress)) {
-        throw new Error(
-          `VERIFIER_MIMC_ADDRESS must be a valid address, got "${formatEnvVarValueForMessage("VERIFIER_MIMC_ADDRESS", optionalMimcAddress)}"`,
-        );
-      }
-      mimcAddress = ethers.getAddress(optionalMimcAddress);
-      const code = await ethers.provider.getCode(mimcAddress);
-      if (code === "0x") {
-        throw new Error(
-          `VERIFIER_MIMC_ADDRESS ${mimcAddress} has no contract bytecode on this network; deploy Mimc first or unset VERIFIER_MIMC_ADDRESS to deploy a new library.`,
-        );
-      }
-      console.log(`Reusing existing Mimc library at ${mimcAddress} (VERIFIER_MIMC_ADDRESS)`);
-    } else {
-      mimcAddress = await (await deployFromFactory("Mimc", signer)).getAddress();
-      await tryVerifyContract(mimcAddress);
-    }
 
     const constructorArgs = [
       [
@@ -79,14 +54,7 @@ const func: DeployFunction = withSignerUiSession(
       ],
     ];
 
-    const contract = await deployFromFactoryWithOpts(
-      contractName,
-      signer,
-      {
-        libraries: { Mimc: mimcAddress },
-      },
-      ...constructorArgs,
-    );
+    const contract = await deployFromFactoryWithOpts(contractName, signer, {}, ...constructorArgs);
 
     await LogContractDeployment(contractName, contract);
     const contractAddress = await contract.getAddress();
@@ -100,9 +68,7 @@ const func: DeployFunction = withSignerUiSession(
 
     console.log("setVerifierAddress calldata:", setVerifierAddress);
 
-    await tryVerifyContractWithConstructorArgs(contractAddress, contractName, constructorArgs, {
-      Mimc: mimcAddress,
-    });
+    await tryVerifyContractWithConstructorArgs(contractAddress, contractName, constructorArgs);
   },
 );
 export default func;

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.33;
 import { LinethRollupBase } from "./LinethRollupBase.sol";
-import { ShnarfDataAcceptor } from "./dataAvailability/ShnarfDataAcceptor.sol";
-import { LocalShnarfProvider } from "./dataAvailability/LocalShnarfProvider.sol";
+import { DataRollingHashAcceptor } from "./dataAvailability/DataRollingHashAcceptor.sol";
+import { LocalDataRollingHashProvider } from "./dataAvailability/LocalDataRollingHashProvider.sol";
 
 /**
  * @title Contract to manage Validium cross-chain messaging on L1 and proof verification.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract Validium is LinethRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
+contract Validium is LinethRollupBase, LocalDataRollingHashProvider, DataRollingHashAcceptor {
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -23,11 +23,7 @@ contract Validium is LinethRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
    * @param _initializationData The initial data used for proof verification.
    */
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
-
-    _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-
-    __LinethRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData);
   }
 
   /**
@@ -35,6 +31,6 @@ contract Validium is LinethRollupBase, LocalShnarfProvider, ShnarfDataAcceptor {
    * @return contractVersion The contract ABI version.
    */
   function CONTRACT_VERSION() public view virtual override returns (string memory contractVersion) {
-    contractVersion = "2.0";
+    contractVersion = "3.0";
   }
 }

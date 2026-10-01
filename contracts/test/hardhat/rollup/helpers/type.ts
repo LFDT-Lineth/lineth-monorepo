@@ -4,6 +4,8 @@ import { Contract } from "ethers";
 
 import { FinalizationData, ShnarfDataGenerator, AggregatedProofData, ExpectedCustomError } from "../../common/types";
 
+import type { StreamPosition } from "../../common/helpers/dataGeneration";
+
 // Re-export shared types for backward compatibility
 export type { AggregatedProofData, ExpectedCustomError } from "../../common/types";
 
@@ -17,6 +19,8 @@ export type FinalizeProofConfig = {
   blobParentShnarfIndex: number;
   shnarfDataGenerator: ShnarfDataGenerator;
   isMultiple: boolean;
+  /** Previously-finalized stream position, when this is the second of two chained finalizations. */
+  base?: StreamPosition;
 };
 
 export type FinalizeParams = {

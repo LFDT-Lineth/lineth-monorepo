@@ -15,11 +15,6 @@ import {
   bytecode as ForcedTransactionGatewayBytecode,
 } from "./static-artifacts/ForcedTransactionGateway.json";
 import {
-  contractName as MimcAddressContractName,
-  abi as MimcAddressAbi,
-  bytecode as MimcAddressFilterBytecode,
-} from "./static-artifacts/Mimc.json";
-import {
   contractName as ProxyAdminContractName,
   abi as ProxyAdminAbi,
   bytecode as ProxyAdminBytecode,
@@ -159,7 +154,7 @@ async function main() {
       unpauseTypeRoles,
       verifierKeys,
       defaultAdmin: linethRollupSecurityCouncil,
-      shnarfProvider: ADDRESS_ZERO,
+      dataRollingHashProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     },
     // Liveness recovery operator
@@ -193,18 +188,6 @@ async function main() {
     const blockNumberDeadlineBuffer = getRequiredEnvVar("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER");
     const securityCouncilPrivateKey = getRequiredEnvVar("SECURITY_COUNCIL_PRIVATE_KEY");
 
-    const mimc = await deployContractFromArtifacts(
-      MimcAddressContractName,
-      MimcAddressAbi,
-      MimcAddressFilterBytecode,
-      wallet,
-      {
-        nonce: walletNonce + 4,
-        ...feeOverrides,
-      },
-    );
-    const mimcAddress = await mimc.getAddress();
-
     const args = [
       linethRollupAddress,
       destinationChainId,
@@ -222,10 +205,9 @@ async function main() {
       ForcedTransactionGatewayAbi,
       ForcedTransactionGatewayBytecode,
       wallet,
-      { libraries: { "src/libraries/Mimc.sol:Mimc": mimcAddress } },
       ...args,
       {
-        nonce: walletNonce + 5,
+        nonce: walletNonce + 4,
         ...feeOverrides,
       },
     );
@@ -246,7 +228,7 @@ async function main() {
     console.log(`FORCED_TRANSACTION_SENDER_ROLE granted to ForcedTransactionGateway`);
   } else {
     console.log(
-      "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy. " +
+      "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping ForcedTransactionGateway deploy. " +
         "The next L1 deploy starts after the LinethRollup proxy nonce.",
     );
   }
