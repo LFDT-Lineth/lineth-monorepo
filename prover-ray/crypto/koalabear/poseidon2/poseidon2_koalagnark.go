@@ -11,9 +11,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 )
 
-// KoalagnarkOctuplet is an octuplet of circuit.Element
-type KoalagnarkOctuplet [8]circuit.Element
-
 // KoalagnarkMDHasher is a Merkle-Damgard hasher using Poseidon2 as compression function.
 // This implementation uses circuit.Element and circuit.KoalaBearAPI, allowing it to work
 // in both native KoalaBear circuits and emulated circuits (e.g., BLS12-377).
@@ -22,7 +19,7 @@ type KoalagnarkMDHasher struct {
 	koalaAPI *circuit.KoalaBearAPI
 
 	// Sponge construction state
-	state KoalagnarkOctuplet
+	state circuit.Octuplet
 
 	// data to hash
 	buffer []circuit.Element
@@ -53,20 +50,20 @@ func (h *KoalagnarkMDHasher) Write(data ...circuit.Element) {
 }
 
 // WriteOctuplet appends octuplets to the hash buffer.
-func (h *KoalagnarkMDHasher) WriteOctuplet(data ...KoalagnarkOctuplet) {
+func (h *KoalagnarkMDHasher) WriteOctuplet(data ...circuit.Octuplet) {
 	for i := 0; i < len(data); i++ {
 		h.buffer = append(h.buffer, data[i][:]...)
 	}
 }
 
 // SetState resets the hasher and sets its state to the given octuplet.
-func (h *KoalagnarkMDHasher) SetState(state KoalagnarkOctuplet) {
+func (h *KoalagnarkMDHasher) SetState(state circuit.Octuplet) {
 	h.Reset()
 	copy(h.state[:], state[:])
 }
 
 // State returns the current hash state without consuming the buffer.
-func (h *KoalagnarkMDHasher) State() KoalagnarkOctuplet {
+func (h *KoalagnarkMDHasher) State() circuit.Octuplet {
 	// State will flush the buffer, take the state and restore the initial
 	// state of the hasher.
 	oldState := h.state
@@ -81,8 +78,8 @@ func (h *KoalagnarkMDHasher) State() KoalagnarkOctuplet {
 	return res
 }
 
-// Sum finalizes the hash and returns the digest as a KoalagnarkOctuplet.
-func (h *KoalagnarkMDHasher) Sum() KoalagnarkOctuplet {
+// Sum finalizes the hash and returns the digest as a circuit.Octuplet.
+func (h *KoalagnarkMDHasher) Sum() circuit.Octuplet {
 	for len(h.buffer) != 0 {
 		var buf [BlockSize]circuit.Element
 		for i := 0; i < BlockSize; i++ {
@@ -102,15 +99,15 @@ func (h *KoalagnarkMDHasher) Sum() KoalagnarkOctuplet {
 	return h.state
 }
 
-func (h *KoalagnarkMDHasher) compressPoseidon2(a, b KoalagnarkOctuplet) KoalagnarkOctuplet {
+func (h *KoalagnarkMDHasher) compressPoseidon2(a, b circuit.Octuplet) circuit.Octuplet {
 	return KoalagnarkCompress(h.koalaAPI, a, b)
 }
 
 // KoalagnarkCompress is the in-circuit counterpart of [Compress]: it applies
 // the Poseidon2 compression function to (a, b) using koalagnark arithmetic,
 // so it runs in native KoalaBear circuits and in emulated ones alike.
-func KoalagnarkCompress(api *circuit.KoalaBearAPI, a, b KoalagnarkOctuplet) KoalagnarkOctuplet {
-	res := KoalagnarkOctuplet{}
+func KoalagnarkCompress(api *circuit.KoalaBearAPI, a, b circuit.Octuplet) circuit.Octuplet {
+	res := circuit.Octuplet{}
 
 	var x [16]circuit.Element
 	copy(x[:], a[:])
@@ -131,8 +128,8 @@ func KoalagnarkCompress(api *circuit.KoalaBearAPI, a, b KoalagnarkOctuplet) Koal
 }
 
 // NewKoalagnarkOctuplet converts a native octuplet into a witness assignment.
-func NewKoalagnarkOctuplet(o field.Octuplet) KoalagnarkOctuplet {
-	var res KoalagnarkOctuplet
+func NewKoalagnarkOctuplet(o field.Octuplet) circuit.Octuplet {
+	var res circuit.Octuplet
 	for i := range res {
 		res[i] = circuit.NewElementFromKoala(o[i])
 	}

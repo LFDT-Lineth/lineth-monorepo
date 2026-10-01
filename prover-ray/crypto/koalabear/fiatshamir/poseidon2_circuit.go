@@ -47,12 +47,12 @@ func (fs *GnarkFiatShamir) UpdateExt(vec ...circuit.Ext) {
 }
 
 // UpdateOctuplet absorbs the eight coordinates of an octuplet.
-func (fs *GnarkFiatShamir) UpdateOctuplet(o poseidon2.KoalagnarkOctuplet) {
+func (fs *GnarkFiatShamir) UpdateOctuplet(o circuit.Octuplet) {
 	fs.h.Write(o[:]...)
 }
 
 // RandomDigest mirrors [FiatShamir.RandomDigest].
-func (fs *GnarkFiatShamir) RandomDigest() poseidon2.KoalagnarkOctuplet {
+func (fs *GnarkFiatShamir) RandomDigest() circuit.Octuplet {
 	res := fs.h.Sum()
 	fs.safeguardUpdate()
 	return res
@@ -96,12 +96,12 @@ func (fs *GnarkFiatShamir) RandomManyIntegers(num, upperBound int) []frontend.Va
 }
 
 // SetState mirrors [FiatShamir.SetState].
-func (fs *GnarkFiatShamir) SetState(s poseidon2.KoalagnarkOctuplet) {
+func (fs *GnarkFiatShamir) SetState(s circuit.Octuplet) {
 	fs.h.SetState(s)
 }
 
 // State mirrors [FiatShamir.State].
-func (fs *GnarkFiatShamir) State() poseidon2.KoalagnarkOctuplet {
+func (fs *GnarkFiatShamir) State() circuit.Octuplet {
 	return fs.h.State()
 }
 

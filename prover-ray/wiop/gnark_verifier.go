@@ -45,7 +45,7 @@ type VerifierCircuit struct {
 	PublicInputsExt  []circuit.Ext
 	// Commitments holds one round commitment per round flagged HasCommitment,
 	// in round order. // private
-	Commitments []poseidon2.KoalagnarkOctuplet
+	Commitments []circuit.Octuplet
 	// PCSOpeningProof is the FRI opening proof; empty for a protocol that was
 	// not PCS-compiled. // private
 	PCSOpeningProof fri.GnarkOpeningProof
@@ -169,7 +169,7 @@ func buildVerifierCircuit(
 			if withValues {
 				c.Commitments = append(c.Commitments, poseidon2.NewKoalagnarkOctuplet(commitment))
 			} else {
-				c.Commitments = append(c.Commitments, poseidon2.KoalagnarkOctuplet{})
+				c.Commitments = append(c.Commitments, circuit.Octuplet{})
 			}
 		}
 	}
@@ -282,7 +282,7 @@ type GnarkRuntime struct {
 	cellsBase    map[ObjectID]circuit.Element
 	cells        map[ObjectID]circuit.Ext
 	coins        map[ObjectID]circuit.Ext
-	commitments  map[int]poseidon2.KoalagnarkOctuplet
+	commitments  map[int]circuit.Octuplet
 	currentRound *Round
 }
 
@@ -295,7 +295,7 @@ func (c *VerifierCircuit) newGnarkRuntime(api frontend.API) *GnarkRuntime {
 		cellsBase:   make(map[ObjectID]circuit.Element),
 		cells:       make(map[ObjectID]circuit.Ext),
 		coins:       make(map[ObjectID]circuit.Ext),
-		commitments: make(map[int]poseidon2.KoalagnarkOctuplet),
+		commitments: make(map[int]circuit.Octuplet),
 	}
 	if c.layout.hasPCS {
 		run.PCSOpeningProof = &c.PCSOpeningProof
@@ -385,7 +385,7 @@ func (run *GnarkRuntime) GetCoinValue(coin *CoinField) circuit.Ext {
 }
 
 // GetCommitment returns the transported commitment of round roundID.
-func (run *GnarkRuntime) GetCommitment(roundID int) poseidon2.KoalagnarkOctuplet {
+func (run *GnarkRuntime) GetCommitment(roundID int) circuit.Octuplet {
 	v, ok := run.commitments[roundID]
 	if !ok {
 		panic(fmt.Sprintf("wiop: GnarkRuntime: commitment for round %d not found", roundID))

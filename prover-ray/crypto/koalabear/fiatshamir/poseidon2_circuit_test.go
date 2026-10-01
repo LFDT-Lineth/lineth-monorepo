@@ -26,11 +26,11 @@ const (
 type fsReplayCircuit struct {
 	Base     []circuit.Element
 	Ext      []circuit.Ext
-	Digest   poseidon2.KoalagnarkOctuplet
+	Digest   circuit.Octuplet
 	Coin     circuit.Ext
 	Integers []frontend.Variable
 	Seeded   circuit.Ext
-	Seed     poseidon2.KoalagnarkOctuplet
+	Seed     circuit.Octuplet
 }
 
 func (c *fsReplayCircuit) Define(api frontend.API) error {

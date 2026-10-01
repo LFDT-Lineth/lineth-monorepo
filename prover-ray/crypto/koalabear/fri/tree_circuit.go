@@ -21,7 +21,7 @@ import (
 // frontier, left to right, and a depth-zero cap is the empty slice, standing
 // for the trusted root itself.
 type GnarkMerkleCap struct {
-	Nodes []poseidon2.KoalagnarkOctuplet
+	Nodes []circuit.Octuplet
 }
 
 // NewGnarkMerkleCap converts a native cap into its witness assignment.
@@ -51,8 +51,8 @@ func convertMerkleCap(c MerkleCap, withValues bool) GnarkMerkleCap {
 // levels that have none; the running trees pass nil throughout, while input
 // trees supply digests rebuilt from their revealed tables.
 func recoverCapRootGnark(
-	api *circuit.KoalaBearAPI, nodes []poseidon2.KoalagnarkOctuplet, aux []*poseidon2.KoalagnarkOctuplet,
-) poseidon2.KoalagnarkOctuplet {
+	api *circuit.KoalaBearAPI, nodes []circuit.Octuplet, aux []*circuit.Octuplet,
+) circuit.Octuplet {
 	n := len(nodes)
 	if n == 0 {
 		panic("fri: recoverCapRootGnark: empty cap has no root")
@@ -64,7 +64,7 @@ func recoverCapRootGnark(
 		panic(fmt.Sprintf("fri: recoverCapRootGnark: cap has %d auxiliary digests, want %d", len(aux), n-1))
 	}
 
-	work := make([]poseidon2.KoalagnarkOctuplet, 2*n-1)
+	work := make([]circuit.Octuplet, 2*n-1)
 	copy(work[n-1:], nodes)
 	for i := n - 2; i >= 0; i-- {
 		work[i] = poseidon2.KoalagnarkCompress(api, work[2*i+1], work[2*i+2])
@@ -80,13 +80,13 @@ func recoverCapRootGnark(
 // that tree is then checked against. A depth-zero cap must be empty and the
 // frontier is the root alone.
 func authenticateCapGnark(
-	api *circuit.KoalaBearAPI, treeCap GnarkMerkleCap, depth int, root poseidon2.KoalagnarkOctuplet,
-) []poseidon2.KoalagnarkOctuplet {
+	api *circuit.KoalaBearAPI, treeCap GnarkMerkleCap, depth int, root circuit.Octuplet,
+) []circuit.Octuplet {
 	if depth == 0 {
 		if len(treeCap.Nodes) != 0 {
 			panic(fmt.Sprintf("fri: authenticateCapGnark: depth-zero cap has %d nodes, want 0", len(treeCap.Nodes)))
 		}
-		return []poseidon2.KoalagnarkOctuplet{root}
+		return []circuit.Octuplet{root}
 	}
 	if want := 1 << depth; len(treeCap.Nodes) != want {
 		panic(fmt.Sprintf("fri: authenticateCapGnark: cap has %d nodes, want %d", len(treeCap.Nodes), want))
@@ -107,7 +107,7 @@ func authenticateCapGnark(
 // frontier, since the index is a circuit variable.
 func authenticateToCapGnark(
 	api *circuit.KoalaBearAPI, branch GnarkBranch, idxBits []frontend.Variable,
-	frontier []poseidon2.KoalagnarkOctuplet,
+	frontier []circuit.Octuplet,
 ) {
 	n := len(branch.Siblings)
 	depth := frontierDepth(len(frontier))
@@ -125,14 +125,14 @@ func authenticateToCapGnark(
 // selectFrontierNodeGnark returns frontier[idx], idx being the little-endian
 // bits selBits. A single-node frontier needs no selection.
 func selectFrontierNodeGnark(
-	api *circuit.KoalaBearAPI, frontier []poseidon2.KoalagnarkOctuplet, selBits []frontend.Variable,
-) poseidon2.KoalagnarkOctuplet {
+	api *circuit.KoalaBearAPI, frontier []circuit.Octuplet, selBits []frontend.Variable,
+) circuit.Octuplet {
 	if len(frontier) == 1 {
 		return frontier[0]
 	}
 	sel := api.Frontend().FromBinary(selBits...)
 
-	var res poseidon2.KoalagnarkOctuplet
+	var res circuit.Octuplet
 	coord := make([]circuit.Element, len(frontier))
 	for c := range res {
 		for i := range frontier {

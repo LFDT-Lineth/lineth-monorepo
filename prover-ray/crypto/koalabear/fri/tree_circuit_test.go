@@ -32,7 +32,7 @@ import (
 type capCircuit struct {
 	Cap      GnarkMerkleCap
 	Branch   GnarkBranch
-	Root     poseidon2.KoalagnarkOctuplet
+	Root     circuit.Octuplet
 	IdxBits  []frontend.Variable
 	capDepth int // structural, not a witness value
 }
@@ -103,7 +103,7 @@ func (w capWitness) assign(capDepth, numBits int) *capCircuit {
 func (w capWitness) template(capDepth, numBits int) *capCircuit {
 	return &capCircuit{
 		Cap:      AllocateGnarkMerkleCap(w.cap),
-		Branch:   GnarkBranch{Siblings: make([]poseidon2.KoalagnarkOctuplet, len(w.branch.Siblings))},
+		Branch:   GnarkBranch{Siblings: make([]circuit.Octuplet, len(w.branch.Siblings))},
 		IdxBits:  make([]frontend.Variable, numBits),
 		capDepth: capDepth,
 	}

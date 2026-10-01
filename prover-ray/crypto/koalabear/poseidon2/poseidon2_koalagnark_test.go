@@ -16,7 +16,7 @@ import (
 // KoalagnarkMDHasherCircuit is a test circuit for the koalagnark-based Poseidon2 hasher
 type KoalagnarkMDHasherCircuit struct {
 	Inputs []kbcircuit.Element
-	Output KoalagnarkOctuplet
+	Output kbcircuit.Octuplet
 }
 
 func (c *KoalagnarkMDHasherCircuit) Define(api frontend.API) error {
@@ -125,8 +125,8 @@ func TestKoalagnarkMDHasherEmulated(t *testing.T) {
 
 // TestKoalagnarkCompressCircuit tests the compression function directly
 type KoalagnarkCompressCircuit struct {
-	A, B   KoalagnarkOctuplet
-	Output KoalagnarkOctuplet
+	A, B   kbcircuit.Octuplet
+	Output kbcircuit.Octuplet
 }
 
 func (c *KoalagnarkCompressCircuit) Define(api frontend.API) error {

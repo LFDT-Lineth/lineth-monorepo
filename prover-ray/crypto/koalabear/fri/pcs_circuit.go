@@ -37,7 +37,7 @@ type GnarkOpeningProof struct {
 // whose auxiliary rows sit above it and are therefore revealed in full rather
 // than opened per query.
 type GnarkInputCap struct {
-	Nodes  []poseidon2.KoalagnarkOctuplet
+	Nodes  []circuit.Octuplet
 	Tables []GnarkInputCapTable
 }
 
@@ -55,7 +55,7 @@ type GnarkInputQuery []GnarkInputTreeOpening
 // auxiliary pair (a nil entry natively) is a zero-width [GnarkRowPair]; a
 // present level always has at least one row, so the encoding is unambiguous.
 type GnarkInputTreeOpening struct {
-	Siblings []poseidon2.KoalagnarkOctuplet
+	Siblings []circuit.Octuplet
 	Leaves   []GnarkRowPair
 }
 
@@ -75,7 +75,7 @@ func (r GnarkRowOpening) isAbsent() bool { return len(r.Base) == 0 && len(r.Ext)
 // only down to the depth-d frontier that RoundCaps[j-1] authenticates against
 // RoundRoots[j-1].
 type GnarkProof struct {
-	RoundRoots     []poseidon2.KoalagnarkOctuplet
+	RoundRoots     []circuit.Octuplet
 	RoundCaps      []GnarkMerkleCap
 	FinalPoly      []circuit.Ext
 	RunningQueries []GnarkRunningQuery
@@ -87,8 +87,8 @@ type GnarkRunningQuery []GnarkBranch
 // GnarkBranch mirrors [Branch] for the running trees, which carry no auxiliary
 // siblings.
 type GnarkBranch struct {
-	Leaf     poseidon2.KoalagnarkOctuplet
-	Siblings []poseidon2.KoalagnarkOctuplet
+	Leaf     circuit.Octuplet
+	Siblings []circuit.Octuplet
 }
 
 // GnarkBatchClaimedValues mirrors [BatchClaimedValues].
@@ -103,7 +103,7 @@ type GnarkSizedClaimedValues struct {
 // GnarkVerifyInputs mirrors [VerifyInputs]. Shapes and Shifts are structural
 // and stay native; everything else is a circuit variable.
 type GnarkVerifyInputs struct {
-	Roots          []poseidon2.KoalagnarkOctuplet
+	Roots          []circuit.Octuplet
 	Shapes         []Shape
 	Shifts         []BatchShifts
 	ClaimedValues  []GnarkBatchClaimedValues
@@ -133,7 +133,7 @@ func convertOpeningProof(p OpeningProof, withValues bool) GnarkOpeningProof {
 		InputQueries: make([]GnarkInputQuery, len(p.InputQueries)),
 		InputCaps:    make([]GnarkInputCap, len(p.InputCaps)),
 		FRIProof: GnarkProof{
-			RoundRoots:     make([]poseidon2.KoalagnarkOctuplet, len(p.FRIProof.RoundRoots)),
+			RoundRoots:     make([]circuit.Octuplet, len(p.FRIProof.RoundRoots)),
 			RoundCaps:      make([]GnarkMerkleCap, len(p.FRIProof.RoundCaps)),
 			FinalPoly:      make([]circuit.Ext, len(p.FRIProof.FinalPoly)),
 			RunningQueries: make([]GnarkRunningQuery, len(p.FRIProof.RunningQueries)),
@@ -216,17 +216,17 @@ func convertRowOpening(r RowOpening, withValues bool) GnarkRowOpening {
 	return res
 }
 
-func convertOctuplets(os []field.Octuplet, withValues bool) []poseidon2.KoalagnarkOctuplet {
-	res := make([]poseidon2.KoalagnarkOctuplet, len(os))
+func convertOctuplets(os []field.Octuplet, withValues bool) []circuit.Octuplet {
+	res := make([]circuit.Octuplet, len(os))
 	for i := range os {
 		res[i] = convertOctuplet(os[i], withValues)
 	}
 	return res
 }
 
-func convertOctuplet(o field.Octuplet, withValues bool) poseidon2.KoalagnarkOctuplet {
+func convertOctuplet(o field.Octuplet, withValues bool) circuit.Octuplet {
 	if !withValues {
-		return poseidon2.KoalagnarkOctuplet{}
+		return circuit.Octuplet{}
 	}
 	return poseidon2.NewKoalagnarkOctuplet(o)
 }
@@ -289,7 +289,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 			inputShapes[treeIdx] = in.Shapes[batchIdx]
 		}
 	}
-	inputFrontiers := make([][]poseidon2.KoalagnarkOctuplet, len(inputRoots))
+	inputFrontiers := make([][]circuit.Octuplet, len(inputRoots))
 	inputCapInfos := make([]inputCapInfo, len(inputRoots))
 	for treeIdx := range inputRoots {
 		info, err := inputCapShapeInfo(pcs.Params, inputShapes[treeIdx])
@@ -305,7 +305,7 @@ func (pcs *PCS) VerifyGnark(api frontend.API, in GnarkVerifyInputs, proof GnarkO
 	// Authenticate each round's cap against its root once, outside the query
 	// loop: the frontier is shared by every query's branch, which is exactly
 	// what capping buys. Mirrors the runningFrontiers loop in [PCS.Verify].
-	runningFrontiers := make([][]poseidon2.KoalagnarkOctuplet, pcs.Params.numRounds())
+	runningFrontiers := make([][]circuit.Octuplet, pcs.Params.numRounds())
 	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 		depth := merkleCapDepth(pcs.Params.NumQueries, int(pcs.Params.LogCodewordSize-j))
 		runningFrontiers[j] = authenticateCapGnark(
@@ -415,13 +415,13 @@ func (pcs *PCS) assertClaimPointsOutOfDomainGnark(api *circuit.KoalaBearAPI, lay
 // inputOpeningRootsGnark mirrors [inputOpeningRoots] without deduplication:
 // every batch gets its own input tree, in order of first appearance.
 func inputOpeningRootsGnark(
-	layout layout, orders [][]int, roots []poseidon2.KoalagnarkOctuplet,
-) ([]poseidon2.KoalagnarkOctuplet, []int) {
+	layout layout, orders [][]int, roots []circuit.Octuplet,
+) ([]circuit.Octuplet, []int) {
 	indexByBatch := make([]int, len(roots))
 	for i := range indexByBatch {
 		indexByBatch[i] = -1
 	}
-	inputRoots := make([]poseidon2.KoalagnarkOctuplet, 0, len(roots))
+	inputRoots := make([]circuit.Octuplet, 0, len(roots))
 	for levelIdx := range layout {
 		for _, batchIdx := range orders[levelIdx] {
 			if indexByBatch[batchIdx] >= 0 {
@@ -495,9 +495,9 @@ type gnarkVerifyQueryCtx struct {
 	pcs               *PCS
 	layout            layout
 	proof             GnarkOpeningProof
-	inputFrontiers    [][]poseidon2.KoalagnarkOctuplet
+	inputFrontiers    [][]circuit.Octuplet
 	inputCapInfos     []inputCapInfo
-	runningFrontiers  [][]poseidon2.KoalagnarkOctuplet
+	runningFrontiers  [][]circuit.Octuplet
 	layoutClaims      [][][]gnarkQuotientClaim
 	inputIndexByBatch []int
 	orders            [][]int
@@ -860,13 +860,13 @@ func levelIndexGnark(numLevels, levelSize int) (int, error) {
 // fixed by the shape and stays native.
 func authenticateInputCapGnark(
 	api *circuit.KoalaBearAPI, info inputCapInfo, treeCap GnarkInputCap, shape Shape,
-	root poseidon2.KoalagnarkOctuplet,
-) []poseidon2.KoalagnarkOctuplet {
+	root circuit.Octuplet,
+) []circuit.Octuplet {
 	if info.depth == 0 {
 		if len(treeCap.Nodes) != 0 || len(treeCap.Tables) != 0 {
 			panic("fri: pcs.VerifyGnark: depth-zero input cap must be empty")
 		}
-		return []poseidon2.KoalagnarkOctuplet{root}
+		return []circuit.Octuplet{root}
 	}
 	if want := 1 << info.depth; len(treeCap.Nodes) != want {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input cap has %d nodes, want %d", len(treeCap.Nodes), want))
@@ -880,7 +880,7 @@ func authenticateInputCapGnark(
 	// index order, not in the query-dependent order of an opened aux row.
 	evenFirst := api.Frontend().FromBinary(0)
 
-	aux := make([]*poseidon2.KoalagnarkOctuplet, len(treeCap.Nodes)-1)
+	aux := make([]*circuit.Octuplet, len(treeCap.Nodes)-1)
 	for i, sizeLog2 := range info.revealed {
 		table := treeCap.Tables[i]
 		if int(table.SizeLog2) != sizeLog2 {
@@ -919,7 +919,7 @@ func gnarkRowMatchesShape(row GnarkRowOpening, sized SizedShape) bool {
 // each branch is folded up to its tree's frontier rather than to the root.
 func authenticateInputQueryGnark(
 	api *circuit.KoalaBearAPI, p Params, opening GnarkInputQuery,
-	frontiers [][]poseidon2.KoalagnarkOctuplet, infos []inputCapInfo, posBits []frontend.Variable,
+	frontiers [][]circuit.Octuplet, infos []inputCapInfo, posBits []frontend.Variable,
 ) {
 	if len(opening) != len(frontiers) {
 		panic(fmt.Sprintf("fri: pcs.VerifyGnark: input query has %d tree openings, want %d",
@@ -953,7 +953,7 @@ func authenticateInputQueryGnark(
 // frontier node, mirroring the native `ancestor == frontier[currPos]`.
 func authenticateInputToCapGnark(
 	api *circuit.KoalaBearAPI, branch GnarkInputTreeOpening, idxBits []frontend.Variable,
-	frontier []poseidon2.KoalagnarkOctuplet, depth int,
+	frontier []circuit.Octuplet, depth int,
 ) {
 	numLevels := len(branch.Leaves)
 	bottom := branch.Leaves[numLevels-1]
@@ -974,9 +974,9 @@ func authenticateInputToCapGnark(
 // foldOneLevelGnark mirrors [foldOneLevel]. isOdd is the current position bit:
 // when set, the ancestor is the right child.
 func foldOneLevelGnark(
-	api *circuit.KoalaBearAPI, ancestor, sibling poseidon2.KoalagnarkOctuplet, aux *GnarkRowPair, isOdd frontend.Variable,
-) poseidon2.KoalagnarkOctuplet {
-	var left, right poseidon2.KoalagnarkOctuplet
+	api *circuit.KoalaBearAPI, ancestor, sibling circuit.Octuplet, aux *GnarkRowPair, isOdd frontend.Variable,
+) circuit.Octuplet {
+	var left, right circuit.Octuplet
 	for i := range left {
 		left[i] = api.Select(isOdd, sibling[i], ancestor[i])
 		right[i] = api.Select(isOdd, ancestor[i], sibling[i])
@@ -990,7 +990,7 @@ func foldOneLevelGnark(
 }
 
 // hashRowOpeningGnark mirrors [hashRowOpening].
-func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) poseidon2.KoalagnarkOctuplet {
+func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) circuit.Octuplet {
 	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
 	absorbLeafHeaderGnark(api, h, len(row.Base), len(row.Ext))
 	h.Write(rowOpeningElementsGnark(row)...)
@@ -1001,7 +1001,7 @@ func hashRowOpeningGnark(api *circuit.KoalaBearAPI, row GnarkRowOpening) poseido
 // order depends on the (variable) position bit and is resolved element-wise.
 func hashAuxPairGnark(
 	api *circuit.KoalaBearAPI, pair GnarkRowPair, isOdd frontend.Variable,
-) poseidon2.KoalagnarkOctuplet {
+) circuit.Octuplet {
 	h := poseidon2.NewKoalagnarkMDHasher(api.Frontend())
 	absorbLeafHeaderGnark(api, h, len(pair[0].Base), len(pair[0].Ext))
 	first := rowOpeningElementsGnark(pair[0])
@@ -1043,14 +1043,14 @@ func rowOpeningElementsGnark(row GnarkRowOpening) []circuit.Element {
 	return res
 }
 
-func assertOctupletEqual(api *circuit.KoalaBearAPI, a, b poseidon2.KoalagnarkOctuplet) {
+func assertOctupletEqual(api *circuit.KoalaBearAPI, a, b circuit.Octuplet) {
 	for i := range a {
 		api.AssertIsEqual(a[i], b[i])
 	}
 }
 
 // octupletToExtGnark mirrors [octupletToExt]: coordinates 6 and 7 must be zero.
-func octupletToExtGnark(api *circuit.KoalaBearAPI, o poseidon2.KoalagnarkOctuplet) circuit.Ext {
+func octupletToExtGnark(api *circuit.KoalaBearAPI, o circuit.Octuplet) circuit.Ext {
 	api.AssertIsEqual(o[6], api.Zero())
 	api.AssertIsEqual(o[7], api.Zero())
 	return circuit.Ext{

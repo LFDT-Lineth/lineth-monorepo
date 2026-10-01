@@ -4,7 +4,6 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -34,7 +33,7 @@ const pcsCircuitNumQueries = 4
 // opening proof.
 type pcsVerifyCircuit struct {
 	Proof  GnarkOpeningProof
-	Roots  []poseidon2.KoalagnarkOctuplet
+	Roots  []circuit.Octuplet
 	Claims []GnarkBatchClaimedValues
 	Zeta   circuit.Ext
 	Alphas []circuit.Ext
@@ -98,6 +97,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 	// prepare a fixed zeta by writing down all coordinates
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	// prepare the FRI folding alphas
+	// and hardcode the query positions to avoid a dependency on the PRNG in the test
 	challenges := Challenges{
 		FoldAlphas: []field.Ext{
 			field.UintsToExt(29, 1, 0, 0, 0, 0),
@@ -106,6 +106,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 		},
 		QueryPositions: []int{3, 9, 12, 6},
 	}
+	// compute the opening proof and the claimed values for the verifier
 	proof, claimed := openForTest(t, pcs, openInputs{
 		Witnesses:  witnesses,
 		Committed:  committed,
@@ -114,6 +115,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 		Challenges: challenges,
 	})
 
+	// prepare the verify fixture struct
 	fx := pcsOpenVerifyFixture{
 		pcs:       pcs,
 		committed: committed,
@@ -127,6 +129,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 		},
 		proof: proof,
 	}
+	// check verification, first the native verifier, then the gnark circuit verifier, to avoid a false positive if the fixture is invalid
 	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof), "native verifier must accept the fixture")
 	return fx
 }
@@ -140,7 +143,7 @@ func circuitFor(fx pcsOpenVerifyFixture, proof OpeningProof) (template, assignme
 		}
 		c := &pcsVerifyCircuit{
 			Proof:  convert(p),
-			Roots:  make([]poseidon2.KoalagnarkOctuplet, len(fx.input.Roots)),
+			Roots:  make([]circuit.Octuplet, len(fx.input.Roots)),
 			Claims: make([]GnarkBatchClaimedValues, len(fx.input.ClaimedValues)),
 			Alphas: make([]circuit.Ext, len(fx.input.Challenges.FoldAlphas)),
 			Pos:    make([]frontend.Variable, fx.pcs.Params.NumQueries),

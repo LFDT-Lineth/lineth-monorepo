@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/circuit"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/consensys/gnark/frontend"
@@ -54,9 +53,9 @@ func (a *OpeningVerifierAction) CheckGnark(api frontend.API, run *wiop.GnarkRunt
 
 // collectRootsGnark mirrors [compiled.collectRoots]: transported roots from the
 // witness, the precomputed root as a circuit constant.
-func (c *compiled) collectRootsGnark(run *wiop.GnarkRuntime, batches []BatchRef) []poseidon2.KoalagnarkOctuplet {
+func (c *compiled) collectRootsGnark(run *wiop.GnarkRuntime, batches []BatchRef) []circuit.Octuplet {
 	api := run.API()
-	roots := make([]poseidon2.KoalagnarkOctuplet, len(batches))
+	roots := make([]circuit.Octuplet, len(batches))
 	for i, b := range batches {
 		if b.IsPrecomp {
 			for j := range roots[i] {
