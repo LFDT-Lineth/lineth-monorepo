@@ -1,7 +1,5 @@
 package lineth.coordinator.config.v2
 
-import linea.web3j.SmartContractErrors
-
 data class CoordinatorConfig(
   val protocol: ProtocolConfig,
   val conflation: ConflationConfig,
@@ -16,5 +14,5 @@ data class CoordinatorConfig(
   val l2NetworkGasPricing: L2NetworkGasPricingConfig? = null,
   val database: DatabaseConfig,
   val api: ApiConfig,
-  val smartContractErrors: SmartContractErrors,
+  val smartContractErrors: Map<String, String>,
 )
