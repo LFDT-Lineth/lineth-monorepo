@@ -59,8 +59,10 @@ func (c *pcsVerifyCircuit) Define(api frontend.API) error {
 	return nil
 }
 
-// newPCSCircuitFixture builds a multi-size witness, opens it at four query
-// positions, and checks the native verifier accepts before any circuit runs.
+// newPCSCircuitFixture builds two multi-size witness batches of different
+// heights, opens them at four query positions, and checks the native verifier
+// accepts before any circuit runs. Two batches give two input trees, so the
+// circuit must match each opening to its own cap.
 func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
@@ -82,15 +84,23 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 		field.VecPseudoRandExt(prng, 8),
 		field.VecPseudoRandExt(prng, 8),
 	}}
-	witnesses := []Batch{witness}
-	committed := []CommitterState{pcs.Commit(witness)}
+	// a second, shorter batch commits to its own input tree, so the proof
+	// carries two input caps
+	otherWitness := make(Batch, 3)
+	otherWitness[1] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 2)}}
+	otherWitness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
+	witnesses := []Batch{witness, otherWitness}
+	committed := []CommitterState{pcs.Commit(witness), pcs.Commit(otherWitness)}
 
 	// prepare the shifts at what positions we open the rows
 	batchShifts := make(BatchShifts, 4)
 	batchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[3] = SizedShifts{Ext: [][]int{{0}, {1}}}
-	shifts := []BatchShifts{batchShifts}
+	otherBatchShifts := make(BatchShifts, 3)
+	otherBatchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
+	otherBatchShifts[2] = SizedShifts{Ext: [][]int{{1}}}
+	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	// prepare a fixed zeta by writing down all coordinates
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
@@ -118,7 +128,7 @@ func newPCSCircuitFixture(t *testing.T) pcsOpenVerifyFixture {
 		pcs:       pcs,
 		committed: committed,
 		input: VerifyInputs{
-			Roots:         []field.Octuplet{committed[0].Tree.Root()},
+			Roots:         utils.Map(func(c CommitterState) field.Octuplet { return c.Tree.Root() }, committed),
 			Shapes:        utils.Map(Batch.Shape, witnesses),
 			Shifts:        shifts,
 			ClaimedValues: claimed,
@@ -214,7 +224,8 @@ func TestPCSVerifyGnarkMatchesNative(t *testing.T) {
 
 	// The fixture must actually exercise capping, or this test would pass
 	// against a verifier that ignores caps entirely.
-	require.NotEmpty(t, fx.proof.InputCaps, "fixture must carry input caps")
+	require.GreaterOrEqual(t, len(fx.proof.InputCaps), 2,
+		"fixture must carry several input caps, so openings are matched to their own tree")
 	require.NotEmpty(t, fx.proof.InputCaps[0].Nodes, "input cap must be non-trivial")
 	require.GreaterOrEqual(t, len(fx.proof.InputCaps[0].Nodes), 4,
 		"input cap must be at least depth 2, so the frontier selector uses more than one bit")
@@ -231,15 +242,21 @@ func TestPCSVerifyGnarkRejectsTamperedInputCap(t *testing.T) {
 	fx := newPCSCircuitFixture(t)
 	prng := rand.New(utils.NewRandSource(4242))
 
-	for node := range fx.proof.InputCaps[0].Nodes {
-		tampered := cloneProofWithInputCapNode(fx.proof, node, field.PseudoRandOctuplet(prng))
+	for tree := range fx.proof.InputCaps {
+		for node := range fx.proof.InputCaps[tree].Nodes {
+			// get a copy of the opening proof where one frontier node of this input
+			// tree's cap is replaced with a random octuplet
+			tampered := cloneProofWithInputCapNode(fx.proof, tree, node, field.PseudoRandOctuplet(prng))
 
-		require.Error(t, fx.pcs.Verify(fx.input, tampered),
-			"native verifier must reject a tampered input cap node %d", node)
+			// sanity check: the tampering must be rejected by the native verifier
+			require.Error(t, fx.pcs.Verify(fx.input, tampered),
+				"native verifier must reject a tampered input cap %d node %d", tree, node)
 
-		template, assignment := circuitFor(fx, tampered)
-		require.Error(t, solvePCSCircuit(t, template, assignment),
-			"circuit must reject a tampered input cap node %d", node)
+			// property under test: the circuit must agree with the native verifier
+			template, assignment := circuitFor(fx, tampered)
+			require.Error(t, solvePCSCircuit(t, template, assignment),
+				"circuit must reject a tampered input cap %d node %d", tree, node)
+		}
 	}
 }
 
@@ -266,11 +283,11 @@ func TestPCSVerifyGnarkRejectsTamperedRoundCap(t *testing.T) {
 
 // cloneProofWithInputCapNode returns a copy of p with one input-cap frontier
 // node replaced, sharing nothing mutable with the original.
-func cloneProofWithInputCapNode(p OpeningProof, node int, value field.Octuplet) OpeningProof {
+func cloneProofWithInputCapNode(p OpeningProof, tree, node int, value field.Octuplet) OpeningProof {
 	res := p
 	res.InputCaps = append([]InputCap(nil), p.InputCaps...)
-	res.InputCaps[0].Nodes = append([]field.Octuplet(nil), p.InputCaps[0].Nodes...)
-	res.InputCaps[0].Nodes[node] = value
+	res.InputCaps[tree].Nodes = append([]field.Octuplet(nil), p.InputCaps[tree].Nodes...)
+	res.InputCaps[tree].Nodes[node] = value
 	return res
 }
 
