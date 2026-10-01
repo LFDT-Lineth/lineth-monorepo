@@ -1,0 +1,13 @@
+diff --git a/dist/manifest.js b/dist/manifest.js
+index bdfcced6dece5e9f02e6277d7e2b1ffb03c329bb..2ed97f9d50e8fbbd1479744409c98c0eb348d9f2 100644
+--- a/dist/manifest.js
++++ b/dist/manifest.js
+@@ -219,7 +219,7 @@ class Manifest {
+             await release();
+         }
+     }
+-    async lock(retries = 3) {
++    async lock(retries = 10) {
+         const lockfileName = path_1.default.join(this.dir, `chain-${this.chainIdSuffix}`);
+         await fs_1.promises.mkdir(path_1.default.dirname(lockfileName), { recursive: true });
+         const release = await proper_lockfile_1.default.lock(lockfileName, { retries, realpath: false });

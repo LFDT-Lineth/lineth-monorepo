@@ -1,0 +1,26 @@
+diff --git a/dist/utils/validations.js b/dist/utils/validations.js
+index 3ff3d56735b1dfd6e6121a5e8af2bcc1014f0d35..08ecaf4c927df526a23989f6202796daa8e835c9 100644
+--- a/dist/utils/validations.js
++++ b/dist/utils/validations.js
+@@ -10,7 +10,7 @@ const proper_lockfile_1 = __importDefault(require("proper-lockfile"));
+ const upgrades_core_1 = require("@openzeppelin/upgrades-core");
+ async function lock(file) {
+     await fs_1.promises.mkdir(path_1.default.dirname(file), { recursive: true });
+-    return proper_lockfile_1.default.lock(file, { retries: { minTimeout: 50, factor: 1.3 }, realpath: false });
++    return proper_lockfile_1.default.lock(file, { retries: { minTimeout: 500, factor: 1.3 }, realpath: false });
+ }
+ async function writeValidations(hre, newRunData) {
+     const cachePath = getValidationsCachePath(hre);
+diff --git a/src/utils/validations.ts b/src/utils/validations.ts
+index 8367d8a85a6ad882d1132dd3db2aaa5916120f71..782663c354e99e0abaf6d74d307428ea251d462d 100644
+--- a/src/utils/validations.ts
++++ b/src/utils/validations.ts
+@@ -12,7 +12,7 @@ import {
+ 
+ async function lock(file: string) {
+   await fs.mkdir(path.dirname(file), { recursive: true });
+-  return lockfile.lock(file, { retries: { minTimeout: 50, factor: 1.3 }, realpath: false });
++  return lockfile.lock(file, { retries: { minTimeout: 500, factor: 1.3 }, realpath: false });
+ }
+ 
+ export async function writeValidations(hre: HardhatRuntimeEnvironment, newRunData: ValidationRunData): Promise<void> {

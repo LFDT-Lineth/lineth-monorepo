@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "fund-target",
+      "kind": "sign",
+      "chain": "l2",
+      "to": "0x00000000000000000000000000000000000ba5e1",
+      "valueWei": "0"
+    },
+    {
+      "id": "bare-create",
+      "kind": "sign",
+      "chain": "l2",
+      "data": "0x6001600c60003960016000f300"
+    },
+    {
+      "id": "create2-deploy",
+      "kind": "script",
+      "chain": "l2",
+      "script": "deploy-via-create2.js"
+    }
+  ]
+}

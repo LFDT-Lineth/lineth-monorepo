@@ -23,7 +23,7 @@ import {
 } from "../common/constants";
 import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
-import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
+import { resolveL2DeployFeeOverrides } from "../common/helpers/feeOverrides";
 import { getDeploymentNetworkName, requireAddressFromRegistryOrEnv } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
 
@@ -40,25 +40,24 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
   const walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE");
+  const feeOverrides = resolveL2DeployFeeOverrides();
 
   const l2MessageServiceContractImplementationName = "L2MessageServiceImplementation";
 
-  const [l2MessageServiceImplementation, proxyAdmin] = await Promise.all([
-    deployContractFromArtifacts(
-      l2MessageServiceContractImplementationName,
-      L2MessageServiceAbi,
-      L2MessageServiceBytecode,
-      wallet,
-      {
-        nonce: walletNonce,
-        ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
-      },
-    ),
-    deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
-      nonce: walletNonce + 1,
-      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
-    }),
-  ]);
+  const l2MessageServiceImplementation = await deployContractFromArtifacts(
+    l2MessageServiceContractImplementationName,
+    L2MessageServiceAbi,
+    L2MessageServiceBytecode,
+    wallet,
+    { nonce: walletNonce, ...feeOverrides },
+  );
+  const proxyAdmin = await deployContractFromArtifacts(
+    ProxyAdminContractName,
+    ProxyAdminAbi,
+    ProxyAdminBytecode,
+    wallet,
+    { nonce: walletNonce + 1, ...feeOverrides },
+  );
 
   const proxyAdminAddress = await proxyAdmin.getAddress();
   const l2MessageServiceImplementationAddress = await l2MessageServiceImplementation.getAddress();
@@ -107,7 +106,8 @@ async function main() {
     proxyAdminAddress,
     initializer,
     {
-      ...LOCAL_L2_DEPLOY_FEE_OVERRIDES,
+      nonce: walletNonce + 2,
+      ...feeOverrides,
     },
   );
 }
