@@ -87,7 +87,7 @@ func solveVerifierCircuit(
 	circ := wiop.AllocateVerifierCircuit(sys, template, pub)
 
 	var ccs interface {
-		IsSolved(witness.Witness, ...solver.Option) error
+		Solve(witness.Witness, ...solver.Option) (any, error)
 		GetNbConstraints() int
 	}
 	var err error
@@ -101,7 +101,8 @@ func solveVerifierCircuit(
 	assignment := wiop.AllocateVerifierCircuit(sys, template, pub).AssignVerifierCircuit(proof, pub)
 	w, err := frontend.NewWitness(assignment, modulus)
 	require.NoError(t, err, "assignment must produce a witness")
-	return ccs.GetNbConstraints(), ccs.IsSolved(w)
+	_, err = ccs.Solve(w)
+	return ccs.GetNbConstraints(), err
 }
 
 func TestVerifierCircuit_PCSOnly(t *testing.T) {

@@ -165,7 +165,8 @@ func TestGnarkFiatShamir_MatchesNative(t *testing.T) {
 		require.NoError(t, err)
 		w, err := frontend.NewWitness(fsReplayWitness(t), field.Modulus())
 		require.NoError(t, err)
-		require.NoError(t, ccs.IsSolved(w), "circuit transcript must derive the native challenges")
+		_, err = ccs.Solve(w)
+		require.NoError(t, err, "circuit transcript must derive the native challenges")
 	})
 
 	t.Run("emulated-bn254", func(t *testing.T) {
@@ -173,7 +174,8 @@ func TestGnarkFiatShamir_MatchesNative(t *testing.T) {
 		require.NoError(t, err)
 		w, err := frontend.NewWitness(fsReplayWitness(t), ecc.BN254.ScalarField())
 		require.NoError(t, err)
-		require.NoError(t, ccs.IsSolved(w), "circuit transcript must derive the native challenges")
+		_, err = ccs.Solve(w)
+		require.NoError(t, err, "circuit transcript must derive the native challenges")
 	})
 }
 
@@ -192,5 +194,6 @@ func TestGnarkFiatShamir_RejectsWrongCoin(t *testing.T) {
 	require.NoError(t, err)
 	w, err := frontend.NewWitness(witness, ecc.BN254.ScalarField())
 	require.NoError(t, err)
-	require.Error(t, ccs.IsSolved(w), "a forged coin must not satisfy the circuit")
+	_, err = ccs.Solve(w)
+	require.Error(t, err, "a forged coin must not satisfy the circuit")
 }

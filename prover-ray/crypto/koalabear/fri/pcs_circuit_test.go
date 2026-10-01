@@ -8,8 +8,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/gnark/backend/witness"
-	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/stretchr/testify/require"
@@ -200,16 +198,13 @@ func convertClaimRows(rows [][]field.Ext, withValues bool) [][]circuit.Ext {
 // assignment satisfies it.
 func solvePCSCircuit(t *testing.T, template, assignment *pcsVerifyCircuit) error {
 	t.Helper()
-	type solvable interface {
-		IsSolved(witness.Witness, ...solver.Option) error
-	}
 	modulus := koalabear.Modulus()
-	var ccs solvable
 	ccs, err := frontend.CompileU32(modulus, scs.NewBuilder, template)
 	require.NoError(t, err, "verifier circuit must compile")
 	w, err := frontend.NewWitness(assignment, modulus)
 	require.NoError(t, err, "witness must build")
-	return ccs.IsSolved(w)
+	_, err = ccs.Solve(w)
+	return err
 }
 
 // TestPCSVerifyGnarkMatchesNative is the honest path: the circuit must accept

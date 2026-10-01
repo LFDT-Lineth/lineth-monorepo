@@ -114,9 +114,9 @@ func solveCap(t *testing.T, template, assignment *capCircuit, emulated bool) err
 	t.Helper()
 
 	// CompileU32 and Compile return different constraint-system types; both
-	// answer IsSolved, which is all this helper needs.
+	// answer Solve, which is all this helper needs.
 	type solvable interface {
-		IsSolved(witness.Witness, ...solver.Option) error
+		Solve(witness.Witness, ...solver.Option) (any, error)
 	}
 	var (
 		ccs     solvable
@@ -133,7 +133,8 @@ func solveCap(t *testing.T, template, assignment *capCircuit, emulated bool) err
 
 	w, err := frontend.NewWitness(assignment, modulus)
 	require.NoError(t, err, "witness must build")
-	return ccs.IsSolved(w)
+	_, err = ccs.Solve(w)
+	return err
 }
 
 // TestCapCircuitMatchesNative checks the honest path across the cap depths the

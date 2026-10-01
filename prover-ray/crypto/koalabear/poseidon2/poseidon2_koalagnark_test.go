@@ -88,7 +88,7 @@ func TestKoalagnarkMDHasherNative(t *testing.T) {
 			fullWitness, err := frontend.NewWitness(witness, field.Modulus())
 			require.NoError(t, err)
 
-			err = ccs.IsSolved(fullWitness)
+			_, err = ccs.Solve(fullWitness)
 			require.NoError(t, err)
 		})
 	}
@@ -117,7 +117,7 @@ func TestKoalagnarkMDHasherEmulated(t *testing.T) {
 			fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
 			require.NoError(t, err)
 
-			err = ccs.IsSolved(fullWitness)
+			_, err = ccs.Solve(fullWitness)
 			require.NoError(t, err)
 		})
 	}
@@ -173,7 +173,7 @@ func TestKoalagnarkCompressNative(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(witness, koalabear.Modulus())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -186,7 +186,7 @@ func TestKoalagnarkCompressEmulated(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -233,7 +233,7 @@ func BenchmarkKoalagnarkNative(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		fullWitness, _ := frontend.NewWitness(witness, koalabear.Modulus())
-		_ = ccs.IsSolved(fullWitness)
+		_, _ = ccs.Solve(fullWitness)
 	}
 }
 
@@ -249,6 +249,6 @@ func BenchmarkKoalagnarkEmulated(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		fullWitness, _ := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
-		_ = ccs.IsSolved(fullWitness)
+		_, _ = ccs.Solve(fullWitness)
 	}
 }
