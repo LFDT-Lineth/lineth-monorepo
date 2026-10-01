@@ -258,31 +258,41 @@ func TestPCSVerifyGnarkRejectsTamperedInputCap(t *testing.T) {
 				"circuit must reject a tampered input cap %d node %d", tree, node)
 		}
 	}
+	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof), "tampering must not mutate the original proof")
 }
 
 // TestPCSVerifyGnarkRejectsTamperedRoundCap does the same for the running-layer
-// caps.
+// caps. A depth-zero round cap has no nodes and is skipped by the inner loop:
+// its frontier is the round root itself.
 func TestPCSVerifyGnarkRejectsTamperedRoundCap(t *testing.T) {
 	fx := newPCSCircuitFixture(t)
 	prng := rand.New(utils.NewRandSource(909))
 
+	tamperedAny := false
 	for round := range fx.proof.FRIProof.RoundCaps {
-		if len(fx.proof.FRIProof.RoundCaps[round].Nodes) == 0 {
-			continue
+		for node := range fx.proof.FRIProof.RoundCaps[round].Nodes {
+			tamperedAny = true
+			// get a copy of the opening proof where one frontier node of this
+			// round's cap is replaced with a random octuplet
+			tampered := cloneProofWithRoundCapNode(fx.proof, round, node, field.PseudoRandOctuplet(prng))
+
+			// sanity check: the tampering must be rejected by the native verifier
+			require.Error(t, fx.pcs.Verify(fx.input, tampered),
+				"native verifier must reject a tampered round %d cap node %d", round, node)
+
+			// property under test: the circuit must agree with the native verifier
+			template, assignment := circuitFor(fx, tampered)
+			require.Error(t, solvePCSCircuit(t, template, assignment),
+				"circuit must reject a tampered round %d cap node %d", round, node)
 		}
-		tampered := cloneProofWithRoundCapNode(fx.proof, round, 0, field.PseudoRandOctuplet(prng))
-
-		require.Error(t, fx.pcs.Verify(fx.input, tampered),
-			"native verifier must reject a tampered round %d cap", round)
-
-		template, assignment := circuitFor(fx, tampered)
-		require.Error(t, solvePCSCircuit(t, template, assignment),
-			"circuit must reject a tampered round %d cap", round)
 	}
+	require.True(t, tamperedAny, "fixture must carry at least one non-empty round cap")
+	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof), "tampering must not mutate the original proof")
 }
 
 // cloneProofWithInputCapNode returns a copy of p with one input-cap frontier
-// node replaced, sharing nothing mutable with the original.
+// node replaced. Only the slices on the path to that node are copied, so p is
+// never mutated; everything else is shared and must not be written to.
 func cloneProofWithInputCapNode(p OpeningProof, tree, node int, value field.Octuplet) OpeningProof {
 	res := p
 	res.InputCaps = append([]InputCap(nil), p.InputCaps...)
@@ -291,7 +301,8 @@ func cloneProofWithInputCapNode(p OpeningProof, tree, node int, value field.Octu
 	return res
 }
 
-// cloneProofWithRoundCapNode is the running-layer analogue.
+// cloneProofWithRoundCapNode is the running-layer analogue of
+// [cloneProofWithInputCapNode], with the same copying guarantees.
 func cloneProofWithRoundCapNode(p OpeningProof, round, node int, value field.Octuplet) OpeningProof {
 	res := p
 	res.FRIProof.RoundCaps = append([]MerkleCap(nil), p.FRIProof.RoundCaps...)
