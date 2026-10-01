@@ -122,6 +122,12 @@ class MaruClusterTest {
     ).addNode("sequencer", addBesu = true)
       .start()
 
+    // Besu >= 26.9.0 no longer returns totalDifficulty in eth_getBlockBy* responses, so assert
+    // on the head block number instead. QBFT assigns every block difficulty 1 (genesis
+    // difficulty is 0x1), so cumulative totalDifficulty reaches terminalTotalDifficulty exactly
+    // at block number (terminalTotalDifficulty - 1). Producing blocks at or past that height
+    // proves the chain crossed TTD and kept going post-TTD.
+    val blockNumberAtWhichTtdIsReached = terminalTotalDifficulty - 1UL
     await()
       .atMost(120.seconds.toJavaDuration())
       .untilAsserted {
@@ -129,9 +135,9 @@ class MaruClusterTest {
           cluster
             .besuNode("sequencer")
             .latestBlock()
-        assertThat(headBlock.totalDifficulty.toULong())
-          .withFailMessage { "Sequencer did not past ttd=$terminalTotalDifficulty" }
-          .isGreaterThanOrEqualTo(terminalTotalDifficulty)
+        assertThat(headBlock.number.toULong())
+          .withFailMessage { "Sequencer did not pass ttd=$terminalTotalDifficulty" }
+          .isGreaterThanOrEqualTo(blockNumberAtWhichTtdIsReached)
       }
   }
 
