@@ -62,6 +62,15 @@ type schemaScanner struct {
 	// ColumnIds maps the concatenation of the module name and the column name to the ObjectID of the corresponding
 	// wizard column name.
 	ColumnIDs map[string]wiop.ObjectID
+	// ExprCache interns the expression nodes built by [castExpression], per
+	// module, so that structurally identical subexpressions share one pointer
+	// instead of being re-allocated at every occurrence. See [intern].
+	//
+	// This is a fallback for zkc not deduplicating its own [air.Term] DAG; it
+	// is the designated removal point once zkc interns natively (see
+	// LFDT-Lineth/lineth-monorepo#4038). The map is used for lookup only and
+	// is never iterated, so it does not affect output ordering.
+	ExprCache map[schema.ModuleId]map[exprKey]wiop.Expression
 }
 
 // Define registers the arithmetization from a corset air.Schema and trace limits
@@ -80,6 +89,7 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 		Modules:        modules,
 		ModulesIDsWiop: map[string]int{},
 		ColumnIDs:      map[string]wiop.ObjectID{},
+		ExprCache:      newExprCache(),
 	}
 
 	scanner.scanColumns()
@@ -510,13 +520,18 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 		// and the domain is the position of the vanishing vector.
 		position := vc.Domain.Unwrap()
 
+		// The rewrite allocates fresh nodes throughout — [wiop.Column.At] for
+		// every leaf, [wiop.DefaultConstruct] for every compound — so the
+		// result is re-interned to let local constraints pinned at the same
+		// position share their lifted subexpressions. [wiop.EditExpression]
+		// visits bottom-up, which is the order [schemaScanner.intern] requires.
 		wExpr = wiop.EditExpression(wExpr,
 			func(e wiop.Expression, children []wiop.Expression) wiop.Expression {
 				switch e := e.(type) {
 				case *wiop.ColumnView:
-					return e.Column.At(position + e.ShiftingOffset)
+					return s.intern(vc.Context, e.Column.At(position+e.ShiftingOffset))
 				default:
-					return wiop.DefaultConstruct(e, children)
+					return s.intern(vc.Context, wiop.DefaultConstruct(e, children))
 				}
 			})
 
@@ -547,6 +562,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wiop.System] components.
+//
+// Every node it returns is interned per module (see [schemaScanner.intern]):
+// zkc hands out a tree in which structurally identical subexpressions are
+// distinct [air.Term] values, and allocating a fresh [wiop.Expression] for
+// each occurrence would starve every pointer-keyed cache downstream. Leaves
+// are interned too, and necessarily so: [wiop.Column.View] and
+// [wiop.ColumnView.Shift] allocate a new pointer on every call, so without
+// leaf interning no compound key could ever match.
 func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[koalabear.Element]) wiop.Expression {
 
 	switch e := expr.(type) {
@@ -557,13 +580,13 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Sum(args...)
+		return s.internedSum(context, args...)
 
 	case *air.Sub[koalabear.Element]:
 
 		res := s.castExpression(context, e.Args[0])
 		for i := 1; i < len(e.Args); i++ {
-			res = wiop.Sub(res, s.castExpression(context, e.Args[i]))
+			res = s.intern(context, wiop.Sub(res, s.castExpression(context, e.Args[i])))
 		}
 		return res
 
@@ -573,7 +596,7 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		for i := range args {
 			args[i] = s.castExpression(context, e.Args[i])
 		}
-		return wiop.Product(args...)
+		return s.internedProduct(context, args...)
 
 	case *air.Constant[koalabear.Element]:
 		// @alex: this bit is a bit hacky, because corset's koalabear.Element
@@ -581,11 +604,11 @@ func (s *schemaScanner) castExpression(context schema.ModuleId, expr air.Term[ko
 		// layout. Ideally, both dependencies should converge toward using the
 		// exact same implementation. This would remove this kind of hacky
 		// conversions.
-		return wiop.NewConstantField(field.Element(e.Value))
+		return s.intern(context, wiop.NewConstantField(field.Element(e.Value)))
 
 	case *air.ColumnAccess[koalabear.Element]:
 
-		return s.compColumnByCorsetColumnAccess(context, e)
+		return s.intern(context, s.compColumnByCorsetColumnAccess(context, e))
 
 	default:
 		eStr := fmt.Sprintf("%v", e)
