@@ -11,6 +11,7 @@ import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.milliseconds

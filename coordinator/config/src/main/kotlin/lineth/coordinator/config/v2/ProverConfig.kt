@@ -1,4 +1,4 @@
-package lineth.coordinator.clients.prover
+package lineth.coordinator.config.v2
 
 import java.nio.file.Path
 import kotlin.time.Duration

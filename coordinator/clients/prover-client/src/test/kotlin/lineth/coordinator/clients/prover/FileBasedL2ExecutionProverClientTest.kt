@@ -11,6 +11,7 @@ import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.fileBased
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofRequestV1
 import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2ExecutionProofResponseDto
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat

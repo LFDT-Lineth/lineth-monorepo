@@ -41,10 +41,10 @@ import lineth.coordinator.blockcreation.BlockCreationMonitor
 import lineth.coordinator.blockcreation.LastProvenBlockNumberProviderSync
 import lineth.coordinator.blockcreation.TargetCheckpointPauseController
 import lineth.coordinator.clients.prover.DefaultProverClientFactory
-import lineth.coordinator.clients.prover.PreRiscvProverConfig
-import lineth.coordinator.clients.prover.ProverConfig
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
+import lineth.coordinator.config.v2.PreRiscvProverConfig
+import lineth.coordinator.config.v2.ProverConfig
 import lineth.coordinator.config.v2.TracesConfig.ClientApiConfig
 import lineth.encoding.BlockRLPEncoder
 import lineth.persistence.DisabledForcedTransactionsDao

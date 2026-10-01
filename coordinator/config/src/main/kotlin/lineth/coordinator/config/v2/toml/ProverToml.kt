@@ -2,12 +2,12 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.FileBasedRiscvProverConfig
-import lineth.coordinator.clients.prover.PreRiscvProverConfig
-import lineth.coordinator.clients.prover.ProverConfig
-import lineth.coordinator.clients.prover.ProversConfig
-import lineth.coordinator.clients.prover.RiscvProverConfig
+import lineth.coordinator.config.v2.FileBasedProverConfig
+import lineth.coordinator.config.v2.FileBasedRiscvProverConfig
+import lineth.coordinator.config.v2.PreRiscvProverConfig
+import lineth.coordinator.config.v2.ProverConfig
+import lineth.coordinator.config.v2.ProversConfig
+import lineth.coordinator.config.v2.RiscvProverConfig
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

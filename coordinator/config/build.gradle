@@ -21,7 +21,6 @@ dependencies {
   api project(':jvm-libs:linea:core:traces')
   api project(':jvm-libs:linea:web3j-extensions')
   api project(':coordinator:ethereum:gas-pricing:dynamic-cap')
-  api project(':coordinator:clients:prover-client')
   api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
 
