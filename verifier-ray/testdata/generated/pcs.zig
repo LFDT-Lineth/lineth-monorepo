@@ -18,7 +18,7 @@ pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []cons
 pub const pcs_cases = [_]PcsCase{
     .{
         .name = "normal_flow",
-        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 4 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{1} }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0} } }, .num_batches = 1, .max_entries = 4, .max_size_log2 = 2 },
+        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 4 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 0 }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 0 }, .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 0 } }, .all_shifts = &[_]i32{ 0, 1, 0, 0 }, .num_batches = 1, .max_entries = 4, .max_size_log2 = 2 },
         .roots = &.{.{ 722211336, 893546910, 1658538459, 2097595508, 897875209, 1954413323, 1998465744, 165241986 }},
         .entry_claims = &.{ &.{.{ 927204618, 1538709283, 1013103993, 1268331236, 1753230135, 1190885497 }}, &.{.{ 1203373308, 591921738, 1117520714, 862323271, 377422270, 939786602 }}, &.{.{ 92, 2130706432, 1065353215, 1065353214, 1065353213, 1065353211 }}, &.{.{ 99, 0, 0, 0, 0, 0 }} },
         .zeta = .{ 19, 2, 3, 5, 7, 11 },
@@ -28,7 +28,7 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "d1_top_level",
-        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1 }, .columns = &.{.{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0} }}, .num_batches = 1, .max_entries = 1, .max_size_log2 = 0 },
+        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1 }, .columns = &.{.{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 }}, .all_shifts = &[_]i32{0}, .num_batches = 1, .max_entries = 1, .max_size_log2 = 0 },
         .roots = &.{.{ 573566229, 1459539590, 1308481344, 396594145, 789435716, 757393619, 1435553532, 1664127553 }},
         .entry_claims = &.{&.{.{ 42, 0, 0, 0, 0, 0 }}},
         .zeta = .{ 7, 1, 0, 0, 0, 0 },
@@ -38,7 +38,7 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "boundary_round",
-        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0} } }, .num_batches = 2, .max_entries = 2, .max_size_log2 = 3 },
+        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 0 } }, .all_shifts = &[_]i32{ 0, 0 }, .num_batches = 2, .max_entries = 2, .max_size_log2 = 3 },
         .roots = &.{ .{ 595185922, 1728714114, 1808282941, 1856929070, 524915110, 577220697, 113872727, 1481543617 }, .{ 224704290, 968037185, 1827942646, 1522613021, 973361900, 48385340, 1898120432, 1617795946 } },
         .entry_claims = &.{ &.{.{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }}, &.{.{ 390, 1065353215, 1065353214, 1065353213, 1065353211, 1065353210 }} },
         .zeta = .{ 23, 3, 5, 7, 11, 13 },
@@ -48,7 +48,7 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "boundary_round_corrupted_claim",
-        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0} } }, .num_batches = 2, .max_entries = 2, .max_size_log2 = 3 },
+        .system = pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .columns = &.{ .{ .batch_idx = 0, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 0 } }, .all_shifts = &[_]i32{ 0, 0 }, .num_batches = 2, .max_entries = 2, .max_size_log2 = 3 },
         .roots = &.{ .{ 595185922, 1728714114, 1808282941, 1856929070, 524915110, 577220697, 113872727, 1481543617 }, .{ 224704290, 968037185, 1827942646, 1522613021, 973361900, 48385340, 1898120432, 1617795946 } },
         .entry_claims = &.{ &.{.{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }}, &.{.{ 999999, 0, 0, 0, 0, 0 }} },
         .zeta = .{ 23, 3, 5, 7, 11, 13 },

@@ -27,4 +27,5 @@ dependencies {
   testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}") {
     because "besu libs in the tests use slf4j"
   }
+  testImplementation(testFixtures(project(':jvm-libs:generic:vertx-helper')))
 }

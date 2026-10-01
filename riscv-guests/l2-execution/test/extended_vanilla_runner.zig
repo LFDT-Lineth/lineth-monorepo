@@ -65,12 +65,11 @@ pub fn main(init: std.process.Init) !void {
     var host = host_machine.HostMachine{};
     var suite = execution_spec_suite.Suite(host_machine.HostMachine){
         .machine = &host,
-        .policy = .allow_linea_rejections,
+        .policy = .skip_linea_unsupported,
         .fork_filter = fork_filter,
         .record_rejection = recordRejection,
         .record_context = &histogram,
     };
-
     std.debug.print("running {s}\n", .{label});
     const stats = try spec_runner.run(&suite, init, operands.items, opts);
     printSummary(stats, &histogram);

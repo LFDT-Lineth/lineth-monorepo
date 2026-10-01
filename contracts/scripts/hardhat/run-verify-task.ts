@@ -17,8 +17,7 @@ async function main() {
     hreModule.run ??
     (
       hreModule.default as
-        | { run?: ((taskName: string, taskArgs?: Record<string, unknown>) => Promise<unknown>) | undefined }
-        | undefined
+        { run?: ((taskName: string, taskArgs?: Record<string, unknown>) => Promise<unknown>) | undefined } | undefined
     )?.run;
 
   if (!run) {

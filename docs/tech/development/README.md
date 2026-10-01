@@ -7,7 +7,7 @@
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Node.js | >= 24.18.0 (see `.nvmrc`) | TypeScript projects |
-| pnpm | v11.9.0+ | Package management |
+| pnpm | v12.6.0+ | Package management |
 | Docker | v24+ | Container runtime |
 | Docker Compose | v2.19+ | Multi-container orchestration |
 | Make | v3.81+ | Build automation |
@@ -57,9 +57,6 @@ make start-l2-blockchain-only
 
 # With CI configuration (web3signer enabled)
 make start-env-with-tracing-v2-ci
-
-# With fleet (leader + follower nodes)
-make start-env-with-tracing-v2-ci-fleet
 
 # With state recovery services
 make start-env-with-staterecovery
@@ -421,9 +418,6 @@ cd e2e && pnpm run test:e2e:local
 
 # Specific test
 cd e2e && pnpm run test:e2e:local -- messaging.spec.ts
-
-# Fleet tests
-cd e2e && pnpm run test:e2e:fleet:local
 
 # Liveness tests
 cd e2e && pnpm run test:e2e:liveness:local

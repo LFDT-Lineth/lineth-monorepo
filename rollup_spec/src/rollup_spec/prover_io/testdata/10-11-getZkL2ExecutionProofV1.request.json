@@ -4,6 +4,8 @@
     "startBlockNumber": 10,
     "endBlockNumber": 11,
     "startBlockTimestamp": 1763000101,
+    "endBlockTimestamp": 1763000101,
+    "transactionsCount": 2,
     "totalGasUsed": 24000000
   },
   "proofRequest": {
@@ -39,7 +41,8 @@
               "withdrawals": [],
               "blobGasUsed": 0,
               "excessBlobGas": 0,
-              "blockAccessList": "0x"
+              "blockAccessList": "0x",
+              "slotNumber": 10
             },
             "versionedHashes": [],
             "parentBeaconBlockRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",
@@ -91,7 +94,8 @@
               "withdrawals": [],
               "blobGasUsed": 0,
               "excessBlobGas": 0,
-              "blockAccessList": "0x"
+              "blockAccessList": "0x",
+              "slotNumber": 11
             },
             "versionedHashes": [],
             "parentBeaconBlockRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",

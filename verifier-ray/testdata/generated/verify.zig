@@ -51,15 +51,13 @@ pub const system_0_public_input = protocol.public_input.Spec{
 // expression: "bool"
 const system_0_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_0_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_0_module_0_buckets = [_]vanishing.Bucket{
@@ -92,11 +90,9 @@ const system_0_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks };
 // shared-randomness system: "bool-col"
-const system_0_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_0_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_0_shared_randomness = shared_randomness.System{ .rounds = &system_0_shared_randomness_rounds, .contribution_refs = &system_0_shared_randomness_contribution_refs };
+const system_0_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_0_shared_randomness_contribution_refs };
 const verify_case_0_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -108,16 +104,24 @@ const verify_case_0_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_0_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_0_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_0_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_0_pcs_all_shifts,
+    .all_claim_cells = &verify_case_0_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -209,9 +213,9 @@ pub const system_1_public_input = protocol.public_input.Spec{
 const system_1_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_1_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -249,11 +253,9 @@ const system_1_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks };
 // shared-randomness system: "fib"
-const system_1_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_1_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_1_shared_randomness = shared_randomness.System{ .rounds = &system_1_shared_randomness_rounds, .contribution_refs = &system_1_shared_randomness_contribution_refs };
+const system_1_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_1_shared_randomness_contribution_refs };
 const verify_case_1_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -267,18 +269,28 @@ const verify_case_1_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_1_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    6,
+    0,
+};
+
+const verify_case_1_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_1_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7, 6 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_1_pcs_all_shifts,
+    .all_claim_cells = &verify_case_1_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -375,8 +387,8 @@ const system_2_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
 };
 
 const system_2_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -414,11 +426,9 @@ const system_2_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks };
 // shared-randomness system: "geo"
-const system_2_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_2_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_2_shared_randomness = shared_randomness.System{ .rounds = &system_2_shared_randomness_rounds, .contribution_refs = &system_2_shared_randomness_contribution_refs };
+const system_2_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_2_shared_randomness_contribution_refs };
 const verify_case_2_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -431,17 +441,26 @@ const verify_case_2_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_2_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+};
+
+const verify_case_2_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_2_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_2_pcs_all_shifts,
+    .all_claim_cells = &verify_case_2_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -535,9 +554,9 @@ pub const system_3_public_input = protocol.public_input.Spec{
 const system_3_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_3_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -575,11 +594,9 @@ const system_3_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks };
 // shared-randomness system: "ctr"
-const system_3_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_3_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_3_shared_randomness = shared_randomness.System{ .rounds = &system_3_shared_randomness_rounds, .contribution_refs = &system_3_shared_randomness_contribution_refs };
+const system_3_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_3_shared_randomness_contribution_refs };
 const verify_case_3_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -593,20 +610,29 @@ const verify_case_3_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_3_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+};
+
+const verify_case_3_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_3_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_3_pcs_all_shifts,
+    .all_claim_cells = &verify_case_3_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -701,13 +727,13 @@ pub const system_4_public_input = protocol.public_input.Spec{
 // expression: "pyth"
 const system_4_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .square, .operands = &.{0} } },
+    .{ .op = .{ .operator = .square, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "colB"
-    .{ .op = .{ .operator = .square, .operands = &.{2} } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 3 } } },
+    .{ .op = .{ .operator = .square, .lhs = 2, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "colC"
-    .{ .op = .{ .operator = .square, .operands = &.{5} } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 6 } } },
+    .{ .op = .{ .operator = .square, .lhs = 5, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 6 } },
 };
 
 const system_4_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -745,11 +771,9 @@ const system_4_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks };
 // shared-randomness system: "pyth"
-const system_4_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_4_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_4_shared_randomness = shared_randomness.System{ .rounds = &system_4_shared_randomness_rounds, .contribution_refs = &system_4_shared_randomness_contribution_refs };
+const system_4_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_4_shared_randomness_contribution_refs };
 const verify_case_4_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -763,22 +787,30 @@ const verify_case_4_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_4_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_4_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_4_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_4_pcs_all_shifts,
+    .all_claim_cells = &verify_case_4_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -874,9 +906,9 @@ pub const system_5_public_input = protocol.public_input.Spec{
 const system_5_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_5_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -914,11 +946,9 @@ const system_5_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks };
 // shared-randomness system: "dyn-fib"
-const system_5_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_5_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_5_shared_randomness = shared_randomness.System{ .rounds = &system_5_shared_randomness_rounds, .contribution_refs = &system_5_shared_randomness_contribution_refs };
+const system_5_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_5_shared_randomness_contribution_refs };
 const verify_case_5_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -932,18 +962,28 @@ const verify_case_5_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_5_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+};
+
+const verify_case_5_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_5_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_5_pcs_all_shifts,
+    .all_claim_cells = &verify_case_5_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1039,7 +1079,7 @@ pub const system_6_public_input = protocol.public_input.Spec{
 const system_6_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 7 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_6_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1077,11 +1117,9 @@ const system_6_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks };
 // shared-randomness system: "const-col"
-const system_6_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_6_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_6_shared_randomness = shared_randomness.System{ .rounds = &system_6_shared_randomness_rounds, .contribution_refs = &system_6_shared_randomness_contribution_refs };
+const system_6_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_6_shared_randomness_contribution_refs };
 const verify_case_6_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -1093,16 +1131,24 @@ const verify_case_6_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_6_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_6_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_6_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_6_pcs_all_shifts,
+    .all_claim_cells = &verify_case_6_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1194,7 +1240,7 @@ pub const system_7_public_input = protocol.public_input.Spec{
 const system_7_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_7_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1232,11 +1278,9 @@ const system_7_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks };
 // shared-randomness system: "fwd-shift"
-const system_7_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_7_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_7_shared_randomness = shared_randomness.System{ .rounds = &system_7_shared_randomness_rounds, .contribution_refs = &system_7_shared_randomness_contribution_refs };
+const system_7_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_7_shared_randomness_contribution_refs };
 const verify_case_7_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -1249,17 +1293,26 @@ const verify_case_7_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_7_pcs_all_shifts = [_]i32{
+    0,
+    1,
+    0,
+};
+
+const verify_case_7_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_7_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_7_pcs_all_shifts,
+    .all_claim_cells = &verify_case_7_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1352,17 +1405,14 @@ pub const system_8_public_input = protocol.public_input.Spec{
 // expression: "cube"
 const system_8_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_8_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_8_module_0_buckets = [_]vanishing.Bucket{
@@ -1395,11 +1445,9 @@ const system_8_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks };
 // shared-randomness system: "bool-cube"
-const system_8_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_8_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_8_shared_randomness = shared_randomness.System{ .rounds = &system_8_shared_randomness_rounds, .contribution_refs = &system_8_shared_randomness_contribution_refs };
+const system_8_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_8_shared_randomness_contribution_refs };
 const verify_case_8_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -1412,19 +1460,27 @@ const verify_case_8_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_8_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_8_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_8_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_8_pcs_all_shifts,
+    .all_claim_cells = &verify_case_8_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -1519,12 +1575,12 @@ const system_9_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 1 }, // col: "b"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
     .{ .constant = .{ .value = 3 } },
     .{ .column_claim = 2 }, // col: "c"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 7 } },
 };
 
 const system_9_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1562,11 +1618,9 @@ const system_9_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks };
 // shared-randomness system: "lin-comb"
-const system_9_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_9_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_9_shared_randomness = shared_randomness.System{ .rounds = &system_9_shared_randomness_rounds, .contribution_refs = &system_9_shared_randomness_contribution_refs };
+const system_9_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_9_shared_randomness_contribution_refs };
 const verify_case_9_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -1580,22 +1634,30 @@ const verify_case_9_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_9_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_9_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_9_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_9_pcs_all_shifts,
+    .all_claim_cells = &verify_case_9_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -1691,9 +1753,9 @@ pub const system_10_public_input = protocol.public_input.Spec{
 const system_10_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_10_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -1731,11 +1793,9 @@ const system_10_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks };
 // shared-randomness system: "fib-16"
-const system_10_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_10_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_10_shared_randomness = shared_randomness.System{ .rounds = &system_10_shared_randomness_rounds, .contribution_refs = &system_10_shared_randomness_contribution_refs };
+const system_10_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_10_shared_randomness_contribution_refs };
 const verify_case_10_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -1749,18 +1809,28 @@ const verify_case_10_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_10_pcs_all_shifts = [_]i32{
+    0,
+    15,
+    14,
+    0,
+};
+
+const verify_case_10_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_10_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 4 }, .shifts = &[_]isize{ 0, 15, 14 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 4 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 4 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 4 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_10_pcs_all_shifts,
+    .all_claim_cells = &verify_case_10_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -1855,17 +1925,16 @@ pub const system_11_public_input = protocol.public_input.Spec{
 const system_11_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .constant = .{ .value = 4 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "b"
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_11_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "v1"
     .{ .expression = 2, .cancelled_positions = &.{} },
     // expression: "v2"
-    .{ .expression = 5, .cancelled_positions = &.{} },
+    .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
 const system_11_module_0_buckets = [_]vanishing.Bucket{
@@ -1898,11 +1967,9 @@ const system_11_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks };
 // shared-randomness system: "same-ratio"
-const system_11_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_11_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_11_shared_randomness = shared_randomness.System{ .rounds = &system_11_shared_randomness_rounds, .contribution_refs = &system_11_shared_randomness_contribution_refs };
+const system_11_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_11_shared_randomness_contribution_refs };
 const verify_case_11_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -1915,19 +1982,27 @@ const verify_case_11_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_11_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_11_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_11_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_11_pcs_all_shifts,
+    .all_claim_cells = &verify_case_11_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -2020,19 +2095,16 @@ pub const system_12_public_input = protocol.public_input.Spec{
 const system_12_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "a"
     .{ .column_claim = 1 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .column_claim = 0 }, // col: "a"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 5, 6 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_12_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "lin"
     .{ .expression = 2, .cancelled_positions = &.{0} },
     // expression: "bool"
-    .{ .expression = 7, .cancelled_positions = &.{} },
+    .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
 const system_12_module_0_buckets = [_]vanishing.Bucket{
@@ -2065,11 +2137,9 @@ const system_12_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks };
 // shared-randomness system: "mixed-ratio"
-const system_12_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_12_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_12_shared_randomness = shared_randomness.System{ .rounds = &system_12_shared_randomness_rounds, .contribution_refs = &system_12_shared_randomness_contribution_refs };
+const system_12_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_12_shared_randomness_contribution_refs };
 const verify_case_12_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2082,17 +2152,26 @@ const verify_case_12_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_12_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_12_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_12_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_12_pcs_all_shifts,
+    .all_claim_cells = &verify_case_12_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2185,15 +2264,13 @@ pub const system_13_public_input = protocol.public_input.Spec{
 // expression: "a-bool"
 const system_13_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_13_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "a-bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_13_module_0_buckets = [_]vanishing.Bucket{
@@ -2204,7 +2281,7 @@ const system_13_module_0_buckets = [_]vanishing.Bucket{
 const system_13_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
     .{ .constant = .{ .value = 7 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_13_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2244,11 +2321,9 @@ const system_13_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks };
 // shared-randomness system: "multi-mod"
-const system_13_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_13_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_13_shared_randomness = shared_randomness.System{ .rounds = &system_13_shared_randomness_rounds, .contribution_refs = &system_13_shared_randomness_contribution_refs };
+const system_13_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_13_shared_randomness_contribution_refs };
 const verify_case_13_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -2262,22 +2337,30 @@ const verify_case_13_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_13_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_13_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_13_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_13_pcs_all_shifts,
+    .all_claim_cells = &verify_case_13_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -2373,9 +2456,9 @@ pub const system_14_public_input = protocol.public_input.Spec{
 const system_14_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_14_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2413,11 +2496,9 @@ const system_14_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks };
 // shared-randomness system: "manual-cxl"
-const system_14_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_14_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_14_shared_randomness = shared_randomness.System{ .rounds = &system_14_shared_randomness_rounds, .contribution_refs = &system_14_shared_randomness_contribution_refs };
+const system_14_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_14_shared_randomness_contribution_refs };
 const verify_case_14_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2430,17 +2511,26 @@ const verify_case_14_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_14_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_14_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_14_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_14_pcs_all_shifts,
+    .all_claim_cells = &verify_case_14_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2535,8 +2625,8 @@ const system_15_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "sel"
     .{ .column_claim = 1 }, // col: "col"
     .{ .constant = .{ .value = 9 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_15_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2574,11 +2664,9 @@ const system_15_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks };
 // shared-randomness system: "pre-sel"
-const system_15_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_15_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_15_shared_randomness = shared_randomness.System{ .rounds = &system_15_shared_randomness_rounds, .contribution_refs = &system_15_shared_randomness_contribution_refs };
+const system_15_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_15_shared_randomness_contribution_refs };
 const verify_case_15_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -2592,19 +2680,27 @@ const verify_case_15_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 99929030 }, .{ .value = 1429397361 }, .{ .value = 1076237802 }, .{ .value = 1989756093 }, .{ .value = 318192499 }, .{ .value = 1663055389 }, .{ .value = 1410501545 }, .{ .value = 1751042557 } } },
 };
 
+const verify_case_15_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_15_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 0 },
+};
+
 pub const verify_case_15_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_15_pcs_all_shifts,
+    .all_claim_cells = &verify_case_15_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -2698,7 +2794,7 @@ pub const system_16_public_input = protocol.public_input.Spec{
 const system_16_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "c"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_16_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2736,11 +2832,9 @@ const system_16_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks };
 // shared-randomness system: "cell-leaf"
-const system_16_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_16_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_16_shared_randomness = shared_randomness.System{ .rounds = &system_16_shared_randomness_rounds, .contribution_refs = &system_16_shared_randomness_contribution_refs };
+const system_16_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_16_shared_randomness_contribution_refs };
 const verify_case_16_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -2752,16 +2846,24 @@ const verify_case_16_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_16_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_16_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_16_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_16_pcs_all_shifts,
+    .all_claim_cells = &verify_case_16_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2858,8 +2960,8 @@ const system_17_module_0_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 0 }, // coin: "coin"
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_17_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -2897,11 +2999,9 @@ const system_17_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks };
 // shared-randomness system: "coin-scaled"
-const system_17_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_17_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_17_shared_randomness = shared_randomness.System{ .rounds = &system_17_shared_randomness_rounds, .contribution_refs = &system_17_shared_randomness_contribution_refs };
+const system_17_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_17_shared_randomness_contribution_refs };
 const verify_case_17_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2914,17 +3014,26 @@ const verify_case_17_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_17_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_17_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+};
+
 pub const verify_case_17_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_17_pcs_all_shifts,
+    .all_claim_cells = &verify_case_17_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3024,9 +3133,9 @@ pub const system_18_public_input = protocol.public_input.Spec{
 const system_18_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_18_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3064,11 +3173,9 @@ const system_18_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks };
 // shared-randomness system: "step3"
-const system_18_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_18_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_18_shared_randomness = shared_randomness.System{ .rounds = &system_18_shared_randomness_rounds, .contribution_refs = &system_18_shared_randomness_contribution_refs };
+const system_18_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_18_shared_randomness_contribution_refs };
 const verify_case_18_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3082,18 +3189,28 @@ const verify_case_18_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_18_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    5,
+    0,
+};
+
+const verify_case_18_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_18_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7, 5 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_18_pcs_all_shifts,
+    .all_claim_cells = &verify_case_18_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3188,19 +3305,14 @@ pub const system_19_public_input = protocol.public_input.Spec{
 // expression: "q"
 const system_19_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_19_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "q"
-    .{ .expression = 8, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_19_module_0_buckets = [_]vanishing.Bucket{
@@ -3233,11 +3345,9 @@ const system_19_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks };
 // shared-randomness system: "quartic"
-const system_19_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_19_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_19_shared_randomness = shared_randomness.System{ .rounds = &system_19_shared_randomness_rounds, .contribution_refs = &system_19_shared_randomness_contribution_refs };
+const system_19_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_19_shared_randomness_contribution_refs };
 const verify_case_19_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -3252,25 +3362,33 @@ const verify_case_19_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_19_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_19_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+};
+
 pub const verify_case_19_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
     },
+    .all_shifts = &verify_case_19_pcs_all_shifts,
+    .all_claim_cells = &verify_case_19_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -3368,7 +3486,7 @@ pub const system_20_public_input = protocol.public_input.Spec{
 const system_20_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_20_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -3406,11 +3524,9 @@ const system_20_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks };
 // shared-randomness system: "dyn-leftpad"
-const system_20_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_20_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_20_shared_randomness = shared_randomness.System{ .rounds = &system_20_shared_randomness_rounds, .contribution_refs = &system_20_shared_randomness_contribution_refs };
+const system_20_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_20_shared_randomness_contribution_refs };
 const verify_case_20_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3423,17 +3539,26 @@ const verify_case_20_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_20_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    0,
+};
+
+const verify_case_20_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_20_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 1 } }, .shifts = &[_]isize{ 0, -1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 1 } }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_20_pcs_all_shifts,
+    .all_claim_cells = &verify_case_20_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3526,17 +3651,15 @@ pub const system_21_public_input = protocol.public_input.Spec{
 // expression: "cube-shift"
 const system_21_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 0 } },
 };
 
 const system_21_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube-shift"
-    .{ .expression = 6, .cancelled_positions = &.{0} },
+    .{ .expression = 4, .cancelled_positions = &.{0} },
 };
 
 const system_21_module_0_buckets = [_]vanishing.Bucket{
@@ -3569,11 +3692,9 @@ const system_21_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks };
 // shared-randomness system: "cube-shift"
-const system_21_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_21_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_21_shared_randomness = shared_randomness.System{ .rounds = &system_21_shared_randomness_rounds, .contribution_refs = &system_21_shared_randomness_contribution_refs };
+const system_21_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_21_shared_randomness_contribution_refs };
 const verify_case_21_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3587,20 +3708,29 @@ const verify_case_21_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_21_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+};
+
+const verify_case_21_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_21_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_21_pcs_all_shifts,
+    .all_claim_cells = &verify_case_21_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -3694,31 +3824,21 @@ pub const system_22_public_input = protocol.public_input.Spec{
 
 const system_22_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 12 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 0 } },
 };
 
 const system_22_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_22_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "quartic"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 5, .cancelled_positions = &.{} },
 };
 
 const system_22_module_0_buckets = [_]vanishing.Bucket{
@@ -3752,11 +3872,9 @@ const system_22_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks };
 // shared-randomness system: "mixed-hi-ratio"
-const system_22_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_22_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_22_shared_randomness = shared_randomness.System{ .rounds = &system_22_shared_randomness_rounds, .contribution_refs = &system_22_shared_randomness_contribution_refs };
+const system_22_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_22_shared_randomness_contribution_refs };
 const verify_case_22_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -3773,31 +3891,39 @@ const verify_case_22_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_22_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_22_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+    .{ .round = 2, .index = 6 },
+};
+
 pub const verify_case_22_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_22_pcs_all_shifts,
+    .all_claim_cells = &verify_case_22_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 7,
     .max_size_log2 = 22,
@@ -3898,17 +4024,14 @@ pub const system_23_public_input = protocol.public_input.Spec{
 // expression: "cubeA"
 const system_23_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_23_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cubeA"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_23_module_0_buckets = [_]vanishing.Bucket{
@@ -3918,17 +4041,14 @@ const system_23_module_0_buckets = [_]vanishing.Bucket{
 // expression: "cubeB"
 const system_23_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_23_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cubeB"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_23_module_1_buckets = [_]vanishing.Bucket{
@@ -3963,11 +4083,9 @@ const system_23_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks };
 // shared-randomness system: "multi-mod-hi-ratio"
-const system_23_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_23_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_23_shared_randomness = shared_randomness.System{ .rounds = &system_23_shared_randomness_rounds, .contribution_refs = &system_23_shared_randomness_contribution_refs };
+const system_23_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_23_shared_randomness_contribution_refs };
 const verify_case_23_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -3983,28 +4101,36 @@ const verify_case_23_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_23_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_23_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+};
+
 pub const verify_case_23_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
     },
+    .all_shifts = &verify_case_23_pcs_all_shifts,
+    .all_claim_cells = &verify_case_23_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -4103,17 +4229,14 @@ pub const system_24_public_input = protocol.public_input.Spec{
 // expression: "cube"
 const system_24_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 0 } },
 };
 
 const system_24_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "cube"
-    .{ .expression = 6, .cancelled_positions = &.{} },
+    .{ .expression = 3, .cancelled_positions = &.{} },
 };
 
 const system_24_module_0_buckets = [_]vanishing.Bucket{
@@ -4146,11 +4269,9 @@ const system_24_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks };
 // shared-randomness system: "cube-32"
-const system_24_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_24_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_24_shared_randomness = shared_randomness.System{ .rounds = &system_24_shared_randomness_rounds, .contribution_refs = &system_24_shared_randomness_contribution_refs };
+const system_24_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_24_shared_randomness_contribution_refs };
 const verify_case_24_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -4163,19 +4284,27 @@ const verify_case_24_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_24_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_24_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_24_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 5 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 5 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_24_pcs_all_shifts,
+    .all_claim_cells = &verify_case_24_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -4269,7 +4398,7 @@ pub const system_25_public_input = protocol.public_input.Spec{
 const system_25_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
 };
 
 const system_25_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -4307,11 +4436,9 @@ const system_25_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks };
 // shared-randomness system: "fwd-shift-3"
-const system_25_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_25_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_25_shared_randomness = shared_randomness.System{ .rounds = &system_25_shared_randomness_rounds, .contribution_refs = &system_25_shared_randomness_contribution_refs };
+const system_25_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_25_shared_randomness_contribution_refs };
 const verify_case_25_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4324,17 +4451,26 @@ const verify_case_25_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_25_pcs_all_shifts = [_]i32{
+    0,
+    3,
+    0,
+};
+
+const verify_case_25_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+};
+
 pub const verify_case_25_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_25_pcs_all_shifts,
+    .all_claim_cells = &verify_case_25_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4428,11 +4564,11 @@ pub const system_26_public_input = protocol.public_input.Spec{
 const system_26_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 2 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 5 } },
 };
 
 const system_26_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -4470,11 +4606,9 @@ const system_26_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks };
 // shared-randomness system: "two-shift"
-const system_26_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_26_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_26_shared_randomness = shared_randomness.System{ .rounds = &system_26_shared_randomness_rounds, .contribution_refs = &system_26_shared_randomness_contribution_refs };
+const system_26_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_26_shared_randomness_contribution_refs };
 const verify_case_26_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4488,18 +4622,28 @@ const verify_case_26_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_26_pcs_all_shifts = [_]i32{
+    1,
+    7,
+    0,
+    0,
+};
+
+const verify_case_26_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_26_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 1, 7, 0 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_26_pcs_all_shifts,
+    .all_claim_cells = &verify_case_26_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4594,15 +4738,13 @@ pub const system_27_public_input = protocol.public_input.Spec{
 // expression: "bool"
 const system_27_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 0 } },
 };
 
 const system_27_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "bool"
-    .{ .expression = 4, .cancelled_positions = &.{} },
+    .{ .expression = 2, .cancelled_positions = &.{} },
 };
 
 const system_27_module_0_buckets = [_]vanishing.Bucket{
@@ -4635,11 +4777,9 @@ const system_27_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks };
 // shared-randomness system: "dyn-quad"
-const system_27_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_27_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_27_shared_randomness = shared_randomness.System{ .rounds = &system_27_shared_randomness_rounds, .contribution_refs = &system_27_shared_randomness_contribution_refs };
+const system_27_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_27_shared_randomness_contribution_refs };
 const verify_case_27_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -4651,16 +4791,24 @@ const verify_case_27_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_27_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_27_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_27_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_27_pcs_all_shifts,
+    .all_claim_cells = &verify_case_27_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4751,21 +4899,16 @@ pub const system_28_public_input = protocol.public_input.Spec{
 // expression: "quartic-shift"
 const system_28_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "col"
-    .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 3 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 1 } },
 };
 
 const system_28_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "quartic-shift"
-    .{ .expression = 10, .cancelled_positions = &.{0} },
+    .{ .expression = 5, .cancelled_positions = &.{0} },
 };
 
 const system_28_module_0_buckets = [_]vanishing.Bucket{
@@ -4798,11 +4941,9 @@ const system_28_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks };
 // shared-randomness system: "quartic-shift"
-const system_28_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_28_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_28_shared_randomness = shared_randomness.System{ .rounds = &system_28_shared_randomness_rounds, .contribution_refs = &system_28_shared_randomness_contribution_refs };
+const system_28_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_28_shared_randomness_contribution_refs };
 const verify_case_28_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4818,26 +4959,35 @@ const verify_case_28_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_28_pcs_all_shifts = [_]i32{
+    0,
+    7,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_28_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+};
+
 pub const verify_case_28_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 5 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
     },
+    .all_shifts = &verify_case_28_pcs_all_shifts,
+    .all_claim_cells = &verify_case_28_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -4937,9 +5087,9 @@ pub const system_29_public_input = protocol.public_input.Spec{
 const system_29_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "col"
     .{ .column_claim = 1 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_29_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -4977,11 +5127,9 @@ const system_29_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks };
 // shared-randomness system: "dyn-fib-multisize"
-const system_29_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_29_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_29_shared_randomness = shared_randomness.System{ .rounds = &system_29_shared_randomness_rounds, .contribution_refs = &system_29_shared_randomness_contribution_refs };
+const system_29_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_29_shared_randomness_contribution_refs };
 const verify_case_29_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4995,18 +5143,28 @@ const verify_case_29_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_29_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+};
+
+const verify_case_29_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 3 },
+};
+
 pub const verify_case_29_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_29_pcs_all_shifts,
+    .all_claim_cells = &verify_case_29_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -5102,9 +5260,9 @@ pub const system_30_public_input = protocol.public_input.Spec{
 const system_30_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colA"
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colA"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_30_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -5120,9 +5278,9 @@ const system_30_module_0_buckets = [_]vanishing.Bucket{
 const system_30_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "colB"
     .{ .column_claim = 1 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "colB"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
 };
 
 const system_30_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -5162,11 +5320,9 @@ const system_30_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks };
 // shared-randomness system: "dyn-fib-two-modules"
-const system_30_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_30_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_30_shared_randomness = shared_randomness.System{ .rounds = &system_30_shared_randomness_rounds, .contribution_refs = &system_30_shared_randomness_contribution_refs };
+const system_30_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_30_shared_randomness_contribution_refs };
 const verify_case_30_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -5184,26 +5340,38 @@ const verify_case_30_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_30_pcs_all_shifts = [_]i32{
+    0,
+    -1,
+    -2,
+    0,
+    -1,
+    -2,
+    0,
+    0,
+};
+
+const verify_case_30_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+    .{ .round = 2, .index = 2 },
+    .{ .round = 2, .index = 4 },
+    .{ .round = 2, .index = 5 },
+    .{ .round = 2, .index = 6 },
+    .{ .round = 2, .index = 3 },
+    .{ .round = 2, .index = 7 },
+};
+
 pub const verify_case_30_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-            .{ .round = 2, .index = 1 },
-            .{ .round = 2, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 4 },
-            .{ .round = 2, .index = 5 },
-            .{ .round = 2, .index = 6 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 7 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts_start = 0, .shifts_len = 3, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 2 } }, .shifts_start = 3, .shifts_len = 3, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 0 } }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
     },
+    .all_shifts = &verify_case_30_pcs_all_shifts,
+    .all_claim_cells = &verify_case_30_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -5307,31 +5475,27 @@ const system_31_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_31_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_31_module_0_buckets = [_]vanishing.Bucket{
@@ -5370,11 +5534,9 @@ const system_31_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks };
 // shared-randomness system: "lds-ones"
-const system_31_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_31_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_31_shared_randomness = shared_randomness.System{ .rounds = &system_31_shared_randomness_rounds, .contribution_refs = &system_31_shared_randomness_contribution_refs };
+const system_31_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_31_shared_randomness_contribution_refs };
 const verify_case_31_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -5389,20 +5551,29 @@ const verify_case_31_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_31_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    3,
+    0,
+};
+
+const verify_case_31_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+};
+
 pub const verify_case_31_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_31_pcs_all_shifts,
+    .all_claim_cells = &verify_case_31_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -5469,39 +5640,33 @@ pub const system_32_public_input = protocol.public_input.Spec{
 const system_32_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_32_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_32_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_32_module_0_buckets = [_]vanishing.Bucket{
@@ -5541,11 +5706,9 @@ const system_32_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks };
 // shared-randomness system: "lds-partial"
-const system_32_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_32_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_32_shared_randomness = shared_randomness.System{ .rounds = &system_32_shared_randomness_rounds, .contribution_refs = &system_32_shared_randomness_contribution_refs };
+const system_32_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_32_shared_randomness_contribution_refs };
 const verify_case_32_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5563,29 +5726,38 @@ const verify_case_32_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_32_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_32_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_32_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_32_pcs_all_shifts,
+    .all_claim_cells = &verify_case_32_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -5655,39 +5827,33 @@ pub const system_33_public_input = protocol.public_input.Spec{
 const system_33_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_33_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_33_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_33_module_0_buckets = [_]vanishing.Bucket{
@@ -5727,11 +5893,9 @@ const system_33_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks };
 // shared-randomness system: "lds-zeros"
-const system_33_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_33_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_33_shared_randomness = shared_randomness.System{ .rounds = &system_33_shared_randomness_rounds, .contribution_refs = &system_33_shared_randomness_contribution_refs };
+const system_33_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_33_shared_randomness_contribution_refs };
 const verify_case_33_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5749,29 +5913,38 @@ const verify_case_33_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_33_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_33_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_33_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_33_pcs_all_shifts,
+    .all_claim_cells = &verify_case_33_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -5841,39 +6014,33 @@ pub const system_34_public_input = protocol.public_input.Spec{
 const system_34_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b0-k0"
     .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .column_claim = 4 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "num"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .column_claim = 4 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_34_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_34_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_34_module_0_buckets = [_]vanishing.Bucket{
@@ -5913,11 +6080,9 @@ const system_34_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks };
 // shared-randomness system: "lds-maskzero"
-const system_34_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_34_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_34_shared_randomness = shared_randomness.System{ .rounds = &system_34_shared_randomness_rounds, .contribution_refs = &system_34_shared_randomness_contribution_refs };
+const system_34_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_34_shared_randomness_contribution_refs };
 const verify_case_34_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5936,32 +6101,41 @@ const verify_case_34_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_34_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_34_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+};
+
 pub const verify_case_34_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
     },
+    .all_shifts = &verify_case_34_pcs_all_shifts,
+    .all_claim_cells = &verify_case_34_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 7,
     .max_size_log2 = 22,
@@ -6032,100 +6206,61 @@ pub const system_35_public_input = protocol.public_input.Spec{
 const system_35_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
     .{ .column_claim = 5 }, // col: "c3"
     .{ .column_claim = 6 }, // col: "z-b0-k1"
     .{ .column_claim = 7 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 28, 29 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
-    .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 39, 40 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 41, 42 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 43 } } },
-    .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 45, 46 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 44, 49 } } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 51, 56 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 50, 57 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 20, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 23 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 25 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 58, 59 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 27 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 61, 62 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 12 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 67, 68 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 66, 69 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 70, 71 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 31 } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 33 } },
+    .{ .op = .{ .operator = .mul, .lhs = 34, .rhs = 27 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 6 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 73, 74 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 75, 76 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 20 } },
+    .{ .op = .{ .operator = .mul, .lhs = 37, .rhs = 31 } },
 };
 
 const system_35_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 26, .cancelled_positions = &.{0} },
+    .{ .expression = 18, .cancelled_positions = &.{0} },
 };
 
 const system_35_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k1"
-    .{ .expression = 33, .cancelled_positions = &.{0} },
+    .{ .expression = 24, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 60, .cancelled_positions = &.{} },
+    .{ .expression = 28, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 65, .cancelled_positions = &.{} },
+    .{ .expression = 32, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 72, .cancelled_positions = &.{} },
+    .{ .expression = 35, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 77, .cancelled_positions = &.{} },
+    .{ .expression = 38, .cancelled_positions = &.{} },
 };
 
 const system_35_module_0_buckets = [_]vanishing.Bucket{
@@ -6166,11 +6301,9 @@ const system_35_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks };
 // shared-randomness system: "lds-pack"
-const system_35_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_35_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_35_shared_randomness = shared_randomness.System{ .rounds = &system_35_shared_randomness_rounds, .contribution_refs = &system_35_shared_randomness_contribution_refs };
+const system_35_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_35_shared_randomness_contribution_refs };
 const verify_case_35_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -6194,45 +6327,55 @@ const verify_case_35_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_35_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_35_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+};
+
 pub const verify_case_35_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_35_pcs_all_shifts,
+    .all_claim_cells = &verify_case_35_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -6310,31 +6453,27 @@ const system_36_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "cA"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "cA"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_36_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_36_module_0_buckets = [_]vanishing.Bucket{
@@ -6344,39 +6483,33 @@ const system_36_module_0_buckets = [_]vanishing.Bucket{
 const system_36_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "fB"
     .{ .column_claim = 1 }, // col: "cB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "fB"
-    .{ .column_claim = 1 }, // col: "cB"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 15 } } },
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_36_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_36_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_36_module_1_buckets = [_]vanishing.Bucket{
@@ -6419,11 +6552,9 @@ const system_36_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks };
 // shared-randomness system: "lds-multi-mod"
-const system_36_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_36_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_36_shared_randomness = shared_randomness.System{ .rounds = &system_36_shared_randomness_rounds, .contribution_refs = &system_36_shared_randomness_contribution_refs };
+const system_36_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_36_shared_randomness_contribution_refs };
 const verify_case_36_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -6445,39 +6576,49 @@ const verify_case_36_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_36_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_36_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+};
+
 pub const verify_case_36_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
     },
+    .all_shifts = &verify_case_36_pcs_all_shifts,
+    .all_claim_cells = &verify_case_36_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 9,
     .max_size_log2 = 22,
@@ -6553,22 +6694,20 @@ const system_37_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 3 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 5 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 8 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 5 } },
 };
 
 const system_37_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 6, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 11, .cancelled_positions = &.{} },
+    .{ .expression = 9, .cancelled_positions = &.{} },
 };
 
 const system_37_module_0_buckets = [_]vanishing.Bucket{
@@ -6607,11 +6746,9 @@ const system_37_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks };
 // shared-randomness system: "lds-size1"
-const system_37_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_37_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_37_shared_randomness = shared_randomness.System{ .rounds = &system_37_shared_randomness_rounds, .contribution_refs = &system_37_shared_randomness_contribution_refs };
+const system_37_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_37_shared_randomness_contribution_refs };
 const verify_case_37_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -6625,19 +6762,27 @@ const verify_case_37_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_37_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+};
+
+const verify_case_37_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+};
+
 pub const verify_case_37_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
     },
+    .all_shifts = &verify_case_37_pcs_all_shifts,
+    .all_claim_cells = &verify_case_37_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -6703,43 +6848,35 @@ pub const system_38_public_input = protocol.public_input.Spec{
 const system_38_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 7 } },
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_38_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_38_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_38_module_0_buckets = [_]vanishing.Bucket{
@@ -6749,42 +6886,35 @@ const system_38_module_0_buckets = [_]vanishing.Bucket{
 
 const system_38_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .constant = .{ .value = 7 } },
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .constant = .{ .value = 7 } },
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_38_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_38_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_38_module_1_buckets = [_]vanishing.Bucket{
@@ -6827,11 +6957,9 @@ const system_38_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks };
 // shared-randomness system: "lds-cond"
-const system_38_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_38_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_38_shared_randomness = shared_randomness.System{ .rounds = &system_38_shared_randomness_rounds, .contribution_refs = &system_38_shared_randomness_contribution_refs };
+const system_38_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_38_shared_randomness_contribution_refs };
 const verify_case_38_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -6856,48 +6984,58 @@ const verify_case_38_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_38_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_38_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+    .{ .round = 3, .index = 13 },
+};
+
 pub const verify_case_38_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_38_pcs_all_shifts,
+    .all_claim_cells = &verify_case_38_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -6975,165 +7113,89 @@ pub const system_39_public_input = protocol.public_input.Spec{
 const system_39_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 6 } },
     .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 10 } },
     .{ .column_claim = 3 }, // col: "z-b0-k0"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 24 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 25 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 17 } },
     .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 29, 30 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 1 } },
     .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 32, 33 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 35 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 36 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 21, .rhs = 24 } },
     .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 37, 42 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 26, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 25, .rhs = 28 } },
     .{ .column_claim = 8 }, // col: "z-b0-k1"
     .{ .column_claim = 9 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 44, 45 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 47, 48 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 49, 50 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 46, 51 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 43, 52 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 30, .rhs = 31 } },
+    .{ .op = .{ .operator = .mul, .lhs = 32, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 33 } },
     .{ .column_claim = 10 }, // col: "c6"
     .{ .column_claim = 11 }, // col: "z-b0-k2"
     .{ .column_claim = 12 }, // col: "z-b0-k2"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 55, 56 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 54, 59 } } },
-    .{ .column_claim = 0 }, // col: "c0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 61, 62 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
-    .{ .column_claim = 1 }, // col: "c1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 66, 67 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 68, 69 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 65, 70 } } },
-    .{ .column_claim = 2 }, // col: "c2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 72, 73 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 74, 75 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 71, 76 } } },
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 79, 80 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 81, 82 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 78, 83 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 77, 84 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 36, .rhs = 37 } },
+    .{ .op = .{ .operator = .mul, .lhs = 38, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 39 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 41 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 85, 86 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 42, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 3 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 88, 89 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 45, .rhs = 12 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 90, 91 } } },
-    .{ .column_claim = 5 }, // col: "c3"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 93, 94 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 95, 96 } } },
-    .{ .column_claim = 6 }, // col: "c4"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 98, 99 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 100, 101 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 97, 102 } } },
-    .{ .column_claim = 7 }, // col: "c5"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 104, 105 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 106, 107 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 103, 108 } } },
-    .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 111, 112 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 113, 114 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 110, 115 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 109, 116 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 117, 118 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 46, .rhs = 47 } },
+    .{ .op = .{ .operator = .mul, .lhs = 30, .rhs = 16 } },
+    .{ .op = .{ .operator = .sub, .lhs = 29, .rhs = 49 } },
+    .{ .op = .{ .operator = .mul, .lhs = 50, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 8 }, // col: "z-b0-k1"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 120, 121 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 122, 123 } } },
-    .{ .column_claim = 10 }, // col: "c6"
-    .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 126, 127 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 125, 128 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 129, 130 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 52, .rhs = 30 } },
+    .{ .op = .{ .operator = .mul, .lhs = 53, .rhs = 47 } },
+    .{ .op = .{ .operator = .mul, .lhs = 36, .rhs = 1 } },
+    .{ .op = .{ .operator = .sub, .lhs = 35, .rhs = 55 } },
+    .{ .op = .{ .operator = .mul, .lhs = 56, .rhs = 43 } },
     .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 11 }, // col: "z-b0-k2"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 132, 133 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 134, 135 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 58, .rhs = 36 } },
+    .{ .op = .{ .operator = .mul, .lhs = 59, .rhs = 47 } },
 };
 
 const system_39_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 26, .cancelled_positions = &.{0} },
+    .{ .expression = 18, .cancelled_positions = &.{0} },
     // expression: "z-recurrence-b0-k1"
-    .{ .expression = 53, .cancelled_positions = &.{0} },
+    .{ .expression = 34, .cancelled_positions = &.{0} },
 };
 
 const system_39_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k2"
-    .{ .expression = 60, .cancelled_positions = &.{0} },
+    .{ .expression = 40, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 87, .cancelled_positions = &.{} },
+    .{ .expression = 44, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 92, .cancelled_positions = &.{} },
+    .{ .expression = 48, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 119, .cancelled_positions = &.{} },
+    .{ .expression = 51, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 124, .cancelled_positions = &.{} },
+    .{ .expression = 54, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 131, .cancelled_positions = &.{} },
+    .{ .expression = 57, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 136, .cancelled_positions = &.{} },
+    .{ .expression = 60, .cancelled_positions = &.{} },
 };
 
 const system_39_module_0_buckets = [_]vanishing.Bucket{
@@ -7175,11 +7237,9 @@ const system_39_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks };
 // shared-randomness system: "lds-many"
-const system_39_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_39_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_39_shared_randomness = shared_randomness.System{ .rounds = &system_39_shared_randomness_rounds, .contribution_refs = &system_39_shared_randomness_contribution_refs };
+const system_39_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_39_shared_randomness_contribution_refs };
 const verify_case_39_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -7208,58 +7268,69 @@ const verify_case_39_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_39_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_39_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+    .{ .round = 3, .index = 13 },
+    .{ .round = 3, .index = 14 },
+    .{ .round = 3, .index = 15 },
+    .{ .round = 3, .index = 16 },
+    .{ .round = 3, .index = 17 },
+};
+
 pub const verify_case_39_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-            .{ .round = 3, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 17 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 2, .claim_start = 9 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 2, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
     },
+    .all_shifts = &verify_case_39_pcs_all_shifts,
+    .all_claim_cells = &verify_case_39_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 15,
     .max_size_log2 = 22,
@@ -7343,31 +7414,27 @@ const system_40_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_40_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_40_module_0_buckets = [_]vanishing.Bucket{
@@ -7406,11 +7473,9 @@ const system_40_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks };
 // shared-randomness system: "lds-size2"
-const system_40_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_40_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_40_shared_randomness = shared_randomness.System{ .rounds = &system_40_shared_randomness_rounds, .contribution_refs = &system_40_shared_randomness_contribution_refs };
+const system_40_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_40_shared_randomness_contribution_refs };
 const verify_case_40_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -7425,20 +7490,29 @@ const verify_case_40_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_40_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    1,
+    0,
+};
+
+const verify_case_40_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+};
+
 pub const verify_case_40_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 2, .claim_start = 1 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
     },
+    .all_shifts = &verify_case_40_pcs_all_shifts,
+    .all_claim_cells = &verify_case_40_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 3,
     .max_size_log2 = 22,
@@ -7506,56 +7580,45 @@ const system_41_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "c1"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .column_claim = 3 }, // col: "c2"
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 8, 9 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 12 } } },
-    .{ .column_claim = 0 }, // col: "c1"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 17 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
     .{ .cell_value = .{ .round = 1, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 21, 22 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 3 }, // col: "c2"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 26, 29 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 15 } },
     .{ .cell_value = .{ .round = 1, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 33, 34 } } },
-    .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 36 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 24, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 25, .rhs = 19 } },
 };
 
 const system_41_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 13, .cancelled_positions = &.{0} },
+    .{ .expression = 12, .cancelled_positions = &.{0} },
+    // expression: "global"
+    .{ .expression = 16, .cancelled_positions = &.{} },
     // expression: "global"
     .{ .expression = 20, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 25, .cancelled_positions = &.{} },
+    .{ .expression = 23, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
-    // expression: "global"
-    .{ .expression = 37, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_41_module_0_buckets = [_]vanishing.Bucket{
@@ -7599,11 +7662,9 @@ const system_41_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks };
 // shared-randomness system: "lds-multi-q"
-const system_41_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_41_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_41_shared_randomness = shared_randomness.System{ .rounds = &system_41_shared_randomness_rounds, .contribution_refs = &system_41_shared_randomness_contribution_refs };
+const system_41_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_41_shared_randomness_contribution_refs };
 const verify_case_41_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -7621,27 +7682,37 @@ const verify_case_41_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_41_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+};
+
+const verify_case_41_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_41_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_41_pcs_all_shifts,
+    .all_claim_cells = &verify_case_41_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 5,
     .max_size_log2 = 22,
@@ -7714,34 +7785,30 @@ const system_42_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "num"
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .column_claim = 3 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 7, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .column_claim = 0 }, // col: "num"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .column_claim = 3 }, // col: "den"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 12, 15 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
 };
 
 const system_42_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 6, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 11, .cancelled_positions = &.{} },
+    .{ .expression = 10, .cancelled_positions = &.{} },
 };
 
 const system_42_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_42_module_0_buckets = [_]vanishing.Bucket{
@@ -7781,11 +7848,9 @@ const system_42_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks };
 // shared-randomness system: "lds-vec-den"
-const system_42_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_42_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_42_shared_randomness = shared_randomness.System{ .rounds = &system_42_shared_randomness_rounds, .contribution_refs = &system_42_shared_randomness_contribution_refs };
+const system_42_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_42_shared_randomness_contribution_refs };
 const verify_case_42_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -7803,29 +7868,38 @@ const verify_case_42_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_42_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+};
+
+const verify_case_42_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+};
+
 pub const verify_case_42_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
     },
+    .all_shifts = &verify_case_42_pcs_all_shifts,
+    .all_claim_cells = &verify_case_42_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 6,
     .max_size_log2 = 22,
@@ -7895,90 +7969,50 @@ pub const system_43_public_input = protocol.public_input.Spec{
 const system_43_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "flt"
     .{ .column_claim = 1 }, // col: "n1"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 5 } } },
-    .{ .column_claim = 0 }, // col: "flt"
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "n2"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 13 } } },
-    .{ .column_claim = 0 }, // col: "flt"
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 8, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 3 }, // col: "n3"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 14 } },
     .{ .column_claim = 4 }, // col: "z-b0-k0"
     .{ .column_claim = 5 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 23, 24 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 31 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 1 }, // col: "n1"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 34 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 36 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 38 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 2 }, // col: "n2"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 40, 41 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 42, 43 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 44, 45 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 39, 46 } } },
-    .{ .column_claim = 0 }, // col: "flt"
-    .{ .column_claim = 3 }, // col: "n3"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 48, 49 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 50, 51 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 47, 54 } } },
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 57, 58 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 59, 60 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 56, 61 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 55, 62 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 21 } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 23 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 63, 64 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
     .{ .cell_value = .{ .round = 1, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 4 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 66, 67 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 27, .rhs = 16 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 68, 69 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
 };
 
 const system_43_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 32, .cancelled_positions = &.{0} },
+    .{ .expression = 22, .cancelled_positions = &.{0} },
 };
 
 const system_43_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 65, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_43_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 70, .cancelled_positions = &.{} },
+    .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
 const system_43_module_0_buckets = [_]vanishing.Bucket{
@@ -8019,11 +8053,9 @@ const system_43_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks };
 // shared-randomness system: "lds-ones-pack"
-const system_43_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_43_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_43_shared_randomness = shared_randomness.System{ .rounds = &system_43_shared_randomness_rounds, .contribution_refs = &system_43_shared_randomness_contribution_refs };
+const system_43_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_43_shared_randomness_contribution_refs };
 const verify_case_43_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -8047,47 +8079,56 @@ const verify_case_43_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 2 },
 };
 
+const verify_case_43_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_43_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 3, .index = 1 },
+    .{ .round = 3, .index = 2 },
+    .{ .round = 3, .index = 3 },
+    .{ .round = 3, .index = 0 },
+    .{ .round = 3, .index = 4 },
+    .{ .round = 3, .index = 5 },
+    .{ .round = 3, .index = 6 },
+    .{ .round = 3, .index = 7 },
+    .{ .round = 3, .index = 8 },
+    .{ .round = 3, .index = 9 },
+    .{ .round = 3, .index = 10 },
+    .{ .round = 3, .index = 11 },
+    .{ .round = 3, .index = 12 },
+};
+
 pub const verify_case_43_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 4 },
-            .{ .round = 3, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 3, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_43_pcs_all_shifts,
+    .all_claim_cells = &verify_case_43_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -8162,42 +8203,35 @@ pub const system_44_public_input = protocol.public_input.Spec{
 
 const system_44_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_44_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_44_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_44_module_0_buckets = [_]vanishing.Bucket{
@@ -8209,38 +8243,32 @@ const system_44_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_44_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_44_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_44_module_1_buckets = [_]vanishing.Bucket{
@@ -8293,11 +8321,9 @@ const system_44_rowlimit_checks = [_]rowlimit.Check{
 
 const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks };
 // shared-randomness system: "lk-simple"
-const system_44_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_44_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_44_shared_randomness = shared_randomness.System{ .rounds = &system_44_shared_randomness_rounds, .contribution_refs = &system_44_shared_randomness_contribution_refs };
+const system_44_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_44_shared_randomness_contribution_refs };
 const verify_case_44_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -8321,45 +8347,55 @@ const verify_case_44_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_44_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_44_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_44_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_44_pcs_all_shifts,
+    .all_claim_cells = &verify_case_44_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -8438,42 +8474,35 @@ pub const system_45_public_input = protocol.public_input.Spec{
 
 const system_45_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_45_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_45_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_45_module_0_buckets = [_]vanishing.Bucket{
@@ -8484,43 +8513,35 @@ const system_45_module_0_buckets = [_]vanishing.Bucket{
 const system_45_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_45_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_45_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_45_module_1_buckets = [_]vanishing.Bucket{
@@ -8573,11 +8594,9 @@ const system_45_rowlimit_checks = [_]rowlimit.Check{
 
 const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks };
 // shared-randomness system: "lk-filterA"
-const system_45_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_45_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_45_shared_randomness = shared_randomness.System{ .rounds = &system_45_shared_randomness_rounds, .contribution_refs = &system_45_shared_randomness_contribution_refs };
+const system_45_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_45_shared_randomness_contribution_refs };
 const verify_case_45_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -8602,48 +8621,58 @@ const verify_case_45_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_45_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_45_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_45_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_45_pcs_all_shifts,
+    .all_claim_cells = &verify_case_45_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -8723,50 +8752,39 @@ pub const system_46_public_input = protocol.public_input.Spec{
 
 const system_46_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_46_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_46_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_46_module_0_buckets = [_]vanishing.Bucket{
@@ -8778,46 +8796,35 @@ const system_46_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 10 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 11 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 10 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 22 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 23, 24 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 26 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 27 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 16 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
 };
 
 const system_46_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 12, .cancelled_positions = &.{0} },
+    .{ .expression = 11, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_46_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_46_module_1_buckets = [_]vanishing.Bucket{
@@ -8870,11 +8877,9 @@ const system_46_rowlimit_checks = [_]rowlimit.Check{
 
 const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks };
 // shared-randomness system: "lk-filterT"
-const system_46_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_46_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_46_shared_randomness = shared_randomness.System{ .rounds = &system_46_shared_randomness_rounds, .contribution_refs = &system_46_shared_randomness_contribution_refs };
+const system_46_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_46_shared_randomness_contribution_refs };
 const verify_case_46_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -8899,48 +8904,58 @@ const verify_case_46_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_46_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_46_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_46_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_46_pcs_all_shifts,
+    .all_claim_cells = &verify_case_46_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -9020,50 +9035,39 @@ pub const system_47_public_input = protocol.public_input.Spec{
 
 const system_47_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_47_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_47_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_47_module_0_buckets = [_]vanishing.Bucket{
@@ -9074,51 +9078,38 @@ const system_47_module_0_buckets = [_]vanishing.Bucket{
 const system_47_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 12 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 13 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .add, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 18 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 26 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 27, 28 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 30 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 32, 33 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_47_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 14, .cancelled_positions = &.{0} },
+    .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 19, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_47_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 34, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_47_module_1_buckets = [_]vanishing.Bucket{
@@ -9171,11 +9162,9 @@ const system_47_rowlimit_checks = [_]rowlimit.Check{
 
 const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks };
 // shared-randomness system: "lk-double"
-const system_47_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_47_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_47_shared_randomness = shared_randomness.System{ .rounds = &system_47_shared_randomness_rounds, .contribution_refs = &system_47_shared_randomness_contribution_refs };
+const system_47_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_47_shared_randomness_contribution_refs };
 const verify_case_47_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 5, .shift = 0 },
@@ -9201,51 +9190,61 @@ const verify_case_47_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_47_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_47_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+};
+
 pub const verify_case_47_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
     },
+    .all_shifts = &verify_case_47_pcs_all_shifts,
+    .all_claim_cells = &verify_case_47_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 13,
     .max_size_log2 = 22,
@@ -9326,50 +9325,39 @@ pub const system_48_public_input = protocol.public_input.Spec{
 
 const system_48_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 11 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{19} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 24 } } },
-    .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 25, 26 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 22, 27 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 28 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 20, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 18 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 30, 31 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 19, .rhs = 20 } },
 };
 
 const system_48_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 13, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 18, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_48_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 32, .cancelled_positions = &.{} },
+    .{ .expression = 21, .cancelled_positions = &.{} },
 };
 
 const system_48_module_0_buckets = [_]vanishing.Bucket{
@@ -9381,46 +9369,36 @@ const system_48_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 10 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 11 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 14 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 21, 22 } } },
-    .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 23, 24 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 26 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 27 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 10 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 17 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
 };
 
 const system_48_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 12, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_48_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_48_module_1_buckets = [_]vanishing.Bucket{
@@ -9473,11 +9451,9 @@ const system_48_rowlimit_checks = [_]rowlimit.Check{
 
 const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks };
 // shared-randomness system: "lk-multi-col"
-const system_48_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_48_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_48_shared_randomness = shared_randomness.System{ .rounds = &system_48_shared_randomness_rounds, .contribution_refs = &system_48_shared_randomness_contribution_refs };
+const system_48_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_48_shared_randomness_contribution_refs };
 const verify_case_48_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 5, .shift = 0 },
@@ -9503,51 +9479,61 @@ const verify_case_48_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_48_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_48_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+};
+
 pub const verify_case_48_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
     },
+    .all_shifts = &verify_case_48_pcs_all_shifts,
+    .all_claim_cells = &verify_case_48_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 13,
     .max_size_log2 = 22,
@@ -9628,42 +9614,35 @@ pub const system_49_public_input = protocol.public_input.Spec{
 
 const system_49_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_49_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_49_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_49_module_0_buckets = [_]vanishing.Bucket{
@@ -9675,38 +9654,32 @@ const system_49_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_49_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_49_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_49_module_1_buckets = [_]vanishing.Bucket{
@@ -9718,38 +9691,32 @@ const system_49_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_49_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_49_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_49_module_2_buckets = [_]vanishing.Bucket{
@@ -9806,11 +9773,9 @@ const system_49_rowlimit_checks = [_]rowlimit.Check{
 
 const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks };
 // shared-randomness system: "lk-shared"
-const system_49_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_49_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_49_shared_randomness = shared_randomness.System{ .rounds = &system_49_shared_randomness_rounds, .contribution_refs = &system_49_shared_randomness_contribution_refs };
+const system_49_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_49_shared_randomness_contribution_refs };
 const verify_case_49_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -9840,61 +9805,72 @@ const verify_case_49_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_49_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_49_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+};
+
 pub const verify_case_49_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
     },
+    .all_shifts = &verify_case_49_pcs_all_shifts,
+    .all_claim_cells = &verify_case_49_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 16,
     .max_size_log2 = 22,
@@ -9980,42 +9956,35 @@ pub const system_50_public_input = protocol.public_input.Spec{
 
 const system_50_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_50_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_50_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_50_module_0_buckets = [_]vanishing.Bucket{
@@ -10025,42 +9994,35 @@ const system_50_module_0_buckets = [_]vanishing.Bucket{
 
 const system_50_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_50_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_50_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_50_module_1_buckets = [_]vanishing.Bucket{
@@ -10072,38 +10034,32 @@ const system_50_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_50_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_50_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_50_module_2_buckets = [_]vanishing.Bucket{
@@ -10115,38 +10071,32 @@ const system_50_module_3_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b3-k0"
     .{ .column_claim = 1 }, // col: "z-b3-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 4 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b3-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b3-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_50_module_3_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b3-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_50_module_3_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_50_module_3_buckets = [_]vanishing.Bucket{
@@ -10214,11 +10164,9 @@ const system_50_rowlimit_checks = [_]rowlimit.Check{
 
 const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks };
 // shared-randomness system: "lk-distinct"
-const system_50_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_50_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_50_shared_randomness = shared_randomness.System{ .rounds = &system_50_shared_randomness_rounds, .contribution_refs = &system_50_shared_randomness_contribution_refs };
+const system_50_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_50_shared_randomness_contribution_refs };
 const verify_case_50_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 6, .shift = 0 },
@@ -10255,80 +10203,92 @@ const verify_case_50_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_50_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_50_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 22 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 20 },
+    .{ .round = 4, .index = 21 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 23 },
+    .{ .round = 4, .index = 24 },
+    .{ .round = 4, .index = 25 },
+};
+
 pub const verify_case_50_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 22 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 20 },
-            .{ .round = 4, .index = 21 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 23 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 24 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 25 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 10, .shifts_len = 2, .claim_start = 10 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 12, .shifts_len = 2, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 21, .shifts_len = 1, .claim_start = 21 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 22, .shifts_len = 1, .claim_start = 22 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 23, .shifts_len = 1, .claim_start = 23 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 24, .shifts_len = 1, .claim_start = 24 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 25, .shifts_len = 1, .claim_start = 25 },
     },
+    .all_shifts = &verify_case_50_pcs_all_shifts,
+    .all_claim_cells = &verify_case_50_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 22,
     .max_size_log2 = 22,
@@ -10422,58 +10382,42 @@ pub const system_51_public_input = protocol.public_input.Spec{
 
 const system_51_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 15 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{23} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Ty"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 4 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 5 }, // col: "filterT"
-    .{ .op = .{ .operator = .add, .operands = &.{ 33, 34 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 26, 35 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 36 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 24, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
 };
 
 const system_51_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 17, .cancelled_positions = &.{0} },
+    .{ .expression = 16, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_51_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 40, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_51_module_0_buckets = [_]vanishing.Bucket{
@@ -10485,54 +10429,38 @@ const system_51_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 10 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 13 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 0 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 15, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sy"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .column_claim = 3 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 32 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 33 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 34 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 35 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 19 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
 };
 
 const system_51_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
+    .{ .expression = 14, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_51_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 38, .cancelled_positions = &.{} },
+    .{ .expression = 22, .cancelled_positions = &.{} },
 };
 
 const system_51_module_1_buckets = [_]vanishing.Bucket{
@@ -10585,11 +10513,9 @@ const system_51_rowlimit_checks = [_]rowlimit.Check{
 
 const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks };
 // shared-randomness system: "lk-multi-filterT"
-const system_51_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_51_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_51_shared_randomness = shared_randomness.System{ .rounds = &system_51_shared_randomness_rounds, .contribution_refs = &system_51_shared_randomness_contribution_refs };
+const system_51_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_51_shared_randomness_contribution_refs };
 const verify_case_51_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 5, .shift = 0 },
     .{ .col_decl_idx = 6, .shift = 0 },
@@ -10616,54 +10542,64 @@ const verify_case_51_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_51_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_51_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+};
+
 pub const verify_case_51_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
     },
+    .all_shifts = &verify_case_51_pcs_all_shifts,
+    .all_claim_cells = &verify_case_51_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 14,
     .max_size_log2 = 22,
@@ -10745,42 +10681,35 @@ pub const system_52_public_input = protocol.public_input.Spec{
 
 const system_52_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_52_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_52_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_52_module_0_buckets = [_]vanishing.Bucket{
@@ -10792,38 +10721,32 @@ const system_52_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_52_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_52_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_52_module_1_buckets = [_]vanishing.Bucket{
@@ -10876,11 +10799,9 @@ const system_52_rowlimit_checks = [_]rowlimit.Check{
 
 const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks };
 // shared-randomness system: "lk-repeated"
-const system_52_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_52_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_52_shared_randomness = shared_randomness.System{ .rounds = &system_52_shared_randomness_rounds, .contribution_refs = &system_52_shared_randomness_contribution_refs };
+const system_52_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_52_shared_randomness_contribution_refs };
 const verify_case_52_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -10904,45 +10825,55 @@ const verify_case_52_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_52_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_52_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_52_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_52_pcs_all_shifts,
+    .all_claim_cells = &verify_case_52_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11021,42 +10952,35 @@ pub const system_53_public_input = protocol.public_input.Spec{
 
 const system_53_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_53_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_53_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_53_module_0_buckets = [_]vanishing.Bucket{
@@ -11068,38 +10992,32 @@ const system_53_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 10, 13 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 14 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 9 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 13, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_53_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{ -1, 0 } },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_53_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_53_module_1_buckets = [_]vanishing.Bucket{
@@ -11152,11 +11070,9 @@ const system_53_rowlimit_checks = [_]rowlimit.Check{
 
 const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks };
 // shared-randomness system: "lk-shift-a"
-const system_53_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_53_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_53_shared_randomness = shared_randomness.System{ .rounds = &system_53_shared_randomness_rounds, .contribution_refs = &system_53_shared_randomness_contribution_refs };
+const system_53_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_53_shared_randomness_contribution_refs };
 const verify_case_53_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -11180,45 +11096,55 @@ const verify_case_53_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_53_pcs_all_shifts = [_]i32{
+    0,
+    1,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_53_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_53_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{1}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_53_pcs_all_shifts,
+    .all_claim_cells = &verify_case_53_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11297,42 +11223,37 @@ pub const system_54_public_input = protocol.public_input.Spec{
 
 const system_54_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
     .{ .column_claim = 4 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 15 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 16 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
 };
 
 const system_54_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_54_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_54_module_0_buckets = [_]vanishing.Bucket{
@@ -11344,38 +11265,32 @@ const system_54_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_54_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_54_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_54_module_1_buckets = [_]vanishing.Bucket{
@@ -11428,11 +11343,9 @@ const system_54_rowlimit_checks = [_]rowlimit.Check{
 
 const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks };
 // shared-randomness system: "lk-shift-b"
-const system_54_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_54_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_54_shared_randomness = shared_randomness.System{ .rounds = &system_54_shared_randomness_rounds, .contribution_refs = &system_54_shared_randomness_contribution_refs };
+const system_54_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_54_shared_randomness_contribution_refs };
 const verify_case_54_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -11457,45 +11370,55 @@ const verify_case_54_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_54_pcs_all_shifts = [_]i32{
+    3,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_54_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_54_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{3}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_54_pcs_all_shifts,
+    .all_claim_cells = &verify_case_54_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -11575,42 +11498,35 @@ pub const system_55_public_input = protocol.public_input.Spec{
 
 const system_55_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_55_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_55_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_55_module_0_buckets = [_]vanishing.Bucket{
@@ -11622,38 +11538,32 @@ const system_55_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_55_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_55_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_55_module_1_buckets = [_]vanishing.Bucket{
@@ -11665,38 +11575,32 @@ const system_55_module_2_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b2-k0"
     .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_55_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_55_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_55_module_2_buckets = [_]vanishing.Bucket{
@@ -11753,11 +11657,9 @@ const system_55_rowlimit_checks = [_]rowlimit.Check{
 
 const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks };
 // shared-randomness system: "lk-multi-A"
-const system_55_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_55_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_55_shared_randomness = shared_randomness.System{ .rounds = &system_55_shared_randomness_rounds, .contribution_refs = &system_55_shared_randomness_contribution_refs };
+const system_55_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_55_shared_randomness_contribution_refs };
 const verify_case_55_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -11787,61 +11689,72 @@ const verify_case_55_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_55_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_55_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 18 },
+};
+
 pub const verify_case_55_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
     },
+    .all_shifts = &verify_case_55_pcs_all_shifts,
+    .all_claim_cells = &verify_case_55_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 16,
     .max_size_log2 = 22,
@@ -11927,58 +11840,42 @@ pub const system_56_public_input = protocol.public_input.Spec{
 
 const system_56_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "Tz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "Ty"
-    .{ .op = .{ .operator = .add, .operands = &.{ 9, 10 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 11 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 15 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 15 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 17, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{23} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "Tz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 4 }, // col: "Ty"
-    .{ .op = .{ .operator = .add, .operands = &.{ 30, 31 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 5 }, // col: "Tx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 33, 34 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 26, 35 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 36 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 24, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 18, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 14 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 22, .rhs = 23 } },
 };
 
 const system_56_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 17, .cancelled_positions = &.{0} },
+    .{ .expression = 16, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 20, .cancelled_positions = &.{} },
 };
 
 const system_56_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 40, .cancelled_positions = &.{} },
+    .{ .expression = 24, .cancelled_positions = &.{} },
 };
 
 const system_56_module_0_buckets = [_]vanishing.Bucket{
@@ -11990,54 +11887,39 @@ const system_56_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "Sz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "Sy"
-    .{ .op = .{ .operator = .add, .operands = &.{ 8, 9 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 10 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 13 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 14 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 14 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 17, 18 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 16, .rhs = 1 } },
     .{ .lagrange_selector = 1 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "Sz"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 26, 27 } } },
-    .{ .column_claim = 3 }, // col: "Sy"
-    .{ .op = .{ .operator = .add, .operands = &.{ 28, 29 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 25, 30 } } },
-    .{ .column_claim = 4 }, // col: "Sx"
-    .{ .op = .{ .operator = .add, .operands = &.{ 31, 32 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 33 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 34 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 35 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 21, .rhs = 22 } },
 };
 
 const system_56_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 16, .cancelled_positions = &.{0} },
+    .{ .expression = 15, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 19, .cancelled_positions = &.{} },
 };
 
 const system_56_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 38, .cancelled_positions = &.{} },
+    .{ .expression = 23, .cancelled_positions = &.{} },
 };
 
 const system_56_module_1_buckets = [_]vanishing.Bucket{
@@ -12090,11 +11972,9 @@ const system_56_rowlimit_checks = [_]rowlimit.Check{
 
 const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks };
 // shared-randomness system: "lk-w3"
-const system_56_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_56_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_56_shared_randomness = shared_randomness.System{ .rounds = &system_56_shared_randomness_rounds, .contribution_refs = &system_56_shared_randomness_contribution_refs };
+const system_56_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_56_shared_randomness_contribution_refs };
 const verify_case_56_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 6, .shift = 0 },
     .{ .col_decl_idx = 7, .shift = 0 },
@@ -12122,57 +12002,67 @@ const verify_case_56_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_56_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_56_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 16 },
+};
+
 pub const verify_case_56_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{ 0, 1 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 1 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 2, .claim_start = 7 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 9, .shifts_len = 2, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 1 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
     },
+    .all_shifts = &verify_case_56_pcs_all_shifts,
+    .all_claim_cells = &verify_case_56_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 15,
     .max_size_log2 = 22,
@@ -12255,20 +12145,18 @@ pub const system_57_public_input = protocol.public_input.Spec{
 
 const system_57_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 3, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 5 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 6 } } },
+    .{ .op = .{ .operator = .add, .lhs = 3, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 5 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 8 } },
 };
 
 const system_57_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -12278,7 +12166,7 @@ const system_57_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
 
 const system_57_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_57_module_0_buckets = [_]vanishing.Bucket{
@@ -12291,16 +12179,14 @@ const system_57_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 1 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 2, 3 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 1, 4 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .add, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 5 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
-    .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 7 } },
 };
 
 const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -12310,7 +12196,7 @@ const system_57_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
 
 const system_57_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
 };
 
 const system_57_module_1_buckets = [_]vanishing.Bucket{
@@ -12363,11 +12249,9 @@ const system_57_rowlimit_checks = [_]rowlimit.Check{
 
 const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks };
 // shared-randomness system: "lk-size1"
-const system_57_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_57_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_57_shared_randomness = shared_randomness.System{ .rounds = &system_57_shared_randomness_rounds, .contribution_refs = &system_57_shared_randomness_contribution_refs };
+const system_57_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_57_shared_randomness_contribution_refs };
 const verify_case_57_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -12389,43 +12273,51 @@ const verify_case_57_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_57_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_57_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+};
+
 pub const verify_case_57_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 0 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
     },
+    .all_shifts = &verify_case_57_pcs_all_shifts,
+    .all_claim_cells = &verify_case_57_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -12502,42 +12394,35 @@ pub const system_58_public_input = protocol.public_input.Spec{
 
 const system_58_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_58_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_58_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_58_module_0_buckets = [_]vanishing.Bucket{
@@ -12549,38 +12434,32 @@ const system_58_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_58_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_58_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_58_module_1_buckets = [_]vanishing.Bucket{
@@ -12633,11 +12512,9 @@ const system_58_rowlimit_checks = [_]rowlimit.Check{
 
 const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks };
 // shared-randomness system: "lk-precomp"
-const system_58_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_58_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_58_shared_randomness = shared_randomness.System{ .rounds = &system_58_shared_randomness_rounds, .contribution_refs = &system_58_shared_randomness_contribution_refs };
+const system_58_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_58_shared_randomness_contribution_refs };
 const verify_case_58_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -12662,45 +12539,55 @@ const verify_case_58_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 1284087301 }, .{ .value = 2104130085 }, .{ .value = 1597477735 }, .{ .value = 797176699 }, .{ .value = 452943547 }, .{ .value = 844011610 }, .{ .value = 336115017 }, .{ .value = 934293072 } } },
 };
 
+const verify_case_58_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_58_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 3 },
+};
+
 pub const verify_case_58_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_58_pcs_all_shifts,
+    .all_claim_cells = &verify_case_58_pcs_all_claim_cells,
     .num_batches = 4,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -12779,42 +12666,35 @@ pub const system_59_public_input = protocol.public_input.Spec{
 
 const system_59_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_59_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_59_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_59_module_0_buckets = [_]vanishing.Bucket{
@@ -12826,38 +12706,32 @@ const system_59_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 7 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 1 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 2 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 18 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 14, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 13 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 14, .rhs = 15 } },
 };
 
 const system_59_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_59_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 16, .cancelled_positions = &.{} },
 };
 
 const system_59_module_1_buckets = [_]vanishing.Bucket{
@@ -12910,11 +12784,9 @@ const system_59_rowlimit_checks = [_]rowlimit.Check{
 
 const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks };
 // shared-randomness system: "lk-rep-s"
-const system_59_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_59_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_59_shared_randomness = shared_randomness.System{ .rounds = &system_59_shared_randomness_rounds, .contribution_refs = &system_59_shared_randomness_contribution_refs };
+const system_59_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_59_shared_randomness_contribution_refs };
 const verify_case_59_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -12938,45 +12810,55 @@ const verify_case_59_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_59_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_59_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+};
+
 pub const verify_case_59_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 2, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 5, .shifts_len = 2, .claim_start = 5 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
     },
+    .all_shifts = &verify_case_59_pcs_all_shifts,
+    .all_claim_cells = &verify_case_59_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 11,
     .max_size_log2 = 22,
@@ -13055,42 +12937,35 @@ pub const system_60_public_input = protocol.public_input.Spec{
 
 const system_60_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "T"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_60_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_60_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_60_module_0_buckets = [_]vanishing.Bucket{
@@ -13101,43 +12976,35 @@ const system_60_module_0_buckets = [_]vanishing.Bucket{
 const system_60_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "filterS"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-b1-k0"
     .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 3, 4 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 3, .rhs = 4 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 6, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 3 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "filterS"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "S"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
 };
 
 const system_60_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_60_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_60_module_1_buckets = [_]vanishing.Bucket{
@@ -13190,11 +13057,9 @@ const system_60_rowlimit_checks = [_]rowlimit.Check{
 
 const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks };
 // shared-randomness system: "lk-empty"
-const system_60_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_60_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_60_shared_randomness = shared_randomness.System{ .rounds = &system_60_shared_randomness_rounds, .contribution_refs = &system_60_shared_randomness_contribution_refs };
+const system_60_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_60_shared_randomness_contribution_refs };
 const verify_case_60_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -13219,48 +13084,58 @@ const verify_case_60_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_60_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_60_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+};
+
 pub const verify_case_60_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
     },
+    .all_shifts = &verify_case_60_pcs_all_shifts,
+    .all_claim_cells = &verify_case_60_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 12,
     .max_size_log2 = 22,
@@ -13342,69 +13217,41 @@ const system_61_module_0_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
     .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 6, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 8 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 9 } } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 7 } },
     .{ .column_claim = 2 }, // col: "z-b1-k0"
     .{ .column_claim = 3 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 15 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 24, 25 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 23, 26 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 29, 30 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 31 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 27, 32 } } },
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 1 }, // col: "colA"
-    .{ .op = .{ .operator = .add, .operands = &.{ 35, 36 } } },
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 0 }, // col: "colB"
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 39 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 40 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 41 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 33, 42 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 10 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 3 } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 13 } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 12 } },
+    .{ .op = .{ .operator = .sub, .lhs = 8, .rhs = 15 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 43, 44 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 16, .rhs = 17 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 2 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 46, 47 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 19, .rhs = 9 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 48, 49 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 20, .rhs = 21 } },
 };
 
 const system_61_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 22, .cancelled_positions = &.{0} },
+    .{ .expression = 14, .cancelled_positions = &.{0} },
 };
 
 const system_61_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 45, .cancelled_positions = &.{} },
+    .{ .expression = 18, .cancelled_positions = &.{} },
 };
 
 const system_61_module_0_bucket_2_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 50, .cancelled_positions = &.{} },
+    .{ .expression = 22, .cancelled_positions = &.{} },
 };
 
 const system_61_module_0_buckets = [_]vanishing.Bucket{
@@ -13415,42 +13262,35 @@ const system_61_module_0_buckets = [_]vanishing.Bucket{
 
 const system_61_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b4"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "range-col-b4"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_61_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_61_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_61_module_1_buckets = [_]vanishing.Bucket{
@@ -13460,42 +13300,35 @@ const system_61_module_1_buckets = [_]vanishing.Bucket{
 
 const system_61_module_2_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .column_claim = 3 }, // col: "range-col-b8"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 8 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 8 } },
     .{ .cell_value = .{ .round = 2, .index = 3 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 10, .rhs = 2 } },
     .{ .lagrange_selector = 7 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{15} } },
-    .{ .column_claim = 1 }, // col: "z-b2-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .column_claim = 3 }, // col: "range-col-b8"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 16, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 14 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_61_module_2_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b2-k0"
     .{ .expression = 9, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 14, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
 };
 
 const system_61_module_2_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 24, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_61_module_2_buckets = [_]vanishing.Bucket{
@@ -13560,11 +13393,9 @@ const system_61_rowlimit_checks = [_]rowlimit.Check{
 
 const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks };
 // shared-randomness system: "rc-distinct"
-const system_61_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_61_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_61_shared_randomness = shared_randomness.System{ .rounds = &system_61_shared_randomness_rounds, .contribution_refs = &system_61_shared_randomness_contribution_refs };
+const system_61_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_61_shared_randomness_contribution_refs };
 const verify_case_61_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -13601,79 +13432,90 @@ const verify_case_61_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .precomputed = .{ .{ .value = 835158699 }, .{ .value = 548244366 }, .{ .value = 353160657 }, .{ .value = 100756588 }, .{ .value = 1467126676 }, .{ .value = 14288135 }, .{ .value = 1355061657 }, .{ .value = 1123976454 } } },
 };
 
+const verify_case_61_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    7,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_61_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 20 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 22 },
+    .{ .round = 4, .index = 23 },
+    .{ .round = 4, .index = 24 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 21 },
+};
+
 pub const verify_case_61_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 12 },
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-            .{ .round = 4, .index = 20 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 22 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 23 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 24 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 21 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 2, .claim_start = 6 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 8, .shifts_len = 2, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 11, .shifts_len = 1, .claim_start = 11 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 12, .shifts_len = 1, .claim_start = 12 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 13, .shifts_len = 1, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 14, .shifts_len = 1, .claim_start = 14 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 21, .shifts_len = 1, .claim_start = 21 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 3 }, .shifts_start = 22, .shifts_len = 1, .claim_start = 22 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 23, .shifts_len = 1, .claim_start = 23 },
+        .{ .batch_idx = 3, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 24, .shifts_len = 1, .claim_start = 24 },
     },
+    .all_shifts = &verify_case_61_pcs_all_shifts,
+    .all_claim_cells = &verify_case_61_pcs_all_claim_cells,
     .num_batches = 4,
     .max_entries = 22,
     .max_size_log2 = 22,
@@ -13767,9 +13609,9 @@ pub const system_62_public_input = protocol.public_input.Spec{
 const system_62_module_0_expressions = [_]vanishing.ExprNode{
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .lagrange_selector = 2 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
 };
 
 const system_62_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -13807,11 +13649,9 @@ const system_62_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
 // shared-randomness system: "public-input"
-const system_62_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_62_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_62_shared_randomness = shared_randomness.System{ .rounds = &system_62_shared_randomness_rounds, .contribution_refs = &system_62_shared_randomness_contribution_refs };
+const system_62_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_62_shared_randomness_contribution_refs };
 const verify_case_62_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -13823,16 +13663,24 @@ const verify_case_62_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_62_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_62_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_62_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_62_pcs_all_shifts,
+    .all_claim_cells = &verify_case_62_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -13928,9 +13776,9 @@ pub const system_63_public_input = protocol.public_input.Spec{
 const system_63_module_0_expressions = [_]vanishing.ExprNode{
     .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 1 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 3 } },
 };
 
 const system_63_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -13968,11 +13816,9 @@ const system_63_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
 // shared-randomness system: "public-input-dyn"
-const system_63_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_63_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_63_shared_randomness = shared_randomness.System{ .rounds = &system_63_shared_randomness_rounds, .contribution_refs = &system_63_shared_randomness_contribution_refs };
+const system_63_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_63_shared_randomness_contribution_refs };
 const verify_case_63_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -13984,16 +13830,24 @@ const verify_case_63_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_63_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_63_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_63_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_63_pcs_all_shifts,
+    .all_claim_cells = &verify_case_63_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14090,8 +13944,8 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 99 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -14129,11 +13983,9 @@ const system_64_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
 // shared-randomness system: "lagrange-sel"
-const system_64_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_64_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_64_shared_randomness = shared_randomness.System{ .rounds = &system_64_shared_randomness_rounds, .contribution_refs = &system_64_shared_randomness_contribution_refs };
+const system_64_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_64_shared_randomness_contribution_refs };
 const verify_case_64_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -14145,16 +13997,24 @@ const verify_case_64_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_64_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_64_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_64_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_64_pcs_all_shifts,
+    .all_claim_cells = &verify_case_64_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14247,8 +14107,8 @@ const system_65_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = .{ .value = 99 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
 };
 
 const system_65_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
@@ -14286,11 +14146,9 @@ const system_65_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_65_rowlimit = rowlimit.System{ .checks = &system_65_rowlimit_checks };
 // shared-randomness system: "lagrange-sel-dyn"
-const system_65_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_65_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_65_shared_randomness = shared_randomness.System{ .rounds = &system_65_shared_randomness_rounds, .contribution_refs = &system_65_shared_randomness_contribution_refs };
+const system_65_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_65_shared_randomness_contribution_refs };
 const verify_case_65_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -14302,16 +14160,24 @@ const verify_case_65_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 1 },
 };
 
+const verify_case_65_pcs_all_shifts = [_]i32{
+    0,
+    0,
+};
+
+const verify_case_65_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 2, .index = 0 },
+    .{ .round = 2, .index = 1 },
+};
+
 pub const verify_case_65_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 2, .index = 1 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
     },
+    .all_shifts = &verify_case_65_pcs_all_shifts,
+    .all_claim_cells = &verify_case_65_pcs_all_claim_cells,
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -14401,74 +14267,48 @@ pub const system_66_public_input = protocol.public_input.Spec{
 
 const system_66_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{0} } },
+    .{ .op = .{ .operator = .negate, .lhs = 0, .rhs = 0 } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 3 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 3 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 3 }, // col: "T4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 7 } },
     .{ .column_claim = 4 }, // col: "T3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 11, 12 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 13 } } },
+    .{ .op = .{ .operator = .add, .lhs = 8, .rhs = 9 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 10 } },
     .{ .column_claim = 5 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 15 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 16 } } },
+    .{ .op = .{ .operator = .add, .lhs = 11, .rhs = 12 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 13 } },
     .{ .column_claim = 6 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 18 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 19 } } },
+    .{ .op = .{ .operator = .add, .lhs = 14, .rhs = 15 } },
+    .{ .op = .{ .operator = .mul, .lhs = 6, .rhs = 16 } },
     .{ .column_claim = 7 }, // col: "T0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 20, 21 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 22 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 4, 23 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 24 } } },
+    .{ .op = .{ .operator = .add, .lhs = 17, .rhs = 18 } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 19 } },
+    .{ .op = .{ .operator = .mul, .lhs = 4, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 21 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 26, 27 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 23, .rhs = 2 } },
     .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 0 }, // col: "M-0"
-    .{ .op = .{ .operator = .negate, .operands = &.{31} } },
-    .{ .column_claim = 1 }, // col: "z-b0-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 3 }, // col: "T4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 38, 39 } } },
-    .{ .column_claim = 4 }, // col: "T3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 40, 41 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 37, 42 } } },
-    .{ .column_claim = 5 }, // col: "T2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 43, 44 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 45 } } },
-    .{ .column_claim = 6 }, // col: "T1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 46, 47 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 48 } } },
-    .{ .column_claim = 7 }, // col: "T0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 49, 50 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 34, 51 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 52 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 32, 53 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 24, .rhs = 25 } },
+    .{ .op = .{ .operator = .mul, .lhs = 2, .rhs = 20 } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 27 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 28, .rhs = 29 } },
 };
 
 const system_66_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
-    .{ .expression = 25, .cancelled_positions = &.{0} },
+    .{ .expression = 22, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 30, .cancelled_positions = &.{} },
+    .{ .expression = 26, .cancelled_positions = &.{} },
 };
 
 const system_66_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 56, .cancelled_positions = &.{} },
+    .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
 const system_66_module_0_buckets = [_]vanishing.Bucket{
@@ -14480,70 +14320,45 @@ const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = .{ .value = 1 } },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 1, .rhs = 2 } },
     .{ .coin_value = 0 }, // coin: "gamma"
     .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "S4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 8, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
     .{ .column_claim = 3 }, // col: "S3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 10, 11 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 12 } } },
+    .{ .op = .{ .operator = .add, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 9 } },
     .{ .column_claim = 4 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 13, 14 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 6, 15 } } },
+    .{ .op = .{ .operator = .add, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 12 } },
     .{ .column_claim = 5 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 16, 17 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 18 } } },
+    .{ .op = .{ .operator = .add, .lhs = 13, .rhs = 14 } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 15 } },
     .{ .column_claim = 6 }, // col: "S0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 19, 20 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 21 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 22 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 23 } } },
+    .{ .op = .{ .operator = .add, .lhs = 16, .rhs = 17 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 18 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 19 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 20 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 25, 26 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 22, .rhs = 1 } },
     .{ .lagrange_selector = 1023 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 27, 28 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .column_claim = 0 }, // col: "z-b1-k0"
-    .{ .coin_value = 0 }, // coin: "gamma"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .coin_value = 1 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "S4"
-    .{ .op = .{ .operator = .mul, .operands = &.{ 36, 37 } } },
-    .{ .column_claim = 3 }, // col: "S3"
-    .{ .op = .{ .operator = .add, .operands = &.{ 38, 39 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 35, 40 } } },
-    .{ .column_claim = 4 }, // col: "S2"
-    .{ .op = .{ .operator = .add, .operands = &.{ 41, 42 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 34, 43 } } },
-    .{ .column_claim = 5 }, // col: "S1"
-    .{ .op = .{ .operator = .add, .operands = &.{ 44, 45 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 33, 46 } } },
-    .{ .column_claim = 6 }, // col: "S0"
-    .{ .op = .{ .operator = .add, .operands = &.{ 47, 48 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 32, 49 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 31, 50 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 30, 51 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 23, .rhs = 24 } },
+    .{ .op = .{ .operator = .mul, .lhs = 1, .rhs = 19 } },
+    .{ .op = .{ .operator = .sub, .lhs = 0, .rhs = 26 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 27, .rhs = 28 } },
 };
 
 const system_66_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
-    .{ .expression = 24, .cancelled_positions = &.{0} },
+    .{ .expression = 21, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 29, .cancelled_positions = &.{} },
+    .{ .expression = 25, .cancelled_positions = &.{} },
 };
 
 const system_66_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 54, .cancelled_positions = &.{} },
+    .{ .expression = 29, .cancelled_positions = &.{} },
 };
 
 const system_66_module_1_buckets = [_]vanishing.Bucket{
@@ -14596,11 +14411,9 @@ const system_66_rowlimit_checks = [_]rowlimit.Check{
 
 const system_66_rowlimit = rowlimit.System{ .checks = &system_66_rowlimit_checks };
 // shared-randomness system: "lk-multi-col-bench"
-const system_66_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_66_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_66_shared_randomness = shared_randomness.System{ .rounds = &system_66_shared_randomness_rounds, .contribution_refs = &system_66_shared_randomness_contribution_refs };
+const system_66_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_66_shared_randomness_contribution_refs };
 const verify_case_66_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 10, .shift = 0 },
     .{ .col_decl_idx = 11, .shift = 0 },
@@ -14632,69 +14445,79 @@ const verify_case_66_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_66_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1023,
+    0,
+    1023,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_66_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 17 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 16 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 15 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 14 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 13 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 11 },
+    .{ .round = 4, .index = 12 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+    .{ .round = 4, .index = 10 },
+    .{ .round = 4, .index = 18 },
+    .{ .round = 4, .index = 19 },
+    .{ .round = 4, .index = 20 },
+};
+
 pub const verify_case_66_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 17 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 16 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 15 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 14 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 13 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{ 0, 1023 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 1 },
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{ 0, 1023 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 11 },
-            .{ .round = 4, .index = 12 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 10 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 18 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 19 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 20 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 3, .shifts_len = 1, .claim_start = 3 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 4, .shifts_len = 1, .claim_start = 4 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 5, .shifts_len = 1, .claim_start = 5 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts_start = 10, .shifts_len = 1, .claim_start = 10 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 11, .shifts_len = 2, .claim_start = 11 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 13, .shifts_len = 2, .claim_start = 13 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 15, .shifts_len = 1, .claim_start = 15 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 16, .shifts_len = 1, .claim_start = 16 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 17, .shifts_len = 1, .claim_start = 17 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 18, .shifts_len = 1, .claim_start = 18 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 19, .shifts_len = 1, .claim_start = 19 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 10 }, .shifts_start = 20, .shifts_len = 1, .claim_start = 20 },
     },
+    .all_shifts = &verify_case_66_pcs_all_shifts,
+    .all_claim_cells = &verify_case_66_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 19,
     .max_size_log2 = 22,
@@ -14782,36 +14605,29 @@ pub const system_67_public_input = protocol.public_input.Spec{
 const system_67_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-m0-k0"
     .{ .column_claim = 2 }, // col: "A"
     .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 5 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 7 } } },
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 9, 10 } } },
-    .{ .column_claim = 2 }, // col: "A"
-    .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 12, 13 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 14 } } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 5 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 7 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 15, 16 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 9, .rhs = 10 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 12, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
 };
 
 const system_67_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m0-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 17, .cancelled_positions = &.{} },
+    .{ .expression = 11, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_67_module_0_buckets = [_]vanishing.Bucket{
@@ -14822,38 +14638,31 @@ const system_67_module_1_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m1-k0"
     .{ .column_claim = 1 }, // col: "B"
     .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 2 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 3 } },
     .{ .column_claim = 2 }, // col: "z-m1-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 4, 7 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 7 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 9, 10 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 9, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .column_claim = 1 }, // col: "B"
-    .{ .coin_value = 0 }, // coin: "beta"
-    .{ .op = .{ .operator = .add, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 14, 17 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 10, .rhs = 11 } },
+    .{ .op = .{ .operator = .sub, .lhs = 4, .rhs = 6 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 13, .rhs = 14 } },
 };
 
 const system_67_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m1-k0"
     .{ .expression = 8, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 13, .cancelled_positions = &.{} },
+    .{ .expression = 12, .cancelled_positions = &.{} },
 };
 
 const system_67_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 22, .cancelled_positions = &.{} },
+    .{ .expression = 15, .cancelled_positions = &.{} },
 };
 
 const system_67_module_1_buckets = [_]vanishing.Bucket{
@@ -14906,11 +14715,9 @@ const system_67_rowlimit_checks = [_]rowlimit.Check{
 
 const system_67_rowlimit = rowlimit.System{ .checks = &system_67_rowlimit_checks };
 // shared-randomness system: "permutation"
-const system_67_shared_randomness_rounds = [_]shared_randomness.Round{};
-
 const system_67_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{};
 
-const system_67_shared_randomness = shared_randomness.System{ .rounds = &system_67_shared_randomness_rounds, .contribution_refs = &system_67_shared_randomness_contribution_refs };
+const system_67_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 0, .has_commitment = false }, .contribution_refs = &system_67_shared_randomness_contribution_refs };
 const verify_case_67_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 1 },
@@ -14931,36 +14738,46 @@ const verify_case_67_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_67_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_67_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+};
+
 pub const verify_case_67_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
     },
+    .all_shifts = &verify_case_67_pcs_all_shifts,
+    .all_claim_cells = &verify_case_67_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 8,
     .max_size_log2 = 22,
@@ -15126,17 +14943,6 @@ pub const system_68_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
-    .shared_randomness_coin_round = 1,
-    .shared_randomness_gamma_refs = &[_]protocol.SharedRandomnessGammaRef{
-        .{ .round = 0, .index = 0 },
-        .{ .round = 0, .index = 1 },
-        .{ .round = 0, .index = 2 },
-        .{ .round = 0, .index = 3 },
-        .{ .round = 0, .index = 4 },
-        .{ .round = 0, .index = 5 },
-        .{ .round = 0, .index = 6 },
-        .{ .round = 0, .index = 7 },
-    },
 };
 pub const system_68_public_input = protocol.public_input.Spec{
     .round_cell_counts = &[_]usize{ 8, 328, 3, 0, 10 },
@@ -15148,40 +14954,31 @@ pub const system_68_public_input = protocol.public_input.Spec{
 const system_68_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "z-m0-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 1 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 1 } },
     .{ .column_claim = 1 }, // col: "z-m0-k0"
     .{ .coin_value = 1 }, // coin: "beta"
     .{ .coin_value = 0 }, // coin: "alpha"
     .{ .column_claim = 2 }, // col: "A"
-    .{ .op = .{ .operator = .add, .operands = &.{ 5, 6 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 4, 7 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 3, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 2, 9 } } },
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 11, 12 } } },
-    .{ .coin_value = 1 }, // coin: "beta"
-    .{ .coin_value = 0 }, // coin: "alpha"
-    .{ .column_claim = 2 }, // col: "A"
-    .{ .op = .{ .operator = .add, .operands = &.{ 15, 16 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 14, 17 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 13, 18 } } },
+    .{ .op = .{ .operator = .add, .lhs = 5, .rhs = 6 } },
+    .{ .op = .{ .operator = .add, .lhs = 4, .rhs = 7 } },
+    .{ .op = .{ .operator = .mul, .lhs = 3, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 9 } },
+    .{ .op = .{ .operator = .sub, .lhs = 2, .rhs = 8 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 19, 20 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 11, .rhs = 12 } },
     .{ .cell_value = .{ .round = 2, .index = 1 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m0-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 14, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_68_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m0-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 21, .cancelled_positions = &.{} },
+    .{ .expression = 13, .cancelled_positions = &.{} },
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_68_module_0_buckets = [_]vanishing.Bucket{
@@ -15193,41 +14990,32 @@ const system_68_module_1_expressions = [_]vanishing.ExprNode{
     .{ .coin_value = 1 }, // coin: "beta"
     .{ .coin_value = 0 }, // coin: "alpha"
     .{ .column_claim = 1 }, // col: "B"
-    .{ .op = .{ .operator = .add, .operands = &.{ 2, 3 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 1, 4 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 5 } } },
+    .{ .op = .{ .operator = .add, .lhs = 2, .rhs = 3 } },
+    .{ .op = .{ .operator = .add, .lhs = 1, .rhs = 4 } },
+    .{ .op = .{ .operator = .mul, .lhs = 0, .rhs = 5 } },
     .{ .column_claim = 2 }, // col: "z-m1-k0"
     .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 7, 8 } } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 6, 9 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 7, .rhs = 8 } },
+    .{ .op = .{ .operator = .sub, .lhs = 6, .rhs = 9 } },
     .{ .cell_value = .{ .round = 2, .index = 2 } }, // cell: "result"
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .op = .{ .operator = .sub, .operands = &.{ 11, 12 } } },
+    .{ .op = .{ .operator = .sub, .lhs = 11, .rhs = 0 } },
     .{ .lagrange_selector = 3 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 13, 14 } } },
-    .{ .column_claim = 0 }, // col: "z-m1-k0"
-    .{ .coin_value = 1 }, // coin: "beta"
-    .{ .coin_value = 0 }, // coin: "alpha"
-    .{ .column_claim = 1 }, // col: "B"
-    .{ .op = .{ .operator = .add, .operands = &.{ 18, 19 } } },
-    .{ .op = .{ .operator = .add, .operands = &.{ 17, 20 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 16, 21 } } },
-    .{ .constant = .{ .value = 1 } },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 22, 23 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 12, .rhs = 13 } },
+    .{ .op = .{ .operator = .sub, .lhs = 6, .rhs = 8 } },
     .{ .lagrange_selector = 0 },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 24, 25 } } },
+    .{ .op = .{ .operator = .mul, .lhs = 15, .rhs = 16 } },
 };
 
 const system_68_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-m1-k0"
     .{ .expression = 10, .cancelled_positions = &.{0} },
     // expression: "global"
-    .{ .expression = 15, .cancelled_positions = &.{} },
+    .{ .expression = 14, .cancelled_positions = &.{} },
 };
 
 const system_68_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
-    .{ .expression = 26, .cancelled_positions = &.{} },
+    .{ .expression = 17, .cancelled_positions = &.{} },
 };
 
 const system_68_module_1_buckets = [_]vanishing.Bucket{
@@ -15270,10 +15058,6 @@ const system_68_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_68_rowlimit = rowlimit.System{ .checks = &system_68_rowlimit_checks };
 // shared-randomness system: "mb-shared-randomness"
-const system_68_shared_randomness_rounds = [_]shared_randomness.Round{
-    .{ .has_commitment = true, .round = 0 },
-};
-
 const system_68_shared_randomness_contribution_refs = [_]shared_randomness.ScalarRef{
     .{ .round = 1, .index = 0 },
     .{ .round = 1, .index = 1 },
@@ -15605,7 +15389,7 @@ const system_68_shared_randomness_contribution_refs = [_]shared_randomness.Scala
     .{ .round = 1, .index = 327 },
 };
 
-const system_68_shared_randomness = shared_randomness.System{ .rounds = &system_68_shared_randomness_rounds, .contribution_refs = &system_68_shared_randomness_contribution_refs };
+const system_68_shared_randomness = shared_randomness.System{ .commitment_round = .{ .round = 1, .has_commitment = false }, .contribution_refs = &system_68_shared_randomness_contribution_refs };
 const verify_case_68_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 1 },
@@ -15626,36 +15410,46 @@ const verify_case_68_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 3 },
 };
 
+const verify_case_68_pcs_all_shifts = [_]i32{
+    0,
+    0,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    0,
+    0,
+};
+
+const verify_case_68_pcs_all_claim_cells = [_]pcs.CellRef{
+    .{ .round = 4, .index = 2 },
+    .{ .round = 4, .index = 5 },
+    .{ .round = 4, .index = 0 },
+    .{ .round = 4, .index = 1 },
+    .{ .round = 4, .index = 4 },
+    .{ .round = 4, .index = 6 },
+    .{ .round = 4, .index = 3 },
+    .{ .round = 4, .index = 7 },
+    .{ .round = 4, .index = 8 },
+    .{ .round = 4, .index = 9 },
+};
+
 pub const verify_case_68_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 4 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 2 },
-        } },
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 5 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 0 },
-            .{ .round = 4, .index = 1 },
-        } },
-        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 3 }, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 4 },
-            .{ .round = 4, .index = 6 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 3 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 7 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 8 },
-        } },
-        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0}, .claim_cells = &[_]pcs.CellRef{
-            .{ .round = 4, .index = 9 },
-        } },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 0, .shifts_len = 1, .claim_start = 0 },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts_start = 1, .shifts_len = 1, .claim_start = 1 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 2, .shifts_len = 2, .claim_start = 2 },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 4, .shifts_len = 2, .claim_start = 4 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 6, .shifts_len = 1, .claim_start = 6 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 7, .shifts_len = 1, .claim_start = 7 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 8, .shifts_len = 1, .claim_start = 8 },
+        .{ .batch_idx = 2, .is_ext = true, .size = .{ .static = 2 }, .shifts_start = 9, .shifts_len = 1, .claim_start = 9 },
     },
+    .all_shifts = &verify_case_68_pcs_all_shifts,
+    .all_claim_cells = &verify_case_68_pcs_all_claim_cells,
     .num_batches = 3,
     .max_entries = 8,
     .max_size_log2 = 22,
@@ -15671,34 +15465,34 @@ const verify_case_68_round_0_cells = [_]protocol.Scalar{};
 const verify_case_68_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_68_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 400562482 }, .a1 = .{ .value = 1475513674 } }, .B1 = .{ .a0 = .{ .value = 1436500341 }, .a1 = .{ .value = 1165334460 } }, .B2 = .{ .a0 = .{ .value = 48460580 }, .a1 = .{ .value = 895512390 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 395342363 }, .a1 = .{ .value = 1927008848 } }, .B1 = .{ .a0 = .{ .value = 1107215131 }, .a1 = .{ .value = 639154567 } }, .B2 = .{ .a0 = .{ .value = 2047919879 }, .a1 = .{ .value = 670132876 } } } },
 };
 
 const verify_case_68_round_3_cells = [_]protocol.Scalar{};
 
 const verify_case_68_round_4_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1867980849 }, .a1 = .{ .value = 1591200829 } }, .B1 = .{ .a0 = .{ .value = 1802410362 }, .a1 = .{ .value = 918955047 } }, .B2 = .{ .a0 = .{ .value = 2128311976 }, .a1 = .{ .value = 1891723258 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 772424385 }, .a1 = .{ .value = 1883116380 } }, .B1 = .{ .a0 = .{ .value = 1780634351 }, .a1 = .{ .value = 322506494 } }, .B2 = .{ .a0 = .{ .value = 508097374 }, .a1 = .{ .value = 267832444 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187572305 }, .a1 = .{ .value = 839996142 } }, .B1 = .{ .a0 = .{ .value = 2099359586 }, .a1 = .{ .value = 43392879 } }, .B2 = .{ .a0 = .{ .value = 456433940 }, .a1 = .{ .value = 1786257083 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 189432693 }, .a1 = .{ .value = 533828489 } }, .B1 = .{ .a0 = .{ .value = 191809 }, .a1 = .{ .value = 1438325212 } }, .B2 = .{ .a0 = .{ .value = 1943967343 }, .a1 = .{ .value = 834044224 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1589188109 }, .a1 = .{ .value = 1871082861 } }, .B1 = .{ .a0 = .{ .value = 1187260178 }, .a1 = .{ .value = 526053177 } }, .B2 = .{ .a0 = .{ .value = 1006329274 }, .a1 = .{ .value = 138740373 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187572305 }, .a1 = .{ .value = 839996142 } }, .B1 = .{ .a0 = .{ .value = 2099359586 }, .a1 = .{ .value = 43392879 } }, .B2 = .{ .a0 = .{ .value = 456433940 }, .a1 = .{ .value = 1786257083 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1987561269 }, .a1 = .{ .value = 1046542574 } }, .B1 = .{ .a0 = .{ .value = 711493484 }, .a1 = .{ .value = 190366191 } }, .B2 = .{ .a0 = .{ .value = 1832847209 }, .a1 = .{ .value = 2109105853 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1058730181 }, .a1 = .{ .value = 322789752 } }, .B1 = .{ .a0 = .{ .value = 1532737611 }, .a1 = .{ .value = 825042390 } }, .B2 = .{ .a0 = .{ .value = 1308472706 }, .a1 = .{ .value = 160683383 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 500294747 }, .a1 = .{ .value = 1517354634 } }, .B1 = .{ .a0 = .{ .value = 1807539844 }, .a1 = .{ .value = 1435260912 } }, .B2 = .{ .a0 = .{ .value = 1207405659 }, .a1 = .{ .value = 235038571 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1679734759 }, .a1 = .{ .value = 1881588482 } }, .B1 = .{ .a0 = .{ .value = 376523587 }, .a1 = .{ .value = 1653234131 } }, .B2 = .{ .a0 = .{ .value = 1218758438 }, .a1 = .{ .value = 1509839952 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 82503528 }, .a1 = .{ .value = 270284756 } }, .B1 = .{ .a0 = .{ .value = 361255023 }, .a1 = .{ .value = 114523771 } }, .B2 = .{ .a0 = .{ .value = 1290056562 }, .a1 = .{ .value = 23454898 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1950703094 }, .a1 = .{ .value = 1265333005 } }, .B1 = .{ .a0 = .{ .value = 348318494 }, .a1 = .{ .value = 2129208702 } }, .B2 = .{ .a0 = .{ .value = 1660143861 }, .a1 = .{ .value = 1862306598 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 117659429 }, .a1 = .{ .value = 407676688 } }, .B1 = .{ .a0 = .{ .value = 905356712 }, .a1 = .{ .value = 1177337632 } }, .B2 = .{ .a0 = .{ .value = 203017722 }, .a1 = .{ .value = 647367778 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 30816780 }, .a1 = .{ .value = 1184486529 } }, .B1 = .{ .a0 = .{ .value = 775760324 }, .a1 = .{ .value = 1578092954 } }, .B2 = .{ .a0 = .{ .value = 56216012 }, .a1 = .{ .value = 639957106 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1698723112 }, .a1 = .{ .value = 2103657310 } }, .B1 = .{ .a0 = .{ .value = 148281876 }, .a1 = .{ .value = 1292214991 } }, .B2 = .{ .a0 = .{ .value = 1174333568 }, .a1 = .{ .value = 48308197 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 117659429 }, .a1 = .{ .value = 407676688 } }, .B1 = .{ .a0 = .{ .value = 905356712 }, .a1 = .{ .value = 1177337632 } }, .B2 = .{ .a0 = .{ .value = 203017722 }, .a1 = .{ .value = 647367778 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1986101523 }, .a1 = .{ .value = 1553398789 } }, .B1 = .{ .a0 = .{ .value = 2122584551 }, .a1 = .{ .value = 1813815374 } }, .B2 = .{ .a0 = .{ .value = 715567356 }, .a1 = .{ .value = 2108306667 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 911363554 }, .a1 = .{ .value = 1213125157 } }, .B1 = .{ .a0 = .{ .value = 609248589 }, .a1 = .{ .value = 2117573920 } }, .B2 = .{ .a0 = .{ .value = 673773224 }, .a1 = .{ .value = 2043794453 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1608111381 }, .a1 = .{ .value = 240638552 } }, .B1 = .{ .a0 = .{ .value = 1518020879 }, .a1 = .{ .value = 1632423014 } }, .B2 = .{ .a0 = .{ .value = 971778098 }, .a1 = .{ .value = 638156717 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 968003303 }, .a1 = .{ .value = 2092894645 } }, .B1 = .{ .a0 = .{ .value = 1957536142 }, .a1 = .{ .value = 663077034 } }, .B2 = .{ .a0 = .{ .value = 658350914 }, .a1 = .{ .value = 727852444 } } } },
 };
 
 const verify_case_68_rounds = [_]protocol.RoundMessage{
     .{ .commitment = commitment.Commitment{ .{ .value = 1073254811 }, .{ .value = 2107462023 }, .{ .value = 428169355 }, .{ .value = 1418641445 }, .{ .value = 1508777045 }, .{ .value = 1804033781 }, .{ .value = 1972090736 }, .{ .value = 19875260 } }, .cells = &verify_case_68_round_0_cells },
     .{ .cells = &verify_case_68_round_1_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 2105875058 }, .{ .value = 1668100267 }, .{ .value = 166180369 }, .{ .value = 1628471435 }, .{ .value = 299690375 }, .{ .value = 743945167 }, .{ .value = 2109996688 }, .{ .value = 162078638 } }, .cells = &verify_case_68_round_2_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 1176443875 }, .{ .value = 1513994153 }, .{ .value = 292216141 }, .{ .value = 2129165180 }, .{ .value = 736467129 }, .{ .value = 641384872 }, .{ .value = 105340611 }, .{ .value = 1045712163 } }, .cells = &verify_case_68_round_3_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 818308897 }, .{ .value = 543177702 }, .{ .value = 1754437299 }, .{ .value = 1625782676 }, .{ .value = 677387156 }, .{ .value = 1626044442 }, .{ .value = 1679876084 }, .{ .value = 793029403 } }, .cells = &verify_case_68_round_2_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1454439667 }, .{ .value = 1741455297 }, .{ .value = 1741314143 }, .{ .value = 374404429 }, .{ .value = 892944295 }, .{ .value = 624805581 }, .{ .value = 1853583390 }, .{ .value = 1084768463 } }, .cells = &verify_case_68_round_3_cells },
     .{ .cells = &verify_case_68_round_4_cells },
 };
 
-const verify_case_68_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1704396793 }, .a1 = .{ .value = 1068582422 } }, .B1 = .{ .a0 = .{ .value = 747895373 }, .a1 = .{ .value = 368625105 } }, .B2 = .{ .a0 = .{ .value = 1375619427 }, .a1 = .{ .value = 797107173 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1633237157 }, .a1 = .{ .value = 1705109942 } }, .B1 = .{ .a0 = .{ .value = 367815016 }, .a1 = .{ .value = 1717164789 } }, .B2 = .{ .a0 = .{ .value = 25005874 }, .a1 = .{ .value = 933563037 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1472467133 }, .a1 = .{ .value = 659106357 } }, .B1 = .{ .a0 = .{ .value = 29060478 }, .a1 = .{ .value = 1536324496 } }, .B2 = .{ .a0 = .{ .value = 1068652469 }, .a1 = .{ .value = 1986255475 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 811652537 }, .a1 = .{ .value = 192460391 } }, .B1 = .{ .a0 = .{ .value = 658496272 }, .a1 = .{ .value = 957495206 } }, .B2 = .{ .a0 = .{ .value = 125662683 }, .a1 = .{ .value = 1869531306 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1818236706 }, .a1 = .{ .value = 1155641285 } }, .B1 = .{ .a0 = .{ .value = 542645382 }, .a1 = .{ .value = 800175965 } }, .B2 = .{ .a0 = .{ .value = 1738915703 }, .a1 = .{ .value = 1096117776 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 750200068 }, .a1 = .{ .value = 914731472 } }, .B1 = .{ .a0 = .{ .value = 278805179 }, .a1 = .{ .value = 1324581862 } }, .B2 = .{ .a0 = .{ .value = 915476411 }, .a1 = .{ .value = 1086623326 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1259530058 }, .a1 = .{ .value = 1177564500 } }, .B1 = .{ .a0 = .{ .value = 688555051 }, .a1 = .{ .value = 1666195606 } }, .B2 = .{ .a0 = .{ .value = 1387712747 }, .a1 = .{ .value = 1023707779 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1708322163 }, .a1 = .{ .value = 71071420 } }, .B1 = .{ .a0 = .{ .value = 2053280341 }, .a1 = .{ .value = 646046301 } }, .B2 = .{ .a0 = .{ .value = 423835251 }, .a1 = .{ .value = 564025067 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1174343411 }, .a1 = .{ .value = 699294138 } }, .B1 = .{ .a0 = .{ .value = 185648795 }, .a1 = .{ .value = 1874668615 } }, .B2 = .{ .a0 = .{ .value = 1718541868 }, .a1 = .{ .value = 79411463 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 253136415 }, .a1 = .{ .value = 1340711014 } }, .B1 = .{ .a0 = .{ .value = 392996721 }, .a1 = .{ .value = 1167841812 } }, .B2 = .{ .a0 = .{ .value = 2117706005 }, .a1 = .{ .value = 1320475551 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1704396793 }, .a1 = .{ .value = 1068582422 } }, .B1 = .{ .a0 = .{ .value = 747895373 }, .a1 = .{ .value = 368625105 } }, .B2 = .{ .a0 = .{ .value = 1375619427 }, .a1 = .{ .value = 797107173 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1633237157 }, .a1 = .{ .value = 1705109942 } }, .B1 = .{ .a0 = .{ .value = 367815016 }, .a1 = .{ .value = 1717164789 } }, .B2 = .{ .a0 = .{ .value = 25005874 }, .a1 = .{ .value = 933563037 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1259530058 }, .a1 = .{ .value = 1177564500 } }, .B1 = .{ .a0 = .{ .value = 688555051 }, .a1 = .{ .value = 1666195606 } }, .B2 = .{ .a0 = .{ .value = 1387712747 }, .a1 = .{ .value = 1023707779 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1708322163 }, .a1 = .{ .value = 71071420 } }, .B1 = .{ .a0 = .{ .value = 2053280341 }, .a1 = .{ .value = 646046301 } }, .B2 = .{ .a0 = .{ .value = 423835251 }, .a1 = .{ .value = 564025067 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1174343411 }, .a1 = .{ .value = 699294138 } }, .B1 = .{ .a0 = .{ .value = 185648795 }, .a1 = .{ .value = 1874668615 } }, .B2 = .{ .a0 = .{ .value = 1718541868 }, .a1 = .{ .value = 79411463 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 253136415 }, .a1 = .{ .value = 1340711014 } }, .B1 = .{ .a0 = .{ .value = 392996721 }, .a1 = .{ .value = 1167841812 } }, .B2 = .{ .a0 = .{ .value = 2117706005 }, .a1 = .{ .value = 1320475551 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1472467133 }, .a1 = .{ .value = 659106357 } }, .B1 = .{ .a0 = .{ .value = 29060478 }, .a1 = .{ .value = 1536324496 } }, .B2 = .{ .a0 = .{ .value = 1068652469 }, .a1 = .{ .value = 1986255475 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 811652537 }, .a1 = .{ .value = 192460391 } }, .B1 = .{ .a0 = .{ .value = 658496272 }, .a1 = .{ .value = 957495206 } }, .B2 = .{ .a0 = .{ .value = 125662683 }, .a1 = .{ .value = 1869531306 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1818236706 }, .a1 = .{ .value = 1155641285 } }, .B1 = .{ .a0 = .{ .value = 542645382 }, .a1 = .{ .value = 800175965 } }, .B2 = .{ .a0 = .{ .value = 1738915703 }, .a1 = .{ .value = 1096117776 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 750200068 }, .a1 = .{ .value = 914731472 } }, .B1 = .{ .a0 = .{ .value = 278805179 }, .a1 = .{ .value = 1324581862 } }, .B2 = .{ .a0 = .{ .value = 915476411 }, .a1 = .{ .value = 1086623326 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 650895099 }, .a1 = .{ .value = 1424223326 } }, .B1 = .{ .a0 = .{ .value = 184717245 }, .a1 = .{ .value = 1773638033 } }, .B2 = .{ .a0 = .{ .value = 1578352017 }, .a1 = .{ .value = 147712974 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2065218081 }, .a1 = .{ .value = 1540529015 } }, .B1 = .{ .a0 = .{ .value = 1116597115 }, .a1 = .{ .value = 2031238359 } }, .B2 = .{ .a0 = .{ .value = 530133091 }, .a1 = .{ .value = 375892808 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1119794522 }, .a1 = .{ .value = 413679443 } }, .B1 = .{ .a0 = .{ .value = 1936724 }, .a1 = .{ .value = 137749021 } }, .B2 = .{ .a0 = .{ .value = 134259321 }, .a1 = .{ .value = 1085130531 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1072838455 }, .a1 = .{ .value = 594630695 } }, .B1 = .{ .a0 = .{ .value = 1654756534 }, .a1 = .{ .value = 353614147 } }, .B2 = .{ .a0 = .{ .value = 1553042203 }, .a1 = .{ .value = 697054440 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 23802624 }, .a1 = .{ .value = 1194939644 } }, .B1 = .{ .a0 = .{ .value = 65578838 }, .a1 = .{ .value = 1205532677 } }, .B2 = .{ .a0 = .{ .value = 1401122111 }, .a1 = .{ .value = 945235810 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 784765983 }, .a1 = .{ .value = 1177546849 } }, .B1 = .{ .a0 = .{ .value = 346153548 }, .a1 = .{ .value = 1456432828 } }, .B2 = .{ .a0 = .{ .value = 977189275 }, .a1 = .{ .value = 37546950 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1205225757 }, .a1 = .{ .value = 42759058 } }, .B1 = .{ .a0 = .{ .value = 259804147 }, .a1 = .{ .value = 482957105 } }, .B2 = .{ .a0 = .{ .value = 1415291772 }, .a1 = .{ .value = 1471502369 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1840908645 }, .a1 = .{ .value = 1736727932 } }, .B1 = .{ .a0 = .{ .value = 14139307 }, .a1 = .{ .value = 1904833028 } }, .B2 = .{ .a0 = .{ .value = 2083740793 }, .a1 = .{ .value = 705575481 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1493485785 }, .a1 = .{ .value = 69130859 } }, .B1 = .{ .a0 = .{ .value = 902444640 }, .a1 = .{ .value = 1701777650 } }, .B2 = .{ .a0 = .{ .value = 2083452202 }, .a1 = .{ .value = 1381146639 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1332706454 }, .a1 = .{ .value = 1159570970 } }, .B1 = .{ .a0 = .{ .value = 1673708092 }, .a1 = .{ .value = 1458738828 } }, .B2 = .{ .a0 = .{ .value = 1312694824 }, .a1 = .{ .value = 1614390403 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1778257879 }, .a1 = .{ .value = 1559107394 } }, .B1 = .{ .a0 = .{ .value = 2095403128 }, .a1 = .{ .value = 1482983340 } }, .B2 = .{ .a0 = .{ .value = 246341813 }, .a1 = .{ .value = 292102160 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1293134271 }, .a1 = .{ .value = 518714554 } }, .B1 = .{ .a0 = .{ .value = 657662593 }, .a1 = .{ .value = 587590646 } }, .B2 = .{ .a0 = .{ .value = 949441623 }, .a1 = .{ .value = 1701523396 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1119794522 }, .a1 = .{ .value = 413679443 } }, .B1 = .{ .a0 = .{ .value = 1936724 }, .a1 = .{ .value = 137749021 } }, .B2 = .{ .a0 = .{ .value = 134259321 }, .a1 = .{ .value = 1085130531 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1072838455 }, .a1 = .{ .value = 594630695 } }, .B1 = .{ .a0 = .{ .value = 1654756534 }, .a1 = .{ .value = 353614147 } }, .B2 = .{ .a0 = .{ .value = 1553042203 }, .a1 = .{ .value = 697054440 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 650895099 }, .a1 = .{ .value = 1424223326 } }, .B1 = .{ .a0 = .{ .value = 184717245 }, .a1 = .{ .value = 1773638033 } }, .B2 = .{ .a0 = .{ .value = 1578352017 }, .a1 = .{ .value = 147712974 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2065218081 }, .a1 = .{ .value = 1540529015 } }, .B1 = .{ .a0 = .{ .value = 1116597115 }, .a1 = .{ .value = 2031238359 } }, .B2 = .{ .a0 = .{ .value = 530133091 }, .a1 = .{ .value = 375892808 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1493485785 }, .a1 = .{ .value = 69130859 } }, .B1 = .{ .a0 = .{ .value = 902444640 }, .a1 = .{ .value = 1701777650 } }, .B2 = .{ .a0 = .{ .value = 2083452202 }, .a1 = .{ .value = 1381146639 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1332706454 }, .a1 = .{ .value = 1159570970 } }, .B1 = .{ .a0 = .{ .value = 1673708092 }, .a1 = .{ .value = 1458738828 } }, .B2 = .{ .a0 = .{ .value = 1312694824 }, .a1 = .{ .value = 1614390403 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1778257879 }, .a1 = .{ .value = 1559107394 } }, .B1 = .{ .a0 = .{ .value = 2095403128 }, .a1 = .{ .value = 1482983340 } }, .B2 = .{ .a0 = .{ .value = 246341813 }, .a1 = .{ .value = 292102160 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1293134271 }, .a1 = .{ .value = 518714554 } }, .B1 = .{ .a0 = .{ .value = 657662593 }, .a1 = .{ .value = 587590646 } }, .B2 = .{ .a0 = .{ .value = 949441623 }, .a1 = .{ .value = 1701523396 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 23802624 }, .a1 = .{ .value = 1194939644 } }, .B1 = .{ .a0 = .{ .value = 65578838 }, .a1 = .{ .value = 1205532677 } }, .B2 = .{ .a0 = .{ .value = 1401122111 }, .a1 = .{ .value = 945235810 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 784765983 }, .a1 = .{ .value = 1177546849 } }, .B1 = .{ .a0 = .{ .value = 346153548 }, .a1 = .{ .value = 1456432828 } }, .B2 = .{ .a0 = .{ .value = 977189275 }, .a1 = .{ .value = 37546950 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1205225757 }, .a1 = .{ .value = 42759058 } }, .B1 = .{ .a0 = .{ .value = 259804147 }, .a1 = .{ .value = 482957105 } }, .B2 = .{ .a0 = .{ .value = 1415291772 }, .a1 = .{ .value = 1471502369 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1840908645 }, .a1 = .{ .value = 1736727932 } }, .B1 = .{ .a0 = .{ .value = 14139307 }, .a1 = .{ .value = 1904833028 } }, .B2 = .{ .a0 = .{ .value = 2083740793 }, .a1 = .{ .value = 705575481 } } } } } } } } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 555335409 }, .{ .value = 1984559862 }, .{ .value = 23716841 }, .{ .value = 1195405010 }, .{ .value = 1691590540 }, .{ .value = 608918087 }, .{ .value = 759916108 }, .{ .value = 1397341573 } }, commitment.Commitment{ .{ .value = 1991510708 }, .{ .value = 1033494474 }, .{ .value = 807130707 }, .{ .value = 927255879 }, .{ .value = 1142619745 }, .{ .value = 1697427021 }, .{ .value = 1187409569 }, .{ .value = 629367872 } }, commitment.Commitment{ .{ .value = 1454566486 }, .{ .value = 176834666 }, .{ .value = 1926295865 }, .{ .value = 883573998 }, .{ .value = 482250442 }, .{ .value = 368008110 }, .{ .value = 767434773 }, .{ .value = 986319141 } }, commitment.Commitment{ .{ .value = 538426911 }, .{ .value = 1884189289 }, .{ .value = 1115249372 }, .{ .value = 555319441 }, .{ .value = 1021670351 }, .{ .value = 1165843573 }, .{ .value = 633794670 }, .{ .value = 935880463 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1657433490 }, .{ .value = 1260402906 }, .{ .value = 1034419718 }, .{ .value = 1651159286 }, .{ .value = 672193847 }, .{ .value = 1060015874 }, .{ .value = 1457790199 }, .{ .value = 1265099960 } }, commitment.Commitment{ .{ .value = 1794123375 }, .{ .value = 1838733582 }, .{ .value = 694478593 }, .{ .value = 185888703 }, .{ .value = 179618968 }, .{ .value = 1279295754 }, .{ .value = 591212140 }, .{ .value = 1217489716 } }, commitment.Commitment{ .{ .value = 195910774 }, .{ .value = 1228122950 }, .{ .value = 279522573 }, .{ .value = 778280267 }, .{ .value = 1100033402 }, .{ .value = 35649070 }, .{ .value = 105835790 }, .{ .value = 427719357 } }, commitment.Commitment{ .{ .value = 1081395064 }, .{ .value = 406704598 }, .{ .value = 196047792 }, .{ .value = 1992891278 }, .{ .value = 265736242 }, .{ .value = 273130703 }, .{ .value = 1374340270 }, .{ .value = 1244362141 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1248731882 }, .{ .value = 1562865888 }, .{ .value = 1017862622 }, .{ .value = 1539006118 }, .{ .value = 1395306189 }, .{ .value = 310116704 }, .{ .value = 1523642646 }, .{ .value = 1802860469 } }, commitment.Commitment{ .{ .value = 710455762 }, .{ .value = 56270909 }, .{ .value = 2027833486 }, .{ .value = 1806414231 }, .{ .value = 1991031912 }, .{ .value = 317587151 }, .{ .value = 631594135 }, .{ .value = 321969320 } }, commitment.Commitment{ .{ .value = 862115678 }, .{ .value = 989859593 }, .{ .value = 1404558608 }, .{ .value = 230850641 }, .{ .value = 1203154365 }, .{ .value = 1782430519 }, .{ .value = 2009461914 }, .{ .value = 1489527142 } }, commitment.Commitment{ .{ .value = 2067803557 }, .{ .value = 13547552 }, .{ .value = 1338292162 }, .{ .value = 2070744588 }, .{ .value = 150156473 }, .{ .value = 1369152096 }, .{ .value = 1855752189 }, .{ .value = 1171258112 } } }, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 277631564 }, .{ .value = 1819848217 }, .{ .value = 1137247495 }, .{ .value = 94961211 }, .{ .value = 1464030398 }, .{ .value = 101296246 }, .{ .value = 423314820 }, .{ .value = 1451052744 } }}, .round_caps = &.{merkle.MerkleCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1888394428 }, .{ .value = 914361255 }, .{ .value = 1962128993 }, .{ .value = 442188154 }, .{ .value = 45489907 }, .{ .value = 1794692768 }, .{ .value = 140773205 }, .{ .value = 178828777 } }, commitment.Commitment{ .{ .value = 1815091357 }, .{ .value = 1783851356 }, .{ .value = 46478416 }, .{ .value = 1573991306 }, .{ .value = 1344548337 }, .{ .value = 1583743017 }, .{ .value = 311797275 }, .{ .value = 1916196087 } } }, .aux = &.{null} }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 443010580 }, .a1 = .{ .value = 1757481537 } }, .B1 = .{ .a0 = .{ .value = 1634870233 }, .a1 = .{ .value = 1409601330 } }, .B2 = .{ .a0 = .{ .value = 193637365 }, .a1 = .{ .value = 684842728 } } }}, .running_queries = &.{ &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 724688944 }, .{ .value = 769490431 }, .{ .value = 514577992 }, .{ .value = 197303429 }, .{ .value = 1546037600 }, .{ .value = 1305351478 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 927329411 }, .{ .value = 972662079 }, .{ .value = 1197021670 }, .{ .value = 767293841 }, .{ .value = 889104759 }, .{ .value = 1639553742 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 724688944 }, .{ .value = 769490431 }, .{ .value = 514577992 }, .{ .value = 197303429 }, .{ .value = 1546037600 }, .{ .value = 1305351478 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 927329411 }, .{ .value = 972662079 }, .{ .value = 1197021670 }, .{ .value = 767293841 }, .{ .value = 889104759 }, .{ .value = 1639553742 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1526435004 }, .{ .value = 1369820571 }, .{ .value = 1464922153 }, .{ .value = 996414764 }, .{ .value = 543349248 }, .{ .value = 1067031143 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 125583351 }, .{ .value = 372331939 }, .{ .value = 246677509 }, .{ .value = 2098888939 }, .{ .value = 1891793111 }, .{ .value = 1877874077 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1526435004 }, .{ .value = 1369820571 }, .{ .value = 1464922153 }, .{ .value = 996414764 }, .{ .value = 543349248 }, .{ .value = 1067031143 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 125583351 }, .{ .value = 372331939 }, .{ .value = 246677509 }, .{ .value = 2098888939 }, .{ .value = 1891793111 }, .{ .value = 1877874077 }, .{ .value = 0 }, .{ .value = 0 } }} }} } } } };
+const verify_case_68_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 111772 }, .{ .value = 111772 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2113882987 }, .{ .value = 2113882987 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 51367342 }, .a1 = .{ .value = 2113686671 } }, .B1 = .{ .a0 = .{ .value = 1228819418 }, .a1 = .{ .value = 367682239 } }, .B2 = .{ .a0 = .{ .value = 1211501653 }, .a1 = .{ .value = 1891868976 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2079679050 }, .a1 = .{ .value = 2127177056 } }, .B1 = .{ .a0 = .{ .value = 1466757626 }, .a1 = .{ .value = 1831214003 } }, .B2 = .{ .a0 = .{ .value = 1121611106 }, .a1 = .{ .value = 1490094980 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 363618483 }, .a1 = .{ .value = 253483476 } }, .B1 = .{ .a0 = .{ .value = 666069181 }, .a1 = .{ .value = 896688507 } }, .B2 = .{ .a0 = .{ .value = 564656978 }, .a1 = .{ .value = 431482959 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1239178926 }, .a1 = .{ .value = 1383379613 } }, .B1 = .{ .a0 = .{ .value = 690997231 }, .a1 = .{ .value = 410826229 } }, .B2 = .{ .a0 = .{ .value = 1795305644 }, .a1 = .{ .value = 1930709224 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1772406504 }, .a1 = .{ .value = 1879937776 } }, .B1 = .{ .a0 = .{ .value = 835083534 }, .a1 = .{ .value = 256083130 } }, .B2 = .{ .a0 = .{ .value = 1363963369 }, .a1 = .{ .value = 1601499743 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1554583919 }, .a1 = .{ .value = 816063334 } }, .B1 = .{ .a0 = .{ .value = 918034969 }, .a1 = .{ .value = 1673755594 } }, .B2 = .{ .a0 = .{ .value = 868130789 }, .a1 = .{ .value = 87019391 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 518329542 }, .a1 = .{ .value = 9010286 } }, .B1 = .{ .a0 = .{ .value = 830226383 }, .a1 = .{ .value = 1559089050 } }, .B2 = .{ .a0 = .{ .value = 1631262084 }, .a1 = .{ .value = 108924374 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 854007304 }, .a1 = .{ .value = 868675207 } }, .B1 = .{ .a0 = .{ .value = 1935433647 }, .a1 = .{ .value = 993734831 } }, .B2 = .{ .a0 = .{ .value = 551778541 }, .a1 = .{ .value = 1902512680 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1081581428 }, .a1 = .{ .value = 1793700109 } }, .B1 = .{ .a0 = .{ .value = 596822397 }, .a1 = .{ .value = 362817099 } }, .B2 = .{ .a0 = .{ .value = 457496808 }, .a1 = .{ .value = 651290027 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 792415531 }, .a1 = .{ .value = 1864587589 } }, .B1 = .{ .a0 = .{ .value = 322225117 }, .a1 = .{ .value = 1517170402 } }, .B2 = .{ .a0 = .{ .value = 329086757 }, .a1 = .{ .value = 192429001 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2037125535 }, .a1 = .{ .value = 2003968108 } }, .B1 = .{ .a0 = .{ .value = 913430309 }, .a1 = .{ .value = 1094548953 } }, .B2 = .{ .a0 = .{ .value = 919711882 }, .a1 = .{ .value = 177729831 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1495876196 }, .a1 = .{ .value = 1272723068 } }, .B1 = .{ .a0 = .{ .value = 1880257363 }, .a1 = .{ .value = 1592632564 } }, .B2 = .{ .a0 = .{ .value = 1232215948 }, .a1 = .{ .value = 1242795724 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1363205229 }, .a1 = .{ .value = 914988856 } }, .B1 = .{ .a0 = .{ .value = 951028496 }, .a1 = .{ .value = 236404135 } }, .B2 = .{ .a0 = .{ .value = 1478139131 }, .a1 = .{ .value = 1194334578 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 610986478 }, .a1 = .{ .value = 1978682291 } }, .B1 = .{ .a0 = .{ .value = 2075589536 }, .a1 = .{ .value = 1271013822 } }, .B2 = .{ .a0 = .{ .value = 1112824560 }, .a1 = .{ .value = 1641738788 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 550691275 }, .a1 = .{ .value = 51103352 } }, .B1 = .{ .a0 = .{ .value = 37372766 }, .a1 = .{ .value = 906123158 } }, .B2 = .{ .a0 = .{ .value = 740000322 }, .a1 = .{ .value = 1213715788 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 34259989 }, .a1 = .{ .value = 542374864 } }, .B1 = .{ .a0 = .{ .value = 1797705179 }, .a1 = .{ .value = 810244002 } }, .B2 = .{ .a0 = .{ .value = 496191041 }, .a1 = .{ .value = 386829508 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 2049553082 }, .a1 = .{ .value = 929690616 } }, .B1 = .{ .a0 = .{ .value = 699791517 }, .a1 = .{ .value = 1465531219 } }, .B2 = .{ .a0 = .{ .value = 790380893 }, .a1 = .{ .value = 115876716 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1905868894 }, .a1 = .{ .value = 1214110206 } }, .B1 = .{ .a0 = .{ .value = 1783595114 }, .a1 = .{ .value = 801621627 } }, .B2 = .{ .a0 = .{ .value = 1495902454 }, .a1 = .{ .value = 520928664 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 85023481 }, .a1 = .{ .value = 1542019968 } }, .B1 = .{ .a0 = .{ .value = 219970021 }, .a1 = .{ .value = 24939640 } }, .B2 = .{ .a0 = .{ .value = 997168078 }, .a1 = .{ .value = 677452534 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 43169108 }, .a1 = .{ .value = 406077689 } }, .B1 = .{ .a0 = .{ .value = 2123214060 }, .a1 = .{ .value = 309647936 } }, .B2 = .{ .a0 = .{ .value = 602620262 }, .a1 = .{ .value = 1681622085 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 258343302 }, .a1 = .{ .value = 1805110090 } }, .B1 = .{ .a0 = .{ .value = 1812604236 }, .a1 = .{ .value = 335142097 } }, .B2 = .{ .a0 = .{ .value = 1994931944 }, .a1 = .{ .value = 1924786951 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 712712737 }, .a1 = .{ .value = 915360924 } }, .B1 = .{ .a0 = .{ .value = 160972491 }, .a1 = .{ .value = 199498243 } }, .B2 = .{ .a0 = .{ .value = 512935979 }, .a1 = .{ .value = 37724738 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 720872898 }, .a1 = .{ .value = 1410731725 } }, .B1 = .{ .a0 = .{ .value = 382563994 }, .a1 = .{ .value = 1625300412 } }, .B2 = .{ .a0 = .{ .value = 1535963350 }, .a1 = .{ .value = 430509951 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 176007959 }, .a1 = .{ .value = 1735320586 } }, .B1 = .{ .a0 = .{ .value = 1692476950 }, .a1 = .{ .value = 146013026 } }, .B2 = .{ .a0 = .{ .value = 1181374227 }, .a1 = .{ .value = 1463686319 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2113882987 }, .{ .value = 2113882987 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 111772 }, .{ .value = 111772 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 363618483 }, .a1 = .{ .value = 253483476 } }, .B1 = .{ .a0 = .{ .value = 666069181 }, .a1 = .{ .value = 896688507 } }, .B2 = .{ .a0 = .{ .value = 564656978 }, .a1 = .{ .value = 431482959 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1239178926 }, .a1 = .{ .value = 1383379613 } }, .B1 = .{ .a0 = .{ .value = 690997231 }, .a1 = .{ .value = 410826229 } }, .B2 = .{ .a0 = .{ .value = 1795305644 }, .a1 = .{ .value = 1930709224 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 51367342 }, .a1 = .{ .value = 2113686671 } }, .B1 = .{ .a0 = .{ .value = 1228819418 }, .a1 = .{ .value = 367682239 } }, .B2 = .{ .a0 = .{ .value = 1211501653 }, .a1 = .{ .value = 1891868976 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2079679050 }, .a1 = .{ .value = 2127177056 } }, .B1 = .{ .a0 = .{ .value = 1466757626 }, .a1 = .{ .value = 1831214003 } }, .B2 = .{ .a0 = .{ .value = 1121611106 }, .a1 = .{ .value = 1490094980 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1081581428 }, .a1 = .{ .value = 1793700109 } }, .B1 = .{ .a0 = .{ .value = 596822397 }, .a1 = .{ .value = 362817099 } }, .B2 = .{ .a0 = .{ .value = 457496808 }, .a1 = .{ .value = 651290027 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 792415531 }, .a1 = .{ .value = 1864587589 } }, .B1 = .{ .a0 = .{ .value = 322225117 }, .a1 = .{ .value = 1517170402 } }, .B2 = .{ .a0 = .{ .value = 329086757 }, .a1 = .{ .value = 192429001 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2037125535 }, .a1 = .{ .value = 2003968108 } }, .B1 = .{ .a0 = .{ .value = 913430309 }, .a1 = .{ .value = 1094548953 } }, .B2 = .{ .a0 = .{ .value = 919711882 }, .a1 = .{ .value = 177729831 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1495876196 }, .a1 = .{ .value = 1272723068 } }, .B1 = .{ .a0 = .{ .value = 1880257363 }, .a1 = .{ .value = 1592632564 } }, .B2 = .{ .a0 = .{ .value = 1232215948 }, .a1 = .{ .value = 1242795724 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1772406504 }, .a1 = .{ .value = 1879937776 } }, .B1 = .{ .a0 = .{ .value = 835083534 }, .a1 = .{ .value = 256083130 } }, .B2 = .{ .a0 = .{ .value = 1363963369 }, .a1 = .{ .value = 1601499743 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1554583919 }, .a1 = .{ .value = 816063334 } }, .B1 = .{ .a0 = .{ .value = 918034969 }, .a1 = .{ .value = 1673755594 } }, .B2 = .{ .a0 = .{ .value = 868130789 }, .a1 = .{ .value = 87019391 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 518329542 }, .a1 = .{ .value = 9010286 } }, .B1 = .{ .a0 = .{ .value = 830226383 }, .a1 = .{ .value = 1559089050 } }, .B2 = .{ .a0 = .{ .value = 1631262084 }, .a1 = .{ .value = 108924374 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 854007304 }, .a1 = .{ .value = 868675207 } }, .B1 = .{ .a0 = .{ .value = 1935433647 }, .a1 = .{ .value = 993734831 } }, .B2 = .{ .a0 = .{ .value = 551778541 }, .a1 = .{ .value = 1902512680 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 400562482 }, .a1 = .{ .value = 1475513674 } }, .B1 = .{ .a0 = .{ .value = 1436500341 }, .a1 = .{ .value = 1165334460 } }, .B2 = .{ .a0 = .{ .value = 48460580 }, .a1 = .{ .value = 895512390 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 395342363 }, .a1 = .{ .value = 1927008848 } }, .B1 = .{ .a0 = .{ .value = 1107215131 }, .a1 = .{ .value = 639154567 } }, .B2 = .{ .a0 = .{ .value = 2047919879 }, .a1 = .{ .value = 670132876 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 469292705 }, .a1 = .{ .value = 1165328763 } }, .B1 = .{ .a0 = .{ .value = 1618988703 }, .a1 = .{ .value = 1704866561 } }, .B2 = .{ .a0 = .{ .value = 506994365 }, .a1 = .{ .value = 1900810484 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 793427768 }, .a1 = .{ .value = 435175217 } }, .B1 = .{ .a0 = .{ .value = 1175367294 }, .a1 = .{ .value = 1321672920 } }, .B2 = .{ .a0 = .{ .value = 1671042716 }, .a1 = .{ .value = 551732451 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 477052136 }, .a1 = .{ .value = 765026492 } }, .B1 = .{ .a0 = .{ .value = 318211978 }, .a1 = .{ .value = 1482765445 } }, .B2 = .{ .a0 = .{ .value = 1505866360 }, .a1 = .{ .value = 908775912 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1040306468 }, .a1 = .{ .value = 2080980332 } }, .B1 = .{ .a0 = .{ .value = 833373270 }, .a1 = .{ .value = 1338984829 } }, .B2 = .{ .a0 = .{ .value = 1851070448 }, .a1 = .{ .value = 434045218 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 702852004 }, .a1 = .{ .value = 1718496369 } }, .B1 = .{ .a0 = .{ .value = 419219357 }, .a1 = .{ .value = 1924266986 } }, .B2 = .{ .a0 = .{ .value = 631627315 }, .a1 = .{ .value = 151612837 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 968158143 }, .a1 = .{ .value = 1725495130 } }, .B1 = .{ .a0 = .{ .value = 176555797 }, .a1 = .{ .value = 527851322 } }, .B2 = .{ .a0 = .{ .value = 814216126 }, .a1 = .{ .value = 1181644272 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 586271191 }, .a1 = .{ .value = 2069016731 } }, .B1 = .{ .a0 = .{ .value = 1874345535 }, .a1 = .{ .value = 1313413899 } }, .B2 = .{ .a0 = .{ .value = 255228653 }, .a1 = .{ .value = 840895235 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 429216175 }, .a1 = .{ .value = 1379560892 } }, .B1 = .{ .a0 = .{ .value = 1652891664 }, .a1 = .{ .value = 1933741483 } }, .B2 = .{ .a0 = .{ .value = 253979213 }, .a1 = .{ .value = 1304892371 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 132555735 }, .a1 = .{ .value = 889387550 } }, .B1 = .{ .a0 = .{ .value = 1693343791 }, .a1 = .{ .value = 659497824 } }, .B2 = .{ .a0 = .{ .value = 1503696157 }, .a1 = .{ .value = 284025426 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1381725357 }, .a1 = .{ .value = 415903145 } }, .B1 = .{ .a0 = .{ .value = 1508428780 }, .a1 = .{ .value = 2058516073 } }, .B2 = .{ .a0 = .{ .value = 969778363 }, .a1 = .{ .value = 1963664132 } } } } } } } } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 555335409 }, .{ .value = 1984559862 }, .{ .value = 23716841 }, .{ .value = 1195405010 }, .{ .value = 1691590540 }, .{ .value = 608918087 }, .{ .value = 759916108 }, .{ .value = 1397341573 } }, commitment.Commitment{ .{ .value = 1991510708 }, .{ .value = 1033494474 }, .{ .value = 807130707 }, .{ .value = 927255879 }, .{ .value = 1142619745 }, .{ .value = 1697427021 }, .{ .value = 1187409569 }, .{ .value = 629367872 } }, commitment.Commitment{ .{ .value = 1454566486 }, .{ .value = 176834666 }, .{ .value = 1926295865 }, .{ .value = 883573998 }, .{ .value = 482250442 }, .{ .value = 368008110 }, .{ .value = 767434773 }, .{ .value = 986319141 } }, commitment.Commitment{ .{ .value = 538426911 }, .{ .value = 1884189289 }, .{ .value = 1115249372 }, .{ .value = 555319441 }, .{ .value = 1021670351 }, .{ .value = 1165843573 }, .{ .value = 633794670 }, .{ .value = 935880463 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 169221006 }, .{ .value = 359098470 }, .{ .value = 756964339 }, .{ .value = 1690578953 }, .{ .value = 252007412 }, .{ .value = 647958288 }, .{ .value = 1988399565 }, .{ .value = 878121775 } }, commitment.Commitment{ .{ .value = 1274827433 }, .{ .value = 716429420 }, .{ .value = 869167712 }, .{ .value = 1719819973 }, .{ .value = 1098851390 }, .{ .value = 1474023110 }, .{ .value = 901119894 }, .{ .value = 440459747 } }, commitment.Commitment{ .{ .value = 464529169 }, .{ .value = 304754053 }, .{ .value = 113855300 }, .{ .value = 142564471 }, .{ .value = 535091597 }, .{ .value = 1663591547 }, .{ .value = 1214920395 }, .{ .value = 2020617887 } }, commitment.Commitment{ .{ .value = 1711410664 }, .{ .value = 555432131 }, .{ .value = 1763300236 }, .{ .value = 1746639233 }, .{ .value = 1067629378 }, .{ .value = 1794983781 }, .{ .value = 1708409324 }, .{ .value = 1131672205 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1260920274 }, .{ .value = 488726485 }, .{ .value = 1263646888 }, .{ .value = 445439186 }, .{ .value = 1259890904 }, .{ .value = 1901291436 }, .{ .value = 1928891060 }, .{ .value = 1388536418 } }, commitment.Commitment{ .{ .value = 905416358 }, .{ .value = 1106742826 }, .{ .value = 109887269 }, .{ .value = 1380672970 }, .{ .value = 937897332 }, .{ .value = 300118156 }, .{ .value = 193117632 }, .{ .value = 1361750203 } }, commitment.Commitment{ .{ .value = 2099067340 }, .{ .value = 636540170 }, .{ .value = 2001084540 }, .{ .value = 1162215003 }, .{ .value = 163459146 }, .{ .value = 623251524 }, .{ .value = 852745200 }, .{ .value = 748881183 } }, commitment.Commitment{ .{ .value = 688046480 }, .{ .value = 1318873530 }, .{ .value = 1853695402 }, .{ .value = 42721364 }, .{ .value = 612254521 }, .{ .value = 132319931 }, .{ .value = 1179331697 }, .{ .value = 1273451579 } } }, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1462277190 }, .{ .value = 1254376593 }, .{ .value = 2012841102 }, .{ .value = 1825809455 }, .{ .value = 1856460756 }, .{ .value = 335168935 }, .{ .value = 1110015243 }, .{ .value = 1982424429 } }}, .round_caps = &.{merkle.MerkleCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1823676001 }, .{ .value = 262132764 }, .{ .value = 1829188831 }, .{ .value = 1964131849 }, .{ .value = 1545668272 }, .{ .value = 834578017 }, .{ .value = 184595164 }, .{ .value = 701303987 } }, commitment.Commitment{ .{ .value = 1930435967 }, .{ .value = 444646780 }, .{ .value = 1987195691 }, .{ .value = 569777021 }, .{ .value = 1236664386 }, .{ .value = 537769559 }, .{ .value = 1203709528 }, .{ .value = 439459317 } } }, .aux = &.{null} }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 477393249 }, .a1 = .{ .value = 324668301 } }, .B1 = .{ .a0 = .{ .value = 1589343693 }, .a1 = .{ .value = 1150884400 } }, .B2 = .{ .a0 = .{ .value = 503455038 }, .a1 = .{ .value = 230727401 } } }}, .running_queries = &.{ &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 229882642 }, .{ .value = 2119921583 }, .{ .value = 1086631321 }, .{ .value = 693691818 }, .{ .value = 1590445060 }, .{ .value = 1630154870 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 2081530831 }, .{ .value = 1222978232 }, .{ .value = 577704359 }, .{ .value = 1488529863 }, .{ .value = 1528964514 }, .{ .value = 330411613 }, .{ .value = 0 }, .{ .value = 0 } }} }} } } } };
 
 const verify_case_68_proof = verifier.Proof{
     .rounds = &verify_case_68_rounds,
@@ -15715,334 +15509,334 @@ const verify_case_68_public_inputs = [_]protocol.Scalar{
     .{ .base = .{ .value = 66 } },
     .{ .base = .{ .value = 77 } },
     .{ .base = .{ .value = 88 } },
-    .{ .base = .{ .value = 707150402 } },
-    .{ .base = .{ .value = 1408331409 } },
-    .{ .base = .{ .value = 338636618 } },
-    .{ .base = .{ .value = 953433897 } },
-    .{ .base = .{ .value = 1254906597 } },
-    .{ .base = .{ .value = 239596987 } },
-    .{ .base = .{ .value = 1962276018 } },
-    .{ .base = .{ .value = 1024324298 } },
-    .{ .base = .{ .value = 1998090651 } },
-    .{ .base = .{ .value = 1054859233 } },
-    .{ .base = .{ .value = 1097752058 } },
-    .{ .base = .{ .value = 791991768 } },
-    .{ .base = .{ .value = 1773546923 } },
-    .{ .base = .{ .value = 889920020 } },
-    .{ .base = .{ .value = 1805131266 } },
-    .{ .base = .{ .value = 1376649739 } },
-    .{ .base = .{ .value = 1355481920 } },
-    .{ .base = .{ .value = 962980946 } },
-    .{ .base = .{ .value = 1383361912 } },
-    .{ .base = .{ .value = 1978320934 } },
-    .{ .base = .{ .value = 902337933 } },
-    .{ .base = .{ .value = 1216023000 } },
-    .{ .base = .{ .value = 922665345 } },
-    .{ .base = .{ .value = 735544820 } },
-    .{ .base = .{ .value = 1337646463 } },
-    .{ .base = .{ .value = 982612855 } },
-    .{ .base = .{ .value = 491170587 } },
-    .{ .base = .{ .value = 402546955 } },
-    .{ .base = .{ .value = 1667225701 } },
-    .{ .base = .{ .value = 73076826 } },
-    .{ .base = .{ .value = 892206069 } },
-    .{ .base = .{ .value = 727685795 } },
-    .{ .base = .{ .value = 1729263875 } },
-    .{ .base = .{ .value = 612882162 } },
-    .{ .base = .{ .value = 503926944 } },
-    .{ .base = .{ .value = 1113252971 } },
-    .{ .base = .{ .value = 466581963 } },
-    .{ .base = .{ .value = 685680584 } },
-    .{ .base = .{ .value = 1053819056 } },
-    .{ .base = .{ .value = 1602024390 } },
-    .{ .base = .{ .value = 172480225 } },
-    .{ .base = .{ .value = 1767879110 } },
-    .{ .base = .{ .value = 1494720690 } },
-    .{ .base = .{ .value = 84474614 } },
-    .{ .base = .{ .value = 225023367 } },
-    .{ .base = .{ .value = 434455574 } },
-    .{ .base = .{ .value = 1270946833 } },
-    .{ .base = .{ .value = 751104859 } },
-    .{ .base = .{ .value = 1448979341 } },
-    .{ .base = .{ .value = 891519 } },
-    .{ .base = .{ .value = 1300231325 } },
-    .{ .base = .{ .value = 1438366688 } },
-    .{ .base = .{ .value = 329033911 } },
-    .{ .base = .{ .value = 506639868 } },
-    .{ .base = .{ .value = 1223421842 } },
-    .{ .base = .{ .value = 1909429949 } },
-    .{ .base = .{ .value = 1434656866 } },
-    .{ .base = .{ .value = 1665231946 } },
-    .{ .base = .{ .value = 222347323 } },
-    .{ .base = .{ .value = 1580599640 } },
-    .{ .base = .{ .value = 2082098205 } },
-    .{ .base = .{ .value = 1975938749 } },
-    .{ .base = .{ .value = 845318047 } },
-    .{ .base = .{ .value = 868684660 } },
-    .{ .base = .{ .value = 802169870 } },
-    .{ .base = .{ .value = 149750239 } },
-    .{ .base = .{ .value = 1402580844 } },
-    .{ .base = .{ .value = 741720504 } },
-    .{ .base = .{ .value = 2018976471 } },
-    .{ .base = .{ .value = 1939037141 } },
-    .{ .base = .{ .value = 135344295 } },
-    .{ .base = .{ .value = 517564436 } },
-    .{ .base = .{ .value = 1254076706 } },
-    .{ .base = .{ .value = 736107496 } },
-    .{ .base = .{ .value = 1158816731 } },
-    .{ .base = .{ .value = 566177258 } },
-    .{ .base = .{ .value = 1390148900 } },
-    .{ .base = .{ .value = 229670556 } },
-    .{ .base = .{ .value = 124025920 } },
-    .{ .base = .{ .value = 1940705857 } },
-    .{ .base = .{ .value = 245288258 } },
-    .{ .base = .{ .value = 1595863050 } },
-    .{ .base = .{ .value = 1092933786 } },
-    .{ .base = .{ .value = 953310842 } },
-    .{ .base = .{ .value = 1856464094 } },
-    .{ .base = .{ .value = 443924021 } },
-    .{ .base = .{ .value = 342617961 } },
-    .{ .base = .{ .value = 1408189982 } },
-    .{ .base = .{ .value = 832324154 } },
-    .{ .base = .{ .value = 561024189 } },
-    .{ .base = .{ .value = 209698327 } },
-    .{ .base = .{ .value = 686737391 } },
-    .{ .base = .{ .value = 29404641 } },
-    .{ .base = .{ .value = 1126242295 } },
-    .{ .base = .{ .value = 635368205 } },
-    .{ .base = .{ .value = 1235926742 } },
-    .{ .base = .{ .value = 121104830 } },
-    .{ .base = .{ .value = 861722568 } },
-    .{ .base = .{ .value = 2047768438 } },
-    .{ .base = .{ .value = 1763424391 } },
-    .{ .base = .{ .value = 1587343680 } },
-    .{ .base = .{ .value = 870251289 } },
-    .{ .base = .{ .value = 2106542732 } },
-    .{ .base = .{ .value = 1957908878 } },
-    .{ .base = .{ .value = 1260913669 } },
-    .{ .base = .{ .value = 1938741896 } },
-    .{ .base = .{ .value = 1442758383 } },
-    .{ .base = .{ .value = 1256467046 } },
-    .{ .base = .{ .value = 1834767570 } },
-    .{ .base = .{ .value = 1269907642 } },
-    .{ .base = .{ .value = 793986024 } },
-    .{ .base = .{ .value = 1549244754 } },
-    .{ .base = .{ .value = 1509513699 } },
-    .{ .base = .{ .value = 1254533447 } },
-    .{ .base = .{ .value = 313889661 } },
-    .{ .base = .{ .value = 482092777 } },
-    .{ .base = .{ .value = 1318791840 } },
-    .{ .base = .{ .value = 1953144882 } },
-    .{ .base = .{ .value = 1094101577 } },
-    .{ .base = .{ .value = 638945249 } },
-    .{ .base = .{ .value = 298368665 } },
-    .{ .base = .{ .value = 58643476 } },
-    .{ .base = .{ .value = 1492690118 } },
-    .{ .base = .{ .value = 643147742 } },
-    .{ .base = .{ .value = 1494731628 } },
-    .{ .base = .{ .value = 515611814 } },
-    .{ .base = .{ .value = 1467428252 } },
-    .{ .base = .{ .value = 457981148 } },
-    .{ .base = .{ .value = 324488461 } },
-    .{ .base = .{ .value = 1894484630 } },
-    .{ .base = .{ .value = 385570511 } },
-    .{ .base = .{ .value = 755344953 } },
-    .{ .base = .{ .value = 1738360518 } },
-    .{ .base = .{ .value = 423197640 } },
-    .{ .base = .{ .value = 1072733227 } },
-    .{ .base = .{ .value = 1181441842 } },
-    .{ .base = .{ .value = 311643150 } },
-    .{ .base = .{ .value = 1797533987 } },
-    .{ .base = .{ .value = 956390699 } },
-    .{ .base = .{ .value = 837451446 } },
-    .{ .base = .{ .value = 1805980110 } },
-    .{ .base = .{ .value = 1884882438 } },
-    .{ .base = .{ .value = 761373661 } },
-    .{ .base = .{ .value = 902427436 } },
-    .{ .base = .{ .value = 1205011397 } },
-    .{ .base = .{ .value = 413802963 } },
-    .{ .base = .{ .value = 520397204 } },
-    .{ .base = .{ .value = 938426361 } },
-    .{ .base = .{ .value = 83645903 } },
-    .{ .base = .{ .value = 1250591704 } },
-    .{ .base = .{ .value = 369008482 } },
-    .{ .base = .{ .value = 1914200245 } },
-    .{ .base = .{ .value = 152236040 } },
-    .{ .base = .{ .value = 1172908284 } },
-    .{ .base = .{ .value = 519122191 } },
-    .{ .base = .{ .value = 572518760 } },
-    .{ .base = .{ .value = 2129151924 } },
-    .{ .base = .{ .value = 1878190002 } },
-    .{ .base = .{ .value = 1141031225 } },
-    .{ .base = .{ .value = 3044790 } },
-    .{ .base = .{ .value = 871101247 } },
-    .{ .base = .{ .value = 1225713312 } },
-    .{ .base = .{ .value = 1595258577 } },
-    .{ .base = .{ .value = 1783919662 } },
-    .{ .base = .{ .value = 606211474 } },
-    .{ .base = .{ .value = 1392998793 } },
-    .{ .base = .{ .value = 81558516 } },
-    .{ .base = .{ .value = 567614934 } },
-    .{ .base = .{ .value = 1477505699 } },
-    .{ .base = .{ .value = 1446376858 } },
-    .{ .base = .{ .value = 921163254 } },
-    .{ .base = .{ .value = 1102623195 } },
-    .{ .base = .{ .value = 1417206768 } },
-    .{ .base = .{ .value = 270215751 } },
-    .{ .base = .{ .value = 113415668 } },
-    .{ .base = .{ .value = 783572711 } },
-    .{ .base = .{ .value = 649710331 } },
-    .{ .base = .{ .value = 681973275 } },
-    .{ .base = .{ .value = 1548584048 } },
-    .{ .base = .{ .value = 806855340 } },
-    .{ .base = .{ .value = 837240245 } },
-    .{ .base = .{ .value = 806698029 } },
-    .{ .base = .{ .value = 1991594777 } },
-    .{ .base = .{ .value = 1375682705 } },
-    .{ .base = .{ .value = 54335650 } },
-    .{ .base = .{ .value = 1443905725 } },
-    .{ .base = .{ .value = 1135903407 } },
-    .{ .base = .{ .value = 1994712648 } },
-    .{ .base = .{ .value = 688569073 } },
-    .{ .base = .{ .value = 130060027 } },
-    .{ .base = .{ .value = 569240389 } },
-    .{ .base = .{ .value = 22345264 } },
-    .{ .base = .{ .value = 1647371200 } },
-    .{ .base = .{ .value = 846471491 } },
-    .{ .base = .{ .value = 377341653 } },
-    .{ .base = .{ .value = 368351448 } },
-    .{ .base = .{ .value = 1190213816 } },
-    .{ .base = .{ .value = 1780117547 } },
-    .{ .base = .{ .value = 1550253619 } },
-    .{ .base = .{ .value = 1481313800 } },
-    .{ .base = .{ .value = 31187028 } },
-    .{ .base = .{ .value = 2047695000 } },
-    .{ .base = .{ .value = 2020474065 } },
-    .{ .base = .{ .value = 880943239 } },
-    .{ .base = .{ .value = 470747800 } },
-    .{ .base = .{ .value = 622138762 } },
-    .{ .base = .{ .value = 959918264 } },
-    .{ .base = .{ .value = 1478788666 } },
-    .{ .base = .{ .value = 1428514876 } },
-    .{ .base = .{ .value = 642882581 } },
-    .{ .base = .{ .value = 499551435 } },
-    .{ .base = .{ .value = 89823507 } },
-    .{ .base = .{ .value = 1162873092 } },
-    .{ .base = .{ .value = 1243290736 } },
-    .{ .base = .{ .value = 795492723 } },
-    .{ .base = .{ .value = 42274965 } },
-    .{ .base = .{ .value = 1457408306 } },
-    .{ .base = .{ .value = 433555827 } },
-    .{ .base = .{ .value = 1552378751 } },
-    .{ .base = .{ .value = 1209486956 } },
-    .{ .base = .{ .value = 1447412747 } },
-    .{ .base = .{ .value = 1782223728 } },
-    .{ .base = .{ .value = 1386073579 } },
-    .{ .base = .{ .value = 144315513 } },
-    .{ .base = .{ .value = 1411336347 } },
-    .{ .base = .{ .value = 165983615 } },
-    .{ .base = .{ .value = 386545744 } },
-    .{ .base = .{ .value = 1550996261 } },
-    .{ .base = .{ .value = 1745812056 } },
-    .{ .base = .{ .value = 2112928165 } },
-    .{ .base = .{ .value = 1734867851 } },
-    .{ .base = .{ .value = 928372945 } },
-    .{ .base = .{ .value = 23023827 } },
-    .{ .base = .{ .value = 1223050611 } },
-    .{ .base = .{ .value = 239348223 } },
-    .{ .base = .{ .value = 134754250 } },
-    .{ .base = .{ .value = 1054464471 } },
-    .{ .base = .{ .value = 424553536 } },
-    .{ .base = .{ .value = 924642143 } },
-    .{ .base = .{ .value = 406893690 } },
-    .{ .base = .{ .value = 1884710405 } },
-    .{ .base = .{ .value = 1972875864 } },
-    .{ .base = .{ .value = 255931580 } },
-    .{ .base = .{ .value = 869816835 } },
-    .{ .base = .{ .value = 40387650 } },
-    .{ .base = .{ .value = 1729377830 } },
-    .{ .base = .{ .value = 524826830 } },
-    .{ .base = .{ .value = 1100455462 } },
-    .{ .base = .{ .value = 1078371264 } },
-    .{ .base = .{ .value = 817476987 } },
-    .{ .base = .{ .value = 1935266255 } },
-    .{ .base = .{ .value = 1493370539 } },
-    .{ .base = .{ .value = 1635434092 } },
-    .{ .base = .{ .value = 92521602 } },
-    .{ .base = .{ .value = 911767489 } },
-    .{ .base = .{ .value = 1368320255 } },
-    .{ .base = .{ .value = 960259584 } },
-    .{ .base = .{ .value = 1562494458 } },
-    .{ .base = .{ .value = 1643742920 } },
-    .{ .base = .{ .value = 1954532291 } },
-    .{ .base = .{ .value = 1131427387 } },
-    .{ .base = .{ .value = 1782668011 } },
-    .{ .base = .{ .value = 1628249922 } },
-    .{ .base = .{ .value = 1493029474 } },
-    .{ .base = .{ .value = 590998517 } },
-    .{ .base = .{ .value = 632617770 } },
-    .{ .base = .{ .value = 263788592 } },
-    .{ .base = .{ .value = 176582284 } },
-    .{ .base = .{ .value = 69349452 } },
-    .{ .base = .{ .value = 2067478419 } },
-    .{ .base = .{ .value = 404722469 } },
-    .{ .base = .{ .value = 1125067910 } },
-    .{ .base = .{ .value = 1561613092 } },
-    .{ .base = .{ .value = 947331187 } },
-    .{ .base = .{ .value = 674936245 } },
-    .{ .base = .{ .value = 997588041 } },
-    .{ .base = .{ .value = 1835203060 } },
-    .{ .base = .{ .value = 372120047 } },
-    .{ .base = .{ .value = 258795079 } },
-    .{ .base = .{ .value = 1095586576 } },
-    .{ .base = .{ .value = 1218423498 } },
-    .{ .base = .{ .value = 1048459899 } },
-    .{ .base = .{ .value = 362038478 } },
-    .{ .base = .{ .value = 1323685386 } },
-    .{ .base = .{ .value = 104089924 } },
-    .{ .base = .{ .value = 1464208305 } },
-    .{ .base = .{ .value = 459654464 } },
-    .{ .base = .{ .value = 1327909943 } },
-    .{ .base = .{ .value = 320577587 } },
-    .{ .base = .{ .value = 1336111143 } },
-    .{ .base = .{ .value = 504289817 } },
-    .{ .base = .{ .value = 92116879 } },
-    .{ .base = .{ .value = 541533185 } },
-    .{ .base = .{ .value = 916621440 } },
-    .{ .base = .{ .value = 1743020139 } },
-    .{ .base = .{ .value = 425342636 } },
-    .{ .base = .{ .value = 2070900402 } },
-    .{ .base = .{ .value = 1596549452 } },
-    .{ .base = .{ .value = 1499149353 } },
-    .{ .base = .{ .value = 25351450 } },
-    .{ .base = .{ .value = 521588779 } },
-    .{ .base = .{ .value = 812730750 } },
-    .{ .base = .{ .value = 1542361528 } },
-    .{ .base = .{ .value = 1025154218 } },
-    .{ .base = .{ .value = 219018398 } },
-    .{ .base = .{ .value = 1697432968 } },
-    .{ .base = .{ .value = 811824484 } },
-    .{ .base = .{ .value = 1602493072 } },
-    .{ .base = .{ .value = 947729583 } },
-    .{ .base = .{ .value = 1210923217 } },
-    .{ .base = .{ .value = 1841700204 } },
-    .{ .base = .{ .value = 1062581482 } },
-    .{ .base = .{ .value = 1620339422 } },
-    .{ .base = .{ .value = 2024024921 } },
-    .{ .base = .{ .value = 1646924507 } },
-    .{ .base = .{ .value = 1237900066 } },
-    .{ .base = .{ .value = 411881095 } },
-    .{ .base = .{ .value = 683324787 } },
-    .{ .base = .{ .value = 45752796 } },
-    .{ .base = .{ .value = 1140450959 } },
-    .{ .base = .{ .value = 2001498906 } },
-    .{ .base = .{ .value = 136390620 } },
-    .{ .base = .{ .value = 270777189 } },
-    .{ .base = .{ .value = 1819607708 } },
-    .{ .base = .{ .value = 2042478018 } },
-    .{ .base = .{ .value = 68941873 } },
-    .{ .base = .{ .value = 241529293 } },
-    .{ .base = .{ .value = 594322866 } },
+    .{ .base = .{ .value = 106343301 } },
+    .{ .base = .{ .value = 994005636 } },
+    .{ .base = .{ .value = 56797207 } },
+    .{ .base = .{ .value = 2116123491 } },
+    .{ .base = .{ .value = 205490027 } },
+    .{ .base = .{ .value = 300435510 } },
+    .{ .base = .{ .value = 1363520036 } },
+    .{ .base = .{ .value = 570836988 } },
+    .{ .base = .{ .value = 575959527 } },
+    .{ .base = .{ .value = 1841993475 } },
+    .{ .base = .{ .value = 1978764484 } },
+    .{ .base = .{ .value = 572864959 } },
+    .{ .base = .{ .value = 412349451 } },
+    .{ .base = .{ .value = 740866006 } },
+    .{ .base = .{ .value = 555331360 } },
+    .{ .base = .{ .value = 1996801062 } },
+    .{ .base = .{ .value = 318225174 } },
+    .{ .base = .{ .value = 1930901587 } },
+    .{ .base = .{ .value = 983745526 } },
+    .{ .base = .{ .value = 1457982725 } },
+    .{ .base = .{ .value = 1791876930 } },
+    .{ .base = .{ .value = 1443135944 } },
+    .{ .base = .{ .value = 824419209 } },
+    .{ .base = .{ .value = 1893399710 } },
+    .{ .base = .{ .value = 1747314638 } },
+    .{ .base = .{ .value = 1127067680 } },
+    .{ .base = .{ .value = 626675897 } },
+    .{ .base = .{ .value = 2121052460 } },
+    .{ .base = .{ .value = 902691940 } },
+    .{ .base = .{ .value = 1821970087 } },
+    .{ .base = .{ .value = 602762017 } },
+    .{ .base = .{ .value = 1069075957 } },
+    .{ .base = .{ .value = 8237207 } },
+    .{ .base = .{ .value = 1392965121 } },
+    .{ .base = .{ .value = 363248680 } },
+    .{ .base = .{ .value = 190294007 } },
+    .{ .base = .{ .value = 1091748528 } },
+    .{ .base = .{ .value = 1611840384 } },
+    .{ .base = .{ .value = 1135574167 } },
+    .{ .base = .{ .value = 1337962842 } },
+    .{ .base = .{ .value = 894965561 } },
+    .{ .base = .{ .value = 1988503194 } },
+    .{ .base = .{ .value = 395557162 } },
+    .{ .base = .{ .value = 1358917384 } },
+    .{ .base = .{ .value = 70606686 } },
+    .{ .base = .{ .value = 1467621649 } },
+    .{ .base = .{ .value = 785376824 } },
+    .{ .base = .{ .value = 1229801926 } },
+    .{ .base = .{ .value = 1705675632 } },
+    .{ .base = .{ .value = 1079141874 } },
+    .{ .base = .{ .value = 603164050 } },
+    .{ .base = .{ .value = 601570780 } },
+    .{ .base = .{ .value = 1591929875 } },
+    .{ .base = .{ .value = 2072106020 } },
+    .{ .base = .{ .value = 1510390880 } },
+    .{ .base = .{ .value = 1776570926 } },
+    .{ .base = .{ .value = 484367505 } },
+    .{ .base = .{ .value = 72329805 } },
+    .{ .base = .{ .value = 874429804 } },
+    .{ .base = .{ .value = 1619595341 } },
+    .{ .base = .{ .value = 1482207815 } },
+    .{ .base = .{ .value = 1110702280 } },
+    .{ .base = .{ .value = 33562627 } },
+    .{ .base = .{ .value = 1437174706 } },
+    .{ .base = .{ .value = 1295482031 } },
+    .{ .base = .{ .value = 1323252452 } },
+    .{ .base = .{ .value = 1615417068 } },
+    .{ .base = .{ .value = 1357543202 } },
+    .{ .base = .{ .value = 100190459 } },
+    .{ .base = .{ .value = 1096515471 } },
+    .{ .base = .{ .value = 530782935 } },
+    .{ .base = .{ .value = 891958239 } },
+    .{ .base = .{ .value = 199466457 } },
+    .{ .base = .{ .value = 271751169 } },
+    .{ .base = .{ .value = 68965513 } },
+    .{ .base = .{ .value = 1728432998 } },
+    .{ .base = .{ .value = 1199134791 } },
+    .{ .base = .{ .value = 849490471 } },
+    .{ .base = .{ .value = 1851379246 } },
+    .{ .base = .{ .value = 2090972583 } },
+    .{ .base = .{ .value = 1811681074 } },
+    .{ .base = .{ .value = 1814176199 } },
+    .{ .base = .{ .value = 1055413014 } },
+    .{ .base = .{ .value = 1481054506 } },
+    .{ .base = .{ .value = 448493312 } },
+    .{ .base = .{ .value = 1685914893 } },
+    .{ .base = .{ .value = 930700520 } },
+    .{ .base = .{ .value = 1912644081 } },
+    .{ .base = .{ .value = 1845554935 } },
+    .{ .base = .{ .value = 278190486 } },
+    .{ .base = .{ .value = 1514757134 } },
+    .{ .base = .{ .value = 1688775527 } },
+    .{ .base = .{ .value = 1365397095 } },
+    .{ .base = .{ .value = 1709287717 } },
+    .{ .base = .{ .value = 1863541611 } },
+    .{ .base = .{ .value = 829918606 } },
+    .{ .base = .{ .value = 733323414 } },
+    .{ .base = .{ .value = 1723936235 } },
+    .{ .base = .{ .value = 1858277846 } },
+    .{ .base = .{ .value = 51652292 } },
+    .{ .base = .{ .value = 714110399 } },
+    .{ .base = .{ .value = 1658396668 } },
+    .{ .base = .{ .value = 758087889 } },
+    .{ .base = .{ .value = 80806660 } },
+    .{ .base = .{ .value = 1965008326 } },
+    .{ .base = .{ .value = 1372492249 } },
+    .{ .base = .{ .value = 796414979 } },
+    .{ .base = .{ .value = 173242559 } },
+    .{ .base = .{ .value = 615690843 } },
+    .{ .base = .{ .value = 1563219624 } },
+    .{ .base = .{ .value = 1386298239 } },
+    .{ .base = .{ .value = 1505166234 } },
+    .{ .base = .{ .value = 124966850 } },
+    .{ .base = .{ .value = 1437390520 } },
+    .{ .base = .{ .value = 1525883852 } },
+    .{ .base = .{ .value = 2254595 } },
+    .{ .base = .{ .value = 2026731669 } },
+    .{ .base = .{ .value = 269399699 } },
+    .{ .base = .{ .value = 627883528 } },
+    .{ .base = .{ .value = 921162405 } },
+    .{ .base = .{ .value = 1814883133 } },
+    .{ .base = .{ .value = 1338429751 } },
+    .{ .base = .{ .value = 647827913 } },
+    .{ .base = .{ .value = 1160707689 } },
+    .{ .base = .{ .value = 43604094 } },
+    .{ .base = .{ .value = 1646023608 } },
+    .{ .base = .{ .value = 47467653 } },
+    .{ .base = .{ .value = 1838088904 } },
+    .{ .base = .{ .value = 736908967 } },
+    .{ .base = .{ .value = 768298468 } },
+    .{ .base = .{ .value = 513500970 } },
+    .{ .base = .{ .value = 926984283 } },
+    .{ .base = .{ .value = 523160220 } },
+    .{ .base = .{ .value = 418340046 } },
+    .{ .base = .{ .value = 665579728 } },
+    .{ .base = .{ .value = 1047747548 } },
+    .{ .base = .{ .value = 770238578 } },
+    .{ .base = .{ .value = 558689981 } },
+    .{ .base = .{ .value = 2118789625 } },
+    .{ .base = .{ .value = 1400644906 } },
+    .{ .base = .{ .value = 1684276217 } },
+    .{ .base = .{ .value = 1109860493 } },
+    .{ .base = .{ .value = 595825631 } },
+    .{ .base = .{ .value = 1968409344 } },
+    .{ .base = .{ .value = 1605905051 } },
+    .{ .base = .{ .value = 164544763 } },
+    .{ .base = .{ .value = 211105107 } },
+    .{ .base = .{ .value = 286482054 } },
+    .{ .base = .{ .value = 317064564 } },
+    .{ .base = .{ .value = 1025235500 } },
+    .{ .base = .{ .value = 2006927508 } },
+    .{ .base = .{ .value = 1908164645 } },
+    .{ .base = .{ .value = 1327639780 } },
+    .{ .base = .{ .value = 2124897389 } },
+    .{ .base = .{ .value = 825137504 } },
+    .{ .base = .{ .value = 1808789370 } },
+    .{ .base = .{ .value = 784402924 } },
+    .{ .base = .{ .value = 2059929599 } },
+    .{ .base = .{ .value = 146230308 } },
+    .{ .base = .{ .value = 126986146 } },
+    .{ .base = .{ .value = 240165098 } },
+    .{ .base = .{ .value = 337681732 } },
+    .{ .base = .{ .value = 993978088 } },
+    .{ .base = .{ .value = 1528766886 } },
+    .{ .base = .{ .value = 275730949 } },
+    .{ .base = .{ .value = 1209669218 } },
+    .{ .base = .{ .value = 644925916 } },
+    .{ .base = .{ .value = 1820422749 } },
+    .{ .base = .{ .value = 187543318 } },
+    .{ .base = .{ .value = 286619181 } },
+    .{ .base = .{ .value = 990694783 } },
+    .{ .base = .{ .value = 468977383 } },
+    .{ .base = .{ .value = 1605016575 } },
+    .{ .base = .{ .value = 879447220 } },
+    .{ .base = .{ .value = 680252495 } },
+    .{ .base = .{ .value = 1957936018 } },
+    .{ .base = .{ .value = 371100301 } },
+    .{ .base = .{ .value = 441443607 } },
+    .{ .base = .{ .value = 1393794681 } },
+    .{ .base = .{ .value = 2083027148 } },
+    .{ .base = .{ .value = 816882506 } },
+    .{ .base = .{ .value = 1056486483 } },
+    .{ .base = .{ .value = 1117975626 } },
+    .{ .base = .{ .value = 1372073482 } },
+    .{ .base = .{ .value = 1073270637 } },
+    .{ .base = .{ .value = 828146560 } },
+    .{ .base = .{ .value = 1348898612 } },
+    .{ .base = .{ .value = 2115402245 } },
+    .{ .base = .{ .value = 1838862054 } },
+    .{ .base = .{ .value = 775541471 } },
+    .{ .base = .{ .value = 1239254740 } },
+    .{ .base = .{ .value = 396607602 } },
+    .{ .base = .{ .value = 345070110 } },
+    .{ .base = .{ .value = 1339388009 } },
+    .{ .base = .{ .value = 599355778 } },
+    .{ .base = .{ .value = 1740238458 } },
+    .{ .base = .{ .value = 902725656 } },
+    .{ .base = .{ .value = 167662616 } },
+    .{ .base = .{ .value = 1852764323 } },
+    .{ .base = .{ .value = 1750212442 } },
+    .{ .base = .{ .value = 1642790332 } },
+    .{ .base = .{ .value = 1831200858 } },
+    .{ .base = .{ .value = 765039021 } },
+    .{ .base = .{ .value = 525303714 } },
+    .{ .base = .{ .value = 971322125 } },
+    .{ .base = .{ .value = 1357164412 } },
+    .{ .base = .{ .value = 1913841809 } },
+    .{ .base = .{ .value = 1769427056 } },
+    .{ .base = .{ .value = 945569638 } },
+    .{ .base = .{ .value = 84768767 } },
+    .{ .base = .{ .value = 497414754 } },
+    .{ .base = .{ .value = 137549877 } },
+    .{ .base = .{ .value = 821966879 } },
+    .{ .base = .{ .value = 132076659 } },
+    .{ .base = .{ .value = 844020074 } },
+    .{ .base = .{ .value = 1359534706 } },
+    .{ .base = .{ .value = 1078644126 } },
+    .{ .base = .{ .value = 1030683045 } },
+    .{ .base = .{ .value = 1111703608 } },
+    .{ .base = .{ .value = 295868329 } },
+    .{ .base = .{ .value = 988537372 } },
+    .{ .base = .{ .value = 158813588 } },
+    .{ .base = .{ .value = 341068116 } },
+    .{ .base = .{ .value = 788967355 } },
+    .{ .base = .{ .value = 490251813 } },
+    .{ .base = .{ .value = 102652880 } },
+    .{ .base = .{ .value = 503723663 } },
+    .{ .base = .{ .value = 1519461971 } },
+    .{ .base = .{ .value = 1034664229 } },
+    .{ .base = .{ .value = 1389297862 } },
+    .{ .base = .{ .value = 556036450 } },
+    .{ .base = .{ .value = 961948415 } },
+    .{ .base = .{ .value = 331283913 } },
+    .{ .base = .{ .value = 1712866757 } },
+    .{ .base = .{ .value = 871211597 } },
+    .{ .base = .{ .value = 1922762371 } },
+    .{ .base = .{ .value = 1829644968 } },
+    .{ .base = .{ .value = 889035805 } },
+    .{ .base = .{ .value = 1281312022 } },
+    .{ .base = .{ .value = 1624040682 } },
+    .{ .base = .{ .value = 572085517 } },
+    .{ .base = .{ .value = 1791710294 } },
+    .{ .base = .{ .value = 492318934 } },
+    .{ .base = .{ .value = 1783983838 } },
+    .{ .base = .{ .value = 784969244 } },
+    .{ .base = .{ .value = 1604928543 } },
+    .{ .base = .{ .value = 1285288471 } },
+    .{ .base = .{ .value = 498218636 } },
+    .{ .base = .{ .value = 1353538279 } },
+    .{ .base = .{ .value = 89270651 } },
+    .{ .base = .{ .value = 1326768348 } },
+    .{ .base = .{ .value = 128936357 } },
+    .{ .base = .{ .value = 956800573 } },
+    .{ .base = .{ .value = 2116371775 } },
+    .{ .base = .{ .value = 111447243 } },
+    .{ .base = .{ .value = 2060782340 } },
+    .{ .base = .{ .value = 486549169 } },
+    .{ .base = .{ .value = 929841244 } },
+    .{ .base = .{ .value = 1787007187 } },
+    .{ .base = .{ .value = 1809991918 } },
+    .{ .base = .{ .value = 1204607090 } },
+    .{ .base = .{ .value = 1825880700 } },
+    .{ .base = .{ .value = 131017615 } },
+    .{ .base = .{ .value = 2091286006 } },
+    .{ .base = .{ .value = 63275680 } },
+    .{ .base = .{ .value = 2075247008 } },
+    .{ .base = .{ .value = 1435919549 } },
+    .{ .base = .{ .value = 875605394 } },
+    .{ .base = .{ .value = 1603953241 } },
+    .{ .base = .{ .value = 1133149704 } },
+    .{ .base = .{ .value = 380881480 } },
+    .{ .base = .{ .value = 1672072629 } },
+    .{ .base = .{ .value = 896179908 } },
+    .{ .base = .{ .value = 1393127636 } },
+    .{ .base = .{ .value = 1888909612 } },
+    .{ .base = .{ .value = 1969582632 } },
+    .{ .base = .{ .value = 816843897 } },
+    .{ .base = .{ .value = 1870697917 } },
+    .{ .base = .{ .value = 1037960023 } },
+    .{ .base = .{ .value = 2049857552 } },
+    .{ .base = .{ .value = 2086370957 } },
+    .{ .base = .{ .value = 1411517106 } },
+    .{ .base = .{ .value = 16674525 } },
+    .{ .base = .{ .value = 1003698658 } },
+    .{ .base = .{ .value = 1818482267 } },
+    .{ .base = .{ .value = 1867699000 } },
+    .{ .base = .{ .value = 2097095842 } },
+    .{ .base = .{ .value = 808030466 } },
+    .{ .base = .{ .value = 1559034723 } },
+    .{ .base = .{ .value = 1709839512 } },
+    .{ .base = .{ .value = 852393748 } },
+    .{ .base = .{ .value = 2028202147 } },
+    .{ .base = .{ .value = 96087980 } },
+    .{ .base = .{ .value = 1918145102 } },
+    .{ .base = .{ .value = 767089425 } },
+    .{ .base = .{ .value = 814310510 } },
+    .{ .base = .{ .value = 1900632352 } },
+    .{ .base = .{ .value = 700593342 } },
+    .{ .base = .{ .value = 1104947140 } },
+    .{ .base = .{ .value = 1137237705 } },
+    .{ .base = .{ .value = 1039934753 } },
+    .{ .base = .{ .value = 1815042380 } },
+    .{ .base = .{ .value = 1700594434 } },
+    .{ .base = .{ .value = 421954821 } },
+    .{ .base = .{ .value = 506998401 } },
+    .{ .base = .{ .value = 1603538058 } },
+    .{ .base = .{ .value = 406841815 } },
+    .{ .base = .{ .value = 247026392 } },
+    .{ .base = .{ .value = 1760280445 } },
+    .{ .base = .{ .value = 482658215 } },
+    .{ .base = .{ .value = 1052418166 } },
+    .{ .base = .{ .value = 344165603 } },
+    .{ .base = .{ .value = 2036720887 } },
+    .{ .base = .{ .value = 1491926005 } },
+    .{ .base = .{ .value = 428768392 } },
+    .{ .base = .{ .value = 250103393 } },
+    .{ .base = .{ .value = 1540448515 } },
+    .{ .base = .{ .value = 1160758934 } },
+    .{ .base = .{ .value = 2104466813 } },
+    .{ .base = .{ .value = 937212186 } },
+    .{ .base = .{ .value = 613943790 } },
+    .{ .base = .{ .value = 249970051 } },
+    .{ .base = .{ .value = 1311128372 } },
+    .{ .base = .{ .value = 1847236528 } },
+    .{ .base = .{ .value = 1705662548 } },
+    .{ .base = .{ .value = 631421230 } },
+    .{ .base = .{ .value = 189520237 } },
+    .{ .base = .{ .value = 1995113456 } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
 };
 
@@ -16058,34 +15852,34 @@ const verify_case_68_failing_round_0_cells = [_]protocol.Scalar{};
 const verify_case_68_failing_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_68_failing_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 400562482 }, .a1 = .{ .value = 1475513674 } }, .B1 = .{ .a0 = .{ .value = 1436500341 }, .a1 = .{ .value = 1165334460 } }, .B2 = .{ .a0 = .{ .value = 48460580 }, .a1 = .{ .value = 895512390 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 395342363 }, .a1 = .{ .value = 1927008848 } }, .B1 = .{ .a0 = .{ .value = 1107215131 }, .a1 = .{ .value = 639154567 } }, .B2 = .{ .a0 = .{ .value = 2047919879 }, .a1 = .{ .value = 670132876 } } } },
 };
 
 const verify_case_68_failing_round_3_cells = [_]protocol.Scalar{};
 
 const verify_case_68_failing_round_4_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1867980849 }, .a1 = .{ .value = 1591200829 } }, .B1 = .{ .a0 = .{ .value = 1802410362 }, .a1 = .{ .value = 918955047 } }, .B2 = .{ .a0 = .{ .value = 2128311976 }, .a1 = .{ .value = 1891723258 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 772424385 }, .a1 = .{ .value = 1883116380 } }, .B1 = .{ .a0 = .{ .value = 1780634351 }, .a1 = .{ .value = 322506494 } }, .B2 = .{ .a0 = .{ .value = 508097374 }, .a1 = .{ .value = 267832444 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187572305 }, .a1 = .{ .value = 839996142 } }, .B1 = .{ .a0 = .{ .value = 2099359586 }, .a1 = .{ .value = 43392879 } }, .B2 = .{ .a0 = .{ .value = 456433940 }, .a1 = .{ .value = 1786257083 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 189432693 }, .a1 = .{ .value = 533828489 } }, .B1 = .{ .a0 = .{ .value = 191809 }, .a1 = .{ .value = 1438325212 } }, .B2 = .{ .a0 = .{ .value = 1943967343 }, .a1 = .{ .value = 834044224 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1589188109 }, .a1 = .{ .value = 1871082861 } }, .B1 = .{ .a0 = .{ .value = 1187260178 }, .a1 = .{ .value = 526053177 } }, .B2 = .{ .a0 = .{ .value = 1006329274 }, .a1 = .{ .value = 138740373 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187572305 }, .a1 = .{ .value = 839996142 } }, .B1 = .{ .a0 = .{ .value = 2099359586 }, .a1 = .{ .value = 43392879 } }, .B2 = .{ .a0 = .{ .value = 456433940 }, .a1 = .{ .value = 1786257083 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1987561269 }, .a1 = .{ .value = 1046542574 } }, .B1 = .{ .a0 = .{ .value = 711493484 }, .a1 = .{ .value = 190366191 } }, .B2 = .{ .a0 = .{ .value = 1832847209 }, .a1 = .{ .value = 2109105853 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1058730181 }, .a1 = .{ .value = 322789752 } }, .B1 = .{ .a0 = .{ .value = 1532737611 }, .a1 = .{ .value = 825042390 } }, .B2 = .{ .a0 = .{ .value = 1308472706 }, .a1 = .{ .value = 160683383 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 500294747 }, .a1 = .{ .value = 1517354634 } }, .B1 = .{ .a0 = .{ .value = 1807539844 }, .a1 = .{ .value = 1435260912 } }, .B2 = .{ .a0 = .{ .value = 1207405659 }, .a1 = .{ .value = 235038571 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1679734759 }, .a1 = .{ .value = 1881588482 } }, .B1 = .{ .a0 = .{ .value = 376523587 }, .a1 = .{ .value = 1653234131 } }, .B2 = .{ .a0 = .{ .value = 1218758438 }, .a1 = .{ .value = 1509839952 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 82503528 }, .a1 = .{ .value = 270284756 } }, .B1 = .{ .a0 = .{ .value = 361255023 }, .a1 = .{ .value = 114523771 } }, .B2 = .{ .a0 = .{ .value = 1290056562 }, .a1 = .{ .value = 23454898 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1950703094 }, .a1 = .{ .value = 1265333005 } }, .B1 = .{ .a0 = .{ .value = 348318494 }, .a1 = .{ .value = 2129208702 } }, .B2 = .{ .a0 = .{ .value = 1660143861 }, .a1 = .{ .value = 1862306598 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 117659429 }, .a1 = .{ .value = 407676688 } }, .B1 = .{ .a0 = .{ .value = 905356712 }, .a1 = .{ .value = 1177337632 } }, .B2 = .{ .a0 = .{ .value = 203017722 }, .a1 = .{ .value = 647367778 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 30816780 }, .a1 = .{ .value = 1184486529 } }, .B1 = .{ .a0 = .{ .value = 775760324 }, .a1 = .{ .value = 1578092954 } }, .B2 = .{ .a0 = .{ .value = 56216012 }, .a1 = .{ .value = 639957106 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1698723112 }, .a1 = .{ .value = 2103657310 } }, .B1 = .{ .a0 = .{ .value = 148281876 }, .a1 = .{ .value = 1292214991 } }, .B2 = .{ .a0 = .{ .value = 1174333568 }, .a1 = .{ .value = 48308197 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 117659429 }, .a1 = .{ .value = 407676688 } }, .B1 = .{ .a0 = .{ .value = 905356712 }, .a1 = .{ .value = 1177337632 } }, .B2 = .{ .a0 = .{ .value = 203017722 }, .a1 = .{ .value = 647367778 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1986101523 }, .a1 = .{ .value = 1553398789 } }, .B1 = .{ .a0 = .{ .value = 2122584551 }, .a1 = .{ .value = 1813815374 } }, .B2 = .{ .a0 = .{ .value = 715567356 }, .a1 = .{ .value = 2108306667 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 911363554 }, .a1 = .{ .value = 1213125157 } }, .B1 = .{ .a0 = .{ .value = 609248589 }, .a1 = .{ .value = 2117573920 } }, .B2 = .{ .a0 = .{ .value = 673773224 }, .a1 = .{ .value = 2043794453 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1608111381 }, .a1 = .{ .value = 240638552 } }, .B1 = .{ .a0 = .{ .value = 1518020879 }, .a1 = .{ .value = 1632423014 } }, .B2 = .{ .a0 = .{ .value = 971778098 }, .a1 = .{ .value = 638156717 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 968003303 }, .a1 = .{ .value = 2092894645 } }, .B1 = .{ .a0 = .{ .value = 1957536142 }, .a1 = .{ .value = 663077034 } }, .B2 = .{ .a0 = .{ .value = 658350914 }, .a1 = .{ .value = 727852444 } } } },
 };
 
 const verify_case_68_failing_rounds = [_]protocol.RoundMessage{
     .{ .commitment = commitment.Commitment{ .{ .value = 1073254811 }, .{ .value = 2107462023 }, .{ .value = 428169355 }, .{ .value = 1418641445 }, .{ .value = 1508777045 }, .{ .value = 1804033781 }, .{ .value = 1972090736 }, .{ .value = 19875260 } }, .cells = &verify_case_68_failing_round_0_cells },
     .{ .cells = &verify_case_68_failing_round_1_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 2105875058 }, .{ .value = 1668100267 }, .{ .value = 166180369 }, .{ .value = 1628471435 }, .{ .value = 299690375 }, .{ .value = 743945167 }, .{ .value = 2109996688 }, .{ .value = 162078638 } }, .cells = &verify_case_68_failing_round_2_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 1176443875 }, .{ .value = 1513994153 }, .{ .value = 292216141 }, .{ .value = 2129165180 }, .{ .value = 736467129 }, .{ .value = 641384872 }, .{ .value = 105340611 }, .{ .value = 1045712163 } }, .cells = &verify_case_68_failing_round_3_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 818308897 }, .{ .value = 543177702 }, .{ .value = 1754437299 }, .{ .value = 1625782676 }, .{ .value = 677387156 }, .{ .value = 1626044442 }, .{ .value = 1679876084 }, .{ .value = 793029403 } }, .cells = &verify_case_68_failing_round_2_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1454439667 }, .{ .value = 1741455297 }, .{ .value = 1741314143 }, .{ .value = 374404429 }, .{ .value = 892944295 }, .{ .value = 624805581 }, .{ .value = 1853583390 }, .{ .value = 1084768463 } }, .cells = &verify_case_68_failing_round_3_cells },
     .{ .cells = &verify_case_68_failing_round_4_cells },
 };
 
-const verify_case_68_failing_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1704396793 }, .a1 = .{ .value = 1068582422 } }, .B1 = .{ .a0 = .{ .value = 747895373 }, .a1 = .{ .value = 368625105 } }, .B2 = .{ .a0 = .{ .value = 1375619427 }, .a1 = .{ .value = 797107173 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1633237157 }, .a1 = .{ .value = 1705109942 } }, .B1 = .{ .a0 = .{ .value = 367815016 }, .a1 = .{ .value = 1717164789 } }, .B2 = .{ .a0 = .{ .value = 25005874 }, .a1 = .{ .value = 933563037 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1472467133 }, .a1 = .{ .value = 659106357 } }, .B1 = .{ .a0 = .{ .value = 29060478 }, .a1 = .{ .value = 1536324496 } }, .B2 = .{ .a0 = .{ .value = 1068652469 }, .a1 = .{ .value = 1986255475 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 811652537 }, .a1 = .{ .value = 192460391 } }, .B1 = .{ .a0 = .{ .value = 658496272 }, .a1 = .{ .value = 957495206 } }, .B2 = .{ .a0 = .{ .value = 125662683 }, .a1 = .{ .value = 1869531306 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1818236706 }, .a1 = .{ .value = 1155641285 } }, .B1 = .{ .a0 = .{ .value = 542645382 }, .a1 = .{ .value = 800175965 } }, .B2 = .{ .a0 = .{ .value = 1738915703 }, .a1 = .{ .value = 1096117776 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 750200068 }, .a1 = .{ .value = 914731472 } }, .B1 = .{ .a0 = .{ .value = 278805179 }, .a1 = .{ .value = 1324581862 } }, .B2 = .{ .a0 = .{ .value = 915476411 }, .a1 = .{ .value = 1086623326 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1259530058 }, .a1 = .{ .value = 1177564500 } }, .B1 = .{ .a0 = .{ .value = 688555051 }, .a1 = .{ .value = 1666195606 } }, .B2 = .{ .a0 = .{ .value = 1387712747 }, .a1 = .{ .value = 1023707779 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1708322163 }, .a1 = .{ .value = 71071420 } }, .B1 = .{ .a0 = .{ .value = 2053280341 }, .a1 = .{ .value = 646046301 } }, .B2 = .{ .a0 = .{ .value = 423835251 }, .a1 = .{ .value = 564025067 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1174343411 }, .a1 = .{ .value = 699294138 } }, .B1 = .{ .a0 = .{ .value = 185648795 }, .a1 = .{ .value = 1874668615 } }, .B2 = .{ .a0 = .{ .value = 1718541868 }, .a1 = .{ .value = 79411463 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 253136415 }, .a1 = .{ .value = 1340711014 } }, .B1 = .{ .a0 = .{ .value = 392996721 }, .a1 = .{ .value = 1167841812 } }, .B2 = .{ .a0 = .{ .value = 2117706005 }, .a1 = .{ .value = 1320475551 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1704396793 }, .a1 = .{ .value = 1068582422 } }, .B1 = .{ .a0 = .{ .value = 747895373 }, .a1 = .{ .value = 368625105 } }, .B2 = .{ .a0 = .{ .value = 1375619427 }, .a1 = .{ .value = 797107173 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1633237157 }, .a1 = .{ .value = 1705109942 } }, .B1 = .{ .a0 = .{ .value = 367815016 }, .a1 = .{ .value = 1717164789 } }, .B2 = .{ .a0 = .{ .value = 25005874 }, .a1 = .{ .value = 933563037 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1525270835 }, .a1 = .{ .value = 2064479626 } }, .B1 = .{ .a0 = .{ .value = 262333982 }, .a1 = .{ .value = 954290418 } }, .B2 = .{ .a0 = .{ .value = 729442899 }, .a1 = .{ .value = 2020234516 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368393902 }, .a1 = .{ .value = 264718709 } }, .B1 = .{ .a0 = .{ .value = 2091709018 }, .a1 = .{ .value = 135484389 } }, .B2 = .{ .a0 = .{ .value = 1451383632 }, .a1 = .{ .value = 444256744 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1259530058 }, .a1 = .{ .value = 1177564500 } }, .B1 = .{ .a0 = .{ .value = 688555051 }, .a1 = .{ .value = 1666195606 } }, .B2 = .{ .a0 = .{ .value = 1387712747 }, .a1 = .{ .value = 1023707779 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1708322163 }, .a1 = .{ .value = 71071420 } }, .B1 = .{ .a0 = .{ .value = 2053280341 }, .a1 = .{ .value = 646046301 } }, .B2 = .{ .a0 = .{ .value = 423835251 }, .a1 = .{ .value = 564025067 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1174343411 }, .a1 = .{ .value = 699294138 } }, .B1 = .{ .a0 = .{ .value = 185648795 }, .a1 = .{ .value = 1874668615 } }, .B2 = .{ .a0 = .{ .value = 1718541868 }, .a1 = .{ .value = 79411463 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 253136415 }, .a1 = .{ .value = 1340711014 } }, .B1 = .{ .a0 = .{ .value = 392996721 }, .a1 = .{ .value = 1167841812 } }, .B2 = .{ .a0 = .{ .value = 2117706005 }, .a1 = .{ .value = 1320475551 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1472467133 }, .a1 = .{ .value = 659106357 } }, .B1 = .{ .a0 = .{ .value = 29060478 }, .a1 = .{ .value = 1536324496 } }, .B2 = .{ .a0 = .{ .value = 1068652469 }, .a1 = .{ .value = 1986255475 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 811652537 }, .a1 = .{ .value = 192460391 } }, .B1 = .{ .a0 = .{ .value = 658496272 }, .a1 = .{ .value = 957495206 } }, .B2 = .{ .a0 = .{ .value = 125662683 }, .a1 = .{ .value = 1869531306 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1818236706 }, .a1 = .{ .value = 1155641285 } }, .B1 = .{ .a0 = .{ .value = 542645382 }, .a1 = .{ .value = 800175965 } }, .B2 = .{ .a0 = .{ .value = 1738915703 }, .a1 = .{ .value = 1096117776 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 750200068 }, .a1 = .{ .value = 914731472 } }, .B1 = .{ .a0 = .{ .value = 278805179 }, .a1 = .{ .value = 1324581862 } }, .B2 = .{ .a0 = .{ .value = 915476411 }, .a1 = .{ .value = 1086623326 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 650895099 }, .a1 = .{ .value = 1424223326 } }, .B1 = .{ .a0 = .{ .value = 184717245 }, .a1 = .{ .value = 1773638033 } }, .B2 = .{ .a0 = .{ .value = 1578352017 }, .a1 = .{ .value = 147712974 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2065218081 }, .a1 = .{ .value = 1540529015 } }, .B1 = .{ .a0 = .{ .value = 1116597115 }, .a1 = .{ .value = 2031238359 } }, .B2 = .{ .a0 = .{ .value = 530133091 }, .a1 = .{ .value = 375892808 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1119794522 }, .a1 = .{ .value = 413679443 } }, .B1 = .{ .a0 = .{ .value = 1936724 }, .a1 = .{ .value = 137749021 } }, .B2 = .{ .a0 = .{ .value = 134259321 }, .a1 = .{ .value = 1085130531 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1072838455 }, .a1 = .{ .value = 594630695 } }, .B1 = .{ .a0 = .{ .value = 1654756534 }, .a1 = .{ .value = 353614147 } }, .B2 = .{ .a0 = .{ .value = 1553042203 }, .a1 = .{ .value = 697054440 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 23802624 }, .a1 = .{ .value = 1194939644 } }, .B1 = .{ .a0 = .{ .value = 65578838 }, .a1 = .{ .value = 1205532677 } }, .B2 = .{ .a0 = .{ .value = 1401122111 }, .a1 = .{ .value = 945235810 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 784765983 }, .a1 = .{ .value = 1177546849 } }, .B1 = .{ .a0 = .{ .value = 346153548 }, .a1 = .{ .value = 1456432828 } }, .B2 = .{ .a0 = .{ .value = 977189275 }, .a1 = .{ .value = 37546950 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1205225757 }, .a1 = .{ .value = 42759058 } }, .B1 = .{ .a0 = .{ .value = 259804147 }, .a1 = .{ .value = 482957105 } }, .B2 = .{ .a0 = .{ .value = 1415291772 }, .a1 = .{ .value = 1471502369 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1840908645 }, .a1 = .{ .value = 1736727932 } }, .B1 = .{ .a0 = .{ .value = 14139307 }, .a1 = .{ .value = 1904833028 } }, .B2 = .{ .a0 = .{ .value = 2083740793 }, .a1 = .{ .value = 705575481 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1493485785 }, .a1 = .{ .value = 69130859 } }, .B1 = .{ .a0 = .{ .value = 902444640 }, .a1 = .{ .value = 1701777650 } }, .B2 = .{ .a0 = .{ .value = 2083452202 }, .a1 = .{ .value = 1381146639 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1332706454 }, .a1 = .{ .value = 1159570970 } }, .B1 = .{ .a0 = .{ .value = 1673708092 }, .a1 = .{ .value = 1458738828 } }, .B2 = .{ .a0 = .{ .value = 1312694824 }, .a1 = .{ .value = 1614390403 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1778257879 }, .a1 = .{ .value = 1559107394 } }, .B1 = .{ .a0 = .{ .value = 2095403128 }, .a1 = .{ .value = 1482983340 } }, .B2 = .{ .a0 = .{ .value = 246341813 }, .a1 = .{ .value = 292102160 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1293134271 }, .a1 = .{ .value = 518714554 } }, .B1 = .{ .a0 = .{ .value = 657662593 }, .a1 = .{ .value = 587590646 } }, .B2 = .{ .a0 = .{ .value = 949441623 }, .a1 = .{ .value = 1701523396 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1119794522 }, .a1 = .{ .value = 413679443 } }, .B1 = .{ .a0 = .{ .value = 1936724 }, .a1 = .{ .value = 137749021 } }, .B2 = .{ .a0 = .{ .value = 134259321 }, .a1 = .{ .value = 1085130531 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1072838455 }, .a1 = .{ .value = 594630695 } }, .B1 = .{ .a0 = .{ .value = 1654756534 }, .a1 = .{ .value = 353614147 } }, .B2 = .{ .a0 = .{ .value = 1553042203 }, .a1 = .{ .value = 697054440 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 650895099 }, .a1 = .{ .value = 1424223326 } }, .B1 = .{ .a0 = .{ .value = 184717245 }, .a1 = .{ .value = 1773638033 } }, .B2 = .{ .a0 = .{ .value = 1578352017 }, .a1 = .{ .value = 147712974 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2065218081 }, .a1 = .{ .value = 1540529015 } }, .B1 = .{ .a0 = .{ .value = 1116597115 }, .a1 = .{ .value = 2031238359 } }, .B2 = .{ .a0 = .{ .value = 530133091 }, .a1 = .{ .value = 375892808 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1493485785 }, .a1 = .{ .value = 69130859 } }, .B1 = .{ .a0 = .{ .value = 902444640 }, .a1 = .{ .value = 1701777650 } }, .B2 = .{ .a0 = .{ .value = 2083452202 }, .a1 = .{ .value = 1381146639 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1332706454 }, .a1 = .{ .value = 1159570970 } }, .B1 = .{ .a0 = .{ .value = 1673708092 }, .a1 = .{ .value = 1458738828 } }, .B2 = .{ .a0 = .{ .value = 1312694824 }, .a1 = .{ .value = 1614390403 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1778257879 }, .a1 = .{ .value = 1559107394 } }, .B1 = .{ .a0 = .{ .value = 2095403128 }, .a1 = .{ .value = 1482983340 } }, .B2 = .{ .a0 = .{ .value = 246341813 }, .a1 = .{ .value = 292102160 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1293134271 }, .a1 = .{ .value = 518714554 } }, .B1 = .{ .a0 = .{ .value = 657662593 }, .a1 = .{ .value = 587590646 } }, .B2 = .{ .a0 = .{ .value = 949441623 }, .a1 = .{ .value = 1701523396 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 23802624 }, .a1 = .{ .value = 1194939644 } }, .B1 = .{ .a0 = .{ .value = 65578838 }, .a1 = .{ .value = 1205532677 } }, .B2 = .{ .a0 = .{ .value = 1401122111 }, .a1 = .{ .value = 945235810 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 784765983 }, .a1 = .{ .value = 1177546849 } }, .B1 = .{ .a0 = .{ .value = 346153548 }, .a1 = .{ .value = 1456432828 } }, .B2 = .{ .a0 = .{ .value = 977189275 }, .a1 = .{ .value = 37546950 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1205225757 }, .a1 = .{ .value = 42759058 } }, .B1 = .{ .a0 = .{ .value = 259804147 }, .a1 = .{ .value = 482957105 } }, .B2 = .{ .a0 = .{ .value = 1415291772 }, .a1 = .{ .value = 1471502369 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1840908645 }, .a1 = .{ .value = 1736727932 } }, .B1 = .{ .a0 = .{ .value = 14139307 }, .a1 = .{ .value = 1904833028 } }, .B2 = .{ .a0 = .{ .value = 2083740793 }, .a1 = .{ .value = 705575481 } } } } } } } } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 555335409 }, .{ .value = 1984559862 }, .{ .value = 23716841 }, .{ .value = 1195405010 }, .{ .value = 1691590540 }, .{ .value = 608918087 }, .{ .value = 759916108 }, .{ .value = 1397341573 } }, commitment.Commitment{ .{ .value = 1991510708 }, .{ .value = 1033494474 }, .{ .value = 807130707 }, .{ .value = 927255879 }, .{ .value = 1142619745 }, .{ .value = 1697427021 }, .{ .value = 1187409569 }, .{ .value = 629367872 } }, commitment.Commitment{ .{ .value = 1454566486 }, .{ .value = 176834666 }, .{ .value = 1926295865 }, .{ .value = 883573998 }, .{ .value = 482250442 }, .{ .value = 368008110 }, .{ .value = 767434773 }, .{ .value = 986319141 } }, commitment.Commitment{ .{ .value = 538426911 }, .{ .value = 1884189289 }, .{ .value = 1115249372 }, .{ .value = 555319441 }, .{ .value = 1021670351 }, .{ .value = 1165843573 }, .{ .value = 633794670 }, .{ .value = 935880463 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1657433490 }, .{ .value = 1260402906 }, .{ .value = 1034419718 }, .{ .value = 1651159286 }, .{ .value = 672193847 }, .{ .value = 1060015874 }, .{ .value = 1457790199 }, .{ .value = 1265099960 } }, commitment.Commitment{ .{ .value = 1794123375 }, .{ .value = 1838733582 }, .{ .value = 694478593 }, .{ .value = 185888703 }, .{ .value = 179618968 }, .{ .value = 1279295754 }, .{ .value = 591212140 }, .{ .value = 1217489716 } }, commitment.Commitment{ .{ .value = 195910774 }, .{ .value = 1228122950 }, .{ .value = 279522573 }, .{ .value = 778280267 }, .{ .value = 1100033402 }, .{ .value = 35649070 }, .{ .value = 105835790 }, .{ .value = 427719357 } }, commitment.Commitment{ .{ .value = 1081395064 }, .{ .value = 406704598 }, .{ .value = 196047792 }, .{ .value = 1992891278 }, .{ .value = 265736242 }, .{ .value = 273130703 }, .{ .value = 1374340270 }, .{ .value = 1244362141 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1248731882 }, .{ .value = 1562865888 }, .{ .value = 1017862622 }, .{ .value = 1539006118 }, .{ .value = 1395306189 }, .{ .value = 310116704 }, .{ .value = 1523642646 }, .{ .value = 1802860469 } }, commitment.Commitment{ .{ .value = 710455762 }, .{ .value = 56270909 }, .{ .value = 2027833486 }, .{ .value = 1806414231 }, .{ .value = 1991031912 }, .{ .value = 317587151 }, .{ .value = 631594135 }, .{ .value = 321969320 } }, commitment.Commitment{ .{ .value = 862115678 }, .{ .value = 989859593 }, .{ .value = 1404558608 }, .{ .value = 230850641 }, .{ .value = 1203154365 }, .{ .value = 1782430519 }, .{ .value = 2009461914 }, .{ .value = 1489527142 } }, commitment.Commitment{ .{ .value = 2067803557 }, .{ .value = 13547552 }, .{ .value = 1338292162 }, .{ .value = 2070744588 }, .{ .value = 150156473 }, .{ .value = 1369152096 }, .{ .value = 1855752189 }, .{ .value = 1171258112 } } }, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 277631564 }, .{ .value = 1819848217 }, .{ .value = 1137247495 }, .{ .value = 94961211 }, .{ .value = 1464030398 }, .{ .value = 101296246 }, .{ .value = 423314820 }, .{ .value = 1451052744 } }}, .round_caps = &.{merkle.MerkleCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1888394428 }, .{ .value = 914361255 }, .{ .value = 1962128993 }, .{ .value = 442188154 }, .{ .value = 45489907 }, .{ .value = 1794692768 }, .{ .value = 140773205 }, .{ .value = 178828777 } }, commitment.Commitment{ .{ .value = 1815091357 }, .{ .value = 1783851356 }, .{ .value = 46478416 }, .{ .value = 1573991306 }, .{ .value = 1344548337 }, .{ .value = 1583743017 }, .{ .value = 311797275 }, .{ .value = 1916196087 } } }, .aux = &.{null} }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 443010580 }, .a1 = .{ .value = 1757481537 } }, .B1 = .{ .a0 = .{ .value = 1634870233 }, .a1 = .{ .value = 1409601330 } }, .B2 = .{ .a0 = .{ .value = 193637365 }, .a1 = .{ .value = 684842728 } } }}, .running_queries = &.{ &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 724688944 }, .{ .value = 769490431 }, .{ .value = 514577992 }, .{ .value = 197303429 }, .{ .value = 1546037600 }, .{ .value = 1305351478 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 927329411 }, .{ .value = 972662079 }, .{ .value = 1197021670 }, .{ .value = 767293841 }, .{ .value = 889104759 }, .{ .value = 1639553742 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 724688944 }, .{ .value = 769490431 }, .{ .value = 514577992 }, .{ .value = 197303429 }, .{ .value = 1546037600 }, .{ .value = 1305351478 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 927329411 }, .{ .value = 972662079 }, .{ .value = 1197021670 }, .{ .value = 767293841 }, .{ .value = 889104759 }, .{ .value = 1639553742 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1526435004 }, .{ .value = 1369820571 }, .{ .value = 1464922153 }, .{ .value = 996414764 }, .{ .value = 543349248 }, .{ .value = 1067031143 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 125583351 }, .{ .value = 372331939 }, .{ .value = 246677509 }, .{ .value = 2098888939 }, .{ .value = 1891793111 }, .{ .value = 1877874077 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1526435004 }, .{ .value = 1369820571 }, .{ .value = 1464922153 }, .{ .value = 996414764 }, .{ .value = 543349248 }, .{ .value = 1067031143 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 125583351 }, .{ .value = 372331939 }, .{ .value = 246677509 }, .{ .value = 2098888939 }, .{ .value = 1891793111 }, .{ .value = 1877874077 }, .{ .value = 0 }, .{ .value = 0 } }} }} } } } };
+const verify_case_68_failing_pcs_opening = verifier.PcsOpening{ .proof = pcs.OpeningProof{ .input_queries = &.{ &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 111772 }, .{ .value = 111772 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2113882987 }, .{ .value = 2113882987 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 51367342 }, .a1 = .{ .value = 2113686671 } }, .B1 = .{ .a0 = .{ .value = 1228819418 }, .a1 = .{ .value = 367682239 } }, .B2 = .{ .a0 = .{ .value = 1211501653 }, .a1 = .{ .value = 1891868976 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2079679050 }, .a1 = .{ .value = 2127177056 } }, .B1 = .{ .a0 = .{ .value = 1466757626 }, .a1 = .{ .value = 1831214003 } }, .B2 = .{ .a0 = .{ .value = 1121611106 }, .a1 = .{ .value = 1490094980 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 363618483 }, .a1 = .{ .value = 253483476 } }, .B1 = .{ .a0 = .{ .value = 666069181 }, .a1 = .{ .value = 896688507 } }, .B2 = .{ .a0 = .{ .value = 564656978 }, .a1 = .{ .value = 431482959 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1239178926 }, .a1 = .{ .value = 1383379613 } }, .B1 = .{ .a0 = .{ .value = 690997231 }, .a1 = .{ .value = 410826229 } }, .B2 = .{ .a0 = .{ .value = 1795305644 }, .a1 = .{ .value = 1930709224 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1772406504 }, .a1 = .{ .value = 1879937776 } }, .B1 = .{ .a0 = .{ .value = 835083534 }, .a1 = .{ .value = 256083130 } }, .B2 = .{ .a0 = .{ .value = 1363963369 }, .a1 = .{ .value = 1601499743 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1554583919 }, .a1 = .{ .value = 816063334 } }, .B1 = .{ .a0 = .{ .value = 918034969 }, .a1 = .{ .value = 1673755594 } }, .B2 = .{ .a0 = .{ .value = 868130789 }, .a1 = .{ .value = 87019391 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 518329542 }, .a1 = .{ .value = 9010286 } }, .B1 = .{ .a0 = .{ .value = 830226383 }, .a1 = .{ .value = 1559089050 } }, .B2 = .{ .a0 = .{ .value = 1631262084 }, .a1 = .{ .value = 108924374 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 854007304 }, .a1 = .{ .value = 868675207 } }, .B1 = .{ .a0 = .{ .value = 1935433647 }, .a1 = .{ .value = 993734831 } }, .B2 = .{ .a0 = .{ .value = 551778541 }, .a1 = .{ .value = 1902512680 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1081581428 }, .a1 = .{ .value = 1793700109 } }, .B1 = .{ .a0 = .{ .value = 596822397 }, .a1 = .{ .value = 362817099 } }, .B2 = .{ .a0 = .{ .value = 457496808 }, .a1 = .{ .value = 651290027 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 792415531 }, .a1 = .{ .value = 1864587589 } }, .B1 = .{ .a0 = .{ .value = 322225117 }, .a1 = .{ .value = 1517170402 } }, .B2 = .{ .a0 = .{ .value = 329086757 }, .a1 = .{ .value = 192429001 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2037125535 }, .a1 = .{ .value = 2003968108 } }, .B1 = .{ .a0 = .{ .value = 913430309 }, .a1 = .{ .value = 1094548953 } }, .B2 = .{ .a0 = .{ .value = 919711882 }, .a1 = .{ .value = 177729831 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1495876196 }, .a1 = .{ .value = 1272723068 } }, .B1 = .{ .a0 = .{ .value = 1880257363 }, .a1 = .{ .value = 1592632564 } }, .B2 = .{ .a0 = .{ .value = 1232215948 }, .a1 = .{ .value = 1242795724 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 8355842 }, .{ .value = 8355842 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1363205229 }, .a1 = .{ .value = 914988856 } }, .B1 = .{ .a0 = .{ .value = 951028496 }, .a1 = .{ .value = 236404135 } }, .B2 = .{ .a0 = .{ .value = 1478139131 }, .a1 = .{ .value = 1194334578 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 610986478 }, .a1 = .{ .value = 1978682291 } }, .B1 = .{ .a0 = .{ .value = 2075589536 }, .a1 = .{ .value = 1271013822 } }, .B2 = .{ .a0 = .{ .value = 1112824560 }, .a1 = .{ .value = 1641738788 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 550691275 }, .a1 = .{ .value = 51103352 } }, .B1 = .{ .a0 = .{ .value = 37372766 }, .a1 = .{ .value = 906123158 } }, .B2 = .{ .a0 = .{ .value = 740000322 }, .a1 = .{ .value = 1213715788 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 34259989 }, .a1 = .{ .value = 542374864 } }, .B1 = .{ .a0 = .{ .value = 1797705179 }, .a1 = .{ .value = 810244002 } }, .B2 = .{ .a0 = .{ .value = 496191041 }, .a1 = .{ .value = 386829508 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 2049553082 }, .a1 = .{ .value = 929690616 } }, .B1 = .{ .a0 = .{ .value = 699791517 }, .a1 = .{ .value = 1465531219 } }, .B2 = .{ .a0 = .{ .value = 790380893 }, .a1 = .{ .value = 115876716 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1905868894 }, .a1 = .{ .value = 1214110206 } }, .B1 = .{ .a0 = .{ .value = 1783595114 }, .a1 = .{ .value = 801621627 } }, .B2 = .{ .a0 = .{ .value = 1495902454 }, .a1 = .{ .value = 520928664 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 85023481 }, .a1 = .{ .value = 1542019968 } }, .B1 = .{ .a0 = .{ .value = 219970021 }, .a1 = .{ .value = 24939640 } }, .B2 = .{ .a0 = .{ .value = 997168078 }, .a1 = .{ .value = 677452534 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 43169108 }, .a1 = .{ .value = 406077689 } }, .B1 = .{ .a0 = .{ .value = 2123214060 }, .a1 = .{ .value = 309647936 } }, .B2 = .{ .a0 = .{ .value = 602620262 }, .a1 = .{ .value = 1681622085 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 258343302 }, .a1 = .{ .value = 1805110090 } }, .B1 = .{ .a0 = .{ .value = 1812604236 }, .a1 = .{ .value = 335142097 } }, .B2 = .{ .a0 = .{ .value = 1994931944 }, .a1 = .{ .value = 1924786951 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 712712737 }, .a1 = .{ .value = 915360924 } }, .B1 = .{ .a0 = .{ .value = 160972491 }, .a1 = .{ .value = 199498243 } }, .B2 = .{ .a0 = .{ .value = 512935979 }, .a1 = .{ .value = 37724738 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 720872898 }, .a1 = .{ .value = 1410731725 } }, .B1 = .{ .a0 = .{ .value = 382563994 }, .a1 = .{ .value = 1625300412 } }, .B2 = .{ .a0 = .{ .value = 1535963350 }, .a1 = .{ .value = 430509951 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 176007959 }, .a1 = .{ .value = 1735320586 } }, .B1 = .{ .a0 = .{ .value = 1692476950 }, .a1 = .{ .value = 146013026 } }, .B2 = .{ .a0 = .{ .value = 1181374227 }, .a1 = .{ .value = 1463686319 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2113882987 }, .{ .value = 2113882987 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 111772 }, .{ .value = 111772 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 363618483 }, .a1 = .{ .value = 253483476 } }, .B1 = .{ .a0 = .{ .value = 666069181 }, .a1 = .{ .value = 896688507 } }, .B2 = .{ .a0 = .{ .value = 564656978 }, .a1 = .{ .value = 431482959 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1239178926 }, .a1 = .{ .value = 1383379613 } }, .B1 = .{ .a0 = .{ .value = 690997231 }, .a1 = .{ .value = 410826229 } }, .B2 = .{ .a0 = .{ .value = 1795305644 }, .a1 = .{ .value = 1930709224 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 51367342 }, .a1 = .{ .value = 2113686671 } }, .B1 = .{ .a0 = .{ .value = 1228819418 }, .a1 = .{ .value = 367682239 } }, .B2 = .{ .a0 = .{ .value = 1211501653 }, .a1 = .{ .value = 1891868976 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2079679050 }, .a1 = .{ .value = 2127177056 } }, .B1 = .{ .a0 = .{ .value = 1466757626 }, .a1 = .{ .value = 1831214003 } }, .B2 = .{ .a0 = .{ .value = 1121611106 }, .a1 = .{ .value = 1490094980 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1081581428 }, .a1 = .{ .value = 1793700109 } }, .B1 = .{ .a0 = .{ .value = 596822397 }, .a1 = .{ .value = 362817099 } }, .B2 = .{ .a0 = .{ .value = 457496808 }, .a1 = .{ .value = 651290027 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 792415531 }, .a1 = .{ .value = 1864587589 } }, .B1 = .{ .a0 = .{ .value = 322225117 }, .a1 = .{ .value = 1517170402 } }, .B2 = .{ .a0 = .{ .value = 329086757 }, .a1 = .{ .value = 192429001 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2037125535 }, .a1 = .{ .value = 2003968108 } }, .B1 = .{ .a0 = .{ .value = 913430309 }, .a1 = .{ .value = 1094548953 } }, .B2 = .{ .a0 = .{ .value = 919711882 }, .a1 = .{ .value = 177729831 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1495876196 }, .a1 = .{ .value = 1272723068 } }, .B1 = .{ .a0 = .{ .value = 1880257363 }, .a1 = .{ .value = 1592632564 } }, .B2 = .{ .a0 = .{ .value = 1232215948 }, .a1 = .{ .value = 1242795724 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1772406504 }, .a1 = .{ .value = 1879937776 } }, .B1 = .{ .a0 = .{ .value = 835083534 }, .a1 = .{ .value = 256083130 } }, .B2 = .{ .a0 = .{ .value = 1363963369 }, .a1 = .{ .value = 1601499743 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1554583919 }, .a1 = .{ .value = 816063334 } }, .B1 = .{ .a0 = .{ .value = 918034969 }, .a1 = .{ .value = 1673755594 } }, .B2 = .{ .a0 = .{ .value = 868130789 }, .a1 = .{ .value = 87019391 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 518329542 }, .a1 = .{ .value = 9010286 } }, .B1 = .{ .a0 = .{ .value = 830226383 }, .a1 = .{ .value = 1559089050 } }, .B2 = .{ .a0 = .{ .value = 1631262084 }, .a1 = .{ .value = 108924374 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 854007304 }, .a1 = .{ .value = 868675207 } }, .B1 = .{ .a0 = .{ .value = 1935433647 }, .a1 = .{ .value = 993734831 } }, .B2 = .{ .a0 = .{ .value = 551778541 }, .a1 = .{ .value = 1902512680 } } } } } } } } }, &.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 4 }, .{ .value = 4 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 2 }, .{ .value = 2 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 400562482 }, .a1 = .{ .value = 1475513674 } }, .B1 = .{ .a0 = .{ .value = 1436500341 }, .a1 = .{ .value = 1165334460 } }, .B2 = .{ .a0 = .{ .value = 48460580 }, .a1 = .{ .value = 895512390 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 395342363 }, .a1 = .{ .value = 1927008848 } }, .B1 = .{ .a0 = .{ .value = 1107215131 }, .a1 = .{ .value = 639154567 } }, .B2 = .{ .a0 = .{ .value = 2047919879 }, .a1 = .{ .value = 670132876 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 469292705 }, .a1 = .{ .value = 1165328763 } }, .B1 = .{ .a0 = .{ .value = 1618988703 }, .a1 = .{ .value = 1704866561 } }, .B2 = .{ .a0 = .{ .value = 506994365 }, .a1 = .{ .value = 1900810484 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 793427768 }, .a1 = .{ .value = 435175217 } }, .B1 = .{ .a0 = .{ .value = 1175367294 }, .a1 = .{ .value = 1321672920 } }, .B2 = .{ .a0 = .{ .value = 1671042716 }, .a1 = .{ .value = 551732451 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{}, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 477052136 }, .a1 = .{ .value = 765026492 } }, .B1 = .{ .a0 = .{ .value = 318211978 }, .a1 = .{ .value = 1482765445 } }, .B2 = .{ .a0 = .{ .value = 1505866360 }, .a1 = .{ .value = 908775912 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1040306468 }, .a1 = .{ .value = 2080980332 } }, .B1 = .{ .a0 = .{ .value = 833373270 }, .a1 = .{ .value = 1338984829 } }, .B2 = .{ .a0 = .{ .value = 1851070448 }, .a1 = .{ .value = 434045218 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 702852004 }, .a1 = .{ .value = 1718496369 } }, .B1 = .{ .a0 = .{ .value = 419219357 }, .a1 = .{ .value = 1924266986 } }, .B2 = .{ .a0 = .{ .value = 631627315 }, .a1 = .{ .value = 151612837 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 968158143 }, .a1 = .{ .value = 1725495130 } }, .B1 = .{ .a0 = .{ .value = 176555797 }, .a1 = .{ .value = 527851322 } }, .B2 = .{ .a0 = .{ .value = 814216126 }, .a1 = .{ .value = 1181644272 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 586271191 }, .a1 = .{ .value = 2069016731 } }, .B1 = .{ .a0 = .{ .value = 1874345535 }, .a1 = .{ .value = 1313413899 } }, .B2 = .{ .a0 = .{ .value = 255228653 }, .a1 = .{ .value = 840895235 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 429216175 }, .a1 = .{ .value = 1379560892 } }, .B1 = .{ .a0 = .{ .value = 1652891664 }, .a1 = .{ .value = 1933741483 } }, .B2 = .{ .a0 = .{ .value = 253979213 }, .a1 = .{ .value = 1304892371 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 132555735 }, .a1 = .{ .value = 889387550 } }, .B1 = .{ .a0 = .{ .value = 1693343791 }, .a1 = .{ .value = 659497824 } }, .B2 = .{ .a0 = .{ .value = 1503696157 }, .a1 = .{ .value = 284025426 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1381725357 }, .a1 = .{ .value = 415903145 } }, .B1 = .{ .a0 = .{ .value = 1508428780 }, .a1 = .{ .value = 2058516073 } }, .B2 = .{ .a0 = .{ .value = 969778363 }, .a1 = .{ .value = 1963664132 } } } } } } } } } }, .input_caps = &.{ pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 555335409 }, .{ .value = 1984559862 }, .{ .value = 23716841 }, .{ .value = 1195405010 }, .{ .value = 1691590540 }, .{ .value = 608918087 }, .{ .value = 759916108 }, .{ .value = 1397341573 } }, commitment.Commitment{ .{ .value = 1991510708 }, .{ .value = 1033494474 }, .{ .value = 807130707 }, .{ .value = 927255879 }, .{ .value = 1142619745 }, .{ .value = 1697427021 }, .{ .value = 1187409569 }, .{ .value = 629367872 } }, commitment.Commitment{ .{ .value = 1454566486 }, .{ .value = 176834666 }, .{ .value = 1926295865 }, .{ .value = 883573998 }, .{ .value = 482250442 }, .{ .value = 368008110 }, .{ .value = 767434773 }, .{ .value = 986319141 } }, commitment.Commitment{ .{ .value = 538426911 }, .{ .value = 1884189289 }, .{ .value = 1115249372 }, .{ .value = 555319441 }, .{ .value = 1021670351 }, .{ .value = 1165843573 }, .{ .value = 633794670 }, .{ .value = 935880463 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 169221006 }, .{ .value = 359098470 }, .{ .value = 756964339 }, .{ .value = 1690578953 }, .{ .value = 252007412 }, .{ .value = 647958288 }, .{ .value = 1988399565 }, .{ .value = 878121775 } }, commitment.Commitment{ .{ .value = 1274827433 }, .{ .value = 716429420 }, .{ .value = 869167712 }, .{ .value = 1719819973 }, .{ .value = 1098851390 }, .{ .value = 1474023110 }, .{ .value = 901119894 }, .{ .value = 440459747 } }, commitment.Commitment{ .{ .value = 464529169 }, .{ .value = 304754053 }, .{ .value = 113855300 }, .{ .value = 142564471 }, .{ .value = 535091597 }, .{ .value = 1663591547 }, .{ .value = 1214920395 }, .{ .value = 2020617887 } }, commitment.Commitment{ .{ .value = 1711410664 }, .{ .value = 555432131 }, .{ .value = 1763300236 }, .{ .value = 1746639233 }, .{ .value = 1067629378 }, .{ .value = 1794983781 }, .{ .value = 1708409324 }, .{ .value = 1131672205 } } }, .tables = &.{} }, pcs.InputCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1260920274 }, .{ .value = 488726485 }, .{ .value = 1263646888 }, .{ .value = 445439186 }, .{ .value = 1259890904 }, .{ .value = 1901291436 }, .{ .value = 1928891060 }, .{ .value = 1388536418 } }, commitment.Commitment{ .{ .value = 905416358 }, .{ .value = 1106742826 }, .{ .value = 109887269 }, .{ .value = 1380672970 }, .{ .value = 937897332 }, .{ .value = 300118156 }, .{ .value = 193117632 }, .{ .value = 1361750203 } }, commitment.Commitment{ .{ .value = 2099067340 }, .{ .value = 636540170 }, .{ .value = 2001084540 }, .{ .value = 1162215003 }, .{ .value = 163459146 }, .{ .value = 623251524 }, .{ .value = 852745200 }, .{ .value = 748881183 } }, commitment.Commitment{ .{ .value = 688046480 }, .{ .value = 1318873530 }, .{ .value = 1853695402 }, .{ .value = 42721364 }, .{ .value = 612254521 }, .{ .value = 132319931 }, .{ .value = 1179331697 }, .{ .value = 1273451579 } } }, .tables = &.{} } }, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1462277190 }, .{ .value = 1254376593 }, .{ .value = 2012841102 }, .{ .value = 1825809455 }, .{ .value = 1856460756 }, .{ .value = 335168935 }, .{ .value = 1110015243 }, .{ .value = 1982424429 } }}, .round_caps = &.{merkle.MerkleCap{ .nodes = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1823676001 }, .{ .value = 262132764 }, .{ .value = 1829188831 }, .{ .value = 1964131849 }, .{ .value = 1545668272 }, .{ .value = 834578017 }, .{ .value = 184595164 }, .{ .value = 701303987 } }, commitment.Commitment{ .{ .value = 1930435967 }, .{ .value = 444646780 }, .{ .value = 1987195691 }, .{ .value = 569777021 }, .{ .value = 1236664386 }, .{ .value = 537769559 }, .{ .value = 1203709528 }, .{ .value = 439459317 } } }, .aux = &.{null} }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 477393249 }, .a1 = .{ .value = 324668301 } }, .B1 = .{ .a0 = .{ .value = 1589343693 }, .a1 = .{ .value = 1150884400 } }, .B2 = .{ .a0 = .{ .value = 503455038 }, .a1 = .{ .value = 230727401 } } }}, .running_queries = &.{ &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 476474861 }, .{ .value = 2123144150 }, .{ .value = 1725702600 }, .{ .value = 429577638 }, .{ .value = 1828778452 }, .{ .value = 292620 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1834938612 }, .{ .value = 1219755665 }, .{ .value = 2069339513 }, .{ .value = 1752644043 }, .{ .value = 1290631122 }, .{ .value = 1960273863 }, .{ .value = 0 }, .{ .value = 0 } }} }}, &.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 229882642 }, .{ .value = 2119921583 }, .{ .value = 1086631321 }, .{ .value = 693691818 }, .{ .value = 1590445060 }, .{ .value = 1630154870 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 2081530831 }, .{ .value = 1222978232 }, .{ .value = 577704359 }, .{ .value = 1488529863 }, .{ .value = 1528964514 }, .{ .value = 330411613 }, .{ .value = 0 }, .{ .value = 0 } }} }} } } } };
 
 const verify_case_68_failing_proof = verifier.Proof{
     .rounds = &verify_case_68_failing_rounds,
@@ -16102,334 +15896,334 @@ const verify_case_68_failing_public_inputs = [_]protocol.Scalar{
     .{ .base = .{ .value = 66 } },
     .{ .base = .{ .value = 77 } },
     .{ .base = .{ .value = 88 } },
-    .{ .base = .{ .value = 707150403 } },
-    .{ .base = .{ .value = 1408331409 } },
-    .{ .base = .{ .value = 338636618 } },
-    .{ .base = .{ .value = 953433897 } },
-    .{ .base = .{ .value = 1254906597 } },
-    .{ .base = .{ .value = 239596987 } },
-    .{ .base = .{ .value = 1962276018 } },
-    .{ .base = .{ .value = 1024324298 } },
-    .{ .base = .{ .value = 1998090651 } },
-    .{ .base = .{ .value = 1054859233 } },
-    .{ .base = .{ .value = 1097752058 } },
-    .{ .base = .{ .value = 791991768 } },
-    .{ .base = .{ .value = 1773546923 } },
-    .{ .base = .{ .value = 889920020 } },
-    .{ .base = .{ .value = 1805131266 } },
-    .{ .base = .{ .value = 1376649739 } },
-    .{ .base = .{ .value = 1355481920 } },
-    .{ .base = .{ .value = 962980946 } },
-    .{ .base = .{ .value = 1383361912 } },
-    .{ .base = .{ .value = 1978320934 } },
-    .{ .base = .{ .value = 902337933 } },
-    .{ .base = .{ .value = 1216023000 } },
-    .{ .base = .{ .value = 922665345 } },
-    .{ .base = .{ .value = 735544820 } },
-    .{ .base = .{ .value = 1337646463 } },
-    .{ .base = .{ .value = 982612855 } },
-    .{ .base = .{ .value = 491170587 } },
-    .{ .base = .{ .value = 402546955 } },
-    .{ .base = .{ .value = 1667225701 } },
-    .{ .base = .{ .value = 73076826 } },
-    .{ .base = .{ .value = 892206069 } },
-    .{ .base = .{ .value = 727685795 } },
-    .{ .base = .{ .value = 1729263875 } },
-    .{ .base = .{ .value = 612882162 } },
-    .{ .base = .{ .value = 503926944 } },
-    .{ .base = .{ .value = 1113252971 } },
-    .{ .base = .{ .value = 466581963 } },
-    .{ .base = .{ .value = 685680584 } },
-    .{ .base = .{ .value = 1053819056 } },
-    .{ .base = .{ .value = 1602024390 } },
-    .{ .base = .{ .value = 172480225 } },
-    .{ .base = .{ .value = 1767879110 } },
-    .{ .base = .{ .value = 1494720690 } },
-    .{ .base = .{ .value = 84474614 } },
-    .{ .base = .{ .value = 225023367 } },
-    .{ .base = .{ .value = 434455574 } },
-    .{ .base = .{ .value = 1270946833 } },
-    .{ .base = .{ .value = 751104859 } },
-    .{ .base = .{ .value = 1448979341 } },
-    .{ .base = .{ .value = 891519 } },
-    .{ .base = .{ .value = 1300231325 } },
-    .{ .base = .{ .value = 1438366688 } },
-    .{ .base = .{ .value = 329033911 } },
-    .{ .base = .{ .value = 506639868 } },
-    .{ .base = .{ .value = 1223421842 } },
-    .{ .base = .{ .value = 1909429949 } },
-    .{ .base = .{ .value = 1434656866 } },
-    .{ .base = .{ .value = 1665231946 } },
-    .{ .base = .{ .value = 222347323 } },
-    .{ .base = .{ .value = 1580599640 } },
-    .{ .base = .{ .value = 2082098205 } },
-    .{ .base = .{ .value = 1975938749 } },
-    .{ .base = .{ .value = 845318047 } },
-    .{ .base = .{ .value = 868684660 } },
-    .{ .base = .{ .value = 802169870 } },
-    .{ .base = .{ .value = 149750239 } },
-    .{ .base = .{ .value = 1402580844 } },
-    .{ .base = .{ .value = 741720504 } },
-    .{ .base = .{ .value = 2018976471 } },
-    .{ .base = .{ .value = 1939037141 } },
-    .{ .base = .{ .value = 135344295 } },
-    .{ .base = .{ .value = 517564436 } },
-    .{ .base = .{ .value = 1254076706 } },
-    .{ .base = .{ .value = 736107496 } },
-    .{ .base = .{ .value = 1158816731 } },
-    .{ .base = .{ .value = 566177258 } },
-    .{ .base = .{ .value = 1390148900 } },
-    .{ .base = .{ .value = 229670556 } },
-    .{ .base = .{ .value = 124025920 } },
-    .{ .base = .{ .value = 1940705857 } },
-    .{ .base = .{ .value = 245288258 } },
-    .{ .base = .{ .value = 1595863050 } },
-    .{ .base = .{ .value = 1092933786 } },
-    .{ .base = .{ .value = 953310842 } },
-    .{ .base = .{ .value = 1856464094 } },
-    .{ .base = .{ .value = 443924021 } },
-    .{ .base = .{ .value = 342617961 } },
-    .{ .base = .{ .value = 1408189982 } },
-    .{ .base = .{ .value = 832324154 } },
-    .{ .base = .{ .value = 561024189 } },
-    .{ .base = .{ .value = 209698327 } },
-    .{ .base = .{ .value = 686737391 } },
-    .{ .base = .{ .value = 29404641 } },
-    .{ .base = .{ .value = 1126242295 } },
-    .{ .base = .{ .value = 635368205 } },
-    .{ .base = .{ .value = 1235926742 } },
-    .{ .base = .{ .value = 121104830 } },
-    .{ .base = .{ .value = 861722568 } },
-    .{ .base = .{ .value = 2047768438 } },
-    .{ .base = .{ .value = 1763424391 } },
-    .{ .base = .{ .value = 1587343680 } },
-    .{ .base = .{ .value = 870251289 } },
-    .{ .base = .{ .value = 2106542732 } },
-    .{ .base = .{ .value = 1957908878 } },
-    .{ .base = .{ .value = 1260913669 } },
-    .{ .base = .{ .value = 1938741896 } },
-    .{ .base = .{ .value = 1442758383 } },
-    .{ .base = .{ .value = 1256467046 } },
-    .{ .base = .{ .value = 1834767570 } },
-    .{ .base = .{ .value = 1269907642 } },
-    .{ .base = .{ .value = 793986024 } },
-    .{ .base = .{ .value = 1549244754 } },
-    .{ .base = .{ .value = 1509513699 } },
-    .{ .base = .{ .value = 1254533447 } },
-    .{ .base = .{ .value = 313889661 } },
-    .{ .base = .{ .value = 482092777 } },
-    .{ .base = .{ .value = 1318791840 } },
-    .{ .base = .{ .value = 1953144882 } },
-    .{ .base = .{ .value = 1094101577 } },
-    .{ .base = .{ .value = 638945249 } },
-    .{ .base = .{ .value = 298368665 } },
-    .{ .base = .{ .value = 58643476 } },
-    .{ .base = .{ .value = 1492690118 } },
-    .{ .base = .{ .value = 643147742 } },
-    .{ .base = .{ .value = 1494731628 } },
-    .{ .base = .{ .value = 515611814 } },
-    .{ .base = .{ .value = 1467428252 } },
-    .{ .base = .{ .value = 457981148 } },
-    .{ .base = .{ .value = 324488461 } },
-    .{ .base = .{ .value = 1894484630 } },
-    .{ .base = .{ .value = 385570511 } },
-    .{ .base = .{ .value = 755344953 } },
-    .{ .base = .{ .value = 1738360518 } },
-    .{ .base = .{ .value = 423197640 } },
-    .{ .base = .{ .value = 1072733227 } },
-    .{ .base = .{ .value = 1181441842 } },
-    .{ .base = .{ .value = 311643150 } },
-    .{ .base = .{ .value = 1797533987 } },
-    .{ .base = .{ .value = 956390699 } },
-    .{ .base = .{ .value = 837451446 } },
-    .{ .base = .{ .value = 1805980110 } },
-    .{ .base = .{ .value = 1884882438 } },
-    .{ .base = .{ .value = 761373661 } },
-    .{ .base = .{ .value = 902427436 } },
-    .{ .base = .{ .value = 1205011397 } },
-    .{ .base = .{ .value = 413802963 } },
-    .{ .base = .{ .value = 520397204 } },
-    .{ .base = .{ .value = 938426361 } },
-    .{ .base = .{ .value = 83645903 } },
-    .{ .base = .{ .value = 1250591704 } },
-    .{ .base = .{ .value = 369008482 } },
-    .{ .base = .{ .value = 1914200245 } },
-    .{ .base = .{ .value = 152236040 } },
-    .{ .base = .{ .value = 1172908284 } },
-    .{ .base = .{ .value = 519122191 } },
-    .{ .base = .{ .value = 572518760 } },
-    .{ .base = .{ .value = 2129151924 } },
-    .{ .base = .{ .value = 1878190002 } },
-    .{ .base = .{ .value = 1141031225 } },
-    .{ .base = .{ .value = 3044790 } },
-    .{ .base = .{ .value = 871101247 } },
-    .{ .base = .{ .value = 1225713312 } },
-    .{ .base = .{ .value = 1595258577 } },
-    .{ .base = .{ .value = 1783919662 } },
-    .{ .base = .{ .value = 606211474 } },
-    .{ .base = .{ .value = 1392998793 } },
-    .{ .base = .{ .value = 81558516 } },
-    .{ .base = .{ .value = 567614934 } },
-    .{ .base = .{ .value = 1477505699 } },
-    .{ .base = .{ .value = 1446376858 } },
-    .{ .base = .{ .value = 921163254 } },
-    .{ .base = .{ .value = 1102623195 } },
-    .{ .base = .{ .value = 1417206768 } },
-    .{ .base = .{ .value = 270215751 } },
-    .{ .base = .{ .value = 113415668 } },
-    .{ .base = .{ .value = 783572711 } },
-    .{ .base = .{ .value = 649710331 } },
-    .{ .base = .{ .value = 681973275 } },
-    .{ .base = .{ .value = 1548584048 } },
-    .{ .base = .{ .value = 806855340 } },
-    .{ .base = .{ .value = 837240245 } },
-    .{ .base = .{ .value = 806698029 } },
-    .{ .base = .{ .value = 1991594777 } },
-    .{ .base = .{ .value = 1375682705 } },
-    .{ .base = .{ .value = 54335650 } },
-    .{ .base = .{ .value = 1443905725 } },
-    .{ .base = .{ .value = 1135903407 } },
-    .{ .base = .{ .value = 1994712648 } },
-    .{ .base = .{ .value = 688569073 } },
-    .{ .base = .{ .value = 130060027 } },
-    .{ .base = .{ .value = 569240389 } },
-    .{ .base = .{ .value = 22345264 } },
-    .{ .base = .{ .value = 1647371200 } },
-    .{ .base = .{ .value = 846471491 } },
-    .{ .base = .{ .value = 377341653 } },
-    .{ .base = .{ .value = 368351448 } },
-    .{ .base = .{ .value = 1190213816 } },
-    .{ .base = .{ .value = 1780117547 } },
-    .{ .base = .{ .value = 1550253619 } },
-    .{ .base = .{ .value = 1481313800 } },
-    .{ .base = .{ .value = 31187028 } },
-    .{ .base = .{ .value = 2047695000 } },
-    .{ .base = .{ .value = 2020474065 } },
-    .{ .base = .{ .value = 880943239 } },
-    .{ .base = .{ .value = 470747800 } },
-    .{ .base = .{ .value = 622138762 } },
-    .{ .base = .{ .value = 959918264 } },
-    .{ .base = .{ .value = 1478788666 } },
-    .{ .base = .{ .value = 1428514876 } },
-    .{ .base = .{ .value = 642882581 } },
-    .{ .base = .{ .value = 499551435 } },
-    .{ .base = .{ .value = 89823507 } },
-    .{ .base = .{ .value = 1162873092 } },
-    .{ .base = .{ .value = 1243290736 } },
-    .{ .base = .{ .value = 795492723 } },
-    .{ .base = .{ .value = 42274965 } },
-    .{ .base = .{ .value = 1457408306 } },
-    .{ .base = .{ .value = 433555827 } },
-    .{ .base = .{ .value = 1552378751 } },
-    .{ .base = .{ .value = 1209486956 } },
-    .{ .base = .{ .value = 1447412747 } },
-    .{ .base = .{ .value = 1782223728 } },
-    .{ .base = .{ .value = 1386073579 } },
-    .{ .base = .{ .value = 144315513 } },
-    .{ .base = .{ .value = 1411336347 } },
-    .{ .base = .{ .value = 165983615 } },
-    .{ .base = .{ .value = 386545744 } },
-    .{ .base = .{ .value = 1550996261 } },
-    .{ .base = .{ .value = 1745812056 } },
-    .{ .base = .{ .value = 2112928165 } },
-    .{ .base = .{ .value = 1734867851 } },
-    .{ .base = .{ .value = 928372945 } },
-    .{ .base = .{ .value = 23023827 } },
-    .{ .base = .{ .value = 1223050611 } },
-    .{ .base = .{ .value = 239348223 } },
-    .{ .base = .{ .value = 134754250 } },
-    .{ .base = .{ .value = 1054464471 } },
-    .{ .base = .{ .value = 424553536 } },
-    .{ .base = .{ .value = 924642143 } },
-    .{ .base = .{ .value = 406893690 } },
-    .{ .base = .{ .value = 1884710405 } },
-    .{ .base = .{ .value = 1972875864 } },
-    .{ .base = .{ .value = 255931580 } },
-    .{ .base = .{ .value = 869816835 } },
-    .{ .base = .{ .value = 40387650 } },
-    .{ .base = .{ .value = 1729377830 } },
-    .{ .base = .{ .value = 524826830 } },
-    .{ .base = .{ .value = 1100455462 } },
-    .{ .base = .{ .value = 1078371264 } },
-    .{ .base = .{ .value = 817476987 } },
-    .{ .base = .{ .value = 1935266255 } },
-    .{ .base = .{ .value = 1493370539 } },
-    .{ .base = .{ .value = 1635434092 } },
-    .{ .base = .{ .value = 92521602 } },
-    .{ .base = .{ .value = 911767489 } },
-    .{ .base = .{ .value = 1368320255 } },
-    .{ .base = .{ .value = 960259584 } },
-    .{ .base = .{ .value = 1562494458 } },
-    .{ .base = .{ .value = 1643742920 } },
-    .{ .base = .{ .value = 1954532291 } },
-    .{ .base = .{ .value = 1131427387 } },
-    .{ .base = .{ .value = 1782668011 } },
-    .{ .base = .{ .value = 1628249922 } },
-    .{ .base = .{ .value = 1493029474 } },
-    .{ .base = .{ .value = 590998517 } },
-    .{ .base = .{ .value = 632617770 } },
-    .{ .base = .{ .value = 263788592 } },
-    .{ .base = .{ .value = 176582284 } },
-    .{ .base = .{ .value = 69349452 } },
-    .{ .base = .{ .value = 2067478419 } },
-    .{ .base = .{ .value = 404722469 } },
-    .{ .base = .{ .value = 1125067910 } },
-    .{ .base = .{ .value = 1561613092 } },
-    .{ .base = .{ .value = 947331187 } },
-    .{ .base = .{ .value = 674936245 } },
-    .{ .base = .{ .value = 997588041 } },
-    .{ .base = .{ .value = 1835203060 } },
-    .{ .base = .{ .value = 372120047 } },
-    .{ .base = .{ .value = 258795079 } },
-    .{ .base = .{ .value = 1095586576 } },
-    .{ .base = .{ .value = 1218423498 } },
-    .{ .base = .{ .value = 1048459899 } },
-    .{ .base = .{ .value = 362038478 } },
-    .{ .base = .{ .value = 1323685386 } },
-    .{ .base = .{ .value = 104089924 } },
-    .{ .base = .{ .value = 1464208305 } },
-    .{ .base = .{ .value = 459654464 } },
-    .{ .base = .{ .value = 1327909943 } },
-    .{ .base = .{ .value = 320577587 } },
-    .{ .base = .{ .value = 1336111143 } },
-    .{ .base = .{ .value = 504289817 } },
-    .{ .base = .{ .value = 92116879 } },
-    .{ .base = .{ .value = 541533185 } },
-    .{ .base = .{ .value = 916621440 } },
-    .{ .base = .{ .value = 1743020139 } },
-    .{ .base = .{ .value = 425342636 } },
-    .{ .base = .{ .value = 2070900402 } },
-    .{ .base = .{ .value = 1596549452 } },
-    .{ .base = .{ .value = 1499149353 } },
-    .{ .base = .{ .value = 25351450 } },
-    .{ .base = .{ .value = 521588779 } },
-    .{ .base = .{ .value = 812730750 } },
-    .{ .base = .{ .value = 1542361528 } },
-    .{ .base = .{ .value = 1025154218 } },
-    .{ .base = .{ .value = 219018398 } },
-    .{ .base = .{ .value = 1697432968 } },
-    .{ .base = .{ .value = 811824484 } },
-    .{ .base = .{ .value = 1602493072 } },
-    .{ .base = .{ .value = 947729583 } },
-    .{ .base = .{ .value = 1210923217 } },
-    .{ .base = .{ .value = 1841700204 } },
-    .{ .base = .{ .value = 1062581482 } },
-    .{ .base = .{ .value = 1620339422 } },
-    .{ .base = .{ .value = 2024024921 } },
-    .{ .base = .{ .value = 1646924507 } },
-    .{ .base = .{ .value = 1237900066 } },
-    .{ .base = .{ .value = 411881095 } },
-    .{ .base = .{ .value = 683324787 } },
-    .{ .base = .{ .value = 45752796 } },
-    .{ .base = .{ .value = 1140450959 } },
-    .{ .base = .{ .value = 2001498906 } },
-    .{ .base = .{ .value = 136390620 } },
-    .{ .base = .{ .value = 270777189 } },
-    .{ .base = .{ .value = 1819607708 } },
-    .{ .base = .{ .value = 2042478018 } },
-    .{ .base = .{ .value = 68941873 } },
-    .{ .base = .{ .value = 241529293 } },
-    .{ .base = .{ .value = 594322866 } },
+    .{ .base = .{ .value = 106343302 } },
+    .{ .base = .{ .value = 994005636 } },
+    .{ .base = .{ .value = 56797207 } },
+    .{ .base = .{ .value = 2116123491 } },
+    .{ .base = .{ .value = 205490027 } },
+    .{ .base = .{ .value = 300435510 } },
+    .{ .base = .{ .value = 1363520036 } },
+    .{ .base = .{ .value = 570836988 } },
+    .{ .base = .{ .value = 575959527 } },
+    .{ .base = .{ .value = 1841993475 } },
+    .{ .base = .{ .value = 1978764484 } },
+    .{ .base = .{ .value = 572864959 } },
+    .{ .base = .{ .value = 412349451 } },
+    .{ .base = .{ .value = 740866006 } },
+    .{ .base = .{ .value = 555331360 } },
+    .{ .base = .{ .value = 1996801062 } },
+    .{ .base = .{ .value = 318225174 } },
+    .{ .base = .{ .value = 1930901587 } },
+    .{ .base = .{ .value = 983745526 } },
+    .{ .base = .{ .value = 1457982725 } },
+    .{ .base = .{ .value = 1791876930 } },
+    .{ .base = .{ .value = 1443135944 } },
+    .{ .base = .{ .value = 824419209 } },
+    .{ .base = .{ .value = 1893399710 } },
+    .{ .base = .{ .value = 1747314638 } },
+    .{ .base = .{ .value = 1127067680 } },
+    .{ .base = .{ .value = 626675897 } },
+    .{ .base = .{ .value = 2121052460 } },
+    .{ .base = .{ .value = 902691940 } },
+    .{ .base = .{ .value = 1821970087 } },
+    .{ .base = .{ .value = 602762017 } },
+    .{ .base = .{ .value = 1069075957 } },
+    .{ .base = .{ .value = 8237207 } },
+    .{ .base = .{ .value = 1392965121 } },
+    .{ .base = .{ .value = 363248680 } },
+    .{ .base = .{ .value = 190294007 } },
+    .{ .base = .{ .value = 1091748528 } },
+    .{ .base = .{ .value = 1611840384 } },
+    .{ .base = .{ .value = 1135574167 } },
+    .{ .base = .{ .value = 1337962842 } },
+    .{ .base = .{ .value = 894965561 } },
+    .{ .base = .{ .value = 1988503194 } },
+    .{ .base = .{ .value = 395557162 } },
+    .{ .base = .{ .value = 1358917384 } },
+    .{ .base = .{ .value = 70606686 } },
+    .{ .base = .{ .value = 1467621649 } },
+    .{ .base = .{ .value = 785376824 } },
+    .{ .base = .{ .value = 1229801926 } },
+    .{ .base = .{ .value = 1705675632 } },
+    .{ .base = .{ .value = 1079141874 } },
+    .{ .base = .{ .value = 603164050 } },
+    .{ .base = .{ .value = 601570780 } },
+    .{ .base = .{ .value = 1591929875 } },
+    .{ .base = .{ .value = 2072106020 } },
+    .{ .base = .{ .value = 1510390880 } },
+    .{ .base = .{ .value = 1776570926 } },
+    .{ .base = .{ .value = 484367505 } },
+    .{ .base = .{ .value = 72329805 } },
+    .{ .base = .{ .value = 874429804 } },
+    .{ .base = .{ .value = 1619595341 } },
+    .{ .base = .{ .value = 1482207815 } },
+    .{ .base = .{ .value = 1110702280 } },
+    .{ .base = .{ .value = 33562627 } },
+    .{ .base = .{ .value = 1437174706 } },
+    .{ .base = .{ .value = 1295482031 } },
+    .{ .base = .{ .value = 1323252452 } },
+    .{ .base = .{ .value = 1615417068 } },
+    .{ .base = .{ .value = 1357543202 } },
+    .{ .base = .{ .value = 100190459 } },
+    .{ .base = .{ .value = 1096515471 } },
+    .{ .base = .{ .value = 530782935 } },
+    .{ .base = .{ .value = 891958239 } },
+    .{ .base = .{ .value = 199466457 } },
+    .{ .base = .{ .value = 271751169 } },
+    .{ .base = .{ .value = 68965513 } },
+    .{ .base = .{ .value = 1728432998 } },
+    .{ .base = .{ .value = 1199134791 } },
+    .{ .base = .{ .value = 849490471 } },
+    .{ .base = .{ .value = 1851379246 } },
+    .{ .base = .{ .value = 2090972583 } },
+    .{ .base = .{ .value = 1811681074 } },
+    .{ .base = .{ .value = 1814176199 } },
+    .{ .base = .{ .value = 1055413014 } },
+    .{ .base = .{ .value = 1481054506 } },
+    .{ .base = .{ .value = 448493312 } },
+    .{ .base = .{ .value = 1685914893 } },
+    .{ .base = .{ .value = 930700520 } },
+    .{ .base = .{ .value = 1912644081 } },
+    .{ .base = .{ .value = 1845554935 } },
+    .{ .base = .{ .value = 278190486 } },
+    .{ .base = .{ .value = 1514757134 } },
+    .{ .base = .{ .value = 1688775527 } },
+    .{ .base = .{ .value = 1365397095 } },
+    .{ .base = .{ .value = 1709287717 } },
+    .{ .base = .{ .value = 1863541611 } },
+    .{ .base = .{ .value = 829918606 } },
+    .{ .base = .{ .value = 733323414 } },
+    .{ .base = .{ .value = 1723936235 } },
+    .{ .base = .{ .value = 1858277846 } },
+    .{ .base = .{ .value = 51652292 } },
+    .{ .base = .{ .value = 714110399 } },
+    .{ .base = .{ .value = 1658396668 } },
+    .{ .base = .{ .value = 758087889 } },
+    .{ .base = .{ .value = 80806660 } },
+    .{ .base = .{ .value = 1965008326 } },
+    .{ .base = .{ .value = 1372492249 } },
+    .{ .base = .{ .value = 796414979 } },
+    .{ .base = .{ .value = 173242559 } },
+    .{ .base = .{ .value = 615690843 } },
+    .{ .base = .{ .value = 1563219624 } },
+    .{ .base = .{ .value = 1386298239 } },
+    .{ .base = .{ .value = 1505166234 } },
+    .{ .base = .{ .value = 124966850 } },
+    .{ .base = .{ .value = 1437390520 } },
+    .{ .base = .{ .value = 1525883852 } },
+    .{ .base = .{ .value = 2254595 } },
+    .{ .base = .{ .value = 2026731669 } },
+    .{ .base = .{ .value = 269399699 } },
+    .{ .base = .{ .value = 627883528 } },
+    .{ .base = .{ .value = 921162405 } },
+    .{ .base = .{ .value = 1814883133 } },
+    .{ .base = .{ .value = 1338429751 } },
+    .{ .base = .{ .value = 647827913 } },
+    .{ .base = .{ .value = 1160707689 } },
+    .{ .base = .{ .value = 43604094 } },
+    .{ .base = .{ .value = 1646023608 } },
+    .{ .base = .{ .value = 47467653 } },
+    .{ .base = .{ .value = 1838088904 } },
+    .{ .base = .{ .value = 736908967 } },
+    .{ .base = .{ .value = 768298468 } },
+    .{ .base = .{ .value = 513500970 } },
+    .{ .base = .{ .value = 926984283 } },
+    .{ .base = .{ .value = 523160220 } },
+    .{ .base = .{ .value = 418340046 } },
+    .{ .base = .{ .value = 665579728 } },
+    .{ .base = .{ .value = 1047747548 } },
+    .{ .base = .{ .value = 770238578 } },
+    .{ .base = .{ .value = 558689981 } },
+    .{ .base = .{ .value = 2118789625 } },
+    .{ .base = .{ .value = 1400644906 } },
+    .{ .base = .{ .value = 1684276217 } },
+    .{ .base = .{ .value = 1109860493 } },
+    .{ .base = .{ .value = 595825631 } },
+    .{ .base = .{ .value = 1968409344 } },
+    .{ .base = .{ .value = 1605905051 } },
+    .{ .base = .{ .value = 164544763 } },
+    .{ .base = .{ .value = 211105107 } },
+    .{ .base = .{ .value = 286482054 } },
+    .{ .base = .{ .value = 317064564 } },
+    .{ .base = .{ .value = 1025235500 } },
+    .{ .base = .{ .value = 2006927508 } },
+    .{ .base = .{ .value = 1908164645 } },
+    .{ .base = .{ .value = 1327639780 } },
+    .{ .base = .{ .value = 2124897389 } },
+    .{ .base = .{ .value = 825137504 } },
+    .{ .base = .{ .value = 1808789370 } },
+    .{ .base = .{ .value = 784402924 } },
+    .{ .base = .{ .value = 2059929599 } },
+    .{ .base = .{ .value = 146230308 } },
+    .{ .base = .{ .value = 126986146 } },
+    .{ .base = .{ .value = 240165098 } },
+    .{ .base = .{ .value = 337681732 } },
+    .{ .base = .{ .value = 993978088 } },
+    .{ .base = .{ .value = 1528766886 } },
+    .{ .base = .{ .value = 275730949 } },
+    .{ .base = .{ .value = 1209669218 } },
+    .{ .base = .{ .value = 644925916 } },
+    .{ .base = .{ .value = 1820422749 } },
+    .{ .base = .{ .value = 187543318 } },
+    .{ .base = .{ .value = 286619181 } },
+    .{ .base = .{ .value = 990694783 } },
+    .{ .base = .{ .value = 468977383 } },
+    .{ .base = .{ .value = 1605016575 } },
+    .{ .base = .{ .value = 879447220 } },
+    .{ .base = .{ .value = 680252495 } },
+    .{ .base = .{ .value = 1957936018 } },
+    .{ .base = .{ .value = 371100301 } },
+    .{ .base = .{ .value = 441443607 } },
+    .{ .base = .{ .value = 1393794681 } },
+    .{ .base = .{ .value = 2083027148 } },
+    .{ .base = .{ .value = 816882506 } },
+    .{ .base = .{ .value = 1056486483 } },
+    .{ .base = .{ .value = 1117975626 } },
+    .{ .base = .{ .value = 1372073482 } },
+    .{ .base = .{ .value = 1073270637 } },
+    .{ .base = .{ .value = 828146560 } },
+    .{ .base = .{ .value = 1348898612 } },
+    .{ .base = .{ .value = 2115402245 } },
+    .{ .base = .{ .value = 1838862054 } },
+    .{ .base = .{ .value = 775541471 } },
+    .{ .base = .{ .value = 1239254740 } },
+    .{ .base = .{ .value = 396607602 } },
+    .{ .base = .{ .value = 345070110 } },
+    .{ .base = .{ .value = 1339388009 } },
+    .{ .base = .{ .value = 599355778 } },
+    .{ .base = .{ .value = 1740238458 } },
+    .{ .base = .{ .value = 902725656 } },
+    .{ .base = .{ .value = 167662616 } },
+    .{ .base = .{ .value = 1852764323 } },
+    .{ .base = .{ .value = 1750212442 } },
+    .{ .base = .{ .value = 1642790332 } },
+    .{ .base = .{ .value = 1831200858 } },
+    .{ .base = .{ .value = 765039021 } },
+    .{ .base = .{ .value = 525303714 } },
+    .{ .base = .{ .value = 971322125 } },
+    .{ .base = .{ .value = 1357164412 } },
+    .{ .base = .{ .value = 1913841809 } },
+    .{ .base = .{ .value = 1769427056 } },
+    .{ .base = .{ .value = 945569638 } },
+    .{ .base = .{ .value = 84768767 } },
+    .{ .base = .{ .value = 497414754 } },
+    .{ .base = .{ .value = 137549877 } },
+    .{ .base = .{ .value = 821966879 } },
+    .{ .base = .{ .value = 132076659 } },
+    .{ .base = .{ .value = 844020074 } },
+    .{ .base = .{ .value = 1359534706 } },
+    .{ .base = .{ .value = 1078644126 } },
+    .{ .base = .{ .value = 1030683045 } },
+    .{ .base = .{ .value = 1111703608 } },
+    .{ .base = .{ .value = 295868329 } },
+    .{ .base = .{ .value = 988537372 } },
+    .{ .base = .{ .value = 158813588 } },
+    .{ .base = .{ .value = 341068116 } },
+    .{ .base = .{ .value = 788967355 } },
+    .{ .base = .{ .value = 490251813 } },
+    .{ .base = .{ .value = 102652880 } },
+    .{ .base = .{ .value = 503723663 } },
+    .{ .base = .{ .value = 1519461971 } },
+    .{ .base = .{ .value = 1034664229 } },
+    .{ .base = .{ .value = 1389297862 } },
+    .{ .base = .{ .value = 556036450 } },
+    .{ .base = .{ .value = 961948415 } },
+    .{ .base = .{ .value = 331283913 } },
+    .{ .base = .{ .value = 1712866757 } },
+    .{ .base = .{ .value = 871211597 } },
+    .{ .base = .{ .value = 1922762371 } },
+    .{ .base = .{ .value = 1829644968 } },
+    .{ .base = .{ .value = 889035805 } },
+    .{ .base = .{ .value = 1281312022 } },
+    .{ .base = .{ .value = 1624040682 } },
+    .{ .base = .{ .value = 572085517 } },
+    .{ .base = .{ .value = 1791710294 } },
+    .{ .base = .{ .value = 492318934 } },
+    .{ .base = .{ .value = 1783983838 } },
+    .{ .base = .{ .value = 784969244 } },
+    .{ .base = .{ .value = 1604928543 } },
+    .{ .base = .{ .value = 1285288471 } },
+    .{ .base = .{ .value = 498218636 } },
+    .{ .base = .{ .value = 1353538279 } },
+    .{ .base = .{ .value = 89270651 } },
+    .{ .base = .{ .value = 1326768348 } },
+    .{ .base = .{ .value = 128936357 } },
+    .{ .base = .{ .value = 956800573 } },
+    .{ .base = .{ .value = 2116371775 } },
+    .{ .base = .{ .value = 111447243 } },
+    .{ .base = .{ .value = 2060782340 } },
+    .{ .base = .{ .value = 486549169 } },
+    .{ .base = .{ .value = 929841244 } },
+    .{ .base = .{ .value = 1787007187 } },
+    .{ .base = .{ .value = 1809991918 } },
+    .{ .base = .{ .value = 1204607090 } },
+    .{ .base = .{ .value = 1825880700 } },
+    .{ .base = .{ .value = 131017615 } },
+    .{ .base = .{ .value = 2091286006 } },
+    .{ .base = .{ .value = 63275680 } },
+    .{ .base = .{ .value = 2075247008 } },
+    .{ .base = .{ .value = 1435919549 } },
+    .{ .base = .{ .value = 875605394 } },
+    .{ .base = .{ .value = 1603953241 } },
+    .{ .base = .{ .value = 1133149704 } },
+    .{ .base = .{ .value = 380881480 } },
+    .{ .base = .{ .value = 1672072629 } },
+    .{ .base = .{ .value = 896179908 } },
+    .{ .base = .{ .value = 1393127636 } },
+    .{ .base = .{ .value = 1888909612 } },
+    .{ .base = .{ .value = 1969582632 } },
+    .{ .base = .{ .value = 816843897 } },
+    .{ .base = .{ .value = 1870697917 } },
+    .{ .base = .{ .value = 1037960023 } },
+    .{ .base = .{ .value = 2049857552 } },
+    .{ .base = .{ .value = 2086370957 } },
+    .{ .base = .{ .value = 1411517106 } },
+    .{ .base = .{ .value = 16674525 } },
+    .{ .base = .{ .value = 1003698658 } },
+    .{ .base = .{ .value = 1818482267 } },
+    .{ .base = .{ .value = 1867699000 } },
+    .{ .base = .{ .value = 2097095842 } },
+    .{ .base = .{ .value = 808030466 } },
+    .{ .base = .{ .value = 1559034723 } },
+    .{ .base = .{ .value = 1709839512 } },
+    .{ .base = .{ .value = 852393748 } },
+    .{ .base = .{ .value = 2028202147 } },
+    .{ .base = .{ .value = 96087980 } },
+    .{ .base = .{ .value = 1918145102 } },
+    .{ .base = .{ .value = 767089425 } },
+    .{ .base = .{ .value = 814310510 } },
+    .{ .base = .{ .value = 1900632352 } },
+    .{ .base = .{ .value = 700593342 } },
+    .{ .base = .{ .value = 1104947140 } },
+    .{ .base = .{ .value = 1137237705 } },
+    .{ .base = .{ .value = 1039934753 } },
+    .{ .base = .{ .value = 1815042380 } },
+    .{ .base = .{ .value = 1700594434 } },
+    .{ .base = .{ .value = 421954821 } },
+    .{ .base = .{ .value = 506998401 } },
+    .{ .base = .{ .value = 1603538058 } },
+    .{ .base = .{ .value = 406841815 } },
+    .{ .base = .{ .value = 247026392 } },
+    .{ .base = .{ .value = 1760280445 } },
+    .{ .base = .{ .value = 482658215 } },
+    .{ .base = .{ .value = 1052418166 } },
+    .{ .base = .{ .value = 344165603 } },
+    .{ .base = .{ .value = 2036720887 } },
+    .{ .base = .{ .value = 1491926005 } },
+    .{ .base = .{ .value = 428768392 } },
+    .{ .base = .{ .value = 250103393 } },
+    .{ .base = .{ .value = 1540448515 } },
+    .{ .base = .{ .value = 1160758934 } },
+    .{ .base = .{ .value = 2104466813 } },
+    .{ .base = .{ .value = 937212186 } },
+    .{ .base = .{ .value = 613943790 } },
+    .{ .base = .{ .value = 249970051 } },
+    .{ .base = .{ .value = 1311128372 } },
+    .{ .base = .{ .value = 1847236528 } },
+    .{ .base = .{ .value = 1705662548 } },
+    .{ .base = .{ .value = 631421230 } },
+    .{ .base = .{ .value = 189520237 } },
+    .{ .base = .{ .value = 1995113456 } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
 };
 
@@ -16441,7 +16235,7 @@ const verify_case_68_failing_input = verifier.VerifyInput{
 const verify_case_68_systems = verifier.Systems{ .public_input = system_68_public_input, .vanishing = system_68, .logderivativesum = system_68_logderiv, .grandproduct = system_68_grandproduct, .rowlimit = system_68_rowlimit, .shared_randomness = system_68_shared_randomness, .pcs = verify_case_68_pcs_system };
 
 pub const metadata = [_]VerifyCaseMetadata{
-    .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
+    .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "Fibonacci", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "GeometricProgression", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
     .{ .name = "ConditionalCounter", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
@@ -16449,67 +16243,67 @@ pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "DynamicFibonacci", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "ConstantColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "ForwardShiftConstant", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
-    .{ .name = "BooleanCube", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 7, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 2 },
+    .{ .name = "BooleanCube", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 4, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 2 },
     .{ .name = "LinearCombination", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 9, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "LargeFibonacci", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
-    .{ .name = "MultipleVanishingsSameRatio", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 6, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
-    .{ .name = "MixedRatioVanishings", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 8, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
-    .{ .name = "MultiModule", .module_count = 2, .dynamic_module_count = 0, .round_count = 4, .expression_count = 8, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 2 },
+    .{ .name = "MultipleVanishingsSameRatio", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
+    .{ .name = "MixedRatioVanishings", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
+    .{ .name = "MultiModule", .module_count = 2, .dynamic_module_count = 0, .round_count = 4, .expression_count = 6, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 2 },
     .{ .name = "ManualCancellation", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
     .{ .name = "PrecomputedSelector", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
     .{ .name = "CellLeaf", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "CoinScaled", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
     .{ .name = "ThreeStepRecurrence", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
-    .{ .name = "Quartic", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 9, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 4 },
+    .{ .name = "Quartic", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 4, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 4 },
     .{ .name = "LeftPadDynamic", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
-    .{ .name = "CubicWithBackShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 7, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 2 },
-    .{ .name = "MixedHighRatio", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 16, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 1, .total_quotient_claims = 6 },
-    .{ .name = "MultiModuleHighRatio", .module_count = 2, .dynamic_module_count = 0, .round_count = 4, .expression_count = 14, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 4 },
-    .{ .name = "SizeThirtyTwoCubic", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 7, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 2 },
+    .{ .name = "CubicWithBackShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 2 },
+    .{ .name = "MixedHighRatio", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 6, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 1, .total_quotient_claims = 6 },
+    .{ .name = "MultiModuleHighRatio", .module_count = 2, .dynamic_module_count = 0, .round_count = 4, .expression_count = 8, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 4 },
+    .{ .name = "SizeThirtyTwoCubic", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 4, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 2 },
     .{ .name = "LargeForwardShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 1 },
     .{ .name = "BackAndForwardShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 7, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
-    .{ .name = "DynamicQuadratic", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
-    .{ .name = "QuarticWithBackShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 11, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 4 },
+    .{ .name = "DynamicQuadratic", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 3, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
+    .{ .name = "QuarticWithBackShift", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 6, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 2, .total_quotient_claims = 4 },
     .{ .name = "DynamicFibonacciMultiSize", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 3, .total_quotient_claims = 1 },
     .{ .name = "DynamicFibonacciTwoModules", .module_count = 2, .dynamic_module_count = 2, .round_count = 4, .expression_count = 10, .bucket_count = 2, .vanishing_count = 2, .total_witness_claims = 6, .total_quotient_claims = 2 },
-    .{ .name = "SingleFractionAllOnes", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 19, .bucket_count = 1, .vanishing_count = 3, .total_witness_claims = 3, .total_quotient_claims = 1 },
-    .{ .name = "PartialFilter", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 23, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
-    .{ .name = "AllZeroFilter", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 23, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
-    .{ .name = "FilterMasksZeroDenominator", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 23, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 5, .total_quotient_claims = 3 },
-    .{ .name = "Packing4Fractions", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 78, .bucket_count = 2, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 5 },
-    .{ .name = "MultiModuleBucketing", .module_count = 2, .dynamic_module_count = 0, .round_count = 5, .expression_count = 42, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 4 },
-    .{ .name = "SizeOneModule", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 12, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
-    .{ .name = "ConditionalLookupShape", .module_count = 2, .dynamic_module_count = 0, .round_count = 5, .expression_count = 52, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
-    .{ .name = "ManyFractions", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 137, .bucket_count = 2, .vanishing_count = 9, .total_witness_claims = 13, .total_quotient_claims = 5 },
-    .{ .name = "SizeTwoModule", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 19, .bucket_count = 1, .vanishing_count = 3, .total_witness_claims = 3, .total_quotient_claims = 1 },
-    .{ .name = "MultipleQueries", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 38, .bucket_count = 1, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 1 },
-    .{ .name = "VectorDenominator", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 19, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
-    .{ .name = "AllFiltersOnesPacked", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 71, .bucket_count = 3, .vanishing_count = 3, .total_witness_claims = 6, .total_quotient_claims = 7 },
-    .{ .name = "SingleColumnNoFilters", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
-    .{ .name = "FilterOnIncluded", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 52, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
-    .{ .name = "FilterOnIncluding", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 64, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
-    .{ .name = "DoubleConditional", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 68, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 9, .total_quotient_claims = 6 },
-    .{ .name = "MultiColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 64, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 9, .total_quotient_claims = 6 },
-    .{ .name = "SharedTable", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 71, .bucket_count = 6, .vanishing_count = 9, .total_witness_claims = 10, .total_quotient_claims = 9 },
-    .{ .name = "DistinctTables", .module_count = 4, .dynamic_module_count = 0, .round_count = 6, .expression_count = 96, .bucket_count = 8, .vanishing_count = 12, .total_witness_claims = 14, .total_quotient_claims = 12 },
-    .{ .name = "MultiColumnFilterOnIncluding", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 80, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 10, .total_quotient_claims = 6 },
-    .{ .name = "RepeatedValueInTable", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
-    .{ .name = "ShiftedAColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
-    .{ .name = "ShiftedBColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
-    .{ .name = "MultipleAFragments", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 71, .bucket_count = 6, .vanishing_count = 9, .total_witness_claims = 10, .total_quotient_claims = 9 },
-    .{ .name = "WidthThree", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 80, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 11, .total_quotient_claims = 6 },
-    .{ .name = "SizeOne", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 29, .bucket_count = 4, .vanishing_count = 4, .total_witness_claims = 5, .total_quotient_claims = 6 },
-    .{ .name = "PrecomputedTable", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
-    .{ .name = "RepeatedSValues", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
-    .{ .name = "EmptySelected", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 52, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
-    .{ .name = "DistinctBounds", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 101, .bucket_count = 7, .vanishing_count = 9, .total_witness_claims = 12, .total_quotient_claims = 13 },
+    .{ .name = "SingleFractionAllOnes", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 15, .bucket_count = 1, .vanishing_count = 3, .total_witness_claims = 3, .total_quotient_claims = 1 },
+    .{ .name = "PartialFilter", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 17, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
+    .{ .name = "AllZeroFilter", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 17, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
+    .{ .name = "FilterMasksZeroDenominator", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 17, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 5, .total_quotient_claims = 3 },
+    .{ .name = "Packing4Fractions", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 39, .bucket_count = 2, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 5 },
+    .{ .name = "MultiModuleBucketing", .module_count = 2, .dynamic_module_count = 0, .round_count = 5, .expression_count = 32, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 4 },
+    .{ .name = "SizeOneModule", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 10, .bucket_count = 1, .vanishing_count = 2, .total_witness_claims = 2, .total_quotient_claims = 1 },
+    .{ .name = "ConditionalLookupShape", .module_count = 2, .dynamic_module_count = 0, .round_count = 5, .expression_count = 37, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
+    .{ .name = "ManyFractions", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 61, .bucket_count = 2, .vanishing_count = 9, .total_witness_claims = 13, .total_quotient_claims = 5 },
+    .{ .name = "SizeTwoModule", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 15, .bucket_count = 1, .vanishing_count = 3, .total_witness_claims = 3, .total_quotient_claims = 1 },
+    .{ .name = "MultipleQueries", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 27, .bucket_count = 1, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 1 },
+    .{ .name = "VectorDenominator", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 15, .bucket_count = 2, .vanishing_count = 3, .total_witness_claims = 4, .total_quotient_claims = 3 },
+    .{ .name = "AllFiltersOnesPacked", .module_count = 1, .dynamic_module_count = 0, .round_count = 5, .expression_count = 31, .bucket_count = 3, .vanishing_count = 3, .total_witness_claims = 6, .total_quotient_claims = 7 },
+    .{ .name = "SingleColumnNoFilters", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 35, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
+    .{ .name = "FilterOnIncluded", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 37, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
+    .{ .name = "FilterOnIncluding", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 42, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
+    .{ .name = "DoubleConditional", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 44, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 9, .total_quotient_claims = 6 },
+    .{ .name = "MultiColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 43, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 9, .total_quotient_claims = 6 },
+    .{ .name = "SharedTable", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 52, .bucket_count = 6, .vanishing_count = 9, .total_witness_claims = 10, .total_quotient_claims = 9 },
+    .{ .name = "DistinctTables", .module_count = 4, .dynamic_module_count = 0, .round_count = 6, .expression_count = 70, .bucket_count = 8, .vanishing_count = 12, .total_witness_claims = 14, .total_quotient_claims = 12 },
+    .{ .name = "MultiColumnFilterOnIncluding", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 10, .total_quotient_claims = 6 },
+    .{ .name = "RepeatedValueInTable", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 35, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
+    .{ .name = "ShiftedAColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 35, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
+    .{ .name = "ShiftedBColumn", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 37, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
+    .{ .name = "MultipleAFragments", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 52, .bucket_count = 6, .vanishing_count = 9, .total_witness_claims = 10, .total_quotient_claims = 9 },
+    .{ .name = "WidthThree", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 49, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 11, .total_quotient_claims = 6 },
+    .{ .name = "SizeOne", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 25, .bucket_count = 4, .vanishing_count = 4, .total_witness_claims = 5, .total_quotient_claims = 6 },
+    .{ .name = "PrecomputedTable", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 35, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
+    .{ .name = "RepeatedSValues", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 35, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
+    .{ .name = "EmptySelected", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 37, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
+    .{ .name = "DistinctBounds", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 59, .bucket_count = 7, .vanishing_count = 9, .total_witness_claims = 12, .total_quotient_claims = 13 },
     .{ .name = "OpenedCellPublicInput", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "OpenedCellPublicInputDynamic", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "LagrangeSelectorBoundary", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "DynamicLagrangeSelectorBoundary", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
-    .{ .name = "MultiColumnBench", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 112, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 15, .total_quotient_claims = 6 },
-    .{ .name = "GrandProductPermutation", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 46, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 4 },
-    .{ .name = "SharedRandomnessContribution", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 54, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 4 },
+    .{ .name = "MultiColumnBench", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 61, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 15, .total_quotient_claims = 6 },
+    .{ .name = "GrandProductPermutation", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 32, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 4 },
+    .{ .name = "SharedRandomnessContribution", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 36, .bucket_count = 3, .vanishing_count = 6, .total_witness_claims = 6, .total_quotient_claims = 4 },
 };
 
 pub fn get(comptime index: usize) VerifyCase {

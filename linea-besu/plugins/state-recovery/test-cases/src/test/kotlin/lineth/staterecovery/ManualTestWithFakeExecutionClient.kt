@@ -9,8 +9,8 @@ import linea.log4j.configureLoggers
 import lineth.staterecovery.plugin.createAppClients
 import lineth.staterecovery.test.FakeExecutionLayerClient
 import lineth.staterecovery.test.FakeStateManagerClientReadFromL1
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.async.get
-import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -28,7 +28,7 @@ private val infuraAppKey = System.getenv("INFURA_PROJECT_ID")
   }
 
 open class TestRunner(
-  private val vertx: Vertx = VertxFactory.createVertx(),
+  private val vertx: Vertx = Vertx.vertx(vertxTestOptions),
   private val smartContractAddress: String,
   private val l2RecoveryStartBlockNumber: ULong,
   private val l1RpcUrl: String,
