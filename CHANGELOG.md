@@ -180,3 +180,4 @@
 - *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
 - *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
 - *(deps)* Refresh dependencies and GitHub Actions (#4088)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
