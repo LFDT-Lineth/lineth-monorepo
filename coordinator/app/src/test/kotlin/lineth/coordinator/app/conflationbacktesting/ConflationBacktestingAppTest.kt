@@ -1,7 +1,7 @@
 package lineth.coordinator.app.conflationbacktesting
 
 import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.ProverConfig
+import lineth.coordinator.clients.prover.PreRiscvProverConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.io.path.Path
@@ -11,7 +11,7 @@ class ConflationBacktestingAppTest {
 
   @Test
   fun `path is updated correctly`() {
-    val proversConfig = ProverConfig(
+    val proversConfig = PreRiscvProverConfig(
       execution = FileBasedProverConfig(
         requestsDirectory = Path("/original/path/to/requests/execution"),
         responsesDirectory = Path("/original/path/to/responses/execution"),
@@ -46,9 +46,9 @@ class ConflationBacktestingAppTest {
       .isEqualTo("/new/backtesting/job-123/execution/requests")
     assertThat(updatedProversConfig.execution.responsesDirectory.toString())
       .isEqualTo("/new/backtesting/job-123/execution/responses")
-    assertThat(updatedProversConfig.blobCompression?.requestsDirectory.toString())
+    assertThat(updatedProversConfig.blobCompression.requestsDirectory.toString())
       .isEqualTo("/new/backtesting/job-123/compression/requests")
-    assertThat(updatedProversConfig.blobCompression?.responsesDirectory.toString())
+    assertThat(updatedProversConfig.blobCompression.responsesDirectory.toString())
       .isEqualTo("/new/backtesting/job-123/compression/responses")
     assertThat(updatedProversConfig.proofAggregation.requestsDirectory.toString())
       .isEqualTo("/new/backtesting/job-123/aggregation/requests")

@@ -68,7 +68,7 @@ runs:
   steps:
     - name: Setup upterm session
       if: ${{ inputs.e2e-tests-with-ssh == 'true' }}
-      uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+      uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 # v1
 
     - name: Setup nodejs environment
       uses: ./.github/actions/setup-nodejs
@@ -80,7 +80,7 @@ runs:
 
     - name: Login to Docker Hub
       if: ${{ inputs.dockerhub_username != '' && inputs.dockerhub_token != '' }}
-      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         username: ${{ inputs.dockerhub_username }}
         password: ${{ inputs.dockerhub_token }}
@@ -159,7 +159,7 @@ runs:
       # external-to-monorepo profile, so this pull would fetch an unpublished CI tag or overwrite
       # the image just loaded from the artifact. Missing external images are pulled on spin-up.
       if: ${{ inputs.linea_besu_package_tag == '' && steps.load_images.outputs.besu_package_loaded != 'true' }}
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
       with:
         max_attempts: 10
         retry_on: error

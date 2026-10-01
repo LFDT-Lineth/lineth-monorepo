@@ -5,19 +5,42 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 data class ProversConfig(
-  val proverA: ProverConfig,
+  val currentProver: ProverConfig,
+  val nextProver: ProverConfig? = null,
   val switchBlockNumberInclusive: ULong?,
   val switchBlockTimestamp: Instant?,
-  val proverB: ProverConfig?,
   val enableRequestFilesCleanup: Boolean = false,
 )
 
 data class ProverConfig(
+  val preRiscvConfig: PreRiscvProverConfig? = null,
+  val riscvConfig: RiscvProverConfig? = null,
+) {
+  init {
+    require((preRiscvConfig != null) != (riscvConfig != null)) {
+      "Either preRiscvConfig or riscvConfig must be configured but not both"
+    }
+  }
+}
+
+data class PreRiscvProverConfig(
   val execution: FileBasedProverConfig,
-  val invalidity: FileBasedProverConfig? = null,
-  val blobCompression: FileBasedProverConfig? = null,
-  val rollup: FileBasedProverConfig? = null,
+  val blobCompression: FileBasedProverConfig,
   val proofAggregation: FileBasedProverConfig,
+  val invalidity: FileBasedProverConfig? = null,
+)
+
+data class RiscvProverConfig(
+  val l2Execution: FileBasedRiscvProverConfig,
+  val rollup: FileBasedRiscvProverConfig,
+  val rollupAggregation: FileBasedRiscvProverConfig,
+)
+
+data class FileBasedRiscvProverConfig(
+  val fileBased: FileBasedProverConfig,
+  val programId: String,
+  val provingSystemVersion: String,
+  val forkName: String,
 )
 
 data class FileBasedProverConfig(
@@ -27,6 +50,4 @@ data class FileBasedProverConfig(
   val inprogressRequestWritingSuffix: String,
   val pollingInterval: Duration,
   val pollingTimeout: Duration,
-  val programVk: String? = null,
-  val forkName: String? = null,
 )

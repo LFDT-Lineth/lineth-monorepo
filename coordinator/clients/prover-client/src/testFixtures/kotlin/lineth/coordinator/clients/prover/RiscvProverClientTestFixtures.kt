@@ -1,11 +1,5 @@
 package lineth.coordinator.clients.prover
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.github.tomakehurst.wiremock.WireMockServer
-import io.vertx.core.Vertx
-import io.vertx.core.http.HttpVersion
-import io.vertx.core.http.PoolOptions
-import io.vertx.ext.web.client.WebClientOptions
 import linea.clients.ConflationWitness
 import linea.clients.ExecutionInfo
 import linea.clients.ForcedTransaction
@@ -17,7 +11,6 @@ import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
-import net.consensys.linea.httprest.client.VertxHttpRestClient
 import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.milliseconds
@@ -25,16 +18,17 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
- * Shared test fixtures (constants, domain/DTO builders, fake transports and REST/WireMock helpers) reused across the
- * RISC-V prover-client test suites (`FileBased*ProverClientTest` / `Restful*ProverClientTest`).
+ * Shared test fixtures (constants, domain/DTO builders, fake transports) reused across the RISC-V prover-client
+ * test suites (`FileBased*ProverClientTest`).
  */
 object RiscvProverClientTestFixtures {
   const val PROVER_VERSION = "4.0.0-riscv"
   const val CHAIN_ID = 59144L
   const val FORK_NAME = "Amsterdam"
-  const val L2_EXECUTION_PROGRAM_VK = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
-  const val ROLLUP_PROGRAM_VK = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
-  const val ROLLUP_AGGREGATION_PROGRAM_VK = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
+  const val PROVING_SYSTEM_VERSION = "0x6c775558affd1208d76f9adff8d011d1850947966f1df5211e96a6d369771581"
+  const val L2_EXECUTION_PROGRAM_ID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
+  const val ROLLUP_PROGRAM_ID = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
+  const val ROLLUP_AGGREGATION_PROGRAM_ID = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
   const val L2_MESSAGE_SERVICE_ADDRESS = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
   const val COINBASE = "0x0000000000000000000000000000000000000000"
 
@@ -50,35 +44,6 @@ object RiscvProverClientTestFixtures {
     pollingInterval = 100.milliseconds,
     pollingTimeout = 2.seconds,
   )
-
-  // --- RESTful transport / WireMock helpers ---
-
-  fun restClient(vertx: Vertx, wiremock: WireMockServer): VertxHttpRestClient {
-    val webClientOptions = WebClientOptions()
-      .setProtocolVersion(HttpVersion.HTTP_1_1)
-      .setDefaultHost("localhost")
-      .setDefaultPort(wiremock.port())
-    return VertxHttpRestClient(webClientOptions, PoolOptions(), vertx)
-  }
-
-  /** Builds a `GET /v1/jobs/...` response body wrapping [proofResponse] under `proof_response`. */
-  fun proverJobResponseBody(
-    proofType: String,
-    startBlock: Long,
-    endBlock: Long,
-    proofResponse: Any,
-    status: String = "proved",
-  ): String {
-    val job = jsonMapper.createObjectNode().apply {
-      put("proof_type", proofType)
-      put("start_block", startBlock)
-      put("end_block", endBlock)
-      put("status", status)
-      put("attempt", 1)
-      set<JsonNode>("proof_response", jsonMapper.valueToTree(proofResponse))
-    }
-    return jsonMapper.writeValueAsString(job)
-  }
 
   // --- domain request builders ---
 
@@ -212,7 +177,7 @@ object RiscvProverClientTestFixtures {
     l2L1Messages = listOf("0xaa"),
     txFroms = listOf("0xbb"),
     filteredAddresses = emptyList(),
-    programVk = L2_EXECUTION_PROGRAM_VK,
+    programVk = L2_EXECUTION_PROGRAM_ID,
   )
 
   fun rollupProofPublicInputsDto(
@@ -250,7 +215,7 @@ object RiscvProverClientTestFixtures {
     publicInputs = rollupProofPublicInputsDto(endBlockNumber),
     l2L1Roots = listOf("0xaa"),
     filteredAddresses = emptyList(),
-    programVk = ROLLUP_PROGRAM_VK,
+    programVk = ROLLUP_PROGRAM_ID,
   )
 
   fun rollupAggregationProofResponseDto(
