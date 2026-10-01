@@ -129,6 +129,11 @@ class L2ExecutionProverClient(
   log = log,
 ),
   L2ExecutionProverClientV1 {
+  init {
+    require(l2MessageServiceAddress.isNotEmpty()) {
+      "l2MessageServiceAddress must be configured for L2ExecutionProverClient"
+    }
+  }
   companion object {
     val LOG: Logger = LogManager.getLogger(L2ExecutionProverClient::class.java)
   }

@@ -14,6 +14,7 @@ import lineth.coordinator.clients.prover.RiscvProverClientTestFixtures.l2Executi
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -31,11 +32,12 @@ import kotlin.time.Instant
 class FileBasedL2ExecutionProverClientTest {
   private lateinit var config: FileBasedProverConfig
   private lateinit var client: L2ExecutionProverClient
+  private lateinit var transport: L2ExecutionProofTransport
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
     config = fileBasedProverConfig(tempDir)
-    val transport = FileBasedProverProofTransport<
+    transport = FileBasedProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,
       BlockIntervalProofIndex,
@@ -54,6 +56,21 @@ class FileBasedL2ExecutionProverClientTest {
       l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
       forkName = FORK_NAME,
     )
+  }
+
+  @Test
+  fun `l2ExecutionProverClient should fail when l2MessageServiceAddress is empty`() {
+    assertThatThrownBy {
+      L2ExecutionProverClient(
+        transport = transport,
+        programId = L2_EXECUTION_PROGRAM_ID,
+        provingSystemVersion = PROVING_SYSTEM_VERSION,
+        l2MessageServiceAddress = "",
+        forkName = FORK_NAME,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessage("l2MessageServiceAddress must be configured for L2ExecutionProverClient")
   }
 
   @Test

@@ -46,8 +46,10 @@ func TestWritePcsSystemZig(t *testing.T) {
 		`const quotient_map = [_]pcs.ClaimRef{`,
 		`const batch_roots = [_]pcs.BatchRoot{`,
 		`pub const pcs_system_7 = pcs.System{`,
-		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, } },`,
-		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 }, .claim_cells = &[_]pcs.CellRef{ .{ .round = 2, .index = 0 }, } },`,
+		`const all_shifts = [_]i32{ 0, 7, 1, }`,
+		`const all_claim_cells = [_]pcs.CellRef{ .{ .round = 1, .index = 0 }, .{ .round = 1, .index = 1 }, .{ .round = 2, .index = 0 }, }`,
+		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts_start = 0, .shifts_len = 2, .claim_start = 0 },`,
+		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts_start = 2, .shifts_len = 1, .claim_start = 2 },`,
 		`.zeta_coin_index = 5,`,
 	} {
 		if !strings.Contains(out, want) {
@@ -216,5 +218,65 @@ func TestBuildPcsSystemRecordsMinimumSafeSizeAboveOne(t *testing.T) {
 	}
 	if pcs.Columns[0].DynamicMinSizeLog2 != 1 {
 		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 1", pcs.Columns[0].DynamicMinSizeLog2)
+	}
+}
+
+// A generated value that does not fit its verifier field must fail loudly at
+// generation time. The R5 build is ReleaseSmall, where `@intCast` safety checks
+// are compiled out, so a value that slipped through here would be silent UB in
+// the verifier rather than a rejected build.
+func TestPcsZigRejectsOutOfRangeIndices(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		sys  PcsSystem
+		want string
+	}{
+		{
+			name: "batch_idx above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{BatchIdx: 1 << 8}}},
+			want: "batch_idx is 256",
+		},
+		{
+			name: "shifts_len above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{Shifts: make([]int, 1<<8)}}},
+			want: "shifts_len is 256",
+		},
+		{
+			name: "claim cell round above u8",
+			sys:  PcsSystem{Columns: []PcsColumnDesc{{ClaimCells: []PcsCellRef{{Round: 1 << 8}}}}},
+			want: "round is 256",
+		},
+		{
+			name: "witness col_decl_idx above u16",
+			sys:  PcsSystem{WitnessMap: []PcsClaimRef{{ColDeclIdx: 1 << 16}}},
+			want: "col_decl_idx is 65536",
+		},
+		{
+			name: "quotient col_decl_idx above u16",
+			sys:  PcsSystem{QuotientMap: []PcsClaimRef{{ColDeclIdx: 1 << 16}}},
+			want: "col_decl_idx is 65536",
+		},
+		{
+			name: "batch root round above u8",
+			sys:  PcsSystem{BatchRoots: []PcsBatchRoot{{Precomputed: false, RoundIndex: 1 << 8}}},
+			want: "round is 256",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if r == nil {
+					t.Fatalf("newPcsTemplateData did not panic on an out-of-range %s", tc.name)
+				}
+				msg, ok := r.(string)
+				if !ok {
+					t.Fatalf("panic value = %v (%T), want string", r, r)
+				}
+				if !strings.Contains(msg, tc.want) {
+					t.Fatalf("panic = %q, want substring %q", msg, tc.want)
+				}
+			}()
+			_ = newPcsTemplateData(0, tc.sys, PcsZigOptions{})
+		})
 	}
 }

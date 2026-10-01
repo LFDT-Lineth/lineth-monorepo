@@ -38,6 +38,7 @@
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
 - *(coordinator)* Improve ProverClientFactory (#4000)
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
@@ -177,3 +178,5 @@
 - *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
 - *(misc)* Maru break down integration tests into smaller chunks (#4049)
 - *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
+- *(deps)* Refresh dependencies and GitHub Actions (#4088)
