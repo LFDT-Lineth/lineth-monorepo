@@ -24,7 +24,6 @@ def _base_public_input(**overrides) -> RollupPublicInput:
     base = RollupPublicInput(
         end_block_number=U64(1000510),
         end_block_timestamp=U64(1763000200),
-        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -34,13 +33,14 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         parent_ftx_number=U64(10),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
-        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=0,
         end_offset=0,
+        l2_l1_roots=[],
+        filtered_addresses=[],
         program_vks=[],
     )
     return replace(base, **overrides)

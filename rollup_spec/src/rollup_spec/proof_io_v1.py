@@ -17,12 +17,12 @@ It lives strictly on the prover *host* side. The guest dataclasses in
 never learn about JSON; the dependency arrow points one way only
 (codec -> guest types).
 
-Guest output vs prover output: a guest emits its public-input tuple plus the
-revealed hash preimages (`l2L1Messages`, `txFroms`, `l2L1Roots`,
-`filteredAddresses`). The `proof` bytes are NOT produced by the guest — the
-zkVM/prover layer attaches them — so they are placeholders (`b""`) in this
-reference. A response therefore equals the guest output plus `proof`; the next
-proving step (or L1) consumes exactly that.
+Guest output vs prover output: the l2-execution guest emits public inputs and
+revealed hash preimages (`l2L1Messages`, `txFroms`, and `filteredAddresses`).
+Rollup and aggregation guests emit root and filtered-address lists in their
+public inputs. The zkVM/prover layer attaches `proof`, which is a placeholder
+(`b""`) in this reference; it hashes each list for the public-input commitment.
+The Coordinator receives the lists in the response for L1 finalization.
 
 Design notes:
   - The JSON field names are NOT a clean camel->snake mapping of the dataclass
@@ -67,6 +67,7 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
+    BLOB_BYTES_LENGTH,
     ChunkWitness,
     ConflationWitness,
     RollupProof,
@@ -408,38 +409,39 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     block_rlps = _require_list(obj, "blockRlps", ctx)
     if not block_rlps:
         raise ProofIoError(f"'{ctx}blockRlps' must be a non-empty array")
-    return ConflationWitness(
-        block_rlps=[
-            _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
-        ],
-    )
+    return ConflationWitness(block_rlps=[
+        _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
+    ])
 
 
 def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
     """
-    Decode one touched-chunk entry: `{chunkHash, isCalldata, calldataLength}`.
+    Decode one touched-chunk entry with its physical blob bytes for blob chunks.
 
     `chunkHash` is the anchored binding hash (a KZG versioned hash for a blob
     chunk, `keccak256(_compressedData)` for a calldata chunk — §3.1).
-    `isCalldata` selects the in-guest check. `calldataLength` is zero for a
-    blob and the positive exact byte length for calldata.
+    `isCalldata` selects the in-guest check. `calldataBytes` contains the exact
+    submitted bytes for calldata and is empty for a blob.
     """
     chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
     is_calldata = _require(obj, "isCalldata", ctx)
     if not isinstance(is_calldata, bool):
         raise ProofIoError(f"'{ctx}isCalldata' must be a boolean")
-    try:
-        calldata_length = int(_u64(_require(obj, "calldataLength", ctx), f"{ctx}calldataLength"))
-    except OverflowError as exc:
-        raise ProofIoError(f"'{ctx}calldataLength' exceeds uint64") from exc
-    if is_calldata and calldata_length == 0:
-        raise ProofIoError(f"'{ctx}calldataLength' must be positive for calldata")
-    if not is_calldata and calldata_length != 0:
-        raise ProofIoError(f"'{ctx}calldataLength' must be 0 for a blob")
+    blob_bytes = _bytes_from_hex(_require(obj, "blobBytes", ctx), f"{ctx}blobBytes")
+    calldata_bytes = _bytes_from_hex(_require(obj, "calldataBytes", ctx), f"{ctx}calldataBytes")
+    if is_calldata and blob_bytes:
+        raise ProofIoError(f"'{ctx}blobBytes' must be empty for calldata")
+    if not is_calldata and len(blob_bytes) != BLOB_BYTES_LENGTH:
+        raise ProofIoError(f"'{ctx}blobBytes' must be exactly {BLOB_BYTES_LENGTH} bytes for a blob")
+    if is_calldata and not calldata_bytes:
+        raise ProofIoError(f"'{ctx}calldataBytes' must be nonempty for calldata")
+    if not is_calldata and calldata_bytes:
+        raise ProofIoError(f"'{ctx}calldataBytes' must be empty for a blob")
     return ChunkWitness(
         chunk_hash=chunk_hash,
         is_calldata=is_calldata,
-        calldata_length=calldata_length,
+        blob_bytes=blob_bytes,
+        calldata_bytes=calldata_bytes,
     )
 
 
@@ -450,10 +452,8 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
 
     The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by `conflations` (paired
-    1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
-    touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
-    are top-level (not per-chunk): relevant only to the first/last touched
-    chunk respectively, and empty (`0x`) when absent. `parentDataRollingHash`/`startOffset`
+    1:1 with `l2ExecutionProofs`). `chunks` carry the physical DA bytes and
+    anchored binding hashes. `parentDataRollingHash`/`startOffset`
     are guest inputs; the outbound `endDataRollingHash`/`endOffset` are recomputed by the
     guest and returned in the response PI, so they are not echoed in the
     request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
@@ -477,11 +477,6 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     boundary_prev_data_rolling_hash_hex = proof_request.get("boundaryPrevDataRollingHash")
     if start_offset > 0 and boundary_prev_data_rolling_hash_hex is None:
         raise ProofIoError("'proofRequest.boundaryPrevDataRollingHash' is required when startOffset > 0")
-    opaque_prefix_bytes = _bytes_from_hex(
-        proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
-    )
-    if len(opaque_prefix_bytes) != start_offset:
-        raise ProofIoError("'proofRequest.opaquePrefixBytes' length must equal startOffset")
     return RollupProofPrivateInput(
         parent_data_rolling_hash=Hash32(
             _bytes_from_hex(
@@ -502,10 +497,6 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
-        opaque_prefix_bytes=opaque_prefix_bytes,
-        opaque_suffix_bytes=_bytes_from_hex(
-            proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
-        ),
         boundary_prev_data_rolling_hash=(
             Hash32(_bytes_from_hex(boundary_prev_data_rolling_hash_hex, "proofRequest.boundaryPrevDataRollingHash"))
             if boundary_prev_data_rolling_hash_hex is not None
@@ -522,12 +513,11 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 
 
 def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
-    """The 20-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
+    """The rollup PI tuple (§2.4) as JSON — shared by the rollup and
     rollup-aggregation responses, which expose the identical PI structure."""
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
-        "l2L1BridgeTransactionTree": _hx(pi.l2_l1_bridge_transaction_tree),
         "parentL1L2BridgeRollingHash": _hx(pi.parent_l1_l2_bridge_rolling_hash),
         "parentL1L2BridgeRollingHashMessageNumber": int(
             pi.parent_l1_l2_bridge_rolling_hash_message_number
@@ -541,13 +531,14 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "parentFtxNumber": int(pi.parent_ftx_number),
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
-        "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
         "parentDataRollingHash": _hx(pi.parent_data_rolling_hash),
         "endDataRollingHash": _hx(pi.end_data_rolling_hash),
         "parentBlockHash": _hx(pi.parent_block_hash),
         "endBlockHash": _hx(pi.end_block_hash),
         "startOffset": int(pi.start_offset),
         "endOffset": int(pi.end_offset),
+        "l2L1Roots": [_hx(r) for r in pi.l2_l1_roots],
+        "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
         # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
         # program VKs verified beneath this proof, checked against L1's single
         # combined approved-VK set (exec vs rollup not distinguished).
@@ -570,8 +561,6 @@ def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_v
         "proof": _hx(proof.proof),
         "startBlockNumber": int(proof.start_block_number),
         "publicInputs": _encode_rollup_public_inputs(proof.public_inputs),
-        "l2L1Roots": [_hx(r) for r in proof.l2_l1_roots],
-        "filteredAddresses": [_hx(a) for a in proof.filtered_addresses],
     }
 
 
@@ -615,7 +604,6 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
-        l2_l1_bridge_transaction_tree=h("l2L1BridgeTransactionTree"),
         parent_l1_l2_bridge_rolling_hash=h("parentL1L2BridgeRollingHash"),
         parent_l1_l2_bridge_rolling_hash_message_number=n("parentL1L2BridgeRollingHashMessageNumber"),
         end_l1_l2_bridge_rolling_hash=h("endL1L2BridgeRollingHash"),
@@ -625,13 +613,20 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         parent_ftx_number=n("parentFtxNumber"),
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
-        filtered_addresses_hash=h("filteredAddressesHash"),
         parent_data_rolling_hash=h("parentDataRollingHash"),
         end_data_rolling_hash=h("endDataRollingHash"),
         parent_block_hash=h("parentBlockHash"),
         end_block_hash=h("endBlockHash"),
         start_offset=int(n("startOffset")),
         end_offset=int(n("endOffset")),
+        l2_l1_roots=[
+            Hash32(_bytes_from_hex(r, f"{ctx}l2L1Roots[{i}]"))
+            for i, r in enumerate(_require_list(obj, "l2L1Roots", ctx))
+        ],
+        filtered_addresses=[
+            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
+            for i, a in enumerate(_require_list(obj, "filteredAddresses", ctx))
+        ],
         program_vks=[
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
             for i, v in enumerate(program_vks)
@@ -640,21 +635,12 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
 
 
 def _decode_rollup_proof(obj: dict, ctx: str) -> VerifiableRollupProof:
-    l2_l1_roots = _require_list(obj, "l2L1Roots", ctx)
-    filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
     proof = RollupProof(
         public_inputs=_decode_rollup_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
         start_block_number=_u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber"),
         proof=_bytes_from_hex(_require(obj, "proof", ctx), f"{ctx}proof"),
-        l2_l1_roots=[
-            Hash32(_bytes_from_hex(r, f"{ctx}l2L1Roots[{i}]")) for i, r in enumerate(l2_l1_roots)
-        ],
-        filtered_addresses=[
-            Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
-            for i, a in enumerate(filtered_addresses)
-        ],
     )
     return VerifiableRollupProof(
         proof=proof,
@@ -708,10 +694,8 @@ def encode_aggregation_response(
     `getZkRollupAggregationProofV1.response.json` object the coordinator's
     Jackson mapper consumes directly.
 
-    The response equals the guest output plus `proof`, and carries the revealed
-    preimages L1 needs as calldata (`l2L1Roots` for `l2L1BridgeTransactionTree`,
-    `filteredAddresses` for `filteredAddressesHash`, plus `l2MessagingBlocksOffsets`),
-    so it is sufficient for L1 finalization. `endBlockNumber` lives in
+    The response equals the guest output plus `proof` and the
+    `l2MessagingBlocksOffsets` calldata list. `endBlockNumber` lives in
     `publicInputs`; only `startBlockNumber` (not in the PI tuple) is supplied as
     host-side range metadata.
     """
@@ -720,8 +704,6 @@ def encode_aggregation_response(
         "proof": _hx(submission.proof),
         "startBlockNumber": int(start_block_number),
         "publicInputs": _encode_rollup_public_inputs(submission.public_inputs),
-        "l2L1Roots": [_hx(r) for r in submission.l2_l1_roots],
-        "filteredAddresses": [_hx(a) for a in submission.filtered_addresses],
         "l2MessagingBlocksOffsets": list(submission.l2_messaging_blocks_offsets),
     }
 
@@ -750,7 +732,7 @@ def run_aggregation_from_request_json(text: str | bytes, prover_version: str) ->
     submission = run_rollup_aggregation_guest(aggregation_input)
     # startBlockNumber is not part of the PI tuple; take it from the first
     # rollup proof's range (the aggregation covers a contiguous range).
-    start_block_number = int(aggregation_input.rollup_proofs[0].start_block_number)
+    start_block_number = int(aggregation_input.rollup_proofs[0].proof.start_block_number)
     return encode_aggregation_response(
         submission, prover_version, start_block_number=start_block_number
     )
