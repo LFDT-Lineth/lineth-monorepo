@@ -3,7 +3,6 @@ package lineth.coordinator.clients.prover
 import io.vertx.core.Vertx
 import linea.clients.BlobCompressionProverClientV2
 import linea.clients.ExecutionProverClientV2
-import linea.clients.InvalidityProverClientV1
 import linea.clients.L2ExecutionProverClientV1
 import linea.clients.ProofAggregationProverClientV2
 import linea.clients.ProverClientV2
@@ -41,8 +40,6 @@ interface ProverClientFactory {
   fun preRiscvProofAggregationProverClient(
     log: Logger = PreRiscvProofAggregationClient.LOG,
   ): ProofAggregationProverClientV2
-
-  fun preRiscvInvalidityProverClient(): InvalidityProverClientV1
 
   /**
    * RISC-V l2-execution prover client.
@@ -277,29 +274,10 @@ class DefaultProverClientFactory(
     ) { preRiscvConfig ->
       PreRiscvProofAggregationClient(
         config = preRiscvConfig.proofAggregation,
-        invalidityProverConfig = preRiscvConfig.invalidity,
         vertx = vertx,
         enableRequestFilesCleanup = config.enableRequestFilesCleanup,
         log = log,
       ).also { support.aggregationWaitingResponses.addReporter(it) }
-    }
-  }
-
-  override fun preRiscvInvalidityProverClient(): InvalidityProverClientV1 {
-    val config = requirePreRiscvConfig()
-    if (config.currentProver.preRiscvConfig!!.invalidity == null) {
-      throw IllegalStateException("Invalidity prover config is not configured")
-    }
-
-    return buildClient(
-      config.currentProver.preRiscvConfig!!.invalidity,
-      config.nextProver?.preRiscvConfig?.invalidity,
-    ) { invalidityConfig ->
-      PreRiscvInvalidityProverClient(
-        config = invalidityConfig,
-        vertx = vertx,
-        enableRequestFilesCleanup = config.enableRequestFilesCleanup,
-      ).also { support.invalidityWaitingResponses.addReporter(it) }
     }
   }
 

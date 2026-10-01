@@ -19,8 +19,6 @@ import lineth.coordinator.clients.ForcedTransactionsJsonRpcClient
 import lineth.coordinator.clients.prover.ProverClientFactoryBuilder
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
-import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
-import lineth.ftx.conflation.InvalidityProofAssembler
 import lineth.metrics.LineaMetricsCategory
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
@@ -148,26 +146,7 @@ class ConflationAppOrchestrator(
         )
         DisabledService("forced-transactions-invalidity-proof")
       } else {
-        check(configs.proversConfig.currentProver.preRiscvConfig?.invalidity != null) {
-          "prover.invalidity config is required for forced transactions feature to work"
-        }
-        val l1EthLogsSearcherForFtx = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1EthClient)
-        ForcedTransactionsInvalidityProofService(
-          ftxDao = forcedTransactionsDao,
-          invalidityProofAssembler = InvalidityProofAssembler(
-            invalidityProofClient = proverClientFactory.preRiscvInvalidityProverClient(),
-            stateManagerClient = zkStateClient,
-            accountProofClient = zkStateClient,
-            ethApiLogsSearcher = l1EthLogsSearcherForFtx,
-            ftxDao = forcedTransactionsDao,
-            tracesClient = tracesClients.tracesConflationClient,
-            contractAddress = configs.protocol.l1.contractAddress,
-            l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
-          ),
-          vertx = vertx,
-          pollingInterval = ftxConfig.invalidityProofCheckInterval,
-          riscvCutoverTimestamp = riscvCutoverTimestamp,
-        )
+        throw IllegalStateException("FTX invalidity proof not supported before RISC-V")
       }
       ForcedTransactionsApp.create(
         config = ftxAppConfig,
