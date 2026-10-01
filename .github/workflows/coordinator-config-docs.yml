@@ -31,9 +31,9 @@ on:
       - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
       - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
       - "buildSrc/build.gradle"
-      - "coordinator/app/build.gradle"
-      - "coordinator/app/src/configDocs/**"
-      - "coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/**"
+      - "coordinator/config/build.gradle"
+      - "coordinator/config/src/configDocs/**"
+      - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
       - "jvm-libs/linea/config-docs/**"
   push:
     branches:
@@ -45,9 +45,9 @@ on:
       - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
       - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
       - "buildSrc/build.gradle"
-      - "coordinator/app/build.gradle"
-      - "coordinator/app/src/configDocs/**"
-      - "coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/**"
+      - "coordinator/config/build.gradle"
+      - "coordinator/config/src/configDocs/**"
+      - "coordinator/config/src/main/kotlin/lineth/coordinator/config/v2/toml/**"
       - "jvm-libs/linea/config-docs/**"
     # Automatic publishing fires only when a Coordinator release tag is cut, so docs on
     # doc.linea always describe a released version (not in-flight main changes).
@@ -94,15 +94,15 @@ jobs:
       - name: Validate Coordinator config docs
         uses: ./.github/actions/validate-config-docs
         with:
-          gradle-check-task: ":coordinator:app:checkConfigDocs"
-          gradle-generate-task: ":coordinator:app:generateConfigDocs"
-          mdx-partial-path: "coordinator/app/build/config-docs-mdx/_generated/coordinator/reference.mdx"
+          gradle-check-task: ":coordinator:config:checkConfigDocs"
+          gradle-generate-task: ":coordinator:config:generateConfigDocs"
+          mdx-partial-path: "coordinator/config/build/config-docs-mdx/_generated/coordinator/reference.mdx"
           committed-snapshot-paths: >-
             docs/tech/components/coordinator-config-reference.md
             docs/tech/components/coordinator-config-schema.json
           component-name: "coordinator"
           artifact-name: "coordinator-config-docs-${{ github.sha }}"
-          artifact-upload-path: "coordinator/app/build/config-docs-mdx/"
+          artifact-upload-path: "coordinator/config/build/config-docs-mdx/"
           provenance-release-tag-prefix: "releases/coordinator/"
 
   publish-doc-linea:

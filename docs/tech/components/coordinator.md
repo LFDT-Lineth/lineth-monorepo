@@ -67,9 +67,10 @@ coordinator/
 │           ├── CoordinatorAppMain.kt       # Entry point
 │           ├── CoordinatorAppCli.kt        # CLI interface
 │           ├── L1DependentApp.kt           # L1 submission services
-│           ├── conflation/
-│           │   └── ConflationApp.kt        # Proof pipeline
-│           └── config/                     # Configuration parsing
+│           └── conflation/
+│               └── ConflationApp.kt        # Proof pipeline
+│
+├── config/                 # Configuration parsing (TOML -> typed config)
 │
 ├── core/                   # Business logic
 │   └── src/main/kotlin/

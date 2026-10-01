@@ -125,7 +125,7 @@ class ConflationBacktestingApp(
         ProverConfig(
           preRiscvConfig = getUpdatedProverConfig(
             proverConfig = proverB,
-            backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory,
+            backtestingDirectory = mainCoordinatorConfig.conflation.backtestingDirectory!!,
             conflationBacktestingJobId = conflationBacktestingAppConfig.jobId(),
           ),
         )
