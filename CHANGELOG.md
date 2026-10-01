@@ -38,6 +38,7 @@
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
 - *(coordinator)* Improve ProverClientFactory (#4000)
 - *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
