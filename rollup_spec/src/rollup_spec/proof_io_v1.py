@@ -67,6 +67,7 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
+    BLOB_BYTES_LENGTH,
     ChunkWitness,
     ConflationWitness,
     RollupProof,
@@ -408,38 +409,39 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     block_rlps = _require_list(obj, "blockRlps", ctx)
     if not block_rlps:
         raise ProofIoError(f"'{ctx}blockRlps' must be a non-empty array")
-    return ConflationWitness(
-        block_rlps=[
-            _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
-        ],
-    )
+    return ConflationWitness(block_rlps=[
+        _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
+    ])
 
 
 def _decode_chunk_witness(obj: dict, ctx: str) -> ChunkWitness:
     """
-    Decode one touched-chunk entry: `{chunkHash, isCalldata, calldataLength}`.
+    Decode one touched-chunk entry with its physical blob bytes for blob chunks.
 
     `chunkHash` is the anchored binding hash (a KZG versioned hash for a blob
     chunk, `keccak256(_compressedData)` for a calldata chunk — §3.1).
-    `isCalldata` selects the in-guest check. `calldataLength` is zero for a
-    blob and the positive exact byte length for calldata.
+    `isCalldata` selects the in-guest check. `calldataBytes` contains the exact
+    submitted bytes for calldata and is empty for a blob.
     """
     chunk_hash = Hash32(_bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash"))
     is_calldata = _require(obj, "isCalldata", ctx)
     if not isinstance(is_calldata, bool):
         raise ProofIoError(f"'{ctx}isCalldata' must be a boolean")
-    try:
-        calldata_length = int(_u64(_require(obj, "calldataLength", ctx), f"{ctx}calldataLength"))
-    except OverflowError as exc:
-        raise ProofIoError(f"'{ctx}calldataLength' exceeds uint64") from exc
-    if is_calldata and calldata_length == 0:
-        raise ProofIoError(f"'{ctx}calldataLength' must be positive for calldata")
-    if not is_calldata and calldata_length != 0:
-        raise ProofIoError(f"'{ctx}calldataLength' must be 0 for a blob")
+    blob_bytes = _bytes_from_hex(_require(obj, "blobBytes", ctx), f"{ctx}blobBytes")
+    calldata_bytes = _bytes_from_hex(_require(obj, "calldataBytes", ctx), f"{ctx}calldataBytes")
+    if is_calldata and blob_bytes:
+        raise ProofIoError(f"'{ctx}blobBytes' must be empty for calldata")
+    if not is_calldata and len(blob_bytes) != BLOB_BYTES_LENGTH:
+        raise ProofIoError(f"'{ctx}blobBytes' must be exactly {BLOB_BYTES_LENGTH} bytes for a blob")
+    if is_calldata and not calldata_bytes:
+        raise ProofIoError(f"'{ctx}calldataBytes' must be nonempty for calldata")
+    if not is_calldata and calldata_bytes:
+        raise ProofIoError(f"'{ctx}calldataBytes' must be empty for a blob")
     return ChunkWitness(
         chunk_hash=chunk_hash,
         is_calldata=is_calldata,
-        calldata_length=calldata_length,
+        blob_bytes=blob_bytes,
+        calldata_bytes=calldata_bytes,
     )
 
 
@@ -450,10 +452,8 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
 
     The request is a `{programVk, proofRequest}` envelope: `programVk`
     is routing metadata and the block range is implied by `conflations` (paired
-    1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
-    touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
-    are top-level (not per-chunk): relevant only to the first/last touched
-    chunk respectively, and empty (`0x`) when absent. `parentDataRollingHash`/`startOffset`
+    1:1 with `l2ExecutionProofs`). `chunks` carry the physical DA bytes and
+    anchored binding hashes. `parentDataRollingHash`/`startOffset`
     are guest inputs; the outbound `endDataRollingHash`/`endOffset` are recomputed by the
     guest and returned in the response PI, so they are not echoed in the
     request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
@@ -477,11 +477,6 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     boundary_prev_data_rolling_hash_hex = proof_request.get("boundaryPrevDataRollingHash")
     if start_offset > 0 and boundary_prev_data_rolling_hash_hex is None:
         raise ProofIoError("'proofRequest.boundaryPrevDataRollingHash' is required when startOffset > 0")
-    opaque_prefix_bytes = _bytes_from_hex(
-        proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
-    )
-    if len(opaque_prefix_bytes) != start_offset:
-        raise ProofIoError("'proofRequest.opaquePrefixBytes' length must equal startOffset")
     return RollupProofPrivateInput(
         parent_data_rolling_hash=Hash32(
             _bytes_from_hex(
@@ -502,10 +497,6 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
-        opaque_prefix_bytes=opaque_prefix_bytes,
-        opaque_suffix_bytes=_bytes_from_hex(
-            proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
-        ),
         boundary_prev_data_rolling_hash=(
             Hash32(_bytes_from_hex(boundary_prev_data_rolling_hash_hex, "proofRequest.boundaryPrevDataRollingHash"))
             if boundary_prev_data_rolling_hash_hex is not None

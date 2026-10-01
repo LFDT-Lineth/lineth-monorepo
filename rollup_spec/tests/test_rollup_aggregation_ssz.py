@@ -155,9 +155,7 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
 def test_decode_rejects_malformed_truncation(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
     if schema_id == 0x1002:
-        # The final input field is a variable-length proof, so removing its
-        # final byte produces another valid proof payload. Truncate the
-        # container header instead to exercise malformed framing.
+        # The final proof is variable-length, so truncate the frame header.
         encoded = encoded[:3]
     else:
         encoded = encoded[:-1]
@@ -178,8 +176,10 @@ def test_decode_rejects_trailing_garbage_in_output() -> None:
         decode_aggregation_output_ssz(encoded + b"\x00")
 
 
-def test_aggregation_input_proof_bytes_can_extend() -> None:
+def test_aggregation_input_accepts_variable_length_proof_bytes() -> None:
     encoded = _aggregation_input_bytes()
     original = decode_aggregation_input_ssz(encoded)
+    shortened = decode_aggregation_input_ssz(encoded[:-1])
     extended = decode_aggregation_input_ssz(encoded + b"\x00")
+    assert shortened.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof[:-1]
     assert extended.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof + b"\x00"

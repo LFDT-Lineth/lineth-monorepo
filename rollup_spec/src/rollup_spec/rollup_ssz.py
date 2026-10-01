@@ -69,12 +69,10 @@ MAX_L2_EXECUTION_PROOFS_PER_ROLLUP = 2**10     # paired 1:1 with conflations (ro
 MAX_CHUNKS_PER_ROLLUP = 2**12                  # chunks touched by one rollup proof's dataRollingHash fold
 MAX_BLOCK_RLPS_PER_CONFLATION = 2**12          # full block RLPs (one per block) in a single conflation
 MAX_BYTES_PER_BLOCK_RLP = 2**24                # 16 MiB: a full canonical block RLP including all tx bodies
+MAX_CALLDATA_BYTES_PER_CHUNK = 2**24            # 16 MiB bound for a single calldata submission
 MAX_PROGRAM_VKS = 2**10                        # distinct guest program VKs bubbled into one program_vks set
 MAX_L2_L1_ROOTS = 2**16                        # per-chunk L2->L1 message-tree roots merged into one proof
 MAX_FILTERED_ADDRESSES = 2**16                 # sanction-list addresses merged at the rollup layer
-# `opaque_prefix_bytes`/`opaque_suffix_bytes` are each bounded by one chunk
-# (`_verify_and_fold_chunks` in rollup.py). Their exact lengths are constrained
-# by `start_offset`/`end_offset`, so `BLOB_BYTES_LENGTH` is a safe SSZ bound.
 
 # ── SSZ wire schema (remerkleable) ───────────────────────────────────────────
 
@@ -86,7 +84,8 @@ class SszConflationWitness(Container):
 class SszChunkWitness(Container):
     chunk_hash: SszBytes32
     is_calldata: boolean
-    calldata_length: uint64
+    blob_bytes: ByteList[BLOB_BYTES_LENGTH]
+    calldata_bytes: ByteList[MAX_CALLDATA_BYTES_PER_CHUNK]
 
 
 class SszRollupPublicInput(Container):
@@ -122,8 +121,6 @@ class SszRollupProofPrivateInput(Container):
     conflations: List[SszConflationWitness, MAX_CONFLATIONS_PER_ROLLUP]
     chunks: List[SszChunkWitness, MAX_CHUNKS_PER_ROLLUP]
     l2_execution_proofs: List[SszVerifiableL2ExecutionProof, MAX_L2_EXECUTION_PROOFS_PER_ROLLUP]
-    opaque_prefix_bytes: ByteList[BLOB_BYTES_LENGTH]
-    opaque_suffix_bytes: ByteList[BLOB_BYTES_LENGTH]
     # Optional[Hash32]: empty list means absent, single-element list means
     # present (see module docstring).
     boundary_prev_data_rolling_hash: List[SszBytes32, 1]
@@ -141,7 +138,9 @@ class SszRollupOutput(Container):
 
 
 def _ssz_conflation_witness(witness: ConflationWitness) -> SszConflationWitness:
-    return SszConflationWitness(block_rlps=[bytes(r) for r in witness.block_rlps])
+    return SszConflationWitness(
+        block_rlps=[bytes(r) for r in witness.block_rlps],
+    )
 
 
 def _ssz_rollup_public_input(pi: RollupPublicInput) -> SszRollupPublicInput:
@@ -184,15 +183,14 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
             SszChunkWitness(
                 chunk_hash=bytes(c.chunk_hash),
                 is_calldata=c.is_calldata,
-                calldata_length=c.calldata_length,
+                blob_bytes=c.blob_bytes,
+                calldata_bytes=c.calldata_bytes,
             )
             for c in private_input.chunks
         ],
         l2_execution_proofs=[
             _ssz_verifiable_l2_execution_proof(p) for p in private_input.l2_execution_proofs
         ],
-        opaque_prefix_bytes=bytes(private_input.opaque_prefix_bytes),
-        opaque_suffix_bytes=bytes(private_input.opaque_suffix_bytes),
         boundary_prev_data_rolling_hash=[bytes(boundary)] if boundary is not None else [],
     )
 
@@ -201,7 +199,9 @@ def _ssz_rollup_input(private_input: RollupProofPrivateInput) -> SszRollupProofP
 
 
 def _conflation_witness_from_view(view: Any) -> ConflationWitness:
-    return ConflationWitness(block_rlps=[bytes(r) for r in view.block_rlps])
+    return ConflationWitness(
+        block_rlps=[bytes(r) for r in view.block_rlps],
+    )
 
 
 def _rollup_public_input_from_view(view: Any) -> RollupPublicInput:
@@ -247,15 +247,14 @@ def _rollup_input_from_view(view: Any) -> RollupProofPrivateInput:
             ChunkWitness(
                 chunk_hash=Hash32(bytes(c.chunk_hash)),
                 is_calldata=bool(c.is_calldata),
-                calldata_length=int(c.calldata_length),
+                blob_bytes=bytes(c.blob_bytes),
+                calldata_bytes=bytes(c.calldata_bytes),
             )
             for c in view.chunks
         ],
         l2_execution_proofs=[
             _verifiable_l2_execution_proof_from_view(p) for p in view.l2_execution_proofs
         ],
-        opaque_prefix_bytes=bytes(view.opaque_prefix_bytes),
-        opaque_suffix_bytes=bytes(view.opaque_suffix_bytes),
         boundary_prev_data_rolling_hash=boundary,
     )
 

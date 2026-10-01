@@ -58,9 +58,9 @@ returns it in the response PI), and no `chainId` on the aggregation request.
 
 `tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the
 native dependencies in `requirements.txt` (`ckzg`, `coincurve` via
-`ethereum-execution`, `lz4`). Those have no wheels for the newest Python and are
-built from source, so use **Python 3.11 or 3.12** and the Xcode command-line
-tools on macOS.
+`ethereum-execution`, `zstandard`). The pinned `ethereum-execution` stack can
+require a source build, so use **Python 3.11 or 3.12** and the Xcode
+command-line tools on macOS.
 
 Prerequisites:
 
