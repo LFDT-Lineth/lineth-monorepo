@@ -11,6 +11,7 @@ import linea.clients.InvalidityProverClientV1
 import linea.domain.InvalidityProofIndex
 import linea.kotlin.encodeHex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import tech.pegasys.teku.infrastructure.async.SafeFuture

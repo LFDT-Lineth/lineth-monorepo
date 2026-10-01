@@ -1,7 +1,6 @@
 package lineth.coordinator.config.v2
 
 import linea.domain.RetryConfig
-import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import java.net.URL
 import kotlin.time.Duration
 
@@ -24,7 +23,7 @@ data class L1SubmissionConfig(
     override val disabled: Boolean,
     val gasPriceCapCalculation: GasPriceCapCalculationConfig,
     val feeHistoryFetcher: FeeHistoryFetcherConfig,
-    val timeOfDayMultipliers: TimeOfDayMultipliers,
+    val timeOfDayMultipliers: Map<String, Double>,
   ) : FeatureToggle {
     data class GasPriceCapCalculationConfig(
       val adjustmentConstant: UInt,

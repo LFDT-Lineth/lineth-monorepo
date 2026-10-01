@@ -405,8 +405,8 @@ class ProverParsingTest {
     assertThat(next!!.preRiscvConfig).isNull()
     assertThat(next.riscvConfig).isNotNull()
     assertThat(next.riscvConfig!!.l2Execution.programId).isEqualTo("0xdeadbeef1")
-    assertThat(next.riscvConfig!!.rollup.programId).isEqualTo("0xdeadbeef2")
-    assertThat(next.riscvConfig!!.rollupAggregation.programId).isEqualTo("0xdeadbeef3")
+    assertThat(next.riscvConfig.rollup.programId).isEqualTo("0xdeadbeef2")
+    assertThat(next.riscvConfig.rollupAggregation.programId).isEqualTo("0xdeadbeef3")
   }
 
   @Test

@@ -16,12 +16,9 @@ dependencies {
 
   // `api` because these types appear on the public surface of the config data classes
   // (e.g. CoordinatorConfig.smartContractErrors, ConflationConfig.tracesLimits) and are used
-  // directly by callers such as coordinator:app.
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:core:traces')
-  api project(':jvm-libs:linea:web3j-extensions')
-  api project(':coordinator:ethereum:gas-pricing:dynamic-cap')
-  api project(':coordinator:clients:prover-client')
+  // FIXME: the blob compressor interfaces shall be moved into dedicated interfaces module
   api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
 

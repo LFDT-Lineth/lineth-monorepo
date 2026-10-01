@@ -4,7 +4,6 @@ import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
-import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import java.net.URL
 import kotlin.ULong
 import kotlin.time.Duration
@@ -69,7 +68,7 @@ data class L1SubmissionConfigToml(
       @param:ConfigDoc("Constant used for the historical average reward calculation.")
       val historicAvgRewardConstant: ULong,
     ) {
-      fun reified(timeOfTheDayMultipliers: TimeOfDayMultipliers): GasPriceCapCalculationConfig {
+      fun reified(timeOfTheDayMultipliers: Map<String, Double>): GasPriceCapCalculationConfig {
         return GasPriceCapCalculationConfig(
           adjustmentConstant = this.adjustmentConstant,
           blobAdjustmentConstant = this.blobAdjustmentConstant,
@@ -234,7 +233,7 @@ data class L1SubmissionConfigToml(
   fun reified(
     l1DefaultEndpoint: URL?,
     l1DefaultRequestRetries: RequestRetriesToml,
-    timeOfDayMultipliers: TimeOfDayMultipliers,
+    timeOfDayMultipliers: Map<String, Double>,
   ): L1SubmissionConfig {
     return L1SubmissionConfig(
       dynamicGasPriceCap =

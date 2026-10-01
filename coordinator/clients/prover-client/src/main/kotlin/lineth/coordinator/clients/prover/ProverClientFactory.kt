@@ -14,6 +14,8 @@ import linea.clients.RollupProverClientV1
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.ProofIndex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedRiscvProverConfig
+import lineth.coordinator.config.v2.ProversConfig
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import lineth.metrics.LineaMetricsCategory
@@ -290,7 +292,7 @@ class DefaultProverClientFactory(
     }
 
     return buildClient(
-      config.currentProver.preRiscvConfig.invalidity,
+      config.currentProver.preRiscvConfig!!.invalidity,
       config.nextProver?.preRiscvConfig?.invalidity,
     ) { invalidityConfig ->
       PreRiscvInvalidityProverClient(

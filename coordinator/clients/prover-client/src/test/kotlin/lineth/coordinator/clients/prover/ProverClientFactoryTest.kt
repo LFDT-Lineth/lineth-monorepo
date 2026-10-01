@@ -10,6 +10,12 @@ import linea.domain.CompressionProofIndex
 import linea.domain.ExecutionProofIndex
 import linea.domain.ProofsToAggregate
 import linea.kotlin.ByteArrayExt
+import lineth.coordinator.config.v2.FileBasedProverConfig
+import lineth.coordinator.config.v2.FileBasedRiscvProverConfig
+import lineth.coordinator.config.v2.PreRiscvProverConfig
+import lineth.coordinator.config.v2.ProverConfig
+import lineth.coordinator.config.v2.ProversConfig
+import lineth.coordinator.config.v2.RiscvProverConfig
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat

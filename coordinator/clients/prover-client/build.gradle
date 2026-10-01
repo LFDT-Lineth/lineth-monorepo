@@ -6,6 +6,7 @@ plugins {
 dependencies {
   implementation project(':coordinator:core-interfaces')
   api project(':coordinator:clients:prover-client:serialization')
+  api project(':coordinator:config')
   implementation project(':coordinator:clients:smart-contract-client')
   implementation project(':coordinator:ethereum:models-helper')
   implementation project(':coordinator:utilities')

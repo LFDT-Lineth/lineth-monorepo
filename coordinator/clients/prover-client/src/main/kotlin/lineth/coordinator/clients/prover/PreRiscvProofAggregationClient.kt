@@ -15,6 +15,7 @@ import linea.domain.ProofsToAggregate
 import linea.kotlin.encodeHex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter

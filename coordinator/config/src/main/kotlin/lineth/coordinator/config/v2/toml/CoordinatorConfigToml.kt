@@ -2,9 +2,7 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
-import linea.web3j.SmartContractErrors
 import lineth.coordinator.config.v2.CoordinatorConfig
-import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
 import net.consensys.linea.traces.TracingModuleV4
@@ -81,7 +79,7 @@ data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
     description = "L1 dynamic gas price cap multipliers keyed by time-of-day/day-of-week slot; " +
       "each entry scales the base gas price cap for that slot.",
   )
-  val gasPriceCapTimeOfDayMultipliers: TimeOfDayMultipliers,
+  val gasPriceCapTimeOfDayMultipliers: Map<String, Double>,
 )
 
 data class SmartContractErrorCodesConfigFileToml(
@@ -89,7 +87,7 @@ data class SmartContractErrorCodesConfigFileToml(
     description = "Mapping of Lineth smart-contract revert error codes to human-readable messages, " +
       "used to decode on-chain rejection reasons.",
   )
-  val smartContractErrors: SmartContractErrors,
+  val smartContractErrors: Map<String, String>,
 )
 
 data class CoordinatorConfigToml(

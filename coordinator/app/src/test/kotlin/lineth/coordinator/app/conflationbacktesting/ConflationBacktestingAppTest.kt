@@ -1,7 +1,7 @@
 package lineth.coordinator.app.conflationbacktesting
 
-import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.PreRiscvProverConfig
+import lineth.coordinator.config.v2.FileBasedProverConfig
+import lineth.coordinator.config.v2.PreRiscvProverConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.io.path.Path
