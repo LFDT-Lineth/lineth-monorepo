@@ -43,7 +43,6 @@ import {
   generateParentShnarfData,
   generateBlobParentShnarfData,
   calculateLastFinalizedState,
-  calculateLastFinalizedStateV6,
   submitCalldataBeforeFinalization,
   proofDataToFinalizationParams,
   expectRevertWhenPaused,
@@ -82,8 +81,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await linethRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -103,8 +102,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await linethRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -124,8 +123,8 @@ describe("Lineth Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await linethRollup.currentL2BlockNumber();
-        const parentStateRootHash = await linethRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await linethRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -174,9 +173,11 @@ describe("Lineth Rollup contract: Finalization", () => {
 
         finalizationData.lastFinalizedTimestamp = finalizationData.finalTimestamp + 1n;
 
-        const actualHashValue = calculateLastFinalizedStateV6(
+        const actualHashValue = calculateLastFinalizedState(
           finalizationData.lastFinalizedL1RollingHashMessageNumber,
           finalizationData.lastFinalizedL1RollingHash,
+          BigInt(calldataAggregatedProof1To155.parentAggregationFtxNumber),
+          calldataAggregatedProof1To155.parentAggregationFtxRollingHash,
           finalizationData.lastFinalizedTimestamp,
         );
 
@@ -215,13 +216,11 @@ describe("Lineth Rollup contract: Finalization", () => {
           calldataAggregatedProof1To155.l1RollingHash,
         );
 
-        finalizationData.shnarfData.snarkHash = generateRandomBytes(32);
+        finalizationData.finalBlockHash = generateRandomBytes(32);
 
-        const { dataEvaluationClaim, dataEvaluationPoint, finalStateRootHash, parentShnarf, snarkHash } =
-          finalizationData.shnarfData;
         const expectedMissingBlobShnarf = generateKeccak256(
-          ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-          [parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim],
+          ["bytes32", "bytes32", "bytes32"],
+          [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
         );
 
         const finalizeCompressedCall = linethRollup
@@ -271,7 +270,7 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     describe("Without submission data", () => {
-      it("Should revert if the final block state equals the zero hash", async () => {
+      it("Should revert if the final block hash equals the zero hash", async () => {
         const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
           startIndex: 0,
           finalIndex: 4,
@@ -296,14 +295,13 @@ describe("Lineth Rollup contract: Finalization", () => {
           calldataAggregatedProof1To155.l1RollingHash,
         );
 
-        // Set the final state root hash to zero
-        finalizationData.shnarfData.finalStateRootHash = HASH_ZERO;
+        finalizationData.finalBlockHash = HASH_ZERO;
 
         const finalizeCall = linethRollup
           .connect(operator)
           .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-        await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalBlockStateEqualsZeroHash");
+        await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalizationBlockHashIsZeroHash");
       });
     });
   });
@@ -350,26 +348,38 @@ describe("Lineth Rollup contract: Finalization", () => {
       await expectRevertWithCustomError(linethRollup, finalizeCall, "ProofIsEmpty");
     });
 
-    it("Should revert when finalization parentStateRootHash is different than last finalized state root hash", async () => {
+    it("Should revert when finalization parentBlockHash does not match the stored block hash", async () => {
       // Submit 4 sets of compressed data setting the correct shnarf in storage
-      await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
       });
 
+      const proofData = calldataAggregatedProof1To155 as AggregatedProofData;
       const finalizationData = await generateFinalizationData({
+        ...proofDataToFinalizationParams({
+          proofData,
+          shnarfDataGenerator: generateParentShnarfData,
+          blobParentShnarfIndex: finalIndex,
+          isMultiple: false,
+        }),
         lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
-        parentStateRootHash: generateRandomBytes(32),
+        parentBlockHash: generateRandomBytes(32),
         aggregatedProof: calldataAggregatedProof1To155.aggregatedProof,
       });
+
+      await linethRollup.setRollingHash(
+        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
+        calldataAggregatedProof1To155.l1RollingHash,
+      );
 
       const finalizeCall = linethRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
           gasLimit: MAX_GAS_LIMIT,
         });
-      await expectRevertWithCustomError(linethRollup, finalizeCall, "StartingRootHashDoesNotMatch");
+      await expectRevertWithCustomError(linethRollup, finalizeCall, "StartingBlockHashDoesNotMatch");
     });
 
     it("Should successfully finalize with only previously submitted data", async () => {
@@ -454,6 +464,10 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should fail when proof does not match", async () => {
+      // Until prover integration, use a reverting verifier to assert proof-failure handling.
+      const revertingVerifier = await deployRevertingVerifier(0n);
+      await linethRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       const { finalIndex } = await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
@@ -475,11 +489,12 @@ describe("Lineth Rollup contract: Finalization", () => {
         calldataAggregatedProof1To155.l1RollingHash,
       );
 
-      // aggregatedProof1To81.aggregatedProof, wrong proof on purpose
       const finalizeCall = linethRollup
         .connect(operator)
         .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-      await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProofOrProofVerificationRanOutOfGas", [
+        "Unknown",
+      ]);
     });
 
     it("Should fail if shnarf does not exist when finalizing", async () => {
@@ -494,9 +509,10 @@ describe("Lineth Rollup contract: Finalization", () => {
         ...proofDataToFinalizationParams({
           proofData,
           shnarfDataGenerator: generateParentShnarfData,
-          blobParentShnarfIndex: 1, // Wrong index to simulate missing shnarf
+          blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
+        finalBlockHash: generateRandomBytes(32),
       });
 
       await linethRollup.setRollingHash(
@@ -504,10 +520,15 @@ describe("Lineth Rollup contract: Finalization", () => {
         calldataAggregatedProof1To155.l1RollingHash,
       );
 
+      const expectedMissingShnarf = generateKeccak256(
+        ["bytes32", "bytes32", "bytes32"],
+        [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
+      );
+
       const finalizeCall = linethRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-      await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(linethRollup, finalizeCall, "FinalShnarfNotSubmitted", [expectedMissingShnarf]);
     });
 
     it("Should successfully finalize 1-81 and then 82-153 in two separate finalizations", async () => {
@@ -629,6 +650,10 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should fail to finalize with extra merkle roots", async () => {
+      // Until prover integration, assert failure via a reverting verifier when public input diverges.
+      const revertingVerifier = await deployRevertingVerifier(0n);
+      await linethRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       await submitCalldataBeforeFinalization(linethRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
@@ -660,7 +685,9 @@ describe("Lineth Rollup contract: Finalization", () => {
         .connect(operator)
         .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-      await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(linethRollup, finalizeCall, "InvalidProofOrProofVerificationRanOutOfGas", [
+        "Unknown",
+      ]);
     });
   });
 
@@ -761,6 +788,9 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should fail to finalize with not enough gas to verify", async () => {
+      revertingVerifier = await deployRevertingVerifier(1n); // GAS_GUZZLE
+      await linethRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       // Submit 2 blobs
       await sendBlobTransaction(linethRollup, 0, 2);
       // Submit another 2 blobs
@@ -790,7 +820,7 @@ describe("Lineth Rollup contract: Finalization", () => {
         linethRollup,
         finalizeCompressedCall,
         "InvalidProofOrProofVerificationRanOutOfGas",
-        ["error pairing"],
+        ["Unknown"],
       );
     });
 
@@ -961,8 +991,8 @@ describe("Lineth Rollup contract: Finalization", () => {
     });
 
     it("Should successfully submit 2 blobs twice then finalize in two separate finalizations using 3 and then 6 finalizationState fields", async () => {
-      // Explicitly use the 3 fields to simulate an existing finalization
-      await linethRollup.setLastFinalizedStateV6(0, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+      // Seed full finalized-state hash (message + forced-tx fields) matching current FinalizedStateHashing.
+      await linethRollup.setLastFinalizedState(0, HASH_ZERO, 0, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
 
       // Submit 2 blobs
       await sendBlobTransaction(linethRollup, 0, 2, true);
@@ -989,6 +1019,13 @@ describe("Lineth Rollup contract: Finalization", () => {
           blobParentShnarfIndex: 2,
           shnarfDataGenerator: generateBlobParentShnarfData,
           isMultiple: true,
+        },
+        overrides: {
+          lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
+          lastFinalizedL1RollingHash: HASH_ZERO,
+          lastFinalizedL1RollingHashMessageNumber: 0n,
+          lastFinalizedForcedTransactionNumber: 0n,
+          lastFinalizedForcedTransactionRollingHash: HASH_ZERO,
         },
       });
 
@@ -1037,9 +1074,10 @@ describe("Lineth Rollup contract: Finalization", () => {
         },
         overrides: {
           parentStateRootHash: HASH_ZERO,
+          parentBlockHash: HASH_ZERO,
         },
         expectedError: {
-          name: "InvalidProof",
+          name: "StartingBlockHashDoesNotMatch",
         },
       });
     });

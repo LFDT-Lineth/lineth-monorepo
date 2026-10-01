@@ -15,15 +15,15 @@ abstract contract ShnarfDataAcceptor is IAcceptShnarfData, ShnarfDataAcceptorBas
    * @dev OPERATOR_ROLE is required to execute.
    * @param _parentShnarf The parent shnarf.
    * @param _shnarf The shnarf to indicate exists.
-   * @param _finalStateRootHash The final state root hash in the data.
+   * @param _finalBlockHash The final L2 block hash in the data.
    */
   function acceptShnarfData(
     bytes32 _parentShnarf,
     bytes32 _shnarf,
-    bytes32 _finalStateRootHash
+    bytes32 _finalBlockHash
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
     require(_shnarf != 0x0, ShnarfSubmissionIsZeroHash());
-    require(_finalStateRootHash != 0x0, FinalStateRootHashIsZeroHash());
-    _acceptShnarfData(_parentShnarf, _shnarf, _finalStateRootHash);
+    require(_finalBlockHash != 0x0, FinalBlockHashIsZeroHash());
+    _acceptShnarfData(_parentShnarf, _shnarf, _finalBlockHash);
   }
 }
