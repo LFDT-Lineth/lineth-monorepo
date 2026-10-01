@@ -111,6 +111,24 @@ pub fn installGuestElf(b: *std.Build, root_module: *std.Build.Module, guest_name
     const install = b.addInstallArtifact(exe, .{});
     b.getInstallStep().dependOn(&install.step); // default `zig build` yields the statically-linked ELF
     b.step("elf", "Alias for the default build — the statically-linked ZkC ELF").dependOn(&install.step);
+
+    const release_dir = b.option([]const u8, "release-dir", "Directory for the Program ID-named ELF") orelse "zig-out/release";
+    const program_id_file = b.option([]const u8, "program-id-file", "Path to write the ELF Program ID") orelse "zig-out/program-id";
+    const program_id_tool = b.addExecutable(.{
+        .name = "program-id",
+        .root_module = b.createModule(.{
+            .root_source_file = b.dependency("build_common", .{}).path("program-id.zig"),
+            .target = b.resolveTargetQuery(.{}),
+            .optimize = .Debug,
+        }),
+    });
+    const program_id = b.addRunArtifact(program_id_tool);
+    program_id.addFileArg(exe.getEmittedBin());
+    program_id.addArg(release_dir);
+    program_id.addArg(program_id_file);
+    program_id.stdio = .inherit;
+    program_id.has_side_effects = true;
+    b.step("program-id", "Stage the complete guest ELF under its Keccak-256 Program ID").dependOn(&program_id.step);
 }
 
 /// build_common is consumed via `@import`, never built directly.
