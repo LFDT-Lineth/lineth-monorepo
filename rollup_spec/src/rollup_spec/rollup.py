@@ -296,6 +296,8 @@ def _verify_and_fold_chunks(
                 raise Exception(f"blob chunk {i} has invalid physical blob") from exc
             if i == 0 and start_offset >= len(payload):
                 raise Exception(f"blob chunk {i} must contain owned bytes")
+            if i < len(chunks) - 1 and not payload:
+                raise Exception(f"blob chunk {i} must contain owned bytes")
             if i < len(chunks) - 1 and chunks[i + 1].is_blob and len(payload) != BLOB_PAYLOAD_CAPACITY:
                 raise Exception(f"chunk {i} requires a full payload before the next chunk")
             try:

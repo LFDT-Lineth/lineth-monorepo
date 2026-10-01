@@ -204,3 +204,10 @@ def test_short_blob_before_blob_is_rejected_and_every_chunk_owned(monkeypatch):
     prefix = bytes(BLOB_PAYLOAD_CAPACITY - len(segment))
     with pytest.raises(Exception, match="must contain owned bytes"):
         run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment + prefix), _blob(monkeypatch, b"")]))
+
+
+def test_empty_blob_between_calldata_chunks_is_rejected(monkeypatch):
+    segment = _segment()
+    chunks = [_calldata(segment), _blob(monkeypatch, b""), _calldata(segment)]
+    with pytest.raises(Exception, match="must contain owned bytes"):
+        run_rollup_guest(_input(monkeypatch, chunks, count=2))
