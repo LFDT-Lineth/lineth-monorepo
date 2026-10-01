@@ -16,7 +16,6 @@ import linea.kotlin.encodeHex
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import lineth.coordinator.config.v2.FileBasedProverConfig
-import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
@@ -113,7 +112,6 @@ internal class AggregationRequestDtoMapper(
 class PreRiscvProofAggregationClient(
   vertx: Vertx,
   val config: FileBasedProverConfig,
-  val invalidityProverConfig: FileBasedProverConfig? = null,
   hashFunction: HashFunction = Sha256HashFunction(),
   executionProofResponseFileNameProvider: ProverFileNameProvider<ExecutionProofIndex> =
     ExecutionProofFileNameProvider,
@@ -154,36 +152,6 @@ class PreRiscvProofAggregationClient(
     log = log,
   ),
   ProofAggregationProverClientV2 {
-
-  private val fileMonitor: FileMonitor = FileMonitor(
-    vertx,
-    FileMonitor.Config(config.pollingInterval, config.pollingTimeout),
-  )
-
-  override fun createProofRequest(proofRequest: ProofsToAggregate): SafeFuture<AggregationProofIndex> {
-    return awaitInvalidityProofResponses(proofRequest).thenCompose {
-      super.createProofRequest(proofRequest)
-    }
-  }
-
-  private fun awaitInvalidityProofResponses(
-    proofRequest: ProofsToAggregate,
-  ): SafeFuture<Unit> {
-    if (proofRequest.invalidityProofs.isEmpty()) {
-      return SafeFuture.completedFuture(Unit)
-    }
-    if (invalidityProverConfig == null) {
-      throw IllegalStateException("Proof request contains invalidity proofs but invalidity Prover is not configured")
-    }
-
-    val responseNames = proofRequest.invalidityProofs.map { invalidityProofIndex ->
-      val responseFileName = InvalidityProofFileNameProvider.getFileName(invalidityProofIndex)
-      invalidityProverConfig.responsesDirectory.resolve(responseFileName)
-    }
-    return fileMonitor
-      .awaitForAllFiles(responseNames)
-      .thenApply { }
-  }
 
   companion object {
     val LOG: Logger = LogManager.getLogger(PreRiscvProofAggregationClient::class.java)
