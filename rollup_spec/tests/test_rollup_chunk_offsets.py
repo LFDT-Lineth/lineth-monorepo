@@ -98,6 +98,44 @@ def test_frame_prefix_or_body_crosses_full_blob_boundary(monkeypatch, split):
     assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(proof.public_inputs.parent_data_rolling_hash + second.chunk_hash))
 
 
+@pytest.mark.parametrize("split", [2, 7])
+def test_frame_prefix_or_body_crosses_short_blob_to_calldata(monkeypatch, split):
+    segment = _segment()
+    first = _blob(monkeypatch, segment[:split])
+    second = _calldata(segment[split:])
+    proof = run_rollup_guest(_input(monkeypatch, [first, second]))
+    first_fold = keccak256(proof.public_inputs.parent_data_rolling_hash + first.chunk_hash)
+    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(first_fold + second.chunk_hash))
+
+
+def test_short_blob_to_calldata_can_finish_frame_and_contain_another(monkeypatch):
+    segment = _segment()
+    proof = run_rollup_guest(_input(
+        monkeypatch, [_blob(monkeypatch, segment[:7]), _calldata(segment[7:] + segment)], count=2,
+    ))
+    assert proof.public_inputs.end_offset == 0
+
+
+def test_short_blob_to_calldata_at_segment_boundary(monkeypatch):
+    segment = _segment()
+    first = _blob(monkeypatch, segment)
+    second = _calldata(segment)
+    proof = run_rollup_guest(_input(monkeypatch, [first, second], count=2))
+    assert proof.public_inputs.end_offset == 0
+
+
+def test_shared_blob_prefix_then_calldata_finishes_frame(monkeypatch):
+    segment = _segment()
+    prefix = b"prior proof"
+    first = _blob(monkeypatch, prefix + segment[:2])
+    second = _calldata(segment[2:])
+    proof = run_rollup_guest(_input(monkeypatch, [first, second], start_offset=len(prefix)))
+    assert proof.public_inputs.start_offset == len(prefix)
+    assert proof.public_inputs.end_offset == 0
+    assert proof.public_inputs.end_data_rolling_hash == Hash32(keccak256(proof.public_inputs.parent_data_rolling_hash + second.chunk_hash))
+
+
 def test_calldata_mixed_with_blob_parses_complete_segments(monkeypatch):
     segment = _segment()
     first = _calldata(segment)
@@ -138,8 +176,15 @@ def test_calldata_requires_frame_alignment_and_no_trailing_bytes(monkeypatch):
     segment = _segment()
     with pytest.raises(Exception, match="segment boundaries"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment[:5]), _calldata(segment[5:])]))
+    with pytest.raises(Exception, match="segment boundaries"):
+        run_rollup_guest(_input(monkeypatch, [_calldata(segment[:5]), _blob(monkeypatch, segment[5:])]))
+    with pytest.raises(Exception, match="segment boundaries"):
+        run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment[:5]), _calldata(segment[5:10]),
+                                              _calldata(segment[10:])]))
     with pytest.raises(Exception, match="trailing bytes"):
         run_rollup_guest(_input(monkeypatch, [_calldata(segment + b"extra")]))
+    with pytest.raises(Exception, match="trailing bytes"):
+        run_rollup_guest(_input(monkeypatch, [_calldata(segment + segment[:5])]))
 
 
 def test_chunk_rejects_invalid_physical_blob_and_wrong_binding_hash(monkeypatch):
@@ -152,10 +197,17 @@ def test_chunk_rejects_invalid_physical_blob_and_wrong_binding_hash(monkeypatch)
         run_rollup_guest(_input(monkeypatch, [replace(_calldata(_segment()), chunk_hash=ZERO)]))
 
 
-def test_nonterminal_blob_must_be_full_and_every_chunk_owned(monkeypatch):
+def test_short_blob_before_blob_is_rejected_and_every_chunk_owned(monkeypatch):
     segment = _segment()
     with pytest.raises(Exception, match="full payload"):
-        run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment), _calldata(segment)], count=2))
+        run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment), _blob(monkeypatch, segment)], count=2))
     prefix = bytes(BLOB_PAYLOAD_CAPACITY - len(segment))
     with pytest.raises(Exception, match="must contain owned bytes"):
         run_rollup_guest(_input(monkeypatch, [_blob(monkeypatch, segment + prefix), _blob(monkeypatch, b"")]))
+
+
+def test_empty_blob_between_calldata_chunks_is_rejected(monkeypatch):
+    segment = _segment()
+    chunks = [_calldata(segment), _blob(monkeypatch, b""), _calldata(segment)]
+    with pytest.raises(Exception, match="must contain owned bytes"):
+        run_rollup_guest(_input(monkeypatch, chunks, count=2))

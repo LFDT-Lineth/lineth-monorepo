@@ -143,9 +143,9 @@ class ChunkWitness:
       neighbouring proof across a range boundary (§3.1); its unpacked bytes
       are divided into a foreign prefix, owned slice and foreign suffix.
     - **Calldata chunk** (`is_calldata=True`): one calldata submission, bound
-      by `keccak256(_compressedData)`. It packs a whole number of conflation
-      segments (complete, no partial tail) and is *range-aligned*: it shares no
-      bytes with a neighbouring proof and carries no foreign bytes.
+      by `keccak256(_compressedData)`. It may complete a segment begun in the
+      preceding blob, but must end at a segment boundary. It is *range-aligned*:
+      it shares no bytes with a neighbouring proof and carries no foreign bytes.
       `calldata_bytes` contains its exact positive-length
       submission; blob chunks set this field empty. Calldata sets `blob_bytes` empty.
 
@@ -296,7 +296,9 @@ def _verify_and_fold_chunks(
                 raise Exception(f"blob chunk {i} has invalid physical blob") from exc
             if i == 0 and start_offset >= len(payload):
                 raise Exception(f"blob chunk {i} must contain owned bytes")
-            if i < len(chunks) - 1 and len(payload) != BLOB_PAYLOAD_CAPACITY:
+            if i < len(chunks) - 1 and not payload:
+                raise Exception(f"blob chunk {i} must contain owned bytes")
+            if i < len(chunks) - 1 and chunks[i + 1].is_blob and len(payload) != BLOB_PAYLOAD_CAPACITY:
                 raise Exception(f"chunk {i} requires a full payload before the next chunk")
             try:
                 chunk_kzg_commitment = KZGCommitment(
@@ -341,16 +343,19 @@ def _verify_and_fold_chunks(
         cursor = frame_end
         boundaries.add(cursor)
 
+    if chunks[-1].is_calldata and cursor != len(stream):
+        raise Exception("calldata chunk contains trailing bytes")
     for extent in extents:
         if extent.start >= cursor:
             raise Exception(f"chunk {extent.chunk_index} must contain owned bytes")
         if extent.is_calldata and (
-            extent.start not in boundaries
-            or (extent.end not in boundaries and extent.chunk_index < len(chunks) - 1)
+            (
+                extent.start not in boundaries
+                and (extent.chunk_index == 0 or chunks[extent.chunk_index - 1].is_calldata)
+            )
+            or extent.end not in boundaries
         ):
-            raise Exception(f"calldata chunk {extent.chunk_index} must start and end at segment boundaries")
-    if chunks[-1].is_calldata and cursor != len(stream):
-        raise Exception("calldata chunk contains trailing bytes")
+            raise Exception(f"calldata chunk {extent.chunk_index} violates segment boundaries")
     # A fully consumed blob ends at the canonical zero offset, even when its
     # unpacked payload occupies less than the physical blob capacity.
     trailing = len(stream) - cursor
