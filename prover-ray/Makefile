@@ -1,8 +1,9 @@
 # The zkc module name
 ZKC_MOD := github.com/LFDT-Lineth/zkc
-# The directory where to find the zkc testdata
-ZKC_MOD_DIR := $(shell go list -m -f '{{.Dir}}' $(ZKC_MOD))
-ZKC_TESTDATA_SYNC_SRC_DIR := $(ZKC_MOD_DIR)/testdata/zkc
+# The directory where to find the zkc testdata. Deferred (=, not :=): on a cold
+# module cache it is empty until download-zkc-mod has run.
+ZKC_MOD_DIR = $(shell go list -m -f '{{.Dir}}' $(ZKC_MOD))
+ZKC_TESTDATA_SYNC_SRC_DIR = $(ZKC_MOD_DIR)/testdata/zkc
 ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 
 # these targets are not defined as depending on source files,
@@ -10,6 +11,7 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 .PHONY: \
 	test \
 	ci-lint \
+	download-zkc-mod \
 	download-zkc-testdata
 
 ##
@@ -28,9 +30,12 @@ ci-lint:
 ##
 ## Download the zkc testdata
 ##
-download-zkc-testdata:
-	# download dependencies first, so we can resolve and validate the module's directory
+# Download the module in its own target: make expands a recipe before running
+# it, so ZKC_MOD_DIR must only be expanded once the download has completed.
+download-zkc-mod:
 	go mod download $(ZKC_MOD)
+
+download-zkc-testdata: download-zkc-mod
 	@test -n "$(ZKC_MOD_DIR)" || (echo "error: could not resolve directory of module $(ZKC_MOD)" && exit 1)
 
 	# cleanup the destination directory, and create it if it doesn't exist
