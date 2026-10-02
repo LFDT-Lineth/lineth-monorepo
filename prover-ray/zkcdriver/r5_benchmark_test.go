@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	koalafield "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
@@ -21,6 +20,10 @@ import (
 
 const (
 	r5VerifierPath = "../../verifier-ray/zig-out/bin/verifier-ray"
+	// r5ProofImagePath is the proof the verifier guest is asked to check. It
+	// is the committed fixture paired with the generated RISC-V system, the
+	// same one verifier-ray's own `make zkc-verify` feeds the guest.
+	r5ProofImagePath = "../../verifier-ray/testdata/riscv_proof_image.bin"
 )
 
 var (
@@ -64,12 +67,11 @@ func loadR5BenchmarkFixture(b *testing.B) *r5BenchmarkFixture {
 	)
 	b.Helper()
 
-	verifierELF, err := os.ReadFile(r5VerifierPath)
+	inputs, err := r5GuestInputs()
 	if err != nil {
-		b.Skipf("R5 verifier ELF unavailable at %s; run `make -C ../verifier-ray build-r5`: %v", r5VerifierPath, err)
-	}
-	inputs, err := predecoding.PrepareInputs(verifierELF, []byte("foobar"))
-	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			b.Skipf("R5 fixture unavailable; run `make -C ../verifier-ray build-r5`: %v", err)
+		}
 		b.Fatalf("preparing R5 input: %v", err)
 	}
 	binFile, err := embedded.CompiledBinaryFile()

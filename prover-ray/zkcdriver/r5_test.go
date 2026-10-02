@@ -1,11 +1,11 @@
 package zkcdriver_test
 
 import (
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
-	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 )
@@ -13,14 +13,11 @@ import (
 // This is a benchmark for the RISC-V arithmetization and not a test so that we
 // don't crash the CI on every PR.
 func BenchmarkRisc5Arithmetization(b *testing.B) {
-	verifPath := "../../verifier-ray/zig-out/bin/verifier-ray"
-	verifElf, err := os.ReadFile(verifPath)
+	inputsMap, err := r5GuestInputs()
 	if err != nil {
-		b.Skipf("skipping integration test: verifier ELF not found at %s (%v)", verifPath, err)
-	}
-	payload := []byte("foobar")
-	inputsMap, err := predecoding.PrepareInputs(verifElf, payload)
-	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			b.Skipf("skipping integration test: R5 fixture not found (%v)", err)
+		}
 		b.Fatalf("failed to prepare inputs: %v", err)
 	}
 	binf, err := embedded.CompiledBinaryFile()
