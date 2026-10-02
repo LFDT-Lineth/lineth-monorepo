@@ -191,6 +191,7 @@ data class BlobData(
   val blobHash: ByteArray,
   val compressedData: ByteArray,
   val batchesCount: UInt,
+  val endBlockHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -201,6 +202,7 @@ data class BlobData(
     if (!blobHash.contentEquals(other.blobHash)) return false
     if (!compressedData.contentEquals(other.compressedData)) return false
     if (batchesCount != other.batchesCount) return false
+    if (!endBlockHash.contentEquals(other.endBlockHash)) return false
 
     return true
   }
@@ -209,6 +211,7 @@ data class BlobData(
     var result = blobHash.contentHashCode()
     result = 31 * result + compressedData.contentHashCode()
     result = 31 * result + batchesCount.hashCode()
+    result = 31 * result + endBlockHash.contentHashCode()
     return result
   }
 }
@@ -219,14 +222,14 @@ enum class BlobStatus {
 }
 
 data class BlobSubmittedEvent(
-  val blobs: List<BlockInterval>,
-  val endBlockTime: Instant,
+  val endBlockNumber: ULong,
+  val endBlockTimestamp: Instant,
   val lastShnarf: ByteArray,
   val submissionTimestamp: Instant,
   val transactionHash: ByteArray,
 ) {
   fun getSubmissionDelay(): Long {
-    return submissionTimestamp.minus(endBlockTime).inWholeSeconds
+    return submissionTimestamp.minus(endBlockTimestamp).inWholeSeconds
   }
 
   override fun equals(other: Any?): Boolean {
@@ -235,8 +238,8 @@ data class BlobSubmittedEvent(
 
     other as BlobSubmittedEvent
 
-    if (blobs != other.blobs) return false
-    if (endBlockTime != other.endBlockTime) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (endBlockTimestamp != other.endBlockTimestamp) return false
     if (!lastShnarf.contentEquals(other.lastShnarf)) return false
     if (submissionTimestamp != other.submissionTimestamp) return false
     if (!transactionHash.contentEquals(other.transactionHash)) return false
@@ -245,8 +248,8 @@ data class BlobSubmittedEvent(
   }
 
   override fun hashCode(): Int {
-    var result = blobs.hashCode()
-    result = 31 * result + endBlockTime.hashCode()
+    var result = endBlockNumber.hashCode()
+    result = 31 * result + endBlockTimestamp.hashCode()
     result = 31 * result + lastShnarf.contentHashCode()
     result = 31 * result + submissionTimestamp.hashCode()
     result = 31 * result + transactionHash.contentHashCode()
