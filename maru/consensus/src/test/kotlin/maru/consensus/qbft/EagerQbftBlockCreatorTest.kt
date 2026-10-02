@@ -9,6 +9,7 @@
 package maru.consensus.qbft
 
 import linea.teku.TekuWeb3JClientFactory
+import linea.teku.Web3JClient
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
@@ -45,6 +46,7 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.ThreadBesuNodeRunner
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -53,8 +55,9 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.whenever
+import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
+import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.infrastructure.async.SafeFuture.completedFuture
 import java.net.URI
 import java.time.Clock
@@ -67,7 +70,8 @@ import kotlin.time.Duration.Companion.minutes
 class EagerQbftBlockCreatorTest {
   private lateinit var cluster: Cluster
   private lateinit var besuInstance: BesuNode
-  private lateinit var ethApiClient: Web3JClient
+  private lateinit var ethApiClient: Web3j
+  private val engineApiClients = mutableListOf<Web3JClient>()
   private val proposerSelector = Mockito.mock(ProposerSelector::class.java)
   private val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
   private val beaconChain = Mockito.mock(BeaconChain::class.java)
@@ -93,16 +97,20 @@ class EagerQbftBlockCreatorTest {
     besuInstance = BesuFactory.buildTestBesu().also {
       cluster.start(it)
     }
-    ethApiClient = TekuWeb3JClientFactory.create(
-      endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
-      timeout = 1.minutes,
-    )
+    ethApiClient = Web3j.build(HttpService(besuInstance.engineRpcUrl().get()))
     reset(
       proposerSelector,
       validatorProvider,
       beaconChain,
     )
     executionLayerManager = createExecutionLayerManager()
+  }
+
+  @AfterEach
+  fun tearDown() {
+    ethApiClient.shutdown()
+    engineApiClients.forEach { it.close() }
+    cluster.stop()
   }
 
   /*
@@ -159,7 +167,7 @@ class EagerQbftBlockCreatorTest {
   @Test
   fun `can create a non empty block with new timestamp`() {
     val genesisExecutionPayload =
-      ethApiClient.eth1Web3j
+      ethApiClient
         .ethGetBlockByNumber(
           DefaultBlockParameter.valueOf("earliest"),
           true,
@@ -234,7 +242,7 @@ class EagerQbftBlockCreatorTest {
   @Test
   fun `clamps next block timestamp strictly above EL head timestamp on genesis parent`() {
     val latestExecutionLayerBlock =
-      ethApiClient.eth1Web3j
+      ethApiClient
         .ethGetBlockByNumber(
           DefaultBlockParameter.valueOf("latest"),
           true,
@@ -290,7 +298,7 @@ class EagerQbftBlockCreatorTest {
 
   @Test
   fun `clamps build timestamp to fork activation before FCU and block assembly`() {
-    val latestPayload = ethApiClient.eth1Web3j
+    val latestPayload = ethApiClient
       .ethGetBlockByNumber(DefaultBlockParameter.valueOf("latest"), true)
       .send().block.toDomain()
     val parent = SealedBeaconBlock(
@@ -323,7 +331,7 @@ class EagerQbftBlockCreatorTest {
   @Test
   fun `uses latest blockhash when parent block is genesis`() {
     val latestExecutionLayerBlock =
-      ethApiClient.eth1Web3j
+      ethApiClient
         .ethGetBlockByNumber(
           DefaultBlockParameter.valueOf("latest"),
           true,
@@ -402,7 +410,7 @@ class EagerQbftBlockCreatorTest {
       TekuWeb3JClientFactory.create(
         endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
         timeout = 1.minutes,
-      )
+      ).also { engineApiClients.add(it) }
     return JsonRpcExecutionLayerManager(
       PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
         web3jClient = engineApiClient,

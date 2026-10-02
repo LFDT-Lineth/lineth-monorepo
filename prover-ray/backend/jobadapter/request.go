@@ -44,21 +44,23 @@ const (
 	forcedTxFilteredAddressTo   = "FILTERED_ADDRESS_TO"
 )
 
-var validForcedTransactionAcceptances = map[string]struct{}{
-	forcedTxIncluded:            {},
-	forcedTxBadNonce:            {},
-	forcedTxBadBalance:          {},
-	forcedTxFilteredAddressFrom: {},
-	forcedTxFilteredAddressTo:   {},
+// forcedTxAcceptanceValues maps the request acceptance string to the
+// ForcedTransactionAcceptance enum value (rollup_spec block.py).
+var forcedTxAcceptanceValues = map[string]uint8{
+	forcedTxIncluded:            0,
+	forcedTxBadNonce:            1,
+	forcedTxBadBalance:          2,
+	forcedTxFilteredAddressFrom: 3,
+	forcedTxFilteredAddressTo:   4,
 }
 
 // L2ExecutionPayload is one block's worth of a decoded L2 execution request:
-// the framed SSZ the guest reads (the output of [ssz.EncodeStatelessInput]) and
-// the block number that payload proves.
+// the framed SSZ the guest reads (the output of [ssz.EncodeStatelessInput]), the
+// block number that payload proves, and its forced transactions.
 type L2ExecutionPayload struct {
 	BlockNumber        uint64
 	FramedSSZ          []byte
-	ForcedTransactions []json.RawMessage
+	ForcedTransactions []ssz.ForcedTransaction
 }
 
 // L2ExecutionRequest is a decoded getZkL2ExecutionProofV1 request: routing
@@ -67,12 +69,15 @@ type L2ExecutionPayload struct {
 // executionPayload.blockNumber), as in the reference decoder.
 type L2ExecutionRequest struct {
 	// ProgramVk is routing metadata; this decoder validates its shape but
-	// does not verify it against the configured guest ELF (open question #6 in
-	// wiki backend-overview.md).
-	ProgramVk []byte
-	ChainID   uint64
-	ForkName  string
-	Payloads  []L2ExecutionPayload
+	// does not verify it against the configured guest ELF.
+	ProgramVk               []byte
+	ChainID                 uint64
+	ForkName                string
+	L2MessageServiceAddress [20]byte
+	Coinbase                [20]byte
+	ParentFtxRollingHash    [32]byte
+	ParentFtxNumber         uint64
+	Payloads                []L2ExecutionPayload
 }
 
 // DecodeL2ExecutionRequest parses a getZkL2ExecutionProofV1 request body and
@@ -123,18 +128,16 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		return nil, err
 	}
 
-	if err := validateFixedHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
-		return nil, err
-	}
-	parentFtxNumberRaw, err := requireField(
-		proofRequest,
-		parentFtxNumberKey,
-		"proofRequest.",
-	)
+	parentFtxRollingHash, err := fixedHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := u64(parentFtxNumberRaw, "proofRequest."+parentFtxNumberKey); err != nil {
+	parentFtxNumberRaw, err := requireField(proofRequest, parentFtxNumberKey, "proofRequest.")
+	if err != nil {
+		return nil, err
+	}
+	parentFtxNumber, err := u64(parentFtxNumberRaw, "proofRequest."+parentFtxNumberKey)
+	if err != nil {
 		return nil, err
 	}
 
@@ -162,17 +165,24 @@ func DecodeL2ExecutionRequest(data []byte) (*L2ExecutionRequest, error) {
 		payloads[i] = p
 	}
 
-	return &L2ExecutionRequest{
-		ProgramVk: programVk,
-		ChainID:   chainConfig.chainID,
-		ForkName:  chainConfig.forkName,
-		Payloads:  payloads,
-	}, nil
+	req := &L2ExecutionRequest{
+		ProgramVk:               programVk,
+		ChainID:                 chainConfig.chainID,
+		ForkName:                chainConfig.forkName,
+		L2MessageServiceAddress: chainConfig.l2MessageServiceAddress,
+		Coinbase:                chainConfig.coinbase,
+		ParentFtxNumber:         parentFtxNumber,
+		Payloads:                payloads,
+	}
+	copy(req.ParentFtxRollingHash[:], parentFtxRollingHash)
+	return req, nil
 }
 
 type decodedChainConfig struct {
-	chainID  uint64
-	forkName string
+	chainID                 uint64
+	forkName                string
+	l2MessageServiceAddress [20]byte
+	coinbase                [20]byte
 }
 
 func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
@@ -180,20 +190,12 @@ func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
 	if err != nil {
 		return decodedChainConfig{}, err
 	}
-	if err := validateFixedHexField(
-		chainConfig,
-		l2MessageServiceAddressKey,
-		"proofRequest.chainConfig.",
-		addressByteSize,
-	); err != nil {
+	l2msgSvc, err := fixedHexField(chainConfig, l2MessageServiceAddressKey, "proofRequest.chainConfig.", addressByteSize)
+	if err != nil {
 		return decodedChainConfig{}, err
 	}
-	if err := validateFixedHexField(
-		chainConfig,
-		coinbaseKey,
-		"proofRequest.chainConfig.",
-		addressByteSize,
-	); err != nil {
+	coinbase, err := fixedHexField(chainConfig, coinbaseKey, "proofRequest.chainConfig.", addressByteSize)
+	if err != nil {
 		return decodedChainConfig{}, err
 	}
 
@@ -215,7 +217,10 @@ func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
 		return decodedChainConfig{}, fmt.Errorf("DecodeL2ExecutionRequest: proofRequest.chainConfig.forkName: %w", err)
 	}
 
-	return decodedChainConfig{chainID: chainID, forkName: forkName}, nil
+	cfg := decodedChainConfig{chainID: chainID, forkName: forkName}
+	copy(cfg.l2MessageServiceAddress[:], l2msgSvc)
+	copy(cfg.coinbase[:], coinbase)
+	return cfg, nil
 }
 
 // decodeL2ExecutionPayload builds the encoder object for one payload: it injects
@@ -315,7 +320,7 @@ func rejectNonEmptyExecutionRequests(newPayloadRequest map[string]json.RawMessag
 	return nil
 }
 
-func payloadForcedTransactions(payload map[string]json.RawMessage, ctx string) ([]json.RawMessage, error) {
+func payloadForcedTransactions(payload map[string]json.RawMessage, ctx string) ([]ssz.ForcedTransaction, error) {
 	reRaw, err := requireField(payload, rollupExtensionKey, ctx)
 	if err != nil {
 		return nil, err
@@ -339,57 +344,72 @@ func payloadForcedTransactions(payload map[string]json.RawMessage, ctx string) (
 	if forcedTransactions == nil {
 		return nil, fmt.Errorf("DecodeL2ExecutionRequest: %srollupExtension.forcedTransactions must be an array", ctx)
 	}
+	out := make([]ssz.ForcedTransaction, len(forcedTransactions))
 	for i, raw := range forcedTransactions {
 		itemCtx := fmt.Sprintf("%srollupExtension.forcedTransactions[%d].", ctx, i)
-		if err := validateForcedTransaction(raw, itemCtx); err != nil {
+		tx, err := decodeForcedTransaction(raw, itemCtx)
+		if err != nil {
 			return nil, err
 		}
+		out[i] = tx
 	}
-	return forcedTransactions, nil
+	return out, nil
 }
 
-func validateForcedTransaction(raw json.RawMessage, ctx string) error {
+func decodeForcedTransaction(raw json.RawMessage, ctx string) (ssz.ForcedTransaction, error) {
 	forcedTransaction, err := object(raw, strings.TrimSuffix(ctx, "."))
 	if err != nil {
-		return err
+		return ssz.ForcedTransaction{}, err
 	}
 
 	numberRaw, err := requireField(forcedTransaction, numberKey, ctx)
 	if err != nil {
-		return err
+		return ssz.ForcedTransaction{}, err
 	}
-	if _, err := u64(numberRaw, ctx+numberKey); err != nil {
-		return err
+	number, err := u64(numberRaw, ctx+numberKey)
+	if err != nil {
+		return ssz.ForcedTransaction{}, err
 	}
 
 	deadlineRaw, err := requireField(forcedTransaction, deadlineKey, ctx)
 	if err != nil {
-		return err
+		return ssz.ForcedTransaction{}, err
 	}
-	if _, err := u64(deadlineRaw, ctx+deadlineKey); err != nil {
-		return err
+	deadline, err := u64(deadlineRaw, ctx+deadlineKey)
+	if err != nil {
+		return ssz.ForcedTransaction{}, err
 	}
 
 	signedTxRaw, err := requireField(forcedTransaction, signedTxRlpKey, ctx)
 	if err != nil {
-		return err
+		return ssz.ForcedTransaction{}, err
 	}
-	if _, err := hexString(signedTxRaw, ctx+signedTxRlpKey); err != nil {
-		return err
+	signedTxRlp, err := hexString(signedTxRaw, ctx+signedTxRlpKey)
+	if err != nil {
+		return ssz.ForcedTransaction{}, err
 	}
 
 	acceptanceRaw, err := requireField(forcedTransaction, acceptanceKey, ctx)
 	if err != nil {
-		return err
+		return ssz.ForcedTransaction{}, err
 	}
 	var acceptance string
 	if err := json.Unmarshal(acceptanceRaw, &acceptance); err != nil {
-		return fmt.Errorf("DecodeL2ExecutionRequest: %s%s must be a string: %w", ctx, acceptanceKey, err)
+		return ssz.ForcedTransaction{}, fmt.Errorf(
+			"DecodeL2ExecutionRequest: %s%s must be a string: %w", ctx, acceptanceKey, err)
 	}
-	if _, ok := validForcedTransactionAcceptances[acceptance]; !ok {
-		return fmt.Errorf("DecodeL2ExecutionRequest: %s%s has unsupported value %q", ctx, acceptanceKey, acceptance)
+	acceptanceValue, ok := forcedTxAcceptanceValues[acceptance]
+	if !ok {
+		return ssz.ForcedTransaction{}, fmt.Errorf(
+			"DecodeL2ExecutionRequest: %s%s has unsupported value %q", ctx, acceptanceKey, acceptance)
 	}
-	return nil
+
+	return ssz.ForcedTransaction{
+		Number:      number,
+		SignedTxRlp: signedTxRlp,
+		Acceptance:  acceptanceValue,
+		Deadline:    deadline,
+	}, nil
 }
 
 func payloadBlockNumber(newPayloadRequest map[string]json.RawMessage, ctx string) (uint64, error) {
@@ -460,17 +480,17 @@ func hexString(raw json.RawMessage, ctx string) ([]byte, error) {
 	return b, nil
 }
 
-func validateFixedHexField(m map[string]json.RawMessage, key, ctx string, wantBytes int) error {
+func fixedHexField(m map[string]json.RawMessage, key, ctx string, wantBytes int) ([]byte, error) {
 	raw, err := requireField(m, key, ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b, err := hexString(raw, ctx+key)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(b) != wantBytes {
-		return fmt.Errorf("DecodeL2ExecutionRequest: %s%s must be %d bytes, got %d", ctx, key, wantBytes, len(b))
+		return nil, fmt.Errorf("DecodeL2ExecutionRequest: %s%s must be %d bytes, got %d", ctx, key, wantBytes, len(b))
 	}
-	return nil
+	return b, nil
 }

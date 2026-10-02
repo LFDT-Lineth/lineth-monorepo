@@ -36,6 +36,9 @@
 - *(maru)* Add Amsterdam support (#3939)
 - *(coordinator)* Add startBlockTimestamp and totalGasUsed request m… (#3953)
 - *(coordinator)* Store proof_index_hash in batches table for RISC-V rollup proof assembly (#3973)
+- *(coordinator)* Improve ProverClientFactory (#4000)
+- *(coordinator)* Add new metadata fields in RISC-V request (#3998)
+- *(coordinator)* [**breaking**] Add new fields on riscv proof requests and revise … (#3993)
 
 ### 🐛 Bug Fixes
 
@@ -86,6 +89,8 @@
 - *(linea-besu)* Update Besu to 26.8.0 (#3830)
 - *(sequencer)* Deduplicate forced transactions in pool (#3807)
 - *(prover)* Empty-codehash check (#3913)
+- *(coordinator)* Preserve Amsterdam execution payload fields (#3949)
+- *(misc)* Make timer stop() await in-flight task execution (#4042)
 
 ### 🚜 Refactor
 
@@ -160,3 +165,22 @@
 - *(misc)* Increase timeout to avoid CI flakiness (#3926)
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
 - *(coordinator)* Consolidate prover clients (#3944)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
+- *(misc)* Fix code licence header (#4009)
+- *(misc)* Improv JVM flakiness test and gradle configs (#4021)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Use junit over kotlin test (#4045)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
+- *(misc)* Maru break down integration tests into smaller chunks (#4049)
+- *(coordinator)* Tidy up move DB sql files to db/coordinator (#4068)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
+- *(deps)* Refresh dependencies and GitHub Actions (#4088)
+- *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)

@@ -9,8 +9,10 @@ import linea.ethapi.EthApiClient
 import linea.ftx.ForcedTransactionsApp
 import linea.kotlin.encodeHex
 import linea.web3j.createWeb3jHttpService
+import linea.web3j.ethapi.Web3jExecutionPayloadClient
 import linea.web3j.ethapi.Web3jExecutionWitnessClient
 import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.ethapi.validateLinethBlock
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.CalculatorsFactory
 import lineth.conflation.calculators.GlobalBlockConflationCalculator
@@ -49,6 +51,7 @@ import kotlin.time.Instant
  */
 class ConflationAppV2(
   private val vertx: Vertx,
+  private val chainId: ULong,
   private val batchesRepository: BatchesRepository,
   private val configs: CoordinatorConfig,
   val forcedTransactionsApp: ForcedTransactionsApp,
@@ -67,8 +70,14 @@ class ConflationAppV2(
     requireNotNull(configs.conflation.riscvStartingBlockTimestampInclusive) {
       "riscvStartingBlockTimestampInclusive must be set to use ConflationAppV2"
     }
-    requireNotNull(configs.riscvProversConfig) {
-      "riscvProversConfig must be set to use ConflationAppV2"
+    requireNotNull(configs.conflation.l2EngineEndpoint) {
+      "conflation.l2-engine-endpoint must be set to use ConflationAppV2"
+    }
+    require(
+      configs.proversConfig.currentProver.riscvConfig != null ||
+        configs.proversConfig.nextProver?.riscvConfig != null,
+    ) {
+      "riscv proversConfig must be set ether in currentProver or nextProver to use ConflationAppV2"
     }
   }
 
@@ -77,11 +86,10 @@ class ConflationAppV2(
     log = LogManager.getLogger("clients.l2.eth.conflation"),
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
+    blockValidator = ::validateLinethBlock,
   )
 
-  private val chainId: ULong = l2EthClient.ethChainId().get()
-
-  private val executionPipeline: ExecutionPipeline = configs.riscvProversConfig!!.let { riscvProversConfig ->
+  private val executionPipeline: ExecutionPipeline = configs.proversConfig.let { riscvProversConfig ->
     val blocksPerBatch = requireNotNull(configs.conflation.blocksLimit) {
       "conflation.blocksLimit must be set when riscv is enabled"
     }
@@ -102,13 +110,16 @@ class ConflationAppV2(
     val conflationCalculator = riscvCalculators.conflationCalculator
     val conflationService = riscvCalculators.conflationService
 
-    val l2ExecutionProverClient = proverClientFactory.executionProverClient()
+    val l2ExecutionProverClient = proverClientFactory.l2ExecutionProverClient()
 
-    val executionWitnessClient = Web3jExecutionWitnessClient(
-      web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString()),
+    val web3jService = createWeb3jHttpService(rpcUrl = configs.conflation.l2Endpoint.toString())
+    val executionWitnessClient = Web3jExecutionWitnessClient(web3jService)
+    val executionPayloadClient = Web3jExecutionPayloadClient(
+      createWeb3jHttpService(rpcUrl = requireNotNull(configs.conflation.l2EngineEndpoint).toString()),
     )
     val requestBuilder = L2ExecutionRequestBuilderImpl(
       executionWitnessClient = executionWitnessClient,
+      executionPayloadClient = executionPayloadClient,
       forcedTransactionsDao = forcedTransactionsDao,
       chainId = chainId,
     )
@@ -131,7 +142,9 @@ class ConflationAppV2(
       vertx = vertx,
       config = ExecutionProofGeneratingCoordinator.Config(
         conflationAndProofGenerationRetryBackoffDelay = configs.conflation.l2RequestRetries.backoffDelay,
-        executionProofPollingInterval = riscvProversConfig.proverA.execution.pollingInterval,
+        executionProofPollingInterval =
+        (riscvProversConfig.currentProver.riscvConfig ?: riscvProversConfig.nextProver?.riscvConfig!!)
+          .l2Execution.fileBased.pollingInterval,
       ),
       metricsFacade = metricsFacade,
     )

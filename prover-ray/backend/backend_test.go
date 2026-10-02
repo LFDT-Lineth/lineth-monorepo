@@ -10,7 +10,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/elfmapping"
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/predecoding"
-	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/internal/minimal-elf"
+	minimal_elf "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver/minimal-elf"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/LFDT-Lineth/zkc/pkg/util/source"
@@ -89,10 +89,10 @@ func TestCore_BuildInputs_DoesNotMutateCachedProgram(t *testing.T) {
 
 // zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
 // compileZKCBin turns it into a bin that NewZkCDriver accepts. It declares a
-// public output memory of [risc5.NumGuestPublicOutputs] bytes, like every real
+// guest_output_hash memory holding a full keccak-256 digest, like every real
 // guest circuit does, because [New] binds that memory as public inputs
 // unconditionally.
-const zkcTestSrc = "../zkcdriver/testdata/guest_output.zkc"
+const zkcTestSrc = "../zkcdriver/testdata/guest_output_hash.zkc"
 
 // compileZKCBin compiles a .zkc source into a serialized ZkC binary in the
 // current zkc format, writes it to a temp file, and returns the path. Core.New

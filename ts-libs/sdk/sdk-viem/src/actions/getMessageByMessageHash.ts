@@ -39,9 +39,7 @@ export type GetMessageByMessageHashReturnType = {
 };
 
 export type GetMessageByMessageHashErrorType =
-  | GetContractEventsErrorType
-  | MessageNotFoundErrorType
-  | ChainNotFoundErrorType;
+  GetContractEventsErrorType | MessageNotFoundErrorType | ChainNotFoundErrorType;
 
 /**
  * Returns the details of a message by its hash.

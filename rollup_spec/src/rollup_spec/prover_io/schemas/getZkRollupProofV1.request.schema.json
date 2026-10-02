@@ -32,26 +32,47 @@
           "items": { "$ref": "#/$defs/conflation" }
         },
         "chunks": {
-          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4): each entry is the chunk's L1-anchored KZG versioned hash.",
+          "description": "Every touched chunk in stream order. Each carries its physical DA bytes and L1-anchored binding hash; only blob chunks can be shared at proof boundaries.",
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/hash32" }
-        },
-        "opaquePrefixBytes": {
-          "description": "Foreign bytes before startOffset in the FIRST touched chunk only (§3.1); empty (0x) or absent otherwise.",
-          "$ref": "#/$defs/hex"
-        },
-        "opaqueSuffixBytes": {
-          "description": "Foreign bytes after endOffset in the LAST touched chunk only (§3.1); empty (0x) or absent otherwise.",
-          "$ref": "#/$defs/hex"
+          "items": {
+            "type": "object",
+            "required": ["chunkHash", "isCalldata", "blobBytes", "calldataBytes"],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": { "properties": { "isCalldata": { "const": true } } },
+                "then": { "properties": { "calldataBytes": { "type": "string", "minLength": 4 }, "blobBytes": { "const": "0x" } } },
+                "else": { "properties": { "calldataBytes": { "const": "0x" }, "blobBytes": { "$ref": "#/$defs/physicalBlob" } } }
+              }
+            ],
+            "properties": {
+              "chunkHash": {
+                "description": "The chunk's L1-anchored binding hash: a KZG versioned hash for a blob chunk, keccak256(_compressedData) for a calldata chunk (§3.1).",
+                "$ref": "#/$defs/hash32"
+              },
+              "isCalldata": {
+                "description": "Selects the in-guest check: false verifies the physical blob's KZG versioned hash; true verifies keccak256 of exact calldataBytes.",
+                "type": "boolean"
+              },
+              "blobBytes": {
+                "description": "Physical EIP-4844 blob (131072 bytes of 4096 field elements), canonically packed; empty 0x for calldata.",
+                "$ref": "#/$defs/hex"
+              },
+              "calldataBytes": {
+                "description": "Exact submitted calldata bytes, empty 0x for blobs.",
+                "$ref": "#/$defs/hex"
+              }
+            }
+          }
         },
         "parentDataRollingHash": {
           "description": "The dataRollingHash accumulator value this proof starts from, paired with startOffset (§2.2, §3.1). If startOffset = 0, this is R_0 (the accumulator before the first touched chunk, folded forward normally from chunk 1). If startOffset > 0 (mid-chunk start), this is already R_1 (the accumulator after the first touched chunk), whose preimage is opened via boundaryPrevDataRollingHash before folding continues from chunk 2 (if any).",
           "$ref": "#/$defs/hash32"
         },
         "startOffset": {
-          "description": "This proof's start position within the first touched chunk (§3.4). 0 means a fresh chunk start; a value in (0, chunkSize) means a mid-chunk start requiring boundaryPrevDataRollingHash.",
-          "$ref": "#/$defs/uint"
+          "description": "Start position in unpacked blob payload bytes. 0 means a chunk boundary; a positive position inside a shared blob requires boundaryPrevDataRollingHash.",
+          "$ref": "#/$defs/offset"
         },
         "boundaryPrevDataRollingHash": {
           "description": "Required only when startOffset > 0 (§3.4): the dataRollingHash value before the first touched chunk, opening its preimage against parentDataRollingHash.",
@@ -67,7 +88,10 @@
   },
   "$defs": {
     "uint": { "type": "integer", "minimum": 0 },
+    "uint64": { "type": "integer", "minimum": 0, "maximum": 18446744073709551615 },
+    "offset": { "type": "integer", "minimum": 0, "maximum": 130046 },
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
+    "physicalBlob": { "type": "string", "minLength": 262146, "maxLength": 262146, "pattern": "^0x[0-9a-fA-F]{262144}$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
     "metadata": {
@@ -78,6 +102,8 @@
         "startBlockNumber": { "$ref": "#/$defs/uint" },
         "endBlockNumber": { "$ref": "#/$defs/uint" },
         "startBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "transactionsCount": { "$ref": "#/$defs/uint" },
         "totalGasUsed": { "$ref": "#/$defs/uint" }
       }
     },

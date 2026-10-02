@@ -28,14 +28,11 @@ fn octuplet(seed: u32) [8]field.Element {
     return out;
 }
 
-// expectedContribution computes the Poseidon2 MD sponge digest over the given
-// committed-round octuplets and expands it through multisethashing.Hash,
-// exactly as the checker itself does — used to build a HONEST contribution
-// for the positive test.
-fn expectedContribution(coms: []const [8]field.Element) multiset_hashing.MSetHash {
-    var hasher = poseidon2.MDHasher.init();
-    for (coms) |c| hasher.writeElements(&c);
-    return multiset_hashing.hash(hasher.sumDigest());
+// expectedContribution expands one commitment octuplet through
+// multisethashing.Hash, exactly as prover-ray's sharedRandomnessContribution
+// does — used to build a HONEST contribution for the positive tests.
+fn expectedContribution(com: [8]field.Element) multiset_hashing.MSetHash {
+    return multiset_hashing.hash(com);
 }
 
 fn contributionToScalars(m: multiset_hashing.MSetHash) [multiset_hashing.size]protocol.Scalar {
@@ -62,40 +59,37 @@ fn makeCtx(
     return .{ .all_coins = &.{}, .rounds = rounds_buf };
 }
 
-// twoRoundSystem describes both round 0 and round 1 as committed rounds
-// feeding the sponge, with the contribution cells living at round 2, indices
-// 0..multiset_hashing.size — mirroring BuildSharedRandomnessSystem's output
-// shape for a coin round at index 2 with two preceding committed rounds.
-const two_round_system_rounds = [_]shared_randomness.Round{
-    .{ .round = 0, .has_commitment = true },
-    .{ .round = 1, .has_commitment = true },
-};
-const two_round_system_refs = blk: {
+// coin_round_system names round 1 as the round whose commitment is the whole
+// preimage, with the contribution cells living at round 2, indices
+// 0..multiset_hashing.size — mirroring BuildSharedRandomnessSystem's output for
+// a coin round at index 1. Round 0's commitment is deliberately irrelevant
+// here, exactly as it is to prover-ray's `rt.Commitments[coinRound.ID]`.
+const coin_round_refs = blk: {
     var refs: [multiset_hashing.size]shared_randomness.ScalarRef = undefined;
     for (&refs, 0..) |*ref, i| {
         ref.* = .{ .round = 2, .index = i };
     }
     break :blk refs;
 };
-const two_round_system = shared_randomness.System{
-    .rounds = &two_round_system_rounds,
-    .contribution_refs = &two_round_system_refs,
+const coin_round_system = shared_randomness.System{
+    .commitment_round = .{ .round = 1, .has_commitment = true },
+    .contribution_refs = &coin_round_refs,
 };
 
 test "shared randomness accepts a correctly recomputed contribution" {
     const com0 = octuplet(1);
     const com1 = octuplet(100);
-    const contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+    const contribution = contributionToScalars(expectedContribution(com1));
 
     var rounds_buf: [3]protocol.RoundMessage = undefined;
-    try shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf));
+    try shared_randomness.verify(coin_round_system, makeCtx(com0, com1, &contribution, &rounds_buf));
 }
 
 test "shared randomness rejects a tampered committed-round octuplet" {
     const com0 = octuplet(1);
     const com1 = octuplet(100);
     // Contribution computed over the HONEST commitments...
-    const contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+    const contribution = contributionToScalars(expectedContribution(com1));
 
     // ...but the ctx now carries a DIFFERENT round-1 commitment (as if the
     // prover swapped in a different batch's root after the fact). The claimed
@@ -106,14 +100,14 @@ test "shared randomness rejects a tampered committed-round octuplet" {
     var rounds_buf: [3]protocol.RoundMessage = undefined;
     try std.testing.expectError(
         error.ContributionMismatch,
-        shared_randomness.verify(two_round_system, makeCtx(com0, tampered_com1, &contribution, &rounds_buf)),
+        shared_randomness.verify(coin_round_system, makeCtx(com0, tampered_com1, &contribution, &rounds_buf)),
     );
 }
 
 test "shared randomness rejects a tampered claimed contribution digest" {
     const com0 = octuplet(1);
     const com1 = octuplet(100);
-    var contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+    var contribution = contributionToScalars(expectedContribution(com1));
     // Flip one limb of the claimed contribution away from the honestly recomputed
     // value (as if the prover just wrote a made-up contribution).
     contribution[3] = baseScalar(0xDEAD);
@@ -121,7 +115,7 @@ test "shared randomness rejects a tampered claimed contribution digest" {
     var rounds_buf: [3]protocol.RoundMessage = undefined;
     try std.testing.expectError(
         error.ContributionMismatch,
-        shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
+        shared_randomness.verify(coin_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
     );
 }
 
@@ -133,20 +127,20 @@ test "shared randomness rejects a tampered claimed contribution limb past the fi
     // fails if the chunked expansion actually ran to completion.
     const com0 = octuplet(1);
     const com1 = octuplet(100);
-    var contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+    var contribution = contributionToScalars(expectedContribution(com1));
     contribution[8] = baseScalar(0xDEAD);
 
     var rounds_buf: [3]protocol.RoundMessage = undefined;
     try std.testing.expectError(
         error.ContributionMismatch,
-        shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
+        shared_randomness.verify(coin_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
     );
 }
 
 test "shared randomness rejects an extension-field-encoded contribution limb" {
     const com0 = octuplet(1);
     const com1 = octuplet(100);
-    var contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{ com0, com1 }));
+    var contribution = contributionToScalars(expectedContribution(com1));
 
     // Re-encode limb 5 as an extension scalar carrying the SAME numeric value
     // (lift of the honest base limb). The value is correct, so a verifier that
@@ -159,29 +153,41 @@ test "shared randomness rejects an extension-field-encoded contribution limb" {
     var rounds_buf: [3]protocol.RoundMessage = undefined;
     try std.testing.expectError(
         error.ContributionNotBaseField,
-        shared_randomness.verify(two_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
+        shared_randomness.verify(coin_round_system, makeCtx(com0, com1, &contribution, &rounds_buf)),
     );
 }
 
-test "shared randomness skips a round with has_commitment = false" {
-    // Round 0 is flagged as uncommitted, so its octuplet must NOT enter the
-    // sponge preimage — only round 1's should, mirroring prover-ray's
-    // `if !rt.System.Rounds[i].HasCommitment { continue }`.
-    const com0 = octuplet(7); // must be ignored
+test "shared randomness ignores commitments outside the coin round" {
+    // Only the coin round's own commitment is the preimage, so a different
+    // round-0 commitment must not move the contribution — the counterpart of
+    // the tampered-round-1 case above, and the property that makes the single
+    // `rt.Commitments[coinRound.ID]` lookup faithful.
     const com1 = octuplet(100);
-    const contribution = contributionToScalars(expectedContribution(&[_][8]field.Element{com1})); // com0 excluded
+    const contribution = contributionToScalars(expectedContribution(com1));
 
-    const rounds = [_]shared_randomness.Round{
-        .{ .round = 0, .has_commitment = false },
-        .{ .round = 1, .has_commitment = true },
-    };
+    var rounds_buf: [3]protocol.RoundMessage = undefined;
+    try shared_randomness.verify(coin_round_system, makeCtx(octuplet(7), com1, &contribution, &rounds_buf));
+    try shared_randomness.verify(coin_round_system, makeCtx(octuplet(999), com1, &contribution, &rounds_buf));
+}
+
+test "shared randomness hashes zeroes when the coin round carries no commitment" {
+    // prover-ray reads rt.Commitments[coinRound.ID] from a map, so a coin round
+    // that committed no column yields the zero Octuplet and the prover hashes
+    // that. The verifier must agree rather than erroring, or the two sides
+    // disagree on a protocol the compiler still permits. (That this check is
+    // then vacuous is a prover-side concern — see the messagebus warning.)
+    const zero: [8]field.Element = @splat(field.Element.zero());
+    const contribution = contributionToScalars(expectedContribution(zero));
+
     const system = shared_randomness.System{
-        .rounds = &rounds,
-        .contribution_refs = &two_round_system_refs,
+        .commitment_round = .{ .round = 1, .has_commitment = false },
+        .contribution_refs = &coin_round_refs,
     };
 
     var rounds_buf: [3]protocol.RoundMessage = undefined;
-    try shared_randomness.verify(system, makeCtx(com0, com1, &contribution, &rounds_buf));
+    // The ctx still carries a round-1 commitment; has_commitment = false must
+    // make the checker ignore it in favour of the zero octuplet.
+    try shared_randomness.verify(system, makeCtx(octuplet(1), octuplet(100), &contribution, &rounds_buf));
 }
 
 test "empty shared-randomness system verifies trivially" {

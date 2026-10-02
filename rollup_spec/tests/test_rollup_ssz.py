@@ -23,10 +23,9 @@ import pytest
 
 import rollup_spec
 from ethereum.crypto.hash import Hash32
-from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from rollup_spec.rollup import RollupProof
+from rollup_spec.rollup import ChunkWitness, RollupProof
 from rollup_spec.proof_io_v1 import (
     _decode_rollup_public_input,
     decode_rollup_request,
@@ -67,8 +66,6 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
     return RollupProof(
         public_inputs=pi,
         start_block_number=U64(resp["startBlockNumber"]),
-        l2_l1_roots=[Hash32(_hexbytes(h)) for h in resp["l2L1Roots"]],
-        filtered_addresses=[Address(_hexbytes(a)) for a in resp["filteredAddresses"]],
     )
 
 
@@ -79,7 +76,16 @@ def _rollup_output_from_response(resp: dict) -> RollupProof:
 
 def test_rollup_input_round_trips_through_ssz() -> None:
     original = decode_rollup_request(_load_json("getZkRollupProofV1.request.json"))
-    recovered = decode_rollup_input_ssz(encode_rollup_input(original))
+    assert len(original.chunks[0].blob_bytes) == 131072
+    original.chunks.append(
+        ChunkWitness(
+            Hash32(bytes([0x2A]) * 32),
+            is_calldata=True,
+            calldata_bytes=bytes(131_073),
+        )
+    )
+    encoded = encode_rollup_input(original)
+    recovered = decode_rollup_input_ssz(encoded)
     assert recovered == original
 
 
@@ -156,3 +162,28 @@ def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> 
     encoded = encode_bytes()
     with pytest.raises(InvalidSsz):
         decode_fn(encoded + b"\x00")
+
+
+def test_decode_rollup_input_rejects_invalid_chunk_boolean() -> None:
+    encoded = bytearray(_rollup_input_bytes())
+    chunks_offset = int.from_bytes(encoded[2 + 52 : 2 + 56], "little")
+    encoded[2 + chunks_offset + 4 + 32] = 2
+
+    with pytest.raises(InvalidSsz):
+        decode_rollup_input_ssz(bytes(encoded))
+
+
+def test_decode_rollup_input_rejects_misaligned_chunk_container() -> None:
+    encoded = bytearray(_rollup_input_bytes())
+    chunks_offset = int.from_bytes(encoded[2 + 52 : 2 + 56], "little")
+    proofs_offset_position = 2 + 56
+    proofs_offset = int.from_bytes(encoded[proofs_offset_position : proofs_offset_position + 4], "little")
+    del encoded[2 + chunks_offset + 40]
+    encoded[proofs_offset_position : proofs_offset_position + 4] = (proofs_offset - 1).to_bytes(4, "little")
+    for offset_position in (60, 64, 68):
+        absolute_position = 2 + offset_position
+        offset = int.from_bytes(encoded[absolute_position : absolute_position + 4], "little")
+        encoded[absolute_position : absolute_position + 4] = (offset - 1).to_bytes(4, "little")
+
+    with pytest.raises(InvalidSsz):
+        decode_rollup_input_ssz(bytes(encoded))

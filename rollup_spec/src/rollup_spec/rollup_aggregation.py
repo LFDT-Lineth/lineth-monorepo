@@ -5,9 +5,7 @@ from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 
 from .l1_rollup import FinalizationSubmission
-from .l2_execution import hash_address_list, hash_digest_list
 from .rollup import (
-    BLOB_BYTES_LENGTH,
     RollupProof,
     RollupPublicInput,
     VerifiableRollupProof,
@@ -29,11 +27,10 @@ def run_rollup_aggregation_guest(
 ) -> FinalizationSubmission:
     """
     rollup-aggregation: flat recursion over M rollup proofs with continuity
-    checks and merged L2-to-L1 root/address commitments.
+    checks and merged L2-to-L1 root/address lists.
 
-    Returns a `FinalizationSubmission`: the guest output (the 20-field
-    public-input tuple + the revealed `l2_l1_roots` / `filtered_addresses`
-    preimages L1 needs as calldata). `proof` is attached by the zkVM/prover
+    Returns a `FinalizationSubmission`: the guest output (the
+    public-input tuple). `proof` is attached by the zkVM/prover
     layer above and is a placeholder (`b""`) here.
     """
     if len(aggregation_input.rollup_proofs) == 0:
@@ -65,8 +62,8 @@ def run_rollup_aggregation_guest(
     program_vk_set: Set[Hash32] = set()
 
     for vp in aggregation_input.rollup_proofs:
-        merged_l2_l1_roots.extend(vp.proof.l2_l1_roots)
-        merged_filtered_addresses.extend(vp.proof.filtered_addresses)
+        merged_l2_l1_roots.extend(vp.proof.public_inputs.l2_l1_roots)
+        merged_filtered_addresses.extend(vp.proof.public_inputs.filtered_addresses)
         if vp.program_vk not in seen_rollup_vks:
             seen_rollup_vks.add(vp.program_vk)
             rollup_vks.append(vp.program_vk)
@@ -81,7 +78,7 @@ def run_rollup_aggregation_guest(
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
-        l2_l1_bridge_transaction_tree=hash_digest_list(merged_l2_l1_roots),
+        l2_l1_roots=merged_l2_l1_roots,
         parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=(
             first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
@@ -95,7 +92,7 @@ def run_rollup_aggregation_guest(
         parent_ftx_number=first_proof.public_inputs.parent_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
-        filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
+        filtered_addresses=merged_filtered_addresses,
         # Position-pair pass-through (§3.4): the extremes are exposed, not
         # asserted here — L1 checks them against committed state (§3.6).
         parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
@@ -110,8 +107,6 @@ def run_rollup_aggregation_guest(
     return FinalizationSubmission(
         public_inputs=public_inputs,
         proof=bytes(),  # Placeholder: filled by zkVM prover at layer above
-        l2_l1_roots=merged_l2_l1_roots,
-        filtered_addresses=merged_filtered_addresses,
         l2_messaging_blocks_offsets=[],  # Not populated from rollup proofs; defaults to empty
     )
 
@@ -127,17 +122,10 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
         passes the same `program_vk` it bubbles up into `rollup_vks` /
         `program_vks`, so the anchored VK is provably the key the verification
         ran against. `RollupProof.proof` stands in for the recursive STARK bytes
-        the guest would actually check. Beyond the recursive verify, we only
-        re-validate the hash preimages (`l2L1BridgeTransactionTree`,
-        `filteredAddressesHash`) the rollup-aggregation proof consumes.
+        the guest would actually check.
     """
     # First: the recursive STARK verify against the explicit verify key.
     recursive_stark_verify(program_vk, proof.proof)
-    # PRECOMPILE: keccak256 (preimage-binding checks).
-    if hash_digest_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
-        raise Exception("invalid l2L1BridgeTransactionTree preimage")
-    if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
-        raise Exception("invalid rollup filteredAddressesHash preimage")
 
 
 def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> None:
@@ -146,15 +134,7 @@ def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> Non
     # nor block-hash continuity alone can detect either.
     if left.public_inputs.end_data_rolling_hash != right.public_inputs.parent_data_rolling_hash:
         raise Exception("rollup dataRollingHash continuity failed")
-    # A chunk filled exactly to its end (`end_offset == BLOB_BYTES_LENGTH`) and
-    # the next proof naturally starting at `start_offset == 0` describe the same
-    # stream position, even though the two integers differ — accept both that
-    # case and plain equality.
-    offsets_continuous = left.public_inputs.end_offset == right.public_inputs.start_offset
-    offsets_at_chunk_boundary = (
-        left.public_inputs.end_offset == BLOB_BYTES_LENGTH and right.public_inputs.start_offset == 0
-    )
-    if not (offsets_continuous or offsets_at_chunk_boundary):
+    if left.public_inputs.end_offset != right.public_inputs.start_offset:
         raise Exception("rollup offset continuity failed")
     # Execution continuity is now explicit (§2.4) rather than folded into the
     # DA accumulator, since a shared chunk's dataRollingHash fold no longer determines

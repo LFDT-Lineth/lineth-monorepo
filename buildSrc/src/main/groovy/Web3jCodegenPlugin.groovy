@@ -2,6 +2,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.model.ObjectFactory
@@ -10,7 +11,11 @@ import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.web3j.codegen.SolidityFunctionWrapperGenerator
 
@@ -18,8 +23,20 @@ import javax.inject.Inject
 
 @CacheableTask
 abstract class GenerateContractWrappersTask extends DefaultTask {
-  @Input
+  /** ABI file path -> contract name. Absolute paths are not a cache input, see below. */
+  @Internal
   abstract MapProperty<String, String> getContracts()
+
+  /** Content of the ABI files, so editing an ABI invalidates the generated wrappers. */
+  @InputFiles
+  @PathSensitive(PathSensitivity.NAME_ONLY)
+  abstract ConfigurableFileCollection getAbiFiles()
+
+  /** ABI file name -> contract name: the relocatable part of {@link #getContracts()}. */
+  @Input
+  Map<String, String> getContractNamesByAbiFileName() {
+    contracts.get().collectEntries { abiFile, contractName -> [(new File(abiFile).name): contractName] }
+  }
 
   @Input
   abstract Property<String> getContractsPackage()
@@ -70,6 +87,7 @@ class Web3jCodegenPlugin implements Plugin<Project> {
       group = "Code Generation"
       description = "Creates Web3J contract wrappers from ABIs files."
       contracts.set(extension.contracts)
+      abiFiles.from(extension.contracts.map { it.keySet() })
       contractsPackage.set(extension.contractsPackage)
       generatedClassesDir.set(extension.generatedClassesDir)
     }

@@ -1,5 +1,16 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Fix code licence header (#4009)
+- *(coordinator, maru, linea-besu)* Update jvm dependencies: (#4029)
+- *(misc)* Update gradle to v9.8 (#4032)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Gradle improve tasks (#4046)
+- *(misc)* CI Merge sequencer plugin unit and acceptance jobs (#4048)
+- *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
+## [2.3.0] - 2026-09-23
+
 ### 🚀 Features
 
 - *(sequencer)* Stop bespoke tracing at configured timestamp (#3908)
@@ -11,6 +22,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Upgrade besu to 26.8.1 for vertx 5 (#3904)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [2.2.0] - 2026-08-21
 
 ### 🚀 Features

@@ -285,7 +285,6 @@ def _sample_rollup_public_input() -> RollupPublicInput:
     return RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -295,13 +294,14 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         parent_ftx_number=U64(7),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(9),
-        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
-        end_offset=131072,
+        end_offset=0,
+        l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
+        filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
         program_vks=[_EXEC_VK],
     )
 
@@ -311,8 +311,6 @@ def _sample_rollup_proof() -> RollupProof:
         public_inputs=_sample_rollup_public_input(),
         start_block_number=U64(1000501),
         proof=b"\xde\xad\xbe\xef",
-        l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
-        filtered_addresses=[Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)],
     )
 
 
@@ -334,9 +332,10 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
-    assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
-    assert req.opaque_suffix_bytes == b""
+    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
+    assert req.chunks[0].is_calldata is False
+    assert req.chunks[0].calldata_bytes == b""
+    assert len(req.chunks[0].blob_bytes) == 131072
 
     assert len(req.l2_execution_proofs) == 2
     verifiable = req.l2_execution_proofs[0]
@@ -406,6 +405,74 @@ def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
         decode_rollup_request(req)
 
 
+def test_decode_rollup_request_is_calldata_true_decodes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x" + "01" * 131073
+    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
+    out = decode_rollup_request(req)
+    assert out.chunks[0].is_calldata is True
+    assert out.chunks[0].calldata_bytes == bytes([1]) * 131073
+    assert out.chunks[0].blob_bytes == b""
+
+
+@pytest.mark.parametrize("blob_hex", [None, "0x", "0x00"])
+def test_blob_chunk_requires_full_physical_blob(blob_hex) -> None:
+    req = _valid_rollup_request()
+    if blob_hex is None:
+        del req["proofRequest"]["chunks"][0]["blobBytes"]
+    else:
+        req["proofRequest"]["chunks"][0]["blobBytes"] = blob_hex
+    with pytest.raises(ProofIoError, match="blobBytes"):
+        decode_rollup_request(req)
+
+
+def test_calldata_chunk_requires_empty_physical_blob() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0].update(isCalldata=True, calldataBytes="0x01")
+    with pytest.raises(ProofIoError, match="blobBytes"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("field", ["isCalldata", "calldataBytes"])
+def test_decode_rollup_request_missing_chunk_field_is_rejected(field) -> None:
+    req = _valid_rollup_request()
+    del req["proofRequest"]["chunks"][0][field]
+    with pytest.raises(ProofIoError, match=field):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("bad", [-1, True, "one", 2**64])
+def test_decode_rollup_request_invalid_calldata_bytes_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = bad
+    with pytest.raises(ProofIoError, match="calldataBytes"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_rejects_nonempty_blob_calldata_bytes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["calldataBytes"] = "0x01"
+    with pytest.raises(ProofIoError, match="empty for a blob"):
+        decode_rollup_request(req)
+
+
+def test_decode_rollup_request_rejects_empty_calldata_bytes() -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = True
+    req["proofRequest"]["chunks"][0]["blobBytes"] = "0x"
+    with pytest.raises(ProofIoError, match="nonempty for calldata"):
+        decode_rollup_request(req)
+
+
+@pytest.mark.parametrize("bad", ["true", 1, 0, "false"])
+def test_decode_rollup_request_non_boolean_is_calldata_is_rejected(bad) -> None:
+    req = _valid_rollup_request()
+    req["proofRequest"]["chunks"][0]["isCalldata"] = bad
+    with pytest.raises(ProofIoError, match="isCalldata"):
+        decode_rollup_request(req)
+
+
 def test_decode_rollup_request_json_round_trips() -> None:
     decoded = decode_rollup_request_json(json.dumps(_valid_rollup_request()))
     assert int(decoded.chain_id) == 59144
@@ -431,31 +498,30 @@ def test_encode_rollup_response_shape_and_values() -> None:
     pi = out["publicInputs"]
     assert pi["endBlockNumber"] == 1000520
     assert pi["endBlockTimestamp"] == 1763000457
-    assert pi["l2L1BridgeTransactionTree"] == "0x" + ("11" * 32)
     assert pi["parentDataRollingHash"] == "0x" + ("47" * 32)
     assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
     assert pi["startOffset"] == 4
-    assert pi["endOffset"] == 131072
+    assert pi["endOffset"] == 0
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
     # §ProgramVK anchoring: one combined programVks list (exec/rollup not
     # distinguished on the wire). A rollup proof lists the exec VK it verified.
     assert pi["programVks"] == ["0x" + ("aa" * 32)]
     assert set(pi.keys()) == {
-        "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
+        "endBlockNumber", "endBlockTimestamp",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
-        "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+        "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "programVks",
+        "startOffset", "endOffset", "l2L1Roots", "filteredAddresses", "programVks",
     }
 
     assert out["programVk"] == "0x" + ("bb" * 32)
-    assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
-    assert out["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
+    assert pi["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
+    assert pi["filteredAddresses"] == ["0x" + ("03" * 20), "0x" + ("04" * 20)]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -483,11 +549,14 @@ def _sample_finalization_submission() -> FinalizationSubmission:
         public_inputs=replace(
             _sample_rollup_public_input(),
             start_offset=0,
+            l2_l1_roots=[
+                Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
+                Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
+            ],
+            filtered_addresses=[Address(bytes([0x01]) * 20), Address(bytes([0x01]) * 20)],
             program_vks=[_EXEC_VK, _ROLLUP_VK],
         ),
         proof=b"\xde\xad\xbe\xef",
-        l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
-        filtered_addresses=[Address(bytes([0x01]) * 20)],
         l2_messaging_blocks_offsets=[],
     )
 
@@ -505,8 +574,8 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert int(proof.start_block_number) == 10
     # endBlockNumber is read from the public inputs, not a wrapper field.
     assert int(proof.public_inputs.end_block_number) == 11
-    assert proof.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
-    assert proof.filtered_addresses == [Address(bytes([0x01]) * 20)]
+    assert proof.public_inputs.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
+    assert proof.public_inputs.filtered_addresses == [Address(bytes([0x01]) * 20)]
     # §ProgramVK anchoring: the rollup proof's own VK, on the coordinator-
     # populated wrapper, plus its single combined program_vks list (here the
     # exec VK it verified).
@@ -515,7 +584,6 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
 
     pi = proof.public_inputs
     assert int(pi.end_block_timestamp) == 1763000457
-    assert bytes(pi.l2_l1_bridge_transaction_tree) == bytes([0x11]) * 32
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 7
     assert int(pi.parent_ftx_number) == 15
     assert int(pi.end_processed_ftx_number) == 18
@@ -589,13 +657,16 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert "endBlockNumber" not in out
     # The response carries the preimages L1 finalization needs as calldata, so
     # it is sufficient for the L1 verification step.
-    assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
-    assert out["filteredAddresses"] == ["0x" + ("01" * 20)]
+    assert out["publicInputs"]["l2L1Roots"] == [
+        "0x" + ("77" * 32), "0x" + ("88" * 32),
+        "0x" + ("77" * 32), "0x" + ("88" * 32),
+    ]
+    assert out["publicInputs"]["filteredAddresses"] == ["0x" + ("01" * 20)] * 2
     assert "programVks" not in out
     assert out["l2MessagingBlocksOffsets"] == []
     assert set(out.keys()) == {
         "proverVersion", "proof", "startBlockNumber", "publicInputs",
-        "l2L1Roots", "filteredAddresses", "l2MessagingBlocksOffsets",
+        "l2MessagingBlocksOffsets",
     }
 
     pi = out["publicInputs"]
@@ -607,13 +678,13 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     # Combined: bubbled exec VK (0xaa) then this aggregation's rollup VK (0xbb).
     assert pi["programVks"] == ["0x" + ("aa" * 32), "0x" + ("bb" * 32)]
     assert set(pi.keys()) == {
-        "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
+        "endBlockNumber", "endBlockTimestamp",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
-        "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+        "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "programVks",
+        "startOffset", "endOffset", "l2L1Roots", "filteredAddresses", "programVks",
     }
 
 

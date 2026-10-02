@@ -38,7 +38,8 @@ async function expectReceiptNotFound(
   });
 }
 
-describe("Forced transaction test suite", () => {
+// Should re-enable when RISC-V is supported
+describe.skip("Forced transaction test suite", () => {
   it.concurrent(
     "Should successfully submit a forced transaction containing a valid l2 transaction",
     async () => {

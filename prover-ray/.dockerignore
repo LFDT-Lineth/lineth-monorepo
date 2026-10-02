@@ -1,5 +1,8 @@
-prover-assets/**
-integration/**
-bin/**
-profiling/**
+# The Go build stage only needs sources + go.mod/go.sum. Keep the context small.
+.git
 Dockerfile
+.dockerignore
+scripts/docker-smoke.sh
+**/*_test.go
+**/testdata
+bin/

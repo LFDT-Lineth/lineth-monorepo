@@ -1,5 +1,14 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Maru use root gradle configs (#4031)
+- *(misc)* Use junit over kotlin test (#4045)
+- *(misc)* Fix gradle build correctness bugs (#4044)
+- *(misc)* Decrease vertx threadpool sizes for testing (#4047)
+- *(misc)* Maru break down integration tests into smaller chunks (#4049)
+## [1.4.0] - 2026-09-23
+
 ### 🚀 Features
 
 - *(maru)* Support Noise / Yamux (#3751)
@@ -17,6 +26,7 @@
 - *(misc)* Rename gradle plugins (#3729)
 - *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
 - *(misc)* Docker image build streamlining (#3790)
+- *(misc)* Upgrade teku libs to 26.9.0 (#3990)
 ## [1.3.0] - 2026-07-14
 
 ### 🚀 Features

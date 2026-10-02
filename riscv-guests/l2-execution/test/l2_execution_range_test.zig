@@ -226,7 +226,7 @@ test "a realistic 2-block range produces every public-input field exactly" {
     // Forced transactions: FTX1 (INCLUDED, tx=T1) and FTX2 (FILTERED_ADDRESS_FROM, tx=T4) both
     // update the rolling hash across the range; only FTX2 bubbles up a filtered address.
     try testing.expectEqualSlices(u8, &plan.parent_ftx_rolling_hash, &output.public_inputs.parent_ftx_rolling_hash);
-    try testing.expectEqual(plan.parent_last_processed_ftx_number, output.public_inputs.parent_processed_ftx_number);
+    try testing.expectEqual(plan.parent_last_processed_ftx_number, output.public_inputs.parent_ftx_number);
     try testing.expectEqual(@as(u64, 2), output.public_inputs.end_processed_ftx_number);
     try testing.expectEqualSlices(u8, &expected_end_ftx_rolling_hash, &output.public_inputs.end_ftx_rolling_hash);
 
@@ -335,6 +335,15 @@ test "non-empty execution requests are rejected" {
     const blocks = [_]conflation_plan.BlockPlan{ .{}, .{ .non_empty_execution_requests = true } };
     const plan = conflation_plan.ConflationPlan{ .blocks = &blocks };
     try plan.expectReject(arena.allocator(), error.ExecutionRequestsNotSupported);
+}
+
+test "blob transaction fields are rejected" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const hashes = [_][32]u8{@splat(1)};
+    const blocks = [_]conflation_plan.BlockPlan{ .{}, .{ .versioned_hashes = &hashes } };
+    const plan = conflation_plan.ConflationPlan{ .blocks = &blocks };
+    try plan.expectReject(arena.allocator(), error.BlobTransactionsNotSupported);
 }
 
 test "non-empty withdrawals are rejected" {
@@ -718,7 +727,7 @@ test "a continuation range chains the FTX rolling hash from its parent value" {
     try testing.expectEqual(PARENT_FTX_NUMBER + 2, output.public_inputs.end_processed_ftx_number);
 
     try testing.expectEqualSlices(u8, &PARENT_FTX_ROLLING_HASH, &output.public_inputs.parent_ftx_rolling_hash);
-    try testing.expectEqual(PARENT_FTX_NUMBER, output.public_inputs.parent_processed_ftx_number);
+    try testing.expectEqual(PARENT_FTX_NUMBER, output.public_inputs.parent_ftx_number);
 }
 
 test "a range replaying the parent's last FTX number is rejected" {
@@ -788,5 +797,5 @@ test "an FTX-free continuation range carries the parent FTX state through unchan
     try testing.expectEqualSlices(u8, &PARENT_FTX_ROLLING_HASH, &output.public_inputs.end_ftx_rolling_hash);
     try testing.expectEqual(PARENT_FTX_NUMBER, output.public_inputs.end_processed_ftx_number);
     try testing.expectEqualSlices(u8, &PARENT_FTX_ROLLING_HASH, &output.public_inputs.parent_ftx_rolling_hash);
-    try testing.expectEqual(PARENT_FTX_NUMBER, output.public_inputs.parent_processed_ftx_number);
+    try testing.expectEqual(PARENT_FTX_NUMBER, output.public_inputs.parent_ftx_number);
 }

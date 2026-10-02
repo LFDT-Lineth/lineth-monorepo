@@ -1,0 +1,33 @@
+name: "RISC-V Rollup Guest Release"
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag_suffix:
+        description: 'Required on non-main branches; appended to releases/riscv-rollup/v<semver>'
+        required: false
+        type: string
+        default: ''
+      pre_release:
+        description: 'Pre-release if checked; draft otherwise'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: riscv-rollup-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: ./.github/workflows/riscv-guest-release.yml
+    with:
+      guest: rollup
+      release_tag_suffix: ${{ inputs.release_tag_suffix }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit

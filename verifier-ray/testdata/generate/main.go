@@ -961,8 +961,6 @@ type messageBusFixtureCase struct {
 func buildMessageBusSharedRandomnessSystem() (*wiop.System, *wiop.Column, *wiop.Column) {
 	sys := wiop.NewSystemf("mb-shared-randomness")
 	r0 := sys.NewRound()
-	sys.NewRound() // coin round: alpha/beta + the shared-randomness gamma hook
-	sys.NewRound() // result round
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
 	colA := modA.NewColumn(sys.Context.Childf("A"), r0)

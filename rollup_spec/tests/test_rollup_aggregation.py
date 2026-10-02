@@ -16,7 +16,7 @@ import pytest
 from ethereum.crypto.hash import Hash32
 from ethereum_types.numeric import U64
 
-from rollup_spec.rollup import BLOB_BYTES_LENGTH, RollupProof, RollupPublicInput
+from rollup_spec.rollup import RollupProof, RollupPublicInput
 from rollup_spec.rollup_aggregation import assert_rollup_proof_continuity
 
 
@@ -24,7 +24,6 @@ def _base_public_input(**overrides) -> RollupPublicInput:
     base = RollupPublicInput(
         end_block_number=U64(1000510),
         end_block_timestamp=U64(1763000200),
-        l2_l1_bridge_transaction_tree=Hash32(bytes([0x11]) * 32),
         parent_l1_l2_bridge_rolling_hash=Hash32(bytes([0x22]) * 32),
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=Hash32(bytes([0x33]) * 32),
@@ -34,13 +33,14 @@ def _base_public_input(**overrides) -> RollupPublicInput:
         parent_ftx_number=U64(10),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(12),
-        filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=0,
-        end_offset=131072,
+        end_offset=0,
+        l2_l1_roots=[],
+        filtered_addresses=[],
         program_vks=[],
     )
     return replace(base, **overrides)
@@ -96,20 +96,15 @@ def test_offset_mismatch_is_rejected() -> None:
         assert_rollup_proof_continuity(_proof(_left_pi()), right)
 
 
-def test_chunk_boundary_offset_handoff_is_accepted() -> None:
-    # A chunk filled exactly to BLOB_BYTES_LENGTH handing off to a proof that
-    # naturally starts fresh at offset 0 is the same stream position, even
-    # though the two integers differ.
-    left = _proof(_left_pi(end_offset=BLOB_BYTES_LENGTH))
+def test_canonical_chunk_boundary_handoff_is_accepted() -> None:
+    left = _proof(_left_pi(end_offset=0))
     right = _proof(_right_pi(start_offset=0))
     assert_rollup_proof_continuity(left, right)
 
 
-def test_chunk_boundary_offset_handoff_requires_start_offset_zero() -> None:
-    # end_offset == BLOB_BYTES_LENGTH does not excuse an arbitrary mismatched
-    # start_offset — only the (BLOB_BYTES_LENGTH, 0) pair is the special case.
-    left = _proof(_left_pi(end_offset=BLOB_BYTES_LENGTH))
-    right = _proof(_right_pi(start_offset=5))
+def test_noncanonical_full_blob_offset_handoff_is_rejected() -> None:
+    left = _proof(_left_pi(end_offset=131072))
+    right = _proof(_right_pi(start_offset=0))
     with pytest.raises(Exception, match="offset continuity"):
         assert_rollup_proof_continuity(left, right)
 

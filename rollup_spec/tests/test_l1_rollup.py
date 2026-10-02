@@ -17,7 +17,6 @@ Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import pytest
-
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum_types.numeric import U64
 
@@ -27,7 +26,6 @@ from rollup_spec.l1_rollup import (
     PlonkVerifier,
     finalize_rollup,
 )
-from rollup_spec.l2_execution import hash_address_list, hash_digest_list
 from rollup_spec.rollup import RollupPublicInput
 
 # Distinct VK / hash byte-pattern helpers (mirrors the style in
@@ -53,14 +51,14 @@ def _position_commitment(data_rolling_hash: Hash32, offset: int) -> Hash32:
     return keccak256(data_rolling_hash + offset.to_bytes(32, "big"))
 
 
-def _base_state(approved_vks) -> LinethRollupState:
+def _base_state(approved_vks, previous_offset: int = 0) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all non-VK finalization checks pass. `approved_vks` is the
     only knob the tests vary.
     """
     return LinethRollupState(
-        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, 0),
+        current_finalized_position_commitment=_position_commitment(_PARENT_DATA_ROLLING_HASH, previous_offset),
         current_finalized_last_block_hash=_PARENT_BLOCK_HASH,
         current_l2_block_number=U64(1000500),
         current_l2_block_timestamp=U64(1763000000),
@@ -74,20 +72,17 @@ def _base_state(approved_vks) -> LinethRollupState:
     )
 
 
-def _base_submission(program_vks) -> FinalizationSubmission:
+def _base_submission(program_vks, start_offset: int = 0) -> FinalizationSubmission:
     """
     A finalization submission carrying the single combined `program_vks` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
-    `filtered_addresses` keep the preimage-hash checks trivial (their keccak of
-    empty input is the PI hash), and the FTX/rolling-hash boundary values are
+    `filtered_addresses` are committed directly with the FTX/rolling-hash boundary values
     held constant across parent/end so continuity passes without any FTX deadline
-    machinery. `start_offset=0` is the fresh-start case, which `finalize_rollup`
-    accepts regardless of the previously-finalized offset.
+    machinery.
     """
     pi = RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        l2_l1_bridge_transaction_tree=hash_digest_list([]),
         parent_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
@@ -97,20 +92,19 @@ def _base_submission(program_vks) -> FinalizationSubmission:
         parent_ftx_number=U64(7),
         end_ftx_rolling_hash=_FTX_ROLLING_HASH,
         end_processed_ftx_number=U64(7),
-        filtered_addresses_hash=hash_address_list([]),
         parent_data_rolling_hash=_PARENT_DATA_ROLLING_HASH,
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
-        start_offset=0,
+        start_offset=start_offset,
         end_offset=_END_OFFSET,
+        l2_l1_roots=[],
+        filtered_addresses=[],
         program_vks=list(program_vks),
     )
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
-        l2_l1_roots=[],
-        filtered_addresses=[],
         l2_messaging_blocks_offsets=[],
     )
 
@@ -158,3 +152,12 @@ def test_finalize_rollup_succeeds_when_all_vks_approved() -> None:
     _finalize(state, submission)  # must not raise
     assert state.current_finalized_position_commitment == _position_commitment(_END_DATA_ROLLING_HASH, _END_OFFSET)
     assert int(state.current_l2_block_number) == 1000520
+
+
+def test_finalize_rollup_rejects_chunk_boundary_start_inside_finalized_blob() -> None:
+    previous_offset = 9
+    state = _base_state(approved_vks=set(), previous_offset=previous_offset)
+    submission = _base_submission(program_vks=[], start_offset=0)
+
+    with pytest.raises(Exception, match="startOffset does not match the finalized position"):
+        finalize_rollup(state, submission, _PARENT_DATA_ROLLING_HASH, previous_offset)

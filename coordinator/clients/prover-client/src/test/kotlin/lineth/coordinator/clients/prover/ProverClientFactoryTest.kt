@@ -4,13 +4,22 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.domain.BlockIntervalProofIndex
 import linea.domain.BlockIntervals
 import linea.domain.CompressionProofIndex
+import linea.domain.ExecutionProofIndex
 import linea.domain.ProofsToAggregate
 import linea.kotlin.ByteArrayExt
+import lineth.coordinator.config.v2.FileBasedProverConfig
+import lineth.coordinator.config.v2.FileBasedRiscvProverConfig
+import lineth.coordinator.config.v2.PreRiscvProverConfig
+import lineth.coordinator.config.v2.ProverConfig
+import lineth.coordinator.config.v2.ProversConfig
+import lineth.coordinator.config.v2.RiscvProverConfig
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
@@ -28,7 +37,72 @@ import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 class ProverClientFactoryTest {
-  private fun buildProversConfig(
+  private fun buildFileBasedProverConfig(proverDir: Path): FileBasedProverConfig {
+    return FileBasedProverConfig(
+      requestsDirectory = proverDir.resolve("requests"),
+      responsesDirectory = proverDir.resolve("responses"),
+      pollingInterval = 100.milliseconds,
+      pollingTimeout = 500.milliseconds,
+      inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
+      inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+    )
+  }
+
+  private fun buildRiscvProverConfig(proverDir: Path): RiscvProverConfig {
+    return RiscvProverConfig(
+      l2Execution = FileBasedRiscvProverConfig(
+        fileBased = buildFileBasedProverConfig(proverDir.resolve("execution")),
+        programId = RiscvProverClientTestFixtures.L2_EXECUTION_PROGRAM_ID,
+        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        forkName = RiscvProverClientTestFixtures.FORK_NAME,
+      ),
+      rollup = FileBasedRiscvProverConfig(
+        fileBased = buildFileBasedProverConfig(proverDir.resolve("rollup")),
+        programId = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
+        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        forkName = RiscvProverClientTestFixtures.FORK_NAME,
+      ),
+      rollupAggregation = FileBasedRiscvProverConfig(
+        fileBased = buildFileBasedProverConfig(proverDir.resolve("aggregation")),
+        programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID,
+        provingSystemVersion = RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
+        forkName = RiscvProverClientTestFixtures.FORK_NAME,
+      ),
+    )
+  }
+
+  private fun buildPreRiscvProverConfig(proverDir: Path): PreRiscvProverConfig {
+    return PreRiscvProverConfig(
+      execution = buildFileBasedProverConfig(proverDir.resolve("execution")),
+      blobCompression = buildFileBasedProverConfig(proverDir.resolve("compression")),
+      proofAggregation = buildFileBasedProverConfig(proverDir.resolve("aggregation")),
+    )
+  }
+
+  private fun buildRiscvProversConfig(
+    tmpDir: Path,
+    switchBlockNumber: Int? = null,
+    switchBlockTimestamp: Instant? = null,
+    withProverB: Boolean = switchBlockNumber != null || switchBlockTimestamp != null,
+  ): ProversConfig {
+    return ProversConfig(
+      currentProver = ProverConfig(
+        riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v1")),
+      ),
+      nextProver = if (withProverB) {
+        ProverConfig(
+          riscvConfig = buildRiscvProverConfig(tmpDir.resolve("riscv-prover/v2")),
+        )
+      } else {
+        null
+      },
+      switchBlockNumberInclusive = switchBlockNumber?.toULong(),
+      switchBlockTimestamp = switchBlockTimestamp,
+      enableRequestFilesCleanup = false,
+    )
+  }
+
+  private fun buildPreRiscvProversConfig(
     tmpDir: Path,
     switchBlockNumber: Int? = null,
     switchBlockTimestamp: Instant? = null,
@@ -37,93 +111,44 @@ class ProverClientFactoryTest {
     require(!(switchBlockNumber != null && switchBlockTimestamp != null)) {
       "Only one of switchBlockNumber and switchBlockTimestamp may be set"
     }
-    fun buildProverConfig(proverDir: Path): ProverConfig {
-      return ProverConfig(
-        execution = FileBasedProverConfig(
-          requestsDirectory = proverDir.resolve("execution/requests"),
-          responsesDirectory = proverDir.resolve("execution/responses"),
-          pollingInterval = 100.milliseconds,
-          pollingTimeout = 500.milliseconds,
-          inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
-        ),
-        blobCompression = FileBasedProverConfig(
-          requestsDirectory = proverDir.resolve("compression/requests"),
-          responsesDirectory = proverDir.resolve("compression/responses"),
-          pollingInterval = 100.milliseconds,
-          pollingTimeout = 500.milliseconds,
-          inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
-        ),
-        proofAggregation = FileBasedProverConfig(
-          requestsDirectory = proverDir.resolve("aggregation/requests"),
-          responsesDirectory = proverDir.resolve("aggregation/responses"),
-          pollingInterval = 100.milliseconds,
-          pollingTimeout = 500.milliseconds,
-          inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
-        ),
-      )
-    }
-
     return ProversConfig(
-      proverA = buildProverConfig(tmpDir.resolve("prover/v2")),
-      switchBlockNumberInclusive = switchBlockNumber?.toULong(),
-      switchBlockTimestamp = switchBlockTimestamp,
-      proverB =
-      if (withProverB) {
-        buildProverConfig(tmpDir.resolve("prover/v3"))
+      currentProver = ProverConfig(
+        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v2")),
+      ),
+      nextProver = if (withProverB) {
+        ProverConfig(
+          preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover/v3")),
+        )
       } else {
         null
       },
+      switchBlockNumberInclusive = switchBlockNumber?.toULong(),
+      switchBlockTimestamp = switchBlockTimestamp,
       enableRequestFilesCleanup = false,
     )
   }
 
-  private fun executionConfig(
-    proverDir: Path,
-    programVk: String? = null,
-    forkName: String? = null,
-  ): FileBasedProverConfig {
-    return FileBasedProverConfig(
-      requestsDirectory = proverDir.resolve("execution/requests"),
-      responsesDirectory = proverDir.resolve("execution/responses"),
-      pollingInterval = 100.milliseconds,
-      pollingTimeout = 500.milliseconds,
-      inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-      inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
-      programVk = programVk,
-      forkName = forkName,
-    )
-  }
-
-  private fun buildProversConfigWithExecution(
+  /** Builds a [ProversConfig] switching from a pre-RISC-V `current` prover to a RISC-V `next` prover. */
+  private fun buildPreRiscvToRiscvSwitchProversConfig(
     tmpDir: Path,
-    programVk: String? = null,
-    forkName: String? = null,
+    switchBlockNumberInclusive: ULong,
   ): ProversConfig {
     return ProversConfig(
-      proverA = ProverConfig(
-        execution = executionConfig(tmpDir.resolve("prover/v2"), programVk, forkName),
-        proofAggregation = FileBasedProverConfig(
-          requestsDirectory = tmpDir.resolve("prover/v2/aggregation/requests"),
-          responsesDirectory = tmpDir.resolve("prover/v2/aggregation/responses"),
-          pollingInterval = 100.milliseconds,
-          pollingTimeout = 500.milliseconds,
-          inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
-        ),
+      currentProver = ProverConfig(
+        preRiscvConfig = buildPreRiscvProverConfig(tmpDir.resolve("prover-switch/pre-riscv")),
       ),
-      switchBlockNumberInclusive = null,
+      nextProver = ProverConfig(
+        riscvConfig = buildRiscvProverConfig(tmpDir.resolve("prover-switch/riscv")),
+      ),
+      switchBlockNumberInclusive = switchBlockNumberInclusive,
       switchBlockTimestamp = null,
-      proverB = null,
       enableRequestFilesCleanup = false,
     )
   }
 
   private lateinit var meterRegistry: MeterRegistry
   private lateinit var metricsFacade: MetricsFacade
-  private lateinit var proverClientFactory: ProverClientFactory
+  private lateinit var preRiscvProverClientFactory: ProverClientFactory
   private lateinit var vertx: Vertx
   private lateinit var testTmpDir: Path
 
@@ -188,172 +213,312 @@ class ProverClientFactoryTest {
     this.testTmpDir = tmpDir
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
-    proverClientFactory =
-      ProverClientFactory(
+    preRiscvProverClientFactory =
+      DefaultProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockNumber = 200),
+        config = buildPreRiscvProversConfig(testTmpDir, switchBlockNumber = 200),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
         metricsFacade = metricsFacade,
       )
   }
 
+  // --- RISC-V l2-execution prover client ---
+
   @Test
-  fun `executionProverClient should build L2 execution prover client when programVk and forkName are set`() {
-    val factory = ProverClientFactory(
+  fun `l2ExecutionProverClient should build L2 execution prover client`() {
+    val factory = DefaultProverClientFactory(
       vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
+      config = buildRiscvProversConfig(testTmpDir),
       l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      chainId = 59144UL,
       metricsFacade = metricsFacade,
     )
 
-    val client = factory.executionProverClient()
+    val client = factory.l2ExecutionProverClient()
     assertThat(client).isNotNull
   }
 
-  @Test
-  fun `executionProverClient should fail when l2MessageServiceAddress is not configured`() {
-    val factory = ProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
-      l2MessageServiceAddress = null,
-      metricsFacade = metricsFacade,
+  // --- current/next prover switching (ABProverClientRouter) ---
+
+  private val switchBlockNumberInclusive = 2_000_000UL
+  private val currentProgramId = "0xfedcba1"
+  private val currentProvingSystemVersion = "0xabcdef1"
+  private val nextProgramId = "0xfedcba4"
+  private val nextProvingSystemVersion = "0xabcdef2"
+
+  private fun l2ExecutionRequestAt(blockNumber: ULong) =
+    RiscvProverClientTestFixtures.l2ExecutionProofRequestV1(
+      executions = listOf(RiscvProverClientTestFixtures.executionInfo(blockNumber)),
     )
 
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
-  }
+  private fun l2ExecutionClientConfig(
+    fileBased: FileBasedProverConfig,
+    programId: String = currentProgramId,
+    provingSystemVersion: String = currentProvingSystemVersion,
+  ): FileBasedRiscvProverConfig = FileBasedRiscvProverConfig(
+    fileBased = fileBased,
+    programId = programId,
+    provingSystemVersion = provingSystemVersion,
+    forkName = RiscvProverClientTestFixtures.FORK_NAME,
+  )
 
-  @Test
-  fun `executionProverClient should fail when l2MessageServiceAddress is empty`() {
-    val factory = ProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = "cancun"),
-      l2MessageServiceAddress = "",
-      metricsFacade = metricsFacade,
+  private fun requestFilePath(config: FileBasedProverConfig, proofIndex: BlockIntervalProofIndex): Path =
+    config.requestsDirectory.resolve(L2ExecutionProofFileNameProvider.getFileName(proofIndex))
+
+  private fun requestDtoFromFile(
+    config: FileBasedProverConfig,
+    proofIndex: BlockIntervalProofIndex,
+  ): L2ExecutionProofRequestDto =
+    RiscvProverClientTestFixtures.jsonMapper.readValue(
+      requestFilePath(config, proofIndex).toFile(),
+      L2ExecutionProofRequestDto::class.java,
     )
 
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("l2MessageServiceAddress must be configured for the RISC-V execution prover")
+  /** Builds a [ProversConfig] switching l2-execution (and dummy file-based rollup/aggregation) at [switchBlockNumberInclusive]. */
+  private fun buildSwitchProversConfig(
+    currentL2Execution: FileBasedRiscvProverConfig,
+    nextL2Execution: FileBasedRiscvProverConfig,
+    tmpDir: Path,
+  ): ProversConfig {
+    fun proverConfig(dirSuffix: String, l2Execution: FileBasedRiscvProverConfig) = RiscvProverConfig(
+      l2Execution = l2Execution,
+      rollup = l2ExecutionClientConfig(
+        fileBased = RiscvProverClientTestFixtures.fileBasedProverConfig(tmpDir.resolve("$dirSuffix/rollup")),
+      ).copy(programId = RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID),
+      rollupAggregation = l2ExecutionClientConfig(
+        fileBased = RiscvProverClientTestFixtures.fileBasedProverConfig(tmpDir.resolve("$dirSuffix/aggregation")),
+      ).copy(programId = RiscvProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_ID),
+    )
+    return ProversConfig(
+      currentProver = ProverConfig(
+        riscvConfig = proverConfig("v1", currentL2Execution),
+      ),
+      nextProver = ProverConfig(
+        riscvConfig = proverConfig("v2", nextL2Execution),
+      ),
+      switchBlockNumberInclusive = switchBlockNumberInclusive,
+      switchBlockTimestamp = null,
+      enableRequestFilesCleanup = false,
+    )
   }
 
-  @Test
-  fun `executionProverClient should fail when programVk is not configured`() {
-    val factory = ProverClientFactory(
+  private fun buildL2ExecutionClient(proversConfig: ProversConfig) =
+    DefaultProverClientFactory(
       vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = null, forkName = "cancun"),
-      l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
+      config = proversConfig,
+      l2MessageServiceAddress = RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS,
+      chainId = 59144UL,
       metricsFacade = metricsFacade,
+    ).l2ExecutionProverClient()
+
+  @Test
+  fun `should switch from current to next prover at switchBlockNumberInclusive when both are file-based`() {
+    val currentFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
+      testTmpDir.resolve("v1/execution"),
+    )
+    val nextFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
+      testTmpDir.resolve("v2/execution"),
     )
 
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("programVk must be configured for the RISC-V execution prover")
-  }
-
-  @Test
-  fun `executionProverClient should fail when forkName is not configured`() {
-    val factory = ProverClientFactory(
-      vertx = vertx,
-      config = buildProversConfigWithExecution(testTmpDir, programVk = "0xabc123", forkName = null),
-      l2MessageServiceAddress = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec",
-      metricsFacade = metricsFacade,
+    val client = buildL2ExecutionClient(
+      buildSwitchProversConfig(
+        currentL2Execution = l2ExecutionClientConfig(
+          fileBased = currentFileConfig,
+          programId = currentProgramId,
+          provingSystemVersion = currentProvingSystemVersion,
+        ),
+        nextL2Execution = l2ExecutionClientConfig(
+          fileBased = nextFileConfig,
+          programId = nextProgramId,
+          provingSystemVersion = nextProvingSystemVersion,
+        ),
+        tmpDir = testTmpDir,
+      ),
     )
 
-    assertThatThrownBy { factory.executionProverClient() }
-      .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("forkName must be configured for the RISC-V execution prover")
+    val beforeSwitchProofIndex = client.createProofRequest(
+      l2ExecutionRequestAt(switchBlockNumberInclusive - 1UL),
+    ).get()
+    assertThat(requestFilePath(currentFileConfig, beforeSwitchProofIndex)).exists()
+    assertThat(requestFilePath(nextFileConfig, beforeSwitchProofIndex)).doesNotExist()
+    val beforeSwitchDto = requestDtoFromFile(currentFileConfig, beforeSwitchProofIndex)
+    assertThat(beforeSwitchDto.programId).isEqualTo(currentProgramId)
+    assertThat(beforeSwitchDto.provingSystemVersion).isEqualTo(currentProvingSystemVersion)
+
+    val atSwitchProofIndex =
+      client.createProofRequest(l2ExecutionRequestAt(switchBlockNumberInclusive)).get()
+    assertThat(requestFilePath(nextFileConfig, atSwitchProofIndex)).exists()
+    assertThat(requestFilePath(currentFileConfig, atSwitchProofIndex)).doesNotExist()
+    val atSwitchDto = requestDtoFromFile(nextFileConfig, atSwitchProofIndex)
+    assertThat(atSwitchDto.programId).isEqualTo(nextProgramId)
+    assertThat(atSwitchDto.provingSystemVersion).isEqualTo(nextProvingSystemVersion)
+  }
+
+  // --- current (pre-RISC-V) to next (RISC-V) prover-type switching ---
+
+  private fun preRiscvToRiscvFactory() = DefaultProverClientFactory(
+    vertx = vertx,
+    config = buildPreRiscvToRiscvSwitchProversConfig(testTmpDir, switchBlockNumberInclusive),
+    l2MessageServiceAddress = RiscvProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS,
+    chainId = 59144UL,
+    metricsFacade = metricsFacade,
+  )
+
+  @Test
+  fun `should build all riscv clients when only next prover is riscv and current is pre-riscv`() {
+    val factory = preRiscvToRiscvFactory()
+
+    // regression: the riscv clients must not try to build from the pre-riscv current prover config
+    assertThatCode {
+      factory.l2ExecutionProverClient()
+      factory.rollupProverClient()
+      factory.rollupAggregationProverClient()
+    }.doesNotThrowAnyException()
   }
 
   @Test
-  fun `should create a prover with routing when switch is defined`() {
-    val proverClient = proverClientFactory.preRiscvProofAggregationProverClient()
-    assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
+  fun `should build pre-riscv clients when only current prover is pre-riscv and next is riscv`() {
+    val factory = preRiscvToRiscvFactory()
 
-    // swallow timeout exception because responses are not available
-    kotlin.runCatching { proverClient.requestProof(request1).get() }
-    kotlin.runCatching { proverClient.requestProof(request2).get() }
-    kotlin.runCatching { proverClient.requestProof(request3).get() }
-
-    await()
-      .atMost(5.seconds.toJavaDuration())
-      .untilAsserted {
-        Files.list(testTmpDir.resolve("prover/v2/aggregation/requests")).use {
-          assertThat(it.count()).isEqualTo(2)
-        }
-        Files.list(testTmpDir.resolve("prover/v3/aggregation/requests")).use {
-          assertThat(it.count()).isEqualTo(1)
-        }
-      }
+    // regression: the pre-riscv clients must not try to build from the riscv next prover config
+    assertThatCode {
+      factory.preRiscvExecutionProverClient()
+      factory.preRiscvBlobCompressionProverClient()
+      factory.preRiscvProofAggregationProverClient()
+    }.doesNotThrowAnyException()
   }
+
+  @Test
+  fun `should not route cross-type clients, each family uses its own prover config on both sides of the switch`() {
+    val factory = preRiscvToRiscvFactory()
+    val riscvFileConfig = RiscvProverClientTestFixtures.fileBasedProverConfig(
+      testTmpDir.resolve("prover-switch/riscv/execution"),
+    )
+
+    val preRiscvClient = factory.preRiscvExecutionProverClient()
+    val riscvClient = factory.l2ExecutionProverClient()
+
+    // the switch between pre-riscv and riscv is owned by the pipelines, not by the clients
+    assertThat(preRiscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
+    assertThat(riscvClient).isNotInstanceOf(ABProverClientRouter::class.java)
+
+    // the riscv client is used as-is on both sides of the switch block number, always from the next prover config
+    listOf(switchBlockNumberInclusive - 1UL, switchBlockNumberInclusive).forEach { blockNumber ->
+      val proofIndex = riscvClient.createProofRequest(l2ExecutionRequestAt(blockNumber)).get()
+      assertThat(requestFilePath(riscvFileConfig, proofIndex)).exists()
+    }
+
+    // the pre-riscv client is likewise used as-is on both sides, without ever touching the riscv config
+    listOf(switchBlockNumberInclusive - 1UL, switchBlockNumberInclusive).forEach { blockNumber ->
+      val proofIndex = ExecutionProofIndex(
+        startBlockNumber = blockNumber,
+        endBlockNumber = blockNumber,
+        startBlockTimestamp = Instant.fromEpochSeconds(blockNumber.toLong()),
+      )
+      assertThat(preRiscvClient.isProofAlreadyDone(proofIndex).get()).isFalse()
+    }
+  }
+
+  // --- pre-RISC-V prover client ---
 
   @Test
   fun `should fail with clear error when block number switch has no prover B`() {
-    val factory =
-      ProverClientFactory(
+    assertThatThrownBy {
+      DefaultProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockNumber = 200, withProverB = false),
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
+        config = buildPreRiscvProversConfig(
+          tmpDir = testTmpDir,
+          switchBlockNumber = 200,
+          withProverB = false,
+        ),
         metricsFacade = metricsFacade,
       )
-
-    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+    }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockNumberInclusive is set")
-  }
-
-  @Test
-  fun `should create a prover with routing when switchBlockTimestamp is defined`() {
-    val factory =
-      ProverClientFactory(
-        vertx = vertx,
-        config = buildProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
-        metricsFacade = metricsFacade,
-      )
-    val proverClient = factory.preRiscvProofAggregationProverClient()
-    assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
-
-    kotlin.runCatching { proverClient.requestProof(request1).get() }
-    kotlin.runCatching { proverClient.requestProof(request2).get() }
-    kotlin.runCatching { proverClient.requestProof(request3).get() }
-
-    await()
-      .atMost(5.seconds.toJavaDuration())
-      .untilAsserted {
-        Files.list(testTmpDir.resolve("prover/v2/aggregation/requests")).use {
-          assertThat(it.count()).isEqualTo(2)
-        }
-        Files.list(testTmpDir.resolve("prover/v3/aggregation/requests")).use {
-          assertThat(it.count()).isEqualTo(1)
-        }
-      }
+      .hasMessageContaining("nextProver must be provided")
   }
 
   @Test
   fun `should fail with clear error when timestamp switch has no prover B`() {
-    val factory =
-      ProverClientFactory(
+    assertThatThrownBy {
+      DefaultProverClientFactory(
         vertx = vertx,
-        config = buildProversConfig(
-          testTmpDir,
+        chainId = 123UL,
+        l2MessageServiceAddress = "0xa",
+        config = buildPreRiscvProversConfig(
+          tmpDir = testTmpDir,
           switchBlockTimestamp = Instant.fromEpochSeconds(50),
           withProverB = false,
         ),
         metricsFacade = metricsFacade,
       )
-
-    assertThatThrownBy { factory.preRiscvProofAggregationProverClient() }
+    }
       .isInstanceOf(IllegalArgumentException::class.java)
-      .hasMessage("proverBConfig must be provided when switchBlockTimestamp is set")
+      .hasMessageContaining("nextProver must be provided")
+  }
+
+  @Test
+  fun `should create a prover with routing when switch is defined`() {
+    val proverClient = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
+    assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
+
+    // swallow timeout exception because responses are not available
+    runCatching { proverClient.requestProof(request1).get() }
+    runCatching { proverClient.requestProof(request2).get() }
+    runCatching { proverClient.requestProof(request3).get() }
+
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        Files.list(testTmpDir.resolve("prover/v2/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(2)
+        }
+        Files.list(testTmpDir.resolve("prover/v3/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(1)
+        }
+      }
+  }
+
+  @Test
+  fun `should create a prover with routing when switchBlockTimestamp is defined`() {
+    val factory =
+      DefaultProverClientFactory(
+        vertx = vertx,
+        config = buildPreRiscvProversConfig(testTmpDir, switchBlockTimestamp = Instant.fromEpochSeconds(50)),
+        chainId = 59144UL,
+        l2MessageServiceAddress = "0xa",
+        metricsFacade = metricsFacade,
+      )
+    val proverClient = factory.preRiscvProofAggregationProverClient()
+    assertThat(proverClient).isInstanceOf(ABProverClientRouter::class.java)
+
+    runCatching { proverClient.requestProof(request1).get() }
+    runCatching { proverClient.requestProof(request2).get() }
+    runCatching { proverClient.requestProof(request3).get() }
+
+    await()
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        Files.list(testTmpDir.resolve("prover/v2/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(2)
+        }
+        Files.list(testTmpDir.resolve("prover/v3/aggregation/requests")).use {
+          assertThat(it.count()).isEqualTo(1)
+        }
+      }
   }
 
   @Test
   fun `should create metrics gauge and aggregate them`() {
-    val proverClientI1 = proverClientFactory.preRiscvProofAggregationProverClient()
-    val proverClientI2 = proverClientFactory.preRiscvProofAggregationProverClient()
+    val proverClientI1 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
+    val proverClientI2 = preRiscvProverClientFactory.preRiscvProofAggregationProverClient()
 
-    kotlin.runCatching { proverClientI1.requestProof(request1).get() }
-    kotlin.runCatching { proverClientI2.requestProof(request2).get() }
-    kotlin.runCatching { proverClientI1.requestProof(request3).get() }
+    runCatching { proverClientI1.requestProof(request1).get() }
+    runCatching { proverClientI2.requestProof(request2).get() }
+    runCatching { proverClientI1.requestProof(request3).get() }
 
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()).isNotNull

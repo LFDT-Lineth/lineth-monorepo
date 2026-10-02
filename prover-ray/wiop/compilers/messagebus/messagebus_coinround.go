@@ -2,28 +2,45 @@ package messagebus
 
 import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
-// ensureCoinRound returns the round on which [Compile] declares the shared α
-// and β coins, allocating it if it does not exist yet.
+// latestRound returns the highest-ID round among rounds, skipping nil entries,
+// or nil when every entry is nil. It is how [Compile] combines the two lower
+// bounds on its result round — the coin rounds and the last participant round —
+// neither of which dominates the other across the layouts callers use.
+func latestRound(rounds ...*wiop.Round) *wiop.Round {
+	var best *wiop.Round
+	for _, r := range rounds {
+		if r != nil && (best == nil || r.ID > best.ID) {
+			best = r
+		}
+	}
+	return best
+}
+
+// misplacedParticipantColumn returns the first column of an unreduced
+// [wiop.MessageBus] entry that does not live on round wantID, along with the
+// entry holding it; both are nil when every participating column is on that
+// round.
 //
-// A sharded protocol needs this round *before* [Compile] runs, so it can
-// register a [wiop.Round.RegisterPreSamplingHook] that seeds the Fiat-Shamir
-// state with the shared randomness every shard agrees on. [Compile] calls this
-// same function rather than repeating the lookup, so the round a caller
-// pre-allocated and the round α and β land on are the same by construction.
-//
-// The result is one past the last bus-impacting round. In the sharded RISC-V
-// layout that means: round 0 commits the program verification data, round 1
-// commits the columns the message bus reads, and the coins therefore land on
-// round 2 — after everything the bus binds, and before the shard-specific data
-// that must not influence the shared challenges.
-//
-// Call it after every [wiop.MessageBus] entry has been declared and before
-// [Compile]. The round is derived from the participant columns, so an entry
-// declared afterwards can move Compile's choice and leave the hook stranded on
-// a round that no longer carries the coins — a divergence that produces
-// mismatched challenges across shards rather than an error.
-func ensureCoinRound(sys *wiop.System) *wiop.Round {
-	return ensureRoundAfter(sys, latestUnreducedParticipantRound(sys))
+// It looks at each column individually rather than at [wiop.MessageBus.Round],
+// which reports the maximum over the entry's table: a table straddling two
+// rounds would report the later one and hide the column on the earlier.
+func misplacedParticipantColumn(sys *wiop.System, wantID int) (*wiop.MessageBus, *wiop.ColumnView) {
+	for _, mb := range sys.MessageBuses {
+		if mb.IsReduced() {
+			continue
+		}
+		for _, cv := range mb.Tab.Columns {
+			if r := cv.Round(); r == nil || r.ID != wantID {
+				return mb, cv
+			}
+		}
+		if cv := mb.Tab.Selector; cv != nil {
+			if r := cv.Round(); r == nil || r.ID != wantID {
+				return mb, cv
+			}
+		}
+	}
+	return nil, nil
 }
 
 // latestUnreducedParticipantRound returns the highest-ID round touched by any

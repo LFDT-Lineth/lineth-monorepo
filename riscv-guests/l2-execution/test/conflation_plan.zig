@@ -109,6 +109,8 @@ pub const BlockPlan = struct {
     tx_logs: []const []const types.Log = &.{},
     /// Forced-transaction witnesses this block declares (§6.5).
     forced_transactions: []const l2_execution_ssz.ForcedTransactionWitness = &.{},
+    /// Versioned hashes carried in the Engine API payload.
+    versioned_hashes: []const [32]u8 = &.{},
 
     /// Overrides the range-level constant base fee for this block only.
     base_fee: ?u64 = null,
@@ -503,7 +505,7 @@ pub const ConflationPlan = struct {
                         .block_access_list = &.{},
                     },
                     .parent_beacon_block_root = ZERO_HASH,
-                    .versioned_hashes = &.{},
+                    .versioned_hashes = block.versioned_hashes,
                     .execution_requests = if (block.non_empty_execution_requests)
                         .{ .deposits = &NON_EMPTY_DEPOSIT_BYTES }
                     else
@@ -516,9 +518,7 @@ pub const ConflationPlan = struct {
                 },
                 .chain_config = .{
                     .chain_id = block.chain_id orelse self.chain_id,
-                    .active_fork_idx = block.active_fork_idx orelse AMSTERDAM_FORK_BYTE,
-                    .activation_block = 0,
-                    .activation_timestamp = null,
+                    .schema_id = @as(u16, block.active_fork_idx orelse AMSTERDAM_FORK_BYTE) << 8 | 0x01,
                 },
                 .public_keys = &.{},
             };
