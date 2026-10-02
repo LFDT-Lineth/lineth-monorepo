@@ -14,15 +14,14 @@ Two schema ids are defined here:
   - `L2_EXECUTION_INPUT_SCHEMA_ID`  (0x0002) — extended l2-execution guest input
   - `L2_EXECUTION_OUTPUT_SCHEMA_ID` (0x0003) — extended l2-execution guest output
 
-The guest output wire is hash-only: the 0x0003 body is exactly
-`keccak256(ssz(public_inputs))` — 32 bytes, nothing else (34 bytes framed).
+The guest output wire is `ssz(public_inputs) || keccak256(ssz(public_inputs))`.
+The hash is appended to the SSZ value, rather than being a field of an SSZ
+container. The public inputs include a variable-length messaging-offset list.
 The remaining `L2ExecutionProof` fields (`start_block_number` and the
 `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages) are off-chain
 data, never part of this wire format, and `proof` is attached by the prover
-layer above the guest. The hash is irreversible, so the output decoder
-returns the public-inputs hash rather than reconstructing a dataclass;
-`encode_l2_execution_public_inputs_bytes` exposes the SSZ
-preimage tuple.
+layer above the guest. The output decoder verifies the hash and returns the
+public inputs; `encode_l2_execution_public_inputs_bytes` exposes their SSZ bytes.
 
 Each payload's `stateless_input_ssz` is carried opaquely — an already
 0x0001-framed vanilla stateless-input byte slice, byte-identical to what a
@@ -110,6 +109,23 @@ def _strict_decode(data: bytes, container: type) -> Any:
         raise InvalidSsz(f"{container.__name__}: {exc}") from exc
     if view.encode_bytes() != data:
         raise InvalidSsz(f"{container.__name__}: input is not the canonical SSZ encoding")
+    return view
+
+
+def _encode_output(schema_id: int, ssz_bytes: bytes) -> bytes:
+    """Frame a guest output with its hash appended outside the SSZ value."""
+    return _frame(schema_id, ssz_bytes + keccak256(ssz_bytes))
+
+
+def _decode_output(data: bytes, schema_id: int, ctx: str, container: type) -> Any:
+    """Decode a guest output and verify the hash of its canonical SSZ bytes."""
+    payload = _strip_frame(data, schema_id, ctx)
+    if len(payload) < 32:
+        raise InvalidSsz(f"{ctx}: missing SSZ hash")
+    ssz_bytes, output_hash = payload[:-32], payload[-32:]
+    view = _strict_decode(ssz_bytes, container)
+    if output_hash != keccak256(ssz_bytes):
+        raise InvalidSsz(f"{ctx}: hash mismatch")
     return view
 
 
@@ -388,10 +404,7 @@ def decode_l2_execution_input_ssz(data: bytes) -> L2ExecutionProofPrivateInput:
     return _l2_execution_input_from_view(_strict_decode(payload, SszL2ExecutionProofPrivateInput))
 
 
-# ── Extended guest output: hash-only framed wire ─────────────────────────────
-
-# The 0x0003 body is exactly one keccak256 hash.
-_OUTPUT_BODY_SIZE = 32
+# ── Extended guest output: SSZ public inputs and hash ────────────────────────
 
 
 def encode_l2_execution_public_inputs_bytes(pi: L2ExecutionProofPublicInput) -> bytes:
@@ -406,26 +419,21 @@ def encode_l2_execution_public_inputs_bytes(pi: L2ExecutionProofPublicInput) -> 
 def encode_l2_execution_output(proof: L2ExecutionProof) -> bytes:
     """
     Encode the extended l2-execution guest's own output into its framed wire
-    bytes (0x0003 schema id): `schema_id || keccak256(ssz(public_inputs))`,
-    34 bytes total. Every `proof` field other than `public_inputs` is
-    off-chain data with no place on this wire (see module docstring).
+    bytes (0x0003 schema id): `schema_id || ssz(public_inputs) ||
+    keccak256(ssz(public_inputs))`. Auxiliary proof fields remain off wire
+    (see module docstring).
     """
-    return _frame(
-        L2_EXECUTION_OUTPUT_SCHEMA_ID,
-        keccak256(encode_l2_execution_public_inputs_bytes(proof.public_inputs)),
+    return _encode_output(
+        L2_EXECUTION_OUTPUT_SCHEMA_ID, encode_l2_execution_public_inputs_bytes(proof.public_inputs)
     )
 
 
-def decode_l2_execution_output_ssz(data: bytes) -> Hash32:
+def decode_l2_execution_output_ssz(data: bytes) -> L2ExecutionProofPublicInput:
     """
-    Decode a framed l2-execution output into the public-inputs hash it
-    carries. The body is `keccak256` of the SSZ-encoded public-input tuple —
-    irreversible, so no dataclass is reconstructed. Strict: rejects a wrong
-    schema id, a truncated body, or trailing bytes.
+    Decode the framed public inputs and verify their appended hash.
+    Strict: rejects a wrong schema id, truncated body, or trailing bytes.
     """
-    payload = _strip_frame(data, L2_EXECUTION_OUTPUT_SCHEMA_ID, "l2-execution output")
-    if len(payload) != _OUTPUT_BODY_SIZE:
-        raise InvalidSsz(
-            f"l2-execution output: body must be exactly {_OUTPUT_BODY_SIZE} bytes, got {len(payload)}"
-        )
-    return Hash32(payload)
+    view = _decode_output(
+        data, L2_EXECUTION_OUTPUT_SCHEMA_ID, "l2-execution output", SszL2ExecutionProofPublicInput
+    )
+    return _l2_execution_public_input_from_view(view)

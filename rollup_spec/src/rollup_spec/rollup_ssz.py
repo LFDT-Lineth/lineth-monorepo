@@ -13,11 +13,9 @@ Two schema ids are defined, one per guest-facing message:
   - `ROLLUP_INPUT_SCHEMA_ID`  (0x1001) — rollup guest input
   - `ROLLUP_OUTPUT_SCHEMA_ID` (0x1801) — rollup guest output
 
-The guest output container omits the `proof` field the logical `RollupProof`
-dataclass carries: a guest cannot attest its own proof, so `proof` is attached
-by the prover layer above and is never part of the guest-emitted bytes.
-Decoding an output frame reconstructs the dataclass with `proof=b""`, matching
-the placeholder `run_rollup_guest` already emits.
+The guest output frame carries SSZ public inputs followed by their keccak256
+hash. Auxiliary `RollupProof` fields and the prover-attached proof stay off
+wire; the decoder returns the public inputs after verifying the hash.
 
 Optional modelling: `RollupProofPrivateInput.boundary_prev_data_rolling_hash`
 is the one Optional field in this wire format (required only for a mid-chunk
@@ -44,6 +42,8 @@ from remerkleable.complex import Container, List
 from .l2_execution_ssz import (
     SszAddress,
     SszVerifiableL2ExecutionProof,
+    _decode_output,
+    _encode_output,
     _frame,
     _ssz_verifiable_l2_execution_proof,
     _strict_decode,
@@ -127,14 +127,6 @@ class SszRollupProofPrivateInput(Container):
     # Optional[Hash32]: empty list means absent, single-element list means
     # present (see module docstring).
     boundary_prev_data_rolling_hash: List[SszBytes32, 1]
-
-
-class SszRollupOutput(Container):
-    # The rollup guest's own output: `RollupProof` with `proof` omitted (the
-    # prover layer attaches it). Field order matches the remaining fields of
-    # `rollup.py::RollupProof`.
-    public_inputs: SszRollupPublicInput
-    start_block_number: uint64
 
 
 # ── Logical dataclass -> SSZ view converters ─────────────────────────────────
@@ -285,32 +277,21 @@ def decode_rollup_input_ssz(data: bytes) -> RollupProofPrivateInput:
     return _rollup_input_from_view(_strict_decode(payload, SszRollupProofPrivateInput))
 
 
-# ── Rollup output: dataclass <-> framed SSZ bytes ────────────────────────────
+# ── Rollup output: public inputs and hash ────────────────────────────────────
 
 
 def encode_rollup_output(proof: RollupProof) -> bytes:
     """
-    Encode the rollup guest's own output into framed SSZ bytes (0x1801 schema
-    id). `proof.proof` is deliberately dropped — it is a prover-attached
-    placeholder in `RollupProof`, never part of the guest-emitted bytes.
+    Encode a 0x1801 frame carrying the SSZ public inputs followed by their
+    keccak256 hash. Auxiliary fields remain available in the logical proof.
     """
-    ssz_output = SszRollupOutput(
-        public_inputs=_ssz_rollup_public_input(proof.public_inputs),
-        start_block_number=int(proof.start_block_number),
-    )
-    return _frame(ROLLUP_OUTPUT_SCHEMA_ID, ssz_output.encode_bytes())
+    return _encode_output(ROLLUP_OUTPUT_SCHEMA_ID, _ssz_rollup_public_input(proof.public_inputs).encode_bytes())
 
 
-def decode_rollup_output_ssz(data: bytes) -> RollupProof:
+def decode_rollup_output_ssz(data: bytes) -> RollupPublicInput:
     """
-    Decode framed SSZ bytes into a `RollupProof` with `proof=b""` (the guest
-    never emits proof bytes; the prover layer attaches them separately).
-    Strict: rejects a wrong schema id, truncated bytes, trailing bytes, or
-    non-canonical SSZ.
+    Decode framed SSZ public inputs, verifying the appended hash. Strict:
+    rejects a wrong schema id, truncated bytes, trailing bytes, or non-canonical SSZ.
     """
-    payload = _strip_frame(data, ROLLUP_OUTPUT_SCHEMA_ID, "rollup output")
-    view = _strict_decode(payload, SszRollupOutput)
-    return RollupProof(
-        public_inputs=_rollup_public_input_from_view(view.public_inputs),
-        start_block_number=U64(int(view.start_block_number)),
-    )
+    view = _decode_output(data, ROLLUP_OUTPUT_SCHEMA_ID, "rollup output", SszRollupPublicInput)
+    return _rollup_public_input_from_view(view)
