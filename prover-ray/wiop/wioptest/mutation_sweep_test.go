@@ -1,9 +1,10 @@
-package compilers_test
+package wioptest_test
 
 import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ import (
 // the committed cell instead of being silently re-derived.
 func assertSweepCatches(t *testing.T, sys *wiop.System, assign func(*wiop.Runtime)) {
 	t.Helper()
-	compileFullPipeline(sys)
+	require.NoError(t, compilers.CompileFull(sys, wioptest.TestingCompileOptions()...))
 
 	prepare := func(rt *wiop.Runtime) {
 		assign(rt)

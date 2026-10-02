@@ -26,11 +26,9 @@
 //
 // The pass allocates α and β itself, via [Round.NewCoinField] on the round
 // right after round 0 (see registerSharedRandomness). They are ordinary
-// Fiat-Shamir coins.
-// In a sharded protocol what makes every shard draw the same pair is that
-// round 0 carries the same data on each, so the state the coins are sampled from is identical shard to shard.
-// With [CompileOptions.SharedRandomness] the pass enforces that layout rather
-// than trusting it.
+// Fiat-Shamir coins. By default, γ is supplied in round 0 to synchronize
+// challenges across shards and bus columns must live on the coin round.
+// [WithoutSharedRandomness] opts an unsharded protocol out of that layout.
 //
 // Caller order: invoke messagebus.Compile(sys) BEFORE
 // grandproduct.Compile(sys); the latter discharges the GrandProducts this
@@ -57,26 +55,18 @@ import (
 // [Compile] is single-invocation per system.
 const PublicInputTag wiop.PublicInputTag = "MessageBus"
 
-// CompileOptions are options for [Compile].
-type CompileOptions struct {
-	// SharedRandomness makes the shard derive α and β from a γ handed to it from
-	// outside the proof instead of from its own Fiat-Shamir transcript, which is
-	// what lets several shards agree on those challenges. It declares γ and the
-	// shard's contribution to it as public inputs, and requires every bus column
-	// to sit on the coin round. γ lives on round 0, so it is absorbed into
-	// Fiat-Shamir before α and β are drawn; see [registerSharedRandomness].
-	//
-	// Off by default: an unsharded protocol has no one to agree with and derives
-	// α and β from its own transcript. Turning it on obliges the prover to supply
-	// γ through [AssignSharedRandomnessSeed] — there is deliberately no default
-	// value, since a γ known in advance would hand the prover α and β before it
-	// commits to its bus columns.
-	//
-	// Setting it on a system with no message-bus entry does nothing: there is no
-	// coin round to seed. Nothing is registered, so [HasSharedRandomness] stays
-	// false and the prover has no γ to supply. A pipeline can therefore turn it on
-	// ahead of the entries it expects and have it engage the moment they arrive.
-	SharedRandomness bool
+type compileOptions struct {
+	sharedRandomness bool
+}
+
+// Option configures a single [Compile] invocation.
+type Option func(*compileOptions)
+
+// WithoutSharedRandomness derives α and β from the System's own transcript,
+// without a γ public input or a coin-round placement requirement. Use it for
+// unsharded protocols whose bus columns are assigned on round 0.
+func WithoutSharedRandomness() Option {
+	return func(o *compileOptions) { o.sharedRandomness = false }
 }
 
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
@@ -85,8 +75,9 @@ type CompileOptions struct {
 // the expected value (one in the unsharded case). See the package
 // documentation for the full reduction.
 //
-// Set [CompileOptions.SharedRandomness] to make α and β derive from a
-// cross-shard γ rather than from this shard's own traffic.
+// Shared randomness is enabled by default when there are bus entries. Supply
+// γ with [AssignSharedRandomnessSeed] before assigning bus columns on the coin
+// round, or explicitly use [WithoutSharedRandomness] for an unsharded layout.
 //
 // The pass appends up to two fresh interactive rounds to sys.Rounds: a
 // coin round where the shared α and β are declared, and a result round
@@ -109,10 +100,10 @@ type CompileOptions struct {
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
 // mixing shards in one call is a misuse — or if it is called a second time with
 // new entries.
-func Compile(sys *wiop.System, opts ...CompileOptions) {
-	opt := CompileOptions{}
-	if len(opts) > 0 {
-		opt = opts[0]
+func Compile(sys *wiop.System, opts ...Option) {
+	opt := compileOptions{sharedRandomness: true}
+	for _, apply := range opts {
+		apply(&opt)
 	}
 
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
@@ -143,12 +134,9 @@ func Compile(sys *wiop.System, opts ...CompileOptions) {
 	if len(byHandle) == 0 {
 		// Nothing left to reduce. A repeat call with no new entries is a
 		// harmless no-op, whether or not a previous call already ran.
-		//
-		// This includes a call that asked for shared randomness: with no entry
+		// This includes a call in shared-randomness mode: with no entry
 		// there is no coin round, hence no α or β to seed and no cross-shard
-		// check to keep consistent, so the request is vacuous rather than a
-		// misuse. A pipeline may therefore set the option before the bus entries
-		// it anticipates exist, and have it take effect once they do.
+		// check to keep consistent. The option is vacuous in that case.
 		return
 	}
 

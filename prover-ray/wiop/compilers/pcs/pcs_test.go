@@ -1,6 +1,7 @@
 package pcs
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -151,4 +152,83 @@ func TestCompileRejectsTamperedCommitment(t *testing.T) {
 	proof.Commitments[0] = root
 
 	require.Error(t, sys.Verify(proof, pub), "a tampered commitment must be rejected")
+}
+
+// TestCompile_PerSystemFRINumQueries checks that each compiled System opens
+// exactly its own configured query count, independently of other Systems
+// compiled and proved concurrently in the same process.
+func TestCompile_PerSystemFRINumQueries(t *testing.T) {
+	cases := []struct {
+		name         string
+		opts         []Option
+		want         int
+		expectedFail bool
+	}{
+		{name: "default", want: defaultFRINumQueries},
+		{name: "two", opts: []Option{WithFRINumQueries(2)}, want: 2},
+		{name: "four", opts: []Option{WithFRINumQueries(4)}, want: 4},
+		{name: "overwrite", opts: []Option{WithFRINumQueries(4), WithFRINumQueries(2)}, expectedFail: true},
+	}
+	const repetitions = 3
+	for rep := range repetitions {
+		for _, tc := range cases {
+			t.Run(fmt.Sprintf("%s/rep%d", tc.name, rep), func(t *testing.T) {
+				t.Parallel()
+				sys, col, _ := newPCSTestSystem()
+				if tc.expectedFail {
+					numRounds := len(sys.Rounds)
+					require.Panics(t, func() { Compile(sys, tc.opts...) },
+						"overwriting an already set query count must be rejected")
+					require.Len(t, sys.Rounds, numRounds, "rejected options must not add an opening round")
+					require.False(t, sys.Rounds[0].HasCommitment, "rejected options must not commit columns")
+					require.Zero(t, FRINumQueries(sys), "rejected options must not record a query count")
+					return
+				}
+				Compile(sys, tc.opts...)
+				require.Equal(t, tc.want, FRINumQueries(sys), "compiled System must record its query count")
+
+				proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+					rt.AssignColumn(col, baseVec(4, 3))
+				})
+				require.NotNil(t, proof.PCSOpeningProof, "proof must carry the FRI opening proof")
+				require.Len(t, proof.PCSOpeningProof.InputQueries, tc.want,
+					"one input query per configured FRI query")
+				require.Len(t, proof.PCSOpeningProof.FRIProof.RunningQueries, tc.want,
+					"one running query per configured FRI query")
+				require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+			})
+		}
+	}
+}
+
+// TestCompile_RejectsNonPositiveFRINumQueries checks that an invalid query count
+// is rejected before Compile touches the System.
+func TestCompile_RejectsNonPositiveFRINumQueries(t *testing.T) {
+	for _, n := range []int{0, -1} {
+		t.Run(fmt.Sprint(n), func(t *testing.T) {
+			sys, _, _ := newPCSTestSystem()
+			numRounds := len(sys.Rounds)
+			numActions := len(sys.Rounds[0].ProverActions)
+
+			require.Panics(t, func() { Compile(sys, WithFRINumQueries(n)) },
+				"a non-positive query count must be rejected")
+
+			require.Len(t, sys.Rounds, numRounds, "no opening round may be added")
+			require.False(t, sys.Rounds[0].HasCommitment, "no round may be flagged as committed")
+			require.Len(t, sys.Rounds[0].ProverActions, numActions, "no commit action may be registered")
+			require.Zero(t, FRINumQueries(sys), "no query count may be recorded")
+		})
+	}
+}
+
+// TestCompile_NoCommittedColumnsRecordsNoQueries checks that the no-op path
+// leaves no opening round and reports no FRI queries.
+func TestCompile_NoCommittedColumnsRecordsNoQueries(t *testing.T) {
+	sys := wiop.NewSystemf("pcs-empty")
+	sys.NewRound()
+
+	Compile(sys, WithFRINumQueries(2))
+
+	require.Len(t, sys.Rounds, 1, "no opening round without committed columns")
+	require.Zero(t, FRINumQueries(sys), "no FRI opening means no query count")
 }

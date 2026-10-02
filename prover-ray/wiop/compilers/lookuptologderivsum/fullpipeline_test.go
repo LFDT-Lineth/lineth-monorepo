@@ -1,13 +1,31 @@
-package compilers_test
+package lookuptologderivsum_test
 
 import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestFullPipeline_LookupScenarios runs the full pipeline on every
+// [wioptest.LookupScenarios] fixture. The pipeline reduces each Inclusion
+// through the log-derivative + recurrence chain into quotient queries that
+// the global pass discharges.
+func TestFullPipeline_LookupScenarios(t *testing.T) {
+	for _, build := range wioptest.LookupScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			require.NoError(t, compilers.CompileFull(sc.Sys, wioptest.TestingCompileOptions()...))
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must accept an honest witness")
+		})
+	}
+}
 
 // rowLimitVec builds a ConcreteVector holding vals in row order.
 func rowLimitVec(vals ...uint64) *wiop.ConcreteVector {
@@ -36,8 +54,8 @@ func rowLimitVec(vals ...uint64) *wiop.ConcreteVector {
 // each dynamic module at the same 2^22 maximum, so a subgroup's per-run row sum
 // is bounded by the static cost the packer already kept below the budget. Adding
 // A fragments does not help — it just splits the bucket into more subgroups. The
-// action is covered structurally and per-side in the lookuptologderivsum
-// package's runtime_rowlimit_internal_test.go.
+// action is covered structurally and per-side in this package's
+// runtime_rowlimit_internal_test.go.
 func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 	sys := wiop.NewSystemf("ll-tamper")
 	r0 := sys.NewRound()
@@ -68,7 +86,7 @@ func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 	}
 	require.GreaterOrEqual(t, dynIdx, 0, "dynamic module must be registered in sys.Modules")
 
-	compileFullPipeline(sys)
+	require.NoError(t, compilers.CompileFull(sys, wioptest.TestingCompileOptions()...))
 
 	// Honest witness: every A row (7) is in the lookup table {7, 7}.
 	assign := func(rt *wiop.Runtime) {
