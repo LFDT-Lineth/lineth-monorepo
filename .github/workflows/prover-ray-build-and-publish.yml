@@ -1,7 +1,3 @@
-# Build + smoke-test + publish the prover-ray image. Mirrors
-# prover-build-and-publish.yml. Reusable (workflow_call), so it is inert until
-# reusable-component-release.yml adds a build-local-prover-ray job that calls it
-# (see the release-integration note at the bottom).
 name: prover-ray-build-and-publish
 
 permissions:
@@ -76,11 +72,9 @@ jobs:
           develop_tag: ${{ env.DEVELOP_TAG }}
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover-ray/Dockerfile
-          # positional context is prover-ray (bare COPYs); the native runner is
-          # built from riscv-guests, passed as a named build context.
           docker_context: prover-ray
-          build_contexts: riscv-guests=riscv-guests/
-          # amd64 only: the zig native runner + native crypto target x86-64.
+          build_args: PROVER_RUNTIME=dev-mock
+          # Keep the initial dev-mock releases on the local stack platform.
           push_platforms: linux/amd64
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-prover-ray
@@ -90,13 +84,4 @@ jobs:
       # is blocked before anything is pushed.
       - name: Smoke test the image
         if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}"
-
-# --- Release integration TODO: add to reusable-component-release.yml ---
-# 1. A build-local-prover-ray job mirroring build-local-prover, gated on
-#    inputs.component-name == 'prover-ray' and needs: [compute-release-metadata,
-#    run-test-prover-ray], calling ./.github/workflows/prover-ray-build-and-publish.yml
-#    with { image_tag: local, develop_tag: develop, push_image: false }.
-# 2. Add build-local-prover-ray to run-e2e-tests' needs list and success check.
-# Open items: image_name/registry (consensys/linea-prover-ray?), self-hosted
-# runner label, and whether a run-test-prover-ray gate exists yet.
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" dev-mock

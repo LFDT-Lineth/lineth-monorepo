@@ -38,8 +38,16 @@ cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$")
 
 # Capture stdout and stderr separately so we can both surface git-cliff's logs
 # and detect the "nothing to bump" warning it writes to stderr.
-stderr_file=$(mktemp)
-trap 'rm -f "${stderr_file}"' EXIT
+temp_dir=$(mktemp -d)
+stderr_file="${temp_dir}/stderr"
+trap 'rm -rf "${temp_dir}"' EXIT
+# git-cliff's default initial tag (0.1.0) does not match our component namespace.
+if [ -z "${latest_tag}" ]; then
+  initial_config="${temp_dir}/initial.toml"
+  cp "${CLIFF_CONFIG}" "${initial_config}"
+  printf '\n[bump]\ninitial_tag = "releases/%s/v0.1.0"\n' "${COMPONENT}" >> "${initial_config}"
+  cliff_args[1]="${initial_config}"
+fi
 next_tag=$(git cliff "${cliff_args[@]}" 2> "${stderr_file}")
 # Re-emit stderr so it's visible in logs
 cat "${stderr_file}" >&2
@@ -58,7 +66,7 @@ if [ -z "${next_tag}" ] || [ "${changed}" = "false" ]; then
   emit_kv changed "false"
   exit 0
 fi
-next_semver="${next_tag#releases/${COMPONENT}/v}"
+next_semver="${next_tag#releases/"${COMPONENT}"/v}"
 if [ -n "${RELEASE_TAG_SUFFIX}" ]; then
   next_tag="${next_tag}-${RELEASE_TAG_SUFFIX}"
   next_semver="${next_semver}-${RELEASE_TAG_SUFFIX}"

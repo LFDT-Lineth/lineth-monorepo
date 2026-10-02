@@ -52,6 +52,7 @@ DOCKER_IMAGE_TARGETS := \
 	docker-build-maru \
 	docker-build-postman \
 	docker-build-prover \
+	docker-build-prover-ray \
 	docker-build-native-yield-automation-service \
 	docker-build-lido-governance-monitor \
 	docker-build-alltools
@@ -108,6 +109,15 @@ docker-build-prover:
 		--dockerfile ./prover/Dockerfile \
 		--context . \
 		--build-context prover=prover/
+
+# .github/workflows/prover-ray-build-and-publish.yml
+docker-build-prover-ray:
+	$(DOCKER_BUILD) \
+		--image-name consensys/linea-prover-ray \
+		--dockerfile ./prover-ray/Dockerfile \
+		--context prover-ray \
+		--build-arg PROVER_RUNTIME=dev-mock \
+		--platforms linux/amd64
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:
