@@ -33,17 +33,6 @@ type selfAssignLagrange struct{ le *wiop.LagrangeEval }
 
 func (a *selfAssignLagrange) Run(rt *wiop.Runtime) { a.le.SelfAssign(rt) }
 
-// constVec is only safe for tests that never reach the PCS opening: a constant
-// column interpolates to a constant polynomial, which makes FRI's deep quotient
-// degenerate. Use [nonConstVec] for anything that proves and verifies.
-func constVec(n int, val uint64) *wiop.ConcreteVector {
-	elems := make([]field.Element, n)
-	for i := range elems {
-		elems[i].SetUint64(val)
-	}
-	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
-}
-
 // nonConstVec returns a column whose interpolant is not constant.
 //
 // This matters for every test that exercises the PCS. FRI verifies the deep
@@ -194,7 +183,7 @@ func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
 	useSmallFRI(t)
 	sys, col, _ := newPCSOnlySystem()
 	sys.Rounds[1].RegisterVerifierAction(unsupportedAction{})
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, constVec(8, 3)) })
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
 
 	require.Panics(t, func() { wiop.AllocateVerifierCircuit(sys, proof, pub) },
 		"a verifier action without CheckGnark must be rejected instead of dropped")
@@ -203,7 +192,7 @@ func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
 func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
 	useSmallFRI(t)
 	sys, col, le := newPCSOnlySystem()
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, constVec(8, 3)) })
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
 	circ := wiop.AllocateVerifierCircuit(sys, proof, pub)
 
 	bad := cloneProof(proof)

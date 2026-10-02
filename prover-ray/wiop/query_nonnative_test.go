@@ -179,10 +179,10 @@ func TestNonNative_Check_UnassignedColumnsReturnsNil(t *testing.T) {
 	q := mod.NewNonNative(sys.Context.Childf("nn"), 16, left, right, modulus, result, quotient)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(left[0], baseVec(4, 3))
-	rt.AssignColumn(right[0], baseVec(4, 4))
-	rt.AssignColumn(modulus[0], baseVec(4, 5))
-	rt.AssignColumn(quotient[0], baseVec(4, 2))
+	rt.AssignColumn(left[0], wioptest.ConstVec(4, 3))
+	rt.AssignColumn(right[0], wioptest.ConstVec(4, 4))
+	rt.AssignColumn(modulus[0], wioptest.ConstVec(4, 5))
+	rt.AssignColumn(quotient[0], wioptest.ConstVec(4, 2))
 	// Result is intentionally left unassigned.
 
 	assert.NoError(t, q.Check(rt), "Check must be a no-op when a referenced column is unassigned")
