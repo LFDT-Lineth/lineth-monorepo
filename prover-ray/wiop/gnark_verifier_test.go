@@ -1,7 +1,9 @@
 package wiop_test
 
 import (
+	"maps"
 	"math/big"
+	"slices"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -172,6 +174,50 @@ func TestVerifierCircuit_Vanishing_Emulated(t *testing.T) {
 	nb, err := solveVerifierCircuit(t, sc.Sys, proof, proof, pub, ecc.BN254.ScalarField())
 	require.NoError(t, err, "honest proof must satisfy the emulated circuit")
 	t.Logf("constraints (emulated over BN254): %d", nb)
+
+	invalid := wioptest.NewMixedRatioVanishingsScenario()
+	global.Compile(invalid.Sys)
+	pcs.Compile(invalid.Sys)
+	badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+	require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+	_, err = solveVerifierCircuit(t, sc.Sys, proof, badProof, badPub, ecc.BN254.ScalarField())
+	require.Error(t, err, "invalid witness must not satisfy the emulated circuit")
+}
+
+// TestVerifierCircuit_Vanishing_TamperedProof starts from an honest proof and
+// corrupts one value at a time: every cell, then every round commitment. Each
+// corrupted proof must be rejected both natively and by the circuit.
+func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
+	useSmallFRI(t)
+	for _, build := range wioptest.VanishingScenarios() {
+		sc := build()
+		if hasDynamicModule(sc.Sys) {
+			continue
+		}
+		t.Run(sc.Name, func(t *testing.T) {
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			one := field.One()
+			for _, id := range slices.Sorted(maps.Keys(proof.Cells)) {
+				bad := cloneProof(proof)
+				bad.Cells[id] = bad.Cells[id].Add(field.ElemFromBase(one))
+				require.Errorf(t, sc.Sys.Verify(bad, pub), "tampered cell %d must fail natively", id)
+				_, err := solveVerifierCircuit(t, sc.Sys, proof, bad, pub, field.Modulus())
+				require.Errorf(t, err, "tampered cell %d must not satisfy the circuit", id)
+			}
+			for _, round := range slices.Sorted(maps.Keys(proof.Commitments)) {
+				bad := cloneProof(proof)
+				root := bad.Commitments[round]
+				root[0].Add(&root[0], &one)
+				bad.Commitments[round] = root
+				_, err := solveVerifierCircuit(t, sc.Sys, proof, bad, pub, field.Modulus())
+				require.Errorf(t, err, "tampered commitment of round %d must not satisfy the circuit", round)
+			}
+		})
+	}
 }
 
 // unsupportedAction is a verifier action without an in-circuit counterpart.
