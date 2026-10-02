@@ -1,10 +1,7 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
-import {
-  abi as LinethRollupV9StubAbi,
-  bytecode as LinethRollupV9StubBytecode,
-} from "./dynamic-artifacts/LinethRollupV9Stub.json";
+import { abi as ValidiumV3StubAbi, bytecode as ValidiumV3StubBytecode } from "./dynamic-artifacts/ValidiumV3Stub.json";
 import {
   contractName as AddressFilterContractName,
   abi as AddressFilterAbi,
@@ -29,9 +26,9 @@ import {
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
 import {
-  LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
-  LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-  LINETH_ROLLUP_V8_ROLES,
+  VALIDIUM_PAUSE_TYPES_ROLES,
+  VALIDIUM_UNPAUSE_TYPES_ROLES,
+  VALIDIUM_ROLES,
   OPERATOR_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
   ADDRESS_ZERO,
@@ -53,48 +50,40 @@ dotenv.config();
 
 async function main() {
   const networkName = getDeploymentNetworkName();
-  const linethRollupInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
-  const linethRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+  const validiumInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
+  const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
+  const validiumSecurityCouncil = requireAddressFromRegistryOrEnv(
     networkName,
     "L1_SECURITY_COUNCIL",
     "L1_SECURITY_COUNCIL",
   );
-  const linethRollupOperators = requireAddressesFromRegistryOrEnv(
-    networkName,
-    "LINETH_ROLLUP_OPERATORS",
-    "LINETH_ROLLUP_OPERATORS",
-  );
-  const linethRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
-  const linethRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
-  const linethRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
+  const validiumOperators = requireAddressesFromRegistryOrEnv(networkName, "VALIDIUM_OPERATORS", "VALIDIUM_OPERATORS");
+  const validiumRateLimitPeriodInSeconds = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_PERIOD");
+  const validiumRateLimitAmountInWei = getRequiredEnvVar("VALIDIUM_RATE_LIMIT_AMOUNT");
+  const validiumGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
   // The default true preserves existing local deploy behavior; the quickstart opts into false to skip the gateway.
   const deployForcedTransactionGateway = getBooleanEnvVarOrDefault("DEPLOY_FORCED_TRANSACTION_GATEWAY", true);
 
-  const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
-  const linethRollupName = "LinethRollupV9Stub";
-  const linethRollupImplementationName = "LinethRollupV9StubImplementation";
+  const validiumName = "ValidiumV3Stub";
+  const validiumImplementationName = "ValidiumV3StubImplementation";
   const forcedTransactionGatewayName = "ForcedTransactionGateway";
 
-  const pauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_PAUSE_TYPES_ROLES", LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES);
-  const unpauseTypeRoles = getEnvVarOrDefault(
-    "LINETH_ROLLUP_UNPAUSE_TYPES_ROLES",
-    LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-  );
+  const pauseTypeRoles = getEnvVarOrDefault("VALIDIUM_PAUSE_TYPES_ROLES", VALIDIUM_PAUSE_TYPES_ROLES);
+  const unpauseTypeRoles = getEnvVarOrDefault("VALIDIUM_UNPAUSE_TYPES_ROLES", VALIDIUM_UNPAUSE_TYPES_ROLES);
 
   // Use random hardcoded address until we introduce YieldManager E2E tests
   const automationServiceAddress = "0x3A9f0c2b8e7D4F6e1b5a9C2e0Fd7a4B6C8e9F1A2";
   const defaultRoleAddresses = [
-    ...generateRoleAssignments(LINETH_ROLLUP_V8_ROLES, linethRollupSecurityCouncil, [
-      { role: OPERATOR_ROLE, addresses: linethRollupOperators },
+    ...generateRoleAssignments(VALIDIUM_ROLES, validiumSecurityCouncil, [
+      { role: OPERATOR_ROLE, addresses: validiumOperators },
     ]),
     { role: YIELD_PROVIDER_STAKING_ROLE, addressWithRole: automationServiceAddress },
   ];
-  const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
+  const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  // No real RISC-V guest-program verifier keys exist yet. submitBlobs/finalizeBlocks are no-op
-  // stubs on this contract, so a key is never actually checked against a proof - a randomly
+  // No real RISC-V guest-program verifier keys exist yet. acceptDataRollingHash/finalizeBlocks are
+  // no-op stubs on this contract, so a key is never actually checked against a proof - a randomly
   // generated placeholder is enough to satisfy initialization.
   const verifierKeys = [ethers.hexlify(ethers.randomBytes(32))];
 
@@ -109,17 +98,11 @@ async function main() {
 
   const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
-  const [linethRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
-    deployContractFromArtifacts(
-      linethRollupImplementationName,
-      LinethRollupV9StubAbi,
-      LinethRollupV9StubBytecode,
-      wallet,
-      {
-        nonce: walletNonce,
-        ...feeOverrides,
-      },
-    ),
+  const [validiumImplementation, proxyAdmin, addressFilter] = await Promise.all([
+    deployContractFromArtifacts(validiumImplementationName, ValidiumV3StubAbi, ValidiumV3StubBytecode, wallet, {
+      nonce: walletNonce,
+      ...feeOverrides,
+    }),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 1,
       ...feeOverrides,
@@ -129,7 +112,7 @@ async function main() {
       AddressFilterAbi,
       AddressFilterBytecode,
       wallet,
-      linethRollupSecurityCouncil,
+      validiumSecurityCouncil,
       PRECOMPILES_ADDRESSES,
       {
         nonce: walletNonce + 2,
@@ -138,42 +121,38 @@ async function main() {
     ),
   ]);
 
-  const [proxyAdminAddress, linethRollupImplementationAddress, addressFilterAddress] = await Promise.all([
+  const [proxyAdminAddress, validiumImplementationAddress, addressFilterAddress] = await Promise.all([
     proxyAdmin.getAddress(),
-    linethRollupImplementation.getAddress(),
+    validiumImplementation.getAddress(),
     addressFilter.getAddress(),
   ]);
 
-  const initializer = getInitializerData(LinethRollupV9StubAbi, "initialize", [
+  const initializer = getInitializerData(ValidiumV3StubAbi, "initialize", [
     {
-      initialBlockHash: linethRollupInitialBlockHash,
-      initialL2BlockNumber: linethRollupInitialL2BlockNumber,
-      genesisTimestamp: linethRollupGenesisTimestamp,
+      initialBlockHash: validiumInitialBlockHash,
+      initialL2BlockNumber: validiumInitialL2BlockNumber,
+      genesisTimestamp: validiumGenesisTimestamp,
       // finalizeBlocks is a no-op stub here, so the verifier is never invoked - DEAD_ADDRESS is a
       // non-zero placeholder that satisfies the zero-address check without deploying a real verifier.
       defaultVerifier: DEAD_ADDRESS,
-      rateLimitPeriodInSeconds: linethRollupRateLimitPeriodInSeconds,
-      rateLimitAmountInWei: linethRollupRateLimitAmountInWei,
+      rateLimitPeriodInSeconds: validiumRateLimitPeriodInSeconds,
+      rateLimitAmountInWei: validiumRateLimitAmountInWei,
       roleAddresses,
       pauseTypeRoles,
       unpauseTypeRoles,
       verifierKeys,
-      defaultAdmin: linethRollupSecurityCouncil,
+      defaultAdmin: validiumSecurityCouncil,
       dataRollingHashProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     },
-    // Liveness recovery operator
-    multiCallAddress,
-    // Use random hardcoded address temporarily until we introduce YieldManager to E2E tests
-    "0xB7De4A2cf9E1c6a0B5f8d3e7a9C4B1a2e6d0f5C8",
   ]);
 
-  const linethRollupContract = await deployContractFromArtifacts(
-    linethRollupName,
+  const validiumContract = await deployContractFromArtifacts(
+    validiumName,
     TransparentUpgradeableProxyAbi,
     TransparentUpgradeableProxyBytecode,
     wallet,
-    linethRollupImplementationAddress,
+    validiumImplementationAddress,
     proxyAdminAddress,
     initializer,
     {
@@ -182,7 +161,7 @@ async function main() {
     },
   );
 
-  const linethRollupAddress = await linethRollupContract.getAddress();
+  const validiumAddress = await validiumContract.getAddress();
 
   if (deployForcedTransactionGateway) {
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
@@ -206,12 +185,12 @@ async function main() {
     const mimcAddress = await mimc.getAddress();
 
     const args = [
-      linethRollupAddress,
+      validiumAddress,
       destinationChainId,
       l2BlockBuffer,
       maxGasLimit,
       maxInputLengthBuffer,
-      linethRollupSecurityCouncil,
+      validiumSecurityCouncil,
       addressFilterAddress,
       l2BlockDurationSeconds,
       blockNumberDeadlineBuffer,
@@ -232,12 +211,12 @@ async function main() {
 
     const forcedTransactionGatewayAddress = await forcedTransactionGateway.getAddress();
     const securityCouncilWallet = new ethers.Wallet(securityCouncilPrivateKey, provider);
-    const linethRollup = new ethers.Contract(linethRollupAddress, LinethRollupV9StubAbi, securityCouncilWallet);
+    const validium = new ethers.Contract(validiumAddress, ValidiumV3StubAbi, securityCouncilWallet);
 
     console.log(
       `Granting FORCED_TRANSACTION_SENDER_ROLE to ForcedTransactionGateway at ${forcedTransactionGatewayAddress}...`,
     );
-    const grantRoleTx = await linethRollup.grantRole(
+    const grantRoleTx = await validium.grantRole(
       FORCED_TRANSACTION_SENDER_ROLE,
       forcedTransactionGatewayAddress,
       feeOverrides,
@@ -247,7 +226,7 @@ async function main() {
   } else {
     console.log(
       "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy. " +
-        "The next L1 deploy starts after the LinethRollup proxy nonce.",
+        "The next L1 deploy starts after the Validium proxy nonce.",
     );
   }
 }
