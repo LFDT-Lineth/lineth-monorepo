@@ -196,7 +196,6 @@ jobs:
           SKIP_DOCKER_IMAGE_INFO: ${{ inputs.dry_run_release }}
         run: |
           mkdir release && cd release
-          # These components use image names outside the linea-<folder> convention.
           if [ "$COMPONENT_NAME" = "maru" ]; then
             IMAGE_NAME="consensys/maru"
           elif [ "$COMPONENT_NAME" = "prover-ray" ]; then
