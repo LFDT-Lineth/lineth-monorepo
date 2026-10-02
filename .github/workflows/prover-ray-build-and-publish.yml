@@ -74,8 +74,7 @@ jobs:
           dockerfile_path: ./prover-ray/Dockerfile
           docker_context: prover-ray
           build_args: PROVER_RUNTIME=dev-mock
-          # Keep the initial dev-mock releases on the local stack platform.
-          push_platforms: linux/amd64
+          requires_qemu: ${{ env.PUSH_IMAGE }}
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-prover-ray
 

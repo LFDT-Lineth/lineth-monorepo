@@ -107,8 +107,9 @@ you change one, change the other.
 
 ## Prover-ray
 
-CI and `make docker-build-prover-ray` build a Linux AMD64 **dev-mock-only** image,
-using `PROVER_RUNTIME=dev-mock` to skip the native toolchain. The package-local
+CI publishes **dev-mock-only** images for Linux AMD64 and ARM64. Local builds
+use `make docker-build-prover-ray` (`PLATFORMS=linux/arm64` for ARM64). Both use
+`PROVER_RUNTIME=dev-mock` to skip the native toolchain. The package-local
 `make -C prover-ray docker-build` keeps the existing native build default.
 
 ```bash

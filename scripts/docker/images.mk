@@ -116,8 +116,7 @@ docker-build-prover-ray:
 		--image-name consensys/linea-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
-		--build-arg PROVER_RUNTIME=dev-mock \
-		--platforms linux/amd64
+		--build-arg PROVER_RUNTIME=dev-mock
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:
