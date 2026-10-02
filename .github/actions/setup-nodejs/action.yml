@@ -57,7 +57,7 @@ runs:
     # exact lockfile and policy it was computed for. Saved by main runs only.
     - uses: ./.github/actions/cache
       name: Cache pnpm lockfile verification verdicts
-      if: ${{ runner.os == 'Linux' && hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
+      if: ${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
       with:
         path: ~/.cache/pnpm/lockfile-verified.jsonl
         key: pnpm-verified-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
