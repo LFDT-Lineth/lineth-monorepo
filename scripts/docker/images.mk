@@ -114,7 +114,7 @@ docker-build-prover:
 # .github/workflows/prover-ray-build-and-publish.yml
 docker-build-prover-ray:
 	$(DOCKER_BUILD) \
-		--image-name consensys/linea-prover-ray \
+		--image-name consensys/lineth-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
 		--build-arg PROVER_RUNTIME=$(PROVER_RAY_MODE) \

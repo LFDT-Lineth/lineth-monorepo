@@ -26,7 +26,7 @@ on:
       image_name:
         required: false
         type: string
-        default: consensys/linea-prover-ray
+        default: consensys/lineth-prover-ray
       push_image:
         required: false
         type: boolean

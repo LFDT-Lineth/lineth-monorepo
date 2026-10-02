@@ -11,7 +11,7 @@
 set -euo pipefail
 
 DOCKER="${DOCKER:-docker}"
-IMAGE="${1:-consensys/linea-prover-ray:dev}"
+IMAGE="${1:-consensys/lineth-prover-ray:dev}"
 MODE="${2:-dev-zkvm}"
 case "$MODE" in
     dev-mock|dev-zkvm) ;;

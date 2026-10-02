@@ -114,12 +114,12 @@ use `make docker-build-prover-ray` (`PLATFORMS=linux/arm64` for ARM64). Both use
 
 ```bash
 make docker-build-prover-ray
-./prover-ray/scripts/docker-smoke.sh consensys/linea-prover-ray:local dev-mock
+./prover-ray/scripts/docker-smoke.sh consensys/lineth-prover-ray:local dev-mock
 ```
 
 Run **Prover Ray Release** in GitHub Actions to publish through the
 shared component release workflow and create a draft release with pull commands.
-Confirm public access to `consensys/linea-prover-ray` and CI push permissions
+Confirm public access to `consensys/lineth-prover-ray` and CI push permissions
 before the first release; pin the full published tag in local setup.
 
 Mount a dev-mock config with the stack's shared queue paths at `CONFIG_FILE`.
