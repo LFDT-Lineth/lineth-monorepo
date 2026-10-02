@@ -105,67 +105,22 @@ upload.
 The workflow and the make target hold the per-image recipe independently — when
 you change one, change the other.
 
-## Prover-ray dev-mock draft releases
+## Prover-ray
 
-Run **Prover Ray Release (dev-mock)** from GitHub Actions after the workflow is
-merged. It follows the component release flow used by coordinator and maru:
-compute the version, run prover-ray tests, build and smoke-test the container,
-publish to Docker Hub, then create a **draft** GitHub release with pull commands.
-The shared zkEVM E2E suite does not consume prover-ray yet, so the release uses
-its container request/response smoke test as the integration gate.
-
-```bash
-gh workflow run prover-ray-release.yml --ref main -f image_tag_suffix=dev-mock
-```
-
-For a release from another branch, also supply a unique `release_tag_suffix`.
-Releases use `releases/prover-ray/v<version>` tags. CI needs the existing release
-bot secrets and `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` with push access to
-`consensys/linea-prover-ray`. That Docker Hub repository must be public for
-unauthenticated local pulls. A draft GitHub release still publishes the image.
-
-The release publishes `consensys/linea-prover-ray:<version>-<date>-<commit>` and,
-by default, an additional tag ending in `-dev-mock`. Main-branch releases also
-update `develop-dev-mock`. Pin the full tag from the draft release's pull command
-in local setup; no local image build is required:
-
-```bash
-export LINEA_PROVER_RAY_TAG='<version>-<date>-<commit>-dev-mock'
-docker pull "consensys/linea-prover-ray:${LINEA_PROVER_RAY_TAG}"
-```
-
-These initial images target `linux/amd64` and contain the Go prover in **dev-mock
-mode only**. They include a default dev-mock config, but local stacks should mount
-a config with their shared queue paths. For the RISC-V setup in
-[PR #3929](https://github.com/LFDT-Lineth/lineth-monorepo/pull/3929), the execution
-config is:
-
-```toml
-version = "local-dev-mock"
-log_level = 4
-
-[execution]
-prover_mode = "dev-mock"
-requests_root_dir = "/data/prover/riscv/execution"
-```
-
-Mount `tmp/local` at `/data`, mount that TOML file at `CONFIG_FILE`, and set
-`WORKER_ID` to a unique worker name. The adapter reads `requests/` and writes
-`responses/` under `requests_root_dir`. The RISC-V Compose integration must
-replace its temporary proof responder with this image and config; publishing
-alone does not change that unmerged stack. The existing
-`docker/config/prover-ray/prover-ray-config.toml` selects **dev-zkvm** for execution
-and must not be used unchanged with a mock image. Dev-mock produces placeholder
-proofs for local plumbing checks.
-
-To reproduce and smoke-test the CI image locally:
+CI and `make docker-build-prover-ray` build a Linux AMD64 **dev-mock-only** image,
+using `PROVER_RUNTIME=dev-mock` to skip the native toolchain. The package-local
+`make -C prover-ray docker-build` keeps the existing native build default.
 
 ```bash
 make docker-build-prover-ray
 ./prover-ray/scripts/docker-smoke.sh consensys/linea-prover-ray:local dev-mock
 ```
 
-CI and this target pass `PROVER_RUNTIME=dev-mock`, so BuildKit skips the native
-runner, guest ELF, and Zig/crypto toolchains. The package-local
-`make -C prover-ray docker-build` keeps its existing dev-zkvm build. A published
-mock image cannot run dev-zkvm by changing the runtime config.
+Run **Prover Ray Release (dev-mock)** in GitHub Actions to publish through the
+shared component release workflow and create a draft release with pull commands.
+Confirm public access to `consensys/linea-prover-ray` and CI push permissions
+before the first release; pin the full published tag in local setup.
+
+Mount a dev-mock config with the stack's shared queue paths at `CONFIG_FILE`.
+The existing `docker/config/prover-ray/prover-ray-config.toml` selects dev-zkvm
+and cannot be used unchanged with this image.
