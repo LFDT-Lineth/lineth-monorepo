@@ -18,7 +18,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * Maps a [RollupProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
  * `rollup_spec/prover_io/schemas/getZkRollupProofV1.request.schema.json`.
  */
-internal class RollupProofRequestDtoMapper(
+class RollupProofRequestDtoMapper(
   private val programId: String,
   private val provingSystemVersion: String,
   private val chainId: Long,
