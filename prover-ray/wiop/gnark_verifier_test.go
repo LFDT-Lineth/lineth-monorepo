@@ -51,7 +51,7 @@ func nonConstVec(n int) *wiop.ConcreteVector {
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
-// newPCSOnlySystem is the smallest PCS-compiled protocol: one committed
+// newPCSOnlySystem builds a minimal PCS-compiled system: one committed
 // column opened at a coin through a LagrangeEval.
 func newPCSOnlySystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 	sys := wiop.NewSystemf("gnark-pcs")
@@ -67,8 +67,8 @@ func newPCSOnlySystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 }
 
 // solveVerifierCircuit compiles the verifier circuit of sys over the given
-// field (template and assignment both taken from proof) and reports whether
-// the constraint count along with the result of solving the assignment.
+// field (template and assignment both taken from proof) and returns the
+// constraint count along with the error from solving the assignment.
 func solveVerifierCircuit(
 	t *testing.T, sys *wiop.System, template, proof wiop.Proof, pub wiop.PublicInput, modulus *big.Int,
 ) (int, error) {
