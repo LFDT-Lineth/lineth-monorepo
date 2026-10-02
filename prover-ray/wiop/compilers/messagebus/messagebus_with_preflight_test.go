@@ -243,9 +243,10 @@ func (s *seededShard) busInputSet(t *testing.T) preflight.BusInputSet {
 		table[sizeIndex].Base = append(table[sizeIndex].Base, padded)
 	}
 
+	blowup := uint64(pcs.RSBlowup(s.sys))
 	encoders := make([]*fri.RSEncoder, maxSizeIndex+1)
 	for i := range encoders {
-		enc := fri.NewEncoder(uint64(1<<pcs.FRILogInverseRate)*(1<<i), 1<<i)
+		enc := fri.NewEncoder(blowup*(1<<i), 1<<i)
 		encoders[i] = &enc
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers"
 	"github.com/LFDT-Lineth/zkc/pkg/util/file"
 	"github.com/sirupsen/logrus"
 )
@@ -43,7 +44,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 	sysPipeline := proverCompilePipeline
 	if testing.Short() {
 		t.Log("short mode, skipping full prover pipeline")
-		sysPipeline = func(_ *wiop.System) {}
+		sysPipeline = func(_ *wiop.System, _ ...compilers.Option) {}
 	}
 
 	// glob the testdata files, and run each one as a sub-test. Each test-case is

@@ -232,3 +232,148 @@ func TestCompile_NoCommittedColumnsRecordsNoQueries(t *testing.T) {
 	require.Len(t, sys.Rounds, 1, "no opening round without committed columns")
 	require.Zero(t, FRINumQueries(sys), "no FRI opening means no query count")
 }
+
+// TestCompile_PerSystemRSBlowup checks that each compiled System commits and
+// opens at its own configured blowup, independently of Systems at other
+// blowups compiled and proved concurrently in the same process.
+func TestCompile_PerSystemRSBlowup(t *testing.T) {
+	cases := []struct {
+		name        string
+		opts        []Option
+		want        int
+		wantMaxSize uint8
+	}{
+		{name: "default", want: defaultRSBlowup, wantMaxSize: 22},
+		{name: "four", opts: []Option{WithRSBlowup(4)}, want: 4, wantMaxSize: 22},
+		{name: "eight", opts: []Option{WithRSBlowup(8)}, want: 8, wantMaxSize: 21},
+		{name: "sixteen", opts: []Option{WithRSBlowup(16)}, want: 16, wantMaxSize: 20},
+	}
+	const repetitions = 3
+	for rep := range repetitions {
+		for _, tc := range cases {
+			t.Run(fmt.Sprintf("%s/rep%d", tc.name, rep), func(t *testing.T) {
+				t.Parallel()
+				sys, col, _ := newPCSTestSystem()
+				Compile(sys, append([]Option{WithFRINumQueries(2)}, tc.opts...)...)
+
+				require.Equal(t, tc.want, RSBlowup(sys), "compiled System must record its blowup")
+				require.Equal(t, tc.wantMaxSize, FRIMaxCommittableSizeLog2(sys),
+					"row limit must shrink once blowup·2^22 exceeds the field's 2-adicity")
+				params := FRIStaticParams(sys)
+				require.Equal(t, tc.want, 1<<(params.LogCodewordSize-params.LogPlainTextSize),
+					"FRI envelope must be built at the System's blowup")
+
+				proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+					rt.AssignColumn(col, baseVec(4, 3))
+				})
+				require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
+			})
+		}
+	}
+}
+
+// TestCompile_RSBlowupBindsProof checks that the blowup is part of what a proof
+// commits to: the same witness commits differently at two blowups, and a proof
+// produced at one blowup is rejected by an otherwise identical System at another.
+func TestCompile_RSBlowupBindsProof(t *testing.T) {
+	prove := func(blowup int) (*wiop.System, wiop.Proof, wiop.PublicInput) {
+		sys, col, _ := newPCSTestSystem()
+		Compile(sys, WithFRINumQueries(2), WithRSBlowup(blowup))
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(col, baseVec(4, 3))
+		})
+		return sys, proof, pub
+	}
+	_, proof2, pub2 := prove(2)
+	sys4, proof4, _ := prove(4)
+
+	require.NotEqual(t, proof2.Commitments[0], proof4.Commitments[0],
+		"the same witness must commit to different codewords at different blowups")
+	require.Error(t, sys4.Verify(proof2, pub2),
+		"a blowup-2 proof must not verify against a blowup-4 System")
+}
+
+// TestWithRSBlowup_RejectsInvalid checks that blowups that are not powers of
+// two in [2, maxRSBlowup] are rejected when the option is built.
+func TestWithRSBlowup_RejectsInvalid(t *testing.T) {
+	for _, blowup := range []int{-2, 0, 1, 3, 6, 2 * maxRSBlowup} {
+		t.Run(fmt.Sprint(blowup), func(t *testing.T) {
+			require.Panics(t, func() { WithRSBlowup(blowup) },
+				"blowup %d must be rejected", blowup)
+		})
+	}
+}
+
+// TestCompile_RejectsRepeatedRSBlowup checks that setting the blowup twice is
+// rejected before Compile touches the System.
+func TestCompile_RejectsRepeatedRSBlowup(t *testing.T) {
+	sys, _, _ := newPCSTestSystem()
+	numRounds := len(sys.Rounds)
+
+	require.Panics(t, func() { Compile(sys, WithRSBlowup(4), WithRSBlowup(8)) },
+		"overwriting an already set blowup must be rejected")
+
+	require.Len(t, sys.Rounds, numRounds, "rejected options must not add an opening round")
+	require.False(t, sys.Rounds[0].HasCommitment, "rejected options must not commit columns")
+	require.Zero(t, RSBlowup(sys), "rejected options must not record a blowup")
+}
+
+// tinyRowLimitBlowup leaves a row limit of 2^1 on KoalaBear (2^(24-23)), so
+// row-limit violations are testable with 4-row columns.
+const tinyRowLimitBlowup = 1 << (field.MaxOrderRoot - 1)
+
+// TestCompile_RSBlowupRejectsOversizedStaticColumn checks that a static column
+// above the blowup's row limit is rejected before Compile touches the System.
+func TestCompile_RSBlowupRejectsOversizedStaticColumn(t *testing.T) {
+	sys, _, _ := newPCSTestSystem() // 4-row static column
+	numRounds := len(sys.Rounds)
+
+	require.Panics(t, func() { Compile(sys, WithRSBlowup(tinyRowLimitBlowup)) },
+		"a 4-row column must be rejected when the row limit is 2")
+
+	require.Len(t, sys.Rounds, numRounds, "no opening round may be added")
+	require.False(t, sys.Rounds[0].HasCommitment, "no round may be flagged as committed")
+	require.Zero(t, RSBlowup(sys), "no blowup may be recorded")
+}
+
+// newDynamicPCSTestSystem is [newPCSTestSystem] with the committed column in a
+// dynamic module, compiled at tinyRowLimitBlowup.
+func newDynamicPCSTestSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("pcs-dyn-rowlimit")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	Compile(sys, WithFRINumQueries(2), WithRSBlowup(tinyRowLimitBlowup))
+	return sys, col
+}
+
+// TestCompile_RSBlowupRejectsOversizedDynamicColumn checks that the prover
+// refuses to commit a dynamic column above the blowup's row limit.
+func TestCompile_RSBlowupRejectsOversizedDynamicColumn(t *testing.T) {
+	sys, col := newDynamicPCSTestSystem()
+
+	require.PanicsWithValue(t,
+		"pcs: round 0 commits a column of size 2^2, above the 2^1 committable at RS blowup 8388608",
+		func() {
+			sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(4, 3)) })
+		}, "a 4-row dynamic column must be rejected when the row limit is 2")
+}
+
+// TestVerify_Regression_ForgedDynamicSizeAboveRowLimit checks that a proof
+// claiming a dynamic size above the blowup's row limit — but within
+// [wiop.ColumnSizeMaxSupported], so System.Verify's own cap lets it through — is
+// rejected with an error rather than a panic while deriving FRI domains.
+func TestVerify_Regression_ForgedDynamicSizeAboveRowLimit(t *testing.T) {
+	sys, col := newDynamicPCSTestSystem()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, baseVec(2, 3)) })
+	require.NoError(t, sys.Verify(proof, pub), "honest 2-row witness must verify")
+
+	proof.DynamicSizes[0] = 4
+	var err error
+	require.NotPanics(t, func() { err = sys.Verify(proof, pub) }, "a forged size must not panic the verifier")
+	require.ErrorContains(t, err, "exceeds the 2^1 committable", "a forged size above the row limit must be rejected")
+}

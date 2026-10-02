@@ -130,20 +130,20 @@ func traceZkc(
 	return outputs, nil
 }
 
-func proverCompilePipeline(sys *wiop.System) {
+func proverCompilePipeline(sys *wiop.System, opts ...compilers.Option) {
 	// The driver places bus columns on round 0; seeded mode requires them on
 	// the coin round, so keep the explicit unsharded option.
 	//
 	// XXX: when zkcdriver is updated and puts traces in round 1 then we can remove this wrapper and just call `CompileFull`
 	// everywhere
-	if err := compilers.CompileFull(sys,
-		compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())); err != nil {
+	opts = append([]compilers.Option{compilers.WithMessageBusOption(messagebus.WithoutSharedRandomness())}, opts...)
+	if err := compilers.CompileFull(sys, opts...); err != nil {
 		panic(err)
 	}
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
-func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
+func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System, ...compilers.Option)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		if r := recover(); r != nil {

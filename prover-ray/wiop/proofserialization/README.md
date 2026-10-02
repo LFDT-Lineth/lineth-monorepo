@@ -508,10 +508,11 @@ Decomposing `modexp_u256`, whose 41.3 MB of row data is 93% of the image:
 which is `229 queries x 4 input trees x 17 levels x 2 conjugate rows x ~140
 values per row`. Three multipliers stack up:
 
-- **229 queries.** `FRILogInverseRate = 1`, i.e. a blow-up factor of 2. At rate
-  1/2 you need ~229 queries for 128 bits (per the soundcalc reference in
-  `pcs.go`). Systems quoting ~1 MB proofs typically use blow-up 4–8 and 30–80
-  queries — a 3–7× difference on its own.
+- **229 queries.** The default RS blow-up factor is 2 (`defaultRSBlowup`,
+  configurable per System with `pcs.WithRSBlowup`). At rate 1/2 you need ~229
+  queries for 128 bits (per the soundcalc reference in `pcs.go`). Systems
+  quoting ~1 MB proofs typically use blow-up 4–8 and 30–80 queries — a 3–7×
+  difference on its own.
 - **Multi-size openings.** Each query opens one row *per committed size* per tree,
   so the per-query cost is the total committed column count across all sizes, not
   one row.

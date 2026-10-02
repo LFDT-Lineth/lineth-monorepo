@@ -222,6 +222,59 @@ func BenchmarkPCSComputeClaims(b *testing.B) {
 	}
 }
 
+// rateBenchPairs pairs each RS blowup with the FRI query count that targets the
+// same security level, so BenchmarkPCSRate compares rates at equal security.
+var rateBenchPairs = []struct{ rate, numQueries int }{
+	{rate: 2, numQueries: 229},
+	{rate: 4, numQueries: 115},
+	{rate: 8, numQueries: 77},
+	{rate: 16, numQueries: 58},
+}
+
+// rateBenchConfigs is one fixed multi-size workload per rateBenchPairs entry.
+func rateBenchConfigs() []benchConfig {
+	cfgs := make([]benchConfig, len(rateBenchPairs))
+	for i, p := range rateBenchPairs {
+		cfgs[i] = benchConfig{
+			minLog2: 8, maxLog2: 16, basePolys: 64, extPolys: 64,
+			rate: p.rate, numQueries: p.numQueries, sharedShifts: []int{0, 1, 2}, seed: 1,
+		}
+	}
+	return cfgs
+}
+
+// BenchmarkPCSRate compares RS blowups on one workload, each at its paired
+// query count, per PCS phase:
+//
+//	go test -run=NONE -bench=BenchmarkPCSRate -benchmem ./crypto/koalabear/fri/
+func BenchmarkPCSRate(b *testing.B) {
+	phases := []struct {
+		name string
+		run  func(b *testing.B, fx *benchFixture)
+	}{
+		{name: "commit", run: func(b *testing.B, fx *benchFixture) {
+			b.Helper()
+			if fx.pcs.Commit(fx.batch).Tree.Root() != fx.roots[0] {
+				b.Fatal("commit root mismatch")
+			}
+		}},
+		{name: "open", run: func(b *testing.B, fx *benchFixture) { b.Helper(); fx.open(b) }},
+		{name: "verify", run: func(b *testing.B, fx *benchFixture) { b.Helper(); fx.verify(b) }},
+	}
+	for _, phase := range phases {
+		for _, cfg := range rateBenchConfigs() {
+			b.Run(phase.name+"/"+cfg.name(), func(b *testing.B) {
+				fx := newBenchFixture(b, cfg)
+				b.ReportAllocs()
+				b.ResetTimer()
+				for b.Loop() {
+					phase.run(b, fx)
+				}
+			})
+		}
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Synthetic-input builders (ported from bench/main.go, same xorshift streams)
 // ─────────────────────────────────────────────────────────────────────────────
