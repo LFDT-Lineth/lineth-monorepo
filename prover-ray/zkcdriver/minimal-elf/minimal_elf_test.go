@@ -1,7 +1,9 @@
 package minimalelf_test
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/arithmetization/gopkg/embedded"
@@ -20,12 +22,32 @@ var (
 //
 // See [minimalelf] package for the definition of AllInOneElfProgram.
 func TestRisc5InstructionCoverageGuest(t *testing.T) {
+	elf, want := minimalelf.AllInOneElfProgram()
+	traceAndCheck(t, elf, want)
+}
+
+// TestFibonacciGuest traces minimalelf.FibonacciELF at small N, including the
+// N = 0 path that skips the loop, and checks the trace and guest output.
+func TestFibonacciGuest(t *testing.T) {
+	// fib(94) is the first value that wraps mod 2^64.
+	for _, n := range []int{0, 1, 2, 10, 93, 94} {
+		t.Run(fmt.Sprintf("N=%d", n), func(t *testing.T) {
+			elf, want := minimalelf.FibonacciELF(n)
+			traceAndCheck(t, elf, want)
+		})
+	}
+}
+
+// traceAndCheck traces elf through the embedded R5 arithmetization, checks the
+// trace against every compiled constraint, and compares guest_output to want.
+func traceAndCheck(t *testing.T, elf, want []byte) {
+	t.Helper()
 	binf, err := embedded.CompiledBinaryFile()
 	if err != nil {
 		t.Fatalf("failed to compile embedded R5 arithmetization: %v", err)
 	}
 
-	inputsMap, err := predecoding.PrepareInputs(minimalelf.AllInOneElfProgram, nil)
+	inputsMap, err := predecoding.PrepareInputs(elf, nil)
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
@@ -47,8 +69,7 @@ func TestRisc5InstructionCoverageGuest(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected a %q output, got outputs: %v", "guest_output", outputs)
 	}
-	want := []byte{'A', 'B', 'C'}
-	if string(got) != string(want) {
-		t.Fatalf("guest_output = %q, want %q", got, want)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("guest_output = %x, want %x", got, want)
 	}
 }
