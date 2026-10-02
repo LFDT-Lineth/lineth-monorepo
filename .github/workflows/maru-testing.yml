@@ -40,6 +40,10 @@ jobs:
           submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
+      # Restores the Besu distribution prebuilt by prepare-linea-besu-maven (testing.yml) and
+      # publishes it to maven local; no-op when the Besu BOM is already in a remote maven repo.
+      - name: Setup Besu in maven local
+        uses: ./.github/actions/setup-besu-maven-local
       - name: Build maru and Unit tests
         run: |
           ./gradlew -V maru:app:buildNeeded

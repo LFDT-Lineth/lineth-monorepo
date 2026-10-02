@@ -16,6 +16,7 @@
 package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.account.Account;
@@ -48,6 +49,8 @@ public record StorageSnapshot(String address, String key, String value) {
     // The account exists if it has sent a transaction
     // or already has its code initialized.
     return account != null
-        && (account.getNonce() != 0 || !account.getCode().isEmpty() || !account.isStorageEmpty());
+        && (account.getNonce() != 0
+            || !account.getCode().isEmpty()
+            || !account.storageEntriesFrom(Bytes32.ZERO, 1).isEmpty());
   }
 }
