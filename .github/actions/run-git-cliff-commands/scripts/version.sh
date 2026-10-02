@@ -35,18 +35,25 @@ for p in "${paths[@]}"; do
   cliff_args+=(--include-path "${p}")
 done
 cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$")
+initial_tag="releases/${COMPONENT}/v0.0.0"
+if [ -z "${latest_tag}" ]; then
+  cliff_args+=(--tag "${initial_tag}")
+fi
 
 # Capture stdout and stderr separately so we can both surface git-cliff's logs
 # and detect the "nothing to bump" warning it writes to stderr.
 stderr_file=$(mktemp)
 trap 'rm -f "${stderr_file}"' EXIT
-next_tag=$(git cliff "${cliff_args[@]}" 2> "${stderr_file}")
+if ! next_tag=$(git cliff "${cliff_args[@]}" 2> "${stderr_file}"); then
+  cat "${stderr_file}" >&2
+  exit 1
+fi
 # Re-emit stderr so it's visible in logs
 cat "${stderr_file}" >&2
 
 changed=true
 # Check if git cliff warned "nothing to bump"
-if grep -q "There is nothing to bump" "${stderr_file}"; then
+if grep -q "There is nothing to bump" "${stderr_file}" || { [ -z "${latest_tag}" ] && [ "${next_tag}" = "${initial_tag}" ]; }; then
   changed=false
 elif [ "${next_tag}" = "${latest_tag}" ]; then
   changed=false
