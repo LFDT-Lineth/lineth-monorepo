@@ -45,7 +45,7 @@ l2-highest-block-tag="LATEST"
 anchoring-tick-interval = "PT1S"
 
 [forced-transactions]
-disabled = false
+disabled = true
 processing-batch-size = 10
 sequencer-endpoint = "http://127.0.0.1:8545/"
 
