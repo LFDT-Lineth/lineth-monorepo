@@ -53,18 +53,8 @@ runs:
         head=$(git rev-parse HEAD 2>/dev/null || echo unknown)
         echo "checkout-matches-ref=$([ "$head" = "$RUNNING_SHA" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-    # pnpm records the result of its lockfile supply-chain verification
-    # (minimumReleaseAge, trustPolicy, tarball URL binding, ...) in
-    # lockfile-verified.jsonl. A verdict is reused only when the normalized
-    # lockfile hash and the full policy match, so any dependency, resolution
-    # or policy change forces a fresh verification. Restored on every ref, but
-    # saved only by main runs (see ./.github/actions/cache), never by PRs.
-    #
-    # The path must be a literal, not a step output: actions/cache re-reads its
-    # inputs in the post step, where outputs of earlier steps are not available,
-    # so an output-derived path is empty there and the save fails with
-    # "Input required and not supplied: path". This is pnpm's default cache
-    # directory on Linux runners (XDG_CACHE_HOME is unset on them).
+    # Cache pnpm's lockfile verification verdicts. A verdict only applies to the
+    # exact lockfile and policy it was computed for. Saved by main runs only.
     - uses: ./.github/actions/cache
       name: Cache pnpm lockfile verification verdicts
       if: ${{ runner.os == 'Linux' && hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
