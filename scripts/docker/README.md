@@ -42,9 +42,7 @@ Once assembled, iterate on the image alone with `SKIP_PREBUILD=true`. Two
 deliberate deviations from CI: the build context stays at `linea-besu/package/tmp`
 instead of CI's `linea-besu/package/linea-besu/.` (identical image — the Dockerfile
 only does `COPY besu /opt/besu/` — but all generated files stay inside `tmp/`,
-which `make -C linea-besu/package clean` removes), and the `-with-fleet` variant is
-not reproduced because it needs a token for the private `Consensys/besu-fleet-plugin`
-repository.
+which `make -C linea-besu/package clean` removes).
 
 ### Variables
 

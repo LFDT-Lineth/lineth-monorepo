@@ -8,6 +8,7 @@ import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.domain.ProofIndex
 import linea.error.ErrorResponse
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.fileio.DirectoryCleaner
 import lineth.fileio.FileMonitor
 import lineth.fileio.FileReader

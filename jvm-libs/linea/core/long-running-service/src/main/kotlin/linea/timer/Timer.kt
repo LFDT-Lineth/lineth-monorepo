@@ -1,5 +1,6 @@
 package linea.timer
 
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 
 enum class TimerSchedule {
@@ -44,8 +45,12 @@ interface Timer {
   /*
    * Stop method to halt the timer and cease executing the scheduled task.
    * It is idempotent. Calling stop on an already stopped timer has no effect.
+   *
+   * Returns a future that completes once the task execution in flight (if any) has finished,
+   * so callers can safely release resources the task depends on (e.g. closing Vert.x).
+   * Must not be awaited from within the task itself, as that would deadlock.
    */
-  fun stop()
+  fun stop(): SafeFuture<Unit>
 }
 
 interface TimerFactory {

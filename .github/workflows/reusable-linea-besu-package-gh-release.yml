@@ -20,11 +20,6 @@ on:
         required: false
         type: string
         default: ''
-      without_besu_fleet_plugin:
-        description: 'Set "true" to exclude besu-fleet-plugin in the release'
-        required: false
-        type: string
-        default: ''
       draft_release:
         description: 'Draft Release'
         required: false
@@ -77,5 +72,4 @@ jobs:
       draft_release: ${{ inputs.draft_release }}
       pre_release: ${{ inputs.pre_release }}
       skip_docker_image_build_and_push: ${{ inputs.dry_run_release }}
-      with_besu_fleet_plugin: ${{ inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit

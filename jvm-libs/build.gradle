@@ -18,19 +18,20 @@ Set<String> publicApiLibs = [
   "signer-interfaces"
 ]
 
-subprojects {
-  // Note that artifacts with generated code only will be skipped if :publish is called without preceding :build
-  def hasGeneratedSources = it.fileTree(dir: 'build/generated', includes: ['**/*.java', '**/*.kt']).files.size() > 0
-  def hasSourceFiles = it.fileTree(dir: 'src', includes: ['**/*.java', '**/*.kt']).files.size() > 0
+subprojects { sub ->
+  def hasSourceFiles = sub.fileTree(dir: 'src', includes: ['**/*.java', '**/*.kt']).files.size() > 0
 
-  if (hasSourceFiles || hasGeneratedSources) {
-    // !in operator doesn't work with spotless plugin
-    if (!publicApiLibs.contains(it.name)) {
-      group="${rootProject.group}.internal"
-    }
+  afterEvaluate {
+    // Modules whose sources are all generated (e.g. web3j contract clients) are published too.
+    // Decided from the applied plugin rather than build/generated, so the result doesn't depend on a previous build.
+    def hasGeneratedSources = sub.plugins.hasPlugin('linea.web3j-codegen')
 
-    afterEvaluate {
-      it.apply from: rootProject.file("gradle/publishing.gradle")
+    if (hasSourceFiles || hasGeneratedSources) {
+      // !in operator doesn't work with spotless plugin
+      if (!publicApiLibs.contains(sub.name)) {
+        sub.group = "${rootProject.group}.internal"
+      }
+      sub.apply from: rootProject.file("gradle/publishing.gradle")
     }
   }
 }

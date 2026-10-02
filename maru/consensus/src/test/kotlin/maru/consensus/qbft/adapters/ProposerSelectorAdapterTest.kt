@@ -14,10 +14,10 @@ import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.whenever
-import kotlin.test.Test
 
 class ProposerSelectorAdapterTest {
   @Test

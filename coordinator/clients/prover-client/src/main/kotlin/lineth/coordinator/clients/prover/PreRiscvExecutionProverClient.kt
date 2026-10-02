@@ -12,6 +12,7 @@ import linea.domain.ExecutionProofIndex
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexString
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.config.v2.FileBasedProverConfig
 import lineth.encoding.BlockEncoder
 import lineth.encoding.BlockRLPEncoder
 import lineth.fileio.FileReader

@@ -1,3 +1,4 @@
+const std = @import("std");
 const protocol = @import("../protocol/root.zig");
 const field = @import("../field/koalabear.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
@@ -53,10 +54,14 @@ pub const System = struct {
 /// A `System{}` zero value (no contribution_refs) verifies trivially: a
 /// protocol compiled without messagebus.CompileOptions.SharedRandomness
 /// registers no checker and has nothing for this sub-verifier to enforce.
-pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
+pub fn verify(system: System, ctx: protocol.Context) Error!void {
     if (system.contribution_refs.len == 0) return;
-    if (system.contribution_refs.len != multiset_hashing.size)
-        @compileError("shared_randomness: contribution_refs must match multiset_hashing.size");
+    // Codegen rejects any other length before emitting the System (see
+    // BuildSharedRandomnessSystem), so this is an invariant, not a proof-
+    // dependent condition. It stays as an assert because the loop below indexes
+    // `contribution` by the same counter: a longer slice would read past the
+    // Octuplet.
+    std.debug.assert(system.contribution_refs.len == multiset_hashing.size);
 
     // A round that committed no column has no Octuplet to hash; prover-ray's
     // `rt.Commitments[...]` map lookup yields the zero value there, so hash
@@ -69,7 +74,7 @@ pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
     }
     const contribution = multiset_hashing.hash(commitment);
 
-    inline for (system.contribution_refs, 0..) |ref, i| {
+    for (system.contribution_refs, 0..) |ref, i| {
         // The contribution limbs are base-field by protocol contract:
         // prover-ray's messagebus.contributionCell panics on an extension
         // cell. Reject an ext-encoded limb here too rather than

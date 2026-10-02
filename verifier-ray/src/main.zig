@@ -35,6 +35,11 @@ else
 // input and exit differs between those environments. The actual verifier logic
 // being tested is still in `verifier.zig`, and this main function just serves as a
 // thin wrapper around it to handle environment-specific details.
+// The bound-round-message workspace lives here, in .bss, rather than in
+// `verify`'s stack frame: it holds every round cell (17,842 on the real RISC-V
+// system) and the guest's linker stack is a fixed 8 MiB.
+var verifier_workspace: verifier.Workspace(riscv_system.system_0_public_input) = undefined;
+
 pub fn main() noreturn {
     if (comptime is_r5_zkvm) {
         // this entry point should only be called from native build (`make build` or `make build-release`)
@@ -85,7 +90,7 @@ fn runVerifier(input: *const verifier.VerifyInput) u8 {
         riscv_system.system_0_systems;
     // `spec`/`systems` are comptime, but the verifier input is a runtime value
     // read from `input` (mmap/linker/embedded memory), so dereference it here.
-    verifier.verify(spec, systems, input.proof, input.public_inputs) catch {
+    verifier.verifyWithWorkspace(spec, systems, input.proof, input.public_inputs, &verifier_workspace) catch {
         // if the verifier fails, return a non-zero exit code
         return 1;
     };

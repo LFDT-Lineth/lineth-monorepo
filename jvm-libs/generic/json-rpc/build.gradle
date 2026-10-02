@@ -22,15 +22,12 @@ dependencies {
   api "io.vertx:vertx-web"
   api "io.vertx:vertx-lang-kotlin"
 
-  testImplementation project(":jvm-libs:generic:vertx-helper")
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
   testImplementation "io.rest-assured:rest-assured:${libs.versions.restassured.get()}"
   testImplementation "io.rest-assured:json-schema-validator:${libs.versions.restassured.get()}"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation "net.javacrumbs.json-unit:json-unit-assertj:${libs.versions.jsonUnit.get()}"
-}
 
-jar {
-  dependsOn configurations.runtimeClasspath
+  testFixturesApi testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }

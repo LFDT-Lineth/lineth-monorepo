@@ -96,5 +96,14 @@ func BuildSharedRandomnessSystem(sys *wiop.System) (SharedRandomnessSystem, erro
 		})
 	}
 
+	// The verifier hashes these as a fixed-size Octuplet. `system` is runtime
+	// data there, so it can no longer assert this at comptime; asserting here
+	// keeps a malformed System from being emitted in the first place.
+	if len(out.ContributionRefs) != messagebus.NumSharedRandomnessContribution {
+		return SharedRandomnessSystem{}, fmt.Errorf(
+			"codegen: BuildSharedRandomnessSystem: emitted %d contribution refs, want %d",
+			len(out.ContributionRefs), messagebus.NumSharedRandomnessContribution)
+	}
+
 	return out, nil
 }

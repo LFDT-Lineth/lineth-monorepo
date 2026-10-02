@@ -34,13 +34,13 @@ jobs:
     name: Run Load Test
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
 
       - name: Hide sensitive inputs
-        uses: levibostian/action-hide-sensitive-inputs@15951963797b16aa43fa0b093b45cd2db0319fdd #v1.2.0
+        uses: levibostian/action-hide-sensitive-inputs@15951963797b16aa43fa0b093b45cd2db0319fdd # v1.2.0
         with:
           exclude_inputs: network, file
 

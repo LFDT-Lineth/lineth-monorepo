@@ -26,7 +26,6 @@ from rollup_spec.l1_rollup import (
     PlonkVerifier,
     finalize_rollup,
 )
-from rollup_spec.l2_execution import hash_address_list, hash_digest_list
 from rollup_spec.rollup import RollupPublicInput
 
 # Distinct VK / hash byte-pattern helpers (mirrors the style in
@@ -77,15 +76,13 @@ def _base_submission(program_vks, start_offset: int = 0) -> FinalizationSubmissi
     """
     A finalization submission carrying the single combined `program_vks` list
     nested in the PI (order bound to the proof). Empty `l2_l1_roots` /
-    `filtered_addresses` keep the preimage-hash checks trivial (their keccak of
-    empty input is the PI hash), and the FTX/rolling-hash boundary values are
+    `filtered_addresses` are committed directly with the FTX/rolling-hash boundary values
     held constant across parent/end so continuity passes without any FTX deadline
     machinery.
     """
     pi = RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        l2_l1_bridge_transaction_tree=hash_digest_list([]),
         parent_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
@@ -95,20 +92,19 @@ def _base_submission(program_vks, start_offset: int = 0) -> FinalizationSubmissi
         parent_ftx_number=U64(7),
         end_ftx_rolling_hash=_FTX_ROLLING_HASH,
         end_processed_ftx_number=U64(7),
-        filtered_addresses_hash=hash_address_list([]),
         parent_data_rolling_hash=_PARENT_DATA_ROLLING_HASH,
         end_data_rolling_hash=_END_DATA_ROLLING_HASH,
         parent_block_hash=_PARENT_BLOCK_HASH,
         end_block_hash=_END_BLOCK_HASH,
         start_offset=start_offset,
         end_offset=_END_OFFSET,
+        l2_l1_roots=[],
+        filtered_addresses=[],
         program_vks=list(program_vks),
     )
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
-        l2_l1_roots=[],
-        filtered_addresses=[],
         l2_messaging_blocks_offsets=[],
     )
 
