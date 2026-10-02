@@ -5,8 +5,8 @@ These cover the properties this codec is responsible for:
   - round-trip fidelity: the SSZ codec preserves every field of the logical
     guest-input dataclass, including the nested payloads, forced-transaction
     witnesses, and the opaque per-payload stateless-input byte slices;
-  - output framing: the 0x0003 frame carries exactly the keccak256 of the
-    fixed 368-byte SSZ public-input tuple and nothing else;
+  - output framing: the 0x0003 frame carries the SSZ public-input tuple,
+    including its variable-length offsets, followed by its keccak256 hash;
   - strict decoding: a wrong schema id, truncated bytes, or trailing bytes are
     all rejected rather than silently accepted or truncated.
 
@@ -83,22 +83,39 @@ def test_l2_execution_input_fixture_exercises_nested_fields() -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Output: hash-only 0x0003 frame
+# Output: SSZ public inputs and hash in a 0x0003 frame
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-def test_l2_execution_output_is_a_34_byte_hash_frame() -> None:
-    encoded = encode_l2_execution_output(_l2_execution_proof())
-    assert len(encoded) == 34
+def test_l2_execution_output_frames_public_inputs_and_hash() -> None:
+    proof = _l2_execution_proof()
+    encoded = encode_l2_execution_output(proof)
+    pi_bytes = encode_l2_execution_public_inputs_bytes(proof.public_inputs)
+    assert len(encoded) == 2 + len(pi_bytes) + 32
     assert encoded[:2] == (0x0003).to_bytes(2, "big")
+    assert encoded[2:-32] == pi_bytes
 
 
 def test_l2_execution_output_hash_is_keccak_of_the_public_input_tuple() -> None:
     proof = _l2_execution_proof()
     encoded = encode_l2_execution_output(proof)
-    expected = keccak256(encode_l2_execution_public_inputs_bytes(proof.public_inputs))
-    assert encoded[2:] == expected
-    assert decode_l2_execution_output_ssz(encoded) == expected
+    pi_bytes = encode_l2_execution_public_inputs_bytes(proof.public_inputs)
+    assert encoded[-32:] == keccak256(pi_bytes)
+    assert decode_l2_execution_output_ssz(encoded) == proof.public_inputs
+
+
+def test_l2_execution_output_preserves_variable_length_offsets() -> None:
+    proof = _l2_execution_proof()
+    proof.public_inputs.l2_messaging_blocks_offsets = [3, 8]
+    encoded = encode_l2_execution_output(proof)
+    assert decode_l2_execution_output_ssz(encoded) == proof.public_inputs
+
+
+def test_l2_execution_output_rejects_wrong_hash() -> None:
+    encoded = bytearray(_l2_execution_output_bytes())
+    encoded[-1] ^= 1
+    with pytest.raises(InvalidSsz, match="hash mismatch"):
+        decode_l2_execution_output_ssz(bytes(encoded))
 
 
 def test_l2_execution_public_input_empty_offsets_encode_to_380_bytes() -> None:
@@ -175,8 +192,7 @@ def test_input_decode_never_silently_absorbs_a_trailing_byte() -> None:
 
 
 def test_output_decode_rejects_trailing_garbage() -> None:
-    # The output body is fixed-size (one 32-byte hash), so trailing bytes are
-    # always detectable and must be rejected outright.
+    # Trailing bytes displace the hash and must be rejected outright.
     encoded = _l2_execution_output_bytes()
     with pytest.raises(InvalidSsz):
         decode_l2_execution_output_ssz(encoded + b"\x00")

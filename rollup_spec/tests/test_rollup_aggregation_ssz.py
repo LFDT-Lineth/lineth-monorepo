@@ -26,7 +26,7 @@ import pytest
 import rollup_spec
 
 from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from rollup_spec.proof_io_v1 import (
     _decode_rollup_public_input,
     decode_aggregation_request,
@@ -109,12 +109,20 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
 def test_aggregation_output_frames_public_inputs_directly() -> None:
     submission = _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
     encoded = encode_aggregation_output(submission)
-    body = encoded[2:]
+    body = encoded[2:-32]
     view = SszFinalizationPublicInput.decode_bytes(body)
     assert encoded[:2] == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big")
+    assert encoded[-32:] == keccak256(body)
     assert body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
     assert [bytes(program_id) for program_id in view.program_ids] == submission.public_inputs.program_ids
     assert [bytes(program_id) for program_id in view.program_ids] != [bytes([0xaa]) * 32, bytes([0xbb]) * 32]
+
+
+def test_aggregation_output_rejects_wrong_hash() -> None:
+    encoded = bytearray(_aggregation_output_bytes())
+    encoded[-1] ^= 1
+    with pytest.raises(InvalidSsz, match="hash mismatch"):
+        decode_aggregation_output_ssz(bytes(encoded))
 
 
 def test_aggregation_output_preserves_messaging_block_offsets() -> None:
