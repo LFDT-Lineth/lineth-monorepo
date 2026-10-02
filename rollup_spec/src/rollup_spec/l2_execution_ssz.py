@@ -21,7 +21,7 @@ The remaining `L2ExecutionProof` fields (`start_block_number` and the
 data, never part of this wire format, and `proof` is attached by the prover
 layer above the guest. The hash is irreversible, so the output decoder
 returns the public-inputs hash rather than reconstructing a dataclass;
-`encode_l2_execution_public_inputs_bytes` exposes the fixed 368-byte
+`encode_l2_execution_public_inputs_bytes` exposes the SSZ
 preimage tuple.
 
 Each payload's `stateless_input_ssz` is carried opaquely — an already
@@ -44,7 +44,7 @@ from typing import Any, TypeAlias
 from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
-from remerkleable.basic import uint8, uint64
+from remerkleable.basic import uint8, uint16, uint64
 from remerkleable.byte_arrays import ByteList, ByteVector, Bytes32 as SszBytes32
 from remerkleable.complex import Container, List
 
@@ -151,7 +151,7 @@ class SszL2ExecutionProofPrivateInput(Container):
 
 
 class SszL2ExecutionProofPublicInput(Container):
-    # 16-field l2-execution public input tuple (Readme.md §2.1), field order
+    # l2-execution public input tuple (Readme.md §2.1), field order
     # matches `l2_execution.py::L2ExecutionProofPublicInput`.
     parent_block_hash: SszBytes32
     end_block_hash: SszBytes32
@@ -169,6 +169,8 @@ class SszL2ExecutionProofPublicInput(Container):
     end_processed_ftx_number: uint64
     filtered_addresses_hash: SszBytes32
     tx_froms_hash: SszBytes32
+    block_count: uint64
+    l2_messaging_blocks_offsets: List[uint16, MAX_PAYLOADS]
 
 
 class SszL2ExecutionProof(Container):
@@ -249,6 +251,8 @@ def _ssz_l2_execution_public_input(pi: L2ExecutionProofPublicInput) -> SszL2Exec
         end_processed_ftx_number=int(pi.end_processed_ftx_number),
         filtered_addresses_hash=bytes(pi.filtered_addresses_hash),
         tx_froms_hash=bytes(pi.tx_froms_hash),
+        block_count=int(pi.block_count),
+        l2_messaging_blocks_offsets=pi.l2_messaging_blocks_offsets,
     )
 
 
@@ -340,6 +344,8 @@ def _l2_execution_public_input_from_view(view: Any) -> L2ExecutionProofPublicInp
         end_processed_ftx_number=U64(int(view.end_processed_ftx_number)),
         filtered_addresses_hash=Hash32(bytes(view.filtered_addresses_hash)),
         tx_froms_hash=Hash32(bytes(view.tx_froms_hash)),
+        block_count=int(view.block_count),
+        l2_messaging_blocks_offsets=[int(o) for o in view.l2_messaging_blocks_offsets],
     )
 
 
@@ -390,7 +396,7 @@ _OUTPUT_BODY_SIZE = 32
 
 def encode_l2_execution_public_inputs_bytes(pi: L2ExecutionProofPublicInput) -> bytes:
     """
-    SSZ-encode the plain 16-field public-input tuple to its fixed 368-byte
+    SSZ-encode the public-input tuple with its variable-length offset list to a
     wire representation — the preimage of the hash the 0x0003 output frame
     carries, exposed for verifiers/provers and off-chain inspection.
     """
