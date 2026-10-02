@@ -89,7 +89,9 @@ deployment and Program ID selection are handled separately.
 To build and stage a guest ELF locally by its ID, run `make release-asset GUEST=l2-execution`
 (or `GUEST=rollup`) from this directory. Each guest exposes the shared `zig build program-id`
 step; `-Drelease-dir=<path>` selects the asset directory. The step hashes the ELF produced by
-the Zig build graph using the pinned toolchain's Keccak implementation.
+the Zig build graph using the pinned toolchain's Keccak implementation. Zig's guest build defaults
+to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
+`-Dkeccak-accel=false`. Release staging uses the Zig build default.
 
 ## Continuous Integration
 

@@ -52,15 +52,11 @@ EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixt
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
 
-# If true, build with the arithmetization keccak wrapper (prover-accelerated
-# custom op) instead of the standard zig keccak.
-KECCAK_ACCEL ?= false
-
 # Shared body for zkc-smoke-trace: pass the exact INPUT as the smoke operand.
 # $(1) = zkc makefile target (elf-trace)
 # $(2) = optional extra runner args (e.g. --zkc-flags "...")
 define zkc-smoke-run
-	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true) -- \
+	$(ZIG) build zkc-smoke $(ZIG_BUILD_FLAGS) $(ZIG_HOST_FLAGS) $(ZIG_FETCH_FLAGS) -Dzkc-smoke-input="$(abspath $(INPUT))" $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL)) -- \
 		--zkc-target "$(1)" \
 		$(2)
 endef
@@ -116,7 +112,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \

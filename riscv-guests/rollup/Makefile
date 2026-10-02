@@ -39,10 +39,6 @@ INPUT ?= $(GENERATED_INPUT)
 # -v/-vv/-vvv raise verbosity.
 ZKC_EXEC_FLAGS ?=
 
-# Production proving config: build with the arithmetization keccak accelerator backend
-# (-Dkeccak-accel=true), same knob as l2-execution's Makefile.
-KECCAK_ACCEL ?= false
-
 # If true, generates an objdump of the generated ELF for debugging purposes.
 OBJDUMP ?= false
 
@@ -57,7 +53,7 @@ clean:
 	rm -rf $(BUILD_CACHE_DIR)
 
 compile:
-	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true)
+	$(ZIG) build $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(KECCAK_ACCEL),-Dkeccak-accel=$(KECCAK_ACCEL))
 	@if command -v riscv64-unknown-elf-objdump >/dev/null 2>&1; then \
 		if [ "$(OBJDUMP)" = "true" ]; then \
 			echo "\nDisassembling $(BIN)"; \
