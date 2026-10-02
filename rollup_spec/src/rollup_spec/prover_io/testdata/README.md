@@ -40,9 +40,11 @@ lists. The `proof` bytes are attached by the zkVM/prover layer,
 not the guest, so they are placeholders (`0x`) in these fixtures; a response
 equals the guest output plus `proof`. The aggregation response is a
 `FinalizationSubmission`: it carries `l2MessagingBlocksOffsets` in the
-public inputs, which L1 consumes directly for finalization. The Coordinator
-submits the root, filtered-address, and VK lists to L1, which hashes each list
-in its public-input calculation.
+public inputs, which L1 consumes directly for finalization. The aggregation
+proof is the final SNARK-wrapped proof, verified on L1; its own VK is configured
+by the L1 verifier and is not a recursively verified response `programVk`.
+The Coordinator submits the root, filtered-address, and Program ID lists to L1, which
+hashes each list in its public-input calculation.
 
 The JSON field names are not always a 1:1 camel↔snake mapping of the dataclass
 fields; the codec owns the renames and type coercion (see `proof_io_v1.py`). A

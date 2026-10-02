@@ -2,15 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupProofV1.request.schema.json",
   "title": "getZkRollupProof V1 request",
-  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {programVk, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
+  "description": "Coordinator -> prover rollup proof request. The shared, versioned contract for the rollup guest input (RollupProofPrivateInput): a {guestProgramId, provingSystem, proofRequest} envelope embedding the l2-execution proofs it recursively verifies.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",
@@ -71,7 +73,7 @@
           "$ref": "#/$defs/hash32"
         },
         "startOffset": {
-          "description": "Start position in unpacked blob payload bytes. 0 means a chunk boundary; a positive position inside a shared blob requires boundaryPrevDataRollingHash.",
+          "description": "Start position in unpacked blob payload bytes. 0 means a fully consumed chunk boundary; a positive position inside a shared blob requires boundaryPrevDataRollingHash.",
           "$ref": "#/$defs/offset"
         },
         "boundaryPrevDataRollingHash": {

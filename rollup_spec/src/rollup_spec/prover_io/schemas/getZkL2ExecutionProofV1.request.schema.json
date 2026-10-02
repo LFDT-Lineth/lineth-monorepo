@@ -6,11 +6,13 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "programVk",
+    "guestProgramId",
+    "provingSystem",
     "proofRequest"
   ],
   "properties": {
-    "programVk": { "$ref": "#/$defs/hash32" },
+    "guestProgramId": { "$ref": "#/$defs/hash32" },
+    "provingSystem": { "type": "string", "minLength": 1 },
     "metadata": { "$ref": "#/$defs/metadata" },
     "proofRequest": {
       "type": "object",

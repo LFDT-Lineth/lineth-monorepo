@@ -1,5 +1,6 @@
 {
-  "programVk": "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d",
+  "guestProgramId": "0x2222222222222222222222222222222222222222222222222222222222222222",
+  "provingSystem": "arithmetization-v1/prover-ray-v1",
   "metadata": {
     "startBlockNumber": 10,
     "endBlockNumber": 14,

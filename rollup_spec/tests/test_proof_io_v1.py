@@ -12,7 +12,6 @@ Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -23,7 +22,7 @@ from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec.block import ForcedTransactionAcceptance
-from rollup_spec.l1_rollup import FinalizationSubmission
+from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
 from rollup_spec.l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
@@ -70,6 +69,34 @@ def _load(path: Path) -> dict:
 
 def _valid_request() -> dict:
     return _load(_fixture("getZkL2ExecutionProofV1.request.json"))
+
+
+@pytest.mark.parametrize("name, decoder", [
+    ("getZkL2ExecutionProofV1.request.json", decode_request),
+    ("getZkRollupProofV1.request.json", decode_rollup_request),
+    ("getZkRollupAggregationProofV1.request.json", decode_aggregation_request),
+])
+def test_request_envelope_validates_guest_id_and_proving_system(name, decoder) -> None:
+    request = _load(_fixture(name))
+    assert len(bytes.fromhex(request["guestProgramId"][2:])) == 32
+    assert request["provingSystem"]
+    assert "programVk" not in request
+    decoder(request)
+
+
+@pytest.mark.parametrize("name, decoder", [
+    ("getZkL2ExecutionProofV1.request.json", decode_request),
+    ("getZkRollupProofV1.request.json", decode_rollup_request),
+    ("getZkRollupAggregationProofV1.request.json", decode_aggregation_request),
+])
+def test_request_envelope_rejects_invalid_guest_identity(name, decoder) -> None:
+    request = _load(_fixture(name))
+    with pytest.raises(ProofIoError, match="programVk"):
+        decoder({**request, "programVk": request["guestProgramId"]})
+    with pytest.raises(ProofIoError, match="guestProgramId"):
+        decoder({**request, "guestProgramId": "0x00"})
+    with pytest.raises(ProofIoError, match="provingSystem"):
+        decoder({**request, "provingSystem": ""})
 
 
 def _expected_response() -> dict:
@@ -543,24 +570,21 @@ def _expected_aggregation_response() -> dict:
 
 
 def _sample_finalization_submission() -> FinalizationSubmission:
-    # The FinalizationSubmission a guest run over the aggregation request fixture
-    # would yield (one rollup proof -> merged roots/addresses are that proof's).
+    # Independently constructed finalization public inputs for serialization.
     # `proof` is a placeholder the prover would fill; here it stands in as
     # 0xdeadbeef to exercise serialization.
-    # The aggregation PI carries the single combined `program_vks` set
-    # (§ProgramVK anchoring): the bubbled exec VK and this aggregation's rollup
-    # VK, in canonical (sorted-distinct) order — 0xAA precedes 0xBB.
+    rollup_pi = _sample_rollup_public_input()
     return FinalizationSubmission(
-        public_inputs=replace(
-            _sample_rollup_public_input(),
+        public_inputs=FinalizationPublicInput(
+            **{name: getattr(rollup_pi, name) for name in FinalizationPublicInput.__dataclass_fields__
+               if name not in ("program_ids", "start_offset", "l2_l1_roots", "filtered_addresses")},
             start_offset=0,
             l2_l1_roots=[
                 Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
                 Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32),
             ],
             filtered_addresses=[Address(bytes([0x01]) * 20), Address(bytes([0x01]) * 20)],
-                program_vks=[_EXEC_VK, _ROLLUP_VK],
-                block_count=0,
+            program_ids=[Hash32(bytes([0x11]) * 32), Hash32(bytes([0x22]) * 32)],
         ),
         proof=b"\xde\xad\xbe\xef",
     )
@@ -638,10 +662,10 @@ def test_decode_aggregation_request_json_round_trips() -> None:
 
 def test_aggregation_request_fixture_tiles_finalization_range() -> None:
     request = _valid_aggregation_request()
-    result = run_rollup_aggregation_guest(decode_aggregation_request(request))
-
     assert request["proofRequest"]["rollupProofs"][0]["startBlockNumber"] == request["metadata"]["startBlockNumber"]
-    assert int(result.public_inputs.end_block_number) == request["metadata"]["endBlockNumber"]
+    assert request["proofRequest"]["rollupProofs"][-1]["publicInputs"]["endBlockNumber"] == request["metadata"]["endBlockNumber"]
+    with pytest.raises(NotImplementedError, match="VK-to-program-ID conversion"):
+        run_rollup_aggregation_guest(decode_aggregation_request(request))
 
 
 # ── aggregation response encode ─────────────────────────────────────────────────
@@ -687,8 +711,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert pi["endDataRollingHash"] == "0x" + ("8d" * 32)
     assert pi["parentFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
-    # Combined: bubbled exec VK (0xaa) then this aggregation's rollup VK (0xbb).
-    assert pi["programVks"] == ["0x" + ("aa" * 32), "0x" + ("bb" * 32)]
+    assert pi["programIds"] == ["0x" + ("11" * 32), "0x" + ("22" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
@@ -696,7 +719,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber",
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
-        "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programVks",
+        "startOffset", "endOffset", "l2L1Roots", "l2L1TreeDepth", "filteredAddresses", "programIds",
         "l2MessagingBlocksOffsets",
     }
 
