@@ -43,6 +43,11 @@ func setDefaultValues() {
 	viper.SetDefault("execution.ignore_compatibility_check", false)
 	viper.SetDefault("execution.serialization", false)
 
+	// persisting the derived lagrange SRS at setup is the default cure for
+	// silently re-deriving it for hours on every prover start; immutable-SRS
+	// deployments opt out explicitly
+	viper.SetDefault("persist_derived_srs", true)
+
 	viper.SetDefault("data_availability.max_nb_batches", 100)
 	viper.SetDefault("data_availability.max_uncompressed_nb_bytes", v1.MaxUncompressedBytes)
 	viper.SetDefault("data_availability.dict_nb_bytes", 65536)

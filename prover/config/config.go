@@ -146,6 +146,18 @@ type Config struct {
 	// accessed (prover). The file structure is described in TODO @gbotrel.
 	AssetsDir string `mapstructure:"assets_dir"`
 
+	// PersistDerivedSRS lets `prover setup` write the Lagrange basis it derives
+	// into the SRS directory, so later runs load it in seconds instead of
+	// spending hours re-deriving it. On by default: a missing dump is otherwise
+	// re-derived silently on every prover start, and the write only ever happens
+	// during setup — a deliberate provisioning action — never at prove time. Set
+	// it to false for a deployment that wants its SRS directory strictly
+	// immutable (read-only mount, snapshotted, or verified by hash); on such a
+	// volume a writability probe fails before any derivation is attempted and
+	// setup carries on with a warning. Nothing else in the prover ever writes
+	// there, whatever this is set to.
+	PersistDerivedSRS bool `mapstructure:"persist_derived_srs"`
+
 	Controller                 Controller
 	Execution                  Execution
 	DataAvailability           DataAvailability `mapstructure:"data_availability"`
