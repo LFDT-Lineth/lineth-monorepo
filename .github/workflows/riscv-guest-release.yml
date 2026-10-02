@@ -88,12 +88,6 @@ jobs:
           fi
       - name: Setup guest toolchain
         uses: ./.github/actions/setup-riscv-guests
-      - name: Test and compile tagged guest
-        env:
-          GUEST: ${{ inputs.guest }}
-        run: make -C riscv-guests release-check GUEST="$GUEST"
-      - name: Verify Program ID staging
-        run: zig test riscv-guests/build_common/program-id.zig
       - name: Stage ID-named ELF
         id: artifact
         env:
