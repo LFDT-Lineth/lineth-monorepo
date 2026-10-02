@@ -8,6 +8,11 @@ permissions:
 on:
   workflow_call:
     inputs:
+      prover_mode:
+        description: 'Prover image mode: dev-mock or dev-zkvm'
+        required: false
+        type: string
+        default: dev-mock
       image_tag:
         required: true
         type: string
@@ -49,6 +54,7 @@ jobs:
       DEVELOP_TAG: ${{ inputs.develop_tag }}
       IMAGE_NAME: ${{ inputs.image_name }}
       PUSH_IMAGE: ${{ inputs.push_image }}
+      PROVER_MODE: ${{ inputs.prover_mode }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
@@ -56,6 +62,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: false
+
+      - name: Configure prover image
+        id: image-config
+        run: |
+          case "$PROVER_MODE" in
+            dev-mock)
+              echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+              ;;
+            dev-zkvm)
+              # The current native toolchain targets x86-64.
+              echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
+              echo "build_contexts=riscv-guests=riscv-guests/" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported prover mode: $PROVER_MODE" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
@@ -73,7 +97,9 @@ jobs:
           push_image: ${{ env.PUSH_IMAGE }}
           dockerfile_path: ./prover-ray/Dockerfile
           docker_context: prover-ray
-          build_args: PROVER_RUNTIME=dev-mock
+          build_args: PROVER_RUNTIME=${{ inputs.prover_mode }}
+          build_contexts: ${{ steps.image-config.outputs.build_contexts }}
+          push_platforms: ${{ steps.image-config.outputs.platforms }}
           requires_qemu: ${{ env.PUSH_IMAGE }}
           save_artifact: ${{ env.PUSH_IMAGE == 'false' }}
           artifact_name: linea-prover-ray
@@ -83,4 +109,4 @@ jobs:
       # is blocked before anything is pushed.
       - name: Smoke test the image
         if: ${{ env.PUSH_IMAGE == 'false' }}
-        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" dev-mock
+        run: ./prover-ray/scripts/docker-smoke.sh "${IMAGE_NAME}:${IMAGE_TAG}" "$PROVER_MODE"

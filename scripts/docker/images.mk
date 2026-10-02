@@ -26,6 +26,7 @@ DRY_RUN ?= false
 SKIP_PREBUILD ?= false
 NODE_VERSION ?= $(shell tr -d '[:space:]' < .nvmrc)
 POSTMAN_NATIVE_LIBS_RELEASE_TAG ?= blob-libs-v3.0.1
+PROVER_RAY_MODE ?= dev-mock
 
 DOCKER_BUILD := scripts/docker/build-image.sh \
 	--tags $(DOCKER_IMAGE_TAG) \
@@ -116,7 +117,8 @@ docker-build-prover-ray:
 		--image-name consensys/linea-prover-ray \
 		--dockerfile ./prover-ray/Dockerfile \
 		--context prover-ray \
-		--build-arg PROVER_RUNTIME=dev-mock
+		--build-arg PROVER_RUNTIME=$(PROVER_RAY_MODE) \
+		$(if $(filter dev-zkvm,$(PROVER_RAY_MODE)),--build-context riscv-guests=riscv-guests/)
 
 # .github/workflows/native-yield-automation-service-build-and-publish.yml
 docker-build-native-yield-automation-service:

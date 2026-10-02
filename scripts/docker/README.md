@@ -117,7 +117,7 @@ make docker-build-prover-ray
 ./prover-ray/scripts/docker-smoke.sh consensys/linea-prover-ray:local dev-mock
 ```
 
-Run **Prover Ray Release (dev-mock)** in GitHub Actions to publish through the
+Run **Prover Ray Release** in GitHub Actions to publish through the
 shared component release workflow and create a draft release with pull commands.
 Confirm public access to `consensys/linea-prover-ray` and CI push permissions
 before the first release; pin the full published tag in local setup.
@@ -125,3 +125,10 @@ before the first release; pin the full published tag in local setup.
 Mount a dev-mock config with the stack's shared queue paths at `CONFIG_FILE`.
 The existing `docker/config/prover-ray/prover-ray-config.toml` selects dev-zkvm
 and cannot be used unchanged with this image.
+
+`prover_mode` defaults to `dev-mock`. Once native proving is ready, select
+`dev-zkvm` in the same release workflow (locally: `PROVER_RAY_MODE=dev-zkvm`).
+Builds, smoke checks, and default tag suffixes follow the selection. Native mode
+is currently WIP and AMD64-only; its toolchain and full dev-zkvm request validation
+must be completed before switching the default. Mount a dev-zkvm runtime config
+when using that image; the release bot and changelog process stay the same.

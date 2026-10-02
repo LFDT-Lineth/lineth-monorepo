@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ''
+      prover_ray_mode:
+        description: 'Prover-ray image mode; ignored for other components'
+        required: false
+        type: string
+        default: dev-mock
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -217,6 +222,7 @@ jobs:
       needs.run-test-prover-ray.result == 'success'
     uses: ./.github/workflows/prover-ray-build-and-publish.yml
     with:
+      prover_mode: ${{ inputs.prover_ray_mode }}
       image_tag: local
       develop_tag: ''
       push_image: false
@@ -284,6 +290,7 @@ jobs:
          (needs.run-e2e-tests.result == 'skipped' && inputs.skip_e2e_test))))
     uses: ./.github/workflows/reusable-component-gh-release.yml
     with:
+      prover_ray_mode: ${{ inputs.prover_ray_mode }}
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}

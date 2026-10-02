@@ -1,4 +1,4 @@
-name: "Prover Ray Release (dev-mock)"
+name: "Prover Ray Release"
 
 permissions:
   actions: read
@@ -9,11 +9,19 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      prover_mode:
+        description: 'Image mode (dev-zkvm is WIP; requires native build and validation to pass)'
+        required: true
+        type: choice
+        default: dev-mock
+        options:
+          - dev-mock
+          - dev-zkvm
       image_tag_suffix:
-        description: 'Custom image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
+        description: 'Custom image tag suffix; defaults to the selected prover mode'
         required: false
         type: string
-        default: 'dev-mock'
+        default: ''
       release_tag_suffix:
         description: 'Custom release tag suffix (must need for non-main release), i.e. release tag would be releases/[component]/v[semver]-[suffix]'
         required: false
@@ -30,7 +38,12 @@ jobs:
     with:
       component-name: prover-ray
       folder-name: prover-ray
-      image_tag_suffix: ${{ inputs.image_tag_suffix }}
+      prover_ray_mode: ${{ inputs.prover_mode }}
+      image_tag_suffix: ${{ inputs.image_tag_suffix || inputs.prover_mode }}
+      include-path: |
+        prover-ray/**
+        ${{ inputs.prover_mode == 'dev-zkvm' && 'riscv-guests/**' || '' }}
+      scopes: ${{ inputs.prover_mode == 'dev-zkvm' && 'prover-ray|riscv-guest|deps|misc' || '' }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       draft_release: true
       pre_release: false
