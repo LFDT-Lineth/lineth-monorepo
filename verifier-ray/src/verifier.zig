@@ -196,13 +196,19 @@ pub fn verifyWithWorkspace(
     const zeta_index = comptime pcs_system.zeta_coin_index orelse
         @compileError("pcs: System.zeta_coin_index must be set");
 
-    // Reconstruct the canonical PCS layout for THIS proof's dynamic sizes: one
-    // baked comptime System verifies proofs of different module sizes because the
-    // bundle placement / entry order / restricted params are a runtime function
-    // of `module_sizes` (mirroring prover-ray's GetLayout + canonicalLayout +
-    // restrictTo). deriveChallenges needs the restricted params for the fold /
-    // query-position counts.
-    const recon = try pcs.reconstruct(pcs_system, proof.module_sizes);
+    // The column manifest (which columns the prover elided from each committed
+    // batch as zero / duplicate) is read from the same transcript-bound round
+    // cells zeta was derived from; `reconstructWithManifest` validates it.
+    var manifest: pcs.Manifest(pcs_system) = .{};
+    try pcs.readManifest(pcs_system, ctx, &manifest);
+
+    // Reconstruct the canonical PCS layout for THIS proof's dynamic sizes and
+    // manifest: one baked comptime System verifies proofs of different module
+    // sizes because the bundle placement / entry order / restricted params are
+    // a runtime function of `module_sizes` (mirroring prover-ray's GetLayout +
+    // canonicalLayout + restrictTo). deriveChallenges needs the restricted
+    // params for the fold / query-position counts.
+    const recon = try pcs.reconstructWithManifest(pcs_system, proof.module_sizes, manifest.slice());
 
     // Every claimed evaluation is an ordinary `LagrangeEval.EvaluationClaims`
     // cell, transcript-bound in `ctx.rounds`. The per-column `claim_cells`
@@ -224,6 +230,7 @@ pub fn verifyWithWorkspace(
         .query_positions = pcs_challenges.query_positions[0..recon.params.num_queries],
         .proof = opening.proof,
         .module_sizes = proof.module_sizes,
+        .manifest = manifest.slice(),
     });
 
     // Route each PCS-authenticated entry_claim to the vanishing claim slot that
@@ -259,10 +266,12 @@ pub fn verifyWithWorkspace(
 }
 
 /// Fills `out[k]` with the authenticated claim each `map` entry points at:
-/// `out[k] = entry_claims[recon.col_to_entry[map[k].col_decl_idx]][map[k].shift]`.
-/// `map.len` must equal `out.len` (the vanishing System's claim total) and every
-/// ClaimRef must be in range, else the PCS/vanishing metadata disagree — a
-/// codegen bug, surfaced as an error rather than an out-of-bounds panic.
+/// `out[k] = pcs.routedClaim(map[k].col_decl_idx, map[k].shift)` — the entry's
+/// claim for a Present column, zero for a Zero column, the target's claim for
+/// an alias (see pcs.zig "Column manifest"). `map.len` must equal `out.len`
+/// (the vanishing System's claim total) and every ClaimRef must be in range,
+/// else the PCS/vanishing metadata disagree — a codegen bug, surfaced as an
+/// error rather than an out-of-bounds panic.
 fn routeClaims(
     comptime system: pcs.System,
     recon: pcs.Reconstructed(system),
@@ -274,13 +283,8 @@ fn routeClaims(
     for (map, out) |ref, *slot| {
         // A ClaimRef names a column by its declaration index; the runtime
         // reconstruction resolves it to the canonical entry that column occupies
-        // for THIS proof's sizes.
-        if (ref.col_decl_idx >= system.columns.len) return error.ClaimMapMismatch;
-        const entry = recon.col_to_entry[ref.col_decl_idx];
-        if (entry >= entry_claims.len) return error.ClaimMapMismatch;
-        const col = entry_claims[entry];
-        if (ref.shift >= col.len) return error.ClaimMapMismatch;
-        slot.* = col[ref.shift];
+        // for THIS proof's sizes and manifest.
+        slot.* = try pcs.routedClaim(system, &recon, entry_claims, ref.col_decl_idx, ref.shift);
     }
 }
 

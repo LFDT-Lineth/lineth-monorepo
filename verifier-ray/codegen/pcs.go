@@ -76,6 +76,23 @@ type PcsSystem struct {
 	// Merkle-authenticated against is provably the one zeta is bound to (mirrors
 	// prover-ray's single-source collectRoots). Length == NumBatches.
 	BatchRoots []PcsBatchRoot
+
+	// BatchManifests locates each interactive batch's column manifest cells
+	// (prover-ray pcs/manifest.go): the transcript cells stating, per column,
+	// whether it is committed (Present), omitted as identically zero (Zero) or
+	// omitted as a duplicate of an earlier column (Alias). nil for the
+	// precomputed batch, which is never elided. Length == NumBatches.
+	BatchManifests []*PcsBatchManifest
+}
+
+// PcsBatchManifest is the verifier-ray pcs.BatchManifest: where one interactive
+// batch's column manifest cells sit in the transcript. The cells are
+// contiguous, one per column of the batch in declaration order, so column
+// ColStart+i reads its code from rounds[Round].cells[CellStart+i].
+type PcsBatchManifest struct {
+	Round     int
+	CellStart int
+	ColStart  int
 }
 
 // PcsColumnDesc is one committed column in prover DECLARATION order (the engine's
@@ -370,6 +387,11 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		return PcsSystem{}, err
 	}
 
+	batchManifests, err := buildPcsBatchManifests(batches, colDeclByID)
+	if err != nil {
+		return PcsSystem{}, err
+	}
+
 	zetaIdx, err := pcsZetaCoinIndex(sys, routing)
 	if err != nil {
 		return PcsSystem{}, err
@@ -389,7 +411,41 @@ func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 		QuotientMap:      quotientMap,
 		ZetaCoinIndex:    zetaIdx,
 		BatchRoots:       batchRoots,
+		BatchManifests:   batchManifests,
 	}, nil
+}
+
+// buildPcsBatchManifests locates every interactive batch's manifest cells. The
+// prover declares them consecutively in the committed round, one per column,
+// which is what lets the verifier address them as a (round, start) pair; a
+// non-contiguous or missing manifest is a prover-ray/codegen mismatch.
+func buildPcsBatchManifests(batches []pcscompiler.BatchRef, colDeclByID map[wiop.ObjectID]int) ([]*PcsBatchManifest, error) {
+	out := make([]*PcsBatchManifest, len(batches))
+	for i, b := range batches {
+		if b.IsPrecomp {
+			continue
+		}
+		cells := pcscompiler.ManifestCells(b.Round)
+		if len(cells) != len(b.Round.Columns) {
+			return nil, fmt.Errorf("codegen: BuildPcsSystem: round %d has %d manifest cells for %d columns",
+				b.Round.ID, len(cells), len(b.Round.Columns))
+		}
+		if len(cells) == 0 {
+			continue
+		}
+		start := cells[0].Context.ID.Position()
+		for j, cell := range cells {
+			if cell.Context.ID.Slot() != b.Round.ID || cell.Context.ID.Position() != start+j {
+				return nil, fmt.Errorf("codegen: BuildPcsSystem: round %d manifest cell %d is not contiguous", b.Round.ID, j)
+			}
+		}
+		out[i] = &PcsBatchManifest{
+			Round:     b.Round.ID,
+			CellStart: start,
+			ColStart:  colDeclByID[b.Round.Columns[0].Context.ID],
+		}
+	}
+	return out, nil
 }
 
 // buildPcsClaimMaps produces the witness/quotient claim maps in the SAME order
