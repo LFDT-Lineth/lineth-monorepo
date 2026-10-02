@@ -59,17 +59,17 @@ runs:
     # lockfile hash and the full policy match, so any dependency, resolution
     # or policy change forces a fresh verification. Restored on every ref, but
     # saved only by main runs (see ./.github/actions/cache), never by PRs.
-    - id: verdict-path
-      name: Locate the pnpm verification verdict file
-      shell: bash
-      run: |
-        echo "path=${XDG_CACHE_HOME:-$HOME/.cache}/pnpm/lockfile-verified.jsonl" >> "$GITHUB_OUTPUT"
-
+    #
+    # The path must be a literal, not a step output: actions/cache re-reads its
+    # inputs in the post step, where outputs of earlier steps are not available,
+    # so an output-derived path is empty there and the save fails with
+    # "Input required and not supplied: path". This is pnpm's default cache
+    # directory on Linux runners (XDG_CACHE_HOME is unset on them).
     - uses: ./.github/actions/cache
       name: Cache pnpm lockfile verification verdicts
-      if: ${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
+      if: ${{ runner.os == 'Linux' && hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) != '' }}
       with:
-        path: ${{ steps.verdict-path.outputs.path }}
+        path: ~/.cache/pnpm/lockfile-verified.jsonl
         key: pnpm-verified-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
         # Append-only JSONL: a fallback restore carries older verdicts (inert
         # unless the lockfile hash and policy match) and the next save adds the new one.
