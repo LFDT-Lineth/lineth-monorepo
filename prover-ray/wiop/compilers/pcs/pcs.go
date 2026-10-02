@@ -123,14 +123,29 @@ func newStaticPCS() *fri.PCS {
 // so this must match the size the PCS restricts its schedule to (both derive it
 // from the same committed columns).
 func effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
+	return effectiveNWith(runtimeSizeOf(rt), batches)
+}
+
+func effectiveNWith(sizeOf moduleSizeFunc, batches []BatchRef) int {
 	maxSizeIndex := 0
 	for _, b := range batches {
-		if idx := roundMaxSizeIndex(b.Round, rt); idx > maxSizeIndex {
+		if idx := roundMaxSizeIndexWith(b.Round, sizeOf); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
 	}
 	return 1 << (maxSizeIndex + FRILogInverseRate)
 }
+
+// moduleSizeFunc resolves a module's domain size. The prover and verifier use
+// the runtime ([runtimeSizeOf]); the verifier circuit, which only supports
+// statically sized modules, uses [staticSizeOf].
+type moduleSizeFunc func(*wiop.Module) int
+
+func runtimeSizeOf(rt *wiop.Runtime) moduleSizeFunc {
+	return func(m *wiop.Module) int { return m.RuntimeSize(rt) }
+}
+
+func staticSizeOf(m *wiop.Module) int { return m.Size() }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
 // the size bucket (SizeID = log2 of the padded column size), the position within
@@ -391,12 +406,12 @@ func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 	return encoders
 }
 
-// roundMaxSizeIndex returns the largest log2 padded size among a round's columns,
-// or 0 when the round owns no columns.
-func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime) int {
+// roundMaxSizeIndexWith returns the largest log2 padded size among a round's
+// columns, or 0 when the round owns no columns.
+func roundMaxSizeIndexWith(round *wiop.Round, sizeOf moduleSizeFunc) int {
 	maxSizeIndex := 0
 	for _, col := range round.Columns {
-		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+		size := utils.NextPowerOfTwo(sizeOf(col.Module))
 		if idx := utils.Log2Ceil(size); idx > maxSizeIndex {
 			maxSizeIndex = idx
 		}
@@ -452,6 +467,10 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 // maxSizeIndex+1, matching the committed table produced by [commitToRound], and
 // positions are assigned in column-declaration order so both agree.
 func GetLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
+	return getLayoutWith(round, runtimeSizeOf(rt))
+}
+
+func getLayoutWith(round *wiop.Round, sizeOf moduleSizeFunc) (map[wiop.ObjectID]ColumnLocation, fri.Shape) {
 
 	var (
 		cols   = round.Columns
@@ -461,7 +480,7 @@ func GetLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLoc
 
 	for _, col := range cols {
 
-		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+		size := utils.NextPowerOfTwo(sizeOf(col.Module))
 		sizeIndex := utils.Log2Ceil(size)
 
 		if size != 1<<sizeIndex {

@@ -77,7 +77,7 @@ func TestVarNative(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(&witness, koalabear.Modulus())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -91,7 +91,7 @@ func TestVarEmulated(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(&witness, ecc.BLS12_377.ScalarField())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -175,7 +175,7 @@ func TestExtNative(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(witness, koalabear.Modulus())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }
 
@@ -189,6 +189,6 @@ func TestExtEmulated(t *testing.T) {
 	fullWitness, err := frontend.NewWitness(witness, ecc.BLS12_377.ScalarField())
 	require.NoError(t, err)
 
-	err = ccs.IsSolved(fullWitness)
+	_, err = ccs.Solve(fullWitness)
 	require.NoError(t, err)
 }

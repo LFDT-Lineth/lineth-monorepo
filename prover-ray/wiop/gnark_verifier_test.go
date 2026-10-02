@@ -1,0 +1,308 @@
+package wiop_test
+
+import (
+	"maps"
+	"math/big"
+	"slices"
+	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/witness"
+	"github.com/consensys/gnark/constraint/solver"
+	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/stretchr/testify/require"
+)
+
+// testFRINumQueries keeps the FRI part of the test circuits small. Soundness
+// of the tests does not rest on FRI: the tampering they exercise is caught by
+// Merkle authentication and the algebraic identities, not by query sampling.
+const testFRINumQueries = 2
+
+func useSmallFRI(t *testing.T) {
+	t.Helper()
+	prev := pcs.FRINumQueries()
+	pcs.SetFRINumQueriesForTest(testFRINumQueries)
+	// Restore the global count when the calling test ends (unlike defer, which
+	// would fire on return from this helper), so other tests see the default.
+	// This guards any future wiop PCS test that does not call useSmallFRI.
+	t.Cleanup(func() { pcs.SetFRINumQueriesForTest(prev) })
+}
+
+type selfAssignLagrange struct{ le *wiop.LagrangeEval }
+
+func (a *selfAssignLagrange) Run(rt *wiop.Runtime) { a.le.SelfAssign(rt) }
+
+// nonConstVec returns a column whose interpolant is not constant.
+//
+// This matters for every test that exercises the PCS. FRI verifies the deep
+// quotient (f(x) − claim)/(x − zeta). When f is constant, the claimed
+// evaluation equals that constant at *every* zeta and the encoded codeword is
+// that constant at every position, so the numerator vanishes identically. The
+// quotient is then zero whatever zeta and the fold challenges are, zeros fold
+// to zeros, and no constraint in checkFolds depends on the transcript any
+// more — leaving the circuit's Fiat-Shamir derivation completely untested
+// while the test still reports success.
+func nonConstVec(n int) *wiop.ConcreteVector {
+	elems := make([]field.Element, n)
+	for i := range elems {
+		elems[i].SetUint64(uint64(i*i + 1))
+	}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
+
+// newPCSOnlySystem builds a minimal PCS-compiled system: one committed
+// column opened at a coin through a LagrangeEval.
+func newPCSOnlySystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
+	sys := wiop.NewSystemf("gnark-pcs")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+	pcs.Compile(sys)
+	return sys, col, le
+}
+
+// compiledVerifier is the verifier circuit of a system compiled once over a
+// given field, so that many witnesses can be solved against it without paying
+// for compilation again (it dominates the cost of the emulated circuit).
+type compiledVerifier struct {
+	sys         *wiop.System
+	template    wiop.Proof
+	templatePub wiop.PublicInput
+	modulus     *big.Int
+	ccs         interface {
+		Solve(witness.Witness, ...solver.Option) (any, error)
+		GetNbConstraints() int
+	}
+}
+
+// compileVerifierCircuit compiles the verifier circuit of sys over the given
+// field, its shape fixed by template (an honest proof of sys).
+func compileVerifierCircuit(
+	t *testing.T, sys *wiop.System, template wiop.Proof, templatePub wiop.PublicInput, modulus *big.Int,
+) *compiledVerifier {
+	t.Helper()
+	cv := &compiledVerifier{sys: sys, template: template, templatePub: templatePub, modulus: modulus}
+	circ := wiop.AllocateVerifierCircuit(sys, template, templatePub)
+	var err error
+	if modulus.Cmp(field.Modulus()) == 0 {
+		cv.ccs, err = frontend.CompileU32(modulus, scs.NewBuilder, circ)
+	} else {
+		cv.ccs, err = frontend.Compile(modulus, scs.NewBuilder, circ)
+	}
+	require.NoError(t, err, "verifier circuit must compile")
+	return cv
+}
+
+// solve assigns (proof, pub) to the compiled circuit and returns the error from
+// solving it.
+func (cv *compiledVerifier) solve(t *testing.T, proof wiop.Proof, pub wiop.PublicInput) error {
+	t.Helper()
+	assignment := wiop.AllocateVerifierCircuit(cv.sys, cv.template, cv.templatePub).AssignVerifierCircuit(proof, pub)
+	w, err := frontend.NewWitness(assignment, cv.modulus)
+	require.NoError(t, err, "assignment must produce a witness")
+	_, err = cv.ccs.Solve(w)
+	return err
+}
+
+func TestVerifierCircuit_PCSOnly(t *testing.T) {
+	useSmallFRI(t)
+	sys, col, le := newPCSOnlySystem()
+	// Must be non-constant, or the deep quotient vanishes and the circuit's
+	// Fiat-Shamir derivation stops being constrained by anything. See
+	// [nonConstVec].
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, nonConstVec(8)) })
+	require.NoError(t, sys.Verify(proof, pub), "honest proof must verify natively")
+
+	native := compileVerifierCircuit(t, sys, proof, pub, field.Modulus())
+	t.Run("honest-native", func(t *testing.T) {
+		require.NoError(t, native.solve(t, proof, pub), "honest proof must satisfy the circuit")
+		t.Logf("constraints (native koalabear): %d", native.ccs.GetNbConstraints())
+	})
+	t.Run("honest-emulated-bn254", func(t *testing.T) {
+		emulated := compileVerifierCircuit(t, sys, proof, pub, ecc.BN254.ScalarField())
+		require.NoError(t, emulated.solve(t, proof, pub), "honest proof must satisfy the circuit")
+		t.Logf("constraints (emulated over BN254): %d", emulated.ccs.GetNbConstraints())
+	})
+	t.Run("tampered-claim", func(t *testing.T) {
+		bad := cloneProof(proof)
+		bad.Cells[le.EvaluationClaims[0].Context.ID] = field.ElemFromExt(field.Uint64ToExt(7))
+		require.Error(t, sys.Verify(bad, pub), "tampered claim must fail natively")
+		require.Error(t, native.solve(t, bad, pub), "tampered claim must not satisfy the circuit")
+	})
+	t.Run("tampered-commitment", func(t *testing.T) {
+		bad := cloneProof(proof)
+		root := bad.Commitments[0]
+		one := field.One()
+		root[0].Add(&root[0], &one)
+		bad.Commitments[0] = root
+		require.Error(t, native.solve(t, bad, pub), "tampered commitment must not satisfy the circuit")
+	})
+}
+
+// circuitFields are the fields the verifier circuit is compiled over: native
+// KoalaBear, and BN254 where KoalaBear is emulated (the field we ship).
+var circuitFields = []struct {
+	name    string
+	modulus *big.Int
+}{
+	{"native-koalabear", field.Modulus()},
+	{"emulated-bn254", ecc.BN254.ScalarField()},
+}
+
+func TestVerifierCircuit_Vanishing(t *testing.T) {
+	useSmallFRI(t)
+	for _, build := range wioptest.VanishingScenarios() {
+		sc := build()
+		if hasDynamicModule(sc.Sys) {
+			continue
+		}
+		t.Run(sc.Name, func(t *testing.T) {
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			// An invalid witness yields a proof of the same shape that the
+			// native verifier rejects; the circuit must reject it too.
+			invalid := build()
+			global.Compile(invalid.Sys)
+			pcs.Compile(invalid.Sys)
+			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
+			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
+
+			for _, f := range circuitFields {
+				t.Run(f.name, func(t *testing.T) {
+					cv := compileVerifierCircuit(t, sc.Sys, proof, pub, f.modulus)
+					require.NoError(t, cv.solve(t, proof, pub), "honest proof must satisfy the circuit")
+					t.Logf("constraints: %d", cv.ccs.GetNbConstraints())
+					require.Error(t, cv.solve(t, badProof, badPub), "invalid witness must not satisfy the circuit")
+				})
+			}
+		})
+	}
+}
+
+// TestVerifierCircuit_Vanishing_TamperedProof starts from an honest proof and
+// corrupts one value at a time: every cell, then every round commitment. Each
+// corrupted proof must be rejected both natively and by the native circuit.
+// The emulated BN254 circuit, being far costlier to compile, only checks the
+// first cell and the first commitment.
+func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
+	useSmallFRI(t)
+	for _, build := range wioptest.VanishingScenarios() {
+		sc := build()
+		if hasDynamicModule(sc.Sys) {
+			continue
+		}
+		t.Run(sc.Name, func(t *testing.T) {
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
+
+			one := field.One()
+			cellIDs := slices.Sorted(maps.Keys(proof.Cells))
+			rounds := slices.Sorted(maps.Keys(proof.Commitments))
+			require.NotEmpty(t, cellIDs, "scenario must expose at least one cell")
+			require.NotEmpty(t, rounds, "scenario must expose at least one commitment")
+
+			tamperCell := func(id wiop.ObjectID) wiop.Proof {
+				bad := cloneProof(proof)
+				bad.Cells[id] = bad.Cells[id].Add(field.ElemFromBase(one))
+				return bad
+			}
+			tamperCommitment := func(round int) wiop.Proof {
+				bad := cloneProof(proof)
+				root := bad.Commitments[round]
+				root[0].Add(&root[0], &one)
+				bad.Commitments[round] = root
+				return bad
+			}
+
+			for _, f := range circuitFields {
+				t.Run(f.name, func(t *testing.T) {
+					ids, rs := cellIDs, rounds
+					if f.modulus.Cmp(field.Modulus()) != 0 {
+						ids, rs = ids[:1], rs[:1]
+					}
+					cv := compileVerifierCircuit(t, sc.Sys, proof, pub, f.modulus)
+					for _, id := range ids {
+						bad := tamperCell(id)
+						require.Errorf(t, sc.Sys.Verify(bad, pub), "tampered cell %d must fail natively", id)
+						require.Errorf(t, cv.solve(t, bad, pub), "tampered cell %d must not satisfy the circuit", id)
+					}
+					for _, round := range rs {
+						require.Errorf(t, cv.solve(t, tamperCommitment(round), pub), "tampered commitment of round %d must not satisfy the circuit", round)
+					}
+				})
+			}
+		})
+	}
+}
+
+// unsupportedAction is a verifier action without an in-circuit counterpart.
+type unsupportedAction struct{}
+
+func (unsupportedAction) Check(*wiop.Runtime) error { return nil }
+
+func TestAllocateVerifierCircuit_RejectsUnsupportedAction(t *testing.T) {
+	useSmallFRI(t)
+	sys, col, _ := newPCSOnlySystem()
+	sys.Rounds[1].RegisterVerifierAction(unsupportedAction{})
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
+
+	require.Panics(t, func() { wiop.AllocateVerifierCircuit(sys, proof, pub) },
+		"a verifier action without CheckGnark must be rejected instead of dropped")
+}
+
+func TestAssignVerifierCircuit_RejectsShapeMismatch(t *testing.T) {
+	useSmallFRI(t)
+	sys, col, le := newPCSOnlySystem()
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) { rt.AssignColumn(col, wioptest.ConstVec(8, 3)) })
+	circ := wiop.AllocateVerifierCircuit(sys, proof, pub)
+
+	bad := cloneProof(proof)
+	// The claim is carried as an extension element; retagging it as base
+	// changes the transcript layout and must be refused.
+	bad.Cells[le.EvaluationClaims[0].Context.ID] = field.ElemFromBase(field.NewElement(3))
+	require.Panics(t, func() { circ.AssignVerifierCircuit(bad, pub) },
+		"a proof whose cell field tags differ from the template must be rejected")
+}
+
+func hasDynamicModule(sys *wiop.System) bool {
+	for _, m := range sys.Modules {
+		if m.IsDynamic() {
+			return true
+		}
+	}
+	return false
+}
+
+func cloneProof(p wiop.Proof) wiop.Proof {
+	res := wiop.Proof{
+		Cells:           make(map[wiop.ObjectID]field.Gen, len(p.Cells)),
+		DynamicSizes:    make(map[int]int, len(p.DynamicSizes)),
+		Commitments:     make(map[int]field.Octuplet, len(p.Commitments)),
+		PCSOpeningProof: p.PCSOpeningProof,
+	}
+	for k, v := range p.Cells {
+		res.Cells[k] = v
+	}
+	for k, v := range p.DynamicSizes {
+		res.DynamicSizes[k] = v
+	}
+	for k, v := range p.Commitments {
+		res.Commitments[k] = v
+	}
+	return res
+}

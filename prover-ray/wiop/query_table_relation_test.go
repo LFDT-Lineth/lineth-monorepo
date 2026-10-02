@@ -89,8 +89,8 @@ func TestInclusion_Check_Match(t *testing.T) {
 	require.NotNil(t, inc)
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, baseVec(4, 3))
-	rt.AssignColumn(colB, baseVec(4, 3))
+	rt.AssignColumn(colA, wioptest.ConstVec(4, 3))
+	rt.AssignColumn(colB, wioptest.ConstVec(4, 3))
 
 	require.NoError(t, inc.Check(rt))
 }
@@ -105,8 +105,8 @@ func TestInclusion_Check_Mismatch(t *testing.T) {
 	inc := sys.NewInclusion(sys.Context.Childf("incMis"), []wiop.Table{tabA}, []wiop.Table{tabB})
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, baseVec(4, 1))
-	rt.AssignColumn(colB, baseVec(4, 2)) // A not in B
+	rt.AssignColumn(colA, wioptest.ConstVec(4, 1))
+	rt.AssignColumn(colB, wioptest.ConstVec(4, 2)) // A not in B
 
 	err := inc.Check(rt)
 	require.Error(t, err)
@@ -164,8 +164,8 @@ func TestInclusion_Check_WithSelector(t *testing.T) {
 	inc := sys.NewInclusion(sys.Context.Childf("incSel"), []wiop.Table{tabA}, []wiop.Table{tabB})
 
 	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(colA, baseVec(4, 1))
-	rt.AssignColumn(colB, baseVec(4, 1))
+	rt.AssignColumn(colA, wioptest.ConstVec(4, 1))
+	rt.AssignColumn(colB, wioptest.ConstVec(4, 1))
 
 	// sel = [1,0,0,0]
 	var one, zero field.Element
