@@ -143,7 +143,7 @@ class RiscvProofRequestDtoMapperTest {
     )
     val l2ExecutionProofTransport = FakeL2ExecutionProofTransport()
 
-    val dto = FileBasedRollupProofRequestDtoMapper(
+    val dto = RollupProofRequestDtoMapper(
       RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
       RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
       chainId,
@@ -199,7 +199,7 @@ class RiscvProofRequestDtoMapperTest {
     val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
-      FileBasedRollupProofRequestDtoMapper(
+      RollupProofRequestDtoMapper(
         RiscvProverClientTestFixtures.ROLLUP_PROGRAM_ID,
         RiscvProverClientTestFixtures.PROVING_SYSTEM_VERSION,
         chainId,
