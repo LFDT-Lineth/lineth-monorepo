@@ -28,6 +28,9 @@ func useSmallFRI(t *testing.T) {
 	t.Helper()
 	prev := pcs.FRINumQueries()
 	pcs.SetFRINumQueriesForTest(testFRINumQueries)
+	// Restore the global count when the calling test ends (unlike defer, which
+	// would fire on return from this helper), so other tests see the default.
+	// This guards any future wiop PCS test that does not call useSmallFRI.
 	t.Cleanup(func() { pcs.SetFRINumQueriesForTest(prev) })
 }
 
