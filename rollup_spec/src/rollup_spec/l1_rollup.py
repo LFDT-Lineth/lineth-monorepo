@@ -5,8 +5,7 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from .l2_execution import hash_address_list, hash_digest_list
-from .rollup import L2_L1_TREE_DEPTH, DataRollingHashWitness, RollupPublicInput
+from .rollup import DataRollingHashWitness
 
 
 def _encode_offset(offset: int) -> bytes:
@@ -76,40 +75,55 @@ class LinethRollupState:
     # is no per-dataRollingHash lastBlockHash to track anymore — just membership.
     anchored_data_rolling_hashes: Set[Hash32] = field(default_factory=set)
     l2_merkle_roots_depths: Dict[Hash32, int] = field(default_factory=dict)
-    # The single, combined security-council-managed approved-VK list
-    # (§ProgramVK anchoring). Exec and rollup VKs are NOT distinguished on L1 —
-    # a finalization's single `public_inputs.program_vks` list is checked against
-    # this one set. On-chain this is managed by an add/remove setter analogous
-    # to `setVerifierAddress` (replace on soundness bug, add on non-soundness
-    # guest update, periodic cleanup); not modelled as a method here.
-    approved_vks: Set[Hash32] = field(default_factory=set)
+    # Security-council-managed identities of the guest programs approved for finalization.
+    approved_program_ids: Set[Hash32] = field(default_factory=set)
+
+
+@dataclass
+class FinalizationPublicInput:
+    """Final aggregation PI. Program IDs identify approved guest programs on L1."""
+    end_block_number: U64
+    end_block_timestamp: U64
+    parent_l1_l2_bridge_rolling_hash: Hash32
+    parent_l1_l2_bridge_rolling_hash_message_number: U64
+    end_l1_l2_bridge_rolling_hash: Hash32
+    end_l1_l2_bridge_rolling_hash_message_number: U64
+    dynamic_chain_config_hash: Hash32
+    parent_ftx_rolling_hash: Hash32
+    parent_ftx_number: U64
+    end_ftx_rolling_hash: Hash32
+    end_processed_ftx_number: U64
+    parent_data_rolling_hash: Hash32
+    end_data_rolling_hash: Hash32
+    parent_block_hash: Hash32
+    end_block_hash: Hash32
+    start_offset: int
+    end_offset: int
+    l2_l1_tree_depth: int
+    l2_l1_roots: List[Hash32] = field(default_factory=list)
+    filtered_addresses: List[Address] = field(default_factory=list)
+    program_ids: List[Hash32] = field(default_factory=list)
+    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 @dataclass
 class FinalizationSubmission:
     """
     The rollup-aggregation guest output as submitted to the L1 finalization
-    call. It is the guest output plus the `proof` bytes: the 20-field
-    `public_inputs` tuple and the revealed preimages L1 needs as calldata —
-    `l2_l1_roots` (preimage of `l2L1BridgeTransactionTree`) and
-    `filtered_addresses` (preimage of `filteredAddressesHash`).
+    call. It is the guest output plus the `proof` bytes: the
+    `public_inputs` tuple. L2-to-L1 roots and filtered addresses are bound
+    directly in the public inputs.
 
-    Guest/prover boundary: the aggregation guest emits `public_inputs` and the
-    preimage lists; `proof` is attached by the zkVM/prover layer above and is a
-    placeholder (`b""`) in this reference (see `run_rollup_aggregation_guest`).
-    `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
-    not yet consumed by `finalize_rollup`.
+    Guest/prover boundary: the aggregation guest emits `public_inputs`; `proof`
+    is attached by the zkVM/prover layer above and is a placeholder (`b""`) in
+    this reference (see `run_rollup_aggregation_guest`).
+    `public_inputs.l2_messaging_blocks_offsets` is bound inside the PI and emitted by L1.
 
-    The single combined program-VK list (§ProgramVK anchoring) lives inside
-    `public_inputs.program_vks` so its order is bound to the proof; it is NOT a
-    separate submission field. `finalize_rollup` checks every entry against the
-    L1 `approved_vks` set.
+    The combined program-ID list lives inside `public_inputs.program_ids`, binding
+    its order to the proof. L1 checks every ID against `approved_program_ids`.
     """
-    public_inputs: RollupPublicInput
+    public_inputs: FinalizationPublicInput
     proof: bytes
-    l2_l1_roots: List[Hash32]
-    filtered_addresses: List[Address]
-    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 def anchor_chunk_submission(
@@ -134,7 +148,7 @@ def finalize_rollup(
     submission: FinalizationSubmission,
     prev_data_rolling_hash: Hash32,
     prev_offset: int,
-) -> None:
+) -> bytes:
     """
     `prev_data_rolling_hash` / `prev_offset` are the previously-finalized end position,
     supplied as calldata so the contract can open the stored position
@@ -146,6 +160,16 @@ def finalize_rollup(
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
         raise Exception("invalid rollup-aggregation proof")
+    previous_messaging_offset = 0
+    finalized_block_count = int(pi.end_block_number) - int(state.current_l2_block_number)
+    for offset in pi.l2_messaging_blocks_offsets:
+        if (
+            type(offset) is not int
+            or not previous_messaging_offset < offset <= finalized_block_count
+            or offset > 0xFFFF
+        ):
+            raise Exception("invalid finalized messaging block offset")
+        previous_messaging_offset = offset
     if keccak256(prev_data_rolling_hash + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
         raise Exception("prevDataRollingHash/prevOffset do not match the finalized position commitment")
     if pi.parent_data_rolling_hash != prev_data_rolling_hash:
@@ -188,26 +212,16 @@ def finalize_rollup(
         pi.end_processed_ftx_number,
     )
 
-    if hash_digest_list(submission.l2_l1_roots) != pi.l2_l1_bridge_transaction_tree:
-        raise Exception("submitted L2-to-L1 roots do not match public input")
-    for root in submission.l2_l1_roots:
-        state.l2_merkle_roots_depths[root] = L2_L1_TREE_DEPTH
+    for root in pi.l2_l1_roots:
+        state.l2_merkle_roots_depths[root] = pi.l2_l1_tree_depth
 
-    if hash_address_list(submission.filtered_addresses) != pi.filtered_addresses_hash:
-        raise Exception("submitted filtered addresses do not match public input")
-    for address in submission.filtered_addresses:
+    for address in pi.filtered_addresses:
         if address not in state.sanctioned_addresses:
             raise Exception("filtered address is not sanctioned")
 
-    # §ProgramVK anchoring: every guest verified beneath this finalization must
-    # be on the single combined approved-VK list, or L1 rejects the finalization
-    # (e.g. an operator swapping in an unapproved guest). Exec and rollup VKs are
-    # not distinguished — they arrive as one `program_vks` list. `program_vks` is
-    # the canonical sorted-distinct set, so this membership scan is
-    # order-independent (each entry checked against `approved_vks`).
-    for vk in pi.program_vks:
-        if vk not in state.approved_vks:
-            raise Exception("program VK is not approved")
+    for program_id in pi.program_ids:
+        if program_id not in state.approved_program_ids:
+            raise Exception("program ID is not approved")
 
     state.current_finalized_position_commitment = keccak256(
         pi.end_data_rolling_hash + _encode_offset(pi.end_offset)
@@ -222,8 +236,10 @@ def finalize_rollup(
     state.current_finalized_ftx_rolling_hash = pi.end_ftx_rolling_hash
     state.current_finalized_processed_ftx_number = pi.end_processed_ftx_number
 
+    return b"".join(offset.to_bytes(2, "big") for offset in pi.l2_messaging_blocks_offsets)
 
-def verify_rollup_aggregation_snark(proof: bytes, public_inputs: RollupPublicInput) -> bool:
+
+def verify_rollup_aggregation_snark(proof: bytes, public_inputs: FinalizationPublicInput) -> bool:
     return True
 
 

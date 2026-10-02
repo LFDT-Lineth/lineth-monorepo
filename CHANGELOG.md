@@ -181,3 +181,6 @@
 - *(misc)* Update gradle besu plugin to v0.3.0 (#4072)
 - *(deps)* Refresh dependencies and GitHub Actions (#4088)
 - *(coordinator)* Make vertx instantiation responsibility of CoordinatorAppMain runner (#4090)
+- *(coordinator)* Carve out config module (#4093)
+- *(coordinator)* Arrange config module dependencies (#4100)
+- *(coordinator)* Remove unsupported invalidity proof client (#4101)

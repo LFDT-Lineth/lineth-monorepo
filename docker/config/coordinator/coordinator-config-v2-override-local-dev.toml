@@ -12,9 +12,6 @@ fs-responses-directory = "tmp/local/prover/v3/execution/responses"
 [prover.blob-compression]
 fs-requests-directory = "tmp/local/prover/v3/compression/requests"
 fs-responses-directory = "tmp/local/prover/v3/compression/responses"
-[prover.invalidity]
-fs-requests-directory = "tmp/local/prover/v3/invalidity/requests"
-fs-responses-directory = "tmp/local/prover/v3/invalidity/responses"
 [prover.proof-aggregation]
 fs-requests-directory = "tmp/local/prover/v3/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
@@ -48,7 +45,7 @@ l2-highest-block-tag="LATEST"
 anchoring-tick-interval = "PT1S"
 
 [forced-transactions]
-disabled = false
+disabled = true
 processing-batch-size = 10
 sequencer-endpoint = "http://127.0.0.1:8545/"
 

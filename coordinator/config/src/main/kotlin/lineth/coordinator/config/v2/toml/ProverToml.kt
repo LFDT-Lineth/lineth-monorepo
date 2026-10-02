@@ -23,8 +23,6 @@ data class ProverToml(
   val execution: FileBasedProverConfigToml? = null,
   @param:ConfigSection("Blob compression prover request/response directories.")
   val blobCompression: FileBasedProverConfigToml? = null,
-  @param:ConfigSection("Invalidity prover request/response directories; omit to disable.")
-  val invalidity: FileBasedProverConfigToml? = null,
   @param:ConfigSection("Proof aggregation prover request/response directories.")
   val proofAggregation: FileBasedProverConfigToml? = null,
   @param:ConfigSection("L2 execution RISC-V prover config.")
@@ -122,7 +120,6 @@ data class ProverToml(
     PreRiscvProverConfig(
       execution = t.toFileBasedProverConfig(t.execution!!),
       blobCompression = t.toFileBasedProverConfig(t.blobCompression!!),
-      invalidity = t.invalidity?.let { t.toFileBasedProverConfig(it) },
       proofAggregation = t.toFileBasedProverConfig(t.proofAggregation!!),
     )
 

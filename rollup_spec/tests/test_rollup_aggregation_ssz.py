@@ -24,16 +24,17 @@ from pathlib import Path
 import pytest
 
 import rollup_spec
-from ethereum.crypto.hash import Hash32
-from ethereum.state import Address
 
-from rollup_spec.l1_rollup import FinalizationSubmission
+from rollup_spec.l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from ethereum.crypto.hash import Hash32
 from rollup_spec.proof_io_v1 import (
     _decode_rollup_public_input,
     decode_aggregation_request,
     encode_aggregation_response,
 )
 from rollup_spec.rollup_aggregation_ssz import (
+    ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID,
+    SszFinalizationPublicInput,
     decode_aggregation_input_ssz,
     decode_aggregation_output_ssz,
     encode_aggregation_input,
@@ -64,13 +65,16 @@ def _hexbytes(value: str) -> bytes:
 def _aggregation_output_from_response(resp: dict) -> FinalizationSubmission:
     """The rollup-aggregation guest's own output implied by a response fixture:
     the same guest-emitted fields, with `proverVersion`/`proof` dropped."""
-    pi = _decode_rollup_public_input(resp["publicInputs"], "publicInputs.")
+    inputs = resp["publicInputs"]
+    rollup_pi = _decode_rollup_public_input({**inputs, "programVks": []}, "publicInputs.")
+    pi = FinalizationPublicInput(
+        **{name: getattr(rollup_pi, name) for name in FinalizationPublicInput.__dataclass_fields__
+           if name != "program_ids"},
+        program_ids=[Hash32(_hexbytes(value)) for value in inputs["programIds"]],
+    )
     return FinalizationSubmission(
         public_inputs=pi,
         proof=b"",
-        l2_l1_roots=[Hash32(_hexbytes(h)) for h in resp["l2L1Roots"]],
-        filtered_addresses=[Address(_hexbytes(a)) for a in resp["filteredAddresses"]],
-        l2_messaging_blocks_offsets=list(resp["l2MessagingBlocksOffsets"]),
     )
 
 
@@ -100,6 +104,34 @@ def test_aggregation_output_round_trips_through_ssz_and_back_to_json() -> None:
         start_block_number=response["startBlockNumber"],
     )
     assert rebuilt_response == {**response, "proof": "0x"}
+
+
+def test_aggregation_output_frames_public_inputs_directly() -> None:
+    submission = _aggregation_output_from_response(_load_json("getZkRollupAggregationProofV1.response.json"))
+    encoded = encode_aggregation_output(submission)
+    body = encoded[2:]
+    view = SszFinalizationPublicInput.decode_bytes(body)
+    assert encoded[:2] == ROLLUP_AGGREGATION_OUTPUT_SCHEMA_ID.to_bytes(2, "big")
+    assert body[:8] == int(submission.public_inputs.end_block_number).to_bytes(8, "little")
+    assert [bytes(program_id) for program_id in view.program_ids] == submission.public_inputs.program_ids
+    assert [bytes(program_id) for program_id in view.program_ids] != [bytes([0xaa]) * 32, bytes([0xbb]) * 32]
+
+
+def test_aggregation_output_preserves_messaging_block_offsets() -> None:
+    submission = _aggregation_output_from_response(
+        _load_json("getZkRollupAggregationProofV1.response.json")
+    )
+    submission.public_inputs.l2_messaging_blocks_offsets = [3, 8]
+
+    recovered = decode_aggregation_output_ssz(encode_aggregation_output(submission))
+    response = encode_aggregation_response(
+        recovered,
+        prover_version=_PROVER_VERSION,
+        start_block_number=10,
+    )
+
+    assert recovered.public_inputs.l2_messaging_blocks_offsets == [3, 8]
+    assert response["publicInputs"]["l2MessagingBlocksOffsets"] == [3, 8]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -139,10 +171,15 @@ def test_decode_rejects_wrong_schema_id(decode_fn, encode_bytes, schema_id) -> N
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_truncated_bytes(decode_fn, encode_bytes, schema_id) -> None:
+def test_decode_rejects_malformed_truncation(decode_fn, encode_bytes, schema_id) -> None:
     encoded = encode_bytes()
+    if schema_id == 0x1002:
+        # The final proof is variable-length, so truncate the frame header.
+        encoded = encoded[:3]
+    else:
+        encoded = encoded[:-1]
     with pytest.raises(InvalidSsz):
-        decode_fn(encoded[: len(encoded) - 1])
+        decode_fn(encoded)
 
 
 @pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
@@ -152,12 +189,16 @@ def test_decode_rejects_missing_schema_id(decode_fn, encode_bytes, schema_id) ->
         decode_fn(encoded[:1])
 
 
-@pytest.mark.parametrize("decode_fn, encode_bytes, schema_id", _DECODE_CASES)
-def test_decode_rejects_trailing_garbage(decode_fn, encode_bytes, schema_id) -> None:
-    # A trailing byte either breaks the outer container's own offset/length
-    # bookkeeping (remerkleable raises directly) or decodes as if absorbed and
-    # is then caught by the canonical-encoding re-check — either way it must
-    # surface as InvalidSsz, not succeed silently.
-    encoded = encode_bytes()
+def test_decode_rejects_trailing_garbage_in_output() -> None:
+    encoded = _aggregation_output_bytes()
     with pytest.raises(InvalidSsz):
-        decode_fn(encoded + b"\x00")
+        decode_aggregation_output_ssz(encoded + b"\x00")
+
+
+def test_aggregation_input_accepts_variable_length_proof_bytes() -> None:
+    encoded = _aggregation_input_bytes()
+    original = decode_aggregation_input_ssz(encoded)
+    shortened = decode_aggregation_input_ssz(encoded[:-1])
+    extended = decode_aggregation_input_ssz(encoded + b"\x00")
+    assert shortened.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof[:-1]
+    assert extended.rollup_proofs[-1].proof.proof == original.rollup_proofs[-1].proof.proof + b"\x00"

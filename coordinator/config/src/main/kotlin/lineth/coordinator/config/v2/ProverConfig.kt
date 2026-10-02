@@ -29,7 +29,6 @@ data class PreRiscvProverConfig(
   val execution: FileBasedProverConfig,
   val blobCompression: FileBasedProverConfig,
   val proofAggregation: FileBasedProverConfig,
-  val invalidity: FileBasedProverConfig? = null,
 )
 
 data class RiscvProverConfig(
