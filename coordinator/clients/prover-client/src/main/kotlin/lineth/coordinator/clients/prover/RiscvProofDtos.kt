@@ -4,9 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import linea.clients.ConflationWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
-import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.RollupProofPublicInputs
-import linea.clients.RollupProofResponseV1
 import linea.domain.BlockInterval
 import linea.domain.ExecutionPayload
 import linea.ethapi.ExecutionWitness
@@ -412,56 +410,8 @@ fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInputs {
   )
 }
 
-fun RollupProofPublicInputs.toDto(): RollupProofPublicInputsDto {
-  return RollupProofPublicInputsDto(
-    endBlockNumber = endBlockNumber.toLong(),
-    endBlockTimestamp = endBlockTimestamp.epochSeconds,
-    l2L1BridgeTransactionTree = l2L1BridgeTransactionTree.encodeHex(),
-    parentL1L2BridgeRollingHash = parentL1L2BridgeMessageRollingHash.encodeHex(),
-    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeMessageNumber.toLong(),
-    endL1L2BridgeRollingHash = endL1L2BridgeMessageRollingHash.encodeHex(),
-    endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeMessageNumber.toLong(),
-    dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
-    parentFtxRollingHash = parentFtxRollingHash.encodeHex(),
-    parentFtxNumber = parentFtxNumber.toLong(),
-    endFtxRollingHash = endFtxRollingHash.encodeHex(),
-    endProcessedFtxNumber = endFtxNumber.toLong(),
-    filteredAddressesHash = filteredAddressesHash.encodeHex(),
-    parentDataRollingHash = parentDataRollingHash.encodeHex(),
-    endDataRollingHash = endDataRollingHash.encodeHex(),
-    parentBlockHash = parentBlockHash.encodeHex(),
-    endBlockHash = endBlockHash.encodeHex(),
-    startOffset = startOffset,
-    endOffset = endOffset,
-    programVks = programVks.map { it.encodeHex() },
-  )
-}
-
 fun ConflationWitness.toDto(): ConflationWitnessDto {
   return ConflationWitnessDto(
     blockRlps = blockRlps.map { it.encodeHex() },
-  )
-}
-
-internal fun L2ExecutionProofResponseV1.toDto(): L2ExecutionProofResponseDto {
-  return L2ExecutionProofResponseDto(
-    proof = proof.encodeHex(),
-    startBlockNumber = startBlockNumber.toLong(),
-    publicInputs = publicInputs.toDto(),
-    l2L1Messages = l2L1Messages.map { it.encodeHex() },
-    txFroms = txFroms.map { it.encodeHex() },
-    filteredAddresses = filteredAddresses.map { it.encodeHex() },
-    programVk = programVk.encodeHex(),
-  )
-}
-
-fun RollupProofResponseV1.toDto(): RollupProofResponseDto {
-  return RollupProofResponseDto(
-    proof = proof.encodeHex(),
-    startBlockNumber = startBlockNumber.toLong(),
-    publicInputs = publicInputs.toDto(),
-    l2L1Roots = l2L1Roots.map { it.encodeHex() },
-    filteredAddresses = filteredAddresses.map { it.encodeHex() },
-    programVk = programVk.encodeHex(),
   )
 }
