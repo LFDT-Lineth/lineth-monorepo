@@ -6,7 +6,13 @@ pub fn main(init: std.process.Init) !void {
 
     const id = try stageElf(init.io, init.gpa, args[1], args[2]);
     const hex = std.fmt.bytesToHex(id, .lower);
-    try std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = args[3], .data = &hex });
+    try writeProgramId(init.io, args[3], &hex);
+}
+
+fn writeProgramId(io: std.Io, path: []const u8, hex: []const u8) !void {
+    const cwd = std.Io.Dir.cwd();
+    if (std.fs.path.dirname(path)) |parent| try cwd.createDirPath(io, parent);
+    try cwd.writeFile(io, .{ .sub_path = path, .data = hex });
 }
 
 fn stageElf(io: std.Io, allocator: std.mem.Allocator, source: []const u8, output_directory: []const u8) ![32]u8 {
@@ -59,4 +65,22 @@ test "stage complete ELF and refuse replacement" {
     defer allocator.free(asset);
     try std.testing.expectEqualStrings(elf, asset);
     try std.testing.expectError(error.PathAlreadyExists, stageElf(io, allocator, source, output_directory));
+}
+
+test "write Program ID into a fresh build directory" {
+    const io = std.testing.io;
+    const cwd = std.Io.Dir.cwd();
+    const allocator = std.testing.allocator;
+    var random_bytes: [8]u8 = undefined;
+    io.random(&random_bytes);
+    const directory = try std.fmt.allocPrint(allocator, "guest-program-id-build-{s}", .{std.fmt.bytesToHex(random_bytes, .lower)});
+    defer allocator.free(directory);
+    defer cwd.deleteTree(io, directory) catch {};
+
+    const path = try std.fmt.allocPrint(allocator, "{s}/zig-out/program-id", .{directory});
+    defer allocator.free(path);
+    try writeProgramId(io, path, "1234");
+    const stored = try cwd.readFileAlloc(io, path, allocator, .limited(64));
+    defer allocator.free(stored);
+    try std.testing.expectEqualStrings("1234", stored);
 }

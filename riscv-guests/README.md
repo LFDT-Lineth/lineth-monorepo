@@ -79,8 +79,8 @@ reviews the resulting draft by default; the pre-release option follows the norma
 convention.
 
 The workflow runs that guest's `make test` and `make compile` before creating the changelog commit
-and tag. It checks out the tag and repeats both commands for the released ELF. Reference tests run
-separately and do not gate guest releases. The GitHub Release attaches the complete ELF as
+and tag. It checks out the tag to build and stage the released ELF. Reference tests run separately
+and do not gate guest releases. The GitHub Release attaches the complete ELF as
 `<program-id>.elf`, with 64 lowercase hexadecimal characters and no `0x` in the filename. Its
 notes give the `0x`-prefixed Program ID: **Keccak-256 of the complete uploaded ELF bytes** (not
 SHA3-256). Published release assets are immutable; use a new tag for a changed binary. Coordinator
