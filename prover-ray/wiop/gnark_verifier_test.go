@@ -136,6 +136,16 @@ func TestVerifierCircuit_PCSOnly(t *testing.T) {
 	})
 }
 
+// circuitFields are the fields the verifier circuit is compiled over: native
+// KoalaBear, and BN254 where KoalaBear is emulated (the field we ship).
+var circuitFields = []struct {
+	name    string
+	modulus *big.Int
+}{
+	{"native-koalabear", field.Modulus()},
+	{"emulated-bn254", ecc.BN254.ScalarField()},
+}
+
 func TestVerifierCircuit_Vanishing(t *testing.T) {
 	useSmallFRI(t)
 	for _, build := range wioptest.VanishingScenarios() {
@@ -149,10 +159,6 @@ func TestVerifierCircuit_Vanishing(t *testing.T) {
 			proof, pub := sc.Sys.Prove(sc.AssignHonest)
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
-			nb, err := solveVerifierCircuit(t, sc.Sys, proof, proof, pub, field.Modulus())
-			require.NoError(t, err, "honest proof must satisfy the circuit")
-			t.Logf("constraints (native koalabear): %d", nb)
-
 			// An invalid witness yields a proof of the same shape that the
 			// native verifier rejects; the circuit must reject it too.
 			invalid := build()
@@ -160,36 +166,26 @@ func TestVerifierCircuit_Vanishing(t *testing.T) {
 			pcs.Compile(invalid.Sys)
 			badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
 			require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
-			_, err = solveVerifierCircuit(t, sc.Sys, proof, badProof, badPub, field.Modulus())
-			require.Error(t, err, "invalid witness must not satisfy the circuit")
+
+			for _, f := range circuitFields {
+				t.Run(f.name, func(t *testing.T) {
+					nb, err := solveVerifierCircuit(t, sc.Sys, proof, proof, pub, f.modulus)
+					require.NoError(t, err, "honest proof must satisfy the circuit")
+					t.Logf("constraints: %d", nb)
+
+					_, err = solveVerifierCircuit(t, sc.Sys, proof, badProof, badPub, f.modulus)
+					require.Error(t, err, "invalid witness must not satisfy the circuit")
+				})
+			}
 		})
 	}
 }
 
-func TestVerifierCircuit_Vanishing_Emulated(t *testing.T) {
-	useSmallFRI(t)
-	sc := wioptest.NewMixedRatioVanishingsScenario()
-	global.Compile(sc.Sys)
-	pcs.Compile(sc.Sys)
-	proof, pub := sc.Sys.Prove(sc.AssignHonest)
-	require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
-
-	nb, err := solveVerifierCircuit(t, sc.Sys, proof, proof, pub, ecc.BN254.ScalarField())
-	require.NoError(t, err, "honest proof must satisfy the emulated circuit")
-	t.Logf("constraints (emulated over BN254): %d", nb)
-
-	invalid := wioptest.NewMixedRatioVanishingsScenario()
-	global.Compile(invalid.Sys)
-	pcs.Compile(invalid.Sys)
-	badProof, badPub := invalid.Sys.Prove(invalid.AssignInvalid)
-	require.Error(t, invalid.Sys.Verify(badProof, badPub), "invalid witness must fail natively")
-	_, err = solveVerifierCircuit(t, sc.Sys, proof, badProof, badPub, ecc.BN254.ScalarField())
-	require.Error(t, err, "invalid witness must not satisfy the emulated circuit")
-}
-
 // TestVerifierCircuit_Vanishing_TamperedProof starts from an honest proof and
 // corrupts one value at a time: every cell, then every round commitment. Each
-// corrupted proof must be rejected both natively and by the circuit.
+// corrupted proof must be rejected both natively and by the native circuit.
+// The emulated BN254 circuit, being far costlier to compile, only checks the
+// first cell and the first commitment.
 func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
 	useSmallFRI(t)
 	for _, build := range wioptest.VanishingScenarios() {
@@ -204,20 +200,41 @@ func TestVerifierCircuit_Vanishing_TamperedProof(t *testing.T) {
 			require.NoError(t, sc.Sys.Verify(proof, pub), "honest proof must verify natively")
 
 			one := field.One()
-			for _, id := range slices.Sorted(maps.Keys(proof.Cells)) {
+			cellIDs := slices.Sorted(maps.Keys(proof.Cells))
+			rounds := slices.Sorted(maps.Keys(proof.Commitments))
+			require.NotEmpty(t, cellIDs, "scenario must expose at least one cell")
+			require.NotEmpty(t, rounds, "scenario must expose at least one commitment")
+
+			tamperCell := func(id wiop.ObjectID) wiop.Proof {
 				bad := cloneProof(proof)
 				bad.Cells[id] = bad.Cells[id].Add(field.ElemFromBase(one))
-				require.Errorf(t, sc.Sys.Verify(bad, pub), "tampered cell %d must fail natively", id)
-				_, err := solveVerifierCircuit(t, sc.Sys, proof, bad, pub, field.Modulus())
-				require.Errorf(t, err, "tampered cell %d must not satisfy the circuit", id)
+				return bad
 			}
-			for _, round := range slices.Sorted(maps.Keys(proof.Commitments)) {
+			tamperCommitment := func(round int) wiop.Proof {
 				bad := cloneProof(proof)
 				root := bad.Commitments[round]
 				root[0].Add(&root[0], &one)
 				bad.Commitments[round] = root
-				_, err := solveVerifierCircuit(t, sc.Sys, proof, bad, pub, field.Modulus())
-				require.Errorf(t, err, "tampered commitment of round %d must not satisfy the circuit", round)
+				return bad
+			}
+
+			for _, f := range circuitFields {
+				t.Run(f.name, func(t *testing.T) {
+					ids, rs := cellIDs, rounds
+					if f.modulus.Cmp(field.Modulus()) != 0 {
+						ids, rs = ids[:1], rs[:1]
+					}
+					for _, id := range ids {
+						bad := tamperCell(id)
+						require.Errorf(t, sc.Sys.Verify(bad, pub), "tampered cell %d must fail natively", id)
+						_, err := solveVerifierCircuit(t, sc.Sys, proof, bad, pub, f.modulus)
+						require.Errorf(t, err, "tampered cell %d must not satisfy the circuit", id)
+					}
+					for _, round := range rs {
+						_, err := solveVerifierCircuit(t, sc.Sys, proof, tamperCommitment(round), pub, f.modulus)
+						require.Errorf(t, err, "tampered commitment of round %d must not satisfy the circuit", round)
+					}
+				})
 			}
 		})
 	}
