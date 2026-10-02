@@ -18,6 +18,7 @@ import linea.kotlin.toHexString
 import linea.kotlin.toHexStringUInt256
 import linea.log4j.configureLoggers
 import linea.web3j.ethapi.createEthApiClient
+import lineth.vertx.vertxTestOptions
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import org.apache.logging.log4j.Level
@@ -42,13 +43,13 @@ class EthLogsSearcherImplIntTest {
   private lateinit var logsClient: EthLogsSearcherImpl
   private lateinit var vertx: Vertx
   private lateinit var wireMockServer: WireMockServer
-  private lateinit var TestingJsonRpcServer: TestingJsonRpcServer
+  private lateinit var testingJsonRpcServer: TestingJsonRpcServer
   private val address = "0x508ca82df566dcd1b0de8296e70a96332cd644ec"
   private val log = LogManager.getLogger("test.case.Web3JLogsSearcherIntTest")
 
   @BeforeEach
   fun beforeEach() {
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
@@ -65,7 +66,7 @@ class EthLogsSearcherImplIntTest {
     wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wireMockServer.start()
 
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     logsClient = EthLogsSearcherImpl(
       vertx,
       ethApiClient = createEthApiClient(
@@ -83,17 +84,17 @@ class EthLogsSearcherImplIntTest {
     retryConfig: RetryConfig = RetryConfig.noRetries,
     subsetOfBlocksWithLogs: List<ULongRange>? = null,
   ) {
-    TestingJsonRpcServer = TestingJsonRpcServer(
+    testingJsonRpcServer = TestingJsonRpcServer(
       vertx = vertx,
       serverName = "fake-execution-layer-log-searcher",
       recordRequestsResponses = true,
     )
-    setUpFakeLogsServerToHandleEthLogs(TestingJsonRpcServer, subsetOfBlocksWithLogs)
+    setUpFakeLogsServerToHandleEthLogs(testingJsonRpcServer, subsetOfBlocksWithLogs)
     logsClient = EthLogsSearcherImpl(
       vertx = vertx,
       ethApiClient = createEthApiClient(
         vertx = vertx,
-        rpcUrl = URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString(),
+        rpcUrl = URI("http://127.0.0.1:" + testingJsonRpcServer.boundPort).toString(),
         requestRetryConfig = retryConfig,
       ),
       config = EthLogsSearcherImpl.Config(
@@ -188,10 +189,10 @@ class EthLogsSearcherImplIntTest {
       ),
     )
 
-    TestingJsonRpcServer.handle("eth_getLogs", { _ ->
+    testingJsonRpcServer.handle("eth_getLogs", { _ ->
       // simulate 2 failures
-      log.debug("eth_getLogs callCount=${TestingJsonRpcServer.callCountByMethod("eth_getLogs")}")
-      if (TestingJsonRpcServer.callCountByMethod("eth_getLogs") < 2) {
+      log.debug("eth_getLogs callCount=${testingJsonRpcServer.callCountByMethod("eth_getLogs")}")
+      if (testingJsonRpcServer.callCountByMethod("eth_getLogs") < 2) {
         throw JsonRpcError.internalError().asException()
       } else {
         generateLogsForBlockRange(fromBlock = 10, toBlock = 15)
@@ -234,7 +235,7 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `when eth_getLogs gets a DNS error shall return failed promise`() {
     val randomHostname = "nowhere-${Random.nextBytes(20).encodeHex()}.local"
-    vertx = Vertx.vertx()
+    vertx = Vertx.vertx(vertxTestOptions)
     logsClient = EthLogsSearcherImpl(
       vertx,
       createEthApiClient(
@@ -320,7 +321,7 @@ class EthLogsSearcherImplIntTest {
       .get()
       .also { log ->
         assertThat(log).isNull()
-        assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
+        assertThat(testingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
         assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
@@ -370,7 +371,7 @@ class EthLogsSearcherImplIntTest {
       .get()
       .also { log ->
         assertThat(log).isNull()
-        assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
+        assertThat(testingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
         assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
@@ -396,7 +397,7 @@ class EthLogsSearcherImplIntTest {
       .also { log ->
         assertThat(log).isNotNull()
         assertThat(ULong.fromHexString(log!!.topics[1].encodeHex())).isEqualTo(35UL)
-        assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 11)
+        assertThat(testingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 11)
         assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
@@ -477,10 +478,10 @@ class EthLogsSearcherImplIntTest {
     }
 
     private fun setUpFakeLogsServerToHandleEthLogs(
-      TestingJsonRpcServer: TestingJsonRpcServer,
+      testingJsonRpcServer: TestingJsonRpcServer,
       subsetOfBlocksWithLogs: List<ULongRange>?,
     ) {
-      TestingJsonRpcServer.apply {
+      testingJsonRpcServer.apply {
         this.handle("eth_getLogs", { request ->
           val filter = parseEthLogsRequest(request)
           subsetOfBlocksWithLogs

@@ -7,4 +7,6 @@ description="Lineth long running service implementation"
 
 dependencies {
   implementation "io.vertx:vertx-core"
+
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
 }

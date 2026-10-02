@@ -62,7 +62,7 @@ jobs:
           fi
 
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -85,7 +85,7 @@ jobs:
           ls -lh "linea-besu/plugins/${WORKSPACE_MODULE_PATH}/build/libs"
 
       - name: Release to GitHub
-        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 #v2.5.0
+        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # v2.5.0
         with:
           arguments: full-release --git-root-search --basedir=${{github.workspace}}/linea-besu/plugins/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
         env:

@@ -30,20 +30,11 @@ Set `ZIG=/path/to/zig` when the required Zig binary is not first on `PATH`.
 
 ## Dependencies
 
-Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), **Consensys/zesu-zkvm** (its pure-Zig precompile backend `stdlibs_accel`, which the guest's in-guest crypto delegates to), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
+Each guest pins its **own** external dependencies in its `build.zig.zon`. For `l2-execution`: **Zesu** (EVM/stateless execution), the **`guest_crypto`** package (the Constantine staticlib backing secp256k1, BLS12-381, BN254, and KZG point evaluation), and the **execution-spec-tests `tests-zkevm` fixtures** (a `lazy` dependency, fetched only for the tests). Every guest also takes `../build_common` as a path dependency for the shared build helpers. `make fetch` pre-fetches a guest's tree.
 
-## Native test dependencies
+## Crypto Backends
 
-A guest's `make test` runs its logic on the **host**, where Zesu's `default.zig` accelerator backend links native crypto C libraries:
-
-| Library | Provides |
-| --- | --- |
-| `libsecp256k1` | ecrecover / signature verification |
-| OpenSSL (`libssl`, `libcrypto`) | secp256r1 (P-256) |
-| `libblst` | BLS12-381 + KZG point evaluation |
-| `libmcl` | BN254 |
-
-Expected under a single prefix — `/opt/homebrew` on macOS, `/usr/local` on Linux — overridable with `-Dcrypto-prefix=<prefix>`. Install them all via Zesu's helper (from a Zesu checkout): `make install-deps`. The freestanding guest ELF (`make compile`) needs **none** of these: its precompiles are either pure-Zig (zesu-zkvm's `stdlibs_accel`, compiled in) or a custom RISC-V opcode (keccak) the prover arithmetizes at execution.
+The host test and freestanding guest both use Zesu's `extern` crypto backend. Every required `zkvm_*` symbol is provided in-process: Zig `std.crypto` implements SHA-256 and P-256, the `guest_crypto` Constantine static library implements secp256k1, BLS12-381, BN254, and KZG point evaluation, Zesu supplies modexp/RIPEMD-160/BLAKE2f, and keccak uses either Zig `std.crypto` or the custom RISC-V opcode that the prover arithmetizes.
 
 ## Development
 
@@ -63,7 +54,7 @@ make -C l2-execution compile ZIG=/path/to/zig
 make -C l2-execution compile ZIG=/path/to/zig IN_ORIGIN=0x08800000   # override the input offset
 ```
 
-`make -C l2-execution compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests (see [Native test dependencies](#native-test-dependencies)).
+`make -C l2-execution compile` builds the guest as a **statically-linked rv64im ELF** under `<guest>/zig-out/bin/` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"). `make test` runs the native Zig unit tests through the same crypto providers.
 
 ### Reference tests (l2-execution only — full EF zkevm fixture suite)
 
@@ -78,6 +69,30 @@ make -C l2-execution reference-test ZIG=/path/to/zig REFERENCE_ARGS="--report-on
 
 The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_tests_zkevm` dependency and, for every block, wraps it into a dummy-filled extended input and checks the extended guest's validity verdict against the fixture's own expected `successful_validation` result — see [`extended_vanilla_runner.zig`](l2-execution/test/extended_vanilla_runner.zig). The corpus walking/reporting is reusable ([`spec_runner.zig`](l2-execution/test/spec_runner.zig)); `extended_vanilla_runner.zig` supplies the only adapter that plugs into it today.
 
+## Guest releases
+
+Use the **RISC-V L2 Execution Guest Release** or **RISC-V Rollup Guest Release** workflow in the
+GitHub Actions UI. Releases are independent, using `releases/riscv-l2-execution/v<semver>` and
+`releases/riscv-rollup/v<semver>` tags. On non-main branches, supply a release tag suffix. The
+component changelogs track changes to the guest and its shared build inputs. The release manager
+reviews the resulting draft by default; the pre-release option follows the normal component release
+convention.
+
+The workflow runs that guest's `make test` and `make compile` before creating the changelog commit
+and tag. It checks out the tag and repeats both commands for the released ELF. Reference tests run
+separately and do not gate guest releases. The GitHub Release attaches the complete ELF as
+`<program-id>.elf`, with 64 lowercase hexadecimal characters and no `0x` in the filename. Its
+notes give the `0x`-prefixed Program ID: **Keccak-256 of the complete uploaded ELF bytes** (not
+SHA3-256). Published release assets are immutable; use a new tag for a changed binary. Coordinator
+deployment and Program ID selection are handled separately.
+
+To build and stage a guest ELF locally by its ID, run `make release-asset GUEST=l2-execution`
+(or `GUEST=rollup`) from this directory. Each guest exposes the shared `zig build program-id`
+step; `-Drelease-dir=<path>` selects the asset directory. The step hashes the ELF produced by
+the Zig build graph using the pinned toolchain's Keccak implementation. Zig's guest build defaults
+to accelerated Keccak; ordinary builds can opt out with `KECCAK_ACCEL=false` or
+`-Dkeccak-accel=false`. Release staging uses the Zig build default.
+
 ## Continuous Integration
 
 Two workflows guard the guests.
@@ -89,7 +104,7 @@ Two workflows guard the guests.
 
 [`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2-execution exec ZKC_EXEC_FLAGS="--fast"` (the ELF → JSON → `zkc` path described below). Fast mode (`--fast`) skips tracing, which is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host reference-test suite's job above.
 
-The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. The interpreter-run workflow reuses that same action for the guest build (the freestanding ELF links none of the crypto) and adds Go plus a `zkc` install.
+The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig version pinned in `.zigversion`, Nim, and LLVM for the Constantine build, with Zig package fetches and build artifacts cached. The interpreter-run workflow reuses that action and adds Go plus a `zkc` install.
 
 ## ZKC Interpreter Integration
 

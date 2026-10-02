@@ -6,6 +6,7 @@ plugins {
 dependencies {
   implementation project(':coordinator:core-interfaces')
   api project(':coordinator:clients:prover-client:serialization')
+  api project(':coordinator:config')
   implementation project(':coordinator:clients:smart-contract-client')
   implementation project(':coordinator:ethereum:models-helper')
   implementation project(':coordinator:utilities')
@@ -32,6 +33,7 @@ dependencies {
   testImplementation testFixtures(project(':coordinator:core-interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
+  testImplementation testFixtures(project(':jvm-libs:generic:vertx-helper'))
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
 }

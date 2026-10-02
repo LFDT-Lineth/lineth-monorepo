@@ -3,7 +3,9 @@
   "metadata": {
     "startBlockNumber": 10,
     "endBlockNumber": 18,
-    "startBlockTimestamp": 1763000000
+    "startBlockTimestamp": 1763000000,
+    "endBlockTimestamp": 1763000557,
+    "transactionsCount": 9
   },
   "proofRequest": {
     "rollupProofs": [
@@ -29,7 +31,7 @@
           "startOffset": 0,
           "endOffset": 0,
           "l2L1TreeDepth": 5,
-      "l2L1Roots": [
+          "l2L1Roots": [
             "0x7777777777777777777777777777777777777777777777777777777777777777",
             "0x8888888888888888888888888888888888888888888888888888888888888888"
           ],
@@ -64,7 +66,7 @@
           "startOffset": 0,
           "endOffset": 0,
           "l2L1TreeDepth": 5,
-      "l2L1Roots": [
+          "l2L1Roots": [
             "0x7777777777777777777777777777777777777777777777777777777777777777",
             "0x8888888888888888888888888888888888888888888888888888888888888888"
           ],

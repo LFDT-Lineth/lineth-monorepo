@@ -39,9 +39,6 @@ EVM trace generation system for Linea's ZK proving pipeline. Implements the cons
 ./gradlew spotlessCheck
 ./gradlew spotlessApply
 
-# License header check
-./gradlew :tracer:arithmetization:checkSpdxHeader
-
 # Sonarqube analysis
 ./gradlew :tracer:sonarqube -Dtests=Unit
 ```
@@ -91,12 +88,11 @@ tracer/
 
 - Corset constraint changes affect ZK proof validity — verify with replay tests
 - Reference tests validate Ethereum spec compliance — do not skip
-- SPDX license headers required on all source files (`checkSpdxHeader` task)
+- SPDX license headers required on all source files
 - Plugin dependencies (tracer plugin, Shomei) are auto-downloaded and extracted during build
 
 ## Agent Rules (Overrides)
 
 - Always run `./gradlew :tracer:arithmetization:test` for unit test changes
 - For constraint changes, also run `./gradlew :tracer:arithmetization:fastReplayTests`
-- Check SPDX headers: `./gradlew :tracer:arithmetization:checkSpdxHeader`
 - Reference the tracer's own [README.md](README.md), [SETUP.md](SETUP.md), and [PLUGINS.md](PLUGINS.md) for detailed docs

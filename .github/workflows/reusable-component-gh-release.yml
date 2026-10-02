@@ -159,7 +159,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Append Changelog Action to release note
         id: append_change_log
@@ -228,7 +228,7 @@ jobs:
           echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
 
       - name: gh-release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: ${{ env.COMPONENT_CAP }} v${{ needs.release-push-tag-changelog.outputs.release_version }}
           tag_name: ${{ needs.release-push-tag-changelog.outputs.release_tag }}

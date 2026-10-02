@@ -19,7 +19,7 @@ jobs:
     name: Prover static check
     steps:
     - name: checkout code
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
     - name: install Go
@@ -41,7 +41,7 @@ jobs:
       working-directory: prover-ray
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee #v9.2.1
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
           skip-save-cache: ${{ github.ref != 'refs/heads/main' || startsWith(github.event_name, 'pull_request') }}
           version: v2.11.3
@@ -66,7 +66,7 @@ jobs:
       - staticcheck
     steps:
     - name: checkout code
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: install Go
       uses: ./.github/actions/setup-go
       with:
