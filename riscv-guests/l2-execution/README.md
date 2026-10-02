@@ -23,20 +23,20 @@ make -C l2-execution exec
 
 ## Compilation
 
-`make -C l2-execution compile` (and `exec`/`debug`) build the guest with
-the **standard** zig keccak by default. Pass `KECCAK_ACCEL=true` to build with the
-arithmetization keccak wrapper (the prover-accelerated custom op) instead:
+`make -C l2-execution compile` (and `exec`/`debug`) build the guest with the
+arithmetization keccak wrapper (the prover-accelerated custom op) by default. Pass
+`KECCAK_ACCEL=false` to build with standard Zig keccak instead:
 
 ```bash
-make -C l2-execution compile                     # standard zig keccak
-make -C l2-execution compile KECCAK_ACCEL=true   # arithmetization keccak wrapper
+make -C l2-execution compile                      # arithmetization keccak wrapper
+make -C l2-execution compile KECCAK_ACCEL=false   # standard Zig keccak
 ```
 
 Equivalently, running `zig build` directly from this directory (requires the generated linker script; run `make linker-script` once after a clean checkout):
 
     make linker-script
-    zig build                       # standard zig keccak
-    zig build -Dkeccak-accel=true   # arithmetization keccak wrapper
+    zig build                        # arithmetization keccak wrapper
+    zig build -Dkeccak-accel=false   # standard Zig keccak
 
 ## Shell alias
 
