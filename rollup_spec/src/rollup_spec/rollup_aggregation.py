@@ -4,10 +4,10 @@ from typing import List, Set
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 
-from .l1_rollup import FinalizationSubmission
+from .l1_rollup import FinalizationPublicInput, FinalizationSubmission
+from .messaging_offsets import rebase_messaging_offsets
 from .rollup import (
     RollupProof,
-    RollupPublicInput,
     VerifiableRollupProof,
     recursive_stark_verify,
 )
@@ -43,6 +43,8 @@ def run_rollup_aggregation_guest(
     # guest-emitted `RollupProof`, not the coordinator-attached VK.
     rollup_proofs = [vp.proof for vp in aggregation_input.rollup_proofs]
     for left, right in zip(rollup_proofs, rollup_proofs[1:]):
+        if int(right.start_block_number) != int(left.public_inputs.end_block_number) + 1:
+            raise Exception("rollup proofs must tile a contiguous block range")
         assert_rollup_proof_continuity(left, right)
 
     first_proof = rollup_proofs[0]
@@ -53,33 +55,25 @@ def run_rollup_aggregation_guest(
             raise Exception("rollup proofs disagree on L2-to-L1 tree depth")
     merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
-
-    # §ProgramVK anchoring: emit ONE `program_vks` set as a CANONICAL sorted,
-    # distinct list — L1 does not distinguish exec vs rollup VKs (single combined
-    # `approvedVks` set), and sorting makes the commitment a pure function of the
-    # set's contents. The set is the union of every rollup proof's bubbled
-    # `public_inputs.program_vks` (the exec VKs it verified) and each proof's own
-    # `program_vk`. `rollup_vks` is kept only as internal trace of the distinct
-    # rollup `program_vk`s that were verified.
-    rollup_vks: List[Hash32] = []  # internal trace only
-    seen_rollup_vks: Set[Hash32] = set()
+    messaging_offsets: List[int] = []
     program_vk_set: Set[Hash32] = set()
 
     for vp in aggregation_input.rollup_proofs:
-        merged_l2_l1_roots.extend(vp.proof.public_inputs.l2_l1_roots)
-        merged_filtered_addresses.extend(vp.proof.public_inputs.filtered_addresses)
-        if vp.program_vk not in seen_rollup_vks:
-            seen_rollup_vks.add(vp.program_vk)
-            rollup_vks.append(vp.program_vk)
-        # Union in the bubbled exec VKs verified beneath this rollup proof, plus
-        # the rollup proof's own VK.
-        program_vk_set.update(vp.proof.public_inputs.program_vks)
+        proof = vp.proof
+        messaging_offsets.extend(rebase_messaging_offsets(
+            int(proof.start_block_number), int(proof.public_inputs.end_block_number),
+            proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
+            int(first_proof.start_block_number), "rollup", "aggregation",
+        ))
+        merged_l2_l1_roots.extend(proof.public_inputs.l2_l1_roots)
+        merged_filtered_addresses.extend(proof.public_inputs.filtered_addresses)
+        program_vk_set.update(proof.public_inputs.program_vks)
         program_vk_set.add(vp.program_vk)
 
-    # Canonical set encoding: sorted ascending by byte value (Hash32 is bytes).
-    program_vks = sorted(program_vk_set)
+    # The final proof commits program IDs; the VK-to-ID correspondence is WIP.
+    program_ids = _program_ids_from_verified_vks(program_vk_set)
 
-    public_inputs = RollupPublicInput(
+    public_inputs = FinalizationPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
         l2_l1_roots=merged_l2_l1_roots,
@@ -97,8 +91,6 @@ def run_rollup_aggregation_guest(
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses=merged_filtered_addresses,
-        # Position-pair pass-through (§3.4): the extremes are exposed, not
-        # asserted here — L1 checks them against committed state (§3.6).
         parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
         end_data_rolling_hash=last_proof.public_inputs.end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
@@ -106,14 +98,19 @@ def run_rollup_aggregation_guest(
         start_offset=first_proof.public_inputs.start_offset,
         end_offset=last_proof.public_inputs.end_offset,
         l2_l1_tree_depth=depth,
-        program_vks=program_vks,
+        program_ids=program_ids,
+        l2_messaging_blocks_offsets=messaging_offsets,
     )
 
     return FinalizationSubmission(
         public_inputs=public_inputs,
         proof=bytes(),  # Placeholder: filled by zkVM prover at layer above
-        l2_messaging_blocks_offsets=[],  # Not populated from rollup proofs; defaults to empty
     )
+
+
+def _program_ids_from_verified_vks(program_vks: Set[Hash32]) -> List[Hash32]:
+    """Convert the verified guest VK set to L1 program IDs once correspondence is defined."""
+    raise NotImplementedError("VK-to-program-ID conversion for finalization is WIP")
 
 
 def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:

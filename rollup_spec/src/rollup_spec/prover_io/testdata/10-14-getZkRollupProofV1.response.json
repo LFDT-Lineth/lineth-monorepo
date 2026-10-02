@@ -32,6 +32,8 @@
     ],
     "programVks": [
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    ]
+    ],
+    "blockCount": 20,
+    "l2MessagingBlocksOffsets": []
   }
 }

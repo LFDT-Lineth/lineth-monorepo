@@ -57,7 +57,7 @@ def _input(monkeypatch, chunks, count=1, start_offset=0):
         end_l1_l2_bridge_rolling_hash=ZERO, end_l1_l2_bridge_rolling_hash_message_number=U64(0),
         dynamic_chain_config_hash=ZERO, parent_ftx_rolling_hash=ZERO, parent_ftx_number=U64(0),
         end_ftx_rolling_hash=ZERO, end_processed_ftx_number=U64(0),
-        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses,
+        filtered_addresses_hash=empty_addresses, tx_froms_hash=empty_addresses, block_count=1,
     )
     proofs = [VerifiableL2ExecutionProof(
         L2ExecutionProof(replace(pi, end_block_number=U64(i)), U64(i)), ZERO,

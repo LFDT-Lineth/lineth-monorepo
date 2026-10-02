@@ -235,7 +235,7 @@ def validate_forced_transactions(
 @dataclass
 class L2ExecutionProofPublicInput:
     """
-    The 16-field l2-execution public input tuple from Readme.md section 2.1.
+    The l2-execution public input tuple from Readme.md section 2.1.
     """
     parent_block_hash: Hash32
     end_block_hash: Hash32
@@ -253,6 +253,8 @@ class L2ExecutionProofPublicInput:
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
     tx_froms_hash: Hash32
+    block_count: int = 0
+    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -294,7 +296,7 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LinethPayloadInput]) -> 
 class L2ExecutionProof:
     """
     An l2-execution proof as the l2-execution guest emits it: the guest
-    *output* (the 15-field `public_inputs` tuple + the revealed hash
+    *output* (the `public_inputs` tuple + the revealed hash
     preimages) plus the `proof` bytes the rollup guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
@@ -336,7 +338,7 @@ class VerifiableL2ExecutionProof:
 
 def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2ExecutionProof:
     """
-    l2-execution: emits the 15-field l2-execution PI (§2.1) for a contiguous
+    l2-execution: emits the l2-execution PI (§2.1) for a contiguous
     block range.
 
     The per-block state transition is delegated to the underlying engine
@@ -369,11 +371,12 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     current_ftx_rolling_hash = execution_input.parent_ftx_rolling_hash
     current_last_processed_ftx_number = execution_input.parent_last_processed_ftx_number
     l2_l1_message_hashes: List[Hash32] = []
+    messaging_offsets: List[int] = []
     tx_froms: List[Address] = []
     filtered_addresses: List[Address] = []
     results: List[StatelessExecutionResult] = []
 
-    for lineth_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
+    for block_index, (lineth_payload, stateless_input) in enumerate(zip(execution_input.payloads, stateless_inputs)):
         payload = stateless_input.new_payload_request.execution_payload
 
         # ── Conflation-level invariants the engine cannot know (it validates each
@@ -433,11 +436,19 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # L2->L1 messages from the block's logs (skipped entirely when no L2MessageService is
         # configured — see `bridge_suppressed`).
         if not bridge_suppressed:
+            has_message = False
             for log in result.block_logs:
                 if log.address != l2_ms_address:
                     continue
-                if log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
+                if log.topics and log.topics[0] == BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0:
+                    if len(log.topics) < 4:
+                        raise Exception("MessageSent log is missing its message hash topic")
                     l2_l1_message_hashes.append(Hash32(log.topics[3]))
+                    has_message = True
+            if has_message:
+                if block_index + 1 > 0xFFFF:
+                    raise Exception("messaging block offset exceeds uint16")
+                messaging_offsets.append(block_index + 1)
 
         current_parent_hash = payload.block_hash
 
@@ -472,6 +483,8 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_processed_ftx_number=current_last_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(filtered_addresses),
         tx_froms_hash=hash_address_list(tx_froms),
+        block_count=len(stateless_inputs),
+        l2_messaging_blocks_offsets=messaging_offsets,
     )
 
     return L2ExecutionProof(

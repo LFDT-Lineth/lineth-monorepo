@@ -35,6 +35,7 @@ from .l2_execution import (
     hash_address_list,
     hash_digest_list,
 )
+from .messaging_offsets import rebase_messaging_offsets
 
 L2_L1_TREE_DEPTH = 5
 ZERO_HASH32 = Hash32(b"\x00" * 32)
@@ -431,6 +432,8 @@ class RollupPublicInput:
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
     program_vks: List[Hash32] = field(default_factory=list)
+    block_count: int = 0
+    l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -582,6 +585,14 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
 
+    messaging_offsets: List[int] = []
+    for proof in l2_execution_proofs:
+        messaging_offsets.extend(rebase_messaging_offsets(
+            int(proof.start_block_number), int(proof.public_inputs.end_block_number),
+            proof.public_inputs.block_count, proof.public_inputs.l2_messaging_blocks_offsets,
+            rollup_start_block_number, "l2-execution", "rollup",
+        ))
+
     # The exec program VKs verified beneath this rollup proof, emitted as a
     # CANONICAL sorted, distinct list (§ProgramVK anchoring): semantically a set,
     # sorted so the commitment is a pure function of its contents. `Hash32` is a
@@ -655,6 +666,8 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_offset=end_offset,
         l2_l1_tree_depth=L2_L1_TREE_DEPTH,
         program_vks=program_vks,
+        block_count=rollup_end_block_number - rollup_start_block_number + 1,
+        l2_messaging_blocks_offsets=messaging_offsets,
     )
 
     return RollupProof(

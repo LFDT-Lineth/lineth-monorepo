@@ -38,7 +38,7 @@ Design notes:
     (schema-checked by the schemas' conformance test, round-trip-checked by
     `proof_io_v1_test.py`). Inline coercion (`_require`, `_bytes_from_hex`,
     `_u64`, the enum lookup) yields precise field-path errors. `proverVersion`
-    (on responses) and `programVk` (on requests) are routing metadata.
+    (on responses) and `guestProgramId` and `provingSystem` (on requests) are routing metadata.
 
 Conventions (Lineth): byte/hash fields are 0x-prefixed hex; integers that fit in
 JSON are plain numbers but `_u64` also accepts 0x-hex strings defensively.
@@ -137,6 +137,17 @@ def _hx(value: Any) -> str:
     return "0x" + bytes(value).hex()
 
 
+def _validate_guest_request_envelope(obj: dict) -> None:
+    guest_id = _bytes_from_hex(_require(obj, "guestProgramId", ""), "guestProgramId")
+    if len(guest_id) != 32:
+        raise ProofIoError("'guestProgramId' must be 32 bytes")
+    proving_system = _require(obj, "provingSystem", "")
+    if not isinstance(proving_system, str) or not proving_system:
+        raise ProofIoError("'provingSystem' must be a non-empty string")
+    if "programVk" in obj:
+        raise ProofIoError("'programVk' belongs on proof responses and nested proofs")
+
+
 # ── request: JSON dict -> guest dataclass ─────────────────────────────────────
 
 
@@ -223,13 +234,14 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     Convert a parsed `getZkL2ExecutionProofV1.request.json` object into the guest
     input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by the payloads. The single
     `proofRequest.chainConfig` carries both the Lineth range-level config
     (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
     the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
     latter when SSZ-encoding each payload's readable `statelessInput`.
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     payloads = _require(proof_request, "payloads", "proofRequest.")
     if not isinstance(payloads, list) or not payloads:
@@ -304,6 +316,8 @@ def encode_response(proof: L2ExecutionProof, prover_version: str, *, program_vk:
             "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
             "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
             "txFromsHash": _hx(pi.tx_froms_hash),
+            "blockCount": pi.block_count,
+            "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
         },
         "l2L1Messages": [_hx(h) for h in proof.l2_l1_messages],
         "txFroms": [_hx(a) for a in proof.tx_froms],
@@ -369,6 +383,11 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
         tx_froms_hash=h("txFromsHash"),
+        block_count=int(n("blockCount")),
+        l2_messaging_blocks_offsets=[
+            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
+            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
+        ],
     )
 
 
@@ -450,7 +469,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
     guest input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the block range is implied by `conflations` (paired
     1:1 with `l2ExecutionProofs`). `chunks` carry the physical DA bytes and
     anchored binding hashes. `parentDataRollingHash`/`startOffset`
@@ -459,6 +478,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     request. `boundaryPrevDataRollingHash` is present only for a mid-chunk start
     (`startOffset > 0`, §3.4).
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     conflations = _require_list(proof_request, "conflations", "proofRequest.")
     if not conflations:
@@ -512,9 +532,8 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 # ── rollup response: guest dataclass -> JSON dict ─────────────────────────────
 
 
-def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
-    """The rollup PI tuple (§2.4) as JSON — shared by the rollup and
-    rollup-aggregation responses, which expose the identical PI structure."""
+def _encode_finalization_shared_inputs(pi) -> dict:
+    """Encode public-input fields common to rollup and finalization."""
     return {
         "endBlockNumber": int(pi.end_block_number),
         "endBlockTimestamp": int(pi.end_block_timestamp),
@@ -540,10 +559,15 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "l2L1Roots": [_hx(r) for r in pi.l2_l1_roots],
         "l2L1TreeDepth": pi.l2_l1_tree_depth,
         "filteredAddresses": [_hx(a) for a in pi.filtered_addresses],
-        # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
-        # program VKs verified beneath this proof, checked against L1's single
-        # combined approved-VK set (exec vs rollup not distinguished).
+        "l2MessagingBlocksOffsets": list(pi.l2_messaging_blocks_offsets),
+    }
+
+
+def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
+    return {
+        **_encode_finalization_shared_inputs(pi),
         "programVks": [_hx(v) for v in pi.program_vks],
+        "blockCount": pi.block_count,
     }
 
 
@@ -552,9 +576,9 @@ def encode_rollup_response(proof: RollupProof, prover_version: str, *, program_v
     Convert the guest's `RollupProof` into a `getZkRollupProofV1.response.json`
     object the coordinator's Jackson mapper consumes directly.
 
-    §ProgramVK anchoring: `program_vk` is host-attached metadata the coordinator
-    supplies from the request envelope and the prover echoes on the response —
-    mirroring the L2-execution response pattern.
+    §ProgramVK anchoring: `program_vk` is prover-attached metadata identifying
+    the guest that produced this proof, carried on the response for recursive
+    verification rather than sourced from the request envelope.
     """
     return {
         "proverVersion": prover_version,
@@ -633,6 +657,11 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
             for i, v in enumerate(program_vks)
         ],
+        block_count=int(n("blockCount")) if "blockCount" in obj else 0,
+        l2_messaging_blocks_offsets=[
+            int(_u64(offset, f"{ctx}l2MessagingBlocksOffsets[{i}]"))
+            for i, offset in enumerate(_require_list(obj, "l2MessagingBlocksOffsets", ctx))
+        ],
     )
 
 
@@ -660,12 +689,13 @@ def decode_aggregation_request(obj: dict) -> RollupAggregationProofPrivateInput:
     Convert a parsed `getZkRollupAggregationProofV1.request.json` object into the
     rollup-aggregation guest input dataclass.
 
-    The request is a `{programVk, proofRequest}` envelope: `programVk`
+    The request is a `{guestProgramId, provingSystem, proofRequest}` envelope: the guest ID
     is routing metadata and the aggregation guest input is just the flat list of
     rollup proofs. There is no `chainId` (unlike the rollup request): the
     aggregation guest does no sender recovery and inherits chain-config integrity
     from the inner proofs' `dynamicChainConfigHash`.
     """
+    _validate_guest_request_envelope(obj)
     proof_request = _require(obj, "proofRequest", "")
     rollup_proofs = _require_list(proof_request, "rollupProofs", "proofRequest.")
     if not rollup_proofs:
@@ -696,8 +726,9 @@ def encode_aggregation_response(
     `getZkRollupAggregationProofV1.response.json` object the coordinator's
     Jackson mapper consumes directly.
 
-    The response equals the guest output plus `proof` and the
-    `l2MessagingBlocksOffsets` calldata list. `endBlockNumber` lives in
+    The response equals the guest output plus the prover-attached `proof` and
+    host-supplied `startBlockNumber`. `l2MessagingBlocksOffsets` is already
+    included in the guest's public inputs. `endBlockNumber` lives in
     `publicInputs`; only `startBlockNumber` (not in the PI tuple) is supplied as
     host-side range metadata.
     """
@@ -705,8 +736,10 @@ def encode_aggregation_response(
         "proverVersion": prover_version,
         "proof": _hx(submission.proof),
         "startBlockNumber": int(start_block_number),
-        "publicInputs": _encode_rollup_public_inputs(submission.public_inputs),
-        "l2MessagingBlocksOffsets": list(submission.l2_messaging_blocks_offsets),
+        "publicInputs": {
+            **_encode_finalization_shared_inputs(submission.public_inputs),
+            "programIds": [_hx(program_id) for program_id in submission.public_inputs.program_ids],
+        },
     }
 
 
